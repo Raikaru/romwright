@@ -1306,6 +1306,11 @@ M2 — Program-model parity
   Split f into f1 (decoded literal operands) and f2 (computed eligibility and
   source tracking), each below 800 changed lines.
 - g: recover PIC reference contexts and flow-established resolver coverage.
+  User-prioritized prerequisite g0: `tests/m2-002_context.py` must first fail
+  when an explicit oracle language/compiler is ignored. Record and compare
+  native/oracle contexts before classifying remaining propagation mismatches.
+  Preserve automatic-selection oracles; explicit-context references use a
+  separate cache namespace. Do not change reference metric definitions.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.
