@@ -5,6 +5,7 @@
 
 #include "ifacedecomp.hh"
 #include "ventris_constant_state.hh"
+#include "ventris_flow.hh"
 #include "ventris_operand_refs.hh"
 #include <algorithm>
 #include <deque>
@@ -195,6 +196,22 @@ class Propagation {
       if (address.offset < 1024 || space->getHighest() - address.offset < 256 ||
           address.offset == 0xffff || address.offset == 0xffffffff)
         return;
+      // SymbolicPropogator.evaluatePureDataRef rejects speculative pointers
+      // to an instruction's fallthrough, including a CALL's saved return PC.
+      const auto *sleigh = dynamic_cast<const Sleigh *>(arch.translate);
+      if (sleigh == nullptr)
+        throw LowlevelError("Reference validation requires a SLEIGH translator");
+      if (space == op.getAddr().getSpace() &&
+          address.offset == op.getAddr().getOffset() + sleigh->instructionLength(op.getAddr())) {
+        class MetadataOnlyEmit : public PcodeEmit {
+        public:
+          virtual void dump(const Address &, OpCode, VarnodeData *, VarnodeData *, int4) {}
+        } emitted;
+        InstructionFlow flow;
+        sleigh->oneInstructionFlow(emitted, op.getAddr(), flow);
+        if (flow.type().fallthrough)
+          return;
+      }
       // Pure data must not point into this function's decoded instructions.
       // Do not use the caller's bounding range as a containment approximation.
       if (address.offset != first) {

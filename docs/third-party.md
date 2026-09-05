@@ -255,6 +255,10 @@ queries retain their stricter reachability rule. Memory call operands are
 READ references, while indirect jump operands retain Ghidra's INDIRECTION
 classification (normalized to DATA). This distinction uses original SLEIGH
 p-code: `FlowInfo.truncateIndirectJump` may rewrite a jump into CALLIND.
+`SymbolicPropogator.evaluatePureDataRef` rejects a pure DATA target equal to
+the source instruction's fallthrough, including an implicitly saved return
+PC. This uses original instruction-flow metadata and does not suppress READ
+or WRITE references to data immediately following an instruction.
 Literal references follow `ScalarOperandAnalyzer` and the SLEIGH
 `OperandSymbol.printList` / `SleighInstructionPrototype.getOpObjects` rules.
 `native/ventris_operand_refs.hh` walks decoded display operands, not assembly
