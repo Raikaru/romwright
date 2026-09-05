@@ -1307,6 +1307,8 @@ M2 — Program-model parity
   source tracking), each below 800 changed lines.
   f3: `data_references_do_not_promote_fallthrough` isolates call return-address
   storage at a function boundary; real reads of following data must survive.
+  f4: `scalar_reference_eligibility_respects_instruction_alignment` separates
+  unused AArch64 address formation from an address returned to the caller.
 - g: recover PIC reference contexts and flow-established resolver coverage.
   User-prioritized prerequisite g0: `tests/m2-002_context.py` must first fail
   when an explicit oracle language/compiler is ignored. Record and compare
