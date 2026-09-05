@@ -1529,7 +1529,7 @@ mod tests {
             0x48, 0x83, 0xc0, 1, // add rax,1
             0xc3,
         ];
-        let import = NativeImport {
+        let mut import = NativeImport {
             language: cfg.language_id.clone(),
             mappings: vec![
                 crate::native::Mapping {
@@ -1549,6 +1549,58 @@ mod tests {
         assert_eq!(refs, vec![ReferenceFact {
             from: 0x100b, to: 0x4001, kind: ReferenceKind::Data,
         }], "computed intermediates are not references; the return references its last setter");
+        // Equal pointer values at a join retain both possible setter origins.
+        import.mappings[0].bytes = vec![
+            0x48, 0xc7, 0xc0, 0xff, 0x3f, 0, 0,
+            0x85, 0xff, 0x74, 6, // test edi,edi; je alternative
+            0x48, 0x83, 0xc0, 2, 0xeb, 4,
+            0x48, 0x83, 0xc0, 2, 0xc3,
+        ];
+        import.mappings[0].size = import.mappings[0].bytes.len() as u64;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1016, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x100b, to: 0x4001, kind: ReferenceKind::Data },
+            ReferenceFact { from: 0x1011, to: 0x4001, kind: ReferenceKind::Data },
+        ], "a joined value must not lose either reaching setter");
+        // A computed argument must be observed before CALL clobbers its
+        // register, and attributed to the setter rather than the call.
+        cfg.language_id = "AARCH64:LE:64:v8A".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/AARCH64/data/languages");
+        import.language = cfg.language_id.clone();
+        import.mappings[0].bytes = vec![
+            0xe0, 0xff, 0x87, 0xd2, // mov x0,#0x3fff
+            0x00, 0x04, 0x00, 0x91, // add x0,x0,#1
+            0x00, 0x04, 0x00, 0x91, // add x0,x0,#1
+            0x05, 0x00, 0x00, 0x94, // bl 0x1020
+            0xc0, 0x03, 0x5f, 0xd6, // ret
+        ];
+        import.mappings[0].size = import.mappings[0].bytes.len() as u64;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1014, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x1008, to: 0x4001, kind: ReferenceKind::Data },
+        ], "computed arguments need source attribution before call effects");
+        // The e500 ABI uses an unnamed 32-bit slice of a 64-bit register.
+        // Without a named-register setter, the return is the reference source.
+        cfg.language_id = "PowerPC:BE:32:e500".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/PowerPC/data/languages");
+        import.language = cfg.language_id.clone();
+        import.mappings[0].bytes = vec![
+            0x38, 0x60, 0x3f, 0xff, // li r3,0x3fff
+            0x38, 0x63, 0x00, 0x01, // addi r3,r3,1
+            0x38, 0x63, 0x00, 0x01, // addi r3,r3,1
+            0x4e, 0x80, 0x00, 0x20, // blr
+        ];
+        import.mappings[0].size = import.mappings[0].bytes.len() as u64;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1010, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x100c, to: 0x4001, kind: ReferenceKind::Data },
+        ], "unnamed register slices must not invent a named-register setter");
     }
 
     #[test]

@@ -1396,6 +1396,21 @@ M2 — Program-model parity
   many O2 have data precision 1.0 and recall 1.0. Computed-pointer eligibility,
   source attribution and PIC context remain; m2-002 is not complete.
 
+## m2-002f2 computed reference eligibility
+- Acceptance `1dd118c` failed because an unused arithmetic intermediate
+  produced a DATA reference. References now require an eligible use rather
+  than every complete output. Return/argument references trace their setters.
+- The regression also covers equal values with two reaching setters,
+  AArch64 arguments observed before call clobbers, and the e500 return-source
+  fallback for an unnamed register slice.
+- `cargo test --workspace`: 131 pass. `tests/corpus.sh`: 5/5 pass. Console
+  and worker rebuild; native `add` still decompiles to
+  `return param_2 + param_1;`. Automatic bridge import returns 15 functions.
+- The pre-context gate reports 4 pass, 16 fail, 0 skipped. Its PowerPC
+  comparison is not context-matched: native selects `PowerPC:BE:32:default`,
+  while the automatic oracle selected `PowerPC:BE:32:e500`. No propagation
+  correction is justified by those mismatches until g0 aligns the contexts.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
