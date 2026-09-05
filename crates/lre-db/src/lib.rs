@@ -2342,6 +2342,77 @@ mod tests {
     }
 
     #[test]
+    fn inferred_xrefs_replace_only_their_pass_and_preserve_assertions() {
+        use lre_model::{FactKind, XrefProvenance};
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("refs", "x86:LE:64:default", &prov()).unwrap();
+        let source = "native-analysis:constant-propagation";
+        let row = |from, kind, producer: &str| XrefRow {
+            from: lre_model::Address::ram(from),
+            to: lre_model::Address::ram(0x3000),
+            kind: "READ".into(),
+            function: None,
+            provenance: XrefProvenance {
+                kind,
+                source: producer.into(),
+                confidence: None,
+            },
+        };
+        let asserted = row(0x1000, FactKind::Asserted, "analyst");
+        let old = row(0x1010, FactKind::Inferred, source);
+        let other = row(0x1020, FactKind::Inferred, "another-pass");
+        db.replace_xrefs(id, &[asserted.clone(), old, other.clone()]).unwrap();
+        let conflict = row(0x1000, FactKind::Inferred, source);
+        let mut fresh = row(0x1030, FactKind::Inferred, source);
+        fresh.provenance.confidence = Some(0.9);
+        db.replace_inferred_xrefs(id, source, &[conflict, fresh.clone()]).unwrap();
+        assert_eq!(db.xrefs(id).unwrap(), vec![asserted.clone(), other.clone(), fresh]);
+        let before = db.xrefs(id).unwrap();
+        let revision = db.revision(id).unwrap();
+        assert!(db.replace_inferred_xrefs(id, source, &[other.clone()]).is_err());
+        assert_eq!(db.xrefs(id).unwrap(), before);
+        assert_eq!(db.revision(id).unwrap(), revision);
+        db.replace_inferred_xrefs(id, source, &[]).unwrap();
+        assert_eq!(db.xrefs(id).unwrap(), vec![asserted.clone(), other]);
+        // Reimporting an empty analysis must not erase an analyst's assertion.
+        db.replace_xrefs(id, &[]).unwrap();
+        assert_eq!(db.xrefs(id).unwrap(), vec![asserted]);
+    }
+
+    #[test]
+    fn legacy_xref_migration_preserves_unknown_ownership_and_confidence() {
+        use lre_model::FactKind;
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("legacy", "x86:LE:64:default", &prov()).unwrap();
+        db.conn.execute_batch(
+            "DROP TABLE xrefs;
+             CREATE TABLE xrefs (
+                program_id INTEGER NOT NULL REFERENCES programs(id),
+                src TEXT NOT NULL, dst TEXT NOT NULL, kind TEXT NOT NULL,
+                provenance TEXT NOT NULL DEFAULT '',
+                PRIMARY KEY (program_id, src, dst, kind));
+             UPDATE meta SET value = '4' WHERE key = 'schema_version';"
+        ).unwrap();
+        for (from, source) in [("00001000", "legacy-author"), ("00001010", "native-import")] {
+            db.conn.execute(
+                "INSERT INTO xrefs VALUES (?1, ?2, '00003000', 'DATA', ?3)",
+                params![id.0, from, source],
+            ).unwrap();
+        }
+        db.migrate().unwrap();
+        db.migrate().unwrap();
+        let rows = db.xrefs(id).unwrap();
+        assert_eq!(rows[0].provenance.kind, FactKind::Asserted);
+        assert_eq!(rows[0].provenance.source, "legacy-author");
+        assert_eq!(rows[0].provenance.confidence, None);
+        assert_eq!(rows[1].provenance.kind, FactKind::Inferred);
+        assert_eq!(rows[1].provenance.source, "native-import");
+        assert_eq!(rows[1].provenance.confidence, None);
+        db.replace_xrefs(id, &[]).unwrap();
+        assert_eq!(db.xrefs(id).unwrap(), vec![rows[0].clone()]);
+    }
+
+    #[test]
     fn analysis_records_search_graph_memory_bookmarks_and_patches() {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
