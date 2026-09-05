@@ -1513,6 +1513,45 @@ mod tests {
     }
 
     #[test]
+    fn computed_references_require_pointer_use() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        // The first addition transiently equals a mapped address. Only the
+        // second result escapes as the return value; neither is a literal.
+        let code = vec![
+            0x48, 0xc7, 0xc0, 0xff, 0x3f, 0, 0, // mov rax,0x3fff
+            0x48, 0x83, 0xc0, 1, // add rax,1
+            0x48, 0x83, 0xc0, 1, // add rax,1
+            0xc3,
+        ];
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x1000, size: code.len() as u64, file_off: 0,
+                    flags: 6, bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3,
+                    bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1010, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![ReferenceFact {
+            from: 0x100b, to: 0x4001, kind: ReferenceKind::Data,
+        }], "computed intermediates are not references; the return references its last setter");
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
