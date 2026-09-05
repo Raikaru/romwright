@@ -458,12 +458,13 @@ diff --git a/decompiler/sleigh.hh b/decompiler/sleigh.hh
  protected:
    ParserContext *obtainContext(const Address &addr,int4 state) const;
    void resolve(ParserContext &pos) const;	///< Generate a parse tree suitable for disassembly
-@@ -179,6 +183,7 @@ public:
+@@ -179,6 +183,8 @@ public:
    virtual void setContextDefault(const string &nm,uintm val);
    virtual void allowContextSet(bool val) const;
    virtual int4 instructionLength(const Address &baseaddr) const;
    virtual int4 oneInstruction(PcodeEmit &emit,const Address &baseaddr) const;
 +  int4 oneInstructionFlow(PcodeEmit &emit,const Address &baseaddr,InstructionFlow &flow) const;
++  const ParserContext *getInstructionContext(const Address &addr) const { return obtainContext(addr,ParserContext::pcode); }
    virtual int4 printAssembly(AssemblyEmit &emit,const Address &baseaddr) const;
  };
 diff --git a/decompiler/sleigh.cc b/decompiler/sleigh.cc
@@ -565,3 +566,14 @@ diff --git a/decompiler/flow.cc b/decompiler/flow.cc
 +    visit.size = 1;
    }
  }
+diff --git a/decompiler/slghsymbol.hh b/decompiler/slghsymbol.hh
+--- a/decompiler/slghsymbol.hh
++++ b/decompiler/slghsymbol.hh
+@@ -524,6 +524,7 @@ public:
+   void print(ostream &s,ParserWalker &pos) const;
+   void printMnemonic(ostream &s,ParserWalker &walker) const;
+   void printBody(ostream &s,ParserWalker &walker) const;
++  void collectOperandScalars(ParserWalker &walker,vector<VarnodeData> &scalars,bool bodyOnly) const;
+   void removeTrailingSpace(void);
+   void applyContext(ParserWalkerChange &walker) const {
+     vector<ContextChange *>::const_iterator iter;

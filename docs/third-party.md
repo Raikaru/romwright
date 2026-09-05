@@ -255,6 +255,11 @@ queries retain their stricter reachability rule. Memory call operands are
 READ references, while indirect jump operands retain Ghidra's INDIRECTION
 classification (normalized to DATA). This distinction uses original SLEIGH
 p-code: `FlowInfo.truncateIndirectJump` may rewrite a jump into CALLIND.
+Literal references follow `ScalarOperandAnalyzer` and the SLEIGH
+`OperandSymbol.printList` / `SleighInstructionPrototype.getOpObjects` rules.
+`native/ventris_operand_refs.hh` walks decoded display operands, not assembly
+text or incidental p-code constants. Direct control-flow targets keep their
+flow classification; address literals in comparisons need no pointer output.
 The importer reuses discovery's loaded console and collects the complete pass
 before publishing any of its rows. ELF, PE and DOL mapping permissions use
 the same low three bits; higher ELF section attributes are not wire flags.

@@ -1378,6 +1378,19 @@ M2 — Program-model parity
   reach recall 1.0 but precision 14/22. Literal operands, computed origins
   and PIC contexts remain in slices f–h.
 
+## m2-002f1 decoded literal operands
+- Acceptance `7ea13b5` failed on a CMP address literal with no pointer-valued
+  output. Its DATA reference now appears, including on an untaken path.
+- Literal extraction walks SLEIGH display metadata and retains scalar widths.
+  It does not parse assembly text or treat every p-code constant as an operand.
+  Direct call/jump targets are excluded from this DATA producer.
+- `cargo test --workspace`: 130 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild; the native worker CLI still decompiles `add`
+  to `return param_2 + param_1;`.
+- The full gate reports 3 pass, 17 fail, 0 skipped. x86-64 plain O0/O2 and
+  many O2 have data precision 1.0 and recall 1.0. Computed-pointer eligibility,
+  source attribution and PIC context remain; m2-002 is not complete.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
