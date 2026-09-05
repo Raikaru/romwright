@@ -1431,8 +1431,18 @@ M2 — Program-model parity
   PowerPC recall ranges from 0.5 to 0.9473684210526315.
 - `tests/corpus.sh`: 5/5 pass. Automatic bridge import and native worker
   smoke paths still run. No M2 gate pass is claimed.
-- Next m2-002 work: isolated reproductions for the remaining mismatch classes,
-  starting with the x86 call fallthrough incorrectly emitted as DATA.
+
+## m2-002f3 call fallthrough references
+- Acceptance `52eb786` failed on a saved return PC at a function boundary.
+  The native pass now follows `evaluatePureDataRef`'s fallthrough rule.
+  The paired real-read regression still reports the following data.
+- Focused `x86_64_cpp_o2` import: 24 native / 24 oracle data references,
+  24 matched, 0 missing, 0 extra. The full matrix has not been rerun after
+  this isolated correction; the g0 report remains the last full report.
+- `cargo test --workspace`: 133 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild; native `add` still returns the sum.
+- Next isolated class: scalar-analyzer instruction-alignment eligibility
+  (the unused AArch64 ADRs in clone-registration code).
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
