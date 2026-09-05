@@ -1604,6 +1604,53 @@ mod tests {
     }
 
     #[test]
+    fn reference_queries_use_selected_compiler_abi() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let code = vec![
+            0x48, 0xc7, 0xc7, 0xff, 0x3f, 0, 0, // mov rdi,0x3fff
+            0x48, 0x83, 0xc7, 2, // add rdi,2
+            0x48, 0xc7, 0xc1, 0xff, 0x3f, 0, 0, // mov rcx,0x3fff
+            0x48, 0x83, 0xc1, 3, // add rcx,3
+            0xe8, 0x25, 0, 0, 0, // call 0x1040
+            0x31, 0xc0, 0xc3,
+        ];
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x1000, size: code.len() as u64, file_off: 0,
+                    flags: 6, bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        for compiler in ["gcc", "default"] {
+            import.compiler = Some(compiler);
+            let mut session = ConsoleSession::new(&cfg).unwrap();
+            session.load_mapped(&import).unwrap();
+            let refs = session.references(0x1000, 0x101e, &import.mappings, false).unwrap();
+            let mut expected = vec![
+                ReferenceFact { from: 0x1012, to: 0x4002, kind: ReferenceKind::Data },
+            ];
+            if compiler == "gcc" {
+                expected.insert(0,
+                    ReferenceFact { from: 0x1007, to: 0x4001, kind: ReferenceKind::Data });
+            }
+            assert_eq!(refs, expected,
+                "RDI is a SysV argument but not a Windows x64 argument ({compiler})");
+        }
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();

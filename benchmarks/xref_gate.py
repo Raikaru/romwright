@@ -19,6 +19,15 @@ from gen_corpus import get_load_segments
 
 SOURCE = "native-analysis:constant-propagation"
 POLICY = "code-data-references-v1"
+# Fixed corpus contexts, independently checked against the native import.
+# PowerPC's ELF opinion admits several variants; automatic selection is not
+# a reproducible choice of analysis semantics.
+CONTEXTS = {
+    "x86_64": {"language": "x86:LE:64:default", "compiler": "gcc"},
+    "i386": {"language": "x86:LE:32:default", "compiler": "gcc"},
+    "aarch64": {"language": "AARCH64:LE:64:v8A", "compiler": "default"},
+    "powerpc": {"language": "PowerPC:BE:32:default", "compiler": "default"},
+}
 
 
 def address(value):
@@ -143,8 +152,13 @@ def main():
                     raise ValueError("Corpus binary hash mismatch")
                 row["sha256"] = sha
                 expected = {"schema_version": 1, "sha256": sha, "binary_size": binary.stat().st_size,
-                            **producer, "address_basis": "ghidra"}
-                reference_path = args.oracle_dir / f"{sha}.json"
+                            **producer, "address_basis": "ghidra",
+                            "language_selection": "explicit", **CONTEXTS[key[0]]}
+                row["analysis_context"] = CONTEXTS[key[0]]
+                reference_path = (args.oracle_dir / "explicit-context-v1" /
+                                  expected["language"].replace(":", "-") /
+                                  expected["compiler"] / f"{sha}.json")
+                reference_path.parent.mkdir(parents=True, exist_ok=True)
                 reference = json.loads(reference_path.read_text()) if reference_path.exists() else {}
                 if (any(reference.get(k) != v for k, v in expected.items()) or "xrefs" not in reference or
                         any("instruction" not in ref or "provenance" not in ref
@@ -153,6 +167,7 @@ def main():
                                                    include_xrefs=True)
                     write_reference(reference_path, reference)
                 validate_reference(reference, expected)
+                row["oracle_context"] = {key: reference[key] for key in ("language", "compiler")}
                 oracle = triples(reference["xrefs"])
                 if not oracle:
                     raise ValueError("Oracle exported no references")
@@ -171,6 +186,11 @@ def main():
                 if result.returncode:
                     raise ValueError(result.stdout + result.stderr)
                 with sqlite3.connect(project / "project.sqlite") as connection:
+                    language = connection.execute(
+                        "SELECT language FROM programs WHERE name=?", (row["id"],)).fetchone()
+                    row["native_language"] = language[0] if language else None
+                    if row["native_language"] != row["analysis_context"]["language"]:
+                        raise ValueError("Native/oracle analysis language mismatch")
                     native_rows = [{"from": src, "to": dst, "kind": kind, "source": source,
                                     "ownership": ownership, "confidence": confidence}
                                    for src, dst, kind, source, ownership, confidence in
