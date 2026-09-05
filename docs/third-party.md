@@ -238,3 +238,11 @@ membership in a supplied mapping. The function query bounds execution to
 one million p-code evaluations; failure returns no successful fact payload.
 Reference creation and durable provenance are separate consumers, not hidden
 side effects of this request.
+
+The separate `references` query classifies mapped-memory accesses from raw
+p-code, following `RefTypeFactory.getMemRefType` and
+`SymbolicPropogator.makeReference` (Ghidra 12.1.3, Apache-2.0). It returns
+instruction-origin READ, WRITE, READ_WRITE and DATA records; reads and
+writes to the same target in one instruction are combined. Internal affine
+stack identities are not program-memory targets. The query does not write
+database rows; ownership and persistence belong to the Rust core.

@@ -429,6 +429,23 @@ pub struct ConstantVarnode {
     pub size: u32,
 }
 
+/// An inferred mapped-memory reference at its instruction address.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ReferenceFact {
+    pub from: u64,
+    pub to: u64,
+    pub kind: ReferenceKind,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ReferenceKind {
+    Read,
+    Write,
+    ReadWrite,
+    Data,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum FlowKind {
     Branch,
@@ -773,11 +790,34 @@ impl ConsoleSession {
         mappings: &[crate::native::Mapping],
         trust_writable: bool,
     ) -> Result<Vec<ConstantFact>> {
+        self.propagation_query("constants", "CONSTANTS ", start, end, mappings, trust_writable)
+    }
+
+    /// Infer read/write/data references without mutating the loaded image.
+    pub fn references(
+        &mut self,
+        start: u64,
+        end: u64,
+        mappings: &[crate::native::Mapping],
+        trust_writable: bool,
+    ) -> Result<Vec<ReferenceFact>> {
+        self.propagation_query("references", "REFERENCES ", start, end, mappings, trust_writable)
+    }
+
+    fn propagation_query<T: serde::de::DeserializeOwned>(
+        &mut self,
+        command: &str,
+        prefix: &str,
+        start: u64,
+        end: u64,
+        mappings: &[crate::native::Mapping],
+        trust_writable: bool,
+    ) -> Result<Vec<T>> {
         use std::fmt::Write as _;
         let mut script = String::with_capacity(64 + mappings.len() * 48);
         let _ = write!(
             script,
-            "constants 0x{start:x} 0x{end:x} {}",
+            "{command} 0x{start:x} 0x{end:x} {}",
             u8::from(trust_writable)
         );
         for mapping in mappings.iter().filter(|mapping| mapping.size != 0) {
@@ -795,12 +835,12 @@ impl ConsoleSession {
         let response = read_until_prompt(&mut self.reader)?;
         let payload = response
             .lines()
-            .find_map(|line| line.trim().strip_prefix("CONSTANTS "))
+            .find_map(|line| line.trim().strip_prefix(prefix))
             .ok_or_else(|| {
-                NativeRuntimeError(format!("constant-propagation query failed: {response}"))
+                NativeRuntimeError(format!("{command} query failed: {response}"))
             })?;
         serde_json::from_str(payload)
-            .map_err(|error| NativeRuntimeError(format!("invalid constant facts: {error}")))
+            .map_err(|error| NativeRuntimeError(format!("invalid {command} facts: {error}")))
     }
 
     /// Ask the console for the control-flow of one instruction.
@@ -1416,32 +1456,24 @@ mod tests {
         };
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        session
-            .send("references 0x1000 0x101c 0 0x1000 0x101c 6 0x3000 0x3010 3 0x4000 0x4010 2\n")
-            .unwrap();
-        let response = read_until_prompt(&mut session.reader).unwrap();
-        let payload = response
-            .lines()
-            .find_map(|line| line.trim().strip_prefix("REFERENCES "))
-            .unwrap_or_else(|| panic!("reference query failed: {response}"));
-        let refs: Vec<serde_json::Value> = serde_json::from_str(payload).unwrap();
+        let refs = session.references(0x1000, 0x101c, &import.mappings, false).unwrap();
         for (from, to, kind) in [
-            (0x1000, 0x3000, "READ"),
-            (0x1006, 0x3000, "READ_WRITE"),
-            (0x100d, 0x4000, "DATA"),
-            (0x1014, 0x3008, "WRITE"),
+            (0x1000, 0x3000, ReferenceKind::Read),
+            (0x1006, 0x3000, ReferenceKind::ReadWrite),
+            (0x100d, 0x4000, ReferenceKind::Data),
+            (0x1014, 0x3008, ReferenceKind::Write),
         ] {
             assert!(
-                refs.iter().any(|reference| reference["from"] == from
-                    && reference["to"] == to
-                    && reference["kind"] == kind),
-                "missing {kind} {from:#x} -> {to:#x}: {refs:?}"
+                refs.iter().any(|reference| reference.from == from
+                    && reference.to == to
+                    && reference.kind == kind),
+                "missing {kind:?} {from:#x} -> {to:#x}: {refs:?}"
             );
         }
         assert!(
             refs.iter().all(|reference| matches!(
-                reference["to"].as_u64(),
-                Some(0x3000 | 0x3008 | 0x4000)
+                reference.to,
+                0x3000 | 0x3008 | 0x4000
             )),
             "{refs:?}"
         );
