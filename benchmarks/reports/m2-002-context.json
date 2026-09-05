@@ -3,7 +3,7 @@
   "milestone": "M2",
   "task": "m2-002",
   "scoring_policy": "code-data-references-v1",
-  "commit": "45713b634adfa77079b719de27a3227cc9436aab",
+  "commit": "e9bf5a60dca59b465dcb2cd4e1c22fbfeed7def8",
   "date": "2026-09-05",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
@@ -112,11 +112,11 @@
     },
     {
       "id": "x86_64_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9545454545454546,
+        "xref.precision": 0.9767441860465116,
         "xref.recall": 0.25609756097560976,
-        "data_xref.precision": 0.96,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 1.0
       },
       "thresholds": {
@@ -136,24 +136,12 @@
       "oracle_sha256": "522ceaec2ee262066c150263af7bc1d492430298f55a004ec246f847ac742937",
       "native_language": "x86:LE:64:default",
       "oracle_references": 164,
-      "native_references": 44,
+      "native_references": 43,
       "oracle_data_references": 24,
-      "native_data_references": 25,
+      "native_data_references": 24,
       "matched": 24,
       "missing": [],
-      "extra": [
-        [
-          [
-            "ram",
-            2103771
-          ],
-          [
-            "ram",
-            2103776
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "x86_64_many_o2",
@@ -591,9 +579,9 @@
       "id": "i386_cpp_o2",
       "status": "fail",
       "metrics": {
-        "xref.precision": 0.9782608695652174,
+        "xref.precision": 1.0,
         "xref.recall": 0.2542372881355932,
-        "data_xref.precision": 0.9565217391304348,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 0.88
       },
       "thresholds": {
@@ -613,9 +601,9 @@
       "oracle_sha256": "489221cd83dd31d101fce39b3664a044e992bdbda4b9a1d8411b8e671d60f294",
       "native_language": "x86:LE:32:default",
       "oracle_references": 177,
-      "native_references": 46,
+      "native_references": 45,
       "oracle_data_references": 25,
-      "native_data_references": 23,
+      "native_data_references": 22,
       "matched": 22,
       "missing": [
         [
@@ -652,19 +640,7 @@
           "read"
         ]
       ],
-      "extra": [
-        [
-          [
-            "ram",
-            4200551
-          ],
-          [
-            "ram",
-            4200556
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "i386_many_o2",
@@ -735,11 +711,11 @@
     },
     {
       "id": "aarch64_plain_o0",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9393939393939394,
+        "xref.precision": 1.0,
         "xref.recall": 0.20945945945945946,
-        "data_xref.precision": 0.875,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 1.0
       },
       "thresholds": {
@@ -759,43 +735,20 @@
       "oracle_sha256": "f1731649bf072c3bea55f250486fa18c338f4ef08f4e0bf8db1a86f172b42255",
       "native_language": "AARCH64:LE:64:v8A",
       "oracle_references": 148,
-      "native_references": 33,
+      "native_references": 31,
       "oracle_data_references": 14,
-      "native_data_references": 16,
+      "native_data_references": 14,
       "matched": 14,
       "missing": [],
-      "extra": [
-        [
-          [
-            "ram",
-            2164524
-          ],
-          [
-            "ram",
-            2296440
-          ],
-          "data"
-        ],
-        [
-          [
-            "ram",
-            2164572
-          ],
-          [
-            "ram",
-            2296440
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "aarch64_plain_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9375,
+        "xref.precision": 1.0,
         "xref.recall": 0.21428571428571427,
-        "data_xref.precision": 0.875,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 1.0
       },
       "thresholds": {
@@ -815,43 +768,20 @@
       "oracle_sha256": "b0bc37f08ed6201d10113a558ad6f3ef0d01a579324a894fd9b65cbd52df6f18",
       "native_language": "AARCH64:LE:64:v8A",
       "oracle_references": 140,
-      "native_references": 32,
+      "native_references": 30,
       "oracle_data_references": 14,
-      "native_data_references": 16,
+      "native_data_references": 14,
       "matched": 14,
       "missing": [],
-      "extra": [
-        [
-          [
-            "ram",
-            2164524
-          ],
-          [
-            "ram",
-            2296376
-          ],
-          "data"
-        ],
-        [
-          [
-            "ram",
-            2164572
-          ],
-          [
-            "ram",
-            2296376
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "aarch64_plain_pie",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9459459459459459,
+        "xref.precision": 1.0,
         "xref.recall": 0.23972602739726026,
-        "data_xref.precision": 0.8947368421052632,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 1.0
       },
       "thresholds": {
@@ -871,43 +801,20 @@
       "oracle_sha256": "69fb38b5e06d43f10f631e943cf73a88d2150959691c3cfd66befdb18a610bbe",
       "native_language": "AARCH64:LE:64:v8A",
       "oracle_references": 146,
-      "native_references": 37,
+      "native_references": 35,
       "oracle_data_references": 17,
-      "native_data_references": 19,
+      "native_data_references": 17,
       "matched": 17,
       "missing": [],
-      "extra": [
-        [
-          [
-            "ram",
-            1116060
-          ],
-          [
-            "ram",
-            1248008
-          ],
-          "data"
-        ],
-        [
-          [
-            "ram",
-            1116108
-          ],
-          [
-            "ram",
-            1248008
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "aarch64_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9565217391304348,
+        "xref.precision": 1.0,
         "xref.recall": 0.22448979591836735,
-        "data_xref.precision": 0.9130434782608695,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 0.9545454545454546
       },
       "thresholds": {
@@ -927,9 +834,9 @@
       "oracle_sha256": "51641018ce659d1dfc23372336a01f7ca2ca754d949b1e87031df0f73b1bd3f2",
       "native_language": "AARCH64:LE:64:v8A",
       "oracle_references": 196,
-      "native_references": 46,
+      "native_references": 44,
       "oracle_data_references": 22,
-      "native_data_references": 23,
+      "native_data_references": 21,
       "matched": 21,
       "missing": [
         [
@@ -944,38 +851,15 @@
           "data"
         ]
       ],
-      "extra": [
-        [
-          [
-            "ram",
-            2165292
-          ],
-          [
-            "ram",
-            2297584
-          ],
-          "data"
-        ],
-        [
-          [
-            "ram",
-            2165340
-          ],
-          [
-            "ram",
-            2297584
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "aarch64_many_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "xref.precision": 0.9975845410628019,
+        "xref.precision": 1.0,
         "xref.recall": 0.38724800750117205,
-        "data_xref.precision": 0.8571428571428571,
+        "data_xref.precision": 1.0,
         "data_xref.recall": 1.0
       },
       "thresholds": {
@@ -995,35 +879,12 @@
       "oracle_sha256": "148f71f7dd0df79bd2b1a8b6b507ac1c7f8a366ccfcd17ec4c356be55c29a13b",
       "native_language": "AARCH64:LE:64:v8A",
       "oracle_references": 2133,
-      "native_references": 828,
+      "native_references": 826,
       "oracle_data_references": 12,
-      "native_data_references": 14,
+      "native_data_references": 12,
       "matched": 12,
       "missing": [],
-      "extra": [
-        [
-          [
-            "ram",
-            2175596
-          ],
-          [
-            "ram",
-            2315416
-          ],
-          "data"
-        ],
-        [
-          [
-            "ram",
-            2175644
-          ],
-          [
-            "ram",
-            2315416
-          ],
-          "data"
-        ]
-      ]
+      "extra": []
     },
     {
       "id": "powerpc_plain_o0",
@@ -1417,8 +1278,8 @@
     }
   ],
   "summary": {
-    "pass": 4,
-    "fail": 16,
+    "pass": 10,
+    "fail": 10,
     "skipped": 0
   },
   "passed": false
