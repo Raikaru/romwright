@@ -35,6 +35,7 @@ struct ReferenceFact {
   std::pair<Word, Word> key() const { return std::make_pair(pc, target); }
   const char *kind() const {
     if ((access & 3) == 3) return "READ_WRITE";
+    if (access & 8) return "DATA"; // INDIRECTION in Ghidra's reference model.
     if (access & 2) return "WRITE";
     if (access & 1) return "READ";
     return "DATA";
@@ -129,11 +130,47 @@ class Propagation {
     references.push_back(ReferenceFact{op.getAddr().getOffset(), address.offset, access});
   }
 
+  unsigned indirectAccess(const PcodeOp &source) const {
+    class JumpEmit : public PcodeEmit {
+    public:
+      bool jump = false;
+      virtual void dump(const Address &, OpCode code, VarnodeData *, VarnodeData *, int4) {
+        jump |= code == CPUI_BRANCHIND;
+      }
+    } emitted;
+    // FlowInfo can replace an unresolved BRANCHIND with CALLIND plus a halt.
+    // Classify the original instruction, not that recovery transformation.
+    arch.translate->oneInstruction(emitted, source.getAddr());
+    return emitted.jump ? 8 : 1;
+  }
+
+  unsigned loadAccess(const PcodeOp &load) const {
+    // Jump operands retain INDIRECTION; propagation records call loads as READ.
+    const Varnode *value = load.getOut();
+    if (value == nullptr)
+      return load.code() == CPUI_CALLIND || load.code() == CPUI_BRANCHIND ?
+          indirectAccess(load) : 1;
+    auto next = load.getBasicIter();
+    for (++next; next != load.getParent()->endOp(); ++next) {
+      const PcodeOp &use = **next;
+      if (use.getAddr() != load.getAddr())
+        break;
+      OpCode code = use.code();
+      if (code != CPUI_CALLIND && code != CPUI_BRANCH && code != CPUI_BRANCHIND &&
+          code != CPUI_CBRANCH)
+        continue;
+      const Varnode *target = use.getIn(0);
+      if (target->getAddr() == value->getAddr() && target->getSize() == value->getSize())
+        return indirectAccess(load);
+    }
+    return 1;
+  }
+
   void memoryReferences(const PcodeOp &op, Snapshot &state) {
     OpCode code = op.code();
     if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
       reference(op, op.getIn(0)->getSpaceFromConst(), get(state, op.getIn(1)),
-                code == CPUI_LOAD ? 1 : 2);
+                code == CPUI_LOAD ? loadAccess(op) : 2);
       if (code == CPUI_STORE)
         reference(op, dataSpace, get(state, op.getIn(2)), 4);
     }
@@ -145,7 +182,7 @@ class Propagation {
         continue;
       AddrSpace *space = input->getSpace();
       reference(op, space, Value::constant(input->getOffset() / space->getWordSize(),
-                                          space->getAddrSize()), 1);
+                                          space->getAddrSize()), loadAccess(op));
     }
     const Varnode *output = op.getOut();
     if (output != nullptr && memorySpace(output->getSpace())) {
@@ -495,7 +532,8 @@ public:
       if (choice == -2)
         continue;
       for (int edge = 0; edge < block->sizeOut(); ++edge) {
-        if (choice >= 0 && block->sizeOut() == 2 && edge != choice)
+        // Ghidra reference analysis follows false conditional branches too.
+        if (!referenceMode && choice >= 0 && block->sizeOut() == 2 && edge != choice)
           continue;
         const auto *next = static_cast<const BlockBasic *>(block->getOut(edge));
         auto position = nodes.lower_bound(next);
