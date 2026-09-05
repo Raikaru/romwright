@@ -81,8 +81,11 @@ def bridge_command(install, java):
 
 
 def generate_reference(command, binary, expected, timeout, *, include_xrefs=False):
+    params = {"session": "oracle", "path": str(binary)}
+    if expected["language_selection"] == "explicit":
+        params.update(language=expected["language"], compiler=expected["compiler"])
     requests = [
-        {"id": 1, "method": "import", "params": {"session": "oracle", "path": str(binary)}},
+        {"id": 1, "method": "import", "params": params},
         {"id": 2, "method": "export_facts" if include_xrefs else "functions",
          "params": {"session": "oracle"}},
         {"id": 3, "method": "close", "params": {"session": "oracle"}},
@@ -108,7 +111,7 @@ def generate_reference(command, binary, expected, timeout, *, include_xrefs=Fals
     if set(replies) != {1, 2, 3} or replies[3].get("ok") is not True:
         raise ValueError("Incomplete bridge response")
     imported = replies[1]
-    reference = {**expected, "language": imported["language"],
+    reference = {**expected, "language": imported["language"], "compiler": imported["compiler"],
                  "image_base": address(imported["image_base"]),
                  "imported_function_count": imported["functions"],
                  "entries": sorted((address(row["entry"]) for row in

@@ -279,3 +279,21 @@ priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and
 DEFAULT remain inferred. The bridge reports the source without manufacturing
 a confidence score. Rust persists ownership separately from the producer
 label and preserves assertions when replacing inferred references.
+
+## Reference oracle analysis context
+
+The M2 reference comparison uses explicit language/compiler pairs through
+Ghidra 12.1.3's `ProgramLoader.Builder.language(String)` and
+`compiler(String)` (Apache-2.0). `PowerPC.opinion` constrains ELF machine 20
+to 32-bit PowerPC but does not select a variant; automatic import selected
+e500 while native ELF import selected the default variant. Their reference
+source decisions differ, so an automatic variant is not a parity baseline.
+The gate declares the four corpus contexts independently, validates the
+oracle's actual language/compiler, and checks the native stored language.
+Native compiler transport is the full language/compiler identity in
+`MappedImage`'s `binaryimage` attribute; the argument-reference regression
+exercises its SysV/Windows ABI difference rather than checking XML text.
+Explicit-context references live under `oracle/xrefs-v1/explicit-context-v1/`;
+the complete automatic-selection references are retained unchanged. No
+reference-kind normalization, precision/recall definition, or threshold is
+changed by choosing matching contexts.

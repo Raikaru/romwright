@@ -71,12 +71,14 @@ final class GhidraBootstrap {
      * Imports a binary under a client-chosen session id, analyzes it, and
      * saves it into the project. Re-importing the same id replaces it.
      */
-    Session importAndAnalyze(String sessionId, Path binary) throws IOException,
+    Session importAndAnalyze(String sessionId, Path binary, String language, String compiler) throws IOException,
             ghidra.util.exception.CancelledException, ghidra.util.exception.VersionException,
             ghidra.util.InvalidNameException {
         closeSession(sessionId);
         try (LoadResults<Program> loadResults = ProgramLoader.builder()
             .source(binary.toFile())
+            .language(language)
+            .compiler(compiler)
             .project(project.getProject())
             .monitor(monitor)
             .load()) {

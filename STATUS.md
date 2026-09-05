@@ -1311,6 +1311,8 @@ M2 — Program-model parity
   native/oracle contexts before classifying remaining propagation mismatches.
   Preserve automatic-selection oracles; explicit-context references use a
   separate cache namespace. Do not change reference metric definitions.
+  Split g0 publication into context-selection code and a separate generated
+  evidence commit; the complete 20-entry diagnostic report is 1,425 lines.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.
@@ -1410,6 +1412,25 @@ M2 — Program-model parity
   comparison is not context-matched: native selects `PowerPC:BE:32:default`,
   while the automatic oracle selected `PowerPC:BE:32:e500`. No propagation
   correction is justified by those mismatches until g0 aligns the contexts.
+
+## m2-002g0 matching analysis contexts
+- Acceptance `0c1bd7c` failed with `Oracle language mismatch`. Explicit
+  default/e500 imports now select the requested language and produce
+  different reference sets; an invalid compiler is rejected.
+- The gate pins language/compiler pairs independently of inferred references,
+  validates actual oracle identities, and checks native stored language.
+  A native ABI regression observes RDI argument references under SysV but
+  not Windows x64. `cargo test --workspace`: 132 pass.
+- All 20 automatic-selection oracle files retain their previous SHA-256.
+  Explicit-context oracles use a separate cache namespace.
+- `benchmarks/reports/m2-002-context.json`: 20 matching contexts; 4 pass,
+  16 fail, 0 skipped. All 5 PowerPC inputs now have data precision 1.0,
+  without changing propagation to compensate for their former e500 oracles.
+  PowerPC recall ranges from 0.5 to 0.9473684210526315.
+- `tests/corpus.sh`: 5/5 pass. Automatic bridge import and native worker
+  smoke paths still run. No M2 gate pass is claimed.
+- Next m2-002 work: isolated reproductions for the remaining mismatch classes,
+  starting with the x86 call fallthrough incorrectly emitted as DATA.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

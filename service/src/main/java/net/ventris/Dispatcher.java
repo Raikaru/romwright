@@ -106,11 +106,19 @@ final class Dispatcher {
         if (!java.nio.file.Files.isRegularFile(binary)) {
             throw new Main.RpcError(-32004, "not a file: " + path);
         }
+        String language = null;
+        String compiler = null;
+        if (params.has("language") || params.has("compiler")) {
+            language = requireString(params, "language");
+            compiler = requireString(params, "compiler");
+        }
         try {
-            Session session = ghidra.importAndAnalyze(sessionId, binary);
+            Session session = ghidra.importAndAnalyze(sessionId, binary, language, compiler);
             JsonObject out = new JsonObject();
             out.addProperty("program", session.programName());
             out.addProperty("language", session.program().getLanguageID().getIdAsString());
+            out.addProperty("compiler",
+                session.program().getCompilerSpec().getCompilerSpecID().getIdAsString());
             // Program.getImageBase(): .ghidra-java/ghidra/program/model/listing/Program.java:473-477.
             out.addProperty("image_base", session.program().getImageBase().toString());
             out.addProperty("functions", session.functionEntries().size());
