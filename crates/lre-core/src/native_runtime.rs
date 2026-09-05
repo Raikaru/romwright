@@ -1372,6 +1372,82 @@ mod tests {
     }
 
     #[test]
+    fn data_references_report_access_kinds() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        // Read a global, update it, materialize a pointer, and store that pointer.
+        let code = vec![
+            0x8b, 0x05, 0xfa, 0x1f, 0, 0, 0x83, 0x05, 0xf3, 0x1f, 0, 0, 1, 0x48, 0x8d, 0x3d, 0xec,
+            0x2f, 0, 0, 0x48, 0x89, 0x3d, 0xed, 0x1f, 0, 0, 0xc3,
+        ];
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x1000,
+                    size: code.len() as u64,
+                    file_off: 0,
+                    flags: 6,
+                    bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x3000,
+                    size: 16,
+                    file_off: 0,
+                    flags: 3,
+                    bytes: vec![1; 16],
+                },
+                crate::native::Mapping {
+                    vaddr: 0x4000,
+                    size: 16,
+                    file_off: 0,
+                    flags: 2,
+                    bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        session
+            .send("references 0x1000 0x101c 0 0x1000 0x101c 6 0x3000 0x3010 3 0x4000 0x4010 2\n")
+            .unwrap();
+        let response = read_until_prompt(&mut session.reader).unwrap();
+        let payload = response
+            .lines()
+            .find_map(|line| line.trim().strip_prefix("REFERENCES "))
+            .unwrap_or_else(|| panic!("reference query failed: {response}"));
+        let refs: Vec<serde_json::Value> = serde_json::from_str(payload).unwrap();
+        for (from, to, kind) in [
+            (0x1000, 0x3000, "READ"),
+            (0x1006, 0x3000, "READ_WRITE"),
+            (0x100d, 0x4000, "DATA"),
+            (0x1014, 0x3008, "WRITE"),
+        ] {
+            assert!(
+                refs.iter().any(|reference| reference["from"] == from
+                    && reference["to"] == to
+                    && reference["kind"] == kind),
+                "missing {kind} {from:#x} -> {to:#x}: {refs:?}"
+            );
+        }
+        assert!(
+            refs.iter().all(|reference| matches!(
+                reference["to"].as_u64(),
+                Some(0x3000 | 0x3008 | 0x4000)
+            )),
+            "{refs:?}"
+        );
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
