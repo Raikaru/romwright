@@ -148,7 +148,8 @@ def main():
                 reference = json.loads(reference_path.read_text()) if reference_path.exists() else {}
                 if (any(reference.get(k) != v for k, v in expected.items()) or "xrefs" not in reference or
                         any("instruction" not in ref for ref in reference.get("xrefs", []))):
-                    reference = generate_reference(command, binary, expected, args.timeout)
+                    reference = generate_reference(command, binary, expected, args.timeout,
+                                                   include_xrefs=True)
                     write_reference(reference_path, reference)
                 validate_reference(reference, expected)
                 oracle = triples(reference["xrefs"])

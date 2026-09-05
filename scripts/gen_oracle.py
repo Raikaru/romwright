@@ -80,10 +80,11 @@ def bridge_command(install, java):
             "net.ventris.Main", "--install-dir", str(install)]
 
 
-def generate_reference(command, binary, expected, timeout):
+def generate_reference(command, binary, expected, timeout, *, include_xrefs=False):
     requests = [
         {"id": 1, "method": "import", "params": {"session": "oracle", "path": str(binary)}},
-        {"id": 2, "method": "export_facts", "params": {"session": "oracle"}},
+        {"id": 2, "method": "export_facts" if include_xrefs else "functions",
+         "params": {"session": "oracle"}},
         {"id": 3, "method": "close", "params": {"session": "oracle"}},
     ]
     # One isolated project per input. EOF invokes the bridge's existing shutdown path.
@@ -110,9 +111,11 @@ def generate_reference(command, binary, expected, timeout):
     reference = {**expected, "language": imported["language"],
                  "image_base": address(imported["image_base"]),
                  "imported_function_count": imported["functions"],
-                 "entries": sorted((address(row["entry"]) for row in replies[2]["functions"]),
-                                   key=lambda entry: int(entry, 16)),
-                 "xrefs": replies[2]["xrefs"]}
+                 "entries": sorted((address(row["entry"]) for row in
+                                    (replies[2]["functions"] if include_xrefs else replies[2])),
+                                   key=lambda entry: int(entry, 16))}
+    if include_xrefs:
+        reference["xrefs"] = replies[2]["xrefs"]
     validate_reference(reference, expected)
     return reference
 

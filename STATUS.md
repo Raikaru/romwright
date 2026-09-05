@@ -1312,6 +1312,17 @@ M2 — Program-model parity
 - Score every reference produced by `native-analysis:constant-propagation`;
   do not mask erroneous native PCs or targets with oracle eligibility.
 
+## m2-002b native reference query
+- `references` reports instruction-origin READ, WRITE, READ_WRITE and DATA
+  records without mutating the loaded image. Rust exposes typed query rows.
+- Access-kind regression passes; all 9 native-runtime tests pass.
+  `cargo test --workspace`: 128 tests pass. `tests/corpus.sh`: 5/5 pass.
+- Differential acceptance still fails 20/20 inputs with data precision and
+  recall both 0.0: native import does not yet persist the new query results.
+  Raw oracle exports remain separate from the function-only M1 format.
+- Remaining m2-002 slices: c (durable ownership/confidence and assertion
+  preservation), then d (import integration and differential gate).
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.

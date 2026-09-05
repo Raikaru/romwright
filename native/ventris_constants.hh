@@ -29,6 +29,18 @@ struct Fact {
   }
 };
 
+struct ReferenceFact {
+  Word pc, target;
+  unsigned access;
+  std::pair<Word, Word> key() const { return std::make_pair(pc, target); }
+  const char *kind() const {
+    if ((access & 3) == 3) return "READ_WRITE";
+    if (access & 2) return "WRITE";
+    if (access & 1) return "READ";
+    return "DATA";
+  }
+};
+
 struct Snapshot {
   State registers, memory;
   std::map<Location, unsigned char> modified;
@@ -80,6 +92,65 @@ class Propagation {
   int pointerSize, uniqueSpace, spaceCount, stackBase = -1;
   bool bigEndian, trustWritable;
   std::size_t operations = 0;
+  std::vector<ReferenceFact> references;
+  std::vector<Word> instructionStarts;
+  bool collectReferences = false;
+
+  void reference(const PcodeOp &op, AddrSpace *space, Value value, unsigned access) {
+    Location address;
+    if (!collectReferences || value.base >= 0 || !location(space, value, address) ||
+        address.offset < 4 || address.offset > space->getHighest() || region(address.offset) == nullptr)
+      return;
+    if (access == 4) {
+      if (address.offset < 1024 || space->getHighest() - address.offset < 256 ||
+          address.offset == 0xffff || address.offset == 0xffffffff)
+        return;
+      // Pure data must not point into this function's decoded instructions.
+      // Do not use the caller's bounding range as a containment approximation.
+      if (address.offset != first) {
+        if (instructionStarts.empty()) {
+          const BlockGraph &graph = function.getBasicBlocks();
+          for (int index = 0; index < graph.getSize(); ++index) {
+            const auto *block = static_cast<const BlockBasic *>(graph.getBlock(index));
+            for (auto it = block->beginOp(); it != block->endOp(); ++it)
+              instructionStarts.push_back((*it)->getAddr().getOffset());
+          }
+          std::sort(instructionStarts.begin(), instructionStarts.end());
+          instructionStarts.erase(std::unique(instructionStarts.begin(), instructionStarts.end()),
+                                  instructionStarts.end());
+        }
+        if (std::binary_search(instructionStarts.begin(), instructionStarts.end(), address.offset))
+          return;
+      }
+    }
+    references.push_back(ReferenceFact{op.getAddr().getOffset(), address.offset, access});
+  }
+
+  void memoryReferences(const PcodeOp &op, Snapshot &state) {
+    OpCode code = op.code();
+    if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
+      reference(op, op.getIn(0)->getSpaceFromConst(), get(state, op.getIn(1)),
+                code == CPUI_LOAD ? 1 : 2);
+      if (code == CPUI_STORE)
+        reference(op, dataSpace, get(state, op.getIn(2)), 4);
+    }
+    // Raw flow can represent fixed-address loads/stores as memory varnodes.
+    for (int index = 0; index < op.numInput(); ++index) {
+      const Varnode *input = op.getIn(index);
+      if (!memorySpace(input->getSpace()) ||
+          ((code == CPUI_BRANCH || code == CPUI_CBRANCH || code == CPUI_CALL) && index == 0))
+        continue;
+      AddrSpace *space = input->getSpace();
+      reference(op, space, Value::constant(input->getOffset() / space->getWordSize(),
+                                          space->getAddrSize()), 1);
+    }
+    const Varnode *output = op.getOut();
+    if (output != nullptr && memorySpace(output->getSpace())) {
+      AddrSpace *space = output->getSpace();
+      reference(op, space, Value::constant(output->getOffset() / space->getWordSize(),
+                                          space->getAddrSize()), 2);
+    }
+  }
 
   bool memorySpace(const AddrSpace *space) const {
     return space == dataSpace || space == codeSpace;
@@ -281,6 +352,8 @@ class Propagation {
         return -2;
       state.registers.beginInstruction(op.getAddr().getSpace()->getIndex(), op.getAddr().getOffset());
       OpCode code = op.code();
+      if (collectReferences)
+        memoryReferences(op, state);
       if (code == CPUI_CBRANCH && op.numInput() == 2) {
         Value condition = get(state, op.getIn(1));
         if (condition.complete(op.getIn(1)->getSize()))
@@ -337,6 +410,9 @@ class Propagation {
                               output->getSize(), value);
         }
         observe(facts, op, value);
+        if (collectReferences && code != CPUI_LOAD && !memorySpace(output->getSpace()) &&
+            value.complete(value.size))
+          reference(op, dataSpace, value, 4);
       }
     }
     return branch;
@@ -390,7 +466,7 @@ public:
       stackRegister = &stack->getSpacebase(0);
   }
 
-  std::vector<Fact> run() {
+  std::vector<Fact> run(bool referenceMode = false) {
     const BlockGraph &graph = function.getBasicBlocks();
     if (graph.getSize() == 0 || function.hasBadData() || function.hasUnimplemented())
       throw LowlevelError("Constant propagation requires decodable function flow");
@@ -432,20 +508,39 @@ public:
       }
     }
     std::vector<Fact> facts;
+    collectReferences = referenceMode;
     for (const auto &entry : nodes) {
       Snapshot final = entry.second.input;
-      transfer(*entry.first, final, &facts);
+      transfer(*entry.first, final, referenceMode ? nullptr : &facts);
     }
     std::sort(facts.begin(), facts.end(), [](const Fact &a, const Fact &b) { return a.key() < b.key(); });
     facts.erase(std::unique(facts.begin(), facts.end(),
         [](const Fact &a, const Fact &b) { return a.key() == b.key(); }), facts.end());
     return facts;
   }
+
+  const std::vector<ReferenceFact> &referenceFacts() {
+    std::sort(references.begin(), references.end(),
+        [](const ReferenceFact &a, const ReferenceFact &b) { return a.key() < b.key(); });
+    std::size_t count = 0;
+    for (std::size_t index = 0; index < references.size(); ++index) {
+      if (count != 0 && references[count - 1].key() == references[index].key())
+        references[count - 1].access |= references[index].access;
+      else {
+        if (count != index)
+          references[count] = references[index];
+        ++count;
+      }
+    }
+    references.resize(count);
+    return references;
+  }
 };
 
 } // namespace ventris_constants
 
 class IfcConstants : public IfaceDecompCommand {
+  bool referenceMode;
   static void writeString(ostream &out, const string &value) {
     const char *digits = "0123456789abcdef";
     out << '"';
@@ -461,6 +556,7 @@ class IfcConstants : public IfaceDecompCommand {
   }
 
 public:
+  explicit IfcConstants(bool references = false) : referenceMode(references) {}
   virtual void execute(istream &input) {
     if (dcp->conf == nullptr)
       throw IfaceExecutionError("No architecture loaded");
@@ -468,7 +564,7 @@ public:
     unsigned trust;
     input.unsetf(ios::basefield);
     if (!(input >> start >> end >> trust) || start >= end || trust > 1)
-      throw IfaceParseError("Expected constants <start> <end-exclusive> <trust-writable:0|1> <start> <end> <flags> ...");
+      throw IfaceParseError("Expected propagation <start> <end-exclusive> <trust-writable:0|1> <start> <end> <flags> ...");
     vector<ventris_constants::Region> regions;
     while (true) {
       input >> ws;
@@ -504,10 +600,19 @@ public:
                       symbol.owner, entry, nullptr, 0);
     function.followFlow(entry, Address(space, end));
     ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0);
-    vector<ventris_constants::Fact> facts = propagation.run();
+    vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;
-    out << "CONSTANTS [" << dec;
+    out << (referenceMode ? "REFERENCES [" : "CONSTANTS [") << dec;
     bool first = true;
+    if (referenceMode) {
+      for (const auto &fact : propagation.referenceFacts()) {
+        if (!first)
+          out << ',';
+        first = false;
+        out << "{\"from\":" << fact.pc << ",\"to\":" << fact.target
+            << ",\"kind\":\"" << fact.kind() << "\"}";
+      }
+    }
     for (const auto &fact : facts) {
       if (!first)
         out << ',';

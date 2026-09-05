@@ -300,7 +300,7 @@ index e62ab6a..6d42a2d 100644
  }
  #include "pcodeparse.hh"
  #include "blockaction.hh"
-@@ -63,6 +67,10 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
+@@ -63,6 +67,11 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
    status->registerCom(new IfcMapconvert(),"map","convert");
    status->registerCom(new IfcMapunionfacet(), "map", "unionfacet");
    status->registerCom(new IfcPrintdisasm(),"disassemble");
@@ -308,10 +308,11 @@ index e62ab6a..6d42a2d 100644
 +  status->registerCom(new IfcLinkage(),"linkage");
 +  status->registerCom(new IfcFunctionStarts(),"functionstarts");
 +  status->registerCom(new IfcConstants(),"constants");
++  status->registerCom(new IfcConstants(true),"references");
    status->registerCom(new IfcDecompile(),"decompile");
    status->registerCom(new IfcDump(),"dump");
    status->registerCom(new IfcDumpbinary(),"binary");
-@@ -829,6 +837,18 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -829,6 +838,18 @@ void IfcPrintdisasm::execute(istream &s)
    }
    IfaceAssemblyEmit assem(status->fileoptr,10);
    while(size > 0) {
