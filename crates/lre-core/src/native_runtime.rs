@@ -1422,12 +1422,14 @@ mod tests {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
-        // Read a global, update it, materialize a pointer, and store that pointer.
+        // Direct accesses and pointers; indirect flow slots are DATA, not READ.
         let code = vec![
             0x8b, 0x05, 0xfa, 0x1f, 0, 0, 0x83, 0x05, 0xf3, 0x1f, 0, 0, 1, 0x48, 0x8d, 0x3d, 0xec,
             0x2f, 0, 0, 0x48, 0x89, 0x3d, 0xed, 0x1f, 0, 0,
-            // Conditional exit to another mapped function; otherwise return.
-            0x85, 0xf6, 0x0f, 0x85, 0xdd, 0x0f, 0, 0, 0xc3,
+            0xff, 0x15, 0xe7, 0x1f, 0, 0, // call [0x3008]
+            // Conditional bounded exit, otherwise jump through a memory slot.
+            0x85, 0xf6, 0x0f, 0x85, 0xd7, 0x0f, 0, 0,
+            0xff, 0x25, 0xd1, 0x1f, 0, 0, // jmp [0x3000]
         ];
         let import = NativeImport {
             language: cfg.language_id.clone(),
@@ -1465,12 +1467,14 @@ mod tests {
         };
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        let refs = session.references(0x1000, 0x1024, &import.mappings, false).unwrap();
+        let refs = session.references(0x1000, 0x102f, &import.mappings, false).unwrap();
         for (from, to, kind) in [
             (0x1000, 0x3000, ReferenceKind::Read),
             (0x1006, 0x3000, ReferenceKind::ReadWrite),
             (0x100d, 0x4000, ReferenceKind::Data),
             (0x1014, 0x3008, ReferenceKind::Write),
+            (0x101b, 0x3008, ReferenceKind::Data),
+            (0x1029, 0x3000, ReferenceKind::Data),
         ] {
             assert!(
                 refs.iter().any(|reference| reference.from == from
@@ -1486,7 +1490,7 @@ mod tests {
             )),
             "{refs:?}"
         );
-        assert!(refs.iter().all(|reference| (0x1000..0x1024).contains(&reference.from)),
+        assert!(refs.iter().all(|reference| (0x1000..0x102f).contains(&reference.from)),
                 "reference inference escaped the function bounds: {refs:?}");
     }
 
