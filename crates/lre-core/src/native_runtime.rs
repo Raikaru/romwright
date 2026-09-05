@@ -1422,7 +1422,7 @@ mod tests {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
-        // Direct accesses and pointers; indirect flow slots are DATA, not READ.
+        // Direct accesses and pointers; indirect jump slots are DATA, calls READ.
         let code = vec![
             0x8b, 0x05, 0xfa, 0x1f, 0, 0, 0x83, 0x05, 0xf3, 0x1f, 0, 0, 1, 0x48, 0x8d, 0x3d, 0xec,
             0x2f, 0, 0, 0x48, 0x89, 0x3d, 0xed, 0x1f, 0, 0,
@@ -1477,7 +1477,7 @@ mod tests {
             (0x1006, 0x3000, ReferenceKind::ReadWrite),
             (0x100d, 0x4000, ReferenceKind::Data),
             (0x1014, 0x3008, ReferenceKind::Write),
-            (0x101b, 0x3008, ReferenceKind::Data),
+            (0x101b, 0x3008, ReferenceKind::Read),
             (0x1029, 0x3000, ReferenceKind::Data),
         ] {
             assert!(
