@@ -260,6 +260,15 @@ Literal references follow `ScalarOperandAnalyzer` and the SLEIGH
 `native/ventris_operand_refs.hh` walks decoded display operands, not assembly
 text or incidental p-code constants. Direct control-flow targets keep their
 flow classification; address literals in comparisons need no pointer output.
+Computed values are not references merely because they equal mapped addresses.
+Register argument/return uses follow `SymbolicPropogator.addParamReferences`,
+`addReturnReferences`, and `createVariableStorageReference`. The native query
+uses compiler-model storage for up to eight untyped register arguments (not
+guessed stack arguments), then traces reaching setters through raw-flow
+predecessors. Equal values at a join retain both possible origins. Source
+search shares the propagation operation bound; it does not maintain a second
+copy of every register state. `VarnodeContext`'s last-set lookup provides the
+source policy; when no setter is available, the consuming instruction is used.
 The importer reuses discovery's loaded console and collects the complete pass
 before publishing any of its rows. ELF, PE and DOL mapping permissions use
 the same low three bits; higher ELF section attributes are not wire flags.

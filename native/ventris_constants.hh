@@ -97,6 +97,94 @@ class Propagation {
   std::vector<ReferenceFact> references;
   std::vector<Word> instructionStarts;
   bool collectReferences = false;
+  std::vector<ParameterPieces> pointerStorage;
+  std::vector<const BlockBasic *> originPending, originVisited;
+
+  void initializePointerStorage() {
+    PrototypePieces prototype;
+    prototype.model = arch.defaultfp;
+    prototype.outtype = arch.types->getBase(pointerSize, TYPE_UINT);
+    prototype.intypes.assign(8, prototype.outtype);
+    prototype.firstVarArgSlot = -1;
+    arch.defaultfp->assignParameterStorage(prototype, pointerStorage, true);
+  }
+
+  void storageReference(const PcodeOp &consumer, const ParameterPieces &storage,
+                        Value value) {
+    // VarnodeContext records the written register and its parents, not
+    // unwritten child aliases. Preserve that distinction for wide registers.
+    originPending.clear();
+    originVisited.clear();
+    originPending.push_back(consumer.getParent());
+    bool initial = true;
+    while (!originPending.empty()) {
+      const BlockBasic *block = originPending.back();
+      originPending.pop_back();
+      auto cursor = block->endOp();
+      if (initial) {
+        cursor = consumer.getBasicIter();
+        initial = false;
+      } else {
+        if (std::find(originVisited.begin(), originVisited.end(), block) != originVisited.end())
+          continue;
+        originVisited.push_back(block);
+      }
+      const PcodeOp *setter = nullptr;
+      while (cursor != block->beginOp()) {
+        if (++operations > 1000000)
+          throw LowlevelError("Constant propagation exceeds one million p-code operations");
+        const PcodeOp &op = **--cursor;
+        const Varnode *output = op.getOut();
+        if (output != nullptr && output->getSpace() == storage.addr.getSpace() &&
+            output->getOffset() >= storage.addr.getOffset() &&
+            output->getSize() <= pointerSize &&
+            output->getOffset() - storage.addr.getOffset() <= Word(pointerSize - output->getSize())) {
+          setter = &op;
+          break;
+        }
+        if ((op.code() == CPUI_CALL || op.code() == CPUI_CALLIND) &&
+            !pointerStorage.empty() && storage.addr == pointerStorage.front().addr) {
+          setter = &op;
+          break;
+        }
+      }
+      if (setter != nullptr)
+        reference(*setter, dataSpace, value, 4);
+      else if (block->sizeIn() == 0)
+        reference(consumer, dataSpace, value, 4);
+      else {
+        for (int index = 0; index < block->sizeIn(); ++index)
+          originPending.push_back(static_cast<const BlockBasic *>(block->getIn(index)));
+      }
+    }
+  }
+
+  void useReferences(const PcodeOp &op, Snapshot &state) {
+    bool returning = op.code() == CPUI_RETURN;
+    if (!returning && op.code() != CPUI_CALL && op.code() != CPUI_CALLIND)
+      return;
+    Word target = ~Word(0);
+    if (op.code() == CPUI_CALL) {
+      const FuncCallSpecs *call = function.getCallSpecs(&op);
+      if (call != nullptr && !call->getEntryAddress().isInvalid())
+        target = call->getEntryAddress().getOffset();
+    }
+    std::size_t begin = returning ? 0 : 1;
+    std::size_t finish = returning ? std::min(std::size_t(1), pointerStorage.size()) :
+        pointerStorage.size();
+    for (std::size_t index = begin; index < finish; ++index) {
+      const ParameterPieces &storage = pointerStorage[index];
+      if (storage.addr.isInvalid() || storage.type->getSize() != pointerSize)
+        continue;
+      AddrSpace *space = storage.addr.getSpace();
+      // Unknown signatures do not justify reading guessed stack arguments.
+      if (space->getType() != IPTR_PROCESSOR || memorySpace(space))
+        continue;
+      Value value = state.registers.get(space->getIndex(), storage.addr.getOffset(), pointerSize);
+      if (value.complete(pointerSize) && value.bits != target && region(value.bits) != nullptr)
+        storageReference(op, storage, value);
+    }
+  }
 
   void reference(const PcodeOp &op, AddrSpace *space, Value value, unsigned access) {
     Location address;
@@ -440,8 +528,10 @@ class Propagation {
         return -2;
       state.registers.beginInstruction(op.getAddr().getSpace()->getIndex(), op.getAddr().getOffset());
       OpCode code = op.code();
-      if (collectReferences)
+      if (collectReferences) {
         memoryReferences(op, state);
+        useReferences(op, state);
+      }
       if (code == CPUI_CBRANCH && op.numInput() == 2) {
         Value condition = get(state, op.getIn(1));
         if (condition.complete(op.getIn(1)->getSize()))
@@ -498,9 +588,6 @@ class Propagation {
                               output->getSize(), value);
         }
         observe(facts, op, value);
-        if (collectReferences && code != CPUI_LOAD && !memorySpace(output->getSpace()) &&
-            value.complete(value.size))
-          reference(op, dataSpace, value, 4);
       }
     }
     return branch;
@@ -598,8 +685,10 @@ public:
     }
     std::vector<Fact> facts;
     collectReferences = referenceMode;
-    if (referenceMode)
+    if (referenceMode) {
+      initializePointerStorage();
       literalReferences();
+    }
     for (const auto &entry : nodes) {
       Snapshot final = entry.second.input;
       transfer(*entry.first, final, referenceMode ? nullptr : &facts);
