@@ -1682,6 +1682,41 @@ mod tests {
     }
 
     #[test]
+    fn scalar_reference_eligibility_respects_instruction_alignment() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "AARCH64:LE:64:v8A".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/AARCH64/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x1000, size: 8, file_off: 0, flags: 6,
+                    bytes: vec![0x01, 0x80, 0x01, 0x10, 0xc0, 0x03, 0x5f, 0xd6], // adr x1,0x4000; ret
+                },
+                crate::native::Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1008, &import.mappings, false).unwrap();
+        assert!(refs.is_empty(), "unused ADR is not a scalar reference: {refs:?}");
+        import.mappings[0].bytes[0] = 0; // adr x0,0x4000; ret
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1008, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x1000, to: 0x4000, kind: ReferenceKind::Data },
+        ], "returned addresses remain eligible for computed reference inference");
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
