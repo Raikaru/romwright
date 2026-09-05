@@ -143,7 +143,7 @@ pub struct FunctionRow {
 }
 
 /// One cross-reference record.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct XrefRow {
     /// Source (incoming) address (typed).
     pub from: Address,
@@ -154,9 +154,27 @@ pub struct XrefRow {
     /// Name of the function containing the source address, resolved at
     /// query time; None for data xrefs or unmapped sources.
     pub function: Option<String>,
-    /// Producer/provenance label.
+    /// Ownership, producing pass, and optional confidence of this fact.
     #[serde(default)]
-    pub provenance: String,
+    pub provenance: XrefProvenance,
+}
+
+/// Assertions survive replacement of inferred analysis results.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum FactKind {
+    Inferred,
+    #[default]
+    Asserted,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct XrefProvenance {
+    pub kind: FactKind,
+    pub source: String,
+    /// A supplied confidence in [0, 1]; None means unknown, not zero.
+    #[serde(default)]
+    pub confidence: Option<f64>,
 }
 
 /// One symbol row.

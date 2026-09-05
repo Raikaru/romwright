@@ -72,7 +72,7 @@ cmake --build build/ventris-qt --target package --config Release
 
 ## API, scripting, and extensions
 
-The versioned Core API uses newline-delimited JSON over stdio or `POST /v1`
+The versioned Core API uses newline-delimited JSON over stdio or `POST /v2`
 over HTTP. It is the same `lre-core` service used by the CLI and desktop
 bridge:
 
@@ -84,6 +84,12 @@ python3 python/ventris_console.py --project ./proj \
   -c 'print(client.ping())'
 python3 python/ventris_plugin_host.py plugin.py --project ./proj --permission read
 ```
+
+API envelopes use `"api": 2`. Xref `provenance` is an object containing
+`kind` (`inferred` or `asserted`), `source`, and `confidence` (a value in
+`[0, 1]`, or `null` when unknown). Version-1 envelopes and `/v1` are rejected.
+Opening a project migrates xref storage to schema 5; analysis replacement
+preserves asserted references, including legacy rows of unknown ownership.
 
 `python/ventris_sdk.py` is dependency-free and supports both transports.
 `ventris_plugin_host.py` runs each plugin in a child process and gates API

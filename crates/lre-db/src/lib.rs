@@ -9,13 +9,13 @@ use lre_model::{
     BookmarkRow, CollaborationOp, CommentRow, DataTypeRow, FunctionRow, GraphEdge, GraphNode,
     JournalEntry, MemoryRegion, PatchRow, ProgramId, PrototypeRow, Provenance, RevisionEvent,
     SearchHit, StackVariableRow, StringRow, SymbolRow, TraceEvent, TypeDefRow, TypeFieldRow,
-    TypeGraphNode, TypeLinkRow, XrefRow,
+    TypeGraphNode, TypeLinkRow, XrefRow, FactKind, XrefProvenance,
 };
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 4;
+pub const SCHEMA_VERSION: i64 = 5;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -35,6 +35,8 @@ pub enum DbError {
     /// Stored collaboration operation was not present.
     #[error("collaboration operation not found: {0}")]
     OperationNotFound(String),
+    #[error("invalid xref provenance: {0}")]
+    InvalidXrefProvenance(String),
 
 }
 /// Convenience alias with the error defaulted per project convention.
@@ -344,7 +346,6 @@ impl ProjectDb {
                  ON collaboration_ops(program_id, lamport, actor, op_id);
              COMMIT;",
         )?;
-        let _ = self.conn.execute("ALTER TABLE xrefs ADD COLUMN provenance TEXT NOT NULL DEFAULT ''", []);
         let v_text: String = self
             .conn
             .query_row("SELECT value FROM meta WHERE key='schema_version'", [], |r| {
@@ -361,10 +362,29 @@ impl ProjectDb {
             )));
         }
         if v < SCHEMA_VERSION {
-            self.conn.execute(
+            let tx = self.conn.unchecked_transaction()?;
+            let has_provenance: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM pragma_table_info('xrefs') WHERE name = 'provenance')",
+                [], |row| row.get(0),
+            )?;
+            if !has_provenance {
+                tx.execute("ALTER TABLE xrefs ADD COLUMN provenance TEXT NOT NULL DEFAULT ''", [])?;
+            }
+            tx.execute_batch(
+                "ALTER TABLE xrefs ADD COLUMN provenance_kind TEXT NOT NULL DEFAULT 'asserted'
+                     CHECK(provenance_kind IN ('asserted', 'inferred'));
+                 ALTER TABLE xrefs ADD COLUMN confidence REAL
+                     CHECK(confidence >= 0 AND confidence <= 1);
+                 UPDATE xrefs SET provenance_kind = 'inferred'
+                     WHERE provenance = 'native-import'
+                        OR provenance GLOB 'native-import:*'
+                        OR provenance GLOB 'native-analysis:*';"
+            )?;
+            tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
             )?;
+            tx.commit()?;
         }
         Ok(())
     }
@@ -449,22 +469,77 @@ impl ProjectDb {
         Ok(())
     }
 
-    /// Replaces the xref set of a program inside one transaction.
+    /// Replace analysis results while retaining existing analyst assertions.
     pub fn replace_xrefs(&self, program: ProgramId, rows: &[XrefRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM xrefs WHERE program_id = ?1", params![program.0])?;
-        let mut stmt = tx
-            .prepare("INSERT INTO xrefs(program_id, src, dst, kind, provenance) VALUES (?1, ?2, ?3, ?4, ?5)")?;
+        tx.execute(
+            "DELETE FROM xrefs WHERE program_id = ?1 AND provenance_kind = 'inferred'",
+            params![program.0],
+        )?;
+        Self::insert_xrefs(&tx, program, rows, None)?;
+        self.bump_and_record(&tx, program, "replace-xrefs", &rows.len().to_string())?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Atomically replace one inference pass without deleting other producers.
+    pub fn replace_inferred_xrefs(
+        &self, program: ProgramId, source: &str, rows: &[XrefRow],
+    ) -> Result<()> {
+        if source.trim().is_empty() {
+            return Err(DbError::InvalidXrefProvenance("inference source is empty".into()));
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "DELETE FROM xrefs WHERE program_id = ?1 AND provenance = ?2
+                 AND provenance_kind = 'inferred'",
+            params![program.0, source],
+        )?;
+        Self::insert_xrefs(&tx, program, rows, Some(source))?;
+        self.bump_and_record(&tx, program, "replace-inferred-xrefs", source)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    fn insert_xrefs(
+        tx: &rusqlite::Transaction<'_>, program: ProgramId, rows: &[XrefRow],
+        expected_source: Option<&str>,
+    ) -> Result<()> {
+        let mut stmt = tx.prepare(
+            "INSERT INTO xrefs(program_id, src, dst, kind, provenance, provenance_kind, confidence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(program_id, src, dst, kind) DO UPDATE SET
+                 provenance = excluded.provenance,
+                 provenance_kind = excluded.provenance_kind,
+                 confidence = excluded.confidence
+             WHERE xrefs.provenance_kind = 'inferred' OR excluded.provenance_kind = 'asserted'"
+        )?;
         let mut seen = std::collections::HashSet::new();
-        for r in rows {
-            if !seen.insert((r.from.clone(), r.to.clone(), r.kind.clone())) {
+        for row in rows {
+            let provenance = &row.provenance;
+            if expected_source.is_some_and(|source|
+                provenance.kind != FactKind::Inferred || provenance.source != source)
+            {
+                return Err(DbError::InvalidXrefProvenance("row does not belong to the inference pass".into()));
+            }
+            if provenance.kind == FactKind::Inferred && provenance.source.trim().is_empty() {
+                return Err(DbError::InvalidXrefProvenance("inference source is empty".into()));
+            }
+            if provenance.confidence.is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value)) {
+                return Err(DbError::InvalidXrefProvenance("confidence must be finite and within [0, 1]".into()));
+            }
+            if !seen.insert((&row.from, &row.to, row.kind.as_str(), provenance.kind)) {
                 continue;
             }
-            stmt.execute(params![program.0, addr_cell(&r.from), addr_cell(&r.to), r.kind, r.provenance])?;
+            let ownership = match provenance.kind {
+                FactKind::Inferred => "inferred",
+                FactKind::Asserted => "asserted",
+            };
+            stmt.execute(params![
+                program.0, addr_cell(&row.from), addr_cell(&row.to), row.kind,
+                provenance.source, ownership, provenance.confidence,
+            ])?;
         }
-        drop(stmt);
-                self.bump_and_record(&tx, program, "replace-xrefs", &format!("{}", rows.len()))?;
-        tx.commit()?;
         Ok(())
     }
 
@@ -689,14 +764,14 @@ impl ProjectDb {
             ("SELECT x.src, x.dst, x.kind, \
               (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
                AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
-              x.provenance \
+              x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.dst = ?2
               ORDER BY x.src LIMIT ?3 OFFSET ?4", dst)
         } else {
             ("SELECT x.src, x.dst, x.kind, \
               (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
                AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
-              x.provenance \
+              x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.src = ?2
               ORDER BY x.dst LIMIT ?3 OFFSET ?4", src)
         };
@@ -713,7 +788,7 @@ impl ProjectDb {
             "SELECT x.src, x.dst, x.kind, \
               (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
                AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
-              x.provenance \
+              x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.dst = ?2 ORDER BY x.src",
         )?;
         let rows = stmt
@@ -728,7 +803,7 @@ impl ProjectDb {
             "SELECT x.src, x.dst, x.kind, \
               (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
                AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
-              x.provenance \
+              x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.src = ?2 ORDER BY x.dst",
         )?;
         let rows = stmt
@@ -742,7 +817,7 @@ impl ProjectDb {
             "SELECT x.src, x.dst, x.kind, \
               (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
                AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
-              x.provenance \
+              x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 ORDER BY x.src, x.dst",
         )?;
         let rows = stmt
@@ -2012,12 +2087,25 @@ fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
 }
 
 fn map_xref(r: &Row<'_>) -> rusqlite::Result<XrefRow> {
+    let ownership: String = r.get(5)?;
+    let kind = match ownership.as_str() {
+        "inferred" => FactKind::Inferred,
+        "asserted" => FactKind::Asserted,
+        _ => return Err(rusqlite::Error::FromSqlConversionFailure(
+            5, rusqlite::types::Type::Text,
+            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "unknown xref ownership")),
+        )),
+    };
     Ok(XrefRow {
         from: addr_from_cell(r.get(0)?),
         to: addr_from_cell(r.get(1)?),
         kind: r.get(2)?,
         function: r.get(3)?,
-        provenance: r.get::<_, Option<String>>(4)?.unwrap_or_default(),
+        provenance: XrefProvenance {
+            source: r.get(4)?,
+            kind,
+            confidence: r.get(6)?,
+        },
     })
 }
 
@@ -2333,7 +2421,7 @@ mod tests {
             from: lre_model::Address::ram(0x400488),
             to: lre_model::Address::ram(0x400466),
             kind: "UNCONDITIONAL_CALL".into(),
-            provenance: String::new(),
+            provenance: XrefProvenance::default(),
         }];
         db.replace_xrefs(id, &rows).unwrap();
         assert_eq!(db.xrefs_to(id, &lre_model::Address::ram(0x400466)).unwrap().len(), 1);
@@ -2370,6 +2458,12 @@ mod tests {
         let before = db.xrefs(id).unwrap();
         let revision = db.revision(id).unwrap();
         assert!(db.replace_inferred_xrefs(id, source, &[other.clone()]).is_err());
+        assert_eq!(db.xrefs(id).unwrap(), before);
+        assert_eq!(db.revision(id).unwrap(), revision);
+        // SQLite converts NaN to NULL; reject it before it can become "unknown".
+        let mut invalid = row(0x1040, FactKind::Inferred, source);
+        invalid.provenance.confidence = Some(f64::NAN);
+        assert!(db.replace_inferred_xrefs(id, source, &[invalid]).is_err());
         assert_eq!(db.xrefs(id).unwrap(), before);
         assert_eq!(db.revision(id).unwrap(), revision);
         db.replace_inferred_xrefs(id, source, &[]).unwrap();
@@ -2454,7 +2548,7 @@ mod tests {
                 from: entry.clone(),
                 to: lre_model::Address::ram(0x401000),
                 kind: "DATA".into(),
-                provenance: String::new(),
+                provenance: XrefProvenance::default(),
             }],
         )
         .unwrap();

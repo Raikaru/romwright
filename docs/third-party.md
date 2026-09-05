@@ -246,3 +246,9 @@ instruction-origin READ, WRITE, READ_WRITE and DATA records; reads and
 writes to the same target in one instruction are combined. Internal affine
 stack identities are not program-memory targets. The query does not write
 database rows; ownership and persistence belong to the Rust core.
+
+Reference ownership uses `Reference.getSource` and the documented `SourceType`
+priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and
+DEFAULT remain inferred. The bridge reports the source without manufacturing
+a confidence score. Rust persists ownership separately from the producer
+label and preserves assertions when replacing inferred references.

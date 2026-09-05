@@ -1323,6 +1323,20 @@ M2 — Program-model parity
 - Remaining m2-002 slices: c (durable ownership/confidence and assertion
   preservation), then d (import integration and differential gate).
 
+## m2-002c durable reference ownership
+- Acceptance `82941db` failed on missing typed ownership and pass replacement.
+  The ownership, rollback and schema-4 migration regressions now pass.
+- Schema 5 stores source, inferred/asserted ownership and nullable confidence.
+  Unknown legacy ownership is preserved as asserted; no confidence is invented.
+  NaN is rejected before SQLite can convert it to NULL.
+- The incompatible provenance-object contract uses API 2 and `/v2`; CLI,
+  SDK and Qt bridge consumers are migrated. CLI and SDK HTTP smoke checks
+  exercised typed durable rows and rejection of API 1 and `/v1`.
+- `cargo test --workspace`: 130 tests pass. `tests/corpus.sh`: 5/5 pass.
+  Java bridge builds with source ownership exported on all reference queries.
+- Native propagation import integration and the data-reference gate remain
+  outstanding; m2-002 is not complete.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.

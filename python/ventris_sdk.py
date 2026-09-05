@@ -1,7 +1,7 @@
 """Small dependency-free client for the versioned Ventris API.
 
 The client uses the same JSON envelope over either the local ``lre-api``
-stdio service or an HTTP ``/v1`` endpoint. It does not maintain a second
+stdio service or an HTTP ``/v2`` endpoint. It does not maintain a second
 project model; responses are the Core service's serialized rows.
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-API_VERSION = 1
+API_VERSION = 2
 
 
 class ApiError(RuntimeError):
@@ -74,7 +74,7 @@ class _StdioTransport(_Transport):
 
 class _HttpTransport(_Transport):
     def __init__(self, url: str, timeout: float):
-        self._url = url.rstrip("/") + "/v1"
+        self._url = url.rstrip("/") + "/v2"
         self._timeout = timeout
 
     def request(self, envelope: Mapping[str, Any]) -> Mapping[str, Any]:

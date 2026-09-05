@@ -76,7 +76,7 @@ fn dispatch(
         .and_then(Value::as_str)
         .ok_or_else(|| "request.method must be a string".to_string())?;
     match method {
-        "ping" => Ok(json!({ "service": "lre-core", "api": 1 })),
+        "ping" => Ok(json!({ "service": "lre-core", "api": 2 })),
         "architectures" => to_value(core.architectures()),
         "open" => {
             let program = required_string(request, "program")?;
@@ -583,7 +583,7 @@ mod tests {
         let response: Value = serde_json::from_str(&core_request(&handle, r#"{"method":"ping"}"#))
             .unwrap();
         assert_eq!(response["ok"], true);
-        assert_eq!(response["result"]["api"], 1);
+        assert_eq!(response["result"]["api"], 2);
     }
 
     #[test]

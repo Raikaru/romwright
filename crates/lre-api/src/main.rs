@@ -32,7 +32,7 @@ fn main() {
             eprintln!("lre-api: cannot listen on {address}: {error}");
             std::process::exit(1);
         });
-        eprintln!("lre-api listening on http://{address}/v1");
+        eprintln!("lre-api listening on http://{address}/v2");
         serve_tcp(&service, listener)
     } else {
         serve_stdio(&service)

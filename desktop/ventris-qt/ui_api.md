@@ -51,9 +51,14 @@ Addresses arrive either as hex strings or as `{"offset": <int>}` objects
 | `symbols_page` | `program`, `offset`, `limit` | `Page<SymbolRow>`; row: `name`, `address`, `external`, `source` |
 | `strings` | `program` | `[StringRow]`: `address`, `value`, `kind` |
 | `search` | `program`, `term`, `limit` | `[SearchHit]`: `address?`, `kind`, `name`, `context` |
-| `xrefs_page` | `program`, `address`, `incoming`, `offset`, `limit` | `Page<XrefRow>`; row: `from`, `to`, `kind` |
+| `xrefs_page` | `program`, `address`, `incoming`, `offset`, `limit` | `Page<XrefRow>`; row: `from`, `to`, `kind`, `function`, `provenance` |
 | `memory_regions` | `program` | `[MemoryRegion]`: `name`, `start`, `size`, `permissions`, `source` |
 | `function_graph` | `program` | `{"nodes": [{address, name}], "edges": [{from, to, kind}]}` |
+
+Xref provenance is `{"kind": "inferred" | "asserted", "source": "<producer>",
+"confidence": <number> | null}`. Null confidence means unknown. Replacing
+analysis results does not remove assertions. These are the same row semantics
+as Core API 2; the Qt bridge keeps its existing FFI request envelope.
 
 ## Commands (undoable, bump the revision)
 
