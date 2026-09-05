@@ -7,6 +7,7 @@
 #include "ventris_constant_state.hh"
 #include "ventris_flow.hh"
 #include "ventris_operand_refs.hh"
+#include "ventris_x86_references.hh"
 #include <algorithm>
 #include <deque>
 #include <tuple>
@@ -98,6 +99,8 @@ class Propagation {
   std::vector<ReferenceFact> references;
   std::vector<Word> instructionStarts;
   bool collectReferences = false;
+  X86ReferencePolicy addressPolicy;
+  std::size_t scalarReferenceCount = 0;
   std::vector<ParameterPieces> pointerStorage;
   std::vector<const BlockBasic *> originPending, originVisited;
 
@@ -187,12 +190,13 @@ class Propagation {
     }
   }
 
-  void reference(const PcodeOp &op, AddrSpace *space, Value value, unsigned access) {
+  void reference(const PcodeOp &op, AddrSpace *space, Value value, unsigned access,
+                 bool addressOperand = false) {
     Location address;
     if (!collectReferences || value.base >= 0 || !location(space, value, address) ||
         address.offset < 4 || address.offset > space->getHighest() || region(address.offset) == nullptr)
       return;
-    if (access == 4) {
+    if (access == 4 && !addressOperand) {
       if (address.offset < 1024 || space->getHighest() - address.offset < 256 ||
           address.offset == 0xffff || address.offset == 0xffffffff)
         return;
@@ -609,6 +613,17 @@ class Propagation {
                               output->getSize(), value);
         }
         observe(facts, op, value);
+        if (collectReferences && output->getSpace()->getType() == IPTR_PROCESSOR &&
+            !memorySpace(output->getSpace()) && value.complete(value.size) &&
+            value.bits > 4096 && region(value.bits) != nullptr &&
+            addressPolicy.matches(op.getAddr())) {
+          // X86Analyzer preserves an existing reference on the LEA operand.
+          auto limit = references.begin() + scalarReferenceCount;
+          auto existing = std::lower_bound(references.begin(), limit, op.getAddr().getOffset(),
+              [](const ReferenceFact &fact, Word pc) { return fact.pc < pc; });
+          if (existing == limit || existing->pc != op.getAddr().getOffset())
+            reference(op, dataSpace, value, 4, true);
+        }
       }
     }
     return branch;
@@ -708,7 +723,9 @@ public:
     collectReferences = referenceMode;
     if (referenceMode) {
       initializePointerStorage();
+      addressPolicy.configure(arch);
       literalReferences();
+      scalarReferenceCount = references.size();
     }
     for (const auto &entry : nodes) {
       Snapshot final = entry.second.input;
