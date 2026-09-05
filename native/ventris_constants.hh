@@ -5,6 +5,7 @@
 
 #include "ifacedecomp.hh"
 #include "ventris_constant_state.hh"
+#include "ventris_operand_refs.hh"
 #include <algorithm>
 #include <deque>
 #include <tuple>
@@ -128,6 +129,53 @@ class Propagation {
       }
     }
     references.push_back(ReferenceFact{op.getAddr().getOffset(), address.offset, access});
+  }
+
+  void literalReferences() {
+    const auto *sleigh = dynamic_cast<const Sleigh *>(arch.translate);
+    if (sleigh == nullptr)
+      throw LowlevelError("Operand references require a SLEIGH translator");
+    std::vector<VarnodeData> scalars;
+    for (auto it = function.beginOpAll(); it != function.endOpAll(); ++it) {
+      const PcodeOp &source = *it->second;
+      Word pc = source.getAddr().getOffset();
+      if (!source.isInstructionStart() || pc < first || pc >= end)
+        continue;
+      ParserWalker walker(sleigh->getInstructionContext(source.getAddr()));
+      walker.baseState();
+      scalars.clear();
+      walker.getConstructor()->collectOperandScalars(walker, scalars, true);
+      for (const VarnodeData &scalar : scalars) {
+        Value value = Value::constant(scalar.offset, scalar.size);
+        if (value.bits < 4096 || region(value.bits) == nullptr)
+          continue;
+        // ScalarOperandAnalyzer's non-relocation-guided exclusions.
+        switch (value.bits) {
+        case 0xffff: case 0xff00: case 0xffffff: case 0xff0000: case 0xff00ff:
+        case 0xffffffff: case 0xffffff00: case 0xffff0000: case 0xff000000:
+          continue;
+        default:
+          break;
+        }
+        bool control = false;
+        auto limit = function.endOp(source.getAddr());
+        for (auto operation = function.beginOp(source.getAddr()); operation != limit; ++operation) {
+          const PcodeOp &op = *operation->second;
+          if (op.code() == CPUI_CALL) {
+            const FuncCallSpecs *call = function.getCallSpecs(&op);
+            control = call != nullptr && !call->getEntryAddress().isInvalid() &&
+                call->getEntryAddress().getOffset() == value.bits;
+          } else if (op.code() == CPUI_BRANCH || op.code() == CPUI_CBRANCH) {
+            control = memorySpace(op.getIn(0)->getSpace()) &&
+                op.getIn(0)->getOffset() == value.bits;
+          }
+          if (control)
+            break;
+        }
+        if (!control)
+          reference(source, dataSpace, value, 4);
+      }
+    }
   }
 
   unsigned indirectAccess(const PcodeOp &source) const {
@@ -550,6 +598,8 @@ public:
     }
     std::vector<Fact> facts;
     collectReferences = referenceMode;
+    if (referenceMode)
+      literalReferences();
     for (const auto &entry : nodes) {
       Snapshot final = entry.second.input;
       transfer(*entry.first, final, referenceMode ? nullptr : &facts);
