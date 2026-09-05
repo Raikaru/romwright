@@ -249,6 +249,12 @@ instruction-origin READ, WRITE, READ_WRITE and DATA records; reads and
 writes to the same target in one instruction are combined. Internal affine
 stack identities are not program-memory targets. The query does not write
 database rows; ownership and persistence belong to the Rust core.
+Reference queries follow false conditional branches, matching
+`ContextEvaluatorAdapter.followFalseConditionalBranches`; constant-value
+queries retain their stricter reachability rule. Memory call operands are
+READ references, while indirect jump operands retain Ghidra's INDIRECTION
+classification (normalized to DATA). This distinction uses original SLEIGH
+p-code: `FlowInfo.truncateIndirectJump` may rewrite a jump into CALLIND.
 The importer reuses discovery's loaded console and collects the complete pass
 before publishing any of its rows. ELF, PE and DOL mapping permissions use
 the same low three bits; higher ELF section attributes are not wire flags.

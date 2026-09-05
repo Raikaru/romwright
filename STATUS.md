@@ -1299,10 +1299,10 @@ M2 — Program-model parity
 - d: integrate the pass at native import, execute the 20-entry differential
   acceptance, and commit measured evidence. Each implementation slice must
   remain below 800 changed lines; split further before exceeding that limit.
-- e: align direct operand references, indirect-flow access kinds and
-  instruction coverage with the verified Ghidra policies.
-- f: replace eager computed-output references with parameter/return/use-site
-  eligibility and source-instruction attribution.
+- e: align indirect-flow access kinds and conditional instruction coverage
+  with the verified Ghidra policies.
+- f: distinguish literal operand references from computed parameter/return/
+  use-site eligibility, replacing eager computed-output references.
 - g: recover PIC reference contexts and flow-established resolver coverage.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
@@ -1361,6 +1361,20 @@ M2 — Program-model parity
   Data precision ranges from 0.461538 to 1.0; recall from 0.090909 to
   0.882353. Reference classification, computed origins and PIC context
   remain in slices e–h; m2-002 is not complete.
+
+## m2-002e reference access and conditional coverage
+- The acceptance now checks indirect-call READ versus indirect-jump DATA,
+  bounded exits, and references on a provably untaken conditional path.
+  Constant-value queries still exclude that untaken path.
+- A separate x86-64 ELF oracle probe confirms 2 memory-call READ references
+  and 2 indirect-jump INDIRECTION references, covering internal and external
+  targets. Original SLEIGH flow distinguishes calls from jumps rewritten by
+  `FlowInfo.truncateIndirectJump`; no instruction encodings are matched.
+- `cargo test --workspace`: 130 pass. `tests/corpus.sh`: 5/5 pass.
+- The 20-entry gate still reports 0 pass, 20 fail, 0 skipped. x86-64 plain
+  O0/O2 now have data precision 1.0 and recall 13/15. AArch64 plain O0/O2
+  reach recall 1.0 but precision 14/22. Literal operands, computed origins
+  and PIC contexts remain in slices f–h.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
