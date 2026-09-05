@@ -1651,6 +1651,37 @@ mod tests {
     }
 
     #[test]
+    fn data_references_do_not_promote_fallthrough() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![crate::native::Mapping {
+                vaddr: 0x1000, size: 16, file_off: 0, flags: 6,
+                // The following function's entry is also the saved return PC.
+                bytes: vec![0xe8, 0x0b, 0, 0, 0, 0xc3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            }],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1005, &import.mappings, false).unwrap();
+        assert!(refs.is_empty(), "saving a return PC is not a data reference: {refs:?}");
+        import.mappings[0].bytes[..6].copy_from_slice(&[0x8b, 0x05, 0, 0, 0, 0]);
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1006, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x1000, to: 0x1006, kind: ReferenceKind::Read },
+        ], "a real access to following data must not be suppressed");
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
