@@ -1443,10 +1443,14 @@ mod tests {
                 },
                 crate::native::Mapping {
                     vaddr: 0x2000,
-                    size: 8,
+                    size: 19,
                     file_off: 0,
                     flags: 6,
-                    bytes: vec![0x48, 0x8d, 0x05, 0xf9, 0x0f, 0, 0, 0xc3],
+                    bytes: vec![
+                        0x31, 0xc0, 0x75, 0x01, 0xc3, // xor eax,eax; jne path; ret
+                        0x8b, 0x05, 0xf5, 0x0f, 0, 0, // path: read [0x3000]
+                        0x48, 0x8d, 0x05, 0xee, 0x1f, 0, 0, 0xc3, // lea rax,[0x4000]; ret
+                    ],
                 },
                 crate::native::Mapping {
                     vaddr: 0x3000,
@@ -1492,6 +1496,18 @@ mod tests {
         );
         assert!(refs.iter().all(|reference| (0x1000..0x102f).contains(&reference.from)),
                 "reference inference escaped the function bounds: {refs:?}");
+        // References describe decoded operands even on provably untaken paths.
+        // Constant-value queries must retain their stricter reachable-flow rule.
+        let constants = session.constants(0x2000, 0x2013, &import.mappings, false).unwrap();
+        assert!(constants.iter().all(|fact| fact.value != 0x4000), "{constants:?}");
+        let refs = session.references(0x2000, 0x2013, &import.mappings, false).unwrap();
+        for (from, to, kind) in [
+            (0x2005, 0x3000, ReferenceKind::Read),
+            (0x200b, 0x4000, ReferenceKind::Data),
+        ] {
+            assert!(refs.iter().any(|reference| reference.from == from
+                && reference.to == to && reference.kind == kind), "{refs:?}");
+        }
     }
 
     #[test]
