@@ -1305,6 +1305,8 @@ M2 — Program-model parity
   use-site eligibility, replacing eager computed-output references.
   Split f into f1 (decoded literal operands) and f2 (computed eligibility and
   source tracking), each below 800 changed lines.
+  f3: `data_references_do_not_promote_fallthrough` isolates call return-address
+  storage at a function boundary; real reads of following data must survive.
 - g: recover PIC reference contexts and flow-established resolver coverage.
   User-prioritized prerequisite g0: `tests/m2-002_context.py` must first fail
   when an explicit oracle language/compiler is ignored. Record and compare
