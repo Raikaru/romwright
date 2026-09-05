@@ -1717,6 +1717,46 @@ mod tests {
     }
 
     #[test]
+    fn x86_computed_address_operands_create_references() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(),
+            compiler: Some("gcc"),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x1000, size: 11, file_off: 0, flags: 6,
+                    bytes: vec![
+                        0xbb, 0xff, 0x3f, 0, 0, // mov ebx,0x3fff
+                        0x8d, 0x43, 1, // lea eax,[ebx+1]
+                        0x31, 0xc0, 0xc3, // discard result; ret
+                    ],
+                },
+                crate::native::Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x100b, &import.mappings, false).unwrap();
+        assert_eq!(refs, vec![
+            ReferenceFact { from: 0x1005, to: 0x4000, kind: ReferenceKind::Data },
+        ], "computed address operands are references even when not returned");
+        import.mappings[0].bytes[5..8].copy_from_slice(&[0x83, 0xc3, 1]); // add ebx,1
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x100b, &import.mappings, false).unwrap();
+        assert!(refs.is_empty(), "unused arithmetic is not address formation: {refs:?}");
+    }
+
+    #[test]
     fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
         let mut cfg = RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
