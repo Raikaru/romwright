@@ -237,6 +237,10 @@ class Propagation {
   }
 
   void literalReferences() {
+    // ScalarOperandAnalyzer.getDefaultEnablement2 excludes aligned ISAs.
+    // Computed pointer uses remain independent of the scalar analyzer.
+    if (arch.translate->getAlignment() != 1)
+      return;
     const auto *sleigh = dynamic_cast<const Sleigh *>(arch.translate);
     if (sleigh == nullptr)
       throw LowlevelError("Operand references require a SLEIGH translator");

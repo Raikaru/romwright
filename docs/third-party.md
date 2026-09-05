@@ -261,6 +261,10 @@ PC. This uses original instruction-flow metadata and does not suppress READ
 or WRITE references to data immediately following an instruction.
 Literal references follow `ScalarOperandAnalyzer` and the SLEIGH
 `OperandSymbol.printList` / `SleighInstructionPrototype.getOpObjects` rules.
+The scalar pass honors `ScalarOperandAnalyzer.getDefaultEnablement2`'s
+instruction-alignment restriction. Aligned ISAs still receive memory and
+computed-use references, but unused address formation is not promoted by
+the scalar pass.
 `native/ventris_operand_refs.hh` walks decoded display operands, not assembly
 text or incidental p-code constants. Direct control-flow targets keep their
 flow classification; address literals in comparisons need no pointer output.

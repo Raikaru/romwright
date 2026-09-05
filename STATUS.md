@@ -1427,7 +1427,7 @@ M2 — Program-model parity
   not Windows x64. `cargo test --workspace`: 132 pass.
 - All 20 automatic-selection oracle files retain their previous SHA-256.
   Explicit-context oracles use a separate cache namespace.
-- `benchmarks/reports/m2-002-context.json`: 20 matching contexts; 4 pass,
+- Report committed as `6e5bc23`: 20 matching contexts; 4 pass,
   16 fail, 0 skipped. All 5 PowerPC inputs now have data precision 1.0,
   without changing propagation to compensate for their former e500 oracles.
   PowerPC recall ranges from 0.5 to 0.9473684210526315.
@@ -1439,12 +1439,26 @@ M2 — Program-model parity
   The native pass now follows `evaluatePureDataRef`'s fallthrough rule.
   The paired real-read regression still reports the following data.
 - Focused `x86_64_cpp_o2` import: 24 native / 24 oracle data references,
-  24 matched, 0 missing, 0 extra. The full matrix has not been rerun after
-  this isolated correction; the g0 report remains the last full report.
+  24 matched, 0 missing, 0 extra. The later f4 matrix measurement includes
+  this isolated correction.
 - `cargo test --workspace`: 133 pass. `tests/corpus.sh`: 5/5 pass.
   Console and worker rebuild; native `add` still returns the sum.
-- Next isolated class: scalar-analyzer instruction-alignment eligibility
-  (the unused AArch64 ADRs in clone-registration code).
+
+## m2-002f4 scalar analyzer eligibility
+- Acceptance `e9bf5a6` failed on an unused AArch64 ADR. The scalar pass now
+  honors Ghidra's instruction-alignment eligibility; the returned-address
+  regression remains positive.
+- Focused `aarch64_plain_o0`: 14 native / 14 oracle data references,
+  14 matched, 0 missing, 0 extra.
+- `benchmarks/reports/m2-002-context.json` now reports 10 pass, 10 fail, 0 skipped.
+  All 20 entries have data precision 1.0. All x86-64 and AArch64 entries
+  pass; i386 and PowerPC remain below the recall threshold.
+- `cargo test --workspace`: 134 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild; the native `add` smoke still returns the sum.
+- Remaining classes are separated: x86 computed LEA references, PIC helper
+  context, resolver flow coverage, and the C++ exception landing pad.
+  AArch64 C++ recall is 21/22, within its threshold; its missing landing-pad
+  reference is not a scalar or constant-propagation arithmetic defect.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
