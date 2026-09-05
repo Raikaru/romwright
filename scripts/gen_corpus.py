@@ -232,36 +232,37 @@ def parse_elf_sections(data: bytes):
         return secs
 
 
-def get_loadable_exec(data: bytes):
+def get_load_segments(data: bytes):
+    """Return PT_LOAD (vaddr, memsz, flags, file offset, filesz) records."""
+    if len(data) < 6 or data[:4] != b"\x7fELF" or data[4] not in (1, 2) or data[5] not in (1, 2):
+        raise ValueError("Unsupported ELF header")
     is_64 = data[4] == 2
-    be = data[5] == 2
-    endian = ">" if be else "<"
-    if is_64:
-        phoff = struct.unpack(f"{endian}Q", data[32:40])[0]
-        phentsize = struct.unpack(f"{endian}H", data[54:56])[0]
-        phnum = struct.unpack(f"{endian}H", data[56:58])[0]
+    endian = ">" if data[5] == 2 else "<"
+    try:
+        phoff = struct.unpack_from(endian + ("Q" if is_64 else "I"), data, 32 if is_64 else 28)[0]
+        phentsize, phnum = struct.unpack_from(endian + "HH", data, 54 if is_64 else 42)
+        header = struct.Struct(endian + ("IIQQQQQQ" if is_64 else "IIIIIIII"))
+        if phentsize < header.size:
+            raise ValueError("Truncated ELF program header")
         segments = []
         for i in range(phnum):
-            off = phoff + i * phentsize
-            p_type, p_flags = struct.unpack(f"{endian}II", data[off:off+8])
-            p_offset, p_vaddr = struct.unpack(f"{endian}QQ", data[off+8:off+24])
-            p_filesz = struct.unpack(f"{endian}Q", data[off+32:off+40])[0]
-            if p_type == 1 and (p_flags & 1):
-                segments.append((p_vaddr, data[p_offset:p_offset+p_filesz]))
+            fields = header.unpack_from(data, phoff + i * phentsize)
+            if is_64:
+                p_type, flags, offset, vaddr, _, filesz, memsz, _ = fields
+            else:
+                p_type, offset, vaddr, _, filesz, memsz, flags, _ = fields
+            if p_type == 1:
+                if filesz > memsz or offset + filesz > len(data):
+                    raise ValueError("Invalid ELF load segment")
+                segments.append((vaddr, memsz, flags, offset, filesz))
         return segments
-    else:
-        phoff = struct.unpack(f"{endian}I", data[28:32])[0]
-        phentsize = struct.unpack(f"{endian}H", data[42:44])[0]
-        phnum = struct.unpack(f"{endian}H", data[44:46])[0]
-        segments = []
-        for i in range(phnum):
-            off = phoff + i * phentsize
-            p_type, p_offset, p_vaddr = struct.unpack(f"{endian}III", data[off:off+12])
-            p_filesz = struct.unpack(f"{endian}I", data[off+16:off+20])[0]
-            p_flags = struct.unpack(f"{endian}I", data[off+24:off+28])[0]
-            if p_type == 1 and (p_flags & 1):
-                segments.append((p_vaddr, data[p_offset:p_offset+p_filesz]))
-        return segments
+    except struct.error as error:
+        raise ValueError("Truncated ELF header") from error
+
+
+def get_loadable_exec(data: bytes):
+    return [(vaddr, data[offset:offset + filesz])
+            for vaddr, _, flags, offset, filesz in get_load_segments(data) if flags & 1]
 
 
 def count_symtab_functions(twin_path: Path) -> int:

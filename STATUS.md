@@ -1299,11 +1299,22 @@ M2 — Program-model parity
 - d: integrate the pass at native import, execute the 20-entry differential
   acceptance, and commit measured evidence. Each implementation slice must
   remain below 800 changed lines; split further before exceeding that limit.
-- Acceptance remains xref recall >= 0.95 and precision >= 0.98 versus oracle.
+- User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
+  versus oracle; full II.3 xref metrics are retained separately.
+
+## Approved m2-002 acceptance scope
+- User approved distinct `data_xref.precision` / `data_xref.recall` metrics
+  for code-origin read/write/data references to mapped program memory, with
+  0.98 / 0.95 thresholds. Full II.3 `xref.*` and m2-016 remain unchanged.
+- Preserve the complete oracle, including synthetic loader metadata and
+  non-RAM references. Oracle instruction-origin evidence and input ELF
+  PT_LOAD bounds define eligibility, not native analysis output.
+- Score every reference produced by `native-analysis:constant-propagation`;
+  do not mask erroneous native PCs or targets with oracle eligibility.
 
 ## Blocked on
-- None. The user authorized source correction for m2-002; verified sources
-  and implementation slices are recorded above.
+- None. Both the source correction and task-specific metric scope have been
+  explicitly authorized; m2-002 acceptance is not yet passing.
 
 ## Next task
 - m2-002: persist inferred data-reference facts with provenance. Write and
