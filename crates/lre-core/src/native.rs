@@ -1273,7 +1273,7 @@ mod tests {
     }
 
     #[test]
-    fn pe_exec_requires_execute_characteristic() {
+    fn pe_memory_regions_preserve_section_permissions() {
         // Section flags: READ (0x40000000) alone must NOT be executable.
         let mut b = vec![0u8; 0x200];
         b[0..2].copy_from_slice(b"MZ");
@@ -1290,11 +1290,15 @@ mod tests {
         b[sec + 20..sec + 24].copy_from_slice(&0x100u32.to_le_bytes()); // raw ptr
         b[sec + 36..sec + 40].copy_from_slice(&0x40000000u32.to_le_bytes()); // READ only
         let imp = import_pe(&b).unwrap();
-        assert_eq!(imp.mappings[0].flags & 0x4, 0, "readable data must not be exec");
-        // EXECUTE (0x20000000) must be.
-        b[sec + 36..sec + 40].copy_from_slice(&0x60000000u32.to_le_bytes());
+        let db = ProjectDb::open_in_memory().unwrap();
+        let pid = db.upsert_program("pe", &imp.language, &native_provenance()).unwrap();
+        store_import(&db, "pe", &imp).unwrap();
+        assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "r--");
+        // Executable, writable code retains all three permissions.
+        b[sec + 36..sec + 40].copy_from_slice(&0xe0000000u32.to_le_bytes());
         let imp = import_pe(&b).unwrap();
-        assert_eq!(imp.mappings[0].flags & 0x4, 0x4, "code section must be exec");
+        store_import(&db, "pe", &imp).unwrap();
+        assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "rwx");
     }
 
     #[test]
