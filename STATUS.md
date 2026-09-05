@@ -1284,16 +1284,26 @@ M2 — Program-model parity
   propagation step and the complete oracle/discovery gate.
   https://github.com/Raikaru/ventris/actions/runs/33979109416
 
+## m2-002 implementation slices
+- User authorized correcting the missing `ReferenceCodeAnalyzer` citation.
+  Verified sources: `RefTypeFactory.getMemRefType` classifies direct p-code
+  references; `SymbolicPropogator.makeReference` inserts analysis references;
+  `ConstantPropagationAnalyzer` supplies propagation policy.
+- a: commit the failing `benchmarks/xref_gate.py` acceptance, then make the
+  oracle export cover all memory reference sources rather than function
+  bodies alone. Preserve non-RAM targets and every reference category.
+- b: expose read/write/data use-site references from native propagation,
+  retaining instruction PCs and the verified reference policy.
+- c: typed inferred/asserted provenance and confidence for xrefs; migrate
+  stored rows and preserve analyst assertions during inference.
+- d: integrate the pass at native import, execute the 20-entry differential
+  acceptance, and commit measured evidence. Each implementation slice must
+  remain below 800 changed lines; split further before exceeding that limit.
+- Acceptance remains xref recall >= 0.95 and precision >= 0.98 versus oracle.
+
 ## Blocked on
-- m2-002 names `ReferenceCodeAnalyzer` and `ConstantPropagationAnalyzer`.
-  `ReferenceCodeAnalyzer.java` is absent from the extracted Java tree, the
-  pinned source tree and all 82 installed Ghidra 12.1.3 source archives;
-  `Base.jar` also contains no class with that name. The other named source
-  exists at `ghidra/app/plugin/core/analysis/ConstantPropagationAnalyzer.java`.
-  The roadmap requires stopping rather than guessing a replacement source.
-  Await a corrected citation or explicit authorization to identify the
-  equivalent reference implementation. No m2-002 implementation was written.
-  Acceptance remains xref recall >= 0.95 and precision >= 0.98 versus oracle.
+- None. The user authorized source correction for m2-002; verified sources
+  and implementation slices are recorded above.
 
 ## Next task
 - m2-002: persist inferred data-reference facts with provenance. Write and
