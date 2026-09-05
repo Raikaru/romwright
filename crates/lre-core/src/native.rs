@@ -46,8 +46,8 @@ pub struct Mapping {
     /// File offset of the mapping's first byte (ELF: section offset; PE:
     /// section raw offset — the RVA-to-file translation the worker uses).
     pub file_off: u64,
-    /// Section flags: ELF SHF_* (0x4 = executable); PE image characteristics
-    /// (0x60000020 = code).
+    /// Low bits encode write (1), read (2), execute (4) for every format.
+    /// Additional ELF SHF_* attributes are retained above those bits.
     pub flags: u64,
     /// Raw bytes of the mapping.
     pub bytes: Vec<u8>,
@@ -650,12 +650,14 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         let mut bytes = data.get(raw..raw + raw_size).unwrap_or(&[]).to_vec();
         bytes.resize(size, 0);
         let sflags = u32_at(data, o + 36)? as u64; // section characteristics
-        let exec = sflags & 0x20000000 != 0;
+        let flags = (u64::from(sflags & 0x20000000 != 0) << 2)
+            | (u64::from(sflags & 0x40000000 != 0) << 1)
+            | u64::from(sflags & 0x80000000 != 0);
         mappings.push(Mapping {
             vaddr: image_base + vaddr,
             size: size as u64,
             file_off: raw as u64,
-            flags: if exec { 0x4 } else { 0 },
+            flags,
             bytes,
         });
     }
@@ -915,13 +917,49 @@ pub fn load_native(binary: &Path) -> Result<NativeImport> {
     imp.binary = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     imp.cfg = crate::session::RuntimeConfig::from_env();
     imp.cfg.language_id = imp.language.clone();
-    if imp.format == "dol" {
-        discovery::discover_mapped(&mut imp)?;
+    let session = if imp.format == "dol" {
+        Some(discovery::discover_mapped(&mut imp)?)
     } else {
         elf_pointers::confirm_initializers(&mut imp);
-        discovery::discover_seeded(&mut imp);
+        discovery::discover_seeded(&mut imp)
+    };
+    if let Some(mut session) = session {
+        infer_data_references(&mut imp, &mut session)?;
     }
     Ok(imp)
+}
+
+fn infer_data_references(
+    import: &mut NativeImport,
+    session: &mut crate::native_runtime::ConsoleSession,
+) -> Result<()> {
+    use crate::native_runtime::ReferenceKind;
+    let mut references = Vec::new();
+    for function in &import.functions {
+        if function.size <= 1 {
+            continue;
+        }
+        let end = function.entry.checked_add(function.size)
+            .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))?;
+        let facts = session.references(function.entry, end, &import.mappings, false)
+            .map_err(|error| ImportError::Bad(format!(
+                "data references at {:#x}: {error}", function.entry
+            )))?;
+        references.extend(facts.into_iter().map(|fact| {
+            let kind = match fact.kind {
+                ReferenceKind::Read => "READ",
+                ReferenceKind::Write => "WRITE",
+                ReferenceKind::ReadWrite => "READ_WRITE",
+                ReferenceKind::Data => "DATA",
+            };
+            NativeXref::with_provenance(
+                fact.from, fact.to, kind, "native-analysis:constant-propagation",
+            )
+        }));
+    }
+    // Publish no partial pass if any query fails.
+    import.xrefs.extend(references);
+    Ok(())
 }
 
 
@@ -976,7 +1014,7 @@ pub fn store_import(
             name: format!("{}:{index}", imp.format.to_ascii_lowercase()),
             start: lre_model::Address::ram(mapping.vaddr),
             size: mapping.size,
-            permissions: mapping_permissions(mapping.flags, &imp.format),
+            permissions: mapping_permissions(mapping.flags),
             source: "native-import".into(),
         })
         .collect::<Vec<_>>();
@@ -1021,16 +1059,8 @@ pub fn store_import(
     })
 }
 
-fn mapping_permissions(flags: u64, format: &str) -> String {
-    let (read, write, execute) = if format.eq_ignore_ascii_case("ELF") {
-        (flags & 0x2 != 0, flags & 0x1 != 0, flags & 0x4 != 0)
-    } else {
-        (
-            flags & 0x40000000 != 0,
-            flags & 0x80000000 != 0,
-            flags & 0x20000000 != 0,
-        )
-    };
+fn mapping_permissions(flags: u64) -> String {
+    let (read, write, execute) = (flags & 0x2 != 0, flags & 0x1 != 0, flags & 0x4 != 0);
     format!(
         "{}{}{}",
         if read { "r" } else { "-" },
@@ -1411,7 +1441,7 @@ mod tests {
             language: "x86:LE:64:default".into(),
             ..Default::default()
         };
-        discovery::discover_seeded(&mut imp);
+        drop(discovery::discover_seeded(&mut imp));
         // Unconfirmed candidate 0x1100 must NOT be promoted when console is absent/failing
         assert_eq!(imp.functions.len(), 1);
         assert_eq!(imp.functions[0].entry, 0x1000);

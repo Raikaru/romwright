@@ -551,3 +551,17 @@ diff --git a/decompiler/sleigh.cc b/decompiler/sleigh.cc
    try {
      builder.build(walker.getConstructor()->getTempl(),-1);
      pcode_cache.resolveRelatives();
+
+diff --git a/decompiler/flow.cc b/decompiler/flow.cc
+--- a/decompiler/flow.cc
++++ b/decompiler/flow.cc
+@@ -881,5 +881,9 @@ void FlowInfo::fillinBranchStubs(void)
+     PcodeOp *op = artificialHalt(*iter,PcodeOp::missing);
+     data.opMarkStartBasic(op);
+     data.opMarkStartInstruction(op);
++    // Explicit bounded exits must be discoverable by branchTarget()/target().
++    VisitStat &visit = visited[*iter];
++    visit.seqnum = op->getSeqNum();
++    visit.size = 1;
+   }
+ }

@@ -827,7 +827,7 @@ impl ConsoleSession {
             let _ = write!(
                 script,
                 " 0x{:x} 0x{mapping_end:x} {}",
-                mapping.vaddr, mapping.flags
+                mapping.vaddr, mapping.flags & 7
             );
         }
         script.push('\n');
@@ -1425,7 +1425,9 @@ mod tests {
         // Read a global, update it, materialize a pointer, and store that pointer.
         let code = vec![
             0x8b, 0x05, 0xfa, 0x1f, 0, 0, 0x83, 0x05, 0xf3, 0x1f, 0, 0, 1, 0x48, 0x8d, 0x3d, 0xec,
-            0x2f, 0, 0, 0x48, 0x89, 0x3d, 0xed, 0x1f, 0, 0, 0xc3,
+            0x2f, 0, 0, 0x48, 0x89, 0x3d, 0xed, 0x1f, 0, 0,
+            // Conditional exit to another mapped function; otherwise return.
+            0x85, 0xf6, 0x0f, 0x85, 0xdd, 0x0f, 0, 0, 0xc3,
         ];
         let import = NativeImport {
             language: cfg.language_id.clone(),
@@ -1436,6 +1438,13 @@ mod tests {
                     file_off: 0,
                     flags: 6,
                     bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x2000,
+                    size: 8,
+                    file_off: 0,
+                    flags: 6,
+                    bytes: vec![0x48, 0x8d, 0x05, 0xf9, 0x0f, 0, 0, 0xc3],
                 },
                 crate::native::Mapping {
                     vaddr: 0x3000,
@@ -1456,7 +1465,7 @@ mod tests {
         };
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        let refs = session.references(0x1000, 0x101c, &import.mappings, false).unwrap();
+        let refs = session.references(0x1000, 0x1024, &import.mappings, false).unwrap();
         for (from, to, kind) in [
             (0x1000, 0x3000, ReferenceKind::Read),
             (0x1006, 0x3000, ReferenceKind::ReadWrite),
@@ -1477,6 +1486,8 @@ mod tests {
             )),
             "{refs:?}"
         );
+        assert!(refs.iter().all(|reference| (0x1000..0x1024).contains(&reference.from)),
+                "reference inference escaped the function bounds: {refs:?}");
     }
 
     #[test]

@@ -224,9 +224,12 @@ Virtual stack offsets are internal identities, never exported pointer values.
 Ordinary calls discard memory facts and non-preserved register facts, then
 apply the prototype's return stack adjustment. Call-to-next handling remains
 with the upstream raw-flow generation.
-The query temporarily registers an otherwise unknown function entry so that
-recursive calls remain calls. It removes only its own symbol after analysis;
-pre-existing functions and their analysis bodies are left intact.
+Each query creates a temporary symbol-owned function. Its distinct scope id
+prevents collisions with anonymous jump-table recovery clones. Removing the
+query's symbol also removes its analysis body; pre-existing bodies stay intact.
+The end-exclusive query bound is converted to `FlowInfo`'s inclusive bound.
+The out-of-tree flow patch indexes synthetic bounded exits in the visited
+map so branch-target lookup can resolve them.
 
 Initial-image reads follow the 1/2/4/8-byte, byte-order and nonzero rules.
 Writable initial memory requires explicit trust and becomes unknown after a
@@ -246,6 +249,10 @@ instruction-origin READ, WRITE, READ_WRITE and DATA records; reads and
 writes to the same target in one instruction are combined. Internal affine
 stack identities are not program-memory targets. The query does not write
 database rows; ownership and persistence belong to the Rust core.
+The importer reuses discovery's loaded console and collects the complete pass
+before publishing any of its rows. ELF, PE and DOL mapping permissions use
+the same low three bits; higher ELF section attributes are not wire flags.
+Cross-architecture reference type and origin parity remains gated by m2-002.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

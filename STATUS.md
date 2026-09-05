@@ -1299,6 +1299,12 @@ M2 — Program-model parity
 - d: integrate the pass at native import, execute the 20-entry differential
   acceptance, and commit measured evidence. Each implementation slice must
   remain below 800 changed lines; split further before exceeding that limit.
+- e: align direct operand references, indirect-flow access kinds and
+  instruction coverage with the verified Ghidra policies.
+- f: replace eager computed-output references with parameter/return/use-site
+  eligibility and source-instruction attribution.
+- g: recover PIC reference contexts and flow-established resolver coverage.
+- h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.
 
@@ -1336,6 +1342,25 @@ M2 — Program-model parity
   Java bridge builds with source ownership exported on all reference queries.
 - Native propagation import integration and the data-reference gate remain
   outstanding; m2-002 is not complete.
+
+## m2-002d import integration
+- Acceptance `872a1d9` failed on PE section permissions and ELF mapping
+  attributes in the reference request. Both regressions now pass.
+- Import reuses the discovery console and publishes the reference pass only
+  after all bounded function queries succeed. Inferred source remains
+  `native-analysis:constant-propagation`; confidence remains unknown.
+- A conditional-exit regression exposed missing synthetic exits in
+  `FlowInfo`'s visited map. The out-of-tree patch fixes target lookup.
+  Symbol-owned temporary functions avoid jump-table clone scope collisions.
+- `cargo test --workspace`: 130 pass. `tests/corpus.sh`: 5/5 pass.
+  The rebuilt worker decompiles `tiny_bin`'s `add` to
+  `return param_2 + param_1;` through the native CLI.
+- `tests/differential.sh` stops at its obsolete `/tmp/spike/decomp_native`
+  invocation; no full differential-script pass is claimed.
+- The 20-entry data-reference gate reports 0 pass, 20 fail, 0 skipped.
+  Data precision ranges from 0.461538 to 1.0; recall from 0.090909 to
+  0.882353. Reference classification, computed origins and PIC context
+  remain in slices e–h; m2-002 is not complete.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
