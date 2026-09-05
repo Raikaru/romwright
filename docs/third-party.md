@@ -268,6 +268,12 @@ the scalar pass.
 `native/ventris_operand_refs.hh` walks decoded display operands, not assembly
 text or incidental p-code constants. Direct control-flow targets keep their
 flow classification; address literals in comparisons need no pointer output.
+The x86-only computed-address policy follows `X86Analyzer.evaluateContext`
+(Ghidra 12.1.3, Apache-2.0): LEA register outputs may create mapped DATA
+references even without a later pointer use. Existing scalar references at
+that instruction take precedence; ordinary unused arithmetic is not promoted.
+The policy uses the decoded SLEIGH constructor mnemonic and applies only to
+reference queries, not discovery or decompiler rewriting.
 Computed values are not references merely because they equal mapped addresses.
 Register argument/return uses follow `SymbolicPropogator.addParamReferences`,
 `addReturnReferences`, and `createVariableStorageReference`. The native query

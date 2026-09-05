@@ -1311,6 +1311,8 @@ M2 — Program-model parity
   unused AArch64 address formation from an address returned to the caller.
   f5: `x86_computed_address_operands_create_references` isolates Ghidra's
   x86 LEA policy from ordinary unused arithmetic; keep it outside discovery.
+  Publish f5 implementation and its complete generated evidence as separate
+  sub-tasks/commits; the 20-entry JSON report exceeds 800 lines.
 - g: recover PIC reference contexts and flow-established resolver coverage.
   User-prioritized prerequisite g0: `tests/m2-002_context.py` must first fail
   when an explicit oracle language/compiler is ignored. Record and compare
@@ -1461,6 +1463,19 @@ M2 — Program-model parity
   context, resolver flow coverage, and the C++ exception landing pad.
   AArch64 C++ recall is 21/22, within its threshold; its missing landing-pad
   reference is not a scalar or constant-propagation arithmetic defect.
+
+## m2-002f5 x86 computed address operands
+- Acceptance `6fdaa9e` failed with no reference for a discarded computed LEA.
+  The x86-specific policy now follows Ghidra's `X86Analyzer.evaluateContext`;
+  unused ADD results remain unpromoted.
+- `cargo test --workspace`: 135 pass. `tests/corpus.sh`: 5/5 pass.
+  Both native executables rebuild.
+- Generated evidence, published separately as `benchmarks/reports/m2-002-f5.json`:
+  10 pass, 10 fail, 0 skipped; all 20 data precisions remain 1.0.
+  i386 PIE data recall rises from 1/22 to 2/22. Other row scores are unchanged.
+- Next focused classes: i386 PC-helper context and PowerPC PIC loads/resolver
+  coverage. The plain PowerPC resolver's missing READs use locally constructed
+  `r12` addresses in `.glink`, not an unknown incoming TOC register.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
