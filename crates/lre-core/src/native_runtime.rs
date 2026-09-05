@@ -1448,7 +1448,7 @@ mod tests {
                     vaddr: 0x4000,
                     size: 16,
                     file_off: 0,
-                    flags: 2,
+                    flags: 0x32, // Readable ELF mergeable-string section.
                     bytes: vec![0; 16],
                 },
             ],
