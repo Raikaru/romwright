@@ -1303,6 +1303,8 @@ M2 — Program-model parity
   with the verified Ghidra policies.
 - f: distinguish literal operand references from computed parameter/return/
   use-site eligibility, replacing eager computed-output references.
+  Split f into f1 (decoded literal operands) and f2 (computed eligibility and
+  source tracking), each below 800 changed lines.
 - g: recover PIC reference contexts and flow-established resolver coverage.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
