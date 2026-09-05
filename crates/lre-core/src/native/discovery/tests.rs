@@ -538,7 +538,7 @@ fn branch_target_requires_proven_linkage_and_imported_slot() {
         if sweep {
             discover_mapped(&mut import).unwrap();
         } else {
-            discover_seeded(&mut import);
+            drop(discover_seeded(&mut import));
         }
         let function = import
             .functions
@@ -663,7 +663,7 @@ fn pic_linkage_requires_proven_consistent_caller_context() {
             ],
             ..Default::default()
         };
-        discover_seeded(&mut import);
+        drop(discover_seeded(&mut import));
         let function = import
             .functions
             .iter()
@@ -761,7 +761,7 @@ fn pattern_entries_require_defined_boundaries_and_valid_code() {
                 .collect(),
             ..Default::default()
         };
-        discover_seeded(&mut import);
+        drop(discover_seeded(&mut import));
         let actual: Vec<_> = import.functions.iter().map(|f| (f.entry, f.size)).collect();
         assert_eq!(actual, expected, "{case}");
     }
@@ -869,7 +869,7 @@ fn possible_pattern_entry_rejects_later_conditional_reference() {
         reloc_candidates: vec![0x1010],
         ..Default::default()
     };
-    discover_seeded(&mut import);
+    drop(discover_seeded(&mut import));
     assert_eq!(
         import
             .functions
@@ -928,7 +928,7 @@ fn possible_pattern_batch_waits_for_its_own_disassembly() {
             .collect(),
         ..Default::default()
     };
-    discover_seeded(&mut import);
+    drop(discover_seeded(&mut import));
     assert_eq!(
         import
             .functions

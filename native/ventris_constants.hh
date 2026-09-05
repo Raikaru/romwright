@@ -112,8 +112,11 @@ class Propagation {
           const BlockGraph &graph = function.getBasicBlocks();
           for (int index = 0; index < graph.getSize(); ++index) {
             const auto *block = static_cast<const BlockBasic *>(graph.getBlock(index));
-            for (auto it = block->beginOp(); it != block->endOp(); ++it)
-              instructionStarts.push_back((*it)->getAddr().getOffset());
+            for (auto it = block->beginOp(); it != block->endOp(); ++it) {
+              Word pc = (*it)->getAddr().getOffset();
+              if (pc >= first && pc < end)
+                instructionStarts.push_back(pc);
+            }
           }
           std::sort(instructionStarts.begin(), instructionStarts.end());
           instructionStarts.erase(std::unique(instructionStarts.begin(), instructionStarts.end()),
@@ -583,9 +586,9 @@ public:
     if (end - 1 > space->getHighest())
       throw IfaceParseError("Function range exceeds the code address space");
     const Address entry(space, start);
-    // FlowInfo treats unresolved in-range calls as PIC branches. Register the
-    // known entry temporarily so a recursive call keeps its continuation.
-    // Preserve any existing function and remove only the symbol we create.
+    // A symbol-owned Funcdata has an independent scope id. Anonymous roots
+    // collide with the address-derived scope used by jump-table recovery.
+    // Register only our temporary symbol; existing function bodies stay intact.
     struct EntrySymbol {
       Scope *owner;
       FunctionSymbol *added;
@@ -594,11 +597,9 @@ public:
           owner->removeSymbol(added);
       }
     } symbol{arch.symboltab->getGlobalScope(), nullptr};
-    if (symbol.owner->findFunction(entry) == nullptr)
-      symbol.added = symbol.owner->addFunction(entry, "");
-    Funcdata function("ventris_constants", "ventris_constants",
-                      symbol.owner, entry, nullptr, 0);
-    function.followFlow(entry, Address(space, end));
+    symbol.added = symbol.owner->addFunction(entry, "ventris_constants");
+    Funcdata &function = *symbol.added->getFunction();
+    function.followFlow(entry, Address(space, end - 1));
     ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0);
     vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;

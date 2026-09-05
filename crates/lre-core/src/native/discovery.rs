@@ -93,7 +93,7 @@ impl FlowProvider for ConsoleProvider {
 
 /// ELF/PE retain structural facts when the optional console is unavailable.
 /// All supported languages use the same mapped addresses and flow worklist.
-pub(super) fn discover_seeded(import: &mut NativeImport) {
+pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleSession> {
     if import.mappings.is_empty()
         || import
             .cfg
@@ -101,30 +101,35 @@ pub(super) fn discover_seeded(import: &mut NativeImport) {
             .as_ref()
             .map_or(true, |path| !path.is_file())
     {
-        return;
+        return None;
     }
     let Ok(mut session) = ConsoleSession::new(&import.cfg) else {
-        return;
+        return None;
     };
     if session.load_mapped(import).is_err() {
-        return;
+        return None;
     }
     let ranges = code_ranges(import);
     if ranges.is_empty() {
-        return;
+        return None;
     }
     let Ok(patterns) = session.function_patterns(&ranges) else {
-        return;
+        return None;
     };
     let mut provider = ConsoleProvider {
         session,
         decoded: None,
         failure: None,
     };
-    let _ = flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider);
+    if flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider).is_err()
+        || provider.failure.is_some()
+    {
+        return None;
+    }
+    Some(provider.session)
 }
 
-pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<()> {
+pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleSession> {
     let mut session =
         ConsoleSession::new(&import.cfg).map_err(|e| ImportError::Bad(e.to_string()))?;
     session
@@ -132,7 +137,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<()> {
         .map_err(|e| ImportError::Bad(e.to_string()))?;
     let ranges = code_ranges(import);
     if ranges.is_empty() {
-        return Ok(());
+        return Ok(session);
     }
     let in_code = |address| {
         ranges
@@ -193,7 +198,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<()> {
     if let Some(error) = provider.failure {
         return Err(ImportError::Bad(error.to_string()));
     }
-    Ok(())
+    Ok(provider.session)
 }
 fn get_canonical_origin(mut addr: u64, addr_origin: &std::collections::HashMap<u64, u64>) -> u64 {
     let mut hops = 0;
