@@ -178,27 +178,28 @@ final class Dispatcher {
         }
         out.add("functions", funcs);
 
+        ghidra.program.model.listing.Listing listing =
+            session.program().getListing();
         JsonArray xrefs = new JsonArray();
-        for (Address entry : session.functionEntries()) {
-            Function f = session.functionAt(entry);
-            ghidra.program.model.address.AddressIterator it =
-                f.getBody().getAddresses(true);
-            while (it.hasNext()) {
-                Address a = it.next();
-                for (Reference r : session.program().getReferenceManager().getReferencesFrom(a)) {
-                    JsonObject o = new JsonObject();
-                    o.addProperty("from", r.getFromAddress().toString());
-                    o.addProperty("to", r.getToAddress().toString());
-                    o.addProperty("kind", r.getReferenceType().toString());
-                    xrefs.add(o);
-                }
+        ghidra.program.model.symbol.ReferenceManager references =
+            session.program().getReferenceManager();
+        ghidra.program.model.address.AddressIterator sources =
+            references.getReferenceSourceIterator(session.program().getMemory(), true);
+        while (sources.hasNext()) {
+            Address source = sources.next();
+            boolean instruction = listing.getInstructionAt(source) != null;
+            for (Reference r : references.getReferencesFrom(source)) {
+                JsonObject o = new JsonObject();
+                o.addProperty("from", r.getFromAddress().toString());
+                o.addProperty("to", r.getToAddress().toString());
+                o.addProperty("kind", r.getReferenceType().toString());
+                o.addProperty("instruction", instruction);
+                xrefs.add(o);
             }
         }
         out.add("xrefs", xrefs);
 
         JsonArray comments = new JsonArray();
-        ghidra.program.model.listing.Listing listing =
-            session.program().getListing();
         java.util.Set<Integer> commentKinds = new java.util.LinkedHashSet<>();
         commentKinds.add(CodeUnit.EOL_COMMENT);
         commentKinds.add(CodeUnit.PRE_COMMENT);

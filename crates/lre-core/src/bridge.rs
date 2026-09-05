@@ -256,7 +256,7 @@ impl Bridge {
     }
     // (dependency-free: dump_specs above kept for the worker spec replay)
 
-    /// Batched export: functions, body xrefs, comments, and datatypes in one
+    /// Batched export: functions, memory-source xrefs, comments, and datatypes in one
     /// round-trip.
     pub fn export_facts(
         &mut self,
