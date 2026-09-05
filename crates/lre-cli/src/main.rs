@@ -555,10 +555,24 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             .map_err(|e| e.to_string())?;
             for r in &rows {
-                if !r.provenance.is_empty() {
-                    println!("{} --{}--> {} [{}]", r.from, r.kind, r.to, r.provenance);
+                let ownership = match r.provenance.kind {
+                    lre_model::FactKind::Inferred => "inferred",
+                    lre_model::FactKind::Asserted => "asserted",
+                };
+                let source = if r.provenance.source.is_empty() {
+                    "unknown"
                 } else {
-                    println!("{} --{}--> {}", r.from, r.kind, r.to);
+                    r.provenance.source.as_str()
+                };
+                match r.provenance.confidence {
+                    Some(confidence) => println!(
+                        "{} --{}--> {} [{ownership}; source={source}; confidence={confidence}]",
+                        r.from, r.kind, r.to
+                    ),
+                    None => println!(
+                        "{} --{}--> {} [{ownership}; source={source}; confidence=unknown]",
+                        r.from, r.kind, r.to
+                    ),
                 }
             }
             println!("-- {} xrefs", rows.len());

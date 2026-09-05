@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::Duration;
 
-pub const API_VERSION: u64 = 1;
+pub const API_VERSION: u64 = 2;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ApiError {
@@ -554,7 +554,7 @@ pub fn serve_stdio(service: &ApiService) -> Result<(), ApiError> {
 }
 
 /// Serves one versioned API endpoint per TCP connection. Requests are
-/// ordinary HTTP/1.1 POSTs to `/v1`; the server is intended for localhost and
+/// ordinary HTTP/1.1 POSTs to `/v2`; the server is intended for localhost and
 /// does not expose an authentication boundary by itself.
 pub fn serve_tcp(service: &ApiService, listener: TcpListener) -> Result<(), ApiError> {
     for stream in listener.incoming() {
@@ -580,8 +580,8 @@ fn handle_http(service: &ApiService, stream: &mut TcpStream) -> Result<(), ApiEr
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request_line = String::new();
     reader.read_line(&mut request_line)?;
-    if !request_line.starts_with("POST /v1 ") {
-        return Err(ApiError::Request("only POST /v1 is supported".into()));
+    if !request_line.starts_with("POST /v2 ") {
+        return Err(ApiError::Request("only POST /v2 is supported".into()));
     }
     let mut content_length = None;
     loop {
@@ -644,10 +644,10 @@ mod tests {
     #[test]
     fn ping_is_explicitly_versioned() {
         let response: Value = serde_json::from_str(
-            &service().handle_line(r#"{"api":1,"id":7,"method":"ping","params":{}}"#),
+            &service().handle_line(r#"{"api":2,"id":7,"method":"ping","params":{}}"#),
         )
         .unwrap();
-        assert_eq!(response["api"], 1);
+        assert_eq!(response["api"], 2);
         assert_eq!(response["id"], 7);
         assert_eq!(response["result"]["service"], "lre-core");
         assert!(response.get("error").is_none());
@@ -657,18 +657,18 @@ mod tests {
     fn unsupported_versions_and_methods_are_structured_errors() {
         let service = service();
         for request in [
-            r#"{"api":2,"id":"v","method":"ping","params":{}}"#,
-            r#"{"api":1,"id":"m","method":"nope","params":{}}"#,
+            r#"{"api":1,"id":"v","method":"ping","params":{}}"#,
+            r#"{"api":2,"id":"m","method":"nope","params":{}}"#,
             "not-json",
         ] {
             let response: Value = serde_json::from_str(&service.handle_line(request)).unwrap();
-            assert_eq!(response["api"], 1);
+            assert_eq!(response["api"], 2);
             assert!(response["error"]["code"].is_string());
             assert!(response.get("result").is_none());
         }
     }
     #[test]
-    fn http_v1_roundtrip_uses_same_envelope() {
+    fn http_v2_roundtrip_uses_same_envelope() {
         let service = service();
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
@@ -676,11 +676,11 @@ mod tests {
             let (mut stream, _) = listener.accept().unwrap();
             handle_http(&service, &mut stream).unwrap();
         });
-        let body = r#"{"api":1,"id":"http","method":"ping","params":{}}"#;
+        let body = r#"{"api":2,"id":"http","method":"ping","params":{}}"#;
         let mut client = TcpStream::connect(address).unwrap();
         write!(
             client,
-            "POST /v1 HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\n\r\n{}",
+            "POST /v2 HTTP/1.1\r\nHost: localhost\r\nContent-Length: {}\r\n\r\n{}",
             body.len(),
             body
         )
@@ -690,7 +690,7 @@ mod tests {
         client.read_to_string(&mut response).unwrap();
         server.join().unwrap();
         assert!(response.starts_with("HTTP/1.1 200 OK"));
-        assert!(response.contains(r#""api":1"#));
+        assert!(response.contains(r#""api":2"#));
         assert!(response.contains(r#""service":"lre-core""#));
     }
     #[test]
@@ -730,7 +730,7 @@ mod tests {
         });
 
         let request = serde_json::json!({
-            "api": 1,
+            "api": 2,
             "id": "live",
             "method": "memory_live",
             "params": {
@@ -753,7 +753,7 @@ mod tests {
         let response: Value = serde_json::from_str(
             &service.handle_line(
                 &serde_json::json!({
-                    "api": 1,
+                    "api": 2,
                     "id": "jobs",
                     "method": "jobs_page",
                     "params": {"offset": 0, "limit": 10}

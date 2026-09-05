@@ -189,10 +189,7 @@ final class Dispatcher {
             Address source = sources.next();
             boolean instruction = listing.getInstructionAt(source) != null;
             for (Reference r : references.getReferencesFrom(source)) {
-                JsonObject o = new JsonObject();
-                o.addProperty("from", r.getFromAddress().toString());
-                o.addProperty("to", r.getToAddress().toString());
-                o.addProperty("kind", r.getReferenceType().toString());
+                JsonObject o = referenceRow(r);
                 o.addProperty("instruction", instruction);
                 xrefs.add(o);
             }
@@ -270,11 +267,7 @@ final class Dispatcher {
         while (it.hasNext()) {
             Address a = it.next();
             for (Reference r : session.program().getReferenceManager().getReferencesFrom(a)) {
-                JsonObject o = new JsonObject();
-                o.addProperty("from", r.getFromAddress().toString());
-                o.addProperty("to", r.getToAddress().toString());
-                o.addProperty("kind", r.getReferenceType().toString());
-                arr.add(o);
+                arr.add(referenceRow(r));
             }
         }
         return arr;
@@ -328,15 +321,28 @@ final class Dispatcher {
         return out;
     }
 
+    private static JsonObject referenceRow(Reference reference) {
+        JsonObject row = new JsonObject();
+        row.addProperty("from", reference.getFromAddress().toString());
+        row.addProperty("to", reference.getToAddress().toString());
+        row.addProperty("kind", reference.getReferenceType().toString());
+        SourceType source = reference.getSource();
+        JsonObject provenance = new JsonObject();
+        boolean asserted = source == SourceType.USER_DEFINED || source == SourceType.IMPORTED;
+        provenance.addProperty("kind", asserted ? "asserted" : "inferred");
+        provenance.addProperty("source", "ghidra:" + source.name());
+        // Ghidra supplies ownership, not a calibrated confidence value.
+        provenance.add("confidence", com.google.gson.JsonNull.INSTANCE);
+        row.add("provenance", provenance);
+        return row;
+    }
+
     private JsonElement xrefsTo(JsonObject params) {
         Session session = ghidra.session(requireString(params, "session"));
         Address at = session.address(requireString(params, "address"));
         JsonArray arr = new JsonArray();
         for (Reference r : session.program().getReferenceManager().getReferencesTo(at)) {
-            JsonObject o = new JsonObject();
-            o.addProperty("from", r.getFromAddress().toString());
-            o.addProperty("kind", r.getReferenceType().toString());
-            arr.add(o);
+            arr.add(referenceRow(r));
         }
         return arr;
     }
@@ -346,10 +352,7 @@ final class Dispatcher {
         Address at = session.address(requireString(params, "address"));
         JsonArray arr = new JsonArray();
         for (Reference r : session.program().getReferenceManager().getReferencesFrom(at)) {
-            JsonObject o = new JsonObject();
-            o.addProperty("to", r.getToAddress().toString());
-            o.addProperty("kind", r.getReferenceType().toString());
-            arr.add(o);
+            arr.add(referenceRow(r));
         }
         return arr;
     }

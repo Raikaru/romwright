@@ -95,7 +95,7 @@ def data_references(reference, binary):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
-    parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
+    parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle/xrefs-v1")
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
         "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
@@ -147,7 +147,8 @@ def main():
                 reference_path = args.oracle_dir / f"{sha}.json"
                 reference = json.loads(reference_path.read_text()) if reference_path.exists() else {}
                 if (any(reference.get(k) != v for k, v in expected.items()) or "xrefs" not in reference or
-                        any("instruction" not in ref for ref in reference.get("xrefs", []))):
+                        any("instruction" not in ref or "provenance" not in ref
+                            for ref in reference.get("xrefs", []))):
                     reference = generate_reference(command, binary, expected, args.timeout,
                                                    include_xrefs=True)
                     write_reference(reference_path, reference)
@@ -170,13 +171,18 @@ def main():
                 if result.returncode:
                     raise ValueError(result.stdout + result.stderr)
                 with sqlite3.connect(project / "project.sqlite") as connection:
-                    native_rows = [{"from": src, "to": dst, "kind": kind, "source": source}
-                                   for src, dst, kind, source in
-                                   connection.execute("SELECT src,dst,kind,provenance FROM xrefs")]
+                    native_rows = [{"from": src, "to": dst, "kind": kind, "source": source,
+                                    "ownership": ownership, "confidence": confidence}
+                                   for src, dst, kind, source, ownership, confidence in
+                                   connection.execute(
+                                       "SELECT src,dst,kind,provenance,provenance_kind,confidence FROM xrefs")]
                 native = triples(native_rows)
                 # Score every output of this pass: do not hide false positives
                 # by intersecting native targets or PCs with oracle bounds.
                 data_native = triples(ref for ref in native_rows if ref["source"] == SOURCE)
+                if any(ref["source"] == SOURCE and ref["ownership"] != "inferred"
+                       for ref in native_rows):
+                    raise ValueError("Native data-reference pass produced a non-inferred fact")
                 full_matched = len(native & oracle)
                 matched = len(data_native & data_oracle)
                 row.update(oracle_references=len(oracle), native_references=len(native),
