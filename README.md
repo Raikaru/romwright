@@ -363,6 +363,9 @@ Known functions without persisted prototypes count as incorrect, not as missing
 matches. Each case must reach stock arity accuracy minus 0.02; missing inputs
 or references cannot produce a passing gate. Architecture detail and complete
 mismatch records are linked from the aggregate by SHA-256.
+The committed m2-006 run passes 20/20 cases with no skips and equals stock in
+every case. This includes i386 `many_o2`, where both score 0/401; relative
+parity is not an absolute accuracy claim.
 
 ```sh
 python3 scripts/gen_native_specs.py --corpus-dir "$CORPUS"
@@ -382,10 +385,10 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 | ELF RISC-V LE64 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF PowerPC | supported | BE32 discovery gated; e500 parity verified; other configurations not gated |
 
-The PE parser supports PE32+ (x86-64) and PE32 (i386). Non-x86 ELF
-imports preserve mappings, symbols, and the entry point for a matching
-`VENTRIS_LANGUAGE`, `VENTRIS_LANGUAGE_DIR`, and `VENTRIS_SLA` worker bundle;
-the Agent Under Fire e500 bundle is the currently verified non-x86 target.
+The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
+requires the matching compiled SLEIGH language and static specification bundle.
+Corpus prototype arity is not full token or program-model parity. The Agent
+Under Fire e500 bundle has separate game-specific parity evidence.
 The catalog itself was exercised against the pinned Ghidra installation.
 
 ## Packaging and desktop status
