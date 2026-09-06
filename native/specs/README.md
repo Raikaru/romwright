@@ -26,10 +26,13 @@ Provision these caches before running the native corpus gate:
 python3 scripts/gen_native_specs.py --corpus-dir /path/to/corpus
 python3 scripts/gen_native_specs.py --corpus-dir /path/to/corpus --check
 python3 tests/m2-006_specs.py --corpus-dir /path/to/corpus
+python3 tests/m2-006_specs_rebuild.py --corpus-dir /path/to/corpus
 ```
 
 Provisioning invokes the bridge with the locked context. A fresh export
-must match an existing manifest; it never silently replaces the manifest.
+must match its recorded context and output hashes; it never replaces the
+manifest. Equivalent rebuilt inputs may have different binary hashes while
+producing identical specs. The original representative hash remains provenance.
 The ignored cache directories are reproducible build inputs, not new
 runtime project owners. `--check` verifies their hashes without starting
 Java. Decompilation uses only the native worker and compiled SLEIGH.

@@ -365,6 +365,7 @@ or references cannot produce a passing gate. Architecture detail and complete
 mismatch records are linked from the aggregate by SHA-256.
 
 ```sh
+python3 scripts/gen_native_specs.py --corpus-dir "$CORPUS"
 python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006.json
 ```
