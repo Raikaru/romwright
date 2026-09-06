@@ -1,0 +1,340 @@
+{
+  "gate": "nonreturn",
+  "milestone": "M2",
+  "task": "m2-008",
+  "commit": "df3cb5de29727c249933170dc750e543fa614289",
+  "date": "2026-09-06T16:25:45.144389+00:00",
+  "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
+  "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
+  "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
+  "comparison": "code-functions-v1 stock positive flags and II.3 fn.bounds; stock false is unknown; not the full M2 gate",
+  "optimized_bounds": {
+    "before": {
+      "matched": 1789,
+      "correct": 1771,
+      "fn.bounds": 0.98993851313583
+    },
+    "after": {
+      "matched": 1789,
+      "correct": 1773,
+      "fn.bounds": 0.9910564561207379
+    }
+  },
+  "optimized_bounds_improved": true,
+  "architecture": "x86_64",
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "sha256": "ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd",
+      "twin_sha256": "fc25106ff6b68589649210e5bf69230a4d7b94429c026d94314a16163c237e9d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "37c24a5bf35def1a0deee90bef24edccfbb57109888a226faf121632103ab8c5",
+      "raw_reference_sha256": "685520ce4e06cf6481136287596390df4e9a33dca06c104c5e84cab8253d14d3",
+      "excluded_functions": 3,
+      "reference": "x86-LE-64-default/gcc/a1baaace2d91bb06/baseline-ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd.json",
+      "reference_sha256": "cb4aa7379b677b84dddbd76dfc70d82b57b95a897523cd2c77f8b981606a0d27",
+      "reference_evidence": {
+        "path": "m2-008-references/x86_64_plain_o0-827fff3538fc2467.json.gz",
+        "sha256": "827fff3538fc24670dd5d118f3f0b9437ff7155aabcd62f18b40c6a1e474fd2a"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 12,
+      "scores": {
+        "before": {
+          "matched": 12,
+          "correct": 10,
+          "fn.bounds": 0.8333333333333334,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_o0-before-a085eca8041dd759.jsonl",
+            "sha256": "a085eca8041dd7596a869fd1e5aa55cdfe847062f0f80c0ac347311d40acbf2e"
+          }
+        },
+        "after": {
+          "matched": 12,
+          "correct": 10,
+          "fn.bounds": 0.8333333333333334,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_o0-after-a085eca8041dd759.jsonl",
+            "sha256": "a085eca8041dd7596a869fd1e5aa55cdfe847062f0f80c0ac347311d40acbf2e"
+          }
+        }
+      },
+      "native_nonreturning": [
+        "00201590"
+      ],
+      "stock_nonreturning": [],
+      "unknown_functions": 6,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00201590"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "sha256": "8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e",
+      "twin_sha256": "1cb15ed8e8ae142fc09d68a832a9decd9aed2054a6cdc1e9f7b4996782a9cde0",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "26745c3807c58c670151138a523e4a1722d36b1b06506a59cdaa90dddc77e624",
+      "raw_reference_sha256": "86faf5787f4db4f5e05f2758cd1665a53e6dec8dbd1bc2783e7795a8ab780a9d",
+      "excluded_functions": 3,
+      "reference": "x86-LE-64-default/gcc/319dd6ba4e61ef64/baseline-8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e.json",
+      "reference_sha256": "625d45caf43030dc78c9570c6f09d02e7c18e7294ec2cf95f6d2acc1d40689ef",
+      "reference_evidence": {
+        "path": "m2-008-references/x86_64_plain_o2-0b7e5deb2f85008a.json.gz",
+        "sha256": "0b7e5deb2f85008a2a1434d5bab0620b752f32928023cf6924c25a72437f0c22"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 12,
+      "scores": {
+        "before": {
+          "matched": 12,
+          "correct": 10,
+          "fn.bounds": 0.8333333333333334,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_o2-before-69a26cc64afb60ef.jsonl",
+            "sha256": "69a26cc64afb60ef59985d1a2fb5d09abf2ab3fdddb243013d403f1645fa20c1"
+          }
+        },
+        "after": {
+          "matched": 12,
+          "correct": 10,
+          "fn.bounds": 0.8333333333333334,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_o2-after-69a26cc64afb60ef.jsonl",
+            "sha256": "69a26cc64afb60ef59985d1a2fb5d09abf2ab3fdddb243013d403f1645fa20c1"
+          }
+        }
+      },
+      "native_nonreturning": [
+        "00201580"
+      ],
+      "stock_nonreturning": [],
+      "unknown_functions": 6,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00201580"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "sha256": "8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d",
+      "twin_sha256": "9e5339a12c6ba9338af52eb765794212afb822e574189dd25f02822e686cd3b7",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "2a3d317b958cb021fef9306acf147900db734edb22d8822e05677137981380d3",
+      "raw_reference_sha256": "dca19742b684608a826d94ac502484e98cd5f32ab22b378fed094e6adaed3142",
+      "excluded_functions": 6,
+      "reference": "x86-LE-64-default/gcc/58b26ead551b756e/baseline-8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d.json",
+      "reference_sha256": "9ea49b576b1af972b30f4ac1f362f99e18d05014c4b19600849e0c71e89e5098",
+      "reference_evidence": {
+        "path": "m2-008-references/x86_64_plain_pie-eda468f028eb9849.json.gz",
+        "sha256": "eda468f028eb984970f2bcc8a885c62b782e2ce417257559aaaa4e741e615483"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 12,
+      "scores": {
+        "before": {
+          "matched": 12,
+          "correct": 9,
+          "fn.bounds": 0.75,
+          "incorrect_count": 3,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_pie-before-50d4306d90ba652f.jsonl",
+            "sha256": "50d4306d90ba652f6a43b889325b8517076308805a971d04eb96d22ebc97c541"
+          }
+        },
+        "after": {
+          "matched": 12,
+          "correct": 9,
+          "fn.bounds": 0.75,
+          "incorrect_count": 3,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_plain_pie-after-50d4306d90ba652f.jsonl",
+            "sha256": "50d4306d90ba652f6a43b889325b8517076308805a971d04eb96d22ebc97c541"
+          }
+        }
+      },
+      "native_nonreturning": [
+        "00101630"
+      ],
+      "stock_nonreturning": [],
+      "unknown_functions": 7,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00101630"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "pass",
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "twin_sha256": "59801887729fd74104dfa2b417954980759ede94cc95af011f6b0981c8f031a0",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "259b484de99a5e75e81fb94b043e7085d9837902ea761ac014013c6ef83e0599",
+      "raw_reference_sha256": "bac0fca6e97830cfab00cb5eacb2a4146f26fafaef4147ff093d2720a7d4cb67",
+      "excluded_functions": 9,
+      "reference": "x86-LE-64-default/gcc/cc8735edd01efb10/baseline-1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d.json",
+      "reference_sha256": "ceb4eeb33a0e51dd2d41cb7a963f8b89c07177ba81eeb17e13dd31c8959d7294",
+      "reference_evidence": {
+        "path": "m2-008-references/x86_64_cpp_o2-7c26e641c5343bdf.json.gz",
+        "sha256": "7c26e641c5343bdfbbfaa0b1aef1556a59dfce2dfee22dbfcea21ece381d5539"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 20,
+      "stock_functions": 20,
+      "scores": {
+        "before": {
+          "matched": 20,
+          "correct": 17,
+          "fn.bounds": 0.85,
+          "incorrect_count": 3,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_cpp_o2-before-d9ce6dbfc288309f.jsonl",
+            "sha256": "d9ce6dbfc288309feb773ac005d74bfcbb8c55c178c2148d1fa531e584dbc420"
+          }
+        },
+        "after": {
+          "matched": 20,
+          "correct": 18,
+          "fn.bounds": 0.9,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_cpp_o2-after-ec1160a098af95b4.jsonl",
+            "sha256": "ec1160a098af95b4347d944e61261cfd7fb0d987173910bd92efe01a5ca55d95"
+          }
+        }
+      },
+      "native_nonreturning": [
+        "00201890",
+        "00201ad0"
+      ],
+      "stock_nonreturning": [
+        "00201ad0"
+      ],
+      "unknown_functions": 11,
+      "rediscovered_callers": 2,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00201890"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "sha256": "13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75",
+      "twin_sha256": "8f85ae21cea8a7c8a38276ca2bf12ba1715906acedf1018ccdae3afa2b5b483d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "1487e49ddb45adef9e21032c90e877620c53e9cea870ade164d51707d1d11bbf",
+      "raw_reference_sha256": "1e0534498a63a4ec529124edc2f8c36879f8ee70fd07a73feddc4064b9506f35",
+      "excluded_functions": 2,
+      "reference": "x86-LE-64-default/gcc/e1d6d71f3c0162c3/baseline-13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75.json",
+      "reference_sha256": "8ff6dba5161394b75b90de5b33eb1f28390825dc7c57182f9eb9bafe8ef9fbf2",
+      "reference_evidence": {
+        "path": "m2-008-references/x86_64_many_o2-f5f7ca6ab26cf3b4.json.gz",
+        "sha256": "f5f7ca6ab26cf3b4fd874fbea3353c84b19eccacf1dcc0a11f5d0fc2dbf8899f"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 409,
+      "stock_functions": 409,
+      "scores": {
+        "before": {
+          "matched": 409,
+          "correct": 407,
+          "fn.bounds": 0.9951100244498777,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_many_o2-before-0c6779dae7004ba0.jsonl",
+            "sha256": "0c6779dae7004ba0b5cc1836224f85dea3c7af924a4b037b9d5f2b48bdfad00c"
+          }
+        },
+        "after": {
+          "matched": 409,
+          "correct": 407,
+          "fn.bounds": 0.9951100244498777,
+          "incorrect_count": 2,
+          "incorrect_evidence": {
+            "path": "m2-008-x86_64-mismatches/x86_64_many_o2-after-0c6779dae7004ba0.jsonl",
+            "sha256": "0c6779dae7004ba0b5cc1836224f85dea3c7af924a4b037b9d5f2b48bdfad00c"
+          }
+        }
+      },
+      "native_nonreturning": [
+        "002040e0"
+      ],
+      "stock_nonreturning": [],
+      "unknown_functions": 4,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [
+        "002040e0"
+      ],
+      "stock_only": []
+    }
+  ]
+}
