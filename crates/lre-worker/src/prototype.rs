@@ -361,4 +361,22 @@ mod tests {
                 .is_none()
         );
     }
+
+    #[test]
+    fn rejects_a_packed_parameter_index_that_would_wrap_to_zero() {
+        let mut packed = Vec::new();
+        element(&mut packed, DOC, |out| element(out, FUNCTION, |out| {
+            element(out, LOCALDB, |out| element(out, SYMBOL, |out| {
+                text(out, 14, "overflow");
+                encode_attribute(out, 61, attr_type::POSITIVE_INT, 0);
+                encode_header(out, crate::wire::ATTRIBUTE, 10);
+                // 2^64 in ten seven-bit groups, not the valid ordinal zero.
+                out.extend_from_slice(&[0x4a, 0x82, 0x80, 0x80, 0x80, 0x80,
+                    0x80, 0x80, 0x80, 0x80, 0x80]);
+                int_type(out);
+            }));
+            prototype(out, "__cdecl", false, int_type);
+        }));
+        assert!(decode_document_with_ram_space(&packed, Some(3)).1.is_none());
+    }
 }
