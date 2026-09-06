@@ -1983,8 +1983,10 @@ M2 — Program-model parity
   corpus member is introduced. Split additional evidence commits below
   800 changed lines if required.
   - e1: add the locked-corpus acceptance and stock return-behavior exporter.
-  - e2–e5: commit x86-64, i386, AArch64, and PowerPC reference evidence
-    separately. e6: commit the aggregate report and task closure.
+  - e2–e5: commit x86-64, i386, AArch64, and PowerPC architecture reports,
+    JSONL mismatches, and compressed raw/scoring/body references separately.
+    e6: commit the aggregate report and measured task status. Each evidence
+    commit remains below 800 changed lines; a failed gate does not close the task.
 - f1: complete the ratified known-name requirement using the pinned ELF/PE
   no-return lists, including `exit`; extend the failing acceptance first.
 - f2: produce and consume positive completed-decompiler flow hints. Preserve
@@ -2000,17 +2002,32 @@ M2 — Program-model parity
   5 inferred functions, 3 removed/restored call xrefs, 1 stale inference
   retracted, and 2 asserted-return controls. Workspace: 163 pass, 2 ignored;
   corpus: 5/5. Standalone and pooled worker paths pass.
-- `5d085b3` commits failing II.3 boundary-tolerance and matched-denominator
-  checks. Both now pass. The 20-entry comparison is regenerating current
-  bridge-provenance raw/scoring references; no corpus gate pass is claimed.
+- `e2ff96c` implements pinned known names and completed native CFG hints.
+  `5d085b3`, `3e90d14`, and `df3cb5d` pin boundary and positive-metadata
+  regressions; 5 benchmark checks pass.
+- `benchmarks/reports/m2-008.json`: 19 pass, 1 fail, 0 skipped. Optimized
+  `fn.bounds` improves from 1771/1789 (0.98993851313583) to 1773/1789
+  (0.9910564561207379). All 20 native analyses are revision-idempotent.
+  Twenty compressed reference bundles and their architecture/mismatch links
+  pass SHA-256 verification. Existing raw and `baseline-*.json` files are unchanged.
+- Stock false return flags are unknown, not returning assertions; 15 additional
+  native `_start` inferences are reported separately. The only missing stock
+  positive is PowerPC C++ `__cxa_throw` at `0x100108b0`. Gate `passed` is false;
+  m2-008 is not marked complete.
 
 ## Blocked on
-- None.
+- m2-008 corpus closure needs relocation-proven PowerPC thunk/name validation
+  from m2-009. Native import stores `0x100108b0` as `FUN_100108b0`, size 16,
+  rather than `__cxa_throw`; fresh stock analysis flags it non-returning.
+  `collect_plt_candidates` has no PPC layout and `promote_linkage` does not
+  rename already-known entries. No guessed name, architecture-specific
+  disassembly, corpus substitution, or out-of-order thunk change was added.
+  Task-order authorization is required before beginning this prerequisite.
 
 ## Next task
 - m2-008: infer non-returning functions and rediscover callers.
-  Failing acceptance is committed in `a5fedc2`; schema-v8 storage is committed
-  in `dd2ae40`. Complete-flow and atomic-publication implementation is in progress.
+  Known-name/hint implementation and optimized-boundary evidence are committed.
+  Blocked on the PowerPC thunk prerequisite above; do not begin m2-009 implicitly.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
