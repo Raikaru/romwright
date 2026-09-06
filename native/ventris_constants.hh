@@ -15,6 +15,11 @@
 namespace ghidra {
 namespace ventris_constants {
 
+class MetadataOnlyEmit : public PcodeEmit {
+public:
+  void dump(const Address &, OpCode, VarnodeData *, VarnodeData *, int4) override {}
+};
+
 struct Region {
   Word start, end;
   unsigned flags;
@@ -207,10 +212,7 @@ class Propagation {
         throw LowlevelError("Reference validation requires a SLEIGH translator");
       if (space == op.getAddr().getSpace() &&
           address.offset == op.getAddr().getOffset() + sleigh->instructionLength(op.getAddr())) {
-        class MetadataOnlyEmit : public PcodeEmit {
-        public:
-          virtual void dump(const Address &, OpCode, VarnodeData *, VarnodeData *, int4) {}
-        } emitted;
+        MetadataOnlyEmit emitted;
         InstructionFlow flow;
         sleigh->oneInstructionFlow(emitted, op.getAddr(), flow);
         if (flow.type().fallthrough)
@@ -249,6 +251,8 @@ class Propagation {
     if (sleigh == nullptr)
       throw LowlevelError("Operand references require a SLEIGH translator");
     std::vector<VarnodeData> scalars;
+    MetadataOnlyEmit emitted;
+    InstructionFlow flow;
     for (auto it = function.beginOpAll(); it != function.endOpAll(); ++it) {
       const PcodeOp &source = *it->second;
       Word pc = source.getAddr().getOffset();
@@ -258,6 +262,7 @@ class Propagation {
       walker.baseState();
       scalars.clear();
       walker.getConstructor()->collectOperandScalars(walker, scalars, true);
+      bool haveFlow = false;
       for (const VarnodeData &scalar : scalars) {
         Value value = Value::constant(scalar.offset, scalar.size);
         if (value.bits < 4096 || region(value.bits) == nullptr)
@@ -270,21 +275,15 @@ class Propagation {
         default:
           break;
         }
-        bool control = false;
-        auto limit = function.endOp(source.getAddr());
-        for (auto operation = function.beginOp(source.getAddr()); operation != limit; ++operation) {
-          const PcodeOp &op = *operation->second;
-          if (op.code() == CPUI_CALL) {
-            const FuncCallSpecs *call = function.getCallSpecs(&op);
-            control = call != nullptr && !call->getEntryAddress().isInvalid() &&
-                call->getEntryAddress().getOffset() == value.bits;
-          } else if (op.code() == CPUI_BRANCH || op.code() == CPUI_CBRANCH) {
-            control = memorySpace(op.getIn(0)->getSpace()) &&
-                op.getIn(0)->getOffset() == value.bits;
-          }
-          if (control)
-            break;
+        // Compiler call-fixups can remove CALL ops from Funcdata. Operand
+        // classification must retain the original instruction's flow targets.
+        if (!haveFlow) {
+          flow.clear();
+          sleigh->oneInstructionFlow(emitted, source.getAddr(), flow);
+          haveFlow = true;
         }
+        bool control = std::any_of(flow.targets.begin(), flow.targets.end(),
+            [&](const Address &target) { return target.getOffset() == value.bits; });
         if (!control)
           reference(source, dataSpace, value, 4);
       }

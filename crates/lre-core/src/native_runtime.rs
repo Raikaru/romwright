@@ -698,6 +698,7 @@ pub struct ConsoleSession {
     stdin: std::process::ChildStdin,
     reader: std::io::BufReader<std::process::ChildStdout>,
     language_id: String,
+    reference_labels: Option<Vec<(u64, String)>>,
 }
 
 impl ConsoleSession {
@@ -728,12 +729,14 @@ impl ConsoleSession {
             stdin,
             reader,
             language_id: cfg.language_id.clone(),
+            reference_labels: None,
         })
     }
 
     /// Load ELF/DOL through the native mapped image. Other formats retain
     /// their BFD/raw address-base handling.
     pub fn load(&mut self, binary: &Path, base: u64) -> Result<()> {
+        self.reference_labels = None;
         if let Some(image) = MappedImage::for_elf_or_dol(binary)? {
             return self.load_xml(&image);
         }
@@ -769,6 +772,7 @@ impl ConsoleSession {
     }
 
     fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
+        self.reference_labels = None;
         self.send(&image.command())?;
         let response = read_until_prompt(&mut self.reader)?;
         if !response.contains("successfully loaded:") {
@@ -802,6 +806,41 @@ impl ConsoleSession {
         trust_writable: bool,
     ) -> Result<Vec<ReferenceFact>> {
         self.propagation_query("references", "REFERENCES ", start, end, mappings, trust_writable)
+    }
+
+    pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
+        use std::fmt::Write as _;
+        if self.reference_labels.is_none() {
+            let ranges = import.mappings.iter().filter(|mapping| mapping.flags & 4 != 0)
+                .map(|mapping| {
+                    mapping.vaddr.checked_add(mapping.size)
+                        .map(|end| (mapping.vaddr, end))
+                        .ok_or_else(|| NativeRuntimeError("pattern mapping range overflows".into()))
+                }).collect::<Result<Vec<_>>>()?;
+            self.function_patterns(&ranges)?;
+        }
+        let mut script = String::new();
+        let mut count = 0;
+        for (address, label) in self.reference_labels.as_ref().unwrap() {
+            if !import.functions.iter().any(|function| function.entry == *address && function.size > 1) {
+                continue;
+            }
+            if label.is_empty() || label.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                return err("invalid function-pattern label");
+            }
+            let _ = writeln!(script, "referencefixup 0x{address:x} {label}");
+            count += 1;
+        }
+        if count != 0 {
+            self.send(&script)?;
+            for _ in 0..count {
+                let response = read_until_prompt(&mut self.reader)?;
+                if !response.lines().any(|line| matches!(line, "FIXUP 0" | "FIXUP 1")) {
+                    return err(format!("reference context failed: {response}"));
+                }
+            }
+        }
+        Ok(())
     }
 
     fn propagation_query<T: serde::de::DeserializeOwned>(
@@ -1117,6 +1156,23 @@ impl ConsoleSession {
             })
         {
             return err("mismatched function-pattern response");
+        }
+        // Retain only annotation evidence needed after discovery; avoid rescanning
+        // the image when the reference pass reuses this loaded console.
+        let labels = self.reference_labels.get_or_insert_with(Vec::new);
+        for hit in &patterns.matches {
+            for action in &patterns.rules[hit.rule].actions {
+                if action.kind != "funcstart"
+                    || !action.attributes.get("validcode")
+                        .is_some_and(|value| value.eq_ignore_ascii_case("function")) {
+                    continue;
+                }
+                if let Some(label) = action.attributes.get("label") {
+                    if !labels.iter().any(|(address, name)| *address == hit.address && name == label) {
+                        labels.push((hit.address, label.clone()));
+                    }
+                }
+            }
         }
         Ok(patterns)
     }
