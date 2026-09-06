@@ -968,10 +968,14 @@ fn infer_data_references(
     let roots = import.reference_roots.iter()
         .filter(|&&(start, _)| !import.functions.iter()
             .any(|function| function.entry == start && function.size > 1))
-        .map(|&(start, end)| Ok((start, end)));
-    let mut work = functions.chain(roots)
+        .copied();
+    let mut work = functions
         .map(|range| range.map(|(start, end)| (start, end, Vec::new(), true)))
         .collect::<Result<Vec<_>>>()?;
+    let function_count = work.len();
+    for (start, end) in roots {
+        work.push((start, end, Vec::new(), true));
+    }
     let mut pending: std::collections::VecDeque<_> = (0..work.len()).collect();
     loop {
         while let Some(index) = pending.pop_front() {
@@ -1001,6 +1005,53 @@ fn infer_data_references(
         }
         if pending.is_empty() { break; }
     }
+    // Propagated caller context can resolve a linkage whose base register was
+    // unknown during discovery. Require the existing pure-linkage proof and
+    // one consistent imported read slot within that exact instruction extent.
+    let imported: std::collections::HashMap<_, _> = import.externals.iter()
+        .filter(|(address, _)| *address != 0)
+        .map(|(address, name)| (*address, name.as_str()))
+        .collect();
+    let candidates: Vec<_> = work[..function_count].iter().enumerate()
+        .filter(|(_, (start, _, facts, _))| {
+            !imported.contains_key(start) && facts.iter()
+                .any(|fact| fact.kind == ReferenceKind::Read && imported.contains_key(&fact.to))
+        })
+        .map(|(index, _)| index)
+        .collect();
+    let mut linked = Vec::new();
+    let mut addresses = Vec::with_capacity(candidates.len().min(1024));
+    for chunk in candidates.chunks(1024) {
+        addresses.clear();
+        addresses.extend(chunk.iter().map(|&index| work[index].0));
+        let shapes = session.linkage_batch(&addresses)
+            .map_err(|error| ImportError::Bad(format!("propagated linkage: {error}")))?;
+        for (&index, shape) in chunk.iter().zip(shapes) {
+            let (start, end, facts, _) = &work[index];
+            let Some(limit) = start.checked_add(shape.length as u64)
+                .filter(|limit| shape.length != 0 && *limit <= *end) else {
+                continue;
+            };
+            let mut slot = None;
+            let mut consistent = true;
+            for fact in facts.iter().filter(|fact| {
+                fact.kind == ReferenceKind::Read && *start <= fact.from && fact.from < limit
+            }) {
+                if !imported.contains_key(&fact.to)
+                    || slot.is_some_and(|previous| previous != fact.to)
+                    || shape.slot.is_some_and(|resolved| resolved != fact.to)
+                {
+                    consistent = false;
+                    break;
+                }
+                slot = Some(fact.to);
+            }
+            if consistent && let Some(name) = slot.and_then(|slot| imported.get(&slot)) {
+                linked.push((*start, (*name).to_owned()));
+            }
+        }
+    }
+    import.externals.extend(linked);
     // Context adds precise accesses; existing speculative DATA remains evidence.
     // Publish no partial pass if any query fails.
     for (_, _, facts, _) in work {
@@ -1090,6 +1141,19 @@ pub fn store_import(
         })
         .collect();
     db.replace_functions(pid, &rows)?;
+    // Refresh this loader's facts without discarding symbols from other owners.
+    let mut symbols = db.symbols(pid)?;
+    symbols.retain(|symbol| symbol.source != "native-import");
+    symbols.extend(
+        imp.externals.iter().filter(|(entry, _)| *entry != 0)
+            .map(|(entry, name)| lre_model::SymbolRow {
+                name: name.clone(),
+                address: lre_model::Address::ram(*entry),
+                external: true,
+                source: "native-import".into(),
+            }),
+    );
+    db.replace_symbols(pid, &symbols)?;
     let xrows: Vec<XrefRow> = imp
         .xrefs
         .iter()

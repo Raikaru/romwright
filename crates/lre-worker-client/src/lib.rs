@@ -10,7 +10,7 @@ use lre_worker::{
     BinaryBacking, ProgramProvider, WorkerError, load_specs, open_store, worker::NativeWorker,
 };
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -639,6 +639,14 @@ impl WorkerPoolManager {
         let store = core.store_handle()?;
         let id = store.program_id(program)?;
         let graph_revision = store.revision(id)?;
+        // A linkage stub has no callee body to recover. Treating its empty
+        // prototype as void(void) would erase live arguments in its callers.
+        let externals: HashSet<_> = store
+            .symbols(id)?
+            .into_iter()
+            .filter(|symbol| symbol.external)
+            .map(|symbol| symbol.address)
+            .collect();
         let mut functions = store.functions(id)?;
         functions.retain(|function| function.entry.space == lre_model::AddressSpace::Ram);
         let mut edges = store.call_edges(id)?;
@@ -685,10 +693,12 @@ impl WorkerPoolManager {
                     return Err(PoolError::StaleRevision(revision, current));
                 }
                 report.analyzed += 1;
-                recovered.push((
-                    function.entry.clone(),
-                    doc.prototype.expect("recovery requires a prototype"),
-                ));
+                if !externals.contains(&function.entry) {
+                    recovered.push((
+                        function.entry.clone(),
+                        doc.prototype.expect("recovery requires a prototype"),
+                    ));
+                }
             }
             if Instant::now() >= deadline {
                 return Ok(report);

@@ -486,6 +486,7 @@ pub struct FlowResult {
 #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
 pub struct LinkageResult {
     pub address: u64,
+    /// Proven linkage-shape extent, even when its slot needs caller context.
     pub length: u32,
     pub slot: Option<u64>,
     /// A possible local linkage shape, not proof of an imported function.
@@ -1179,8 +1180,8 @@ impl ConsoleSession {
         if results.len() != expected.len()
             || results.iter().zip(expected).any(|(result, address)| {
                 result.address != address
-                    || result.slot.is_some() != (result.length != 0)
-                    || (result.needs_context && result.length != 0)
+                    || (result.length != 0) != (result.slot.is_some() || result.needs_context)
+                    || (result.needs_context && result.slot.is_some())
             })
         {
             return err("incomplete or mismatched linkage response");
