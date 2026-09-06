@@ -1654,6 +1654,10 @@ M2 — Program-model parity
   `.shstrtab` addresses and declared encodings are not optional oracle rows.
   First commit `elf_string_tables_preserve_namespaces_and_utf8` failing;
   do not remove non-loaded strings from the metric.
+- b2: the real ELF Unicode smoke import loses `A😀BC` behind a shifted
+  UTF-16 interpretation beginning in alignment padding. Commit
+  `shared_data_strings_use_alignment_and_reference_evidence` failing, then
+  resolve overlapping candidates using BOM, reference, and alignment evidence.
 - c: verify worker string delivery, complete differential acceptance, and CI.
   Publish implementation and generated reports in separate commits below
   800 changed lines.
