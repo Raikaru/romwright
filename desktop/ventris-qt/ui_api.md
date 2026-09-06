@@ -88,13 +88,25 @@ story and a phase of their own. The bridge methods remain available.
 
 | Method | Request | Result |
 | --- | --- | --- |
-| `type_defs` | `program` | `[TypeDefRow]`: `name`, `kind`, `definition`, `size?`, `alignment?`, `base_type?`, `provenance` |
+| `type_defs` | `program` | `[TypeDefRow]`: `name`, `kind`, `definition`, `size?`, `alignment?`, `base_type?`, `provenance`, `primitive?`, `element_count?` |
 | `type_fields` | `program` | `[TypeFieldRow]`: `type_name`, `ordinal`, `field_name`, `offset`, `size?`, `type_ref?` |
-| `prototypes` | `program` | `[PrototypeRow]`: `function`, `signature`, `calling_convention?`, `return_type?` |
+| `prototypes` | `program` | `[PrototypeRow]`: `function`, `signature`, `calling_convention?`, `return_type?`, `provenance` |
 | `stack_variables` | `program` | `[StackVariableRow]`: `function`, `ordinal`, `name`, `storage`, `type_name?`, `offset?`, `size?` |
 | `type_graph` | `program` | `{"nodes": [{name, kind, size?}], "edges": [{source, target, kind, provenance}]}` |
 | `set_type_def` | `program`, `row` (TypeDefRow) | `{"name"}` |
 | `set_type_field` | `program`, `row` (TypeFieldRow) | `{"type_name", "ordinal"}` |
 | `set_prototype` | `program`, `row` (PrototypeRow) | `{"function"}` |
+| `replace_prototypes` | `program`, `rows` ([PrototypeRow]) | `{"count"}` (input rows; existing assertions are retained) |
 | `set_stack_variable` | `program`, `row` (StackVariableRow) | `{"function", "ordinal"}` |
 | `propagate_type_links` | `program` | `[TypeLinkRow]`: `source`, `target`, `kind`, `provenance` |
+
+`primitive` is `signed_integer`, `unsigned_integer`, `float`, `boolean`, or
+`void`; `null` means unclassified. Array `element_count` is a nonnegative
+integer or `null` for unknown; zero is not treated as missing.
+
+Prototype `provenance` is `{"kind": "asserted" | "inferred", "source": string,
+"confidence": number | null}`. Confidence must be finite and within `[0, 1]`;
+inferences require a nonempty source. Missing legacy provenance remains an
+assertion of unknown origin/confidence. Inference cannot overwrite an existing
+assertion. Desktop prototype edits explicitly record source `ui` and asserted
+ownership without inventing a confidence.

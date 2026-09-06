@@ -269,7 +269,7 @@ references retain their physical source and target addresses.
 
 ELF string tables retain their declared UTF-8 encoding, including non-loaded
 tables. Metadata addresses are space-qualified in the desktop table
-(`.shstrtab::0x1`), not displayed or cached as RAM. Database format 6 retains
+(`.shstrtab::0x1`), not displayed or cached as RAM. Database format 6 introduced
 typed non-RAM addresses; existing RAM hex cells require no re-encoding.
 
 Worker string queries serve those RAM facts as UTF-8, without guessing strings
@@ -280,6 +280,22 @@ NUL terminator. Missing facts and valid empty strings remain distinct.
 `benchmarks/string_gate.py` compares the unchanged 20-entry corpus against
 defined reference strings. Its summary links hashed per-binary difference
 files in `<report-stem>-details/`; no missing or extra addresses are discarded.
+
+## Prototype and type storage
+
+Database format 7 adds prototype ownership, producer, and optional confidence.
+Prototypes and xrefs share `FactProvenance`: `asserted` or `inferred`, a source
+label, and confidence in `[0, 1]` or `null` when unknown. Inference cannot replace
+an assertion; bulk prototype replacement retains assertions. Legacy prototype
+records retain their signatures and conventions with unknown source/confidence.
+
+The existing `type_defs` and `type_fields` tables store primitives, pointers,
+arrays, and composites. `primitive` classifies signed/unsigned integers, floats,
+booleans, or void; `base_type` identifies pointer/array targets; `element_count`
+is nullable and preserves zero-length arrays. Composite fields retain their
+ordinal, offset, size, and type reference. Legacy kind labels and unclassified
+records remain intact. This is storage support, not a claim of recovered
+prototype or type-analysis parity.
 
 ## Support matrix
 

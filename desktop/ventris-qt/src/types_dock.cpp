@@ -3,6 +3,7 @@
 #include "core_bridge.h"
 #include "json_util.h"
 
+#include <QComboBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
@@ -41,6 +42,25 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     type_editor->addWidget(type_alignment_edit_, 2, 3);
     type_editor->addWidget(new QLabel(QStringLiteral("Base type"), type_panel), 3, 0);
     type_editor->addWidget(type_base_edit_, 3, 1);
+
+    auto *type_metadata = new QWidget(type_panel);
+    auto *type_metadata_layout = new QHBoxLayout(type_metadata);
+    type_metadata_layout->setContentsMargins(0, 0, 0, 0);
+    type_primitive_edit_ = new QComboBox(type_metadata);
+    type_primitive_edit_->setObjectName(QStringLiteral("primitiveKind"));
+    type_primitive_edit_->addItem(QStringLiteral("Unknown"));
+    for (const char *kind : {"signed_integer", "unsigned_integer", "float", "boolean", "void"}) {
+        const QString name = QString::fromLatin1(kind);
+        type_primitive_edit_->addItem(name, name);
+    }
+    type_element_count_edit_ = new QLineEdit(type_metadata);
+    type_element_count_edit_->setObjectName(QStringLiteral("elementCount"));
+    type_element_count_edit_->setPlaceholderText(QStringLiteral("unknown"));
+    type_metadata_layout->addWidget(new QLabel(QStringLiteral("Primitive"), type_metadata));
+    type_metadata_layout->addWidget(type_primitive_edit_);
+    type_metadata_layout->addWidget(new QLabel(QStringLiteral("Elements"), type_metadata));
+    type_metadata_layout->addWidget(type_element_count_edit_);
+    type_editor->addWidget(type_metadata, 3, 2, 1, 2);
 
     field_ordinal_edit_ = new QLineEdit(QStringLiteral("0"), type_panel);
     field_name_edit_ = new QLineEdit(type_panel);
@@ -102,11 +122,11 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     type_layout->addLayout(type_actions);
 
     auto *type_tabs = new QTabWidget(type_panel);
-    types_ = new QTableWidget(0, 7, type_tabs);
+    types_ = new QTableWidget(0, 9, type_tabs);
     types_->setHorizontalHeaderLabels(
         {QStringLiteral("Name"), QStringLiteral("Kind"), QStringLiteral("Definition"),
          QStringLiteral("Size"), QStringLiteral("Align"), QStringLiteral("Base"),
-         QStringLiteral("Provenance")});
+         QStringLiteral("Provenance"), QStringLiteral("Primitive"), QStringLiteral("Elements")});
     type_fields_ = new QTableWidget(0, 6, type_tabs);
     type_fields_->setHorizontalHeaderLabels(
         {QStringLiteral("Type"), QStringLiteral("Ordinal"), QStringLiteral("Field"),
@@ -183,6 +203,11 @@ void TypesDock::loadTypes(const QString &program) {
                              types_->setItem(index, 6,
                                              new QTableWidgetItem(
                                                  row.value("provenance").toString()));
+                             types_->setItem(index, 7,
+                                             new QTableWidgetItem(row.value("primitive").toString()));
+                             const QJsonValue count = row.value("element_count");
+                             types_->setItem(index, 8, new QTableWidgetItem(
+                                 count.isDouble() ? QString::number(count.toInteger()) : QString()));
                          }
                          emit jobFinished(QStringLiteral("types"), true,
                                           QStringLiteral("%1 types").arg(rows.size()));
@@ -358,6 +383,10 @@ void TypesDock::saveTypeDefinition(const QString &program) {
                         {"definition", type_definition_edit_->text()},
                         {"size", optionalInteger(type_size_edit_->text())},
                         {"alignment", optionalInteger(type_alignment_edit_->text())},
+                        {"primitive", type_primitive_edit_->currentData().isNull()
+                                          ? QJsonValue(QJsonValue::Null)
+                                          : QJsonValue(type_primitive_edit_->currentData().toString())},
+                        {"element_count", optionalInteger(type_element_count_edit_->text())},
                         {"base_type", type_base_edit_->text().isEmpty()
                                           ? QJsonValue(QJsonValue::Null)
                                           : QJsonValue(type_base_edit_->text())},
@@ -415,6 +444,8 @@ void TypesDock::savePrototype(const QString &program, const QString &address) {
                                 {"calling_convention", calling_convention_edit_->text().isEmpty()
                                                            ? QJsonValue(QJsonValue::Null)
                                                            : QJsonValue(calling_convention_edit_->text())},
+                                {"provenance", QJsonObject{{"kind", "asserted"}, {"source", "ui"},
+                                                          {"confidence", QJsonValue(QJsonValue::Null)}}},
                                 {"return_type", QJsonValue(QJsonValue::Null)}}}},
         [this, address](const QJsonObject &response) {
             QString error;
