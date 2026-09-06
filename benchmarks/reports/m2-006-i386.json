@@ -1,0 +1,108 @@
+{
+  "gate": "prototypes",
+  "milestone": "M2",
+  "task": "m2-006",
+  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
+  "date": "2026-09-06T11:31:31.302134+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "budget_ms": 60000,
+  "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
+  "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "architecture": "i386",
+  "corpus": [
+    {
+      "id": "i386_plain_o0",
+      "status": "fail",
+      "sha256": "cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba",
+      "twin_sha256": "0a5f83884f4c5507faacdbc78f7f7193500a68c38a709f240631c5c17f9b5cba",
+      "reference": "x86-LE-32-default/gcc/b6d94d352db0ef21/baseline-cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba.json",
+      "reference_sha256": "9ca0f7e2197a26d0f2de66f14d674931f9957805a7a00369d03707e89918b99f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_o0.bin\", \"program\": \"i386_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "i386_plain_o2",
+      "status": "fail",
+      "sha256": "7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3",
+      "twin_sha256": "7110a5c2d8e3c32f4b6863d253ec21197f5949d7c0f5d24a9ef97e8e8c1d1fba",
+      "reference": "x86-LE-32-default/gcc/999a9f78cc395e3d/baseline-7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3.json",
+      "reference_sha256": "d27ed99a060b8464a5d9618e7577232a27b45dec7f1e123434aa2e4bc6716aa7",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_o2.bin\", \"program\": \"i386_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "i386_plain_pie",
+      "status": "fail",
+      "sha256": "0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c",
+      "twin_sha256": "9d0db8fbd3db207c5a7eceae9afd138fe27d2954184a423784e20c03107236d0",
+      "reference": "x86-LE-32-default/gcc/820e21abe052b885/baseline-0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c.json",
+      "reference_sha256": "105192fa02179fc23d080f1e0076fadde69b6453fbef91be17c536c9708e1921",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_pie.bin\", \"program\": \"i386_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "i386_cpp_o2",
+      "status": "fail",
+      "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
+      "twin_sha256": "e00e6f89c277547b9f8da6df57a2f201246d3d01faa52e0c570ff456ca7e6e45",
+      "reference": "x86-LE-32-default/gcc/861f2863456e1c84/baseline-55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc.json",
+      "reference_sha256": "257c8c54a6b917086c9db7eab9ce3bb989d88e291ae2332a212d2f03ba3e5b0f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_cpp_o2.bin\", \"program\": \"i386_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "i386_many_o2",
+      "status": "fail",
+      "sha256": "9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f",
+      "twin_sha256": "0164176fd5ac2f28275c4187b52507e9722e18f9f7e2aa53c2e65804f07f9d0f",
+      "reference": "x86-LE-32-default/gcc/c7039be76b3fca25/baseline-9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f.json",
+      "reference_sha256": "c252760ea4ff2cad1d2a5a2d896854c615946cb020ba258032b6c51aaae34c5c",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_many_o2.bin\", \"program\": \"i386_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]"
+    }
+  ]
+}

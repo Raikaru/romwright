@@ -1,0 +1,108 @@
+{
+  "gate": "prototypes",
+  "milestone": "M2",
+  "task": "m2-006",
+  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
+  "date": "2026-09-06T11:31:31.302134+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "budget_ms": 60000,
+  "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
+  "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "architecture": "aarch64",
+  "corpus": [
+    {
+      "id": "aarch64_plain_o0",
+      "status": "fail",
+      "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+      "twin_sha256": "3aa0bf7efbab75891c725118f175beac8e9c2ffeb51be6731bc16dc96648aaad",
+      "reference": "AARCH64-LE-64-v8A/default/54831ee74b814f60/baseline-66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f.json",
+      "reference_sha256": "09b1addd4a7a4d721e723c3850bccdeec7249c6d91787f9a56bbbeed133e5e18",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o0.bin\", \"program\": \"aarch64_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "fail",
+      "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
+      "twin_sha256": "1a5355a6fdf07651017d6866c59bdd016d0b613f8f8bb8f2bde066d8cf19454d",
+      "reference": "AARCH64-LE-64-v8A/default/9309bc4915cc92f3/baseline-ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a.json",
+      "reference_sha256": "4c7a1116f53b09c122a995273df5a46c1f9dead2ee55d1a530375204d06c1f70",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o2.bin\", \"program\": \"aarch64_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "fail",
+      "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
+      "twin_sha256": "20d555bb798d4dc6f52279846df3181cdf005b80161d50cb0243022a2727a11e",
+      "reference": "AARCH64-LE-64-v8A/default/0988e4d3d8eb91e9/baseline-130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555.json",
+      "reference_sha256": "43802e28b6c83505fc54519cabe5e90f32d55aeb296cabb0b2697b78c9e61751",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_pie.bin\", \"program\": \"aarch64_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "fail",
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "twin_sha256": "c03b2ca9e12d2555b02768ec88052c5738ccc07fd1ab9f24b3e14e1299ce45fa",
+      "reference": "AARCH64-LE-64-v8A/default/b1960f8ccf019ac7/baseline-670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9.json",
+      "reference_sha256": "4d019a8adcd0cd2f07f21666c5d11ecc11480f652028aede5aa8725cc0041f85",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_cpp_o2.bin\", \"program\": \"aarch64_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "fail",
+      "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
+      "twin_sha256": "2d9c54d3c99b3c7f3a36191c5ac8370e677245b91f535a81becfd85ed18656ad",
+      "reference": "AARCH64-LE-64-v8A/default/27c5de6429efbf50/baseline-61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809.json",
+      "reference_sha256": "d12ae2be0873db65665d9a5637e28c9302d6028ef4bc1f136828b5fedc780f9a",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_many_o2.bin\", \"program\": \"aarch64_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+    }
+  ]
+}

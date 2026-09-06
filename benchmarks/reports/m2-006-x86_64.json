@@ -1,0 +1,260 @@
+{
+  "gate": "prototypes",
+  "milestone": "M2",
+  "task": "m2-006",
+  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
+  "date": "2026-09-06T11:31:31.302134+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "budget_ms": 60000,
+  "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
+  "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "architecture": "x86_64",
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "sha256": "ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd",
+      "twin_sha256": "fc25106ff6b68589649210e5bf69230a4d7b94429c026d94314a16163c237e9d",
+      "reference": "x86-LE-64-default/gcc/c738e5eb618ecbe7/baseline-ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd.json",
+      "reference_sha256": "85e8275e48e07b4eaddd3017ab55ba9620f22f3c11a324c42c8298501bc27b0c",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
+      "runs": 1,
+      "inference": {
+        "analyzed": 14,
+        "changed": 12,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 12,
+      "persisted_prototypes": 12,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "sha256": "8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e",
+      "twin_sha256": "1cb15ed8e8ae142fc09d68a832a9decd9aed2054a6cdc1e9f7b4996782a9cde0",
+      "reference": "x86-LE-64-default/gcc/2238cd6de7355096/baseline-8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e.json",
+      "reference_sha256": "eac5db3ca51b1987f946f96a05d00fa564b4217b10b0edc5d74158422265424a",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
+      "runs": 1,
+      "inference": {
+        "analyzed": 14,
+        "changed": 12,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 12,
+      "persisted_prototypes": 12,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "sha256": "8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d",
+      "twin_sha256": "9e5339a12c6ba9338af52eb765794212afb822e574189dd25f02822e686cd3b7",
+      "reference": "x86-LE-64-default/gcc/9ffc66a302c9b3f4/baseline-8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d.json",
+      "reference_sha256": "e69277b8f3fb359aaeee5c29176f982e45f2dd8a68ea06e8a43d11158984156c",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
+      "runs": 1,
+      "inference": {
+        "analyzed": 14,
+        "changed": 12,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 12,
+      "persisted_prototypes": 12,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "fail",
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "twin_sha256": "59801887729fd74104dfa2b417954980759ede94cc95af011f6b0981c8f031a0",
+      "reference": "x86-LE-64-default/gcc/ae226b22b9bd188d/baseline-1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d.json",
+      "reference_sha256": "f196f308d46a068ecf4f9172b75b146abfa1baf5bfebbbbe3f93ac51cabda397",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
+      "runs": 1,
+      "inference": {
+        "analyzed": 23,
+        "changed": 21,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 20,
+      "persisted_prototypes": 20,
+      "scores": {
+        "native": {
+          "matched": 3,
+          "correct": 2,
+          "value": 0.6666666666666666,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-x86_64-mismatches/x86_64_cpp_o2-native-a3732af4ee96c0b7.jsonl",
+            "sha256": "a3732af4ee96c0b7ce3680abc010fe8445a49fae0307658944eafe15e0184ac5"
+          }
+        },
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "sha256": "13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75",
+      "twin_sha256": "8f85ae21cea8a7c8a38276ca2bf12ba1715906acedf1018ccdae3afa2b5b483d",
+      "reference": "x86-LE-64-default/gcc/9ba9b2b300372c16/baseline-13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75.json",
+      "reference_sha256": "d0bbaf9a88ce7c98019d5e7b2c1a9e56b88a08bdfc15b59a51399ec53ddeb2c3",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "metrics": {
+        "proto.arity": 0.9975062344139651,
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {
+        "proto.arity": 0.9775062344139651
+      },
+      "runs": 1,
+      "inference": {
+        "analyzed": 411,
+        "changed": 409,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 409,
+      "persisted_prototypes": 409,
+      "scores": {
+        "native": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-x86_64-mismatches/x86_64_many_o2-native-51047b5804cfa3d4.jsonl",
+            "sha256": "51047b5804cfa3d41ec3ad0b9e0bd0b8da892688983342a1c47a184bd54f44c1"
+          }
+        },
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-x86_64-mismatches/x86_64_many_o2-ghidra-51047b5804cfa3d4.jsonl",
+            "sha256": "51047b5804cfa3d41ec3ad0b9e0bd0b8da892688983342a1c47a184bd54f44c1"
+          }
+        }
+      }
+    }
+  ]
+}
