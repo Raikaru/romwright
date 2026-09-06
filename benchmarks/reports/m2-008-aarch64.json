@@ -2,8 +2,8 @@
   "gate": "nonreturn",
   "milestone": "M2",
   "task": "m2-008",
-  "commit": "df3cb5de29727c249933170dc750e543fa614289",
-  "date": "2026-09-06T16:25:45.144389+00:00",
+  "commit": "471f1982d6c97d51f23c3c6445dfe19891cc9fea",
+  "date": "2026-09-06T23:02:14.166885+00:00",
   "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
   "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
   "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
@@ -16,8 +16,8 @@
     },
     "after": {
       "matched": 1789,
-      "correct": 1773,
-      "fn.bounds": 0.9910564561207379
+      "correct": 1774,
+      "fn.bounds": 0.9916154276131918
     }
   },
   "optimized_bounds_improved": true,

@@ -1999,7 +1999,7 @@ M2 — Program-model parity
   names. Reuse generic p-code linkage evidence, then rerun m2-008. The rest of
   m2-009 remains out of scope until m2-008 closes.
 
-### m2-008 partial evidence
+### m2-008 evidence
 - `df32929` passes the direct-flow acceptance: 2 inferred functions and
   2 removed call xrefs; 163 workspace tests and corpus 5/5 pass.
 - `9286d42` and `cae416a` commit the known-name and resolved-indirect-loop
@@ -2010,29 +2010,34 @@ M2 — Program-model parity
 - `e2ff96c` implements pinned known names and completed native CFG hints.
   `5d085b3`, `3e90d14`, and `df3cb5d` pin boundary and positive-metadata
   regressions; 5 benchmark checks pass.
-- `benchmarks/reports/m2-008.json`: 19 pass, 1 fail, 0 skipped. Optimized
-  `fn.bounds` improves from 1771/1789 (0.98993851313583) to 1773/1789
-  (0.9910564561207379). All 20 native analyses are revision-idempotent.
-  Twenty compressed reference bundles and their architecture/mismatch links
-  pass SHA-256 verification. Existing raw and `baseline-*.json` files are unchanged.
-- Stock false return flags are unknown, not returning assertions; 15 additional
-  native `_start` inferences are reported separately. The only missing stock
-  positive is PowerPC C++ `__cxa_throw` at `0x100108b0`. Gate `passed` is false;
-  m2-008 is not marked complete.
+- `5d32b11` commits the failing corpus-backed PowerPC linkage acceptance
+  (`tests/m2-008_ppc_linkage.py`). `471f198` submits direct-call targets to the
+  existing bounded p-code linkage proof in both the seeded and swept paths.
+  No architecture-specific branch, name guess, or metric/corpus change was added.
+  `0x100108b0` now imports as `__cxa_throw`, size 16, and is inferred
+  non-returning; `printf` at `0x100108d0` stays returning.
+- `benchmarks/reports/m2-008.json` at commit `471f198`: **20 pass, 0 fail,
+  0 skipped**. Optimized `fn.bounds` improves from 1771/1789
+  (0.98993851313583) to 1774/1789 (0.9916154276131918). Every stock positive
+  is covered, all 20 native analyses are revision-idempotent, and the twenty
+  compressed reference bundles plus architecture and mismatch links pass
+  SHA-256 verification. Raw and `baseline-*.json` references are unchanged.
+- Stock false return flags remain unknown rather than returning assertions; the
+  15 additional native ELF entry-point inferences are reported separately.
+- Verification: `cargo test --workspace` 163 pass/2 ignored;
+  `cargo test -p lre-core --no-default-features native::discovery` 18 pass;
+  `tests/corpus.sh` 5/5; `tests/m2-008_nonreturn.py`, `tests/m2-008_ppc_linkage.py`,
+  and `tests/m2-006_thunks.py --architecture powerpc` all pass.
+- m2-008 is complete. No metric definition, corpus member, or reserved decision changed.
 
 ## Blocked on
-- m2-008 corpus closure needs relocation-proven PowerPC thunk/name validation
-  from m2-009. Native import stores `0x100108b0` as `FUN_100108b0`, size 16,
-  rather than `__cxa_throw`; fresh stock analysis flags it non-returning.
-  `collect_plt_candidates` has no PPC layout and `promote_linkage` does not
-  rename already-known entries. No guessed name, architecture-specific
-  disassembly, corpus substitution, or out-of-order thunk change was added.
-  The user authorized this prerequisite; implementation is now actionable.
+- None.
 
 ## Next task
-- m2-008: infer non-returning functions and rediscover callers.
-  Known-name/hint implementation and optimized-boundary evidence are committed.
-  Execute only the authorized PowerPC prerequisite above, then rerun this gate.
+- m2-009: validate thunk and tail-call parity (PLT thunks and jumps to another
+  function's entry), with thunk count matching the oracle within ±1% on libc.
+  Its acceptance test does not exist yet; write it first. The authorized
+  prerequisite taken during m2-008 covered only import-name linkage proof.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
