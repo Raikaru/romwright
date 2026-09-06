@@ -13,7 +13,9 @@
 //! are big-endian seven-bit groups. String lengths are themselves encoded as
 //! a packed integer before the string bytes (`PackedDecode.java:180-195`).
 
-use lre_model::{Address, AddressSpace, DecompReference, DecompReferenceKind, DecompToken, TokenKind};
+use lre_model::{
+    Address, AddressSpace, DecompReference, DecompReferenceKind, DecompToken, FuncProto, TokenKind,
+};
 
 /// Token element ids, verified against `ElementId.java` and `ClangToken.java`.
 const ELEM_VALUE: u32 = 9;
@@ -89,7 +91,7 @@ fn is_token(eid: u32) -> bool {
 }
 
 #[derive(Clone, Debug)]
-enum Value {
+pub(crate) enum Value {
     Boolean(bool),
     Signed(i64),
     Unsigned(u64),
@@ -99,7 +101,7 @@ enum Value {
 }
 
 impl Value {
-    fn unsigned(&self) -> Option<u64> {
+    pub(crate) fn unsigned(&self) -> Option<u64> {
         match self {
             Self::Unsigned(v) | Self::Space(v) => Some(*v),
             Self::Signed(v) if *v >= 0 => Some(*v as u64),
@@ -107,7 +109,7 @@ impl Value {
         }
     }
 
-    fn signed(&self) -> Option<i64> {
+    pub(crate) fn signed(&self) -> Option<i64> {
         match self {
             Self::Signed(v) => Some(*v),
             Self::Unsigned(v) => i64::try_from(*v).ok(),
@@ -156,8 +158,9 @@ fn read_value(packed: &[u8], p: &mut usize) -> Option<Value> {
     let length = (type_byte & 0x0f) as usize;
     match type_code {
         TYPECODE_BOOLEAN => Some(Value::Boolean(length != 0)),
-        TYPECODE_SIGNED_POSITIVE =>
-            Some(Value::Signed(i64::try_from(read_groups(packed, p, length)?).ok()?)),
+        TYPECODE_SIGNED_POSITIVE => Some(Value::Signed(
+            i64::try_from(read_groups(packed, p, length)?).ok()?,
+        )),
         TYPECODE_SIGNED_NEGATIVE => {
             let magnitude = i64::try_from(read_groups(packed, p, length)?).ok()?;
             Some(Value::Signed(magnitude.checked_neg()?))
@@ -220,8 +223,27 @@ pub fn decode_tokens_with_ram_space(
     packed: &[u8],
     ram_space_index: Option<u64>,
 ) -> Vec<DecompToken> {
+    decode_packed(packed, ram_space_index, false).0
+}
+
+/// Decode tokens and the native function prototype in one pass. A missing or
+/// incomplete structural function yields no prototype, never a guessed one.
+pub fn decode_document_with_ram_space(
+    packed: &[u8],
+    ram_space_index: Option<u64>,
+) -> (Vec<DecompToken>, Option<FuncProto>) {
+    decode_packed(packed, ram_space_index, true)
+}
+
+fn decode_packed(
+    packed: &[u8],
+    ram_space_index: Option<u64>,
+    collect_prototype: bool,
+) -> (Vec<DecompToken>, Option<FuncProto>) {
     let mut tokens = Vec::new();
     let mut stack: Vec<Ctx> = Vec::new();
+    let mut prototype = collect_prototype.then(crate::prototype::Collector::default);
+    let mut valid = true;
     let mut p = 0usize;
     while p < packed.len() {
         let header = packed[p];
@@ -229,8 +251,12 @@ pub fn decode_tokens_with_ram_space(
         match header & 0xc0 {
             TAG_ELEMENT_START => {
                 let Some(id) = read_id_after_header(packed, &mut p, header) else {
+                    valid = false;
                     break;
                 };
+                if let Some(prototype) = prototype.as_mut() {
+                    prototype.start(id, stack.last().map(|ctx| ctx.id), stack.len() + 1);
+                }
                 stack.push(Ctx {
                     id,
                     ..Ctx::default()
@@ -238,17 +264,23 @@ pub fn decode_tokens_with_ram_space(
             }
             TAG_ELEMENT_END => {
                 let Some(id) = read_id_after_header(packed, &mut p, header) else {
+                    valid = false;
                     break;
                 };
                 let Some(ctx) = stack.pop() else {
+                    valid = false;
                     continue;
                 };
                 // A malformed close must not make us associate subsequent
                 // content with the wrong element. Valid Ghidra streams always
                 // close the top id (`PackedDecode.closeElement`, lines 318-330).
                 if ctx.id != id {
+                    valid = false;
                     stack.clear();
                     continue;
+                }
+                if let Some(prototype) = prototype.as_mut() {
+                    prototype.end(id, stack.len() + 1);
                 }
                 // ClangBreak intentionally has no XMLcontent; its Java
                 // decoder sets text to empty and carries only ATTRIB_INDENT.
@@ -258,12 +290,22 @@ pub fn decode_tokens_with_ram_space(
             }
             TAG_ATTRIBUTE => {
                 let Some(attrid) = read_id_after_header(packed, &mut p, header) else {
+                    valid = false;
                     break;
                 };
                 let Some(value) = read_value(packed, &mut p) else {
                     // A malformed/unknown value cannot be safely skipped
                     // beyond the type-specific parser; stop at this point.
+                    valid = false;
                     break;
+                };
+                let value = if let Some(prototype) = prototype.as_mut() {
+                    let Some(value) = prototype.attribute(attrid, value, stack.len()) else {
+                        continue;
+                    };
+                    value
+                } else {
+                    value
                 };
                 let Some(ctx) = stack.last_mut() else {
                     continue;
@@ -329,21 +371,34 @@ pub fn decode_tokens_with_ram_space(
             // PackedDecode rejects these as top-level stream elements, but a
             // malformed payload should still terminate safely rather than
             // indexing past the buffer.
-            _ => break,
+            _ => {
+                valid = false;
+                break;
+            }
         }
     }
-    tokens
+    let prototype = if valid && stack.is_empty() {
+        prototype.and_then(crate::prototype::Collector::finish)
+    } else {
+        None
+    };
+    (tokens, prototype)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::{encode_attribute, encode_header, encode_string_attribute, attr_type};
+    use crate::wire::{attr_type, encode_attribute, encode_header, encode_string_attribute};
 
     fn pack_token(eid: u32, color: u8, text: &str) -> Vec<u8> {
         let mut out = Vec::new();
         encode_header(&mut out, TAG_ELEMENT_START, eid);
-        encode_attribute(&mut out, ATTRIB_COLOR, attr_type::UNSIGNED_INT, color as u64);
+        encode_attribute(
+            &mut out,
+            ATTRIB_COLOR,
+            attr_type::UNSIGNED_INT,
+            color as u64,
+        );
         encode_string_attribute(&mut out, ATTRIB_CONTENT, text.as_bytes());
         encode_header(&mut out, TAG_ELEMENT_END, eid);
         out
