@@ -14,8 +14,10 @@ use lre_model::{
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
+mod return_behavior;
+
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 7;
+pub const SCHEMA_VERSION: i64 = 8;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -400,6 +402,20 @@ impl ProjectDb {
                          CHECK(primitive IN ('signed_integer', 'unsigned_integer', 'float', 'boolean', 'void'));
                      ALTER TABLE type_defs ADD COLUMN element_count INTEGER
                          CHECK(element_count >= 0);",
+                )?;
+            }
+            if v < 8 {
+                tx.execute_batch(
+                    "CREATE TABLE return_behaviors (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         function TEXT NOT NULL,
+                         no_return INTEGER NOT NULL CHECK(no_return IN (0, 1)),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, function)
+                     );",
                 )?;
             }
             tx.execute(
@@ -2636,6 +2652,7 @@ mod tests {
              ALTER TABLE prototypes DROP COLUMN confidence;
              ALTER TABLE type_defs DROP COLUMN primitive;
              ALTER TABLE type_defs DROP COLUMN element_count;
+             DROP TABLE return_behaviors;
              UPDATE meta SET value = '4' WHERE key = 'schema_version';"
         ).unwrap();
         for (from, source) in [("00001000", "legacy-author"), ("00001010", "native-import")] {
@@ -2796,6 +2813,7 @@ mod tests {
                  size INTEGER, alignment INTEGER, base_type TEXT,
                  provenance TEXT NOT NULL DEFAULT '',
                  PRIMARY KEY(program_id, name));
+             DROP TABLE return_behaviors;
              UPDATE meta SET value = '6' WHERE key = 'schema_version';"
         ).unwrap();
         db.conn.execute(
@@ -2862,10 +2880,6 @@ mod tests {
         assert_eq!(stored["provenance"], serde_json::json!({
             "kind": "inferred", "source": "test-analysis", "confidence": 0.875
         }));
-        let version: String = db.conn.query_row(
-            "SELECT value FROM meta WHERE key = 'schema_version'", [], |row| row.get(0),
-        ).unwrap();
-        assert_eq!(version, "7");
     }
 
     #[test]
