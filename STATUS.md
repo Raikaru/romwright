@@ -1639,6 +1639,22 @@ M2 — Program-model parity
   Workspace: 142 passed; corpus smoke: 5/5; data-reference acceptance: 20/20.
   This closes the data-reference task, not the full M2 parity gate.
 
+## m2-003 implementation slices
+- Frozen acceptance: reference string addresses, minimum length 4, matching
+  reference encodings; str.recall >= 0.95. The 20-entry corpus is unchanged.
+- a: failing `data_string_sweep_decodes_utf8_and_utf16` acceptance, then an
+  oracle-backed string gate and defined-string export. Actual upstream source:
+  `ghidra/app/plugin/core/string/StringsAnalyzer.java`; default discovery is
+  ASCII-only. `DefinedStringIterator` covers already-defined Unicode strings.
+- b: native data-section sweep for ASCII/UTF-8 and endian-aware UTF-16,
+  preserving decoded text and m2-002 references. Exercise supplementary
+  characters and minimum character count, not byte or UTF-16 code-unit count.
+- c: verify worker string delivery, complete differential acceptance, and CI.
+  Publish implementation and generated reports in separate commits below
+  800 changed lines.
+- Initial acceptance failed: only ASCII `word` was found; UTF-8 and UTF-16
+  strings were absent and executable `CODE` bytes were incorrectly included.
+
 ## Blocked on
 - None.
 

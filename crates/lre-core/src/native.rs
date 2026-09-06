@@ -2353,4 +2353,36 @@ mod tests {
         bytes[0x228..0x22c].copy_from_slice(&24u32.to_be_bytes());
         assert_eq!(analyze(&bytes), expected, "section-address evidence is independent of its name");
     }
+
+    #[test]
+    fn data_string_sweep_decodes_utf8_and_utf16() {
+        for (language, big_endian) in [
+            ("x86:LE:64:default", false), ("PowerPC:BE:32:default", true),
+        ] {
+            let wide = |value: &str| {
+                value.encode_utf16().chain(std::iter::once(0))
+                    .flat_map(|unit| if big_endian { unit.to_be_bytes() } else { unit.to_le_bytes() })
+                    .collect::<Vec<_>>()
+            };
+            let mappings = [
+                (0x3000, 2, b"word\0".to_vec()),
+                (0x3100, 2, "café\0".as_bytes().to_vec()),
+                (0x3200, 2, wide("wide text")),
+                (0x3300, 2, wide("A😀BC")),
+                (0x3400, 2, "猫猫猫\0".as_bytes().to_vec()),
+                (0x3500, 2, wide("😀😀")),
+                (0x1000, 6, b"CODE\0".to_vec()),
+            ].into_iter().map(|(vaddr, flags, bytes)| Mapping {
+                vaddr, size: bytes.len() as u64, file_off: 0, flags, bytes,
+            }).collect();
+            let import = NativeImport { language: language.into(), mappings, ..Default::default() };
+            let mut strings: Vec<_> = discover_strings(&import).into_iter()
+                .map(|row| (row.address.offset, row.value)).collect();
+            strings.sort_unstable();
+            assert_eq!(strings, vec![
+                (0x3000, "word".into()), (0x3100, "café".into()),
+                (0x3200, "wide text".into()), (0x3300, "A😀BC".into()),
+            ], "decode data strings in {language}; count characters, not encoded bytes or code units");
+        }
+    }
 }
