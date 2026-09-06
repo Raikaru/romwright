@@ -1545,13 +1545,17 @@ M2 — Program-model parity
 - Publication sub-tasks remain separate: g4 implementation, then g4-report
   generated evidence. Preserve the complete gate JSON.
 
-## m2-002g5 linkage reference regions
-- Acceptance: `elf_linkage_references_do_not_require_functions`. Analyze
-  disconnected code in an executable PowerPC `.glink` region without
-  inserting functions. Reject non-executable and ordinary-data/code sections
-  as linkage-region evidence.
-- Follow decoded control flow within the loader-declared region; do not
-  infer function starts or add a byte-pattern recognizer.
+## m2-002g5 section-address reference roots
+- Acceptance: `elf_linkage_references_do_not_require_functions`. Follow
+  executable section-address roots without inserting functions. Reject
+  non-executable sections and unseeded disconnected bytes; section names
+  do not determine whether a root is code.
+- The initial sweep assumption was rejected: it added READs at PowerPC C++
+  `0x100109bc` and `0x100109cc`. An isolated matching oracle import defines
+  only four instructions at `0x10010980..0x1001098c`.
+- `ElfProgramBuilder.markupSectionHeaders` creates imported references to
+  section starts. Reuse that entry-root evidence, not a linear code sweep.
+  Do not change reference eligibility, normalization, or gate thresholds.
 - Publication sub-tasks: g5 implementation, then g5-report generated evidence.
 
 ## Blocked on

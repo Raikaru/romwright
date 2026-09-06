@@ -2220,13 +2220,13 @@ mod tests {
             import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
                 .collect::<Vec<_>>()
         };
-        assert_eq!(analyze(&bytes), vec![
-            (0x1004, 0x3004, "READ".into()), (0x101c, 0x3008, "READ".into()),
-        ], "all disconnected linkage code must contribute references");
+        let expected = vec![(0x1004, 0x3004, "READ".into())];
+        assert_eq!(analyze(&bytes), expected,
+            "follow the section-address code root, not unseeded disconnected bytes");
         bytes[0x230..0x234].copy_from_slice(&2u32.to_be_bytes());
         assert!(analyze(&bytes).is_empty(), "non-executable linkage data is not code");
         bytes[0x230..0x234].copy_from_slice(&6u32.to_be_bytes());
         bytes[0x228..0x22c].copy_from_slice(&24u32.to_be_bytes());
-        assert!(analyze(&bytes).is_empty(), "ordinary sections are not linkage-region evidence");
+        assert_eq!(analyze(&bytes), expected, "section-address evidence is independent of its name");
     }
 }
