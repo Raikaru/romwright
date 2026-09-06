@@ -383,6 +383,7 @@ apply stored no-return flags without overwriting asserted prototypes.
 
 ```sh
 python3 tests/m2-008_nonreturn.py --report benchmarks/reports/m2-008-positive.json
+python3 tests/m2-008_ppc_linkage.py --corpus-dir /path/to/corpus
 python3 benchmarks/nonreturn_gate.py --corpus-dir /path/to/corpus \
   --report benchmarks/reports/m2-008.json
 ```
