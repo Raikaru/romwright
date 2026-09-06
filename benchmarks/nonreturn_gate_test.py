@@ -32,6 +32,16 @@ class BoundsTest(unittest.TestCase):
         self.assertEqual((score['matched'], score['correct']), (2, 0))
         self.assertEqual(score['fn.bounds'], 0)
 
+    def test_range_start_padding_does_not_shift_the_matched_entry(self):
+        reference = {
+            '00001000': [['00000ff0', '0000100f']],
+            '00002000': [['00001fef', '0000200f']],
+        }
+        score = bounds_score([function(0x1000, 0x10), function(0x2000, 0x10)],
+            reference, set(reference))
+        self.assertEqual((score['matched'], score['correct']), (2, 1))
+        self.assertEqual([row['entry'] for row in score['mismatches']], ['00002000'])
+
 
 if __name__ == '__main__':
     unittest.main()
