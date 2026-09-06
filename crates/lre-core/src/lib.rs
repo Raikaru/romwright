@@ -14,6 +14,8 @@ pub mod native;
 pub mod native_runtime;
 pub mod session;
 mod prototypes;
+mod nonreturn;
+pub use nonreturn::NonReturnInferenceReport;
 
 use lre_db::ProjectDb;
 use lre_model::{
