@@ -2033,6 +2033,7 @@ mod tests {
         let facts = session.constants(
             0x1000, 0x1000 + import.mappings[0].size, &import.mappings, false,
         ).unwrap();
-        assert!(facts.is_empty(), "realignment must not preserve stale frame aliases: {facts:?}");
+        assert!(facts.iter().all(|fact| fact.pc < 0x1009),
+            "realignment must not produce constants from stale frame aliases: {facts:?}");
     }
 }

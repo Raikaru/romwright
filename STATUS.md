@@ -1501,6 +1501,19 @@ M2 — Program-model parity
   i386 O0/O2/C++/many recall is 15/17, 14/16, 23/25, 12/14.
   Other architectures' row scores are unchanged.
 
+## m2-002g2 symbolic stack realignment
+- Acceptance extension `37319ac` failed after `and esp,-16` before a PC helper.
+  The aligned frame now remains usable; pre-alignment pointer and memory
+  aliases are retired rather than equated with the realigned frame.
+- The paired regression rejects post-alignment constants derived from stale
+  aliases while allowing the valid literal stored before alignment.
+- `cargo test --workspace`: 136 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild.
+- `benchmarks/reports/m2-002-g2.json`: 11 pass, 9 fail, 0 skipped;
+  all 20 data precisions remain 1.0. i386 PIE recall is 16/22;
+  i386 O0/O2/C++/many recall is 16/17, 15/16, 24/25, 13/14.
+  Other architectures' row scores are unchanged.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.

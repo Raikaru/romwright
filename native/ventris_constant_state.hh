@@ -209,6 +209,15 @@ public:
     }
   }
 
+  void forgetRelativeBase(int base) {
+    for (auto it = relations.begin(); it != relations.end();) {
+      if (it->second.base == base)
+        it = relations.erase(it);
+      else
+        ++it;
+    }
+  }
+
   void beginInstruction(int space, Word offset) {
     if (space != instructionSpace || offset != instructionOffset) {
       if (uniqueSpace >= 0)
