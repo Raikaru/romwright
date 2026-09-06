@@ -1592,6 +1592,12 @@ M2 — Program-model parity
   segment bytes rather than silently replacing them with zeroes.
 - Do not add function seeds or change the gate's PT_LOAD eligibility rule.
 - Publication sub-tasks: g7 implementation, then g7-report generated evidence.
+- Acceptance: failed on missing loaded ELF header bytes before implementation;
+  passes after completion. Workspace: 141 passed. Corpus: 5/5 passed.
+- Matched-context gate: 19 passed, 1 failed; data precision 1.0 on every row.
+  PowerPC PIE recall increased from 20/26 to 23/26. The three symbolic DATA
+  destinations now exist in native memory; PIC-context READ references remain.
+  Evidence: `benchmarks/reports/m2-002-g7.json`.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

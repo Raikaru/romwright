@@ -52,6 +52,7 @@ pub(super) fn prepare(
     for section in sections.iter_mut().filter(|s| s.flags & 2 != 0) {
         section.addr = rebase(section.addr)?;
     }
+    complete_load_segments(data, import, width, be, bias)?;
     let machine = word(data, 18, 2, be)?;
     let linkage_types = match machine {
         3 | 62 => [6, 7],
@@ -180,27 +181,82 @@ pub(super) fn prepare(
     Ok(())
 }
 
-fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Option<u64>> {
-    let (offset_at, size_at, count_at, minimum) = if width == 4 {
-        (28, 42, 44, 32)
-    } else {
-        (32, 54, 56, 56)
-    };
+fn program_headers(data: &[u8], width: usize, be: bool) -> Result<std::slice::ChunksExact<'_, u8>> {
+    let (offset_at, size_at, count_at, minimum) =
+        if width == 4 { (28, 42, 44, 32) } else { (32, 54, 56, 56) };
     let offset = usize::try_from(word(data, offset_at, width, be)?)
         .map_err(|_| bad("ELF program-header offset overflow"))?;
     let stride = word(data, size_at, 2, be)? as usize;
     let count = word(data, count_at, 2, be)? as usize;
-    if count != 0 && stride < minimum {
+    if count == 0 {
+        return Ok(data[..0].chunks_exact(minimum));
+    }
+    if stride < minimum {
         return Err(bad("undersized ELF program header"));
     }
-    for index in 0..count {
-        let header = index.checked_mul(stride).and_then(|at| offset.checked_add(at))
-            .ok_or_else(|| bad("ELF program-header range overflow"))?;
-        if word(data, header, 4, be)? != 2 { // PT_DYNAMIC
+    let end = count.checked_mul(stride).and_then(|size| offset.checked_add(size))
+        .ok_or_else(|| bad("ELF program-header range overflow"))?;
+    Ok(data.get(offset..end).ok_or_else(|| bad("truncated ELF program headers"))?.chunks_exact(stride))
+}
+
+fn complete_load_segments(
+    data: &[u8], import: &mut NativeImport, width: usize, be: bool, bias: u64,
+) -> Result<()> {
+    import.mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
+    for header in program_headers(data, width, be)? {
+        if word(header, 0, 4, be)? != 1 { // PT_LOAD
             continue;
         }
-        let start = word(data, header + if width == 4 { 4 } else { 8 }, width, be)?;
-        let size = word(data, header + if width == 4 { 16 } else { 32 }, width, be)?;
+        let offset = word(header, if width == 4 { 4 } else { 8 }, width, be)?;
+        let start = word(header, if width == 4 { 8 } else { 16 }, width, be)?
+            .checked_add(bias).ok_or_else(|| bad("ELF segment address overflow"))?;
+        let filesz = word(header, if width == 4 { 16 } else { 32 }, width, be)?;
+        let memsz = word(header, if width == 4 { 20 } else { 40 }, width, be)?;
+        let permissions = word(header, if width == 4 { 24 } else { 4 }, 4, be)?;
+        let end = start.checked_add(memsz).ok_or_else(|| bad("ELF segment range overflow"))?;
+        if filesz > memsz || (width == 4 && end > 1u64 << 32) {
+            return Err(bad("invalid ELF segment memory range"));
+        }
+        let file_end = offset.checked_add(filesz).ok_or_else(|| bad("ELF segment file overflow"))?;
+        let file_bytes = usize::try_from(offset).ok().zip(usize::try_from(file_end).ok())
+            .and_then(|(begin, end)| data.get(begin..end))
+            .ok_or_else(|| bad("truncated ELF load segment"))?;
+        let flags = ((permissions & 2) >> 1) | ((permissions & 4) >> 1) | ((permissions & 1) << 2);
+        let mut gaps = Vec::new();
+        let mut add_gap = |begin: u64, end: u64| -> Result<()> {
+            let relative = begin - start;
+            let initialized_start = relative.min(filesz) as usize;
+            let initialized_end = (end - start).min(filesz) as usize;
+            gaps.push(super::Mapping {
+                vaddr: begin, size: end - begin,
+                file_off: offset.checked_add(relative).ok_or_else(|| bad("ELF segment offset overflow"))?,
+                flags, bytes: file_bytes[initialized_start..initialized_end].to_vec(),
+            });
+            Ok(())
+        };
+        let mut cursor = start;
+        for mapping in &import.mappings {
+            if mapping.vaddr >= end { break; }
+            let mapped_end = mapping.vaddr.checked_add(mapping.size)
+                .ok_or_else(|| bad("ELF mapping overflow"))?;
+            if mapped_end <= cursor { continue; }
+            if mapping.vaddr > cursor { add_gap(cursor, mapping.vaddr)?; }
+            cursor = mapped_end.min(end);
+        }
+        if cursor < end { add_gap(cursor, end)?; }
+        import.mappings.extend(gaps);
+        import.mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
+    }
+    Ok(())
+}
+
+fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Option<u64>> {
+    for header in program_headers(data, width, be)? {
+        if word(header, 0, 4, be)? != 2 { // PT_DYNAMIC
+            continue;
+        }
+        let start = word(header, if width == 4 { 4 } else { 8 }, width, be)?;
+        let size = word(header, if width == 4 { 16 } else { 32 }, width, be)?;
         let end = start.checked_add(size).ok_or_else(|| bad("ELF dynamic range overflow"))?;
         let bytes = usize::try_from(start).ok().zip(usize::try_from(end).ok())
             .and_then(|(start, end)| data.get(start..end))
