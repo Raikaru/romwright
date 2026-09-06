@@ -1,0 +1,209 @@
+{
+  "task": "m2-005",
+  "implementation_commit": "838badf7750f1b6b76891f30073b7296ce7296be",
+  "measured_at": "2026-09-06T08:06:05.183225+00:00",
+  "standalone": {
+    "address": {
+      "space": "Ram",
+      "offset": 4195430
+    },
+    "revision": 5,
+    "prototype": {
+      "calling_convention": "__stdcall",
+      "return_type": {
+        "name": "int",
+        "id": 13835058055282163861,
+        "size": null,
+        "metatype": null,
+        "element_count": null,
+        "target": null,
+        "prototype": null
+      },
+      "parameters": [
+        {
+          "ordinal": 0,
+          "name": "param_1",
+          "data_type": {
+            "name": "int",
+            "id": 13835058055282163861,
+            "size": null,
+            "metatype": null,
+            "element_count": null,
+            "target": null,
+            "prototype": null
+          }
+        },
+        {
+          "ordinal": 1,
+          "name": "param_2",
+          "data_type": {
+            "name": "int",
+            "id": 13835058055282163861,
+            "size": null,
+            "metatype": null,
+            "element_count": null,
+            "target": null,
+            "prototype": null
+          }
+        }
+      ],
+      "variadic": false
+    },
+    "text": "int add(int param_1,int param_2){return param_2 + param_1;}"
+  },
+  "pooled": [
+    {
+      "address": {
+        "offset": 4195430,
+        "space": "Ram"
+      },
+      "revision": 5,
+      "prototype": {
+        "calling_convention": "__stdcall",
+        "parameters": [
+          {
+            "data_type": {
+              "element_count": null,
+              "id": 13835058055282163861,
+              "metatype": null,
+              "name": "int",
+              "prototype": null,
+              "size": null,
+              "target": null
+            },
+            "name": "param_1",
+            "ordinal": 0
+          },
+          {
+            "data_type": {
+              "element_count": null,
+              "id": 13835058055282163861,
+              "metatype": null,
+              "name": "int",
+              "prototype": null,
+              "size": null,
+              "target": null
+            },
+            "name": "param_2",
+            "ordinal": 1
+          }
+        ],
+        "return_type": {
+          "element_count": null,
+          "id": 13835058055282163861,
+          "metatype": null,
+          "name": "int",
+          "prototype": null,
+          "size": null,
+          "target": null
+        },
+        "variadic": false
+      },
+      "text": "int add(int param_1,int param_2){return param_2 + param_1;}"
+    },
+    {
+      "address": {
+        "offset": 4195450,
+        "space": "Ram"
+      },
+      "revision": 5,
+      "prototype": {
+        "calling_convention": "__stdcall",
+        "parameters": [],
+        "return_type": {
+          "element_count": null,
+          "id": 13835058055282163899,
+          "metatype": null,
+          "name": "undefined8",
+          "prototype": null,
+          "size": null,
+          "target": null
+        },
+        "variadic": false
+      },
+      "text": "undefined8 main(void){undefined4 uVar1;uVar1 = add(2,0x28);printf(0x401180,uVar1);return 0;}"
+    },
+    {
+      "address": {
+        "offset": 4195430,
+        "space": "Ram"
+      },
+      "revision": 5,
+      "prototype": {
+        "calling_convention": "__stdcall",
+        "parameters": [
+          {
+            "data_type": {
+              "element_count": null,
+              "id": 13835058055282163861,
+              "metatype": null,
+              "name": "int",
+              "prototype": null,
+              "size": null,
+              "target": null
+            },
+            "name": "param_1",
+            "ordinal": 0
+          },
+          {
+            "data_type": {
+              "element_count": null,
+              "id": 13835058055282163861,
+              "metatype": null,
+              "name": "int",
+              "prototype": null,
+              "size": null,
+              "target": null
+            },
+            "name": "param_2",
+            "ordinal": 1
+          }
+        ],
+        "return_type": {
+          "element_count": null,
+          "id": 13835058055282163861,
+          "metatype": null,
+          "name": "int",
+          "prototype": null,
+          "size": null,
+          "target": null
+        },
+        "variadic": false
+      },
+      "text": "int add(int param_1,int param_2){return param_2 + param_1;}"
+    }
+  ],
+  "jobs": {
+    "pool": {
+      "busy_workers": 0,
+      "idle_workers": 1,
+      "memory_cap_bytes": 268435456,
+      "memory_cap_hits": 0,
+      "restarts": 0
+    },
+    "rows": [
+      {
+        "address": 4195430,
+        "detail": "completed",
+        "id": 1,
+        "operation": "decompile",
+        "state": "succeeded"
+      },
+      {
+        "address": 4195450,
+        "detail": "completed",
+        "id": 2,
+        "operation": "decompile",
+        "state": "succeeded"
+      },
+      {
+        "address": 4195430,
+        "detail": "completed",
+        "id": 3,
+        "operation": "decompile",
+        "state": "succeeded"
+      }
+    ],
+    "total": 3
+  }
+}
