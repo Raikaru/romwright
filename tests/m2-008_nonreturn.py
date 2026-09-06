@@ -16,7 +16,7 @@ from prototype_gate import run_api
 SOURCE = r'''
 .text
 .globl entry, relay, stop, ordinary, unknown, indirect, dead_entry, dead_relay
-.globl known_caller, dead_known
+.globl known_caller, dead_known, hint_loop
 .type entry,@function
 entry:
 .cfi_startproc
@@ -75,6 +75,33 @@ dead_known:
  ret
 .cfi_endproc
 .size known_caller,.-known_caller
+.type hint_loop,@function
+hint_loop:
+.cfi_startproc
+.Ldispatch:
+ and $3,%edi
+ lea .Ltargets(%rip),%rdx
+ movslq (%rdx,%rdi,4),%rax
+ add %rdx,%rax
+ jmp *%rax
+.Lcase0:
+ add $1,%edi
+ jmp .Ldispatch
+.Lcase1:
+ add $2,%edi
+ jmp .Ldispatch
+.Lcase2:
+ xor $1,%edi
+ jmp .Ldispatch
+.Lcase3:
+ sub $1,%edi
+ jmp .Ldispatch
+.cfi_endproc
+.size hint_loop,.-hint_loop
+.section .rodata
+.p2align 2
+.Ltargets:
+ .long .Lcase0-.Ltargets, .Lcase1-.Ltargets, .Lcase2-.Ltargets, .Lcase3-.Ltargets
 .section .note.GNU-stack,"",@progbits
 '''
 
@@ -92,7 +119,7 @@ def main():
         subprocess.run(['gcc', '-nostdlib', '-no-pie', '-Wl,-e,entry', '-x', 'assembler', '-',
             '-o', str(twin), '-lc'], input=SOURCE, text=True, check=True, capture_output=True)
         names = {'entry', 'relay', 'stop', 'ordinary', 'unknown', 'indirect', 'dead_entry', 'dead_relay'}
-        names.update({'known_caller', 'dead_known'})
+        names.update({'known_caller', 'dead_known', 'hint_loop'})
         symbols = {parts[0]: int(parts[2], 16) for line in subprocess.check_output(
             ['nm', '-P', str(twin)], text=True).splitlines()
             if len(parts := line.split()) >= 3 and parts[0] in names}
@@ -126,6 +153,10 @@ def main():
         known_before = invoke([refs('dead_known'), known_doc])
         assert any('CALL' in row['kind'] for row in known_before[0]), known_before
         assert any(token['text'] == 'ordinary' for token in known_before[1]['tokens']), known_before[1]
+        hint_before = invoke([('decompile_doc', dict(**context, address=address('hint_loop')))])[0]
+        assert len(hint_before['jump_tables']) == 1, hint_before['jump_tables']
+        assert len({row['offset'] for row in hint_before['jump_tables'][0]['targets']}) == 4, hint_before['jump_tables']
+        assert hint_before['prototype'].get('no_return') is True, hint_before['prototype']
         # Keep a child warm across publication: revision invalidation must prevent
         # the old returning-callee assumptions from surviving the inference.
         _, report, after_doc = invoke([doc, ('infer_nonreturning', context), doc])
@@ -134,7 +165,8 @@ def main():
             ('functions', dict(program='fixture')), ('prototypes', dict(program='fixture'))])
         assert prototypes == [assertion], prototypes
         inferred = {row['function']['offset'] for row in facts if row['no_return']}
-        assert inferred == {symbols['stop'], symbols['relay'], symbols['known_caller'], exit_entry['offset']}, facts
+        assert inferred == {symbols['stop'], symbols['relay'], symbols['known_caller'],
+            symbols['hint_loop'], exit_entry['offset']}, facts
         assert all(row['provenance']['kind'] == 'inferred' and row['provenance']['source'] for row in facts), facts
         assert not any('CALL' in row['kind'] for row in entry_refs + relay_refs), (entry_refs, relay_refs)
         relay = next(row for row in functions if row['entry'] == address('relay'))
@@ -157,7 +189,7 @@ def main():
         assert repeated['changed'] == [] and final_doc['revision'] == after_doc['revision'], repeated
         assert final_facts == facts, (final_facts, facts)
         evidence = dict(task='m2-008', passed=True, scope='temporary positive acceptance, not locked corpus',
-            inferred_functions=4, returning_controls=2, unresolved_indirect_controls=2,
+            inferred_functions=5, returning_controls=2, unresolved_indirect_controls=2,
             removed_call_xrefs=3, standalone=1, pooled=True, report=report, repeated=repeated)
         if args.report:
             args.report.write_text(json.dumps(evidence, indent=2) + '\n')
