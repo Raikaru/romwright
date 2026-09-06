@@ -1,0 +1,108 @@
+{
+  "gate": "prototypes",
+  "milestone": "M2",
+  "task": "m2-006",
+  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
+  "date": "2026-09-06T11:31:31.302134+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "budget_ms": 60000,
+  "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
+  "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "architecture": "powerpc",
+  "corpus": [
+    {
+      "id": "powerpc_plain_o0",
+      "status": "fail",
+      "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
+      "twin_sha256": "97b3662bd95e93df818571151aac96950dcb3b269bddefeb696f5251a5098e46",
+      "reference": "PowerPC-BE-32-default/default/6724a577a70a7870/baseline-ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557.json",
+      "reference_sha256": "b43874ccf05a53a82b0284b203e4a2f420e9d974d7345103146dd8c3195d3a90",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o0.bin\", \"program\": \"powerpc_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "fail",
+      "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
+      "twin_sha256": "a2aa29568245f14890b5e36c748dfb26f5a4871bcef84cc3e66ff86e26ad5493",
+      "reference": "PowerPC-BE-32-default/default/31e6f8fae452277f/baseline-27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9.json",
+      "reference_sha256": "7f44bbf66d27567d03ed003fc07691d8f9a2c3d3fe287dee8d9e5b564ae48dcb",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o2.bin\", \"program\": \"powerpc_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "fail",
+      "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
+      "twin_sha256": "b3e0062dde8ee5d4435cbc2ef95314d267746e58b234d8b7bd106b9f2822fce8",
+      "reference": "PowerPC-BE-32-default/default/57a4ab9ac48d0d4a/baseline-0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452.json",
+      "reference_sha256": "329716c41f5546a999048cc24bb237ffe8dd1e8c1e30bb06bc1130094b48f7b6",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_pie.bin\", \"program\": \"powerpc_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "fail",
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "twin_sha256": "5d6d9b486062fd3c64103b9e2af80bd0e593b795bbe707496a195701c0e1f0b6",
+      "reference": "PowerPC-BE-32-default/default/a0a8ac8e5686ff4e/baseline-682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf.json",
+      "reference_sha256": "5829e7dc6166fac820848c6bb8ea3a1b3d464a90cfda8fb329bcf7906d0f0be5",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_cpp_o2.bin\", \"program\": \"powerpc_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "fail",
+      "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
+      "twin_sha256": "019ba2359b9a494d642933df418a9f33d83879b1dd0437371d407a3fc4c9cd32",
+      "reference": "PowerPC-BE-32-default/default/57e3047e610b5676/baseline-4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3.json",
+      "reference_sha256": "6c947388349ba69c1288efc1ff1ce7216f64dc5f1668bcc73428c931648e84a8",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "metrics": {},
+      "thresholds": {},
+      "runs": 1,
+      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_many_o2.bin\", \"program\": \"powerpc_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+    }
+  ]
+}
