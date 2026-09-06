@@ -1906,16 +1906,27 @@ M2 — Program-model parity
 - Verification: console rebuild, 156 workspace tests, corpus 5/5, both thunk
   regressions and bounded-inference acceptance. Final report publication is e3.
 
+### m2-006-e3 evidence
+- `21ec27a` commits the full gate produced from implementation `f45df59`:
+  20 passed, 0 failed, 0 skipped. All 1,640 DWARF functions match; native and
+  stock each recover 1,236 arities correctly, with 404 retained mismatches.
+- Sixteen cases score 1.0. x86-64, AArch64 and PowerPC many score 400/401;
+  i386 many scores 0/401 in both analyzers. This meets the relative criterion,
+  not an absolute accuracy claim for that case.
+- Verified 4 architecture-report hashes and 8 complete mismatch-file hashes.
+  Reports include spec-file and linkage-source hashes. Baselines are unchanged.
+- Final verification: 156 workspace tests, corpus 5/5, 2 explicit native
+  recovery tests, revision/standalone/pooled/inference regressions, both thunk
+  regressions, and all 3 static-bundle and equivalent-input rebuild checks.
+- m2-006 is complete. M2 program-model parity remains open; next is m2-007.
+
 ## Blocked on
 - None.
 
 ## Next task
-- m2-006: decompile all functions, write inferred prototypes, and re-decompile
-  callers; bound to N=3 rounds or a time budget. Follow the verified pinned
-  DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
-  Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Next: e3 rerun and commit full native parity evidence against the committed
-  e2 implementation, then record the next task.
+- m2-007: recover indirect switch targets through workers.
+  Write and commit its failing acceptance before implementation, following the
+  ratified roadmap. m2-006 is complete; no switch-recovery work began here.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
