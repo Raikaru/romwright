@@ -1761,7 +1761,8 @@ M2 — Program-model parity
   generated reference evidence per architecture, separately from tooling.
   b1 verification: stock headless `plain_o0` arity 2/2 against DWARF;
   4 Python boundary tests, 154 workspace tests, corpus 5/5, and string
-  regression 20/20 passed. Full reference generation is the next b2 action.
+  regression 20/20 passed. Full stock collection finished; b2 evidence commits
+  are pending (including all 401 i386-many arity mismatches).
 - c: bound pool registration and decompile operations, refresh workers after
   fact revisions, and apply stored callee prototypes before caller analysis.
   Split c into c1 (production registration deadlines and child teardown),
@@ -1787,6 +1788,16 @@ M2 — Program-model parity
   The reference must explicitly run parameter ID, not score unprocessed
   default signatures. m2-006 parity and the inference API remain unfinished.
 
+### m2-006-c1 evidence
+- Failing production registration regression committed in `ee7708e`: two
+  250 ms leases took 4.03 s and returned registration errors instead of deadlines.
+- The corrected regression takes 0.52 s for two wedged children plus a
+  malformed-protocol child that ignores EOF. Deadlines kill/reap and poison;
+  immediate protocol failures remain errors instead of waiting for the budget.
+- Real native smoke: 1 standalone and 3 pooled decompiles, 2 recovered `add`
+  parameters, 1 idle worker. Workspace 154 tests; corpus 5/5; string regression
+  20/20 with recall 1.0. No inferred writes or revision invalidation are claimed.
+
 ## Blocked on
 - None.
 
@@ -1795,8 +1806,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Check registration as well as per-decompile deadlines before claiming a
-  time budget; the current pool starts its watchdog after registration.
+  Registration is supervised. Next, invalidate stale fact snapshots and carry
+  one absolute deadline through the full inference request.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

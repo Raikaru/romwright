@@ -12,7 +12,6 @@ use lre_worker::{
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
 /// One warm worker session: a spawned decompiler + its program facts.
@@ -26,7 +25,7 @@ impl WorkerSession {
     /// Spawns `ghidra_opt`, registers `program`, selects the decompile
     /// action, and loads all durable provider facts needed by callbacks.
     /// The provider includes the native section map and store facts.
-    pub fn spawn(config: &PoolConfig) -> PoolResult<Self> {
+    fn spawn(config: &PoolConfig, on_launch: impl FnOnce(&NativeWorker)) -> PoolResult<Self> {
         let PoolConfig {
             decompiler,
             spec_root,
@@ -98,6 +97,8 @@ impl WorkerSession {
             .env("VENTRIS_LANGUAGE_DIR", &config.language_dir)
             .env("VENTRIS_LANGUAGE", &config.language_id);
         let mut worker = NativeWorker::launch(command)?;
+        // Arm supervision before the first potentially blocking protocol I/O.
+        on_launch(&worker);
         worker
             .register_program_with_shell(
                 &mut provider,
@@ -175,12 +176,6 @@ impl WorkerSession {
 
     fn pid(&self) -> Option<u32> {
         self.worker.pid()
-    }
-
-    pub(crate) fn worker_kill_handle(
-        &self,
-    ) -> std::sync::Arc<std::sync::Mutex<Option<std::process::Child>>> {
-        self.worker.kill_handle()
     }
 }
 
@@ -396,14 +391,20 @@ impl WorkerPool {
         format!("{}@{}", self.config.program, self.config.binary.display())
     }
 
-    fn take_or_spawn(&mut self) -> PoolResult<WorkerSession> {
+    fn take_or_spawn(
+        &mut self,
+        on_launch: impl FnOnce(&NativeWorker),
+    ) -> PoolResult<WorkerSession> {
         let key = self.key();
         let session = self.idle.get_mut(&key).and_then(|workers| workers.pop());
-        let session = match session {
-            Some(session) => session,
-            None => WorkerSession::spawn(&self.config)?,
+        let mut session = match session {
+            Some(session) => {
+                on_launch(&session.worker);
+                session
+            }
+            None => WorkerSession::spawn(&self.config, on_launch)?,
         };
-        if let Err(error) = self.enforce_memory_cap(&session) {
+        if let Err(error) = self.enforce_memory_cap(&mut session) {
             if matches!(error, PoolError::MemCap(_, _)) {
                 self.memory_cap_hits = self.memory_cap_hits.saturating_add(1);
             }
@@ -436,42 +437,42 @@ impl WorkerPool {
         &mut self,
         op: impl FnOnce(&mut WorkerSession) -> lre_worker::Result<T>,
     ) -> PoolResult<T> {
-        let mut session = self.take_or_spawn()?;
         let deadline = Instant::now() + self.config.deadline;
-        let done = std::sync::Arc::new(AtomicBool::new(false));
-        let watchdog_done = done.clone();
-        let handle = session.worker_kill_handle();
-        let wd = std::thread::spawn(move || {
-            while !watchdog_done.load(Ordering::Relaxed) {
-                if Instant::now() >= deadline {
-                    if let Ok(mut guard) = handle.lock() {
-                        if let Some(mut child) = guard.take() {
-                            let _ = child.kill();
-                            let _ = child.wait();
+        let (done, completion) = std::sync::mpsc::sync_channel(1);
+        let mut watchdog = None;
+        let result: PoolResult<(WorkerSession, T)> = (|| {
+            let mut session = self.take_or_spawn(|worker| {
+                let handle = worker.kill_handle();
+                watchdog = Some(std::thread::spawn(move || {
+                    if completion
+                        .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+                        .is_err()
+                    {
+                        if let Ok(mut guard) = handle.lock() {
+                            if let Some(mut child) = guard.take() {
+                                let _ = child.kill();
+                                let _ = child.wait();
+                            }
                         }
                     }
-                    return;
-                }
-                std::thread::sleep(Duration::from_millis(10));
-            }
-        });
-        let result = op(&mut session);
-        done.store(true, Ordering::Relaxed);
-        let _ = wd.join();
-        match result {
-            Ok(v) => {
-                // Warm reuse: return the worker to the pool.
-                let key = self.key();
-                self.idle.entry(key).or_default().push(session);
-                Ok(v)
-            }
-            Err(e) => {
-                // Poisoned: dropping the session means the next lease
-                // starts a fresh worker (restart semantics).
-                drop(session);
-                Err(PoolError::Worker(e))
-            }
+                }));
+            })?;
+            let value = op(&mut session)?;
+            Ok((session, value))
+        })();
+        let _ = done.send(());
+        if let Some(watchdog) = watchdog {
+            let _ = watchdog.join();
         }
+        if Instant::now() >= deadline {
+            // Never publish late output or return a timed-out session to idle.
+            drop(result);
+            return Err(PoolError::Deadline(self.config.deadline));
+        }
+        let (session, value) = result?;
+        let key = self.key();
+        self.idle.entry(key).or_default().push(session);
+        Ok(value)
     }
 
     /// Linux-only worker RSS in bytes (VmRSS from /proc/<pid>/status);
@@ -486,19 +487,14 @@ impl WorkerPool {
     /// Enforces `memory_cap`: if the worker's RSS exceeds the cap it is
     /// killed, the session poisoned, and `MemCap` returned (the retry path
     /// spawns fresh). Linux-only measurement (WORKER-003).
-    fn enforce_memory_cap(&self, session: &WorkerSession) -> PoolResult<()> {
+    fn enforce_memory_cap(&self, session: &mut WorkerSession) -> PoolResult<()> {
         let cap = self.config.memory_cap;
         if cap == 0 {
             return Ok(());
         }
         match session.pid().and_then(WorkerPool::worker_rss_bytes) {
             Some(rss) if rss > cap => {
-                if let Some(pid) = session.pid() {
-                    let _ = std::process::Command::new("kill")
-                        .arg("-9")
-                        .arg(pid.to_string())
-                        .status();
-                }
+                session.worker.kill()?;
                 Err(PoolError::MemCap(rss, cap))
             }
             _ => Ok(()),
@@ -507,27 +503,17 @@ impl WorkerPool {
 
     /// Convenience: decompile one address with the pool's deadline.
     pub fn decompile(&mut self, address: u64) -> PoolResult<Vec<u8>> {
-        let res = self.with_worker_named("decompile", Some(address), |session| {
+        self.with_worker_named("decompile", Some(address), |session| {
             session.decompile(address)
-        });
-        let budget = self.config.deadline;
-        match res {
-            Err(PoolError::Worker(WorkerError::Process(_))) => Err(PoolError::Deadline(budget)),
-            other => other,
-        }
+        })
     }
 
     /// Convenience: decompile and decode one structured document with the
     /// pool's deadline/restart semantics.
     pub fn decompile_doc(&mut self, address: u64) -> PoolResult<DecompDoc> {
-        let res = self.with_worker_named("decompile", Some(address), |session| {
+        self.with_worker_named("decompile", Some(address), |session| {
             session.decompile_doc(address)
-        });
-        let budget = self.config.deadline;
-        match res {
-            Err(PoolError::Worker(WorkerError::Process(_))) => Err(PoolError::Deadline(budget)),
-            other => other,
-        }
+        })
     }
 }
 
@@ -667,11 +653,23 @@ mod tests {
         // A second attempt must launch a fresh child, not reuse poisoned I/O.
         let results = [pool.decompile_doc(0), pool.decompile_doc(0)];
         let elapsed = started.elapsed();
+        // A protocol failure must remain an error, not wait for EOF until the
+        // deadline turns it into a timeout. This child deliberately ignores EOF.
+        std::fs::write(
+            root.join("hang"),
+            "#!/bin/sh\nprintf '\\000\\000\\001\\177'\nexec sleep 2\n",
+        )
+        .unwrap();
+        let rejected = pool.decompile_doc(0);
         drop(pool);
         std::fs::remove_dir_all(root).unwrap();
         for result in results {
             assert!(matches!(&result, Err(PoolError::Deadline(_))), "{result:?}");
         }
         assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
+        assert!(
+            matches!(&rejected, Err(PoolError::Worker(_))),
+            "{rejected:?}"
+        );
     }
 }
