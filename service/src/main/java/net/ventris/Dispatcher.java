@@ -33,6 +33,8 @@ import ghidra.program.model.symbol.Reference;
 import ghidra.program.model.symbol.SourceType;
 import ghidra.program.model.symbol.Symbol;
 import ghidra.program.model.symbol.SymbolIterator;
+import ghidra.program.model.data.StringDataInstance;
+import ghidra.program.util.DefinedStringIterator;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -203,6 +205,51 @@ final class Dispatcher {
             }
         }
         out.add("xrefs", xrefs);
+
+        JsonArray strings = new JsonArray();
+        DefinedStringIterator stringIt = DefinedStringIterator.forProgram(session.program());
+        while (stringIt.hasNext()) {
+            Data data = stringIt.next();
+            StringDataInstance instance = StringDataInstance.getStringDataInstance(data);
+            String value = instance.getStringValue();
+            if (value == null) {
+                throw new IllegalStateException("Cannot decode defined string at " + data.getAddress());
+            }
+            String encoding = instance.getCharsetName();
+            if ("UTF-16".equalsIgnoreCase(encoding)) {
+                boolean bigEndian = data.isBigEndian();
+                if (data.getLength() >= 2) {
+                    try {
+                        int prefix = ((data.getByte(0) & 255) << 8) | (data.getByte(1) & 255);
+                        if (prefix == 0xfeff) bigEndian = true;
+                        else if (prefix == 0xfffe) bigEndian = false;
+                    } catch (MemoryAccessException error) {
+                        throw new IllegalStateException("Cannot read string byte order at " + data.getAddress(), error);
+                    }
+                }
+                encoding = bigEndian ? "UTF-16BE" : "UTF-16LE";
+            }
+            JsonObject o = new JsonObject();
+            JsonObject address = new JsonObject();
+            String spaceName = data.getAddress().getAddressSpace().getName();
+            if ("ram".equalsIgnoreCase(spaceName)) address.addProperty("space", "Ram");
+            else if ("external".equalsIgnoreCase(spaceName)) address.addProperty("space", "External");
+            else {
+                JsonObject space = new JsonObject();
+                space.addProperty("Other", spaceName);
+                address.add("space", space);
+            }
+            long offset = data.getAddress().getOffset();
+            if (offset >= 0) address.addProperty("offset", offset);
+            else address.addProperty("offset", new java.math.BigInteger(Long.toUnsignedString(offset)));
+            o.add("address", address);
+            o.addProperty("value", value);
+            o.addProperty("kind", encoding);
+            o.addProperty("length", value.codePointCount(0, value.length()));
+            o.addProperty("byte_length", data.getLength());
+            strings.add(o);
+        }
+        out.add("strings", strings);
 
         JsonArray comments = new JsonArray();
         java.util.Set<Integer> commentKinds = new java.util.LinkedHashSet<>();

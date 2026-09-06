@@ -18,6 +18,38 @@ fn word(data: &[u8], offset: usize, width: usize, be: bool) -> Result<u64> {
     }))
 }
 
+fn collect_string_tables(data: &[u8], sections: &[ElfSection], import: &mut NativeImport) -> Result<()> {
+    for section in sections.iter().filter(|section| section.typ == 3 && section.size != 0) {
+        let start = usize::try_from(section.off).map_err(|_| bad("ELF string table offset overflow"))?;
+        let size = usize::try_from(section.size).map_err(|_| bad("ELF string table size overflow"))?;
+        let bytes = data.get(start..start.checked_add(size).ok_or_else(|| bad("ELF string table overflow"))?)
+            .ok_or_else(|| bad("truncated ELF string table"))?;
+        section.addr.checked_add(section.size).ok_or_else(|| bad("ELF string table address overflow"))?;
+        let address = lre_model::Address {
+            space: if section.flags & 2 != 0 { lre_model::AddressSpace::Ram }
+                else { lre_model::AddressSpace::Other(section.name.clone()) },
+            offset: section.addr,
+        };
+        let mut strings = Vec::new();
+        // ElfProgramBuilder.markupStringTable skips the initial empty entry
+        // and declares each subsequent string as StringUTF8DataType.
+        let mut begin = 1;
+        for (end, &byte) in bytes.iter().enumerate().skip(1) {
+            if byte != 0 { continue; }
+            let value = String::from_utf8_lossy(&bytes[begin..end]);
+            if value.chars().count() >= 4 {
+                strings.push(lre_model::StringRow {
+                    address: lre_model::Address { space: address.space.clone(), offset: address.offset + begin as u64 },
+                    value: value.into_owned(), kind: "UTF-8".into(),
+                });
+            }
+            begin = end + 1;
+        }
+        import.string_tables.push(super::NativeStringTable { address, size: section.size, strings });
+    }
+    Ok(())
+}
+
 pub(super) fn prepare(
     data: &[u8],
     sections: &mut [ElfSection],
@@ -53,6 +85,7 @@ pub(super) fn prepare(
         section.addr = rebase(section.addr)?;
     }
     complete_load_segments(data, import, width, be, bias)?;
+    collect_string_tables(data, sections, import)?;
     let machine = word(data, 18, 2, be)?;
     if machine == 20 && width == 4 && dynamic_value(data, width, be, 0x70000000)?.is_some() {
         import.reference_call_register = Some("r30"); // DT_PPC_GOT: old ELF32 PIC ABI.

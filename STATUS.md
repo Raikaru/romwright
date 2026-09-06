@@ -1661,6 +1661,14 @@ M2 — Program-model parity
 - c: verify worker string delivery, complete differential acceptance, and CI.
   Publish implementation and generated reports in separate commits below
   800 changed lines.
+- d: publish complete difference sets as hashed per-binary JSON sidecars;
+  the first full report contains 3,141 lines. No rows are discarded.
+  Execute these report-publication sub-tasks one commit at a time:
+  d1 x86-64's five sidecars; d2 i386's three plain sidecars;
+  d3 i386's C++/many sidecars; d4 AArch64's five sidecars;
+  d5 PowerPC's three plain sidecars; d6 PowerPC's C++/many sidecars;
+  d7 the summary referencing all 20 sidecars. Each commit stays below 800
+  changed lines; no committed baseline is modified.
 - Initial acceptance failed: only ASCII `word` was found; UTF-8 and UTF-16
   strings were absent and executable `CODE` bytes were incorrectly included.
 

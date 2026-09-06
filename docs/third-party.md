@@ -361,3 +361,17 @@ Explicit-context references live under `oracle/xrefs-v1/explicit-context-v1/`;
 the complete automatic-selection references are retained unchanged. No
 reference-kind normalization, precision/recall definition, or threshold is
 changed by choosing matching contexts.
+
+## Native string facts
+
+The string oracle enumerates Ghidra 12.1.3 `DefinedStringIterator` and decodes
+through `StringDataInstance` (Apache-2.0), including non-loaded metadata.
+`ElfProgramBuilder.markupStringTable` declares ELF table entries as UTF-8;
+native import retains that encoding and the section's address space rather
+than treating `.shstrtab` offsets as RAM addresses.
+
+The native sweep covers ASCII, UTF-8, and endian-aware UTF-16 data, with a
+minimum of four Unicode scalar values. BOMs, string-start data references,
+and UTF-16 alignment resolve overlapping interpretations. The upstream
+`StringsAnalyzer` defaults to ASCII-only discovery; its n-gram model is
+not copied into the native decoder.
