@@ -91,7 +91,8 @@ fn run(
                 .insert(prototype.function.offset, prototype.signature);
         }
     }
-    for string in db.strings(pid)? {
+    for string in db.strings(pid)?.into_iter()
+        .filter(|string| string.address.space == lre_model::AddressSpace::Ram) {
         provider.strings.insert(string.address.offset, string.value);
     }
 

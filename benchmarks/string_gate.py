@@ -15,6 +15,7 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from gen_oracle import bridge_command, digest, generate_reference, provenance, validate_reference, write_reference
+from ui_gate import physical_memory_gb
 from xref_gate import CONTEXTS, address
 
 
@@ -134,10 +135,23 @@ def main():
     report = {"gate": "strings", "milestone": "M2", "task": "m2-003",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
               "date": datetime.now(timezone.utc).date().isoformat(),
-              "machine": {"os": platform.platform(), "cpu": platform.processor(), "ram_gb": 0},
+              "machine": {"os": platform.platform(), "cpu": platform.processor() or platform.machine(),
+                          "ram_gb": physical_memory_gb()},
               "corpus": rows, "summary": summary,
               "passed": len(rows) == 20 and summary["pass"] == 20}
     args.report.parent.mkdir(parents=True, exist_ok=True)
+    detail_dir = args.report.with_name(args.report.stem + "-details")
+    detail_dir.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        if "missing" not in row:
+            continue
+        differences = {"schema_version": 1, "id": row["id"],
+                       "missing": row.pop("missing"), "extra": row.pop("extra")}
+        detail_path = detail_dir / f"{row['id']}.json"
+        write_reference(detail_path, differences)
+        row.update(missing_count=len(differences["missing"]), extra_count=len(differences["extra"]),
+                   differences={"path": os.path.relpath(detail_path, args.report.parent),
+                                "sha256": digest(detail_path)})
     write_reference(args.report, report)
     return 0 if report["passed"] else 1
 

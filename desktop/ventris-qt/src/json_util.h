@@ -16,7 +16,21 @@ inline QString addressText(const QJsonValue &value) {
     if (value.isObject()) {
         const QJsonObject object = value.toObject();
         const qlonglong offset = object.value("offset").toVariant().toLongLong();
-        return QStringLiteral("0x%1").arg(static_cast<qulonglong>(offset), 0, 16);
+        const QString text = QStringLiteral("0x%1").arg(static_cast<qulonglong>(offset), 0, 16);
+        const QJsonValue space = object.value("space");
+        QString name;
+        if (space.isObject()) {
+            name = space.toObject().value("Other").toString();
+        } else {
+            name = space.toString();
+            if (name.isEmpty() || name == QStringLiteral("Ram")) {
+                return text;
+            }
+            if (name == QStringLiteral("External")) {
+                name = QStringLiteral("ext");
+            }
+        }
+        return QStringLiteral("%1::%2").arg(name, text);
     }
     return QStringLiteral("?");
 }

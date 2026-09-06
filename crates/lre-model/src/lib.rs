@@ -16,8 +16,8 @@ pub struct FunctionId(pub u32);
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SymbolId(pub u32);
 
-/// Which address space an offset lives in. Stage 1 only ever materializes
-/// `ram`, but the enum exists so callers cannot silently assume flat memory.
+/// Address-space identity, including non-loaded metadata. Callers must not
+/// silently project offsets from other spaces into RAM.
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub enum AddressSpace {
     /// Main loaded memory.
@@ -57,8 +57,8 @@ impl Address {
         Self { space: AddressSpace::Ram, offset }
     }
 
-    /// Parses a canonical hex string (`"00400466"`, `"0x400466"`) as a RAM
-    /// address, the storage convention of every row in the project store.
+    /// Parses a canonical RAM hex string (`"00400466"`, `"0x400466"`),
+    /// the compact storage convention for RAM address cells.
     pub fn parse_ram_hex(s: &str) -> Option<Self> {
         let hex = s.trim().trim_start_matches("0x");
         if hex.is_empty() {
@@ -67,7 +67,7 @@ impl Address {
         u64::from_str_radix(hex, 16).ok().map(Self::ram)
     }
 
-    /// The canonical hex form the store writes (`"00400466"`).
+    /// The offset-only hex form (`"00400466"`), without space identity.
     pub fn hex(&self) -> String {
         format!("{:08x}", self.offset)
     }

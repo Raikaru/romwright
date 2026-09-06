@@ -15,7 +15,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 5;
+pub const SCHEMA_VERSION: i64 = 6;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -363,23 +363,30 @@ impl ProjectDb {
         }
         if v < SCHEMA_VERSION {
             let tx = self.conn.unchecked_transaction()?;
-            let has_provenance: bool = tx.query_row(
+            if v < 5 {
+                let has_provenance: bool = tx.query_row(
                 "SELECT EXISTS(SELECT 1 FROM pragma_table_info('xrefs') WHERE name = 'provenance')",
                 [], |row| row.get(0),
             )?;
-            if !has_provenance {
-                tx.execute("ALTER TABLE xrefs ADD COLUMN provenance TEXT NOT NULL DEFAULT ''", [])?;
-            }
-            tx.execute_batch(
-                "ALTER TABLE xrefs ADD COLUMN provenance_kind TEXT NOT NULL DEFAULT 'asserted'
+                if !has_provenance {
+                    tx.execute(
+                        "ALTER TABLE xrefs ADD COLUMN provenance TEXT NOT NULL DEFAULT ''",
+                        [],
+                    )?;
+                }
+                tx.execute_batch(
+                    "ALTER TABLE xrefs ADD COLUMN provenance_kind TEXT NOT NULL DEFAULT 'asserted'
                      CHECK(provenance_kind IN ('asserted', 'inferred'));
                  ALTER TABLE xrefs ADD COLUMN confidence REAL
                      CHECK(confidence >= 0 AND confidence <= 1);
                  UPDATE xrefs SET provenance_kind = 'inferred'
                      WHERE provenance = 'native-import'
                         OR provenance GLOB 'native-import:*'
-                        OR provenance GLOB 'native-analysis:*';"
-            )?;
+                        OR provenance GLOB 'native-analysis:*';",
+                )?;
+            }
+            // Version 6 permits typed non-RAM address cells; existing RAM
+            // hex cells are unchanged. Older readers must reject this format.
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -840,13 +847,14 @@ impl ProjectDb {
     }
 
     /// Replaces discovered strings atomically.
-    pub fn replace_strings(&self, program: ProgramId, rows: &[StringRow]) -> Result<()> {
+    pub fn replace_strings<'a>(&self, program: ProgramId, rows: impl IntoIterator<Item = &'a StringRow>) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute("DELETE FROM strings WHERE program_id = ?1", params![program.0])?;
         let mut stmt = tx.prepare(
             "INSERT OR IGNORE INTO strings(program_id, address, value, kind)
              VALUES (?1, ?2, ?3, ?4)",
         )?;
+        let mut count = 0usize;
         for row in rows {
             stmt.execute(params![
                 program.0,
@@ -854,9 +862,10 @@ impl ProjectDb {
                 row.value,
                 row.kind
             ])?;
+            count += 1;
         }
         drop(stmt);
-        self.bump_and_record(&tx, program, "replace-strings", &rows.len().to_string())?;
+        self.bump_and_record(&tx, program, "replace-strings", &count.to_string())?;
         tx.commit()?;
         Ok(())
     }
@@ -870,7 +879,7 @@ impl ProjectDb {
         Ok(stmt
             .query_map(params![program.0], |row| {
                 Ok(StringRow {
-                    address: addr_from_cell(row.get(0)?),
+                    address: addr_from_cell(row.get(0)?, 0)?,
                     value: row.get(1)?,
                     kind: row.get(2)?,
                 })
@@ -898,7 +907,7 @@ impl ProjectDb {
         let rows = stmt
             .query_map(params![program.0, limit, offset], |row| {
                 Ok(StringRow {
-                    address: addr_from_cell(row.get(0)?),
+                    address: addr_from_cell(row.get(0)?, 0)?,
                     value: row.get(1)?,
                     kind: row.get(2)?,
                 })
@@ -919,7 +928,7 @@ impl ProjectDb {
             )?;
             for row in stmt.query_map(params![program.0, pattern], |row| {
                 Ok(SearchHit {
-                    address: Some(addr_from_cell(row.get(0)?)),
+                    address: Some(addr_from_cell(row.get(0)?, 0)?),
                     kind: "function".into(),
                     name: row.get(1)?,
                     context: String::new(),
@@ -935,7 +944,7 @@ impl ProjectDb {
             )?;
             for row in stmt.query_map(params![program.0, pattern], |row| {
                 Ok(SearchHit {
-                    address: Some(addr_from_cell(row.get(0)?)),
+                    address: Some(addr_from_cell(row.get(0)?, 0)?),
                     kind: "symbol".into(),
                     name: row.get(1)?,
                     context: row.get(2)?,
@@ -951,7 +960,7 @@ impl ProjectDb {
             )?;
             for row in stmt.query_map(params![program.0, pattern], |row| {
                 Ok(SearchHit {
-                    address: Some(addr_from_cell(row.get(0)?)),
+                    address: Some(addr_from_cell(row.get(0)?, 0)?),
                     kind: "string".into(),
                     name: row.get(1)?,
                     context: row.get(2)?,
@@ -967,7 +976,7 @@ impl ProjectDb {
             )?;
             for row in stmt.query_map(params![program.0, pattern], |row| {
                 Ok(SearchHit {
-                    address: Some(addr_from_cell(row.get(0)?)),
+                    address: Some(addr_from_cell(row.get(0)?, 0)?),
                     kind: "comment".into(),
                     name: row.get(2)?,
                     context: row.get(1)?,
@@ -1023,8 +1032,8 @@ impl ProjectDb {
         let edges = stmt
             .query_map(params![program.0], |row| {
                 Ok(GraphEdge {
-                    from: addr_from_cell(row.get(0)?),
-                    to: addr_from_cell(row.get(1)?),
+                    from: addr_from_cell(row.get(0)?, 0)?,
+                    to: addr_from_cell(row.get(1)?, 1)?,
                     kind: row.get(2)?,
                 })
             })?
@@ -1095,7 +1104,7 @@ impl ProjectDb {
             .query_map(params![program.0], |row| {
                 Ok(MemoryRegion {
                     name: row.get(0)?,
-                    start: addr_from_cell(row.get(1)?),
+                    start: addr_from_cell(row.get(1)?, 1)?,
                     size: row.get(2)?,
                     permissions: row.get(3)?,
                     source: row.get(4)?,
@@ -1140,7 +1149,7 @@ impl ProjectDb {
         Ok(stmt
             .query_map(params![program.0], |row| {
                 Ok(BookmarkRow {
-                    address: addr_from_cell(row.get(0)?),
+                    address: addr_from_cell(row.get(0)?, 0)?,
                     label: row.get(1)?,
                     comment: row.get(2)?,
                 })
@@ -1196,7 +1205,7 @@ impl ProjectDb {
         let raw = stmt
             .query_map(params![program.0], |row| {
                 Ok((
-                    addr_from_cell(row.get(0)?),
+                    addr_from_cell(row.get(0)?, 0)?,
                     row.get::<_, String>(1)?,
                     row.get::<_, String>(2)?,
                     row.get::<_, i64>(3)? != 0,
@@ -1264,8 +1273,8 @@ impl ProjectDb {
         let rows = stmt
             .query_map(params![program.0], |r| {
                 Ok(CommentRow {
-                    address: addr_from_cell(r.get(0)?),
-                    function: addr_from_cell(r.get(1)?),
+                    address: addr_from_cell(r.get(0)?, 0)?,
+                    function: addr_from_cell(r.get(1)?, 1)?,
                     kind: r.get(2)?,
                     text: r.get(3)?,
                 })
@@ -1517,7 +1526,7 @@ impl ProjectDb {
         Ok(stmt
             .query_map(params![program.0], |row| {
                 Ok(PrototypeRow {
-                    function: addr_from_cell(row.get(0)?),
+                    function: addr_from_cell(row.get(0)?, 0)?,
                     signature: row.get(1)?,
                     calling_convention: row.get(2)?,
                     return_type: row.get(3)?,
@@ -2058,27 +2067,37 @@ fn hex_decode(value: &str) -> Result<Vec<u8>> {
 
 fn map_symbol(r: &Row<'_>) -> rusqlite::Result<SymbolRow> {
     Ok(SymbolRow {
-        address: addr_from_cell(r.get(0)?),
+        address: addr_from_cell(r.get(0)?, 0)?,
         name: r.get(1)?,
         external: r.get::<_, i64>(2)? != 0,
         source: r.get(3)?,
     })
 }
 
-/// Store-side address mapping: the schema persists canonical hex string
-/// offsets (single-space contract: the store holds `ram` addresses). This is
-/// the one serialization edge where rendered text is allowed — the model
-/// contract is typed above it.
+/// RAM addresses use compact hex cells; non-RAM addresses use the typed JSON
+/// representation so identical offsets in distinct spaces remain distinct.
 fn addr_cell(a: &lre_model::Address) -> String {
-    format!("{:08x}", a.offset)
+    if a.space == lre_model::AddressSpace::Ram {
+        format!("{:08x}", a.offset)
+    } else {
+        serde_json::to_string(a).expect("address contains only serializable fields")
+    }
 }
-fn addr_from_cell(s: String) -> lre_model::Address {
-    lre_model::Address::parse_ram_hex(&s).unwrap_or_default()
+fn addr_from_cell(s: String, column: usize) -> rusqlite::Result<lre_model::Address> {
+    if s.starts_with('{') {
+        return serde_json::from_str(&s).map_err(|error| rusqlite::Error::FromSqlConversionFailure(
+            column, rusqlite::types::Type::Text, Box::new(error),
+        ));
+    }
+    lre_model::Address::parse_ram_hex(&s).ok_or_else(|| rusqlite::Error::FromSqlConversionFailure(
+        column, rusqlite::types::Type::Text,
+        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid hexadecimal address")),
+    ))
 }
 
 fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
     Ok(FunctionRow {
-        entry: addr_from_cell(r.get(0)?),
+        entry: addr_from_cell(r.get(0)?, 0)?,
         name: r.get(1)?,
         size: r.get(2)?,
         signature: r.get(3)?,
@@ -2097,8 +2116,8 @@ fn map_xref(r: &Row<'_>) -> rusqlite::Result<XrefRow> {
         )),
     };
     Ok(XrefRow {
-        from: addr_from_cell(r.get(0)?),
-        to: addr_from_cell(r.get(1)?),
+        from: addr_from_cell(r.get(0)?, 0)?,
+        to: addr_from_cell(r.get(1)?, 1)?,
         kind: r.get(2)?,
         function: r.get(3)?,
         provenance: XrefProvenance {
@@ -2122,7 +2141,7 @@ fn map_type_field(r: &Row<'_>) -> rusqlite::Result<TypeFieldRow> {
 
 fn map_stack_variable(r: &Row<'_>) -> rusqlite::Result<StackVariableRow> {
     Ok(StackVariableRow {
-        function: addr_from_cell(r.get(0)?),
+        function: addr_from_cell(r.get(0)?, 0)?,
         ordinal: r.get(1)?,
         name: r.get(2)?,
         storage: r.get(3)?,

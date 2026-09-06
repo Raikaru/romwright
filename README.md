@@ -260,6 +260,22 @@ empty analyses. Rebuild the native console after updating.
 This M2 primitive does not establish program-model parity or enable a new
 import analyzer by default.
 
+## Native string facts
+
+Native import stores null-terminated ASCII, UTF-8, and endian-aware UTF-16
+data strings with at least four Unicode scalar values. BOMs, data-reference
+starts, and UTF-16 alignment resolve overlapping candidates. Existing data
+references retain their physical source and target addresses.
+
+ELF string tables retain their declared UTF-8 encoding, including non-loaded
+tables. Metadata addresses are space-qualified in the desktop table
+(`.shstrtab::0x1`), not displayed or cached as RAM. Database format 6 retains
+typed non-RAM addresses; existing RAM hex cells require no re-encoding.
+
+`benchmarks/string_gate.py` compares the unchanged 20-entry corpus against
+defined reference strings. Its summary links hashed per-binary difference
+files in `<report-stem>-details/`; no missing or extra addresses are discarded.
+
 ## Support matrix
 
 | Input | Structural native import | Native flow/decode/decompile |

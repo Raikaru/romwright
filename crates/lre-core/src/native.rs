@@ -17,8 +17,9 @@ mod discovery;
 mod elf_pointers;
 mod elf_unwind;
 mod elf_image;
+mod strings;
 use lre_model::{
-    FunctionRow, MemoryRegion, Provenance, ProgramSummary, StringRow, XrefRow,
+    FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
 };
 /// Errors from a native import.
 #[derive(Debug, thiserror::Error)]
@@ -107,10 +108,19 @@ pub struct NativeRegisterContext {
     pub value: u64,
 }
 
+/// Loader-defined string table, including non-loaded metadata address spaces.
+#[derive(Debug)]
+pub struct NativeStringTable {
+    pub address: lre_model::Address,
+    pub size: u64,
+    pub strings: Vec<lre_model::StringRow>,
+}
+
 /// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
     pub mappings: Vec<Mapping>,
+    pub string_tables: Vec<NativeStringTable>,
     pub functions: Vec<NativeFunction>,
     pub xrefs: Vec<NativeXref>,
     pub externals: Vec<(u64, String)>,
@@ -1066,7 +1076,9 @@ pub fn store_import(
         })
         .collect::<Vec<_>>();
     db.replace_memory_regions(pid, &regions)?;
-    db.replace_strings(pid, &discover_strings(imp))?;
+    let swept_strings = strings::discover(imp);
+    db.replace_strings(pid, imp.string_tables.iter().flat_map(|table| &table.strings)
+        .chain(&swept_strings))?;
     let rows: Vec<FunctionRow> = functions
         .iter()
         .map(|f| FunctionRow {
@@ -1116,33 +1128,6 @@ fn mapping_permissions(flags: u64) -> String {
     )
 }
 
-fn discover_strings(imp: &NativeImport) -> Vec<StringRow> {
-    let mut rows = Vec::new();
-    for mapping in &imp.mappings {
-        let mut start = None;
-        for index in 0..=mapping.bytes.len() {
-            let printable = mapping
-                .bytes
-                .get(index)
-                .is_some_and(|byte| (0x20..=0x7e).contains(byte));
-            if printable && start.is_none() {
-                start = Some(index);
-            }
-            if (!printable || index == mapping.bytes.len()) && start.is_some() {
-                let begin = start.take().unwrap_or(index);
-                if index.saturating_sub(begin) >= 4 {
-                    let value = String::from_utf8_lossy(&mapping.bytes[begin..index]).into_owned();
-                    rows.push(StringRow {
-                        address: lre_model::Address::ram(mapping.vaddr + begin as u64),
-                        value,
-                        kind: "ASCII".into(),
-                    });
-                }
-            }
-        }
-    }
-    rows
-}
 
 /// Context for candidate pre-pass confirmation.
 pub struct CandidateFilterContext<'a> {
@@ -2376,7 +2361,7 @@ mod tests {
                 vaddr, size: bytes.len() as u64, file_off: 0, flags, bytes,
             }).collect();
             let import = NativeImport { language: language.into(), mappings, ..Default::default() };
-            let mut strings: Vec<_> = discover_strings(&import).into_iter()
+            let mut strings: Vec<_> = strings::discover(&import).into_iter()
                 .map(|row| (row.address.offset, row.value)).collect();
             strings.sort_unstable();
             assert_eq!(strings, vec![

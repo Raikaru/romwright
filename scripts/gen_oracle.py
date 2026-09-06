@@ -80,13 +80,13 @@ def bridge_command(install, java):
             "net.ventris.Main", "--install-dir", str(install)]
 
 
-def generate_reference(command, binary, expected, timeout, *, include_xrefs=False):
+def generate_reference(command, binary, expected, timeout, *, include_xrefs=False, include_strings=False):
     params = {"session": "oracle", "path": str(binary)}
     if expected["language_selection"] == "explicit":
         params.update(language=expected["language"], compiler=expected["compiler"])
     requests = [
         {"id": 1, "method": "import", "params": params},
-        {"id": 2, "method": "export_facts" if include_xrefs else "functions",
+        {"id": 2, "method": "export_facts" if include_xrefs or include_strings else "functions",
          "params": {"session": "oracle"}},
         {"id": 3, "method": "close", "params": {"session": "oracle"}},
     ]
@@ -115,10 +115,12 @@ def generate_reference(command, binary, expected, timeout, *, include_xrefs=Fals
                  "image_base": address(imported["image_base"]),
                  "imported_function_count": imported["functions"],
                  "entries": sorted((address(row["entry"]) for row in
-                                    (replies[2]["functions"] if include_xrefs else replies[2])),
+                                    (replies[2]["functions"] if include_xrefs or include_strings else replies[2])),
                                    key=lambda entry: int(entry, 16))}
     if include_xrefs:
         reference["xrefs"] = replies[2]["xrefs"]
+    if include_strings:
+        reference["strings"] = replies[2]["strings"]
     validate_reference(reference, expected)
     return reference
 
