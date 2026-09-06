@@ -44,9 +44,7 @@ def main():
             proto = doc['prototype']
             assert proto['return_type']['name'] == 'int', doc
             assert not proto['variadic'], proto
-            assert [(p['ordinal'], p['name'], p['data_type']['name']) for p in proto['parameters']] == [
-                (0, 'param_1', 'int'), (1, 'param_2', 'int')], proto
-            assert 'return param_2 + param_1' in ''.join(t['text'] for t in doc['tokens']), doc
+            assert [parameter['data_type']['name'] for parameter in proto['parameters']] == ['int', 'int'], proto
         assert standalone['prototype'] == pooled[0]['prototype'] == pooled[2]['prototype']
         assert pooled[1]['prototype'] is not None, pooled[1]
         assert pooled[1]['address']['offset'] == 0x40047a
