@@ -1920,6 +1920,17 @@ M2 — Program-model parity
   regressions, and all 3 static-bundle and equivalent-input rebuild checks.
 - m2-006 is complete. M2 program-model parity remains open; next is m2-007.
 
+## m2-007 implementation slices
+- a: commit a failing real indirect-switch acceptance and stock target exporter.
+  Use a temporary positive fixture, not a change to the locked corpus.
+- b: project packed jump-table metadata into standalone and pooled documents,
+  preserving typed branch/target addresses, order and duplicate destinations.
+  Distinguish unavailable metadata from a recovered function with no tables.
+- c: compare targets against stock on the positive fixture and record all 20
+  unchanged corpus cases, including zero-table observations and missing inputs.
+  The recorded task provides no numeric threshold. No new metric, persistence
+  operation, rediscovery pass, or full M2 parity claim is introduced here.
+
 ## Blocked on
 - None.
 
