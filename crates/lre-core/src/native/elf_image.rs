@@ -168,6 +168,15 @@ pub(super) fn prepare(
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;
     }
+    // ElfProgramBuilder.markupSectionHeaders references each loaded sh_addr.
+    // An executable section start is a code root, not a function or a sweep.
+    for section in sections.iter().filter(|section| {
+        section.typ == 1 && section.flags & 6 == 6 && section.size != 0
+    }) {
+        let end = section.addr.checked_add(section.size)
+            .ok_or_else(|| bad("ELF section code range overflow"))?;
+        import.reference_roots.push((section.addr, end));
+    }
     Ok(())
 }
 
