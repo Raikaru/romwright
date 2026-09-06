@@ -1,0 +1,68 @@
+{
+  "task": "m2-008",
+  "passed": true,
+  "scope": "temporary positive acceptance, not locked corpus",
+  "inferred_functions": 2,
+  "returning_controls": 2,
+  "unresolved_indirect_controls": 2,
+  "removed_call_xrefs": 2,
+  "standalone": 1,
+  "pooled": true,
+  "report": {
+    "changed": [
+      {
+        "offset": 4194813,
+        "space": "Ram"
+      },
+      {
+        "offset": 4194824,
+        "space": "Ram"
+      }
+    ],
+    "rediscovered": [
+      {
+        "offset": 4194796,
+        "space": "Ram"
+      },
+      {
+        "offset": 4194813,
+        "space": "Ram"
+      }
+    ],
+    "revision": 16,
+    "unknown": [
+      {
+        "offset": 4194832,
+        "space": "Ram"
+      },
+      {
+        "offset": 4194834,
+        "space": "Ram"
+      }
+    ]
+  },
+  "repeated": {
+    "changed": [],
+    "rediscovered": [
+      {
+        "offset": 4194796,
+        "space": "Ram"
+      },
+      {
+        "offset": 4194813,
+        "space": "Ram"
+      }
+    ],
+    "revision": 16,
+    "unknown": [
+      {
+        "offset": 4194832,
+        "space": "Ram"
+      },
+      {
+        "offset": 4194834,
+        "space": "Ram"
+      }
+    ]
+  }
+}

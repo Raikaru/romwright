@@ -143,6 +143,11 @@ pub const ATTRIBUTE: u8 = 0xc0;
 // marshal.cc:1264-1265 register ELEM_DATA/ELEM_INPUT; the ids below are the
 // ones the protocol paths actually use, each cited to its defining file.
 pub mod elem {
+    /// ELEM_VOID (marshal.cc:1273).
+    pub const VOID: u32 = 10;
+    /// ELEM_PROTOTYPE and ELEM_RETURNSYM (fspec.cc:47,50).
+    pub const PROTOTYPE: u32 = 169;
+    pub const RETURNSYM: u32 = 172;
     /// ELEM_ADDR (address.cc:25)
     pub const ADDR: u32 = 11;
     /// ELEM_RANGELIST (address.cc:27)
@@ -202,6 +207,8 @@ pub mod attr {
     pub const LAST: u32 = 28;
     /// ATTRIB_MAXSIZE (fspec.cc:27).
     pub const MAXSIZE: u32 = 120;
+    /// ATTRIB_NORETURN (fspec.cc:30).
+    pub const NORETURN: u32 = 123;
 }
 
 /// Query element ids (ghidra_arch.cc:30-48); these are what the decompiler
@@ -315,6 +322,39 @@ pub fn encode_addr_element_size(out: &mut Vec<u8>, space_index: u32, offset: u64
     encode_attribute(out, attr::OFFSET, attr_type::UNSIGNED_INT, offset);
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_header(out, ELEMENT_END, elem::ADDR);
+}
+
+/// Full function metadata for callbacks and non-returning preload entries.
+/// Funcdata::decode requires a unique nonzero local scope id. FuncProto::decode
+/// requires a returnsym; the unlocked void output leaves type recovery enabled.
+pub(crate) fn encode_function_element(
+    out: &mut Vec<u8>,
+    space: u32,
+    scope_id: u64,
+    address: u64,
+    name: &str,
+    size: u64,
+    no_return: bool,
+) {
+    encode_header(out, ELEMENT_START, elem::FUNCTION);
+    encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, scope_id);
+    encode_string_attribute(out, attr::NAME, name.as_bytes());
+    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
+    encode_addr_element(out, space, address);
+    if no_return {
+        encode_header(out, ELEMENT_START, elem::PROTOTYPE);
+        // PackedEncode::writeBool (marshal.cc:1147): value is in the type byte.
+        encode_header(out, ATTRIBUTE, attr::NORETURN);
+        out.push((attr_type::BOOLEAN << 4) | 1);
+        encode_header(out, ELEMENT_START, elem::RETURNSYM);
+        encode_header(out, ELEMENT_START, elem::ADDR);
+        encode_header(out, ELEMENT_END, elem::ADDR);
+        encode_header(out, ELEMENT_START, elem::VOID);
+        encode_header(out, ELEMENT_END, elem::VOID);
+        encode_header(out, ELEMENT_END, elem::RETURNSYM);
+        encode_header(out, ELEMENT_END, elem::PROTOTYPE);
+    }
+    encode_header(out, ELEMENT_END, elem::FUNCTION);
 }
 
 #[cfg(test)]

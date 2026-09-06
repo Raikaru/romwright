@@ -367,6 +367,28 @@ python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus
 python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus --architecture powerpc
 ```
 
+`infer_nonreturning` takes `binary` and `program`; `return_behaviors` reads the
+stored facts for a `program`. This is an explicit pass, not an import default.
+Complete native executable flows without reachable returns establish a fact;
+missing, invalid, or unresolved indirect flow remains unknown. Known non-returning
+callees terminate call fallthrough, and their callers are reanalyzed.
+Schema v8 publishes owned inferred facts, completed caller extents, and owned
+call xrefs in one revision-checked transaction. Assertions and other sources
+remain protected; unsupported previous inferences are retracted. Repeating an
+unchanged analysis does not bump the revision. Standalone and pooled workers
+apply stored no-return flags without overwriting asserted prototypes.
+
+```sh
+python3 tests/m2-008_nonreturn.py --report benchmarks/reports/m2-008-positive.json
+python3 benchmarks/nonreturn_gate.py --corpus-dir /path/to/corpus \
+  --report benchmarks/reports/m2-008.json
+```
+
+The locked-corpus comparison uses exact non-returning function sets from fresh,
+context-matched stock analysis and immutable references. It is not an II.3 metric
+or the full M2 parity gate. The separate temporary fixture proves positive
+inference and caller fallthrough removal; it is not a replacement corpus member.
+
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped
 ELF corpus entries, then scores against their unstripped DWARF twins. It never
 loads DWARF into either analyzer. References are immutable; `--check` verifies

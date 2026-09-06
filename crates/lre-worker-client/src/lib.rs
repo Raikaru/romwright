@@ -80,6 +80,7 @@ impl WorkerSession {
             provider.strings.insert(string.address.offset, string.value);
         }
         provider.load_call_edges(&db, pid)?;
+        provider.load_return_behaviors(&db, pid)?;
         let function_shell = provider.function_shell()?;
         let spec_docs = load_specs(spec_root)?;
         let mut command = std::process::Command::new(decompiler);
