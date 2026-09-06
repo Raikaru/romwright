@@ -371,3 +371,61 @@ fn unreferenced_plt_entry_requires_executable_table_and_bound_slot() {
     }
     std::fs::remove_file(path).unwrap();
 }
+
+#[test]
+fn load_segment_gaps_preserve_bytes_and_section_precedence() {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let path = std::env::temp_dir()
+        .join(format!("ventris-elf-segments-{}-{stamp}", std::process::id()));
+    for (width, be) in [(8, false), (4, false), (4, true)] {
+        let mut data = fixture(width, be, 4, 0);
+        data.resize(0x2200, 0x5a);
+        data.copy_within(0x400..0x440, 0x1000);
+        data.copy_within(0x440..0x440 + 3 * width, 0x2000);
+        let stride = if width == 8 { 64 } else { 40 };
+        let file_offset_at = 0x80 + if width == 8 { 8 } else { 4 };
+        for (offset, size, value) in [
+            (0x80 + if width == 8 { 4 } else { 24 }, 4, 7u64),
+            (0x80 + if width == 8 { 32 } else { 16 }, width, 0x2200),
+            (0x80 + if width == 8 { 40 } else { 20 }, width, 0x2300),
+            (0x100 + stride + 8 + 2 * width, width, 0x1000),
+            (0x100 + 2 * stride + 8 + 2 * width, width, 0x2000),
+        ] {
+            for i in 0..size {
+                data[offset + if be { size - 1 - i } else { i }] = (value >> (8 * i)) as u8;
+            }
+        }
+        let base = if width == 8 { 0x100000 } else { 0x10000 };
+        let import = import_elf(&data).unwrap();
+        std::fs::write(&path, &data).unwrap();
+        let image = ProgramImage::open(&path).unwrap();
+        assert_eq!(image.read(base, 4), Some(b"\x7fELF".to_vec()),
+            "loaded headers are mapped: width={width}, be={be}");
+        assert_eq!(image.read(base + 0x800, 8), Some(vec![0x5a; 8]),
+            "inter-section bytes come from the segment's file range");
+        assert_eq!(image.read(base + 0x2200, 16), Some(vec![0; 16]),
+            "the segment's memory-only tail is zero-filled");
+        assert!(image.read(base + 0x2300, 1).is_none(), "do not map beyond p_memsz");
+        assert_eq!(image.read(base + 0x1000, 4), Some(vec![0x90, 0x90, 0x90, 0xc3]));
+        let pointer = base + 0x1010;
+        let relocated: Vec<_> = (0..width)
+            .map(|i| (pointer >> (8 * if be { width - 1 - i } else { i })) as u8).collect();
+        assert_eq!(image.read(base + 0x2000, width as u64), Some(relocated),
+            "segment completion must not shadow relocated section bytes");
+        let code = import.mappings.iter().find(|m| m.vaddr == base + 0x1000).unwrap();
+        assert_eq!(code.flags & 7, 6, "section permissions override broader segment permissions");
+        let mut ranges: Vec<_> = import.mappings.iter()
+            .map(|m| (m.vaddr, m.vaddr + m.size)).collect();
+        ranges.sort_unstable();
+        assert!(ranges.windows(2).all(|pair| pair[0].1 <= pair[1].0),
+            "every mapped address has one byte owner");
+        drop(image);
+        for i in 0..width {
+            data[file_offset_at + if be { width - 1 - i } else { i }] =
+                (0x2000u64 >> (8 * i)) as u8;
+        }
+        assert!(import_elf(&data).is_err(), "truncated PT_LOAD contents must be rejected");
+    }
+    std::fs::remove_file(path).unwrap();
+}

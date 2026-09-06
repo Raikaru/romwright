@@ -1583,6 +1583,16 @@ M2 — Program-model parity
   Next: preserve PT_LOAD bytes outside allocated sections, then PIC call context.
 - Publication sub-tasks: g6 implementation, then g6-report generated evidence.
 
+## m2-002g7 complete PT_LOAD byte coverage
+- Acceptance: `load_segment_gaps_preserve_bytes_and_section_precedence`.
+  Preserve loaded ELF headers, inter-section file bytes, and zero-filled
+  segment tails. Allocated section mappings and their relocated bytes keep
+  precedence; segment completion must not create overlapping mappings.
+- Exercise ELF64 little-endian and ELF32 in both byte orders. Reject truncated
+  segment bytes rather than silently replacing them with zeroes.
+- Do not add function seeds or change the gate's PT_LOAD eligibility rule.
+- Publication sub-tasks: g7 implementation, then g7-report generated evidence.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
