@@ -283,6 +283,15 @@ impl ApiService {
                     .map_err(|_| DispatchError::Request("count is too large".into()))?;
                 value(self.core.disasm_native(&binary, &address.hex(), count))
             }
+            "return_behaviors" => {
+                let program = string_param(params, "program")?;
+                value(self.core.return_behaviors(&program))
+            }
+            "infer_nonreturning" => {
+                let binary = path_param(params, "binary")?;
+                let program = string_param(params, "program")?;
+                value(self.core.infer_nonreturning(&binary, &program))
+            }
             "infer_prototypes" => {
                 let binary = path_param(params, "binary")?;
                 let program = string_param(params, "program")?;

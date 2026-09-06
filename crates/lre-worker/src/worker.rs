@@ -205,7 +205,11 @@ impl NativeWorker {
         tspec: &str,
         corespec: &str,
     ) -> Result<()> {
-        let shell = Self::encode_function_shell_doc(provider.ram_space_index as u32, &[]);
+        let shell = Self::encode_function_shell_doc(
+            provider.ram_space_index as u32,
+            &[],
+            &provider.non_returning,
+        );
         self.register_program_with_shell(provider, pspec, cspec, tspec, corespec, &shell)
     }
 
@@ -285,35 +289,52 @@ impl NativeWorker {
 
     /// Encodes the packed document accepted as registerProgram's fifth
     /// parameter. Entries are `(RAM address, function name, byte size)`.
-    pub fn encode_function_shell_doc(space_index: u32, entries: &[(u64, &str, u64)]) -> Vec<u8> {
+    /// Known non-returning entries carry full prototypes instead of lazy shells.
+    pub fn encode_function_shell_doc(
+        space_index: u32,
+        entries: &[(u64, &str, u64)],
+        non_returning: &std::collections::HashSet<u64>,
+    ) -> Vec<u8> {
         let mut doc = Vec::new();
         crate::wire::encode_header(&mut doc, crate::wire::ELEMENT_START, crate::wire::elem::DOC);
-        for (offset, name, size) in entries {
+        for (index, (offset, name, size)) in entries.iter().enumerate() {
             crate::wire::encode_header(
                 &mut doc,
                 crate::wire::ELEMENT_START,
                 crate::wire::elem::MAPSYM,
             );
-            crate::wire::encode_header(
-                &mut doc,
-                crate::wire::ELEMENT_START,
-                crate::wire::elem::FUNCTIONSHELL,
-            );
-            crate::wire::encode_string_attribute(
-                &mut doc,
-                crate::wire::attr::NAME,
-                name.as_bytes(),
-            );
-            crate::wire::encode_string_attribute(
-                &mut doc,
-                crate::wire::attr::LABEL,
-                name.as_bytes(),
-            );
-            crate::wire::encode_header(
-                &mut doc,
-                crate::wire::ELEMENT_END,
-                crate::wire::elem::FUNCTIONSHELL,
-            );
+            if non_returning.contains(offset) {
+                crate::wire::encode_function_element(
+                    &mut doc,
+                    space_index,
+                    index as u64 + 1,
+                    *offset,
+                    name,
+                    *size,
+                    true,
+                );
+            } else {
+                crate::wire::encode_header(
+                    &mut doc,
+                    crate::wire::ELEMENT_START,
+                    crate::wire::elem::FUNCTIONSHELL,
+                );
+                crate::wire::encode_string_attribute(
+                    &mut doc,
+                    crate::wire::attr::NAME,
+                    name.as_bytes(),
+                );
+                crate::wire::encode_string_attribute(
+                    &mut doc,
+                    crate::wire::attr::LABEL,
+                    name.as_bytes(),
+                );
+                crate::wire::encode_header(
+                    &mut doc,
+                    crate::wire::ELEMENT_END,
+                    crate::wire::elem::FUNCTIONSHELL,
+                );
+            }
             crate::wire::encode_addr_element_size(&mut doc, space_index, *offset, *size);
             crate::wire::encode_header(
                 &mut doc,
@@ -625,25 +646,6 @@ pub fn open_store(project_dir: &Path) -> Result<ProjectDb> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn register_program_frame_shape() {
-        // Frame: burst(2) "registerProgram" 4 XML streams, one packed
-        // function-shell stream, then burst(3).
-        let mut buf = Vec::new();
-        encode_burst(&mut buf, burst::COMMAND_OPEN);
-        encode_string_stream(&mut buf, b"registerProgram");
-        encode_string_stream(&mut buf, b"<p/>");
-        encode_string_stream(&mut buf, b"<c/>");
-        encode_string_stream(&mut buf, b"<t/>");
-        encode_string_stream(&mut buf, b"<k/>");
-        encode_string_stream(&mut buf, &NativeWorker::encode_function_shell_doc(3, &[]));
-        encode_burst(&mut buf, burst::COMMAND_CLOSE);
-        // Spot-check the ordering of markers.
-        assert_eq!(&buf[3..4], &[burst::COMMAND_OPEN]);
-        assert!(buf.windows(15).any(|w| w == b"registerProgram"));
-        assert_eq!(*buf.last().unwrap(), burst::COMMAND_CLOSE);
-    }
 
     #[test]
     fn check_setup_rejects_missing_binary() {

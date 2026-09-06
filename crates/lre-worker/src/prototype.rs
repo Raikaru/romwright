@@ -4,15 +4,12 @@
 //! Datatype::encodeRef, TypePointer/TypeArray/TypeCode::encode (pinned tree).
 
 use crate::doc::Value;
-use crate::wire::elem::{DOC, FUNCTION, SYMBOL, TYPE, TYPEREF};
+use crate::wire::elem::{DOC, FUNCTION, PROTOTYPE, RETURNSYM, SYMBOL, TYPE, TYPEREF, VOID};
 use lre_model::{DecompType, FuncParam, FuncProto};
 
-const VOID: u32 = 10;
 const DEF: u32 = 43;
 const INTERNALLIST: u32 = 161;
 const PARAM: u32 = 166;
-const PROTOTYPE: u32 = 169;
-const RETURNSYM: u32 = 172;
 const LOCALDB: u32 = 228;
 
 #[derive(Default)]

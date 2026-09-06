@@ -92,18 +92,27 @@ def main():
         invoke = lambda requests: run_api(ROOT, project, requests, 120, env)
         refs = lambda name: ('xrefs', dict(program='fixture', address=address(name), incoming=False))
         doc = ('decompile_doc', dict(**context, address=address('relay')))
+        assertion = dict(function=address('stop'), signature='void stop(void)',
+            calling_convention=None, return_type='void',
+            provenance=dict(kind='asserted', source='nonreturn-acceptance', confidence=None))
+        operation = dict(op_id='assert-stop', actor='acceptance', lamport=1,
+            kind='set_prototype', payload=json.dumps(assertion), applied=False, provenance='acceptance')
         before = invoke([('import_native', dict(binary=str(binary), name='fixture'))] + [
             ('rename', dict(program='fixture', address=address(name), name=name))
-            for name in names if not name.startswith('dead_')] + [refs('dead_entry'), refs('dead_relay'), doc])
+            for name in names if not name.startswith('dead_')] + [
+                ('append_collab_op', dict(program='fixture', operation=operation)),
+                ('apply_collab_op', dict(program='fixture', op_id='assert-stop')),
+                refs('dead_entry'), refs('dead_relay'), doc])
         for rows in before[-3:-1]:
             assert any(row['to'] == address('ordinary') and 'CALL' in row['kind'] for row in rows), rows
         assert any(token['text'] == 'ordinary' for token in before[-1]['tokens']), before[-1]
         # Keep a child warm across publication: revision invalidation must prevent
         # the old returning-callee assumptions from surviving the inference.
         _, report, after_doc = invoke([doc, ('infer_nonreturning', context), doc])
-        facts, entry_refs, relay_refs, functions = invoke([
+        facts, entry_refs, relay_refs, functions, prototypes = invoke([
             ('return_behaviors', dict(program='fixture')), refs('dead_entry'), refs('dead_relay'),
-            ('functions', dict(program='fixture'))])
+            ('functions', dict(program='fixture')), ('prototypes', dict(program='fixture'))])
+        assert prototypes == [assertion], prototypes
         inferred = {row['function']['offset'] for row in facts if row['no_return']}
         assert inferred == {symbols['stop'], symbols['relay']}, facts
         assert all(row['provenance']['kind'] == 'inferred' and row['provenance']['source'] for row in facts), facts
@@ -121,7 +130,7 @@ def main():
         assert repeated['changed'] == [] and final_doc['revision'] == after_doc['revision'], repeated
         assert final_facts == facts, (final_facts, facts)
         evidence = dict(task='m2-008', passed=True, scope='temporary positive acceptance, not locked corpus',
-            inferred_functions=2, returning_controls=2, unresolved_indirect_controls=1,
+            inferred_functions=2, returning_controls=2, unresolved_indirect_controls=2,
             removed_call_xrefs=2, standalone=1, pooled=True, report=report, repeated=repeated)
         if args.report:
             args.report.write_text(json.dumps(evidence, indent=2) + '\n')

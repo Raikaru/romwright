@@ -7,7 +7,7 @@
 //! query function from ghidra_arch.cc.
 use crate::wire::{self, burst, encode_burst, encode_string_stream};
 use crate::{NativeWorker, Result, WorkerError};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -75,6 +75,8 @@ pub struct ProgramProvider {
     pub strings: HashMap<u64, String>,
     /// Entry address -> stored prototype, including its assertion status.
     pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
+    /// RAM entries with a stored non-returning fact.
+    pub non_returning: HashSet<u64>,
     /// RAM call edges ordered by source/destination offset.
     pub call_edges: Vec<(lre_model::Address, lre_model::Address)>,
     /// Track which space index `ram` occupies once the tspec registers it.
@@ -100,6 +102,7 @@ impl ProgramProvider {
             external_names: HashMap::new(),
             strings: HashMap::new(),
             prototypes: HashMap::new(),
+            non_returning: HashSet::new(),
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
@@ -116,6 +119,22 @@ impl ProgramProvider {
         self.call_edges.retain(|(from, to)| {
             from.space == lre_model::AddressSpace::Ram && to.space == lre_model::AddressSpace::Ram
         });
+        Ok(())
+    }
+
+    pub fn load_return_behaviors(
+        &mut self,
+        db: &lre_db::ProjectDb,
+        program: lre_model::ProgramId,
+    ) -> Result<()> {
+        self.non_returning = db
+            .return_behaviors(program)?
+            .into_iter()
+            .filter_map(|row| {
+                (row.function.space == lre_model::AddressSpace::Ram && row.no_return)
+                    .then_some(row.function.offset)
+            })
+            .collect();
         Ok(())
     }
 
@@ -138,6 +157,7 @@ impl ProgramProvider {
         Ok(NativeWorker::encode_function_shell_doc(
             self.ram_space_index as u32,
             &entries,
+            &self.non_returning,
         ))
     }
 
@@ -516,53 +536,37 @@ impl NativeWorker {
     ) -> Result<()> {
         let (space, vaddr, _size) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad packed <addr>".into()))?;
-        let is_function =
-            space == provider.ram_space_index && provider.functions.binary_search(&vaddr).is_ok();
         let mut buf = Vec::new();
-        if !is_function {
-            encode_burst(&mut buf, burst::QRESPONSE_OPEN);
-            encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
-        } else {
-            let name = provider
-                .function_name(vaddr)
-                .unwrap_or_else(|| "FUN_".to_string() + &format!("{vaddr:x}"));
-            encode_burst(&mut buf, burst::QRESPONSE_OPEN);
-            let mut doc = Vec::new();
-            // <doc id=0><mapsym><function name size><addr/></function>
-            // <addr .../><rangelist/></mapsym></doc>
-            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::DOC);
-            wire::encode_attribute(&mut doc, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
-            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::MAPSYM);
-            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::FUNCTION);
-            // Scope id must be nonzero/unique: Funcdata::decode creates a
-            // ScopeLocal with this id; id 0 collides with the global scope
-            // (database.cc:822). The entry address is unique per function.
-            wire::encode_attribute(
-                &mut doc,
-                wire::attr::ID,
-                wire::attr_type::UNSIGNED_INT,
-                vaddr,
-            );
-            wire::encode_string_attribute(&mut doc, wire::attr::NAME, name.as_bytes());
-            let size = provider.function_sizes.get(&vaddr).copied().unwrap_or(8);
-            wire::encode_attribute(
-                &mut doc,
-                wire::attr::SIZE,
-                wire::attr_type::POSITIVE_INT,
-                size,
-            );
-            wire::encode_addr_element(&mut doc, space as u32, vaddr);
-            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::FUNCTION);
-            wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);
-            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::RANGELIST);
-            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::RANGELIST);
-            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::MAPSYM);
-            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::DOC);
-            encode_string_stream(&mut buf, &doc);
-            encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+        encode_burst(&mut buf, burst::QRESPONSE_OPEN);
+        if space == provider.ram_space_index {
+            if let Ok(index) = provider.functions.binary_search(&vaddr) {
+                let name = provider
+                    .function_name(vaddr)
+                    .unwrap_or_else(|| format!("FUN_{vaddr:x}"));
+                let size = provider.function_sizes.get(&vaddr).copied().unwrap_or(8);
+                let mut doc = Vec::new();
+                wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::DOC);
+                wire::encode_attribute(&mut doc, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
+                wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::MAPSYM);
+                wire::encode_function_element(
+                    &mut doc,
+                    space as u32,
+                    index as u64 + 1,
+                    vaddr,
+                    &name,
+                    size,
+                    provider.non_returning.contains(&vaddr),
+                );
+                wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);
+                wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::RANGELIST);
+                wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::RANGELIST);
+                wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::MAPSYM);
+                wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::DOC);
+                encode_string_stream(&mut buf, &doc);
+            }
         }
-        self.write_frame(&buf)?;
-        Ok(())
+        encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+        self.write_frame(&buf)
     }
 
     /// getRegister (ArchitectureGhidra::getRegister): the answer is a

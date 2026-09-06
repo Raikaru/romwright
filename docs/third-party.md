@@ -405,6 +405,17 @@ default block are not reinterpreted as target facts. The benchmark-only
 `JumpTable.getSwitchAddress`, and `JumpTable.getCases`, verified against the
 extracted Ghidra 12.1.3 Java sources (Apache-2.0).
 
+## Native non-returning recovery
+
+Worker metadata follows `Funcdata::decode` and `FuncProto::encode`/`decode`
+in pinned `funcdata.cc` and `fspec.cc` (Apache-2.0): non-returning behavior is
+the prototype's `ATTRIB_NORETURN`, not a function-shell attribute. Packed
+booleans follow `PackedEncode::writeBool` in `marshal.cc`. Output type storage
+stays unlocked so the flag does not replace existing prototype recovery.
+The benchmark-only `scripts/ExportReturnBehaviors.java` reads
+`Function.hasNoReturn` from the extracted Ghidra 12.1.3 Java API (Apache-2.0).
+The native flow closure and revision-owned SQLite publication are Ventris code.
+
 ## Benchmark DWARF arity truth
 
 `benchmarks/dwarf_arity.py` invokes GNU `readelf` (GPL-3.0-or-later) on
