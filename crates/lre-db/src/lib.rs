@@ -2492,6 +2492,30 @@ mod tests {
     }
 
     #[test]
+    fn call_edges_exclude_branches_and_data_and_deduplicate_kinds() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("calls", "x86:LE:64:default", &prov()).unwrap();
+        let row = |from, to, kind: &str| XrefRow {
+            from: lre_model::Address::ram(from),
+            to: lre_model::Address::ram(to),
+            kind: kind.into(),
+            function: None,
+            provenance: FactProvenance::default(),
+        };
+        db.replace_xrefs(id, &[
+            row(0x1000, 0x2000, "UNCONDITIONAL_CALL"),
+            row(0x1000, 0x2000, "CONDITIONAL_CALL"),
+            row(0x1010, 0x2000, "CONDITIONAL_JUMP"),
+            row(0x1020, 0x2000, "READ"),
+            row(0x1030, 0x2100, "COMPUTED_CALL"),
+        ]).unwrap();
+        assert_eq!(db.call_edges(id).unwrap(), vec![
+            (lre_model::Address::ram(0x1000), lre_model::Address::ram(0x2000)),
+            (lre_model::Address::ram(0x1030), lre_model::Address::ram(0x2100)),
+        ]);
+    }
+
+    #[test]
     fn inferred_xrefs_replace_only_their_pass_and_preserve_assertions() {
         use lre_model::{FactKind, FactProvenance};
         let db = ProjectDb::open_in_memory().unwrap();

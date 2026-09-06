@@ -1761,8 +1761,11 @@ M2 — Program-model parity
   generated reference evidence per architecture, separately from tooling.
   b1 verification: stock headless `plain_o0` arity 2/2 against DWARF;
   4 Python boundary tests, 154 workspace tests, corpus 5/5, and string
-  regression 20/20 passed. Full stock collection finished; b2 evidence commits
-  are pending (including all 401 i386-many arity mismatches).
+  regression 20/20 passed. b2 reference gate: 20 passed, 0 failed, 0 skipped;
+  1,640 DWARF functions matched. `benchmarks/reports/m2-006-reference.json`
+  is committed in `c131f4c`. Sixteen cases score 1.0; x86-64, AArch64 and
+  PowerPC many score 400/401; i386 many scores 0/401. All 404 mismatches remain
+  in linked evidence. This is reference collection, not native inference parity.
   b2 report detail is split from the aggregate: per-binary JSONL mismatch
   evidence retains every entry/expected/actual tuple, with a SHA-256 link.
   Commit that detail separately from the aggregate report to stay below 800 lines.
