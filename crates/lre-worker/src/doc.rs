@@ -396,11 +396,28 @@ mod tests {
     }
 
     #[test]
+    fn recovers_captured_add_prototype_alongside_tokens() {
+        let raw = include_bytes!("../fixtures/doc_add.bin");
+        let (tokens, prototype) = decode_document_with_ram_space(raw, Some(3));
+        let prototype = prototype.expect("captured function has a recovered prototype");
+        assert_eq!(prototype.calling_convention, "__stdcall");
+        assert_eq!(prototype.return_type.name.as_deref(), Some("int"));
+        assert!(!prototype.variadic);
+        assert_eq!(prototype.parameters.len(), 2);
+        for (ordinal, parameter) in prototype.parameters.iter().enumerate() {
+            assert_eq!(parameter.ordinal, ordinal as u32);
+            assert_eq!(parameter.name, format!("param_{}", ordinal + 1));
+            assert_eq!(parameter.data_type.name.as_deref(), Some("int"));
+        }
+        let text: String = tokens.iter().map(|token| token.text.as_str()).collect();
+        assert!(text.contains("return param_2 + param_1"), "{text}");
+    }
+
+    #[test]
     fn decodes_captured_real_doc() {
         // Real packed `<doc>` from the pinned x86-64 decompiler worker.
         let raw = include_bytes!("../fixtures/doc_add.bin");
         let tokens = decode_tokens_with_ram_space(raw, Some(3));
-        assert!(!tokens.is_empty(), "real doc decodes to tokens");
         let text: String = tokens.iter().map(|t| t.text.as_str()).collect();
         assert!(
             text.contains("add") && text.contains("return") && text.contains("param"),

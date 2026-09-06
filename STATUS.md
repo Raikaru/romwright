@@ -1715,6 +1715,16 @@ M2 — Program-model parity
 - m2-004 is complete. Prototype recovery and the full M2 parity gate remain
   open; no new Java bridge state or runtime dependency was introduced.
 
+## m2-005 implementation slices
+- a: commit the failing captured-`add` acceptance, then decode function
+  prototypes and ordered parameter symbols from the existing packed response.
+  Reuse the packed grammar; do not parse C text or modify pinned native code.
+- b: carry optional recovered prototypes through worker/model/client document
+  results; verify both standalone and pooled worker paths against real code.
+- c: verify workspace/corpus/string regressions, commit measured evidence,
+  and document the response contract. Split implementation commits below 800
+  changed lines. Durable inference remains m2-006, not this task.
+
 ## Blocked on
 - None.
 
