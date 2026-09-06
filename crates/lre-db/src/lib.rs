@@ -15,10 +15,11 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 mod return_behavior;
+mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 8;
+pub const SCHEMA_VERSION: i64 = 9;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -413,6 +414,21 @@ impl ProjectDb {
                          program_id INTEGER NOT NULL REFERENCES programs(id),
                          function TEXT NOT NULL,
                          no_return INTEGER NOT NULL CHECK(no_return IN (0, 1)),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, function)
+                     );",
+                )?;
+            }
+            if v < 9 {
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS thunks (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         function TEXT NOT NULL,
+                         thunked TEXT NOT NULL,
+                         kind TEXT NOT NULL CHECK(kind IN ('direct', 'linkage')),
                          provenance TEXT NOT NULL,
                          provenance_kind TEXT NOT NULL
                              CHECK(provenance_kind IN ('asserted', 'inferred')),

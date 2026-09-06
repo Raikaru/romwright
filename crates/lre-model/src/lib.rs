@@ -569,6 +569,44 @@ pub struct ReturnBehaviorRow {
     pub provenance: FactProvenance,
 }
 
+/// How a thunk's destination was proven. A direct thunk transfers to another
+/// image function's entry; a linkage thunk leaves the image through a
+/// loader-recorded pointer slot.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ThunkKind {
+    Direct,
+    Linkage,
+}
+
+impl ThunkKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ThunkKind::Direct => "direct",
+            ThunkKind::Linkage => "linkage",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "direct" => Some(ThunkKind::Direct),
+            "linkage" => Some(ThunkKind::Linkage),
+            _ => None,
+        }
+    }
+}
+
+/// A function whose whole body transfers to one proven destination. Tail calls
+/// from inside a larger body are not thunks and never produce this fact.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ThunkRow {
+    pub function: Address,
+    /// The thunked function entry, or the imported pointer slot for linkage.
+    pub thunked: Address,
+    pub kind: ThunkKind,
+    pub provenance: FactProvenance,
+}
+
 /// One recovered stack variable.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct StackVariableRow {
