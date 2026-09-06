@@ -1993,6 +1993,11 @@ M2 — Program-model parity
   assertions and unknown-flow rejection; do not infer from rendered C text.
 - f3: export exact oracle body ranges, reuse `code-functions-v1` eligibility,
   and record before/after `fn.bounds` on the unchanged optimized recipes.
+- g (authorized prerequisite): the user approved taking only relocation-proven
+  PowerPC linkage/name recovery from m2-009 out of order. Commit a failing
+  corpus-backed acceptance first; preserve returning imports and authoritative
+  names. Reuse generic p-code linkage evidence, then rerun m2-008. The rest of
+  m2-009 remains out of scope until m2-008 closes.
 
 ### m2-008 partial evidence
 - `df32929` passes the direct-flow acceptance: 2 inferred functions and
@@ -2022,12 +2027,12 @@ M2 — Program-model parity
   `collect_plt_candidates` has no PPC layout and `promote_linkage` does not
   rename already-known entries. No guessed name, architecture-specific
   disassembly, corpus substitution, or out-of-order thunk change was added.
-  Task-order authorization is required before beginning this prerequisite.
+  The user authorized this prerequisite; implementation is now actionable.
 
 ## Next task
 - m2-008: infer non-returning functions and rediscover callers.
   Known-name/hint implementation and optimized-boundary evidence are committed.
-  Blocked on the PowerPC thunk prerequisite above; do not begin m2-009 implicitly.
+  Execute only the authorized PowerPC prerequisite above, then rerun this gate.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
