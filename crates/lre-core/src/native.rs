@@ -18,6 +18,7 @@ mod elf_pointers;
 mod elf_unwind;
 mod elf_image;
 mod strings;
+pub(crate) mod nonreturn;
 use lre_model::{
     FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
 };
