@@ -1749,6 +1749,22 @@ M2 — Program-model parity
 - m2-005 is complete. These are read-only recovered facts, not persisted
   prototype inference or full M2 parity.
 
+## m2-006 implementation slices
+- a: commit the failing real API inference acceptance; add benchmark-only
+  DWARF arity projection using readelf and the locked unstripped twins.
+  This is test infrastructure for the M2 criterion, not the M3 runtime reader.
+- b: export fresh stock parameter-ID results from stripped binaries and add
+  the frozen proto.arity comparator/report. Never seed either analysis with
+  DWARF; preserve matching denominators and all mismatches in evidence.
+- c: bound pool registration and decompile operations, refresh workers after
+  fact revisions, and apply stored callee prototypes before caller analysis.
+- d: implement Core-owned inferred writes and the API inference operation,
+  with at most 3 rounds, caller-only re-analysis, a time budget, and assertion
+  retention. Existing prototype storage remains authoritative.
+- e: run the full unchanged DWARF corpus gate, fix demonstrated mismatches,
+  and publish measured reports. Split any implementation slice further before
+  exceeding 800 changed lines; no metric or corpus change is authorized.
+
 ## Blocked on
 - None.
 
