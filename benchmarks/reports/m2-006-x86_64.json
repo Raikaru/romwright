@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
-  "date": "2026-09-06T11:31:31.302134+00:00",
+  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
+  "date": "2026-09-06T12:01:07.764159+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -35,6 +35,13 @@
         "proto.arity": 0.98
       },
       "runs": 1,
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
       "inference": {
         "analyzed": 14,
         "changed": 12,
@@ -81,6 +88,13 @@
         "proto.arity": 0.98
       },
       "runs": 1,
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
       "inference": {
         "analyzed": 14,
         "changed": 12,
@@ -127,6 +141,13 @@
         "proto.arity": 0.98
       },
       "runs": 1,
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
       "inference": {
         "analyzed": 14,
         "changed": 12,
@@ -173,6 +194,13 @@
         "proto.arity": 0.98
       },
       "runs": 1,
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
       "inference": {
         "analyzed": 23,
         "changed": 21,
@@ -223,6 +251,13 @@
         "proto.arity": 0.9775062344139651
       },
       "runs": 1,
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
       "inference": {
         "analyzed": 411,
         "changed": 409,

@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
-  "date": "2026-09-06T11:31:31.302134+00:00",
+  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
+  "date": "2026-09-06T12:01:07.764159+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -25,7 +25,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "a51f9684e17b87fc4ceb2b101cab7fee8789825f7d8304648e056536b67f3400"
+        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
       }
     },
     {
@@ -40,7 +40,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "a51f9684e17b87fc4ceb2b101cab7fee8789825f7d8304648e056536b67f3400"
+        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
       }
     },
     {
@@ -55,7 +55,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "a51f9684e17b87fc4ceb2b101cab7fee8789825f7d8304648e056536b67f3400"
+        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
       }
     },
     {
@@ -70,7 +70,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "a51f9684e17b87fc4ceb2b101cab7fee8789825f7d8304648e056536b67f3400"
+        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
       }
     },
     {
@@ -85,178 +85,238 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "a51f9684e17b87fc4ceb2b101cab7fee8789825f7d8304648e056536b67f3400"
+        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
       }
     },
     {
       "id": "i386_plain_o0",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_o0.bin\", \"program\": \"i386_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "802836267ffaf0e81fbf657ff44262e3a49dfb62b695e540fb96a8c6671012e5"
+        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
       }
     },
     {
       "id": "i386_plain_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_o2.bin\", \"program\": \"i386_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "802836267ffaf0e81fbf657ff44262e3a49dfb62b695e540fb96a8c6671012e5"
+        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
       }
     },
     {
       "id": "i386_plain_pie",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_plain_pie.bin\", \"program\": \"i386_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "802836267ffaf0e81fbf657ff44262e3a49dfb62b695e540fb96a8c6671012e5"
+        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
       }
     },
     {
       "id": "i386_cpp_o2",
       "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_cpp_o2.bin\", \"program\": \"i386_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]",
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "802836267ffaf0e81fbf657ff44262e3a49dfb62b695e540fb96a8c6671012e5"
+        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
       }
     },
     {
       "id": "i386_many_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/i386_many_o2.bin\", \"program\": \"i386_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for x86:LE:32:default: native/specs/x86-LE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/x86-LE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 0.0,
+        "ghidra.proto.arity": 0.0
+      },
+      "thresholds": {
+        "proto.arity": -0.02
+      },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "802836267ffaf0e81fbf657ff44262e3a49dfb62b695e540fb96a8c6671012e5"
+        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
       }
     },
     {
       "id": "aarch64_plain_o0",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o0.bin\", \"program\": \"aarch64_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "ef93b7984630be8f986a37af122ae176cbf79a2ac42fe3e52a620ff5101d4058"
+        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
       }
     },
     {
       "id": "aarch64_plain_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o2.bin\", \"program\": \"aarch64_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "ef93b7984630be8f986a37af122ae176cbf79a2ac42fe3e52a620ff5101d4058"
+        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
       }
     },
     {
       "id": "aarch64_plain_pie",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_pie.bin\", \"program\": \"aarch64_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "ef93b7984630be8f986a37af122ae176cbf79a2ac42fe3e52a620ff5101d4058"
+        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
       }
     },
     {
       "id": "aarch64_cpp_o2",
       "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_cpp_o2.bin\", \"program\": \"aarch64_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]",
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "ef93b7984630be8f986a37af122ae176cbf79a2ac42fe3e52a620ff5101d4058"
+        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
       }
     },
     {
       "id": "aarch64_many_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_many_o2.bin\", \"program\": \"aarch64_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 0.9975062344139651,
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {
+        "proto.arity": 0.9775062344139651
+      },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "ef93b7984630be8f986a37af122ae176cbf79a2ac42fe3e52a620ff5101d4058"
+        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
       }
     },
     {
       "id": "powerpc_plain_o0",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o0.bin\", \"program\": \"powerpc_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "9b9276c6d33ae1f41c8b14894f67db9c3ea98b6f953deb0a3f36e27ac82e0e8f"
+        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
       }
     },
     {
       "id": "powerpc_plain_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o2.bin\", \"program\": \"powerpc_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "9b9276c6d33ae1f41c8b14894f67db9c3ea98b6f953deb0a3f36e27ac82e0e8f"
+        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
       }
     },
     {
       "id": "powerpc_plain_pie",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_pie.bin\", \"program\": \"powerpc_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "9b9276c6d33ae1f41c8b14894f67db9c3ea98b6f953deb0a3f36e27ac82e0e8f"
+        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
       }
     },
     {
       "id": "powerpc_cpp_o2",
       "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_cpp_o2.bin\", \"program\": \"powerpc_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]",
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "9b9276c6d33ae1f41c8b14894f67db9c3ea98b6f953deb0a3f36e27ac82e0e8f"
+        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
       }
     },
     {
       "id": "powerpc_many_o2",
-      "status": "fail",
-      "metrics": {},
-      "thresholds": {},
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_many_o2.bin\", \"program\": \"powerpc_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]",
+      "status": "pass",
+      "metrics": {
+        "proto.arity": 0.9975062344139651,
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {
+        "proto.arity": 0.9775062344139651
+      },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "9b9276c6d33ae1f41c8b14894f67db9c3ea98b6f953deb0a3f36e27ac82e0e8f"
+        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
       }
     }
   ],
   "summary": {
-    "pass": 4,
-    "fail": 16,
+    "pass": 16,
+    "fail": 4,
     "skipped": 0
   },
   "passed": false
