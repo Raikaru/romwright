@@ -1678,15 +1678,24 @@ M2 — Program-model parity
   instead of RAM address `0x401178`). Four string protocol regressions and
   nine independent protocol-peer callback cases now pass, including namespace
   isolation, missing/empty strings, UTF-16 limits, and the 12-bit length bound.
+- Completion evidence: `benchmarks/reports/m2-003.json`, committed in
+  `1c9f318`, measures implementation `5ffe7e9` with fresh reference exports:
+  20 passed, 0 failed, 0 skipped; str.recall 1.0 for every binary (threshold
+  0.95). All 20 difference-file hashes and counts were verified: 0 missing
+  and 363 additional address/encoding pairs; no differences were discarded.
+- Final verification: `cargo test --workspace` 149 passed; `tests/corpus.sh`
+  5/5; generated support matrix current; workflow YAML parses. Hosted CI
+  has not yet been observed for this change. Smoke drivers were removed.
+- m2-003 is complete. The full M2 parity gate remains open.
 
 ## Blocked on
 - None.
 
 ## Next task
-- m2-003: sweep ASCII, UTF-8, and UTF-16 strings in data sections, minimum
-  length 4; attach references from m2-002. Ratified acceptance: str.recall
-  >= 0.95 versus the oracle. Write and commit the failing acceptance before
-  implementation; do not change the corpus or metric definition.
+- m2-004: add provenance and confidence to prototypes, and typed primitive,
+  pointer, array, and struct records. Write and commit the failing migration
+  acceptance before implementation. The current store format is 6; the
+  roadmap's original version-2 target predates the intervening migrations.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
