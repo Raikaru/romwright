@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
-  "date": "2026-09-06T11:31:31.302134+00:00",
+  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
+  "date": "2026-09-06T12:01:07.764159+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -16,7 +16,7 @@
   "corpus": [
     {
       "id": "powerpc_plain_o0",
-      "status": "fail",
+      "status": "pass",
       "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
       "twin_sha256": "97b3662bd95e93df818571151aac96950dcb3b269bddefeb696f5251a5098e46",
       "reference": "PowerPC-BE-32-default/default/6724a577a70a7870/baseline-ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557.json",
@@ -27,14 +27,49 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o0.bin\", \"program\": \"powerpc_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "inference": {
+        "analyzed": 15,
+        "changed": 12,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 12,
+      "persisted_prototypes": 12,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "powerpc_plain_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
       "twin_sha256": "a2aa29568245f14890b5e36c748dfb26f5a4871bcef84cc3e66ff86e26ad5493",
       "reference": "PowerPC-BE-32-default/default/31e6f8fae452277f/baseline-27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9.json",
@@ -45,14 +80,49 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_o2.bin\", \"program\": \"powerpc_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "inference": {
+        "analyzed": 15,
+        "changed": 12,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 12,
+      "persisted_prototypes": 12,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "powerpc_plain_pie",
-      "status": "fail",
+      "status": "pass",
       "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
       "twin_sha256": "b3e0062dde8ee5d4435cbc2ef95314d267746e58b234d8b7bd106b9f2822fce8",
       "reference": "PowerPC-BE-32-default/default/57a4ab9ac48d0d4a/baseline-0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452.json",
@@ -63,10 +133,45 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_plain_pie.bin\", \"program\": \"powerpc_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "inference": {
+        "analyzed": 16,
+        "changed": 13,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 13,
+      "persisted_prototypes": 13,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "powerpc_cpp_o2",
@@ -81,14 +186,53 @@
       },
       "truth_functions": 3,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_cpp_o2.bin\", \"program\": \"powerpc_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "inference": {
+        "analyzed": 23,
+        "changed": 20,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 19,
+      "persisted_prototypes": 19,
+      "scores": {
+        "native": {
+          "matched": 3,
+          "correct": 2,
+          "value": 0.6666666666666666,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-powerpc-mismatches/powerpc_cpp_o2-native-d38b94787b92a3b7.jsonl",
+            "sha256": "d38b94787b92a3b713cb3353d242836948c4805d3938630e1283c3e066391670"
+          }
+        },
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "powerpc_many_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
       "twin_sha256": "019ba2359b9a494d642933df418a9f33d83879b1dd0437371d407a3fc4c9cd32",
       "reference": "PowerPC-BE-32-default/default/57e3047e610b5676/baseline-4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3.json",
@@ -99,10 +243,53 @@
       },
       "truth_functions": 401,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 0.9975062344139651,
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {
+        "proto.arity": 0.9775062344139651
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/powerpc_many_o2.bin\", \"program\": \"powerpc_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for PowerPC:BE:32:default: native/specs/PowerPC-BE-32-default \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/PowerPC-BE-32-default` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "inference": {
+        "analyzed": 413,
+        "changed": 410,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 410,
+      "persisted_prototypes": 410,
+      "scores": {
+        "native": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-powerpc-mismatches/powerpc_many_o2-native-3257723d0b7cc023.jsonl",
+            "sha256": "3257723d0b7cc023c72ff83e3b008fe161f444b9fd76184094dde3f825f0d908"
+          }
+        },
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-powerpc-mismatches/powerpc_many_o2-ghidra-3257723d0b7cc023.jsonl",
+            "sha256": "3257723d0b7cc023c72ff83e3b008fe161f444b9fd76184094dde3f825f0d908"
+          }
+        }
+      }
     }
   ]
 }
