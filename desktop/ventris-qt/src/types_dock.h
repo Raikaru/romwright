@@ -3,6 +3,7 @@
 #include <QDockWidget>
 
 class CoreBridge;
+class QComboBox;
 class QLineEdit;
 class QTableWidget;
 
@@ -36,6 +37,8 @@ private:
     QLineEdit *type_size_edit_ = nullptr;
     QLineEdit *type_alignment_edit_ = nullptr;
     QLineEdit *type_base_edit_ = nullptr;
+    QComboBox *type_primitive_edit_ = nullptr;
+    QLineEdit *type_element_count_edit_ = nullptr;
 
     QLineEdit *field_ordinal_edit_ = nullptr;
     QLineEdit *field_name_edit_ = nullptr;
