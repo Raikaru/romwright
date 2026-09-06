@@ -313,6 +313,12 @@ Computed LOAD operands retain `SymbolicPropogator`'s READ classification,
 including loads used by indirect jumps. Fixed-address jump operands retain
 their separate INDIRECTION classification; normalizing that type to DATA
 does not change the classification of a computed load.
+ELF section-address roots follow `ElfProgramBuilder.markupSectionHeaders`'s
+imported `sh_addr` references (Apache-2.0). Allocated executable sections
+supply bounded code entries independently of the function table or section
+name. Existing function queries take precedence at the same entry.
+As in `ConstantPropagationAnalyzer.analyzeLocation`, analysis follows flow
+from a defined entry; it does not sweep disconnected bytes or create functions.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

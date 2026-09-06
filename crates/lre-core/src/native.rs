@@ -124,6 +124,8 @@ pub struct NativeImport {
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
     pub register_contexts: Vec<NativeRegisterContext>,
+    /// ELF section-address code roots and exclusive bounds, not function seeds.
+    pub reference_roots: Vec<(u64, u64)>,
     pub format: String,
     /// Ghidra-compatible language id selected from the file machine.
     pub language: String,
@@ -947,18 +949,21 @@ fn infer_data_references(
     session.prepare_reference_context(import)
         .map_err(|error| ImportError::Bad(format!("reference context: {error}")))?;
     let mut references = Vec::new();
-    for function in &import.functions {
-        if function.size <= 1 {
-            continue;
-        }
-        let end = function.entry.checked_add(function.size)
-            .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))?;
+    let functions = import.functions.iter().filter(|function| function.size > 1).map(|function| {
+        function.entry.checked_add(function.size)
+            .map(|end| (function.entry, end))
+            .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))
+    });
+    let roots = import.reference_roots.iter()
+        .filter(|&&(start, _)| !import.functions.iter()
+            .any(|function| function.entry == start && function.size > 1))
+        .map(|&(start, end)| Ok((start, end)));
+    for range in functions.chain(roots) {
+        let (start, end) = range?;
         // ConstantPropagationAnalyzer's default trusts initial writable values.
         // This inferred-reference policy does not change strict constant queries.
-        let facts = session.references(function.entry, end, &import.mappings, true)
-            .map_err(|error| ImportError::Bad(format!(
-                "data references at {:#x}: {error}", function.entry
-            )))?;
+        let facts = session.references(start, end, &import.mappings, true)
+            .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?;
         references.extend(facts.into_iter().map(|fact| {
             let kind = match fact.kind {
                 ReferenceKind::Read => "READ",

@@ -1556,6 +1556,13 @@ M2 — Program-model parity
 - `ElfProgramBuilder.markupSectionHeaders` creates imported references to
   section starts. Reuse that entry-root evidence, not a linear code sweep.
   Do not change reference eligibility, normalization, or gate thresholds.
+- Acceptance `b949d8b` passes. `cargo test --workspace`: 139 pass;
+  `tests/corpus.sh`: 5/5 pass. Console and worker rebuild.
+- `benchmarks/reports/m2-002-g5.json`: 19 pass, 1 fail, 0 skipped;
+  all 20 data precisions are 1.0. PowerPC PIE recall is 20/26.
+- Remaining classes: three READs needing incoming PIC register context,
+  and three DATA refs from PowerPC dual-instruction operand markup.
+  No M2 gate pass is claimed.
 - Publication sub-tasks: g5 implementation, then g5-report generated evidence.
 
 ## Blocked on
