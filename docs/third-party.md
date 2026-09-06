@@ -301,6 +301,10 @@ Symbolic alignment follows `VarnodeContext.and`'s alignment-mask policy.
 The native state keeps a usable opaque frame but retires its previous
 register and memory aliases before reusing the abstract origin. It does not
 assume the unknown pre-alignment pointer already satisfied the alignment.
+The importer selects `ConstantPropagationAnalyzer`'s default writable-memory
+trust for inferred references. Explicit constant queries retain their own
+trust flag and unknown-call invalidation; inference does not silently weaken
+that stricter query contract.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

@@ -1515,10 +1515,17 @@ M2 — Program-model parity
   Other architectures' row scores are unchanged.
 
 ## m2-002g3 writable-image reference policy
-- Acceptance `inferred_references_use_writable_image_values` must fail before
-  matching `ConstantPropagationAnalyzer`'s default writable-memory trust.
-  Keep the explicit strict constant-query mode unchanged.
-- Publish implementation and the complete generated matrix report separately.
+- Acceptance `a89c3c1` failed on the second dereference through a writable
+  initial-image pointer. The importer now matches
+  `ConstantPropagationAnalyzer`'s default writable-memory trust.
+  Explicit strict constant queries retain their previous behavior.
+- `cargo test --workspace`: 137 pass. `tests/corpus.sh`: 5/5 pass.
+- `benchmarks/reports/m2-002-g3.json`: 14 pass, 6 fail, 0 skipped;
+  all 20 data precisions remain 1.0. The four non-PIE i386 rows reach
+  data recall 1.0; i386 PIE is 17/22 and PowerPC PIE is 18/26.
+- Remaining failures are i386 PIE linkage references and the five PowerPC
+  linkage/resolver rows. Implementation and generated evidence are published
+  separately; no M2 gate pass is claimed.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

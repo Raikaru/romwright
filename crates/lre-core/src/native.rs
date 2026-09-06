@@ -943,7 +943,9 @@ fn infer_data_references(
         }
         let end = function.entry.checked_add(function.size)
             .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))?;
-        let facts = session.references(function.entry, end, &import.mappings, false)
+        // ConstantPropagationAnalyzer's default trusts initial writable values.
+        // This inferred-reference policy does not change strict constant queries.
+        let facts = session.references(function.entry, end, &import.mappings, true)
             .map_err(|error| ImportError::Bad(format!(
                 "data references at {:#x}: {error}", function.entry
             )))?;
