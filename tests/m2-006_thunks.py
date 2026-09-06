@@ -16,10 +16,11 @@ from prototype_gate import run_api
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--corpus-dir', type=Path, required=True)
+    parser.add_argument('--architecture', choices=('x86_64', 'powerpc'), default='x86_64')
     args = parser.parse_args()
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     recipe = next(row for row in lock['entries']
-        if row['architecture'] == 'x86_64' and row['variant'] == 'cpp_o2')
+        if row['architecture'] == args.architecture and row['variant'] == 'cpp_o2')
     binary = (args.corpus_dir / recipe['binary']).resolve()
     truth = extract(args.corpus_dir / recipe['unstripped_twin'])
     entry, main = next((entry, row) for entry, row in truth['functions'].items() if row['name'] == 'main')
@@ -42,8 +43,8 @@ def main():
         imported = {row['address']['offset'] for row in symbols if row['external']}
         assert imported, symbols
         assert not [row for row in prototypes if row['function']['offset'] in imported], prototypes
-        print(json.dumps(dict(passed=True, entry=entry, parameters=2,
-            rounds=report['rounds'], imported_symbols=len(imported))))
+        print(json.dumps(dict(passed=True, architecture=args.architecture, entry=entry,
+            parameters=2, rounds=report['rounds'], imported_symbols=len(imported))))
 
 
 if __name__ == '__main__':
