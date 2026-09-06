@@ -316,6 +316,17 @@ cargo build -p lre-cli -p lre-api -p lre-worker
 python3 tests/m2-005_prototype.py
 ```
 
+The benchmark-only arity reference runs stock parameter ID on the 20 stripped
+ELF corpus entries, then scores against their unstripped DWARF twins. It never
+loads DWARF into either analyzer. References are immutable; `--check` verifies
+and scores them without rerunning stock analysis. Reports retain complete
+mismatches in SHA-256-linked JSONL files.
+
+```sh
+python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
+  --report benchmarks/reports/m2-006-reference.json
+```
+
 ## Support matrix
 
 | Input | Structural native import | Native flow/decode/decompile |
