@@ -53,9 +53,8 @@ impl BinaryBacking {
     }
 }
 
-/// Program facts the callbacks serve: binary bytes + function entries from
-/// the store. Types/comments/context answer empty for now — the decompiler
-/// treats missing data as "unknown", which is the honest state.
+/// A snapshot of program facts served to native callbacks. Missing facts stay
+/// unknown; durable ownership remains in the project store.
 pub struct ProgramProvider {
     pub backing: BinaryBacking,
     /// Function entry addresses, sorted.
@@ -76,6 +75,8 @@ pub struct ProgramProvider {
     pub strings: HashMap<u64, String>,
     /// Entry address -> prototype signature override (from the store).
     pub prototypes: HashMap<u64, String>,
+    /// RAM call edges ordered by source/destination offset.
+    pub call_edges: Vec<(lre_model::Address, lre_model::Address)>,
     /// Track which space index `ram` occupies once the tspec registers it.
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
@@ -99,10 +100,45 @@ impl ProgramProvider {
             external_names: HashMap::new(),
             strings: HashMap::new(),
             prototypes: HashMap::new(),
+            call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
             registers: HashMap::new(),
         }
+    }
+
+    pub fn load_call_edges(
+        &mut self,
+        db: &lre_db::ProjectDb,
+        program: lre_model::ProgramId,
+    ) -> Result<()> {
+        self.call_edges = db.call_edges(program)?;
+        self.call_edges.retain(|(from, to)| {
+            from.space == lre_model::AddressSpace::Ram && to.space == lre_model::AddressSpace::Ram
+        });
+        Ok(())
+    }
+
+    /// Preloads all known functions so stored callee signatures can be applied
+    /// before the first caller is analyzed.
+    pub fn function_shell(&self) -> Result<Vec<u8>> {
+        let entries = self
+            .functions
+            .iter()
+            .map(|offset| {
+                let name = self.function_names.get(offset).ok_or_else(|| {
+                    WorkerError::Setup(format!("function {offset:#x} has no stored name"))
+                })?;
+                let size = self.function_sizes.get(offset).ok_or_else(|| {
+                    WorkerError::Setup(format!("function {offset:#x} has no stored extent"))
+                })?;
+                Ok((*offset, name.as_str(), *size))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(NativeWorker::encode_function_shell_doc(
+            self.ram_space_index as u32,
+            &entries,
+        ))
     }
 
     /// Name of the function at `vaddr`, if known.

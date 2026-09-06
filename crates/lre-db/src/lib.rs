@@ -837,6 +837,23 @@ impl ProjectDb {
         Ok(rows)
     }
 
+    /// Lists unique call edges in numeric source/destination offset order.
+    /// Address spaces are preserved; branches and data references are excluded.
+    pub fn call_edges(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<(lre_model::Address, lre_model::Address)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT src, dst FROM xrefs WHERE program_id = ?1 AND instr(kind, 'CALL') > 0",
+        )?;
+        let mut edges = stmt.query_map(params![program.0], |row| {
+            Ok((addr_from_cell(row.get(0)?, 0)?, addr_from_cell(row.get(1)?, 1)?))
+        })?.collect::<std::result::Result<Vec<_>, _>>()?;
+        // Hex cells can have different widths; SQL text order is not numeric.
+        edges.sort_unstable_by_key(|(from, to)| (from.offset, to.offset));
+        Ok(edges)
+    }
+
 
     /// Lists symbols of a program ordered by address.
     pub fn symbols(&self, program: ProgramId) -> Result<Vec<SymbolRow>> {
@@ -2508,10 +2525,15 @@ mod tests {
             row(0x1010, 0x2000, "CONDITIONAL_JUMP"),
             row(0x1020, 0x2000, "READ"),
             row(0x1030, 0x2100, "COMPUTED_CALL"),
+            // Hex text order puts the wider address before 0x20000000.
+            row(0x1_0000_0000, 0x2200, "UNCONDITIONAL_CALL"),
+            row(0x2000_0000, 0x2200, "UNCONDITIONAL_CALL"),
         ]).unwrap();
         assert_eq!(db.call_edges(id).unwrap(), vec![
             (lre_model::Address::ram(0x1000), lre_model::Address::ram(0x2000)),
             (lre_model::Address::ram(0x1030), lre_model::Address::ram(0x2100)),
+            (lre_model::Address::ram(0x2000_0000), lre_model::Address::ram(0x2200)),
+            (lre_model::Address::ram(0x1_0000_0000), lre_model::Address::ram(0x2200)),
         ]);
     }
 

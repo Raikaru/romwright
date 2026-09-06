@@ -8,6 +8,7 @@
 //! no-JVM replacement for the Stage-1 bridge, per ADR-0001.
 
 use lre_db::ProjectDb;
+use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -53,6 +54,7 @@ pub struct NativeWorker {
     pub(crate) out_buf: Vec<u8>,
     /// Architecture slot returned by registerProgram.
     arch_id: i32,
+    applied_prototypes: HashSet<u64>,
     /// Path passed to ghidra_opt for diagnostics.
     pub binary: PathBuf,
 }
@@ -79,11 +81,55 @@ impl NativeWorker {
         Ok(Self {
             child: std::sync::Arc::new(std::sync::Mutex::new(Some(child))),
             arch_id: 0,
+            applied_prototypes: HashSet::new(),
             stdin: Some(stdin),
             stdout,
             out_buf: Vec::new(),
             binary,
         })
+    }
+
+    /// Activates stored prototypes for this function and its direct callees.
+    /// Unrelated prototypes must not affect an independent decompile.
+    pub fn prepare_function(&mut self, provider: &mut ProgramProvider, address: u64) -> Result<()> {
+        if let Some(&size) = provider.function_sizes.get(&address) {
+            let first = provider
+                .call_edges
+                .partition_point(|(from, _)| from.offset < address);
+            for index in first..provider.call_edges.len() {
+                if provider.call_edges[index].0.offset - address >= size {
+                    break;
+                }
+                let callee = provider.call_edges[index].1.offset;
+                self.apply_stored_prototype(provider, callee)?;
+            }
+        }
+        self.apply_stored_prototype(provider, address)
+    }
+
+    fn apply_stored_prototype(
+        &mut self,
+        provider: &mut ProgramProvider,
+        address: u64,
+    ) -> Result<()> {
+        if self.applied_prototypes.contains(&address) {
+            return Ok(());
+        }
+        let Some(signature) = provider.prototypes.get(&address).cloned() else {
+            return Ok(());
+        };
+        let name = provider
+            .function_names
+            .get(&address)
+            .cloned()
+            .ok_or_else(|| {
+                WorkerError::Setup(format!(
+                    "prototype target {address:#x} has no function name"
+                ))
+            })?;
+        self.set_function_signature(provider, address, &name, &signature)?;
+        self.applied_prototypes.insert(address);
+        Ok(())
     }
 
     /// Writes one complete frame to the child's stdin.
@@ -159,6 +205,7 @@ impl NativeWorker {
             .ok_or_else(|| {
                 WorkerError::Protocol("registerProgram returned no architecture id".into())
             })?;
+        self.applied_prototypes.clear();
         Ok(())
     }
 

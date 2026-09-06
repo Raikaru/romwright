@@ -10,7 +10,7 @@ use lre_worker::{
     BinaryBacking, ProgramProvider, WorkerError, load_specs, open_store, worker::NativeWorker,
 };
 use serde::Serialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
@@ -18,7 +18,6 @@ use std::time::{Duration, Instant};
 pub struct WorkerSession {
     worker: NativeWorker,
     provider: ProgramProvider,
-    applied_prototypes: HashSet<u64>,
 }
 
 impl WorkerSession {
@@ -41,13 +40,11 @@ impl WorkerSession {
         provider.load_language_info(spec_root)?;
         let db = open_store(project_dir)?;
         let pid = db.program_id(program)?;
-        let mut function_shells = Vec::new();
         for f in db.functions(pid)? {
             let off = f.entry.offset;
             provider.functions.push(off);
-            provider.function_names.insert(off, f.name.clone());
+            provider.function_names.insert(off, f.name);
             provider.function_sizes.insert(off, f.size as u64);
-            function_shells.push((off, f.name, f.size as u64));
         }
         for symbol in db.symbols(pid)? {
             provider
@@ -82,14 +79,8 @@ impl WorkerSession {
         for string in db.strings(pid)? {
             provider.strings.insert(string.address.offset, string.value);
         }
-        let shell_entries: Vec<(u64, &str, u64)> = function_shells
-            .iter()
-            .map(|(offset, name, size)| (*offset, name.as_str(), *size))
-            .collect();
-        let function_shell = NativeWorker::encode_function_shell_doc(
-            provider.ram_space_index as u32,
-            &shell_entries,
-        );
+        provider.load_call_edges(&db, pid)?;
+        let function_shell = provider.function_shell()?;
         let spec_docs = load_specs(spec_root)?;
         let mut command = std::process::Command::new(decompiler);
         command
@@ -112,11 +103,7 @@ impl WorkerSession {
         worker
             .set_action(&mut provider, "decompile", "")
             .map_err(|error| WorkerError::Setup(format!("setAction: {error}")))?;
-        Ok(Self {
-            worker,
-            provider,
-            applied_prototypes: HashSet::new(),
-        })
+        Ok(Self { worker, provider })
     }
 
     fn ram_space(&self) -> u32 {
@@ -126,36 +113,9 @@ impl WorkerSession {
     /// Decompiles one address. The pool wraps this with the deadline;
     /// a kill during the call surfaces as a read error (poisoned).
     pub fn decompile(&mut self, address: u64) -> lre_worker::Result<Vec<u8>> {
-        self.apply_prototype(address)?;
+        self.worker.prepare_function(&mut self.provider, address)?;
         let space = self.ram_space();
         self.worker.decompile_at(&mut self.provider, space, address)
-    }
-
-    fn apply_prototype(&mut self, address: u64) -> lre_worker::Result<()> {
-        if self.applied_prototypes.contains(&address) {
-            return Ok(());
-        }
-        let Some(signature) = self.provider.prototypes.get(&address).cloned() else {
-            return Ok(());
-        };
-        let function_name = self
-            .provider
-            .function_names
-            .get(&address)
-            .cloned()
-            .ok_or_else(|| {
-                WorkerError::Setup(format!(
-                    "prototype target {address:#x} has no function name"
-                ))
-            })?;
-        self.worker.set_function_signature(
-            &mut self.provider,
-            address,
-            &function_name,
-            &signature,
-        )?;
-        self.applied_prototypes.insert(address);
-        Ok(())
     }
 
     /// Decompiles one address and decodes the pinned packed document into
@@ -191,6 +151,8 @@ pub enum PoolError {
     Deadline(Duration),
     #[error("worker exceed memory cap (rss {0} bytes > cap {1} bytes); killed")]
     MemCap(u64, u64),
+    #[error("program revision changed during decompilation ({0} -> {1}); result discarded")]
+    StaleRevision(u64, u64),
 }
 
 pub type PoolResult<T, E = PoolError> = std::result::Result<T, E>;
@@ -515,6 +477,10 @@ impl WorkerPool {
             session.decompile_doc(address)
         })
     }
+
+    fn invalidate_facts(&mut self) {
+        self.idle.clear();
+    }
 }
 
 /// Owns the pool selected for the current API program and binary.
@@ -524,11 +490,15 @@ impl WorkerPool {
 /// the next decompile.
 pub struct WorkerPoolManager {
     pool: Option<WorkerPool>,
+    revision: u64,
 }
 
 impl Default for WorkerPoolManager {
     fn default() -> Self {
-        Self { pool: None }
+        Self {
+            pool: None,
+            revision: 0,
+        }
     }
 }
 
@@ -539,6 +509,7 @@ impl WorkerPoolManager {
         binary: &Path,
         program: &str,
         base: u64,
+        revision: u64,
     ) -> PoolResult<&mut WorkerPool> {
         let language =
             lre_core::session::program_language(core.runtime_config(), program, core.db_path())
@@ -559,6 +530,13 @@ impl WorkerPoolManager {
         {
             self.pool = Some(WorkerPool::new(config));
         }
+        if self.revision != revision {
+            self.pool
+                .as_mut()
+                .expect("worker pool initialized")
+                .invalidate_facts();
+            self.revision = revision;
+        }
         Ok(self.pool.as_mut().expect("worker pool initialized"))
     }
 
@@ -571,13 +549,22 @@ impl WorkerPoolManager {
         program: &str,
         base: Option<u64>,
     ) -> PoolResult<DecompDoc> {
-        let mut doc = self
-            .ensure_pool(core, binary, program, base.unwrap_or(0))?
-            .decompile_doc(address.offset)?;
-        doc.address = address.clone();
         let store = core.store_handle()?;
         let program_id = store.program_id(program)?;
-        doc.revision = store.revision(program_id)?;
+        let revision = store.revision(program_id)?;
+        let mut doc = self
+            .ensure_pool(core, binary, program, base.unwrap_or(0), revision)?
+            .decompile_doc(address.offset)?;
+        let current = store.revision(program_id)?;
+        if current != revision {
+            self.pool
+                .as_mut()
+                .expect("worker pool initialized")
+                .invalidate_facts();
+            return Err(PoolError::StaleRevision(revision, current));
+        }
+        doc.address = address.clone();
+        doc.revision = revision;
         Ok(doc)
     }
 
