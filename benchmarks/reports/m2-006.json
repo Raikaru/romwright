@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
-  "date": "2026-09-06T12:01:07.764159+00:00",
+  "commit": "f45df591e70787e00f32a26984bed6d99788203f",
+  "date": "2026-09-06T12:38:37.054456+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -12,6 +12,7 @@
   "budget_ms": 60000,
   "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
   "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "native_linkage_sha256": "5d2e2cee98c38072c9780529850d0b13909d8c91d5c3a6df9f5e2fd8bff23715",
   "corpus": [
     {
       "id": "x86_64_plain_o0",
@@ -25,7 +26,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
+        "sha256": "8bec2faab768546f9a640d429bf024e27db3606fb82aff6066716dbc9d421f5e"
       }
     },
     {
@@ -40,7 +41,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
+        "sha256": "8bec2faab768546f9a640d429bf024e27db3606fb82aff6066716dbc9d421f5e"
       }
     },
     {
@@ -55,14 +56,14 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
+        "sha256": "8bec2faab768546f9a640d429bf024e27db3606fb82aff6066716dbc9d421f5e"
       }
     },
     {
       "id": "x86_64_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -70,7 +71,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
+        "sha256": "8bec2faab768546f9a640d429bf024e27db3606fb82aff6066716dbc9d421f5e"
       }
     },
     {
@@ -85,7 +86,7 @@
       },
       "evidence": {
         "path": "m2-006-x86_64.json",
-        "sha256": "8468a912cb29ed3a3d5bfc69577837f1ce592dea2853f242848269c9da4377e9"
+        "sha256": "8bec2faab768546f9a640d429bf024e27db3606fb82aff6066716dbc9d421f5e"
       }
     },
     {
@@ -100,7 +101,7 @@
       },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
+        "sha256": "8ebcae33b75deacc6ec9f2f7ca597df83fc26fa8fb1f43b9ecae24c2888bd3f6"
       }
     },
     {
@@ -115,7 +116,7 @@
       },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
+        "sha256": "8ebcae33b75deacc6ec9f2f7ca597df83fc26fa8fb1f43b9ecae24c2888bd3f6"
       }
     },
     {
@@ -130,14 +131,14 @@
       },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
+        "sha256": "8ebcae33b75deacc6ec9f2f7ca597df83fc26fa8fb1f43b9ecae24c2888bd3f6"
       }
     },
     {
       "id": "i386_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -145,7 +146,7 @@
       },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
+        "sha256": "8ebcae33b75deacc6ec9f2f7ca597df83fc26fa8fb1f43b9ecae24c2888bd3f6"
       }
     },
     {
@@ -160,7 +161,7 @@
       },
       "evidence": {
         "path": "m2-006-i386.json",
-        "sha256": "17527ebf2123e53fee05e3030f728b6b41f901982aa70163395b1ea3238c5f35"
+        "sha256": "8ebcae33b75deacc6ec9f2f7ca597df83fc26fa8fb1f43b9ecae24c2888bd3f6"
       }
     },
     {
@@ -175,7 +176,7 @@
       },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
+        "sha256": "c32a75d671c43cc5d06015a33c58bdf75cad1161769cda7c5b48b8510d728d88"
       }
     },
     {
@@ -190,7 +191,7 @@
       },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
+        "sha256": "c32a75d671c43cc5d06015a33c58bdf75cad1161769cda7c5b48b8510d728d88"
       }
     },
     {
@@ -205,14 +206,14 @@
       },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
+        "sha256": "c32a75d671c43cc5d06015a33c58bdf75cad1161769cda7c5b48b8510d728d88"
       }
     },
     {
       "id": "aarch64_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -220,7 +221,7 @@
       },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
+        "sha256": "c32a75d671c43cc5d06015a33c58bdf75cad1161769cda7c5b48b8510d728d88"
       }
     },
     {
@@ -235,7 +236,7 @@
       },
       "evidence": {
         "path": "m2-006-aarch64.json",
-        "sha256": "7a1079cc71826f2c1b786d9597cb390a95ac001605cb714b189820b403c53764"
+        "sha256": "c32a75d671c43cc5d06015a33c58bdf75cad1161769cda7c5b48b8510d728d88"
       }
     },
     {
@@ -250,7 +251,7 @@
       },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
+        "sha256": "a6c170259b585e569f3319e29a33324e2c8f09fc44b20f9772ebabc4e3913a77"
       }
     },
     {
@@ -265,7 +266,7 @@
       },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
+        "sha256": "a6c170259b585e569f3319e29a33324e2c8f09fc44b20f9772ebabc4e3913a77"
       }
     },
     {
@@ -280,14 +281,14 @@
       },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
+        "sha256": "a6c170259b585e569f3319e29a33324e2c8f09fc44b20f9772ebabc4e3913a77"
       }
     },
     {
       "id": "powerpc_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -295,7 +296,7 @@
       },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
+        "sha256": "a6c170259b585e569f3319e29a33324e2c8f09fc44b20f9772ebabc4e3913a77"
       }
     },
     {
@@ -310,14 +311,14 @@
       },
       "evidence": {
         "path": "m2-006-powerpc.json",
-        "sha256": "8cb21c338149f52ae12fb9e94b2581f61ad1966655dfe163f6856c22bb82e2bc"
+        "sha256": "a6c170259b585e569f3319e29a33324e2c8f09fc44b20f9772ebabc4e3913a77"
       }
     }
   ],
   "summary": {
-    "pass": 16,
-    "fail": 4,
+    "pass": 20,
+    "fail": 0,
     "skipped": 0
   },
-  "passed": false
+  "passed": true
 }
