@@ -107,6 +107,32 @@ fn fixture(width: usize, be: bool, relocation: u64, image_base: u64) -> Vec<u8> 
 }
 
 #[test]
+fn elf_string_tables_preserve_namespaces_and_utf8() {
+    for loaded in [false, true] {
+        let mut data = fixture(8, false, 4, 0x400000);
+        if loaded {
+            data[0x208..0x210].copy_from_slice(&2u64.to_le_bytes());
+            data[0x210..0x218].copy_from_slice(&0x403000u64.to_le_bytes());
+        }
+        let import = import_elf(&data).unwrap();
+        let db = lre_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
+        lre_core::native::store_import(&db, "strings", &import).unwrap();
+        let mut rows = db.strings(db.program_id("strings").unwrap()).unwrap();
+        rows.sort_by_key(|row| row.address.offset);
+        let actual: Vec<_> = rows.into_iter()
+            .map(|row| (row.address.space, row.address.offset, row.value, row.kind)).collect();
+        let expected: Vec<_> = [(1, ".text"), (7, ".data"), (13, ".reloc"), (20, ".shstrtab")]
+            .into_iter().map(|(offset, value)| (
+                if loaded { lre_model::AddressSpace::Ram }
+                else { lre_model::AddressSpace::Other(".shstrtab".into()) },
+                offset + if loaded { 0x403000 } else { 0 },
+                value.to_owned(), "UTF-8".to_owned(),
+            )).collect();
+        assert_eq!(actual, expected, "retain declared strings without aliasing non-loaded metadata to RAM");
+    }
+}
+
+#[test]
 fn loaded_elf_addresses_and_relative_pointer_bytes_agree() {
     let stamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
