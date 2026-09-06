@@ -1724,6 +1724,11 @@ M2 — Program-model parity
 - c: verify workspace/corpus/string regressions, commit measured evidence,
   and document the response contract. Split implementation commits below 800
   changed lines. Durable inference remains m2-006, not this task.
+- b prerequisite regression: with no `VENTRIS_SLA` override, the standalone
+  fixture recovers `int add(int, int)` but the pooled API emits bad-instruction
+  tokens and a void prototype. Keep `tests/m2-005_prototype.py` as the real
+  CLI/API acceptance; reuse language resolution and configure the pool's child
+  explicitly rather than requiring process-global environment setup.
 
 ## Blocked on
 - None.
