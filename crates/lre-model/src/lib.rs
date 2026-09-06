@@ -558,6 +558,15 @@ pub struct PrototypeRow {
     pub provenance: FactProvenance,
 }
 
+/// A function's return behavior is unknown unless a producer supplies a fact.
+/// `no_return = false` can explicitly override an inferred non-returning flag.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ReturnBehaviorRow {
+    pub function: Address,
+    pub no_return: bool,
+    pub provenance: FactProvenance,
+}
+
 /// One recovered stack variable.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct StackVariableRow {
