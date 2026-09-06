@@ -1995,10 +1995,14 @@ M2 — Program-model parity
 ### m2-008 partial evidence
 - `df32929` passes the direct-flow acceptance: 2 inferred functions and
   2 removed call xrefs; 163 workspace tests and corpus 5/5 pass.
-- The first full comparison is 12 pass, 8 fail, 0 skipped. It includes stock
-  synthetic externals and exposes missing known-name behavior. No gate pass
-  or task completion is claimed. The ratified task also requires known names,
-  decompiler hints, and optimized-corpus boundary evidence; those remain open.
+- `9286d42` and `cae416a` commit the known-name and resolved-indirect-loop
+  regressions before implementation. The extended real acceptance now reports
+  5 inferred functions, 3 removed/restored call xrefs, 1 stale inference
+  retracted, and 2 asserted-return controls. Workspace: 163 pass, 2 ignored;
+  corpus: 5/5. Standalone and pooled worker paths pass.
+- `5d085b3` commits failing II.3 boundary-tolerance and matched-denominator
+  checks. Both now pass. The 20-entry comparison is regenerating current
+  bridge-provenance raw/scoring references; no corpus gate pass is claimed.
 
 ## Blocked on
 - None.

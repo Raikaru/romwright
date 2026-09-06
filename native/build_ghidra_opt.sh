@@ -31,6 +31,7 @@ cp "$ROOT/native/ventris_linkage.hh" "$ROOT/native/ventris_patterns.hh" \
    "$ROOT/native/ventris_operand_refs.hh" \
    "$ROOT/native/ventris_x86_references.hh" \
    "$ROOT/native/ventris_callfixups.hh" \
+   "$ROOT/native/ventris_nonreturn.hh" \
    "$ROOT/native/ventris_constants.hh" "$BUILD/decompiler/"
 
 cp "$PATCH" "$BUILD/apply.patch"

@@ -24,7 +24,9 @@ impl WorkerSession {
     /// Spawns `ghidra_opt`, registers `program`, selects the decompile
     /// action, and loads all durable provider facts needed by callbacks.
     /// The provider includes the native section map and store facts.
-    fn spawn(config: &PoolConfig, on_launch: impl FnOnce(&NativeWorker)) -> PoolResult<Self> {
+    fn spawn(
+        config: &PoolConfig, on_launch: impl FnOnce(&NativeWorker), asserted_returns_only: bool,
+    ) -> PoolResult<Self> {
         let PoolConfig {
             decompiler,
             spec_root,
@@ -80,7 +82,7 @@ impl WorkerSession {
             provider.strings.insert(string.address.offset, string.value);
         }
         provider.load_call_edges(&db, pid)?;
-        provider.load_return_behaviors(&db, pid)?;
+        provider.load_return_behaviors(&db, pid, asserted_returns_only)?;
         let function_shell = provider.function_shell()?;
         let spec_docs = load_specs(spec_root)?;
         let mut command = std::process::Command::new(decompiler);
@@ -291,6 +293,8 @@ pub struct WorkerPool {
     busy_workers: u32,
     restarts: u64,
     memory_cap_hits: u64,
+    // Set only on a fresh inference pool: prior inferred flags are not evidence.
+    asserted_returns_only: bool,
 }
 
 impl WorkerPool {
@@ -303,6 +307,7 @@ impl WorkerPool {
             busy_workers: 0,
             restarts: 0,
             memory_cap_hits: 0,
+            asserted_returns_only: false,
         }
     }
 
@@ -383,7 +388,7 @@ impl WorkerPool {
                 on_launch(&session.worker);
                 session
             }
-            None => WorkerSession::spawn(&self.config, on_launch)?,
+            None => WorkerSession::spawn(&self.config, on_launch, self.asserted_returns_only)?,
         };
         if let Err(error) = self.enforce_memory_cap(&mut session) {
             if matches!(error, PoolError::MemCap(_, _)) {
@@ -617,6 +622,41 @@ impl WorkerPoolManager {
         doc.address = address.clone();
         doc.revision = revision;
         Ok(doc)
+    }
+
+    /// Fresh native hints cannot use previous inferred no-return flags as seeds.
+    /// Publish only after the entire input-revision snapshot has been analyzed.
+    pub fn infer_nonreturning(
+        &mut self,
+        core: &lre_core::Core,
+        binary: &Path,
+        program: &str,
+    ) -> PoolResult<lre_core::NonReturnInferenceReport> {
+        let store = core.store_handle()?;
+        let id = store.program_id(program)?;
+        let revision = store.revision(id)?;
+        let config = PoolConfig::from_runtime(
+            core.runtime_config(), binary, program, core.db_path(), &store.program_language(id)?,
+        )?;
+        let mut pool = WorkerPool::new(config);
+        pool.asserted_returns_only = true;
+        let mut hints = Vec::new();
+        for function in store.functions(id)?.into_iter()
+            .filter(|function| function.entry.space == lre_model::AddressSpace::Ram)
+        {
+            let actual = store.revision(id)?;
+            if actual != revision {
+                return Err(PoolError::StaleRevision(revision, actual));
+            }
+            let doc = pool.decompile_doc(function.entry.offset)?;
+            if doc.address != function.entry {
+                return Err(WorkerError::Protocol("no-return hint address mismatch".into()).into());
+            }
+            if doc.prototype.is_some_and(|prototype| prototype.no_return) {
+                hints.push(function.entry);
+            }
+        }
+        Ok(core.infer_nonreturning(binary, program, revision, &hints)?)
     }
 
     /// Recovers all functions, then only callers of changed callees, for at most

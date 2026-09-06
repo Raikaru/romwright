@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sqlite3
 import sys
 import tempfile
 
@@ -188,9 +189,45 @@ def main():
             ('return_behaviors', dict(program='fixture'))])
         assert repeated['changed'] == [] and final_doc['revision'] == after_doc['revision'], repeated
         assert final_facts == facts, (final_facts, facts)
+        # Seed store states through its SQL schema; the public DB setter's
+        # ownership/revision behavior has its own Rust coverage.
+        def put_return(name, no_return, kind):
+            with sqlite3.connect(project / 'project.sqlite') as database:
+                database.execute('''INSERT INTO return_behaviors
+                    (program_id, function, no_return, provenance, provenance_kind, confidence)
+                    SELECT program_id, entry, ?, ?, ?, NULL FROM functions WHERE name=?
+                    ON CONFLICT(program_id, function) DO UPDATE SET
+                    no_return=excluded.no_return, provenance=excluded.provenance,
+                    provenance_kind=excluded.provenance_kind, confidence=NULL''',
+                    (no_return, facts[0]['provenance']['source'] if kind == 'inferred'
+                        else 'nonreturn-acceptance', kind, name))
+                database.execute('UPDATE programs SET revision=revision+1')
+                database.execute('''INSERT INTO revision_events(program_id, revision, kind, detail)
+                    SELECT id, revision, 'return-behavior', 'acceptance input' FROM programs''')
+        # A stale positive must not validate itself through the worker snapshot.
+        put_return('ordinary', True, 'inferred')
+        revalidated, revalidated_facts = invoke([('infer_nonreturning', context),
+            ('return_behaviors', dict(program='fixture'))])
+        assert address('ordinary') in revalidated['changed'], revalidated
+        assert revalidated_facts == facts, revalidated_facts
+        # Assertions override both a known name and an inferred callee; callers'
+        # original returning continuations and their owned call edges return.
+        put_return('exit', False, 'asserted')
+        put_return('stop', False, 'asserted')
+        retracted, restored_doc, restored_known, restored_facts = invoke([
+            ('infer_nonreturning', context), doc, known_doc,
+            ('return_behaviors', dict(program='fixture'))])
+        assert any(token['text'] == 'ordinary' for token in restored_doc['tokens']), restored_doc
+        assert any(token['text'] == 'ordinary' for token in restored_known['tokens']), restored_known
+        for rows in invoke([refs('dead_entry'), refs('dead_relay'), refs('dead_known')]):
+            assert any(row['to'] == address('ordinary') and 'CALL' in row['kind'] for row in rows), rows
+        assert {row['function']['offset'] for row in restored_facts if row['no_return']} == {symbols['hint_loop']}, restored_facts
+        assert sum(row['provenance']['kind'] == 'asserted' and not row['no_return'] for row in restored_facts) == 2, restored_facts
         evidence = dict(task='m2-008', passed=True, scope='temporary positive acceptance, not locked corpus',
             inferred_functions=5, returning_controls=2, unresolved_indirect_controls=2,
-            removed_call_xrefs=3, standalone=1, pooled=True, report=report, repeated=repeated)
+            removed_call_xrefs=3, restored_call_xrefs=3, stale_inference_retracted=1,
+            asserted_return_controls=2, standalone=1, pooled=True,
+            report=report, repeated=repeated, revalidated=revalidated, retracted=retracted)
         if args.report:
             args.report.write_text(json.dumps(evidence, indent=2) + '\n')
         print(json.dumps(evidence))

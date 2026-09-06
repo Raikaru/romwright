@@ -4,6 +4,32 @@ use std::collections::BTreeSet;
 
 const SOURCE: &str = "native-flow nonreturn recovery";
 
+// Ghidra 12.1.3 Base/data/{Elf,PE}FunctionsThatDoNotReturn (Apache-2.0).
+// NoReturnFunctionAnalyzer strips leading underscores before exact matching.
+fn known_no_return(format: &str, name: &str) -> bool {
+    let name = name.trim_start_matches('_');
+    match format {
+        "ELF" | "elf32" => matches!(name,
+            "exit" | "cexit" | "c_exit" | "abort" | "reboot" | "longjmp"
+            | "longjmp_chk" | "siglongjmp" | "panic" | "stack_chk_fail"
+            | "cxa_throw" | "cxa_terminate" | "cxa_call_unexpected" | "cxa_bad_cast"
+            | "Unwind_Resume" | "assert_fail" | "assert_rtn" | "fortify_fail"
+            | "ZSt9terminatev" | "ZN10__cxxabiv111__terminateEPFvvE" | "pthread_exit"),
+        "PE" => matches!(name,
+            "abort" | "CxxThrowException" | "CxxThrowException@8" | "CxxFrameHandler3"
+            | "crtExitProcess" | "ExitProcess" | "ExitThread" | "exit"
+            | "ExRaiseAccessViolation" | "ExRaiseDatatypeMisalignment" | "ExRaiseStatus"
+            | "FreeLibraryAndExitThread" | "invalid_parameter_noinfo_noreturn"
+            | "invoke_watson" | "KeBugCheck" | "KeBugCheckEx" | "longjmp" | "quick_exit"
+            | "RpcRaiseException" | "terminate" | "raise_securityfailure"
+            | "report_rangecheckfailure" | "?_Xregex_error@std@@YAXW4error_type@regex_constant@1@@Z"
+            | "?_Xbad_alloc@std@@YAXXZ" | "?_Xlength_error@std@@YAXPBD@Z"
+            | "?_Xout_of_range@std@@YAXPBD@Z" | "?_Xbad_function_call@std@@YAXXZ"
+            | "?terminate@@YAXXZ"),
+        _ => false,
+    }
+}
+
 #[derive(serde::Serialize)]
 pub struct NonReturnInferenceReport {
     pub changed: Vec<lre_model::Address>,
@@ -27,17 +53,25 @@ impl crate::Core {
         &self,
         binary: &std::path::Path,
         program: &str,
+        expected_revision: u64,
+        hints: &[lre_model::Address],
     ) -> crate::Result<NonReturnInferenceReport> {
         use lre_model::{Address, AddressSpace, FactKind, FactProvenance, ReturnBehaviorRow};
         let id = self.db.program_id(program)?;
         let revision = self.db.revision(id)?;
+        if revision != expected_revision {
+            return Err(lre_db::DbError::StaleRevision {
+                expected: expected_revision, actual: revision,
+            }.into());
+        }
         let stored = self.db.functions(id)?;
         let facts = self.db.return_behaviors(id)?;
-        let entries: Vec<_> = stored
+        let mut entries: Vec<_> = stored
             .iter()
             .filter(|row| row.entry.space == AddressSpace::Ram)
             .map(|row| row.entry.offset)
             .collect();
+        entries.sort_unstable();
         if entries.is_empty() {
             return Err(ImportError::Bad("no RAM function entries to analyze".into()).into());
         }
@@ -65,6 +99,22 @@ impl crate::Core {
                 } else {
                     blocked.insert(row.function.offset);
                 }
+            }
+        }
+        for function in &stored {
+            if function.entry.space == AddressSpace::Ram
+                && !blocked.contains(&function.entry.offset)
+                && known_no_return(&import.format, &function.name)
+            {
+                known.insert(function.entry.offset);
+            }
+        }
+        for hint in hints {
+            if hint.space != AddressSpace::Ram || entries.binary_search(&hint.offset).is_err() {
+                return Err(ImportError::Bad("no-return hint is not a stored RAM function".into()).into());
+            }
+            if !blocked.contains(&hint.offset) {
+                known.insert(hint.offset);
             }
         }
         // Our previous inferences are deliberately not seeds: new assertions
@@ -102,7 +152,8 @@ impl crate::Core {
             analysis
                 .functions
                 .iter()
-                .filter(|(_, flow)| !flow.complete)
+                .filter(|(entry, flow)| !flow.complete
+                    && !analysis.non_returning.contains(entry) && !blocked.contains(entry))
                 .map(|(&entry, _)| Address::ram(entry)),
         );
         let sizes = affected

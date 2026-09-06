@@ -122,7 +122,7 @@ fn inferred_declarations_roundtrip_array_and_variadic_callback_pointers() {
         .unwrap();
     let address = Address::ram(0x400466);
     let proto: lre_model::FuncProto = serde_json::from_value(serde_json::json!({
-        "calling_convention": "__stdcall", "variadic": false,
+        "calling_convention": "__stdcall", "variadic": false, "no_return": false,
         "return_type": {"metatype": "ptr", "size": 8, "target": {"name": "int"}},
         "parameters": [
             {"ordinal": 0, "name": "rows", "data_type": {
@@ -134,7 +134,7 @@ fn inferred_declarations_roundtrip_array_and_variadic_callback_pointers() {
             {"ordinal": 1, "name": "visit", "data_type": {
                 "metatype": "ptr", "size": 8, "target": {
                     "metatype": "code", "prototype": {
-                        "calling_convention": "__stdcall", "variadic": true,
+                        "calling_convention": "__stdcall", "variadic": true, "no_return": false,
                         "return_type": {"name": "int"},
                         "parameters": [{"ordinal": 0, "name": "value", "data_type": {"name": "char"}}]
                     }

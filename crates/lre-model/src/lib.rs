@@ -292,6 +292,8 @@ pub struct FuncProto {
     pub return_type: DecompType,
     pub parameters: Vec<FuncParam>,
     pub variadic: bool,
+    /// A positive native no-return hint; false does not prove a return path.
+    pub no_return: bool,
 }
 
 /// Recovered indirect branch targets, in native table order. Several case
