@@ -306,6 +306,10 @@ details remain unknown, and incomplete structural documents have no prototype.
 This read path does not persist inferred signatures or change store revisions.
 Standalone and pooled workers share language resolution; pooled children receive
 their SLEIGH configuration explicitly without process-global environment edits.
+The pool's 60-second operation deadline includes native registration, not just
+decompilation. Failed and timed-out children are killed and reaped; late output
+is not published or returned to the warm pool. Protocol errors remain distinct
+from elapsed deadlines.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker

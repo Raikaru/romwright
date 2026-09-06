@@ -467,13 +467,12 @@ impl NativeWorker {
 
 impl Drop for NativeWorker {
     fn drop(&mut self) {
-        // Closing our side of the stdin pipe makes ghidra_opt exit on EOF
-        // (readToAnyBurst, ghidra_arch.cc:96), so wait() cannot block on a
-        // live child holding the pipe. The child may be mid-query with
-        // nothing to answer; closing stdin is the only guaranteed exit.
+        // A failed or wedged child may ignore EOF. It owns no durable state;
+        // terminate and reap it rather than letting teardown block indefinitely.
         drop(self.stdin.take());
         if let Ok(mut guard) = self.child.lock() {
             if let Some(mut child) = guard.take() {
+                let _ = child.kill();
                 let _ = child.wait();
             }
         }
