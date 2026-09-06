@@ -15,6 +15,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 mod return_behavior;
+pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
 pub const SCHEMA_VERSION: i64 = 8;
@@ -41,6 +42,8 @@ pub enum DbError {
     InvalidFactProvenance(String),
     #[error("stale fact revision: expected {expected}, found {actual}")]
     StaleRevision { expected: u64, actual: u64 },
+    #[error("invalid return analysis: {0}")]
+    InvalidReturnAnalysis(String),
 
 }
 /// Convenience alias with the error defaulted per project convention.
