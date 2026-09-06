@@ -124,6 +124,8 @@ pub struct NativeImport {
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
     pub register_contexts: Vec<NativeRegisterContext>,
+    /// Loader-enabled register propagation across calls during reference analysis.
+    pub reference_call_register: Option<&'static str>,
     /// ELF section-address code roots and exclusive bounds, not function seeds.
     pub reference_roots: Vec<(u64, u64)>,
     pub format: String,
@@ -948,7 +950,6 @@ fn infer_data_references(
     use crate::native_runtime::ReferenceKind;
     session.prepare_reference_context(import)
         .map_err(|error| ImportError::Bad(format!("reference context: {error}")))?;
-    let mut references = Vec::new();
     let functions = import.functions.iter().filter(|function| function.size > 1).map(|function| {
         function.entry.checked_add(function.size)
             .map(|end| (function.entry, end))
@@ -958,13 +959,42 @@ fn infer_data_references(
         .filter(|&&(start, _)| !import.functions.iter()
             .any(|function| function.entry == start && function.size > 1))
         .map(|&(start, end)| Ok((start, end)));
-    for range in functions.chain(roots) {
-        let (start, end) = range?;
-        // ConstantPropagationAnalyzer's default trusts initial writable values.
-        // This inferred-reference policy does not change strict constant queries.
-        let facts = session.references(start, end, &import.mappings, true)
-            .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?;
-        references.extend(facts.into_iter().map(|fact| {
+    let mut work = functions.chain(roots)
+        .map(|range| range.map(|(start, end)| (start, end, Vec::new(), true)))
+        .collect::<Result<Vec<_>>>()?;
+    let mut pending: std::collections::VecDeque<_> = (0..work.len()).collect();
+    loop {
+        while let Some(index) = pending.pop_front() {
+            let (start, end, _, _) = work[index];
+            work[index].3 = false;
+            // ConstantPropagationAnalyzer's default trusts initial writable values.
+            // This inferred-reference policy does not change strict constant queries.
+            let facts = session.references(start, end, &import.mappings, true)
+                .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?;
+            let known = &mut work[index].2;
+            if known.is_empty() {
+                *known = facts;
+            } else {
+                known.extend(facts);
+                known.sort_unstable_by_key(|fact| (fact.from, fact.to, fact.kind as u8));
+                known.dedup();
+            }
+        }
+        // Finish local evidence before applying this round's call context.
+        for target in session.take_reference_context_targets() {
+            if let Some(next) = work.iter().position(|item| item.0 == target) {
+                if !work[next].3 {
+                    work[next].3 = true;
+                    pending.push_back(next);
+                }
+            }
+        }
+        if pending.is_empty() { break; }
+    }
+    // Context adds precise accesses; existing speculative DATA remains evidence.
+    // Publish no partial pass if any query fails.
+    for (_, _, facts, _) in work {
+        import.xrefs.extend(facts.into_iter().map(|fact| {
             let kind = match fact.kind {
                 ReferenceKind::Read => "READ",
                 ReferenceKind::Write => "WRITE",
@@ -976,8 +1006,6 @@ fn infer_data_references(
             )
         }));
     }
-    // Publish no partial pass if any query fails.
-    import.xrefs.extend(references);
     Ok(())
 }
 
@@ -2216,24 +2244,44 @@ mod tests {
                 bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
             }
         }
-        let analyze = |bytes: &[u8]| {
+        let analyze = |bytes: &[u8], caller_first: bool| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
             import.functions = [(0x1000, 8), (0x1100, 16), (0x1200, 8)].into_iter()
                 .map(|(entry, size)| NativeFunction { entry, size, name: format!("FUN_{entry:x}") })
                 .collect();
+            if caller_first { import.functions.swap(0, 1); }
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             infer_data_references(&mut import, &mut session).unwrap();
             assert!(session.constants(0x1000, 0x1008, &import.mappings, false).unwrap().is_empty(),
                 "call-derived reference context must not enter strict constant queries");
-            import.xrefs.into_iter().filter(|xref| xref.kind == "READ")
-                .map(|xref| (xref.from, xref.to)).collect::<Vec<_>>()
+            let mut data = Vec::new();
+            let reads = import.xrefs.into_iter().filter_map(|xref| {
+                if xref.kind == "DATA" { data.push((xref.from, xref.to)); }
+                (xref.kind == "READ").then_some((xref.from, xref.to))
+            }).collect::<Vec<_>>();
+            (reads, data)
         };
-        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004)],
+        assert_eq!(analyze(&bytes, false).0, vec![(0x1000, 0x3004)],
             "only the called function inherits the actual r30 value, independent of query order");
         bytes[0x330..0x334].fill(0);
-        assert!(analyze(&bytes).is_empty(), "a GOT section alone cannot enable r30 propagation");
+        assert!(analyze(&bytes, false).0.is_empty(), "a GOT section alone cannot enable r30 propagation");
+        bytes[0x330..0x334].copy_from_slice(&0x70000000u32.to_be_bytes());
+        for offset in [0x200, 0x204] {
+            bytes[offset..offset + 4].copy_from_slice(&0x60000000u32.to_be_bytes()); // nop
+        }
+        assert!(analyze(&bytes, false).0.is_empty(), "unknown caller values must not invent a GOT context");
+        bytes[0x200..0x204].copy_from_slice(&0x3fc00000u32.to_be_bytes()); // lis r30,0
+        bytes[0x100..0x104].copy_from_slice(&0x807e3004u32.to_be_bytes()); // lwz r3,0x3004(r30)
+        assert!(analyze(&bytes, false).0.is_empty(), "zero is not an established PIC register context");
+        bytes[0x204..0x208].copy_from_slice(&0x63de0004u32.to_be_bytes()); // ori r30,r30,4
+        let (reads, data) = analyze(&bytes, false);
+        assert_eq!(reads, vec![(0x1000, 0x3008)], "use the actual caller value, not DT_PPC_GOT");
+        assert!(data.contains(&(0x1000, 0x3004)),
+            "call context adds precise accesses without erasing speculative offset DATA");
+        assert_eq!(analyze(&bytes, true), (reads, data),
+            "caller-first scheduling must retain the same local and contextual evidence");
     }
 
     #[test]

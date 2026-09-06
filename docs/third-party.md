@@ -329,6 +329,14 @@ zero-filled remainder of `p_memsz`, following the public ELF program-header
 ABI. Section bytes and permissions retain precedence; uncovered intervals
 receive converted PF_R/PF_W/PF_X permissions without overlapping existing
 mappings. Completing memory does not add code entries or function seeds.
+ELF32 PowerPC enables caller r30 context only with DT_PPC_GOT, following
+`PowerPCAddressAnalyzer.getDefaultPropagateR30Option` and
+`setRegisterIfNotSet` (Apache-2.0). Complete nonzero values at real calls seed
+only their destinations; existing context wins. Local references are collected
+before each round activates new call context, so function scheduling does not
+erase speculative offset DATA. Contextual analysis adds precise accesses and
+deduplicates repeated facts. This transient worklist does not create functions,
+modify strict constant queries, or promote branch xrefs into calls.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

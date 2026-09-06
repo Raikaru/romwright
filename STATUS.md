@@ -1608,6 +1608,16 @@ M2 — Program-model parity
   register values at calls, not a global guessed GOT base. Keep this context
   transient and exclude it from strict constant queries.
 - Publication sub-tasks: g8 implementation, then g8-report generated evidence.
+- Acceptance failed on the missing callee READ before implementation. Added
+  zero/unknown-value, preserved DATA, and caller-order regressions; each exposed
+  a failing behavior before its correction. Workspace: 142 passed. Corpus: 5/5.
+- Complete diagnostic run: all 20 rows meet the data-reference thresholds;
+  precision 1.0 throughout, PowerPC PIE recall 25/26 (0.9615384615), AArch64 C++
+  recall 21/22 (0.9545454545), and recall 1.0 on the other 18 rows.
+  Generated evidence publication is pending: `benchmarks/reports/m2-002-g8.json`.
+- Remaining PowerPC READ: `0x2069c -> 0x408c0`, reached through `_start`'s
+  non-linking branch at `0x204f0`, not a call. Do not broaden call propagation
+  or `close_call_targets` to hide that distinction.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

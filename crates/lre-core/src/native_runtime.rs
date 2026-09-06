@@ -700,6 +700,9 @@ pub struct ConsoleSession {
     language_id: String,
     reference_labels: Option<Vec<(u64, String)>>,
     reference_registers: Vec<crate::native::NativeRegisterContext>,
+    active_reference_registers: usize,
+    reference_call_register: Option<&'static str>,
+    new_reference_targets: Vec<u64>,
 }
 
 impl ConsoleSession {
@@ -732,6 +735,9 @@ impl ConsoleSession {
             language_id: cfg.language_id.clone(),
             reference_labels: None,
             reference_registers: Vec::new(),
+            active_reference_registers: 0,
+            reference_call_register: None,
+            new_reference_targets: Vec::new(),
         })
     }
 
@@ -740,6 +746,9 @@ impl ConsoleSession {
     pub fn load(&mut self, binary: &Path, base: u64) -> Result<()> {
         self.reference_labels = None;
         self.reference_registers.clear();
+        self.active_reference_registers = 0;
+        self.reference_call_register = None;
+        self.new_reference_targets.clear();
         if let Some(image) = MappedImage::for_elf_or_dol(binary)? {
             return self.load_xml(&image);
         }
@@ -777,6 +786,9 @@ impl ConsoleSession {
     fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
         self.reference_labels = None;
         self.reference_registers.clear();
+        self.active_reference_registers = 0;
+        self.reference_call_register = None;
+        self.new_reference_targets.clear();
         self.send(&image.command())?;
         let response = read_until_prompt(&mut self.reader)?;
         if !response.contains("successfully loaded:") {
@@ -815,6 +827,9 @@ impl ConsoleSession {
     pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
         use std::fmt::Write as _;
         self.reference_registers.clone_from(&import.register_contexts);
+        self.active_reference_registers = self.reference_registers.len();
+        self.reference_call_register = import.reference_call_register;
+        self.new_reference_targets.clear();
         if self.reference_labels.is_none() {
             let ranges = import.mappings.iter().filter(|mapping| mapping.flags & 4 != 0)
                 .map(|mapping| {
@@ -847,6 +862,11 @@ impl ConsoleSession {
         }
         Ok(())
     }
+    pub(crate) fn take_reference_context_targets(&mut self) -> impl Iterator<Item = u64> + '_ {
+        self.active_reference_registers = self.reference_registers.len();
+        self.new_reference_targets.drain(..)
+    }
+
 
     fn propagation_query<T: serde::de::DeserializeOwned>(
         &mut self,
@@ -875,7 +895,13 @@ impl ConsoleSession {
             );
         }
         if command == "references" {
-            for context in &self.reference_registers {
+            if let Some(register) = self.reference_call_register {
+                if register.is_empty() || register.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                    return err("invalid call-context register");
+                }
+                let _ = write!(script, " --track-register {register}");
+            }
+            for context in self.reference_registers.iter().take(self.active_reference_registers) {
                 if context.start <= start && start < context.end {
                     if context.register.is_empty()
                         || context.register.chars().any(|c| c.is_whitespace() || c.is_control()) {
@@ -894,8 +920,31 @@ impl ConsoleSession {
             .ok_or_else(|| {
                 NativeRuntimeError(format!("{command} query failed: {response}"))
             })?;
-        serde_json::from_str(payload)
-            .map_err(|error| NativeRuntimeError(format!("invalid {command} facts: {error}")))
+        let facts = serde_json::from_str(payload)
+            .map_err(|error| NativeRuntimeError(format!("invalid {command} facts: {error}")))?;
+        if command == "references" {
+            if let Some(register) = self.reference_call_register {
+                #[derive(serde::Deserialize)]
+                struct CallRegister { target: u64, value: u64 }
+                let payload = response.lines().find_map(|line| line.strip_prefix("CALL_REGISTERS "))
+                    .ok_or_else(|| NativeRuntimeError(format!("missing call-context facts: {response}")))?;
+                let contexts: Vec<CallRegister> = serde_json::from_str(payload)
+                    .map_err(|error| NativeRuntimeError(format!("invalid call-context facts: {error}")))?;
+                for context in contexts {
+                    if self.reference_registers.iter().any(|existing| {
+                        existing.register == register &&
+                            existing.start <= context.target && context.target < existing.end
+                    }) { continue; }
+                    let end = context.target.checked_add(1)
+                        .ok_or_else(|| NativeRuntimeError("call-context address overflow".into()))?;
+                    self.reference_registers.push(crate::native::NativeRegisterContext {
+                        start: context.target, end, register: register.into(), value: context.value,
+                    });
+                    self.new_reference_targets.push(context.target);
+                }
+            }
+        }
+        Ok(facts)
     }
 
     /// Ask the console for the control-flow of one instruction.
