@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "48b79bccf9a944f148945d13bf4346150beed4a5",
-  "date": "2026-09-06T11:31:31.302134+00:00",
+  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
+  "date": "2026-09-06T12:01:07.764159+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -16,7 +16,7 @@
   "corpus": [
     {
       "id": "aarch64_plain_o0",
-      "status": "fail",
+      "status": "pass",
       "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
       "twin_sha256": "3aa0bf7efbab75891c725118f175beac8e9c2ffeb51be6731bc16dc96648aaad",
       "reference": "AARCH64-LE-64-v8A/default/54831ee74b814f60/baseline-66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f.json",
@@ -27,14 +27,49 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o0.bin\", \"program\": \"aarch64_plain_o0\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "inference": {
+        "analyzed": 21,
+        "changed": 18,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 17,
+      "persisted_prototypes": 17,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "aarch64_plain_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
       "twin_sha256": "1a5355a6fdf07651017d6866c59bdd016d0b613f8f8bb8f2bde066d8cf19454d",
       "reference": "AARCH64-LE-64-v8A/default/9309bc4915cc92f3/baseline-ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a.json",
@@ -45,14 +80,49 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_o2.bin\", \"program\": \"aarch64_plain_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "inference": {
+        "analyzed": 21,
+        "changed": 18,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 17,
+      "persisted_prototypes": 17,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "aarch64_plain_pie",
-      "status": "fail",
+      "status": "pass",
       "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
       "twin_sha256": "20d555bb798d4dc6f52279846df3181cdf005b80161d50cb0243022a2727a11e",
       "reference": "AARCH64-LE-64-v8A/default/0988e4d3d8eb91e9/baseline-130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555.json",
@@ -63,10 +133,45 @@
       },
       "truth_functions": 2,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 1.0,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_plain_pie.bin\", \"program\": \"aarch64_plain_pie\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "inference": {
+        "analyzed": 21,
+        "changed": 18,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 17,
+      "persisted_prototypes": 17,
+      "scores": {
+        "native": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        },
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "aarch64_cpp_o2",
@@ -81,14 +186,53 @@
       },
       "truth_functions": 3,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 0.6666666666666666,
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {
+        "proto.arity": 0.98
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_cpp_o2.bin\", \"program\": \"aarch64_cpp_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "inference": {
+        "analyzed": 29,
+        "changed": 26,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 24,
+      "persisted_prototypes": 24,
+      "scores": {
+        "native": {
+          "matched": 3,
+          "correct": 2,
+          "value": 0.6666666666666666,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-aarch64-mismatches/aarch64_cpp_o2-native-0c5eec4f2d45265a.jsonl",
+            "sha256": "0c5eec4f2d45265ab29608a7f15b5d9c74ad573fc9818ac24ec7eb4a1f5fc764"
+          }
+        },
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
     },
     {
       "id": "aarch64_many_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
       "twin_sha256": "2d9c54d3c99b3c7f3a36191c5ac8370e677245b91f535a81becfd85ed18656ad",
       "reference": "AARCH64-LE-64-v8A/default/27c5de6429efbf50/baseline-61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809.json",
@@ -99,10 +243,53 @@
       },
       "truth_functions": 401,
       "unmapped_truth": [],
-      "metrics": {},
-      "thresholds": {},
+      "metrics": {
+        "proto.arity": 0.9975062344139651,
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {
+        "proto.arity": 0.9775062344139651
+      },
       "runs": 1,
-      "reason": "[{\"request\": [\"infer_prototypes\", {\"binary\": \"/tmp/ventris-m2-002h-z5FKeO/corpus/aarch64_many_o2.bin\", \"program\": \"aarch64_many_o2\", \"budget_ms\": 60000}], \"error\": {\"code\": \"worker_error\", \"message\": \"worker: worker: setup: spec bundle missing for AARCH64:LE:64:v8A: native/specs/AARCH64-LE-64-v8A \\u2014 generate it once with `lre-cli dump-specs <program> --out native/specs/AARCH64-LE-64-v8A` (JVM bridge)\"}}]"
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "inference": {
+        "analyzed": 419,
+        "changed": 416,
+        "rounds": 2,
+        "stop_reason": "converged"
+      },
+      "native_functions": 415,
+      "persisted_prototypes": 415,
+      "scores": {
+        "native": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-aarch64-mismatches/aarch64_many_o2-native-e50fb39080d2e4a0.jsonl",
+            "sha256": "e50fb39080d2e4a048cfda6bda54c9bb0f7059633fa0f138ec3ff62186230759"
+          }
+        },
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-aarch64-mismatches/aarch64_many_o2-ghidra-e50fb39080d2e4a0.jsonl",
+            "sha256": "e50fb39080d2e4a048cfda6bda54c9bb0f7059633fa0f138ec3ff62186230759"
+          }
+        }
+      }
     }
   ]
 }
