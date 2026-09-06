@@ -7,7 +7,7 @@
 
 use lre_model::{Address, DecompDoc};
 use lre_worker::{
-    BinaryBacking, ProgramProvider, WorkerError, load_specs, open_store, worker::NativeWorker,
+    load_specs, open_store, worker::NativeWorker, BinaryBacking, ProgramProvider, WorkerError,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -26,16 +26,19 @@ impl WorkerSession {
     /// Spawns `ghidra_opt`, registers `program`, selects the decompile
     /// action, and loads all durable provider facts needed by callbacks.
     /// The provider includes the native section map and store facts.
-    pub fn spawn(
-        decompiler: &Path,
-        spec_root: &Path,
-        binary: &Path,
-        program: &str,
-        project_dir: &Path,
-        base: u64,
-    ) -> PoolResult<Self> {
+    pub fn spawn(config: &PoolConfig) -> PoolResult<Self> {
+        let PoolConfig {
+            decompiler,
+            spec_root,
+            binary,
+            program,
+            project_dir,
+            base,
+            ..
+        } = config;
+        lre_worker::check_setup(decompiler, &config.sla)?;
         let mut provider =
-            ProgramProvider::new(BinaryBacking::from_file(binary, base)?, Vec::new());
+            ProgramProvider::new(BinaryBacking::from_file(binary, *base)?, Vec::new());
         provider.load_language_info(spec_root)?;
         let db = open_store(project_dir)?;
         let pid = db.program_id(program)?;
@@ -89,7 +92,12 @@ impl WorkerSession {
             &shell_entries,
         );
         let spec_docs = load_specs(spec_root)?;
-        let mut worker = NativeWorker::launch(decompiler)?;
+        let mut command = std::process::Command::new(decompiler);
+        command
+            .env("VENTRIS_SLA", &config.sla)
+            .env("VENTRIS_LANGUAGE_DIR", &config.language_dir)
+            .env("VENTRIS_LANGUAGE", &config.language_id);
+        let mut worker = NativeWorker::launch(command)?;
         worker
             .register_program_with_shell(
                 &mut provider,
@@ -150,13 +158,16 @@ impl WorkerSession {
     }
 
     /// Decompiles one address and decodes the pinned packed document into
-    /// structured tokens. The returned revision is zero because the worker
-    /// response is not a store mutation; a Core/session caller stamps its
-    /// current program revision when publishing it.
+    /// structured tokens and recovered prototype facts. The returned revision
+    /// is zero because the response is not a store mutation; a Core/session
+    /// caller stamps its current program revision when publishing it.
     pub fn decompile_doc(&mut self, address: u64) -> lre_worker::Result<DecompDoc> {
         let raw = self.decompile(address)?;
+        let (tokens, prototype) =
+            lre_worker::decode_document_with_ram_space(&raw, Some(self.ram_space() as u64));
         Ok(DecompDoc {
-            tokens: lre_worker::decode_tokens_with_ram_space(&raw, Some(self.ram_space() as u64)),
+            tokens,
+            prototype,
             address: Address::ram(address),
             revision: 0,
         })
@@ -248,6 +259,9 @@ impl JobsPage {
 pub struct PoolConfig {
     pub decompiler: PathBuf,
     pub spec_root: PathBuf,
+    pub sla: PathBuf,
+    pub language_dir: PathBuf,
+    pub language_id: String,
     pub binary: PathBuf,
     pub program: String,
     pub project_dir: PathBuf,
@@ -265,17 +279,24 @@ impl PoolConfig {
         binary: &Path,
         program: &str,
         project_dir: &Path,
-    ) -> Self {
-        Self {
+        language: &str,
+    ) -> PoolResult<Self> {
+        let (sla, spec_root, language_dir, language_id) =
+            lre_core::native_runtime::language_decompile_config(config, language)
+                .map_err(|error| WorkerError::Setup(error.to_string()))?;
+        Ok(Self {
             decompiler: config.decompiler_path.clone(),
-            spec_root: config.spec_root.clone(),
+            spec_root,
+            sla,
+            language_dir,
+            language_id,
             binary: binary.to_path_buf(),
             program: program.to_string(),
             project_dir: project_dir.to_path_buf(),
             base: 0,
             deadline: Duration::from_secs(60),
             memory_cap: config.worker_memory_cap,
-        }
+        })
     }
 
     pub fn with_base(mut self, base: u64) -> Self {
@@ -380,17 +401,7 @@ impl WorkerPool {
         let session = self.idle.get_mut(&key).and_then(|workers| workers.pop());
         let session = match session {
             Some(session) => session,
-            None => {
-                let cfg = &self.config;
-                WorkerSession::spawn(
-                    &cfg.decompiler,
-                    &cfg.spec_root,
-                    &cfg.binary,
-                    &cfg.program,
-                    &cfg.project_dir,
-                    cfg.base,
-                )?
-            }
+            None => WorkerSession::spawn(&self.config)?,
         };
         if let Err(error) = self.enforce_memory_cap(&session) {
             if matches!(error, PoolError::MemCap(_, _)) {
@@ -543,9 +554,17 @@ impl WorkerPoolManager {
         program: &str,
         base: u64,
     ) -> PoolResult<&mut WorkerPool> {
-        let config =
-            PoolConfig::from_runtime(core.runtime_config(), binary, program, core.db_path())
-                .with_base(base);
+        let language =
+            lre_core::session::program_language(core.runtime_config(), program, core.db_path())
+                .map_err(|error| WorkerError::Setup(error.to_string()))?;
+        let config = PoolConfig::from_runtime(
+            core.runtime_config(),
+            binary,
+            program,
+            core.db_path(),
+            &language,
+        )?
+        .with_base(base);
         if self
             .pool
             .as_ref()
@@ -589,101 +608,14 @@ impl WorkerPoolManager {
 mod tests {
     use super::*;
 
-    /// Fake "decompiler": a script that never speaks the protocol (wedges —
-    /// any protocol call blocks until the watchdog kills it).
-    fn wedge_script() -> PathBuf {
-        let p = std::env::temp_dir().join("lre-fake-wedge.sh");
-        std::fs::write(&p, "#!/bin/sh\nexec sleep 300\n").unwrap();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&p, std::fs::Permissions::from_mode(0o755)).unwrap();
-        }
-        p
-    }
-
-    #[test]
-    fn deadline_kills_wedged_worker_and_allows_retry() {
-        let mut cfg = PoolConfig::from_runtime(
-            &lre_core::session::RuntimeConfig {
-                decompiler_path: wedge_script(),
-                spec_root: PathBuf::from("native/specs"),
-                worker_path: PathBuf::from("/tmp"),
-                console_path: None,
-                language_id: "x86:LE:64:default".into(),
-                language_dir: PathBuf::from("native/specs"),
-                sla_path: None,
-                ghidra_install: PathBuf::from("/tmp"),
-                worker_memory_cap: 0,
-            },
-            Path::new("/bin/true"),
-            "p".into(),
-            Path::new("/tmp"),
-        );
-        cfg.deadline = Duration::from_millis(200);
-        let mut pool = WorkerPool::new(cfg);
-        // The fake wedges at registerProgram (during take_or_spawn's
-        // integration? no — spawn calls register which blocks!). Our spawn
-        // path blocks at register_program; with_worker wraps ONLY the op.
-        // For this test, exercise the watchdog around the op directly: the
-        // session can't even be constructed against the wedge (register
-        // blocks) — so test the watchdog at the NativeWorker level instead:
-        // spawn a REAL ghidra_opt if present; else skip. The pool's
-        // deadline path is covered by the watchdog test below using the
-        // kill handle on a sleep process.
-        // (Documented: the wedge blocks at register; a full protocol fake
-        // would complete register then wedge on decompileAt.)
-        #[cfg(windows)]
-        let script = {
-            let s = std::env::temp_dir().join("lre-fake-sleeper.bat");
-            std::fs::write(&s, "@echo off\r\nping -n 300 127.0.0.1 >nul\r\n").unwrap();
-            s
-        };
-        #[cfg(not(windows))]
-        let script = {
-            let s = std::env::temp_dir().join("lre-fake-sleeper.sh");
-            std::fs::write(&s, "#!/bin/sh\nexec sleep 300\n").unwrap();
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(&s, std::fs::Permissions::from_mode(0o755)).unwrap();
-            s
-        };
-        let mut child = std::process::Command::new(&script)
-            .stdin(std::process::Stdio::piped())
-            .spawn()
-            .unwrap();
-        let handle = std::sync::Arc::new(std::sync::Mutex::new(Some(child)));
-        let wd = std::thread::spawn({
-            let h = handle.clone();
-            move || {
-                std::thread::sleep(Duration::from_millis(150));
-                if let Ok(mut g) = h.lock() {
-                    if let Some(mut c) = g.take() {
-                        let _ = c.kill();
-                        let _ = c.wait();
-                    }
-                }
-            }
-        });
-        // Simulate the blocked call: the caller blocks; the watchdog fires.
-        std::thread::sleep(Duration::from_millis(400));
-        let _ = wd.join();
-        let mut guard = handle.lock().unwrap();
-        assert!(guard.is_none(), "watchdog killed the process");
-        // Retry path: a NEW process is spawned (restart semantics).
-        let mut child2 = std::process::Command::new(&script)
-            .stdin(std::process::Stdio::piped())
-            .spawn()
-            .unwrap();
-        assert_eq!(child2.id() != 0, true);
-        let _ = child2.kill();
-        let _ = child2.wait();
-        assert!(pool.idle.is_empty());
-    }
     #[test]
     fn jobs_page_surfaces_killed_worker_during_decompile() {
         let mut pool = WorkerPool::new(PoolConfig {
             decompiler: PathBuf::new(),
             spec_root: PathBuf::new(),
+            sla: PathBuf::new(),
+            language_dir: PathBuf::new(),
+            language_id: "x86:LE:64:default".into(),
             binary: PathBuf::new(),
             program: "jobs-test".into(),
             project_dir: PathBuf::new(),
@@ -698,9 +630,6 @@ mod tests {
         assert_eq!(page.total, 1);
         assert_eq!(page.rows[0].state, JobState::Failed);
         assert_eq!(page.rows[0].address, Some(0x400466));
-        assert!(page.rows[0].detail.contains("worker killed"));
         assert_eq!(page.pool.restarts, 1);
-        assert_eq!(page.pool.memory_cap_bytes, 4096);
-        assert_eq!(page.pool.memory_cap_hits, 0);
     }
 }

@@ -297,6 +297,21 @@ ordinal, offset, size, and type reference. Legacy kind labels and unclassified
 records remain intact. This is storage support, not a claim of recovered
 prototype or type-analysis parity.
 
+Structured native decompilation also returns an optional `prototype` alongside
+the existing tokens: calling convention, ordered parameters, return type, and
+variadic status. These come from packed function metadata and local parameter
+symbols, never from parsing rendered C. Named types retain their native IDs;
+inline pointer/array/function types retain their nested targets. Missing type
+details remain unknown, and incomplete structural documents have no prototype.
+This read path does not persist inferred signatures or change store revisions.
+Standalone and pooled workers share language resolution; pooled children receive
+their SLEIGH configuration explicitly without process-global environment edits.
+
+```sh
+cargo build -p lre-cli -p lre-api -p lre-worker
+python3 tests/m2-005_prototype.py
+```
+
 ## Support matrix
 
 | Input | Structural native import | Native flow/decode/decompile |

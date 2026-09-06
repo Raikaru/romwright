@@ -33,7 +33,9 @@ fn main() {
         .and_then(|i| std::env::args().nth(i + 1))
         .and_then(|v| u64::from_str_radix(v.trim_start_matches("0x"), 16).ok())
         .unwrap_or(0x400000);
-    if let Err(e) = run(&args[1], &args[2], &args[3], &args[4], &args[5], &project, base) {
+    if let Err(e) = run(
+        &args[1], &args[2], &args[3], &args[4], &args[5], &project, base,
+    ) {
         eprintln!("error: {e}");
         std::process::exit(1);
     }
@@ -82,7 +84,9 @@ fn run(
             .push((comment.address.offset, comment.kind, comment.text));
     }
     for datatype in db.datatypes(pid)? {
-        provider.datatypes.insert(datatype.name, datatype.definition);
+        provider
+            .datatypes
+            .insert(datatype.name, datatype.definition);
     }
     for prototype in db.prototypes(pid)? {
         if !prototype.signature.is_empty() {
@@ -91,15 +95,18 @@ fn run(
                 .insert(prototype.function.offset, prototype.signature);
         }
     }
-    for string in db.strings(pid)?.into_iter()
-        .filter(|string| string.address.space == lre_model::AddressSpace::Ram) {
+    for string in db
+        .strings(pid)?
+        .into_iter()
+        .filter(|string| string.address.space == lre_model::AddressSpace::Ram)
+    {
         provider.strings.insert(string.address.offset, string.value);
     }
 
     let offset = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
         .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))?;
     let specs = lre_worker::load_specs(Path::new(lang_dir))?;
-    let mut worker = lre_worker::NativeWorker::launch(Path::new(ghidra_opt))?;
+    let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider
         .function_names
         .get(&offset)
@@ -129,7 +136,9 @@ fn run(
             .function_names
             .get(&offset)
             .cloned()
-            .ok_or_else(|| lre_worker::WorkerError::Setup("prototype target has no function name".into()))?;
+            .ok_or_else(|| {
+                lre_worker::WorkerError::Setup("prototype target has no function name".into())
+            })?;
         worker.set_function_signature(&mut provider, offset, &function_name, &signature)?;
     }
     worker.set_action(&mut provider, "decompile", "")?;
@@ -139,10 +148,12 @@ fn run(
     // and rendered compatibility text. `decode_tokens_with_ram_space` follows
     // PackedDecode.java and preserves token metadata; concatenation is only
     // the legacy CLI presentation boundary.
-    let tokens = lre_worker::decode_tokens_with_ram_space(&raw, Some(ram as u64));
     if std::env::var_os("WORKER_STRUCTURED").is_some() {
+        let (tokens, prototype) =
+            lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
         let doc = lre_model::DecompDoc {
             tokens,
+            prototype,
             address: lre_model::Address::ram(offset),
             revision: 0,
         };
@@ -153,6 +164,7 @@ fn run(
         );
         return Ok(());
     }
+    let tokens = lre_worker::decode_tokens_with_ram_space(&raw, Some(ram as u64));
     let c_text: String = tokens.iter().map(|token| token.text.as_str()).collect();
     if std::env::var_os("WORKER_DUMP").is_some() {
         let mut f = std::fs::File::create("/tmp/ctext_dump.txt").unwrap();

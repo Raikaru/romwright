@@ -41,8 +41,17 @@ Addresses arrive either as hex strings or as `{"offset": <int>}` objects
 | --- | --- | --- |
 | `listing` | `binary`, `start`, `count` | `ListingWindow`: `rows` (`stable_id`, `address`, `kind`, `text`, `bytes`), `start`, `count`, `overscan` |
 | `jobs_page` | `offset`, `limit` | `JobsPage`: `rows` (`id`, `operation`, `address?`, `state`, `detail`), `total`, `pool` (`idle_workers`, `busy_workers`, `restarts`, `memory_cap_bytes`, `memory_cap_hits`) |
-| `decompile_doc` | `binary`, `program`, `address` | `DecompDoc`: `tokens` (`text`, `kind`, `color`, `symbol?`, `address?`, ...), `address`, `revision` |
+| `decompile_doc` | `binary`, `program`, `address` | `DecompDoc`: `tokens` (`text`, `kind`, `color`, `symbol?`, `address?`, ...), `prototype?`, `address`, `revision` |
 | `memory` | `binary`, `address` (RAM only), `size` | `{"address", "size", "bytes_hex"}` |
+
+`prototype` contains `calling_convention`, `return_type`, ordered `parameters`,
+and `variadic`. Parameters carry `ordinal`, `name`, and `data_type`. Type
+references carry nullable `name`, native `id`, `size`, and `metatype`; inline
+types may also carry `element_count`, nested `target`, and a function-pointer
+`prototype`. IDs are native decompiler identities, not database IDs, and may
+require lossless 64-bit JSON parsing. Unknown type details are not void.
+Absent/incomplete structural documents have a null prototype. Existing token
+rendering is unchanged; reading these facts does not persist inferred signatures.
 
 ## Facts
 
