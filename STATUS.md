@@ -1765,13 +1765,26 @@ M2 — Program-model parity
   and publish measured reports. Split any implementation slice further before
   exceeding 800 changed lines; no metric or corpus change is authorized.
 
+### m2-006-a evidence
+- Failing API acceptance committed in `5960e96`; benchmark projection tests
+  committed in `6c67db6` after observing the missing-module failure.
+- DWARF projection: 20 locked ELF twins, 1,640 concrete subprograms, 0
+  unmapped entries. The real `plain_o0` export reports `add` arity 2 and
+  `main` arity 0. Two inheritance/error boundary tests pass.
+- Workspace 154 tests passed; corpus 5/5. Existing string regression:
+  20 passed, 0 failed, 0 skipped, recall 1.0; report refreshed.
+- The pinned stock entry point is `DecompilerFunctionAnalyzer`, which
+  delegates to `DecompilerParameterIdCmd`; ELF default enablement is off.
+  The reference must explicitly run parameter ID, not score unprocessed
+  default signatures. m2-006 parity and the inference API remain unfinished.
+
 ## Blocked on
 - None.
 
 ## Next task
 - m2-006: decompile all functions, write inferred prototypes, and re-decompile
-  callers; bound to N=3 rounds or a time budget. Verify the pinned
-  DecompilerParameterIdAnalyzer class and write the failing acceptance first.
+  callers; bound to N=3 rounds or a time budget. Follow the verified pinned
+  DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
   Check registration as well as per-decompile deadlines before claiming a
   time budget; the current pool starts its watchdog after registration.
