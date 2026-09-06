@@ -873,3 +873,20 @@ fn datatype_metatype(definition: &str) -> &'static str {
 pub fn spec_dir(root: &Path) -> PathBuf {
     root.join("Ghidra/Processors/x86/data/languages")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn string_query_decodes_address_after_datatype_name() {
+        let mut payload = Vec::new();
+        wire::encode_header(&mut payload, wire::ELEMENT_START, wire::query::GETSTRINGDATA);
+        wire::encode_attribute(&mut payload, wire::attr::MAXSIZE, wire::attr_type::POSITIVE_INT, 64);
+        wire::encode_string_attribute(&mut payload, wire::attr::TYPE, b"char");
+        wire::encode_attribute(&mut payload, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
+        wire::encode_addr_element(&mut payload, 3, 0x401178);
+        wire::encode_header(&mut payload, wire::ELEMENT_END, wire::query::GETSTRINGDATA);
+        assert_eq!(decode_addr_element(&payload), Some((3, 0x401178, 0)));
+    }
+}
