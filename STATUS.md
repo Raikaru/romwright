@@ -1764,6 +1764,9 @@ M2 — Program-model parity
   regression 20/20 passed. Full reference generation is the next b2 action.
 - c: bound pool registration and decompile operations, refresh workers after
   fact revisions, and apply stored callee prototypes before caller analysis.
+  Split c into c1 (production registration deadlines and child teardown),
+  c2 (revision invalidation and callee activation), and c3 (unlock inferred
+  targets during recovery without unlocking analyst assertions).
 - d: implement Core-owned inferred writes and the API inference operation,
   with at most 3 rounds, caller-only re-analysis, a time budget, and assertion
   retention. Existing prototype storage remains authoritative.
