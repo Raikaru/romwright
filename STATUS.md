@@ -1599,6 +1599,16 @@ M2 — Program-model parity
   destinations now exist in native memory; PIC-context READ references remain.
   Evidence: `benchmarks/reports/m2-002-g7.json`.
 
+## m2-002g8 caller-derived PowerPC GOT context
+- Acceptance: `powerpc_pic_context_follows_calls_not_unrelated_functions`.
+  Analyze the callee before its caller; a caller-proven r30 value must still
+  resolve the callee's READ. An uncalled function must not inherit that value,
+  and removing DT_PPC_GOT must disable propagation.
+- Match the ELF32 PowerPC policy in `PowerPCAddressAnalyzer`: propagate actual
+  register values at calls, not a global guessed GOT base. Keep this context
+  transient and exclude it from strict constant queries.
+- Publication sub-tasks: g8 implementation, then g8-report generated evidence.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
