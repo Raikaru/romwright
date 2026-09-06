@@ -324,6 +324,11 @@ from a non-stack symbolic base as speculative DATA. Native inference applies
 the existing constant filters to that offset; it does not claim that the
 unknown base is zero. Stack aliases and original call instructions are
 excluded. Constant-value queries do not receive these speculative facts.
+ELF memory includes PT_LOAD file bytes outside allocated sections and the
+zero-filled remainder of `p_memsz`, following the public ELF program-header
+ABI. Section bytes and permissions retain precedence; uncovered intervals
+receive converted PF_R/PF_W/PF_X permissions without overlapping existing
+mappings. Completing memory does not add code entries or function seeds.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and
