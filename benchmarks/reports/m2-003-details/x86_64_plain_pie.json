@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "x86_64_plain_pie",
+  "missing": [],
+  "extra": [
+    [
+      [
+        "ram",
+        1048627
+      ],
+      "utf-16-le"
+    ],
+    [
+      [
+        "ram",
+        1049551
+      ],
+      "utf-16-le"
+    ],
+    [
+      [
+        "ram",
+        1050064
+      ],
+      "utf-16-le"
+    ]
+  ]
+}
