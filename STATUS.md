@@ -1321,6 +1321,9 @@ M2 — Program-model parity
   separate cache namespace. Do not change reference metric definitions.
   Split g0 publication into context-selection code and a separate generated
   evidence commit; the complete 20-entry diagnostic report is 1,425 lines.
+  g1: `references_apply_pc_helper_fixups` must fail before reusing compiler
+  call-fixups for pattern-labeled existing functions. Preserve unknown ordinary
+  calls; pattern labels must not create new discovery roots.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.

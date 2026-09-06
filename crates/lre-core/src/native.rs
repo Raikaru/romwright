@@ -1937,4 +1937,66 @@ mod tests {
         assert!(imp.xrefs.is_empty(), "xrefs must be empty when directory 5 is absent");
         assert!(imp.reloc_candidates.is_empty(), "reloc_candidates must be empty when directory 5 is absent");
     }
+
+    #[test]
+    fn references_apply_pc_helper_fixups() {
+        use crate::native_runtime::{ConsoleSession, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(), compiler: Some("gcc"),
+            format: "elf".into(), cfg: cfg.clone(),
+            functions: vec![
+                NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() },
+                NativeFunction { entry: 0x1100, size: 4, name: "FUN_1100".into() },
+            ],
+            mappings: vec![
+                Mapping {
+                    vaddr: 0x1000, size: 14, file_off: 0, flags: 6,
+                    bytes: vec![
+                        0xe8, 0xfb, 0, 0, 0, // call 0x1100
+                        0x8d, 0x83, 0xfb, 0x2f, 0, 0, // lea eax,[ebx+0x2ffb]
+                        0x31, 0xc0, 0xc3, // discard address; ret
+                    ],
+                },
+                Mapping {
+                    vaddr: 0x1100, size: 4, file_off: 0, flags: 6,
+                    bytes: vec![0x8b, 0x1c, 0x24, 0xc3], // mov ebx,[esp]; ret
+                },
+                Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        infer_data_references(&mut import, &mut session).unwrap();
+        let refs: Vec<_> = import.xrefs.iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
+        assert_eq!(refs, vec![(0x1005, 0x4000, "DATA")],
+            "a recognized helper supplies the caller PC for address formation");
+
+        import.xrefs.clear();
+        import.functions.truncate(1);
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        infer_data_references(&mut import, &mut session).unwrap();
+        assert!(import.xrefs.is_empty(), "a pattern alone cannot establish a function");
+
+        import.functions.push(NativeFunction {
+            entry: 0x1100, size: 5, name: "FUN_1100".into(),
+        });
+        import.mappings[1].bytes = vec![0x8b, 0x5c, 0x24, 4, 0xc3]; // reads argument, not PC
+        import.mappings[1].size = 5;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        infer_data_references(&mut import, &mut session).unwrap();
+        assert!(import.xrefs.is_empty(), "ordinary calls retain unknown register context");
+    }
 }
