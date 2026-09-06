@@ -1985,6 +1985,23 @@ mod tests {
             "a recognized helper supplies the caller PC for address formation");
 
         import.xrefs.clear();
+        import.mappings[0].bytes = vec![
+            0x83, 0xe4, 0xf0, // and esp,-16
+            0xe8, 0xf8, 0, 0, 0, // call 0x1100
+            0x8d, 0x83, 0xf8, 0x2f, 0, 0, // lea eax,[ebx+0x2ff8]
+            0x31, 0xc0, 0xc3,
+        ];
+        import.mappings[0].size = 17;
+        import.functions[0].size = 17;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        infer_data_references(&mut import, &mut session).unwrap();
+        let refs: Vec<_> = import.xrefs.iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
+        assert_eq!(refs, vec![(0x1008, 0x4000, "DATA")],
+            "stack realignment must retain a usable frame for the helper");
+
+        import.xrefs.clear();
         import.functions.truncate(1);
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
@@ -2000,5 +2017,22 @@ mod tests {
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session).unwrap();
         assert!(import.xrefs.is_empty(), "ordinary calls retain unknown register context");
+
+        import.mappings[0].bytes = vec![
+            0xc7, 0x04, 0x24, 0, 0x40, 0, 0, // mov dword [esp],0x4000
+            0x89, 0xe1, // mov ecx,esp
+            0x83, 0xe4, 0xf0, // and esp,-16
+            0x8b, 0x04, 0x24, // mov eax,[esp]: old slot may not alias
+            0x29, 0xe1, // sub ecx,esp: old pointer may not equal new pointer
+            0x81, 0xc1, 0x08, 0x40, 0, 0, // add ecx,0x4008
+            0xc3,
+        ];
+        import.mappings[0].size = import.mappings[0].bytes.len() as u64;
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let facts = session.constants(
+            0x1000, 0x1000 + import.mappings[0].size, &import.mappings, false,
+        ).unwrap();
+        assert!(facts.is_empty(), "realignment must not preserve stale frame aliases: {facts:?}");
     }
 }

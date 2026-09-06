@@ -1325,6 +1325,10 @@ M2 — Program-model parity
   call-fixups for pattern-labeled existing functions. Preserve unknown ordinary
   calls; pattern labels must not create new discovery roots.
   Publish g1 implementation and the complete generated matrix report separately.
+  g2: extend `references_apply_pc_helper_fixups` with a pre-call stack alignment
+  and stale-alias rejection. Follow `VarnodeContext.and`'s symbolic alignment
+  rule without equating the old and realigned stack origins.
+  Publish g2 implementation and the complete generated matrix report separately.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.
