@@ -369,9 +369,12 @@ python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus --architecture power
 
 `infer_nonreturning` takes `binary` and `program`; `return_behaviors` reads the
 stored facts for a `program`. This is an explicit pass, not an import default.
-Complete native executable flows without reachable returns establish a fact;
-missing, invalid, or unresolved indirect flow remains unknown. Known non-returning
-callees terminate call fallthrough, and their callers are reanalyzed.
+Seeds combine the pinned Ghidra ELF/PE no-return names, protected stored facts,
+and completed native decompiler CFG hints (`prototype.no_return`). Complete
+executable flows without reachable returns establish further facts; missing,
+invalid, or unresolved indirect flow remains unknown. Known non-returning
+callees terminate call fallthrough, and their callers are reanalyzed. Hint
+workers start from assertions only, never recycling this pass's old inferences.
 Schema v8 publishes owned inferred facts, completed caller extents, and owned
 call xrefs in one revision-checked transaction. Assertions and other sources
 remain protected; unsupported previous inferences are retracted. Repeating an
@@ -384,10 +387,18 @@ python3 benchmarks/nonreturn_gate.py --corpus-dir /path/to/corpus \
   --report benchmarks/reports/m2-008.json
 ```
 
-The locked-corpus comparison uses exact non-returning function sets from fresh,
-context-matched stock analysis and immutable references. It is not an II.3 metric
-or the full M2 parity gate. The separate temporary fixture proves positive
-inference and caller fallthrough removal; it is not a replacement corpus member.
+The locked-corpus comparison uses `code-functions-v1` eligibility and fresh,
+context-matched stock return flags and function body ranges. It records II.3
+`fn.bounds` before/after inference and requires improvement over the unchanged
+optimized recipes; it is not the full M2 parity gate. Current-provenance raw
+and scoring references can be supplied with `--raw-oracle-dir` and
+`--scoring-dir`. The temporary fixture proves positive inference and caller
+fallthrough removal; it is not a replacement corpus member.
+Stock `hasNoReturn() == false` is absence of metadata, not proof of returning:
+the comparison requires coverage of stock positives and reports additional
+native inferences separately. Compressed, hash-linked reference evidence keeps
+the raw oracle, scoring view, and exact body/flag export; architecture reports
+and JSONL mismatch sidecars retain the complete comparison.
 
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped
 ELF corpus entries, then scores against their unstripped DWARF twins. It never

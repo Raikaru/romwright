@@ -412,8 +412,16 @@ in pinned `funcdata.cc` and `fspec.cc` (Apache-2.0): non-returning behavior is
 the prototype's `ATTRIB_NORETURN`, not a function-shell attribute. Packed
 booleans follow `PackedEncode::writeBool` in `marshal.cc`. Output type storage
 stays unlocked so the flag does not replace existing prototype recovery.
+Known names and leading-underscore normalization follow Ghidra 12.1.3
+`Features/Base/data/{Elf,PE}FunctionsThatDoNotReturn` and
+`NoReturnFunctionAnalyzer` (Apache-2.0). `native/ventris_nonreturn.hh` checks
+completed basic-block CFGs, halt flags, and recovered jump tables using pinned
+`funcdata.hh`, `block.hh`, `op.hh`, and `jumptable.hh`; it exports a transient
+prototype flag and restores the cached prototype after encoding.
 The benchmark-only `scripts/ExportReturnBehaviors.java` reads
-`Function.hasNoReturn` from the extracted Ghidra 12.1.3 Java API (Apache-2.0).
+`Function.hasNoReturn`, inherited `Namespace.getBody`, and
+`AddressSetView.getAddressRanges` / `AddressRange` endpoints from the extracted
+Ghidra 12.1.3 Java API (Apache-2.0). Eligibility reuses `code-functions-v1`.
 The native flow closure and revision-owned SQLite publication are Ventris code.
 
 ## Benchmark DWARF arity truth
