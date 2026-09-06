@@ -1614,14 +1614,30 @@ M2 — Program-model parity
 - Complete diagnostic run: all 20 rows meet the data-reference thresholds;
   precision 1.0 throughout, PowerPC PIE recall 25/26 (0.9615384615), AArch64 C++
   recall 21/22 (0.9545454545), and recall 1.0 on the other 18 rows.
-  Generated evidence publication is pending: `benchmarks/reports/m2-002-g8.json`.
+  Evidence: `benchmarks/reports/m2-002-g8.json`, committed in `4ef169f`;
+  measured implementation `d49d518`.
 - Remaining PowerPC READ: `0x2069c -> 0x408c0`, reached through `_start`'s
   non-linking branch at `0x204f0`, not a call. Do not broaden call propagation
   or `close_call_targets` to hide that distinction.
 
+## m2-002h differential acceptance and CI
+- Acceptance: existing `benchmarks/xref_gate.py`, committed before native
+  reference inference. Enforce all 20 ELF rows in the pinned-Ghidra CI job,
+  with a separate explicit-context oracle cache and retained JSON evidence.
+- Run the context regression and native Core tests with the built console.
+  Retain the M1 discovery gate and its reports unchanged.
+- Publication sub-tasks: h CI integration, then h-report generated evidence.
+- Fresh corpus: 20/20 binaries generated; 20/20 explicit-context oracles
+  regenerated in an empty cache. Differential acceptance: 20 passed, 0 failed,
+  0 skipped, with the same precision/recall as g8.
+- CI commands executed locally: explicit default/e500 contexts honored;
+  invalid compiler rejected; 91 Core tests passed with the console available.
+  Workflow YAML parses. `actionlint` is unavailable on this workstation;
+  hosted GitHub CI has not yet been observed for this change.
+
 ## Blocked on
-- None. Both the source correction and task-specific metric scope have been
-  explicitly authorized; m2-002 acceptance is not yet passing.
+- None. The m2-002 acceptance and fresh-input CI commands pass locally.
+  Final CI integration and fresh-input evidence publication remain.
 
 ## Next task
 - m2-002: persist inferred data-reference facts with provenance. Write and
