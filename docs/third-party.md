@@ -305,6 +305,14 @@ The importer selects `ConstantPropagationAnalyzer`'s default writable-memory
 trust for inferred references. Explicit constant queries retain their own
 trust flag and unknown-call invalidation; inference does not silently weaken
 that stricter query contract.
+ELF i386 PLT queries follow `X86_32_ElfExtension.processX86PltSections`:
+only `DT_PLTGOT` supplies EBX, and only executable `.plt` / `.plt.*` ranges
+receive it. Loader register context is transient reference-query input;
+ordinary code and strict constant queries do not inherit it.
+Computed LOAD operands retain `SymbolicPropogator`'s READ classification,
+including loads used by indirect jumps. Fixed-address jump operands retain
+their separate INDIRECTION classification; normalizing that type to DATA
+does not change the classification of a computed load.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

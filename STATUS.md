@@ -1528,11 +1528,22 @@ M2 — Program-model parity
   separately; no M2 gate pass is claimed.
 
 ## m2-002g4 ELF PLT register context
-- Acceptance `elf_plt_register_context_is_scoped` must fail before transporting
-  `X86_32_ElfExtension`'s DT_PLTGOT-derived EBX value into reference analysis.
-  Require the dynamic tag and restrict the context to executable PLT sections.
-- Keep context transient and separate from function discovery and strict
-  constant queries. Publish implementation and generated evidence separately.
+- Acceptance `0c40e58` failed without loader context; extension `9431bcb`
+  failed when a computed indirect jump slot was classified as DATA.
+  Both now pass. Missing `DT_PLTGOT`, non-PLT code, and strict constant
+  queries do not receive EBX context.
+- Match `X86_32_ElfExtension`'s executable PLT scope. Computed LOAD operands
+  retain READ; fixed-address indirect-jump operands retain DATA normalization.
+- `cargo test --workspace`: 138 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild; both computed and fixed indirect-access
+  regressions pass.
+- `benchmarks/reports/m2-002-g4.json`: 15 pass, 5 fail, 0 skipped.
+  All 20 data precisions are 1.0; i386 PIE data recall is 22/22.
+  The five PowerPC rows remain below the recall threshold.
+- Next focused class: PowerPC linkage/resolver instruction coverage,
+  separately from incoming PIC register context. No M2 gate pass is claimed.
+- Publication sub-tasks remain separate: g4 implementation, then g4-report
+  generated evidence. Preserve the complete gate JSON.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

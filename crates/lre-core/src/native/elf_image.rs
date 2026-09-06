@@ -165,6 +165,70 @@ pub(super) fn prepare(
     import.externals.sort();
     import.externals.dedup();
     collect_plt_candidates(sections, import, machine, width as u64);
+    if machine == 3 && width == 4 {
+        collect_x86_plt_context(data, sections, import, bias, be)?;
+    }
+    Ok(())
+}
+
+fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Option<u64>> {
+    let (offset_at, size_at, count_at, minimum) = if width == 4 {
+        (28, 42, 44, 32)
+    } else {
+        (32, 54, 56, 56)
+    };
+    let offset = usize::try_from(word(data, offset_at, width, be)?)
+        .map_err(|_| bad("ELF program-header offset overflow"))?;
+    let stride = word(data, size_at, 2, be)? as usize;
+    let count = word(data, count_at, 2, be)? as usize;
+    if count != 0 && stride < minimum {
+        return Err(bad("undersized ELF program header"));
+    }
+    for index in 0..count {
+        let header = index.checked_mul(stride).and_then(|at| offset.checked_add(at))
+            .ok_or_else(|| bad("ELF program-header range overflow"))?;
+        if word(data, header, 4, be)? != 2 { // PT_DYNAMIC
+            continue;
+        }
+        let start = word(data, header + if width == 4 { 4 } else { 8 }, width, be)?;
+        let size = word(data, header + if width == 4 { 16 } else { 32 }, width, be)?;
+        let end = start.checked_add(size).ok_or_else(|| bad("ELF dynamic range overflow"))?;
+        let bytes = usize::try_from(start).ok().zip(usize::try_from(end).ok())
+            .and_then(|(start, end)| data.get(start..end))
+            .ok_or_else(|| bad("ELF dynamic table outside file"))?;
+        if bytes.len() % (2 * width) != 0 {
+            return Err(bad("partial ELF dynamic record"));
+        }
+        for entry in bytes.chunks_exact(2 * width) {
+            let tag = word(entry, 0, width, be)?;
+            if tag == 0 {
+                break;
+            }
+            if tag == wanted {
+                return Ok(Some(word(entry, width, width, be)?));
+            }
+        }
+    }
+    Ok(None)
+}
+
+fn collect_x86_plt_context(
+    data: &[u8], sections: &[ElfSection], import: &mut NativeImport, bias: u64, be: bool,
+) -> Result<()> {
+    // X86_32_ElfExtension.processX86PltSections (Ghidra 12.1.3).
+    let Some(got) = dynamic_value(data, 4, be, 3)? else { return Ok(()); }; // DT_PLTGOT
+    let value = got.checked_add(bias).filter(|value| *value <= u32::MAX as u64)
+        .ok_or_else(|| bad("ELF32 GOT context overflows address space"))?;
+    for section in sections.iter().filter(|section| {
+        section.flags & 6 == 6 && section.size != 0
+            && (section.name == ".plt" || section.name.starts_with(".plt."))
+    }) {
+        let end = section.addr.checked_add(section.size)
+            .ok_or_else(|| bad("ELF PLT context range overflows"))?;
+        import.register_contexts.push(super::NativeRegisterContext {
+            start: section.addr, end, register: "EBX".into(), value,
+        });
+    }
     Ok(())
 }
 

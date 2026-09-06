@@ -699,6 +699,7 @@ pub struct ConsoleSession {
     reader: std::io::BufReader<std::process::ChildStdout>,
     language_id: String,
     reference_labels: Option<Vec<(u64, String)>>,
+    reference_registers: Vec<crate::native::NativeRegisterContext>,
 }
 
 impl ConsoleSession {
@@ -730,6 +731,7 @@ impl ConsoleSession {
             reader,
             language_id: cfg.language_id.clone(),
             reference_labels: None,
+            reference_registers: Vec::new(),
         })
     }
 
@@ -737,6 +739,7 @@ impl ConsoleSession {
     /// their BFD/raw address-base handling.
     pub fn load(&mut self, binary: &Path, base: u64) -> Result<()> {
         self.reference_labels = None;
+        self.reference_registers.clear();
         if let Some(image) = MappedImage::for_elf_or_dol(binary)? {
             return self.load_xml(&image);
         }
@@ -773,6 +776,7 @@ impl ConsoleSession {
 
     fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
         self.reference_labels = None;
+        self.reference_registers.clear();
         self.send(&image.command())?;
         let response = read_until_prompt(&mut self.reader)?;
         if !response.contains("successfully loaded:") {
@@ -810,6 +814,7 @@ impl ConsoleSession {
 
     pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
         use std::fmt::Write as _;
+        self.reference_registers.clone_from(&import.register_contexts);
         if self.reference_labels.is_none() {
             let ranges = import.mappings.iter().filter(|mapping| mapping.flags & 4 != 0)
                 .map(|mapping| {
@@ -868,6 +873,17 @@ impl ConsoleSession {
                 " 0x{:x} 0x{mapping_end:x} {}",
                 mapping.vaddr, mapping.flags & 7
             );
+        }
+        if command == "references" {
+            for context in &self.reference_registers {
+                if context.start <= start && start < context.end {
+                    if context.register.is_empty()
+                        || context.register.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                        return err("invalid reference context register");
+                    }
+                    let _ = write!(script, " --register {} 0x{:x}", context.register, context.value);
+                }
+            }
         }
         script.push('\n');
         self.send(&script)?;

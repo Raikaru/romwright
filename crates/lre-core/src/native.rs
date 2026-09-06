@@ -98,7 +98,16 @@ pub struct MemoryRelocation {
     pub(crate) width: usize,
 }
 
-/// Parsed import result: everything the importer writes to the store.
+/// Loader-established register value over an instruction-address range.
+#[derive(Debug, Clone)]
+pub struct NativeRegisterContext {
+    pub start: u64,
+    pub end: u64,
+    pub register: String,
+    pub value: u64,
+}
+
+/// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
     pub mappings: Vec<Mapping>,
@@ -114,6 +123,7 @@ pub struct NativeImport {
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
+    pub register_contexts: Vec<NativeRegisterContext>,
     pub format: String,
     /// Ghidra-compatible language id selected from the file machine.
     pub language: String,
