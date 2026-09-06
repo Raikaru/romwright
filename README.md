@@ -90,6 +90,12 @@ API envelopes use `"api": 2`. Xref `provenance` is an object containing
 `[0, 1]`, or `null` when unknown). Version-1 envelopes and `/v1` are rejected.
 Opening a project migrates xref storage to schema 5; analysis replacement
 preserves asserted references, including legacy rows of unknown ownership.
+Native imports retain loader references and persist SLEIGH-inferred READ,
+WRITE, and DATA references separately as inferred facts. The
+[`xref_gate.py`](benchmarks/xref_gate.py) acceptance compares all 20 ELF corpus
+entries with explicitly matched Ghidra language/compiler contexts, requiring
+data-reference precision >= 0.98 and recall >= 0.95. Full xref metrics remain
+reported separately; this is not a claim of complete M2 program-model parity.
 
 `python/ventris_sdk.py` is dependency-free and supports both transports.
 `ventris_plugin_host.py` runs each plugin in a child process and gates API

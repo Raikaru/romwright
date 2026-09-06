@@ -64,7 +64,7 @@ jobs:
         run: python3 tests/m1-006_pdb_test.py
 
   corpus-oracle:
-    name: M1 Oracle and Discovery (ubuntu-latest)
+    name: M1 Discovery and M2 Data References (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -118,6 +118,22 @@ jobs:
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --scoring-dir "$RUNNER_TEMP/discovery/scoring" \
             --report "$RUNNER_TEMP/discovery/discovery-report.json"
+      - name: Verify reference analysis contracts
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m2-002_context.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA"
+          cargo test -p lre-core -- --nocapture
+      - name: Enforce complete M2 data-reference gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 benchmarks/xref_gate.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
+            --report "$RUNNER_TEMP/discovery/data-xref-report.json"
       - name: Retain discovery reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -126,6 +142,14 @@ jobs:
           path: |
             ${{ runner.temp }}/discovery/*-report.json
             ${{ runner.temp }}/discovery/corpus/manifest.json
+      - name: Retain data-reference evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-data-reference-reports
+          path: |
+            ${{ runner.temp }}/discovery/data-xref-report.json
+            ${{ runner.temp }}/discovery/xref-oracle/
 
   corpus-windows:
     name: MSVC Corpus (windows-latest)
