@@ -104,6 +104,7 @@ def main():
     sys.path.insert(0, str(root / 'scripts'))
     from gen_corpus import get_load_segments
     from gen_oracle import digest
+    from gen_native_specs import FILES, validate_bundle
     from dwarf_arity import extract
     from ui_gate import physical_memory_gb
     from xref_gate import address as typed_address
@@ -162,6 +163,13 @@ def main():
                 reference = json.loads(baseline.read_text())
                 if digest(binary) != row['sha256'] or digest(twin) != row['twin_sha256']:
                     raise ValueError('Corpus input changed after validation')
+                specs = root / 'native/specs'
+                language = reference['language']
+                if language != 'x86:LE:64:default':
+                    validate_bundle(specs, {key: reference[key] for key in
+                        ('language', 'compiler', 'upstream_version', 'upstream_revision')})
+                    specs = specs / language.replace(':', '-')
+                row['native_specs_sha256'] = {name: digest(specs / name) for name in FILES}
                 project = work / row['id']
                 context = dict(binary=str(binary), program=row['id'])
                 imported, functions = run_api(root, project, [

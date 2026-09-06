@@ -15,3 +15,21 @@ Regeneration (only when the pinned language changes):
 
 At runtime the worker is 100% Java-free; this directory is a build-time
 artifact exactly like the compiled x86-64.sla.
+
+The locked i386, AArch64 and PowerPC corpus contexts use generated caches
+in `<language-id-with-dashes>/`. Their committed `*.manifest.json` files
+record the exact language/compiler, pinned upstream and bridge provenance,
+representative input hash, and all five output hashes and byte counts.
+Provision these caches before running the native corpus gate:
+
+```sh
+python3 scripts/gen_native_specs.py --corpus-dir /path/to/corpus
+python3 scripts/gen_native_specs.py --corpus-dir /path/to/corpus --check
+python3 tests/m2-006_specs.py --corpus-dir /path/to/corpus
+```
+
+Provisioning invokes the bridge with the locked context. A fresh export
+must match an existing manifest; it never silently replaces the manifest.
+The ignored cache directories are reproducible build inputs, not new
+runtime project owners. `--check` verifies their hashes without starting
+Java. Decompilation uses only the native worker and compiled SLEIGH.
