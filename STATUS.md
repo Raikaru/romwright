@@ -1545,6 +1545,15 @@ M2 — Program-model parity
 - Publication sub-tasks remain separate: g4 implementation, then g4-report
   generated evidence. Preserve the complete gate JSON.
 
+## m2-002g5 linkage reference regions
+- Acceptance: `elf_linkage_references_do_not_require_functions`. Analyze
+  disconnected code in an executable PowerPC `.glink` region without
+  inserting functions. Reject non-executable and ordinary-data/code sections
+  as linkage-region evidence.
+- Follow decoded control flow within the loader-declared region; do not
+  infer function starts or add a byte-pattern recognizer.
+- Publication sub-tasks: g5 implementation, then g5-report generated evidence.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.

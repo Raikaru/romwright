@@ -2159,4 +2159,74 @@ mod tests {
         bytes[0x228..0x22c].copy_from_slice(&30u32.to_le_bytes()); // rename .plt to .text
         assert!(analyze(&bytes).is_empty(), "PLT register context must not leak into ordinary code");
     }
+
+    #[test]
+    fn elf_linkage_references_do_not_require_functions() {
+        use crate::native_runtime::{find_console, ConsoleSession};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "PowerPC:BE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/PowerPC/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let code = [
+            0x3d, 0x60, 0, 0, 0x81, 0x6b, 0x30, 4, // lis r11,0; lwz r11,0x3004(r11)
+            0x7d, 0x69, 3, 0xa6, 0x4e, 0x80, 4, 0x20, // mtctr r11; bctr
+            0x48, 0, 0, 8, 0x60, 0, 0, 0, // disconnected resolver: b next; nop
+            0x3d, 0x80, 0, 0, 0x80, 0x0c, 0x30, 8, // lis r12,0; lwz r0,0x3008(r12)
+            0x4e, 0x80, 0, 0x20, // blr
+        ];
+        let mut bytes = vec![0u8; 0x2a0];
+        bytes[..7].copy_from_slice(b"\x7fELF\x01\x02\x01");
+        for (offset, value) in [(16, 2u16), (18, 20), (40, 52), (42, 32), (44, 2),
+            (46, 40), (48, 4), (50, 3)] {
+            bytes[offset..offset + 2].copy_from_slice(&value.to_be_bytes());
+        }
+        for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
+            bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+        }
+        for (index, header) in [
+            [1u32, 0x100, 0x1000, 0x1000, code.len() as u32, code.len() as u32, 5, 4],
+            [1, 0x140, 0x3000, 0x3000, 16, 16, 6, 4],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 52 + index * 32 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+            }
+        }
+        bytes[0x100..0x100 + code.len()].copy_from_slice(&code);
+        let names = b"\0.glink\0.data\0.shstrtab\0.text\0";
+        bytes[0x180..0x180 + names.len()].copy_from_slice(names);
+        for (index, header) in [
+            [1u32, 1, 6, 0x1000, 0x100, code.len() as u32, 0, 0, 4, 0],
+            [8, 1, 3, 0x3000, 0x140, 16, 0, 0, 4, 0],
+            [14, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 0x200 + (index + 1) * 40 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+            }
+        }
+        let analyze = |bytes: &[u8]| {
+            let mut import = import_elf(bytes).unwrap();
+            import.cfg = cfg.clone();
+            import.functions.clear();
+            import.xrefs.clear();
+            let mut session = ConsoleSession::new(&cfg).unwrap();
+            session.load_mapped(&import).unwrap();
+            infer_data_references(&mut import, &mut session).unwrap();
+            assert!(import.functions.is_empty(), "reference coverage must not manufacture functions");
+            import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(analyze(&bytes), vec![
+            (0x1004, 0x3004, "READ".into()), (0x101c, 0x3008, "READ".into()),
+        ], "all disconnected linkage code must contribute references");
+        bytes[0x230..0x234].copy_from_slice(&2u32.to_be_bytes());
+        assert!(analyze(&bytes).is_empty(), "non-executable linkage data is not code");
+        bytes[0x230..0x234].copy_from_slice(&6u32.to_be_bytes());
+        bytes[0x228..0x22c].copy_from_slice(&24u32.to_be_bytes());
+        assert!(analyze(&bytes).is_empty(), "ordinary sections are not linkage-region evidence");
+    }
 }
