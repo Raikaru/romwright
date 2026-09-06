@@ -395,6 +395,16 @@ nested function-pointer prototypes do not replace the enclosing function's
 prototype. Missing references remain unknown, and malformed or truncated
 documents do not publish a partial prototype. No pinned source is modified.
 
+The switch projection in `crates/lre-worker/src/doc.rs` follows
+`Funcdata::encodeJumpTable` and `JumpTable::encode` (`funcdata.cc`,
+`jumptable.cc`; Apache-2.0). It retains the branch address and every ordered
+destination, including duplicates. The structural function's direct address
+distinguishes native facts from C markup. Optional labels and the recovered
+default block are not reinterpreted as target facts. The benchmark-only
+`scripts/ExportSwitchTargets.java` uses `HighFunction.getJumpTables`,
+`JumpTable.getSwitchAddress`, and `JumpTable.getCases`, verified against the
+extracted Ghidra 12.1.3 Java sources (Apache-2.0).
+
 ## Benchmark DWARF arity truth
 
 `benchmarks/dwarf_arity.py` invokes GNU `readelf` (GPL-3.0-or-later) on

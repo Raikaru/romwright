@@ -8,8 +8,10 @@ pub mod provider;
 pub mod wire;
 pub mod worker;
 
-pub use doc::{decode_document_with_ram_space, decode_tokens, decode_tokens_with_ram_space};
-pub use provider::{decode_addr_element, spec_dir, BinaryBacking, ProgramProvider};
+pub use doc::{
+    DecodedDocument, decode_document_with_ram_space, decode_tokens, decode_tokens_with_ram_space,
+};
+pub use provider::{BinaryBacking, ProgramProvider, decode_addr_element, spec_dir};
 pub use worker::*;
 
 /// Convenience alias with the error defaulted per project convention.

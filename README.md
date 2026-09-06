@@ -304,6 +304,27 @@ symbols, never from parsing rendered C. Named types retain their native IDs;
 inline pointer/array/function types retain their nested targets. Missing type
 details remain unknown, and incomplete structural documents have no prototype.
 This read path does not persist inferred signatures or change store revisions.
+
+The same document exposes `jump_tables`: typed branch addresses and ordered
+target addresses, including duplicate case destinations. `[]` means a complete
+native function has no recovered tables; `null` means structural metadata is
+unavailable or incomplete. Targets come from packed native jump tables, not
+rendered C. This does not infer case labels/default identities, persist new
+functions, or trigger rediscovery. The positive acceptance exercises one
+seven-target indirect branch through standalone and warm pooled workers:
+
+```sh
+python3 tests/m2-007_switches.py
+cargo test -p lre-worker --test jump_tables
+python3 benchmarks/switch_gate.py --corpus-dir "$CORPUS" \
+  --report benchmarks/reports/m2-007.json
+```
+
+The corpus comparison records exact recovered branch/target sets against fresh
+stock exports and preserves immutable references in `oracle/switches-v1`.
+Zero-table cases are not positive recovery evidence. This comparison adds no
+II.3 metric and is not the full M2 program-model parity gate.
+
 Standalone and pooled workers share language resolution; pooled children receive
 their SLEIGH configuration explicitly without process-global environment edits.
 The pool's 60-second operation deadline includes native registration, not just

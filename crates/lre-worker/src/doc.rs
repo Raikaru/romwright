@@ -13,9 +13,23 @@
 //! are big-endian seven-bit groups. String lengths are themselves encoded as
 //! a packed integer before the string bytes (`PackedDecode.java:180-195`).
 
+use crate::wire::elem::{ADDR, DOC, FUNCTION};
 use lre_model::{
-    Address, AddressSpace, DecompReference, DecompReferenceKind, DecompToken, FuncProto, TokenKind,
+    Address, AddressSpace, DecompReference, DecompReferenceKind, DecompToken, FuncProto, JumpTable,
+    TokenKind,
 };
+
+/// The decoded payload, before its caller assigns the request and store revision.
+pub struct DecodedDocument {
+    pub tokens: Vec<DecompToken>,
+    pub prototype: Option<FuncProto>,
+    pub jump_tables: Option<Vec<JumpTable>>,
+}
+
+// funcdata.cc and jumptable.cc packed element tables.
+const JUMPTABLELIST: u32 = 118;
+const JUMPTABLE: u32 = 213;
+const DEST: u32 = 212;
 
 /// Token element ids, verified against `ElementId.java` and `ClangToken.java`.
 const ELEM_VALUE: u32 = 9;
@@ -131,6 +145,97 @@ struct Ctx {
     content_seen: bool,
 }
 
+impl Ctx {
+    fn address(&self, ram_space_index: Option<u64>) -> Option<Address> {
+        let space = self.space?;
+        let offset = self.address_offset?;
+        Some(Address {
+            space: if ram_space_index == Some(space) {
+                AddressSpace::Ram
+            } else {
+                AddressSpace::Other(format!("space:{space}"))
+            },
+            offset,
+        })
+    }
+}
+
+#[derive(Default)]
+struct SwitchCollector {
+    function_depth: Option<usize>,
+    structural: bool,
+    table_depth: Option<usize>,
+    branch: Option<Address>,
+    targets: Vec<Address>,
+    tables: Vec<JumpTable>,
+    result: Option<Vec<JumpTable>>,
+    failed: bool,
+}
+
+impl SwitchCollector {
+    fn start(&mut self, id: u32, parent: Option<u32>, depth: usize) {
+        if id == FUNCTION && parent == Some(DOC) {
+            self.function_depth = Some(depth);
+            self.structural = false;
+        }
+        if id == JUMPTABLE
+            && parent == Some(JUMPTABLELIST)
+            && self.function_depth == depth.checked_sub(2)
+        {
+            self.table_depth = Some(depth);
+        }
+    }
+
+    fn end(&mut self, ctx: &Ctx, depth: usize, ram_space_index: Option<u64>) {
+        if ctx.id == ADDR && self.function_depth == depth.checked_sub(1) {
+            self.structural = ctx.space.is_some() && ctx.address_offset.is_some();
+            self.failed |= !self.structural;
+        }
+        if self.table_depth == depth.checked_sub(1) && matches!(ctx.id, ADDR | DEST) {
+            if let Some(address) = ctx.address(ram_space_index) {
+                if ctx.id == ADDR {
+                    self.failed |= self.branch.replace(address).is_some();
+                } else {
+                    self.targets.push(address);
+                }
+            } else {
+                self.failed = true;
+            }
+        }
+        if ctx.id == JUMPTABLE && self.table_depth == Some(depth) {
+            match self.branch.take() {
+                Some(branch) if !self.targets.is_empty() => {
+                    self.tables.push(JumpTable {
+                        branch,
+                        targets: std::mem::take(&mut self.targets),
+                    });
+                }
+                _ => self.failed = true,
+            }
+            self.table_depth = None;
+        }
+        if ctx.id == FUNCTION && self.function_depth == Some(depth) {
+            if self.structural {
+                self.failed |= self
+                    .result
+                    .replace(std::mem::take(&mut self.tables))
+                    .is_some();
+            } else if !self.tables.is_empty() {
+                self.failed = true;
+            }
+            self.function_depth = None;
+        }
+    }
+
+    fn finish(self) -> Option<Vec<JumpTable>> {
+        if self.failed || self.function_depth.is_some() || self.table_depth.is_some() {
+            None
+        } else {
+            self.result
+        }
+    }
+}
+
 fn read_id_after_header(packed: &[u8], p: &mut usize, h: u8) -> Option<u32> {
     let mut id = (h & 0x1f) as u32;
     if h & 0x20 != 0 {
@@ -187,16 +292,7 @@ fn read_value(packed: &[u8], p: &mut usize) -> Option<Value> {
 }
 
 fn token_from_context(ctx: &Ctx, text: String, ram_space_index: Option<u64>) -> DecompToken {
-    let address = match (ctx.space, ctx.address_offset) {
-        (Some(space), Some(offset)) => {
-            let space = match ram_space_index {
-                Some(ram) if space == ram => AddressSpace::Ram,
-                _ => AddressSpace::Other(format!("space:{space}")),
-            };
-            Some(Address { space, offset })
-        }
-        _ => None,
-    };
+    let address = ctx.address(ram_space_index);
     DecompToken {
         text,
         kind: kind_of(ctx.id),
@@ -225,26 +321,27 @@ pub fn decode_tokens_with_ram_space(
     packed: &[u8],
     ram_space_index: Option<u64>,
 ) -> Vec<DecompToken> {
-    decode_packed(packed, ram_space_index, false).0
+    decode_packed(packed, ram_space_index, false).tokens
 }
 
-/// Decode tokens and the native function prototype in one pass. A missing or
-/// incomplete structural function yields no prototype, never a guessed one.
+/// Decode tokens and recovered native metadata in one pass. Missing or
+/// incomplete structural data stays unknown, never a guessed empty result.
 pub fn decode_document_with_ram_space(
     packed: &[u8],
     ram_space_index: Option<u64>,
-) -> (Vec<DecompToken>, Option<FuncProto>) {
+) -> DecodedDocument {
     decode_packed(packed, ram_space_index, true)
 }
 
 fn decode_packed(
     packed: &[u8],
     ram_space_index: Option<u64>,
-    collect_prototype: bool,
-) -> (Vec<DecompToken>, Option<FuncProto>) {
+    collect_metadata: bool,
+) -> DecodedDocument {
     let mut tokens = Vec::new();
     let mut stack: Vec<Ctx> = Vec::new();
-    let mut prototype = collect_prototype.then(crate::prototype::Collector::default);
+    let mut prototype = collect_metadata.then(crate::prototype::Collector::default);
+    let mut switches = collect_metadata.then(SwitchCollector::default);
     let mut valid = true;
     let mut p = 0usize;
     while p < packed.len() {
@@ -258,6 +355,9 @@ fn decode_packed(
                 };
                 if let Some(prototype) = prototype.as_mut() {
                     prototype.start(id, stack.last().map(|ctx| ctx.id), stack.len() + 1);
+                }
+                if let Some(switches) = switches.as_mut() {
+                    switches.start(id, stack.last().map(|ctx| ctx.id), stack.len() + 1);
                 }
                 stack.push(Ctx {
                     id,
@@ -283,6 +383,9 @@ fn decode_packed(
                 }
                 if let Some(prototype) = prototype.as_mut() {
                     prototype.end(id, stack.len() + 1);
+                }
+                if let Some(switches) = switches.as_mut() {
+                    switches.end(&ctx, stack.len() + 1, ram_space_index);
                 }
                 // ClangBreak intentionally has no XMLcontent; its Java
                 // decoder sets text to empty and carries only ATTRIB_INDENT.
@@ -310,6 +413,7 @@ fn decode_packed(
                     value
                 };
                 let Some(ctx) = stack.last_mut() else {
+                    valid = false;
                     continue;
                 };
                 if attrid == ATTRIB_CONTENT {
@@ -335,6 +439,12 @@ fn decode_packed(
                             }
                         }
                         ATTRIB_SPACE => {
+                            if collect_metadata
+                                && matches!(ctx.id, ADDR | DEST)
+                                && ctx.space.is_some()
+                            {
+                                valid = false;
+                            }
                             ctx.space = value.unsigned();
                         }
                         ATTRIB_OFF => {
@@ -362,9 +472,14 @@ fn decode_packed(
                         ATTRIB_INDENT => {
                             ctx.indent = value.signed();
                         }
-                        // ATTRIB_OFFSET is a structure-field offset, not a
-                        // memory address; it is intentionally consumed but not
-                        // exposed as `DecompToken.address`.
+                        // Structural addresses use OFFSET; Clang field offsets
+                        // are not memory addresses and remain ignored.
+                        ATTRIB_OFFSET if collect_metadata && matches!(ctx.id, ADDR | DEST) => {
+                            if ctx.address_offset.is_some() {
+                                valid = false;
+                            }
+                            ctx.address_offset = value.unsigned();
+                        }
                         ATTRIB_OFFSET => {}
                         _ => {}
                     }
@@ -379,12 +494,20 @@ fn decode_packed(
             }
         }
     }
-    let prototype = if valid && stack.is_empty() {
-        prototype.and_then(crate::prototype::Collector::finish)
-    } else {
-        None
-    };
-    (tokens, prototype)
+    let complete = valid && stack.is_empty();
+    DecodedDocument {
+        tokens,
+        prototype: if complete {
+            prototype.and_then(crate::prototype::Collector::finish)
+        } else {
+            None
+        },
+        jump_tables: if complete {
+            switches.and_then(SwitchCollector::finish)
+        } else {
+            None
+        },
+    }
 }
 
 #[cfg(test)]
@@ -455,8 +578,11 @@ mod tests {
     #[test]
     fn recovers_captured_add_prototype_alongside_tokens() {
         let raw = include_bytes!("../fixtures/doc_add.bin");
-        let (tokens, prototype) = decode_document_with_ram_space(raw, Some(3));
-        let prototype = prototype.expect("captured function has a recovered prototype");
+        let decoded = decode_document_with_ram_space(raw, Some(3));
+        let tokens = decoded.tokens;
+        let prototype = decoded
+            .prototype
+            .expect("captured function has a recovered prototype");
         assert_eq!(prototype.calling_convention, "__stdcall");
         assert_eq!(prototype.return_type.name.as_deref(), Some("int"));
         assert!(!prototype.variadic);
@@ -486,9 +612,11 @@ mod tests {
             "reconstructed text should be the C body: {text}"
         );
         assert!(tokens.iter().any(|t| t.color > 0), "colors populated");
-        assert!(tokens
-            .iter()
-            .any(|t| t.kind == TokenKind::FuncName || t.kind == TokenKind::Variable));
+        assert!(
+            tokens
+                .iter()
+                .any(|t| t.kind == TokenKind::FuncName || t.kind == TokenKind::Variable)
+        );
         assert!(
             tokens.iter().any(|t| t.reference.is_some()),
             "specialized token references are retained"

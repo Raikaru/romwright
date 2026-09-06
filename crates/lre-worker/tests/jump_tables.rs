@@ -1,7 +1,7 @@
 use lre_model::{Address, AddressSpace};
 use lre_worker::doc::decode_document_with_ram_space;
 use lre_worker::wire::{
-    attr_type, elem, encode_attribute, encode_header, ELEMENT_END, ELEMENT_START,
+    ELEMENT_END, ELEMENT_START, attr_type, elem, encode_attribute, encode_header,
 };
 
 // Pinned funcdata.cc and jumptable.cc element tables; marshal.cc attributes.
@@ -49,26 +49,49 @@ fn switch_targets_preserve_order_duplicates_and_address_spaces() {
         (3, Some(0x1_0000_0090)),
         (3, Some(0x1_0000_0020)),
     ]));
-    let recovered = decode_document_with_ram_space(&packed, Some(3)).jump_tables.unwrap();
+    let recovered = decode_document_with_ram_space(&packed, Some(3))
+        .jump_tables
+        .unwrap();
     assert_eq!(recovered.len(), 1);
     assert_eq!(recovered[0].branch, Address::ram(0x1_0000_0010));
-    assert_eq!(recovered[0].targets, vec![
-        Address::ram(0x1_0000_0090),
-        Address { space: AddressSpace::Other("space:4".into()), offset: 0x40 },
-        Address::ram(0x1_0000_0090),
-        Address::ram(0x1_0000_0020),
-    ]);
+    assert_eq!(
+        recovered[0].targets,
+        vec![
+            Address::ram(0x1_0000_0090),
+            Address {
+                space: AddressSpace::Other("space:4".into()),
+                offset: 0x40
+            },
+            Address::ram(0x1_0000_0090),
+            Address::ram(0x1_0000_0020),
+        ]
+    );
 }
 
 #[test]
 fn absent_tables_are_distinct_from_unavailable_or_incomplete_metadata() {
-    assert_eq!(decode_document_with_ram_space(&document(None), Some(3)).jump_tables, Some(vec![]));
-    assert!(decode_document_with_ram_space(&[], Some(3)).jump_tables.is_none());
+    assert_eq!(
+        decode_document_with_ram_space(&document(None), Some(3)).jump_tables,
+        Some(vec![])
+    );
+    assert!(
+        decode_document_with_ram_space(&[], Some(3))
+            .jump_tables
+            .is_none()
+    );
     let packed = document(Some(&[(3, Some(0x1_0000_0090))]));
     for end in 0..packed.len() {
-        assert!(decode_document_with_ram_space(&packed[..end], Some(3)).jump_tables.is_none(),
-            "published partial metadata at byte {end}");
+        assert!(
+            decode_document_with_ram_space(&packed[..end], Some(3))
+                .jump_tables
+                .is_none(),
+            "published partial metadata at byte {end}"
+        );
     }
     let missing_offset = document(Some(&[(3, None)]));
-    assert!(decode_document_with_ram_space(&missing_offset, Some(3)).jump_tables.is_none());
+    assert!(
+        decode_document_with_ram_space(&missing_offset, Some(3))
+            .jump_tables
+            .is_none()
+    );
 }
