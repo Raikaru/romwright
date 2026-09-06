@@ -1,0 +1,78 @@
+{
+  "task": "m2-004",
+  "implementation_commit": "9bd4d65020db4533a86c1a7b0e8b0f996ce344b3",
+  "measured_at": "2026-09-06T07:19:53.562Z",
+  "verification": "Separate stdio API process reopens facts written through the Qt type editor and API collaboration operations",
+  "types": [
+    {
+      "alignment": 4,
+      "base_type": null,
+      "definition": "int32_t",
+      "element_count": null,
+      "kind": "primitive",
+      "name": "Count",
+      "primitive": "signed_integer",
+      "provenance": "ui",
+      "size": 4
+    },
+    {
+      "alignment": 4,
+      "base_type": "Count",
+      "definition": "Count[0]",
+      "element_count": 0,
+      "kind": "array",
+      "name": "CountArray",
+      "primitive": null,
+      "provenance": "ui",
+      "size": 0
+    },
+    {
+      "alignment": 8,
+      "base_type": "Count",
+      "definition": "",
+      "element_count": null,
+      "kind": "pointer",
+      "name": "CountPtr",
+      "primitive": null,
+      "provenance": "schema-smoke",
+      "size": 8
+    },
+    {
+      "alignment": 8,
+      "base_type": null,
+      "definition": "",
+      "element_count": null,
+      "kind": "struct",
+      "name": "Node",
+      "primitive": null,
+      "provenance": "schema-smoke",
+      "size": 16
+    }
+  ],
+  "fields": [
+    {
+      "field_name": "next",
+      "offset": 8,
+      "ordinal": 0,
+      "size": 8,
+      "type_name": "Node",
+      "type_ref": "CountPtr"
+    }
+  ],
+  "prototypes": [
+    {
+      "calling_convention": "cdecl",
+      "function": {
+        "offset": 4195430,
+        "space": "Ram"
+      },
+      "provenance": {
+        "confidence": null,
+        "kind": "asserted",
+        "source": "ui"
+      },
+      "return_type": null,
+      "signature": "Count ui_recover(void)"
+    }
+  ]
+}
