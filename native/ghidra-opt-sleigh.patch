@@ -289,18 +289,19 @@ diff --git a/decompiler/ifacedecomp.cc b/decompiler/ifacedecomp.cc
 index e62ab6a..6d42a2d 100644
 --- a/decompiler/ifacedecomp.cc
 +++ b/decompiler/ifacedecomp.cc
-@@ -16,6 +16,10 @@
+@@ -16,6 +16,11 @@
  #include "ifacedecomp.hh"
 +#include "ventris_linkage.hh"
 +#include "ventris_patterns.hh"
 +#include "ventris_flow.hh"
 +#include "ventris_constants.hh"
++#include "ventris_callfixups.hh"
  extern "C" {
  #include <time.h>
  }
  #include "pcodeparse.hh"
  #include "blockaction.hh"
-@@ -63,6 +67,11 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
+@@ -63,6 +68,12 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
    status->registerCom(new IfcMapconvert(),"map","convert");
    status->registerCom(new IfcMapunionfacet(), "map", "unionfacet");
    status->registerCom(new IfcPrintdisasm(),"disassemble");
@@ -309,10 +310,11 @@ index e62ab6a..6d42a2d 100644
 +  status->registerCom(new IfcFunctionStarts(),"functionstarts");
 +  status->registerCom(new IfcConstants(),"constants");
 +  status->registerCom(new IfcConstants(true),"references");
++  status->registerCom(new IfcReferenceFixup(),"referencefixup");
    status->registerCom(new IfcDecompile(),"decompile");
    status->registerCom(new IfcDump(),"dump");
    status->registerCom(new IfcDumpbinary(),"binary");
-@@ -829,6 +838,18 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -829,6 +840,18 @@ void IfcPrintdisasm::execute(istream &s)
    }
    IfaceAssemblyEmit assem(status->fileoptr,10);
    while(size > 0) {
@@ -577,3 +579,25 @@ diff --git a/decompiler/slghsymbol.hh b/decompiler/slghsymbol.hh
    void removeTrailingSpace(void);
    void applyContext(ParserWalkerChange &walker) const {
      vector<ContextChange *>::const_iterator iter;
+diff --git a/decompiler/inject_sleigh.hh b/decompiler/inject_sleigh.hh
+--- a/decompiler/inject_sleigh.hh
++++ b/decompiler/inject_sleigh.hh
+@@ -65,6 +65,7 @@
+ class InjectPayloadCallfixup : public InjectPayloadSleigh {
+   vector<string> targetSymbolNames;	///< Names (symbols) of specific functions to replace with \b this payload
+ public:
+   InjectPayloadCallfixup(const string &sourceName);	///< Constructor
++  const vector<string> &getTargetSymbolNames(void) const { return targetSymbolNames; }
+   virtual void decode(Decoder &decoder);
+ };
+diff --git a/decompiler/pcodeinject.hh b/decompiler/pcodeinject.hh
+--- a/decompiler/pcodeinject.hh
++++ b/decompiler/pcodeinject.hh
+@@ -223,6 +223,7 @@
+   PcodeInjectLibrary(Architecture *g,uint4 tmpbase) { glb = g; tempbase = tmpbase; }	///< Constructor
+   virtual ~PcodeInjectLibrary(void);				///< Destructor
+   uint4 getUniqueBase(void) const { return tempbase; }		///< Get the (current) offset for building temporary registers
++  const map<string,int4> &getCallFixups(void) const { return callFixupMap; }
+   int4 getPayloadId(int4 type,const string &nm) const;		///< Map name and type to the payload id
+   InjectPayload *getPayload(int4 id) const { return injection[id]; }	///< Get the InjectPayload by id
+   string getCallFixupName(int4 injectid) const;			///< Get the call-fixup name associated with an id

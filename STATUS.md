@@ -1324,6 +1324,7 @@ M2 — Program-model parity
   g1: `references_apply_pc_helper_fixups` must fail before reusing compiler
   call-fixups for pattern-labeled existing functions. Preserve unknown ordinary
   calls; pattern labels must not create new discovery roots.
+  Publish g1 implementation and the complete generated matrix report separately.
 - h: run the complete differential acceptance and wire its CI gate.
 - User-approved acceptance: data_xref recall >= 0.95 and precision >= 0.98
   versus oracle; full II.3 xref metrics are retained separately.
@@ -1479,6 +1480,22 @@ M2 — Program-model parity
 - Next focused classes: i386 PC-helper context and PowerPC PIC loads/resolver
   coverage. The plain PowerPC resolver's missing READs use locally constructed
   `r12` addresses in `.glink`, not an unknown incoming TOC register.
+
+## m2-002g1 compiler-defined PC-helper context
+- Acceptance `839b68f` failed with no caller reference after a PC helper.
+  It now passes the recognized-helper case and rejects a pattern without a
+  validated function and a helper-shaped function that reads an argument.
+- Reuse discovery's pattern-label evidence and the selected compiler's
+  call-fixup targets/p-code. No instruction-byte recognizer, new function root,
+  or native function rename is added.
+- Original instruction flow still excludes CALL operands from scalar DATA
+  references after Ghidra expands their call-fixups.
+- `cargo test --workspace`: 136 pass. `tests/corpus.sh`: 5/5 pass.
+  Console and worker rebuild.
+- `benchmarks/reports/m2-002-g1.json`: 10 pass, 10 fail, 0 skipped;
+  all 20 data precisions remain 1.0. i386 PIE recall is 15/22 (was 2/22);
+  i386 O0/O2/C++/many recall is 15/17, 14/16, 23/25, 12/14.
+  Other architectures' row scores are unchanged.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been

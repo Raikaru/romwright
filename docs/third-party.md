@@ -288,6 +288,16 @@ before publishing any of its rows. ELF, PE and DOL mapping permissions use
 the same low three bits; higher ELF section attributes are not wire flags.
 Cross-architecture reference type and origin parity remains gated by m2-002.
 
+Reference context also consumes `CallFixupAnalyzer`'s compiler target-name
+policy (Ghidra 12.1.3, Apache-2.0). Pattern labels with `validcode="function"`
+annotate existing discovered functions only. The selected compiler's
+`InjectPayloadCallfixup` supplies the p-code; `FuncProto.setInjectId` and
+`FlowInfo` apply it. The staged native patch exposes two read-only metadata
+accessors; it does not modify the pinned source tree. Cached labels are
+transient console context, not function discoveries or durable renames.
+Scalar classification uses original SLEIGH control-flow targets even when
+the compiler's fixup replaces a CALL in the raw function.
+
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and
 DEFAULT remain inferred. The bridge reports the source without manufacturing

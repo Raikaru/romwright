@@ -934,6 +934,8 @@ fn infer_data_references(
     session: &mut crate::native_runtime::ConsoleSession,
 ) -> Result<()> {
     use crate::native_runtime::ReferenceKind;
+    session.prepare_reference_context(import)
+        .map_err(|error| ImportError::Bad(format!("reference context: {error}")))?;
     let mut references = Vec::new();
     for function in &import.functions {
         if function.size <= 1 {
