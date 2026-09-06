@@ -615,3 +615,19 @@ diff --git a/decompiler/pcodeinject.hh b/decompiler/pcodeinject.hh
    int4 getPayloadId(int4 type,const string &nm) const;		///< Map name and type to the payload id
    InjectPayload *getPayload(int4 id) const { return injection[id]; }	///< Get the InjectPayload by id
    string getCallFixupName(int4 injectid) const;			///< Get the call-fixup name associated with an id
+diff --git a/decompiler/grammar.cc b/decompiler/grammar.cc
+--- a/decompiler/grammar.cc
++++ b/decompiler/grammar.cc
+@@ -2312,11 +2312,7 @@ Datatype *FunctionModifier::modType(Datatype *base,const TypeDeclarator *decl,Architecture *glb) const
+     proto.outtype = glb->types->getTypeVoid();
+   else
+     proto.outtype = base;
+-  // Varargs is encoded as extra null pointer in paramlist
+-  proto.firstVarArgSlot = -1;
+-  if ((!paramlist.empty())&&(paramlist.back() == (TypeDeclarator *)0)) {
+-    proto.firstVarArgSlot = paramlist.size() - 1;
+-  }
++  proto.firstVarArgSlot = dotdotdot ? paramlist.size() : -1;
+ 
+   getInTypes(proto.intypes,glb);
+ 

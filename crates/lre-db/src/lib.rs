@@ -37,6 +37,8 @@ pub enum DbError {
     OperationNotFound(String),
     #[error("invalid fact provenance: {0}")]
     InvalidFactProvenance(String),
+    #[error("stale fact revision: expected {expected}, found {actual}")]
+    StaleRevision { expected: u64, actual: u64 },
 
 }
 /// Convenience alias with the error defaulted per project convention.
@@ -1514,7 +1516,7 @@ impl ProjectDb {
             "DELETE FROM prototypes WHERE program_id = ?1 AND provenance_kind = 'inferred'",
             params![program.0],
         )?;
-        Self::insert_prototypes(&tx, program, rows)?;
+        Self::insert_prototypes(&tx, program, rows, None)?;
         self.bump_and_record(&tx, program, "replace-prototypes", &rows.len().to_string())?;
         tx.commit()?;
         Ok(())
@@ -1523,14 +1525,39 @@ impl ProjectDb {
     /// Upserts one prototype; an inference cannot overwrite an assertion.
     pub fn set_prototype(&self, program: ProgramId, row: &PrototypeRow) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        Self::insert_prototypes(&tx, program, std::slice::from_ref(row))?;
+        Self::insert_prototypes(&tx, program, std::slice::from_ref(row), None)?;
         self.bump_and_record(&tx, program, "prototype", &row.function.hex())?;
         tx.commit()?;
         Ok(())
     }
 
+    /// Merges one inference round against its input snapshot. Unchanged facts
+    /// and assertion conflicts neither advance the revision nor notify callers.
+    pub fn merge_inferred_prototypes(
+        &self, program: ProgramId, expected: u64, rows: &[PrototypeRow],
+    ) -> Result<Vec<lre_model::Address>> {
+        if rows.iter().any(|row| row.provenance.kind != FactKind::Inferred) {
+            return Err(DbError::InvalidFactProvenance(
+                "inference batches must contain only inferred facts".into(),
+            ));
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        let actual = self.revision(program)?;
+        if actual != expected {
+            return Err(DbError::StaleRevision { expected, actual });
+        }
+        let mut changed = Vec::new();
+        Self::insert_prototypes(&tx, program, rows, Some(&mut changed))?;
+        if !changed.is_empty() {
+            self.bump_and_record(&tx, program, "infer-prototypes", &changed.len().to_string())?;
+        }
+        tx.commit()?;
+        Ok(changed)
+    }
+
     fn insert_prototypes(
         tx: &rusqlite::Transaction<'_>, program: ProgramId, rows: &[PrototypeRow],
+        mut changed: Option<&mut Vec<lre_model::Address>>,
     ) -> Result<()> {
         let mut stmt = tx.prepare(
             "INSERT INTO prototypes(
@@ -1544,16 +1571,27 @@ impl ProjectDb {
                  provenance = excluded.provenance,
                  provenance_kind = excluded.provenance_kind,
                  confidence = excluded.confidence
-             WHERE prototypes.provenance_kind = 'inferred'
-                OR excluded.provenance_kind = 'asserted'",
+             WHERE (prototypes.provenance_kind = 'inferred'
+                OR excluded.provenance_kind = 'asserted')
+               AND (prototypes.signature IS NOT excluded.signature
+                OR prototypes.calling_convention IS NOT excluded.calling_convention
+                OR prototypes.return_type IS NOT excluded.return_type
+                OR prototypes.provenance IS NOT excluded.provenance
+                OR prototypes.provenance_kind IS NOT excluded.provenance_kind
+                OR prototypes.confidence IS NOT excluded.confidence)",
         )?;
         for row in rows {
             let ownership = validate_fact_provenance(&row.provenance)?;
-            stmt.execute(params![
+            let count = stmt.execute(params![
                 program.0, addr_cell(&row.function), row.signature,
                 row.calling_convention, row.return_type, row.provenance.source,
                 ownership, row.provenance.confidence,
             ])?;
+            if count != 0 {
+                if let Some(changed) = changed.as_mut() {
+                    changed.push(row.function.clone());
+                }
+            }
         }
         Ok(())
     }
