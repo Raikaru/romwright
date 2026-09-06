@@ -1963,6 +1963,22 @@ M2 — Program-model parity
 - m2-007 is complete. No metric definition, corpus member, persistence
   operation, or rediscovery pass changed. Full M2 parity remains open.
 
+## m2-008 implementation slices
+- a: commit failing real native acceptance for a closed-loop callee, a
+  non-returning relay, and a conditional caller. Returning, indirect, and
+  incomplete-flow controls must not acquire unsupported non-returning facts.
+- b: migrate provenance-owned return behavior storage; preserve assertions,
+  reject stale publication, and leave unchanged facts at the same revision.
+- c: prove non-returning behavior only from complete native flow closure,
+  propagate it through calls, and refresh caller extents and owned call xrefs
+  atomically. Never use neighboring entry distances as flow evidence.
+- d: expose explicit inference and stored facts through the existing Core/API
+  conventions, and apply facts in standalone and pooled native workers.
+- e: exercise the real acceptance, unchanged corpus, and milestone report;
+  publish evidence and update the next task. No new metric threshold or
+  corpus member is introduced. Split additional evidence commits below
+  800 changed lines if required.
+
 ## Blocked on
 - None.
 
