@@ -1,0 +1,681 @@
+{
+  "gate": "switches",
+  "milestone": "M2",
+  "task": "m2-007",
+  "commit": "42eb5f12b05e8c899661c2cf2fad9ed6365fca6c",
+  "date": "2026-09-06T13:28:06.493891+00:00",
+  "comparison": "exact recovered function/branch/target sets; not an II.3 metric or full M2 gate",
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "sha256": "ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd",
+      "twin_sha256": "fc25106ff6b68589649210e5bf69230a4d7b94429c026d94314a16163c237e9d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-64-default/gcc/27be9cc854e466e7/baseline-ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd.json",
+      "reference_sha256": "9ead5081089225ae5e2765ff3979f940a1ddb5b095f5f560146e72e67d75a046",
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 15,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00204000",
+        "00204008",
+        "00204020"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "sha256": "8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e",
+      "twin_sha256": "1cb15ed8e8ae142fc09d68a832a9decd9aed2054a6cdc1e9f7b4996782a9cde0",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-64-default/gcc/2dc2c67ced68b0b8/baseline-8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e.json",
+      "reference_sha256": "2ce5e6dae073303e295b3c369b66eb5ffd26fc371b2ae88042640dc874d59081",
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 15,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00204000",
+        "00204008",
+        "00204020"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "sha256": "8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d",
+      "twin_sha256": "9e5339a12c6ba9338af52eb765794212afb822e574189dd25f02822e686cd3b7",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-64-default/gcc/8772b4f9a448f5be/baseline-8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d.json",
+      "reference_sha256": "6bd2792a5e0182d7a565e34be1faccbb02925520feab4a11223ad1052719af7d",
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 12,
+      "stock_functions": 18,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00104000",
+        "00104008",
+        "00104010",
+        "00104018",
+        "00104020",
+        "00104028"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "pass",
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "twin_sha256": "59801887729fd74104dfa2b417954980759ede94cc95af011f6b0981c8f031a0",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-64-default/gcc/c96b79de955eea05/baseline-1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d.json",
+      "reference_sha256": "447d7c729cb562a9db75692ba023520291c5aeb971e37f33528f155d64f14ae5",
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 20,
+      "stock_functions": 29,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00204000",
+        "00204008",
+        "00204020",
+        "00204028",
+        "00204030",
+        "00204038",
+        "00204040",
+        "00204048",
+        "00204050"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "sha256": "13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75",
+      "twin_sha256": "8f85ae21cea8a7c8a38276ca2bf12ba1715906acedf1018ccdae3afa2b5b483d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-64-default/gcc/696fa3def23d6643/baseline-13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75.json",
+      "reference_sha256": "e29ff6de1d07ddc75195ec381106a6a485b89952d81601ad131df0dc3bd347a5",
+      "native_specs_sha256": {
+        "pspec.xml": "c9b37d3acee646dd59cdb53294b567f6df53bcfb2b57887c0652c07419347e70",
+        "cspec.xml": "5b3fad1679fcf9a27be2d73e8cac0f95cbd02532b25cbefd45a0e471b8da1adc",
+        "tspec.xml": "5d63ab66d711e16dc1d9a20e0faf3b0465f942ce302799f9a65624e59e663637",
+        "coretypes.xml": "88d1297b0b2101ef34d26766df1e32d5b9eb66ae0b48bb7a70c0f3a2ab33eee7",
+        "registers.txt": "4f4ec6de2987e6bc890250a0d15e62ebf94eea14f924c8a5d651834ea3f000f6"
+      },
+      "native_functions": 409,
+      "stock_functions": 411,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00209000",
+        "00209008"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "i386_plain_o0",
+      "status": "pass",
+      "sha256": "cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba",
+      "twin_sha256": "0a5f83884f4c5507faacdbc78f7f7193500a68c38a709f240631c5c17f9b5cba",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-32-default/gcc/2909274f56a2aaa8/baseline-cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba.json",
+      "reference_sha256": "dfbeb77a96814e3723e5cf6b1364e700d7822ad013cdeddeb0904dedb0cefa04",
+      "native_specs_sha256": {
+        "pspec.xml": "b83be4039dd2e89ceaca7e6200d3c2cbd4152f7bdee8555065a4b9de1ce76b91",
+        "cspec.xml": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
+        "tspec.xml": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",
+        "coretypes.xml": "5d97d2ec6b6c8e1e7a2971e1e9acdef240178d44238e466f98eed4aff8ec60e9",
+        "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
+      },
+      "native_functions": 15,
+      "stock_functions": 18,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00404000",
+        "00404004",
+        "00404010"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "i386_plain_o2",
+      "status": "pass",
+      "sha256": "7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3",
+      "twin_sha256": "7110a5c2d8e3c32f4b6863d253ec21197f5949d7c0f5d24a9ef97e8e8c1d1fba",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-32-default/gcc/16ac2ff9741849ce/baseline-7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3.json",
+      "reference_sha256": "ab43dcb0abc5f47775c5c8f9ac5384cd2bd243c70f7e0e65df24e5273c6f0d8d",
+      "native_specs_sha256": {
+        "pspec.xml": "b83be4039dd2e89ceaca7e6200d3c2cbd4152f7bdee8555065a4b9de1ce76b91",
+        "cspec.xml": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
+        "tspec.xml": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",
+        "coretypes.xml": "5d97d2ec6b6c8e1e7a2971e1e9acdef240178d44238e466f98eed4aff8ec60e9",
+        "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
+      },
+      "native_functions": 15,
+      "stock_functions": 18,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00404000",
+        "00404004",
+        "00404010"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "i386_plain_pie",
+      "status": "pass",
+      "sha256": "0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c",
+      "twin_sha256": "9d0db8fbd3db207c5a7eceae9afd138fe27d2954184a423784e20c03107236d0",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-32-default/gcc/81fa2bd8eb3fe708/baseline-0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c.json",
+      "reference_sha256": "ac27eace5a9bbec2ae85d5a363b8e013977693474b91c202d204ca6d2443e0fc",
+      "native_specs_sha256": {
+        "pspec.xml": "b83be4039dd2e89ceaca7e6200d3c2cbd4152f7bdee8555065a4b9de1ce76b91",
+        "cspec.xml": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
+        "tspec.xml": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",
+        "coretypes.xml": "5d97d2ec6b6c8e1e7a2971e1e9acdef240178d44238e466f98eed4aff8ec60e9",
+        "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
+      },
+      "native_functions": 16,
+      "stock_functions": 22,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00014000",
+        "00014004",
+        "00014008",
+        "0001400c",
+        "00014010",
+        "00014014"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "i386_cpp_o2",
+      "status": "pass",
+      "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
+      "twin_sha256": "e00e6f89c277547b9f8da6df57a2f201246d3d01faa52e0c570ff456ca7e6e45",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-32-default/gcc/a9c7d882c01c63cd/baseline-55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc.json",
+      "reference_sha256": "13cbd394510235c65edd6555a70897b97c5d1bf65dd76d8f11878077bad5acd2",
+      "native_specs_sha256": {
+        "pspec.xml": "b83be4039dd2e89ceaca7e6200d3c2cbd4152f7bdee8555065a4b9de1ce76b91",
+        "cspec.xml": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
+        "tspec.xml": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",
+        "coretypes.xml": "5d97d2ec6b6c8e1e7a2971e1e9acdef240178d44238e466f98eed4aff8ec60e9",
+        "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
+      },
+      "native_functions": 23,
+      "stock_functions": 32,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00404000",
+        "00404004",
+        "00404010",
+        "00404014",
+        "00404018",
+        "0040401c",
+        "00404020",
+        "00404024",
+        "00404028"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "i386_many_o2",
+      "status": "pass",
+      "sha256": "9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f",
+      "twin_sha256": "0164176fd5ac2f28275c4187b52507e9722e18f9f7e2aa53c2e65804f07f9d0f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "reference": "x86-LE-32-default/gcc/c0dbb7aabe7dcf98/baseline-9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f.json",
+      "reference_sha256": "9f343fbbf75240345b6d911091a6b08454ff4e426481667e3ad089403538e2d1",
+      "native_specs_sha256": {
+        "pspec.xml": "b83be4039dd2e89ceaca7e6200d3c2cbd4152f7bdee8555065a4b9de1ce76b91",
+        "cspec.xml": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
+        "tspec.xml": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",
+        "coretypes.xml": "5d97d2ec6b6c8e1e7a2971e1e9acdef240178d44238e466f98eed4aff8ec60e9",
+        "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
+      },
+      "native_functions": 413,
+      "stock_functions": 415,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00409000",
+        "00409004"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "status": "pass",
+      "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+      "twin_sha256": "3aa0bf7efbab75891c725118f175beac8e9c2ffeb51be6731bc16dc96648aaad",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "reference": "AARCH64-LE-64-v8A/default/586060d930add7d3/baseline-66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f.json",
+      "reference_sha256": "2a28ecde01723a2fc4f2eeab17d18a48117af23f324615d7ad197996e99da01e",
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 23,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00231000",
+        "00231008",
+        "00231010",
+        "00231018",
+        "00231020",
+        "00231028"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "pass",
+      "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
+      "twin_sha256": "1a5355a6fdf07651017d6866c59bdd016d0b613f8f8bb8f2bde066d8cf19454d",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "reference": "AARCH64-LE-64-v8A/default/e5ea33a802a664c8/baseline-ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a.json",
+      "reference_sha256": "becc31853c54e7b28e02b21956cf2050ce8f2944283d776beb934a0b5a5e616f",
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 23,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00231000",
+        "00231008",
+        "00231010",
+        "00231018",
+        "00231020",
+        "00231028"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "pass",
+      "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
+      "twin_sha256": "20d555bb798d4dc6f52279846df3181cdf005b80161d50cb0243022a2727a11e",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "reference": "AARCH64-LE-64-v8A/default/1cf269ae093017ba/baseline-130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555.json",
+      "reference_sha256": "a2b63be157643693d837f28b50ba828724c3738439acb820d891bd9baa539224",
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 24,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00131000",
+        "00131008",
+        "00131010",
+        "00131018",
+        "00131020",
+        "00131028",
+        "00131030"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "pass",
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "twin_sha256": "c03b2ca9e12d2555b02768ec88052c5738ccc07fd1ab9f24b3e14e1299ce45fa",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "reference": "AARCH64-LE-64-v8A/default/87f2ce8f59759197/baseline-670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9.json",
+      "reference_sha256": "459e88183a74c008d5f832214f88bd1666c85414bdda019749c13b2bded6392e",
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 24,
+      "stock_functions": 36,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00231000",
+        "00231008",
+        "00231010",
+        "00231018",
+        "00231020",
+        "00231028",
+        "00231030",
+        "00231038",
+        "00231040",
+        "00231048",
+        "00231050",
+        "00231058"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "pass",
+      "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
+      "twin_sha256": "2d9c54d3c99b3c7f3a36191c5ac8370e677245b91f535a81becfd85ed18656ad",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "reference": "AARCH64-LE-64-v8A/default/2575815817550c65/baseline-61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809.json",
+      "reference_sha256": "4dc214b189e776922a5f50fb920c3ba3d77b8c6e260fa3629fe14c472271751f",
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 415,
+      "stock_functions": 420,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00236000",
+        "00236008",
+        "00236010",
+        "00236018",
+        "00236020"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "status": "pass",
+      "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
+      "twin_sha256": "97b3662bd95e93df818571151aac96950dcb3b269bddefeb696f5251a5098e46",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "reference": "PowerPC-BE-32-default/default/f33cd933b7b24da5/baseline-ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557.json",
+      "reference_sha256": "8f38293985c102003d0711fafb16887500f92841482dac5f56e33dcf63f7e048",
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 12,
+      "stock_functions": 15,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "10031000",
+        "10031004",
+        "10031010"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "pass",
+      "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
+      "twin_sha256": "a2aa29568245f14890b5e36c748dfb26f5a4871bcef84cc3e66ff86e26ad5493",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "reference": "PowerPC-BE-32-default/default/66351939be426879/baseline-27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9.json",
+      "reference_sha256": "961cfd2a38a9749a58c7fbdd98b200a591dd22fefd3d35bc45f0668d03d2b2a8",
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 12,
+      "stock_functions": 15,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "10031000",
+        "10031004",
+        "10031010"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "pass",
+      "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
+      "twin_sha256": "b3e0062dde8ee5d4435cbc2ef95314d267746e58b234d8b7bd106b9f2822fce8",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "reference": "PowerPC-BE-32-default/default/5e64802b5095075e/baseline-0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452.json",
+      "reference_sha256": "e2b3ac788a3ff7d1f771965a1d6d69939e4508e275b1cb8d4a6f67e1b721af8c",
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 13,
+      "stock_functions": 19,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "00041000",
+        "00041004",
+        "00041008",
+        "0004100c",
+        "00041010",
+        "00041014"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "pass",
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "twin_sha256": "5d6d9b486062fd3c64103b9e2af80bd0e593b795bbe707496a195701c0e1f0b6",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "reference": "PowerPC-BE-32-default/default/c1ed1c5fd33c5752/baseline-682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf.json",
+      "reference_sha256": "39c9a2e5752525691440110909dc75ab2420eafddebd50795169606f9ad57522",
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 19,
+      "stock_functions": 28,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "10031000",
+        "10031004",
+        "10031010",
+        "10031014",
+        "10031018",
+        "1003101c",
+        "10031020",
+        "10031024",
+        "10031028"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "pass",
+      "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
+      "twin_sha256": "019ba2359b9a494d642933df418a9f33d83879b1dd0437371d407a3fc4c9cd32",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "reference": "PowerPC-BE-32-default/default/039848a34ed18ea7/baseline-4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3.json",
+      "reference_sha256": "8b9b6e8f2e1378229917c79ce0610a98b85f4f19a89249819e770afc340db2a7",
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 410,
+      "stock_functions": 412,
+      "native_tables": 0,
+      "stock_tables": 0,
+      "native_only_functions": [],
+      "stock_only_functions": [
+        "10036000",
+        "10036004"
+      ],
+      "mismatched_functions": [],
+      "recovered": {}
+    }
+  ],
+  "summary": {
+    "pass": 20,
+    "fail": 0,
+    "skipped": 0
+  },
+  "passed": true
+}
