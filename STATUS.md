@@ -1831,6 +1831,20 @@ M2 — Program-model parity
   Corpus 5/5, both prototype API/CLI scripts, string regression 20/20 at 1.0.
 - Core persistence and bounded inference orchestration remain unfinished.
 
+### m2-006-d1 evidence
+- `25184e0` committed missing atomic-merge and typed-persistence acceptance.
+  Changed inferred batches advance 1 revision; repeated batches advance 0.
+  Assertions survive conflicts; stale revisions and invalid batches write 0 rows.
+- The Core renderer round-trips an `int` pointer return, pointer to 4-element
+  array, and variadic callback through the actual native parser. Missing type
+  information is rejected without changing the stored prototype or revision.
+- The regression exposed lost nested varargs in pinned `FunctionModifier`.
+  The out-of-tree patch now uses its `dotdotdot` flag, as top-level parsing does;
+  no pinned source or baseline reference was edited.
+- Verification: native build, 156 workspace tests, 2 explicit native tests in
+  0.11 s, corpus 5/5, both prototype scripts, string regression 20/20 at 1.0.
+  API orchestration and native arity parity remain unfinished.
+
 ## Blocked on
 - None.
 
@@ -1839,8 +1853,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Registration, fact snapshots, and recovery locks are implemented. Next,
-  persist structured inferred prototypes atomically and implement bounded rounds.
+  Registration, snapshots, recovery locks, and atomic persistence are implemented.
+  Next: bounded API rounds with caller-only scheduling and one absolute deadline.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

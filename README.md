@@ -317,6 +317,11 @@ stored function extents rather than neighboring function-entry distances.
 Recovery unlocks inferred target parameters, return type, and calling convention;
 stored callees and analyst assertions remain locked. Inferred declarations never
 rename functions. The native command resets its parameters between applications.
+Core can persist a completed recovery batch through the existing prototype
+store. Nested pointer/array/callback declarations are rendered from structured
+types; absent types are rejected rather than replaced by `void`. The write
+checks its input revision, retains assertions, and leaves unchanged facts at
+the same revision. Native round-trips cover variadic callback pointers.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker

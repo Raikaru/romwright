@@ -13,6 +13,7 @@ pub mod listing;
 pub mod native;
 pub mod native_runtime;
 pub mod session;
+mod prototypes;
 
 use lre_db::ProjectDb;
 use lre_model::{
@@ -77,6 +78,8 @@ pub enum CoreError {
     /// Function sort key was not one of entry|name|size[:asc|:desc].
     #[error("invalid sort key: {0}")]
     InvalidSortKey(String),
+    #[error("invalid recovered prototype: {0}")]
+    InvalidPrototype(String),
 }
 
 /// Convenience alias with the error defaulted per project convention.

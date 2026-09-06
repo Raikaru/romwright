@@ -285,7 +285,7 @@ pub struct FuncParam {
     pub data_type: DecompType,
 }
 
-/// Native prototype facts, independent of rendered C and not yet persisted.
+/// Native prototype facts, independent of rendered C.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct FuncProto {
     pub calling_convention: String,
