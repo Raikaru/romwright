@@ -103,7 +103,7 @@ fn run(
         provider.strings.insert(string.address.offset, string.value);
     }
     provider.load_call_edges(&db, pid)?;
-    provider.load_return_behaviors(&db, pid)?;
+    provider.load_return_behaviors(&db, pid, false)?;
 
     let offset = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
         .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))?;

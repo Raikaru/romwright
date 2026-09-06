@@ -126,10 +126,12 @@ impl ProgramProvider {
         &mut self,
         db: &lre_db::ProjectDb,
         program: lre_model::ProgramId,
+        asserted_only: bool,
     ) -> Result<()> {
         self.non_returning = db
             .return_behaviors(program)?
             .into_iter()
+            .filter(|row| !asserted_only || row.provenance.kind == lre_model::FactKind::Asserted)
             .filter_map(|row| {
                 (row.function.space == lre_model::AddressSpace::Ram && row.no_return)
                     .then_some(row.function.offset)

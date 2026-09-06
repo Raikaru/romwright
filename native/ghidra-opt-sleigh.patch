@@ -141,11 +141,12 @@ diff --git a/decompiler/ghidra_process.cc b/decompiler/ghidra_process.cc
 index a93aa00..9ba9404 100644
 --- a/decompiler/ghidra_process.cc
 +++ b/decompiler/ghidra_process.cc
-@@ -14,6 +14,7 @@
+@@ -14,6 +14,8 @@
   * limitations under the License.
   */
  #include "ghidra_process.hh"
 +#include "database_ghidra.hh"
++#include "ventris_nonreturn.hh"
  #include "flow.hh"
  #include "blockaction.hh"
  
@@ -245,7 +246,19 @@ index a93aa00..9ba9404 100644
  void DeregisterProgram::loadParameters(void)
  
  {
-@@ -497,6 +573,7 @@ void GhidraDecompCapability::initialize(void)
+@@ -324,7 +401,10 @@ void DecompileAt::rawAction(void)
+ 	ParamIDAnalysis pidanalysis( fd, false );
+ 	pidanalysis.encode( encoder, true );
+       }
+-      fd->encode(encoder,0,ghidra->getSendSyntaxTree());
++      {
++        VentrisNoReturnHint hint(*fd);
++        fd->encode(encoder,0,ghidra->getSendSyntaxTree());
++      }
+       if (ghidra->getSendCCode()&&
+ 	  (ghidra->allacts.getCurrentName() == "decompile"))
+         ghidra->print->docFunction(fd);
+@@ -497,6 +577,7 @@ void GhidraDecompCapability::initialize(void)
  
  {
    commandmap["registerProgram"] = new RegisterProgram();

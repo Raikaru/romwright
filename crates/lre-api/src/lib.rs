@@ -290,7 +290,11 @@ impl ApiService {
             "infer_nonreturning" => {
                 let binary = path_param(params, "binary")?;
                 let program = string_param(params, "program")?;
-                value(self.core.infer_nonreturning(&binary, &program))
+                let mut pool = self.worker_pool.lock()
+                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
+                let report = pool.infer_nonreturning(&self.core, &binary, &program)
+                    .map_err(|error| DispatchError::Worker(error.to_string()))?;
+                Ok(json!(report))
             }
             "infer_prototypes" => {
                 let binary = path_param(params, "binary")?;

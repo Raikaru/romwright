@@ -2,41 +2,64 @@
   "task": "m2-008",
   "passed": true,
   "scope": "temporary positive acceptance, not locked corpus",
-  "inferred_functions": 2,
+  "inferred_functions": 5,
   "returning_controls": 2,
   "unresolved_indirect_controls": 2,
-  "removed_call_xrefs": 2,
+  "removed_call_xrefs": 3,
+  "restored_call_xrefs": 3,
+  "stale_inference_retracted": 1,
+  "asserted_return_controls": 2,
   "standalone": 1,
   "pooled": true,
   "report": {
     "changed": [
       {
-        "offset": 4194813,
+        "offset": 4195104,
         "space": "Ram"
       },
       {
-        "offset": 4194824,
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195148,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195174,
         "space": "Ram"
       }
     ],
     "rediscovered": [
       {
-        "offset": 4194796,
+        "offset": 4195120,
         "space": "Ram"
       },
       {
-        "offset": 4194813,
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
         "space": "Ram"
       }
     ],
-    "revision": 16,
+    "revision": 18,
     "unknown": [
       {
-        "offset": 4194832,
+        "offset": 4195088,
         "space": "Ram"
       },
       {
-        "offset": 4194834,
+        "offset": 4195156,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195158,
         "space": "Ram"
       }
     ]
@@ -45,22 +68,108 @@
     "changed": [],
     "rediscovered": [
       {
-        "offset": 4194796,
+        "offset": 4195120,
         "space": "Ram"
       },
       {
-        "offset": 4194813,
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
         "space": "Ram"
       }
     ],
-    "revision": 16,
+    "revision": 18,
     "unknown": [
       {
-        "offset": 4194832,
+        "offset": 4195088,
         "space": "Ram"
       },
       {
-        "offset": 4194834,
+        "offset": 4195156,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195158,
+        "space": "Ram"
+      }
+    ]
+  },
+  "revalidated": {
+    "changed": [
+      {
+        "offset": 4195150,
+        "space": "Ram"
+      }
+    ],
+    "rediscovered": [
+      {
+        "offset": 4195120,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
+        "space": "Ram"
+      }
+    ],
+    "revision": 20,
+    "unknown": [
+      {
+        "offset": 4195088,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195156,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195158,
+        "space": "Ram"
+      }
+    ]
+  },
+  "retracted": {
+    "changed": [
+      {
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
+        "space": "Ram"
+      }
+    ],
+    "rediscovered": [
+      {
+        "offset": 4195120,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195137,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195161,
+        "space": "Ram"
+      }
+    ],
+    "revision": 23,
+    "unknown": [
+      {
+        "offset": 4195088,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195156,
+        "space": "Ram"
+      },
+      {
+        "offset": 4195158,
         "space": "Ram"
       }
     ]

@@ -135,6 +135,7 @@ fn decode_prototype(mut node: Node, mut parameters: Vec<FuncParam>) -> Option<Fu
         return_type,
         parameters,
         variadic,
+        no_return: node.boolean(crate::wire::attr::NORETURN)?,
     })
 }
 
@@ -191,7 +192,7 @@ impl Collector {
         let Some(node) = self.capture.last_mut() else {
             return Some(value);
         };
-        if node.depth == depth && matches!(id, 9 | 10 | 12 | 13 | 14 | 19 | 48 | 61 | 115) {
+        if node.depth == depth && matches!(id, 9 | 10 | 12 | 13 | 14 | 19 | 48 | 61 | 115 | crate::wire::attr::NORETURN) {
             node.attributes.push((id, value));
         }
         // Metadata is not a Clang token. Move its attributes instead of copying
