@@ -1729,14 +1729,36 @@ M2 — Program-model parity
   tokens and a void prototype. Keep `tests/m2-005_prototype.py` as the real
   CLI/API acceptance; reuse language resolution and configure the pool's child
   explicitly rather than requiring process-global environment setup.
+- Captured-`add` acceptance `a2261e7` first failed on the missing decoder;
+  `c2d6711` recovers ordered input types, return type, and calling convention
+  from packed metadata. Nested variadic function pointers remain nested.
+- API regression `452403e` failed on bad-instruction/void output; `838badf`
+  passes the resolved language/SLA to the pooled child. Overflow regression
+  `b71faf0` first accepted a 2^64 parameter index as zero; checked accumulation
+  now rejects it. Captured token metadata is unchanged with collection enabled.
+- Verification on `838badf`: 154 workspace tests across 22 suites; corpus 5/5.
+  Removed a copied-watchdog simulation that did not exercise the production
+  pool, rather than claiming it as deadline coverage.
+- `benchmarks/reports/m2-005.json` records 1 standalone and 3 pooled real
+  decompiles (`add`, `main`, `add`), with 1 warm idle worker and 0 restarts.
+  Add has 2 int parameters and an int return; standalone/pooled prototypes
+  agree. The regression deliberately unsets `VENTRIS_SLA`.
+- String regression on the same source: 20 passed, 0 failed, 0 skipped,
+  recall 1.0 throughout; `benchmarks/reports/m2-003.json` refreshed.
+  Support matrix current; throwaway drivers removed. No baseline was edited.
+- m2-005 is complete. These are read-only recovered facts, not persisted
+  prototype inference or full M2 parity.
 
 ## Blocked on
 - None.
 
 ## Next task
-- m2-005: return recovered FuncProto (parameters, return type, and calling
-  convention) alongside worker decompile tokens. Marshal the decompiler's
-  packed prototype and write the failing fixture-`add` acceptance first.
+- m2-006: decompile all functions, write inferred prototypes, and re-decompile
+  callers; bound to N=3 rounds or a time budget. Verify the pinned
+  DecompilerParameterIdAnalyzer class and write the failing acceptance first.
+  Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
+  Check registration as well as per-decompile deadlines before claiming a
+  time budget; the current pool starts its watchdog after registration.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
