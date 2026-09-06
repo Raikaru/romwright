@@ -287,6 +287,10 @@ impl ApiService {
                 let program = string_param(params, "program")?;
                 value(self.core.return_behaviors(&program))
             }
+            "thunks" => {
+                let program = string_param(params, "program")?;
+                value(self.core.thunks(&program))
+            }
             "infer_nonreturning" => {
                 let binary = path_param(params, "binary")?;
                 let program = string_param(params, "program")?;

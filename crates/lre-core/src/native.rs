@@ -117,6 +117,18 @@ pub struct NativeStringTable {
     pub strings: Vec<lre_model::StringRow>,
 }
 
+/// Single owner name for flow-proven thunk facts and their jump xrefs.
+pub const THUNK_SOURCE: &str = "native-import:thunk";
+
+/// A function whose whole body transfers to one proven destination.
+#[derive(Clone, Copy, Debug)]
+pub struct NativeThunk {
+    pub entry: u64,
+    /// Thunked function entry, or the imported slot for linkage stubs.
+    pub destination: u64,
+    pub kind: lre_model::ThunkKind,
+}
+
 /// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
@@ -125,6 +137,8 @@ pub struct NativeImport {
     pub functions: Vec<NativeFunction>,
     pub xrefs: Vec<NativeXref>,
     pub externals: Vec<(u64, String)>,
+    /// Flow-proven thunk entries and their destinations.
+    pub thunks: Vec<NativeThunk>,
     /// Relocation code targets to be verified as candidate function entries.
     pub reloc_candidates: Vec<u64>,
     /// Untrusted data pointers; never functions until flow confirms them.
@@ -984,8 +998,13 @@ fn infer_data_references(
             work[index].3 = false;
             // ConstantPropagationAnalyzer's default trusts initial writable values.
             // This inferred-reference policy does not change strict constant queries.
-            let facts = session.references(start, end, &import.mappings, true)
-                .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?;
+            // A root or stripped entry that does not decode contributes no
+            // references; it must not abort the whole image's import.
+            let Some(facts) = session.optional_references(start, end, &import.mappings, true)
+                .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?
+            else {
+                continue;
+            };
             let known = &mut work[index].2;
             if known.is_empty() {
                 *known = facts;
@@ -1176,6 +1195,21 @@ pub fn store_import(
         })
         .collect();
     db.replace_xrefs(pid, &xrows)?;
+    let thunks: Vec<lre_model::ThunkRow> = imp
+        .thunks
+        .iter()
+        .map(|thunk| lre_model::ThunkRow {
+            function: lre_model::Address::ram(thunk.entry),
+            thunked: lre_model::Address::ram(thunk.destination),
+            kind: thunk.kind,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: THUNK_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    db.replace_inferred_thunks(pid, THUNK_SOURCE, &thunks)?;
     Ok(ProgramSummary {
         program: program.to_string(),
         functions: functions.len() as u64,
@@ -2403,6 +2437,57 @@ mod tests {
         bytes[0x228..0x22c].copy_from_slice(&24u32.to_be_bytes());
         assert_eq!(analyze(&bytes), expected, "section-address evidence is independent of its name");
     }
+
+    #[test]
+    fn an_undecodable_code_root_does_not_abort_reference_inference() {
+        use crate::native_runtime::{ConsoleSession, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut bytes = vec![
+            // 0x1000: an ELF header start, exactly how a section root can land
+            // on bytes that never decode as code.
+            0x7f, 0x45, 0x4c, 0x46, 0x02, 0x01, 0x01, 0x00,
+            // 0x1008: mov rax,[rip+0x1ff1]; ret
+            0x48, 0x8b, 0x05, 0xf1, 0x1f, 0x00, 0x00, 0xc3,
+        ];
+        bytes.resize(0x20, 0);
+        let mut import = NativeImport {
+            cfg: cfg.clone(),
+            language: cfg.language_id.clone(),
+            format: "elf32".into(),
+            mappings: vec![
+                Mapping { vaddr: 0x1000, size: 0x20, file_off: 0, flags: 6, bytes },
+                Mapping { vaddr: 0x3000, size: 8, file_off: 0, flags: 2, bytes: vec![0; 8] },
+            ],
+            reference_roots: vec![(0x1000, 0x1008), (0x1008, 0x1010)],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        assert!(
+            session
+                .optional_references(0x1000, 0x1008, &import.mappings, true)
+                .unwrap()
+                .is_none(),
+            "the console must refuse the undecodable root instead of answering"
+        );
+        infer_data_references(&mut import, &mut session).unwrap();
+        assert_eq!(
+            import
+                .xrefs
+                .iter()
+                .map(|xref| (xref.from, xref.to, xref.kind.clone()))
+                .collect::<Vec<_>>(),
+            vec![(0x1008, 0x3000, "READ".into())],
+            "the decodable root still contributes its reference"
+        );
+    }
+
 
     #[test]
     fn data_string_sweep_decodes_utf8_and_utf16() {

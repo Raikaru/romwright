@@ -47,6 +47,11 @@ impl crate::Core {
         Ok(self.db.return_behaviors(id)?)
     }
 
+    pub fn thunks(&self, program: &str) -> crate::Result<Vec<lre_model::ThunkRow>> {
+        let id = self.db.program_id(program)?;
+        Ok(self.db.thunks(id)?)
+    }
+
     /// Analyze a byte snapshot, then publish facts and completed caller flows
     /// against the input store revision. Partial native output is never proof.
     pub fn infer_nonreturning(

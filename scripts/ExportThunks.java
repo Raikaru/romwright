@@ -22,9 +22,15 @@ public class ExportThunks extends GhidraScript {
                 continue;
             }
             Function thunked = function.getThunkedFunction(false);
+            boolean external = thunked != null && thunked.isExternal();
+            // External thunk targets live in the synthetic EXTERNAL space and
+            // have no image address; report the flag instead of a fake one.
+            boolean mapped = thunked != null && !external
+                    && thunked.getEntryPoint().getAddressSpace().equals(
+                            currentProgram.getAddressFactory().getDefaultAddressSpace());
             JsonObject fact = new JsonObject();
-            fact.addProperty("thunked", thunked == null ? null : thunked.getEntryPoint().toString());
-            fact.addProperty("external", thunked != null && thunked.isExternal());
+            fact.addProperty("thunked", mapped ? thunked.getEntryPoint().toString() : null);
+            fact.addProperty("external", external);
             fact.addProperty("name", function.getName(false));
             thunks.add(function.getEntryPoint().toString(), fact);
         }
