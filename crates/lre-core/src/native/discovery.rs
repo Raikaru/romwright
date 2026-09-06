@@ -368,8 +368,8 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         let mut next_active: Vec<u64> = Vec::new();
         for chunk in to_query.chunks(1024) {
             let flows = flow_provider.flow(chunk);
-            // Only an unconditional branch to a proven imported-slot stub
-            // establishes an independent linkage entry; ordinary labels do not.
+            // Branch targets need an unconditional transfer to a proven import
+            // stub; direct calls independently establish their target entries.
             if has_linkage_slots {
                 for target in chunk
                     .iter()
@@ -464,6 +464,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 match info.kind {
                     FlowKind::Call => {
                         for t in &info.targets {
+                            if has_linkage_slots && in_code(*t) {
+                                linkage_candidates.insert(*t);
+                            }
                             if in_code(*t) && !entries.contains(t) {
                                 entries.push(*t);
                                 addr_origin.insert(*t, *t);
@@ -718,6 +721,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             match info.kind {
                                 FlowKind::Call => {
                                     for t in &info.targets {
+                                        if has_linkage_slots && in_code(*t) {
+                                            linkage_candidates.insert(*t);
+                                        }
                                         if in_code(*t) && !entries.contains(t) {
                                             entries.push(*t);
                                             addr_origin.insert(*t, *t);
