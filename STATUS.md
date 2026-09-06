@@ -1782,6 +1782,11 @@ M2 — Program-model parity
 - e: run the full unchanged DWARF corpus gate, fix demonstrated mismatches,
   and publish measured reports. Split any implementation slice further before
   exceeding 800 changed lines; no metric or corpus change is authorized.
+  Split e into e1 (reproducible static bundles for the 3 missing locked
+  languages), e2 (generic imported-thunk prototype uncertainty), and e3
+  (full parity reports). Bundle register lists exceed 800 lines; provision
+  generated caches with recorded hashes rather than commit partial bundles.
+  Native reports use separately committed architecture detail plus an aggregate.
 
 ### m2-006-a evidence
 - Failing API acceptance committed in `5960e96`; benchmark projection tests
@@ -1858,6 +1863,19 @@ M2 — Program-model parity
   corpus 5/5; inference, prototype, and revision scripts; string regression
   20/20 with recall 1.0. Native corpus arity parity remains unmeasured.
 
+### m2-006-b3 evidence
+- Full native gate: 4 passed, 16 failed, 0 skipped. All 20 immutable stock
+  references validate; native inference receives only stripped inputs.
+- x86-64 C++ scores 2/3 against stock 3/3. At `0x2019e0`, raw native `main`
+  has 2 inputs; after inference it has 1. Imported PLT stubs were persisted
+  as `void(void)`, and calls to `__isoc23_strtol`/`printf` lost their arguments.
+- The other 15 cases fail because i386, AArch64 and PowerPC spec bundles are
+  absent. Existing static export uses the bridge only during provisioning.
+- Aggregate and 4 architecture reports retain all cases and link full scores
+  and mismatches by hash. Repackaging preserved every measured score and count.
+- Verification: 156 workspace tests, corpus 5/5, 4 arity/DWARF boundary tests.
+  The native gate is not passed.
+
 ## Blocked on
 - None.
 
@@ -1866,8 +1884,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Inference API and bounded rounds are implemented. Next: integrate and run
-  the full native arity gate against the 20 frozen stock references.
+  Native gate has 4 pass / 16 fail. Next: provision the 3 static language
+  bundles and prevent unknown imported-thunk prototypes from poisoning callers.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

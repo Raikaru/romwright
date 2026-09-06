@@ -348,6 +348,18 @@ python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json
 ```
 
+The native gate checks all 20 frozen references, runs inference on stripped
+inputs, and scores persisted prototypes against DWARF with the same metric.
+Known functions without persisted prototypes count as incorrect, not as missing
+matches. Each case must reach stock arity accuracy minus 0.02; missing inputs
+or references cannot produce a passing gate. Architecture detail and complete
+mismatch records are linked from the aggregate by SHA-256.
+
+```sh
+python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
+  --report benchmarks/reports/m2-006.json
+```
+
 ## Support matrix
 
 | Input | Structural native import | Native flow/decode/decompile |
