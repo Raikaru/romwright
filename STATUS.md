@@ -1972,6 +1972,10 @@ M2 — Program-model parity
 - c: prove non-returning behavior only from complete native flow closure,
   propagate it through calls, and refresh caller extents and owned call xrefs
   atomically. Never use neighboring entry distances as flow evidence.
+  - c1: publish owned return facts, caller extents, and call edges in one
+    revision-checked transaction; retract unsupported owned inferences.
+  - c2: add complete-flow proofs and the native Core orchestration. Keep
+    c1 and c2 in separate commits below 800 changed lines.
 - d: expose explicit inference and stored facts through the existing Core/API
   conventions, and apply facts in standalone and pooled native workers.
 - e: exercise the real acceptance, unchanged corpus, and milestone report;
@@ -1984,8 +1988,8 @@ M2 — Program-model parity
 
 ## Next task
 - m2-008: infer non-returning functions and rediscover callers.
-  Write and commit its failing acceptance before implementation, following the
-  ratified roadmap. m2-007 is complete; m2-008 implementation has not begun.
+  Failing acceptance is committed in `a5fedc2`; schema-v8 storage is committed
+  in `dd2ae40`. Complete-flow and atomic-publication implementation is in progress.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
