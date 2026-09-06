@@ -310,10 +310,15 @@ The pool's 60-second operation deadline includes native registration, not just
 decompilation. Failed and timed-out children are killed and reaped; late output
 is not published or returned to the warm pool. Protocol errors remain distinct
 from elapsed deadlines.
+Pool snapshots follow the store revision: edits invalidate idle workers, and a
+revision change during analysis discards the result. Both native entrypoints
+apply stored callee signatures before analyzing a caller, using call xrefs and
+stored function extents rather than neighboring function-entry distances.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
 python3 tests/m2-005_prototype.py
+python3 tests/m2-006_revision.py
 ```
 
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped

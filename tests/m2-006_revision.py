@@ -36,6 +36,10 @@ def main():
             cwd=root, env=env, input=''.join(json.dumps(dict(api=2, id=index,
                 method=method, params=params)) + '\n' for index, (method, params) in enumerate(requests)),
             text=True, capture_output=True, check=True, timeout=120)
+        standalone = json.loads(subprocess.run([
+            str(root / 'target/debug/lre-cli'), 'decompile-native-doc', str(binary),
+            '0x40047a', '--project', temporary], cwd=root, env=env, text=True,
+            capture_output=True, check=True, timeout=120).stdout)
     replies = [json.loads(line) for line in response.stdout.splitlines()]
     assert len(replies) == len(requests) and all(not row.get('error') for row in replies), replies
     before, after, callee = (replies[index]['result'] for index in (1, 4, 5))
@@ -48,6 +52,7 @@ def main():
 
     assert call_arity(before) == 2, before
     assert call_arity(after) == 1, after
+    assert call_arity(standalone) == 1, standalone
     assert after['revision'] > before['revision'], (before, after)
     assert [parameter['name'] for parameter in callee['prototype']['parameters']] == ['left'], callee
     print(json.dumps(dict(passed=True, caller_arguments_before=2, caller_arguments_after=1,

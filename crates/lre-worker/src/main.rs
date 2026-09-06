@@ -102,27 +102,13 @@ fn run(
     {
         provider.strings.insert(string.address.offset, string.value);
     }
+    provider.load_call_edges(&db, pid)?;
 
     let offset = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
         .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))?;
     let specs = lre_worker::load_specs(Path::new(lang_dir))?;
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
-    let function_shell = provider
-        .function_names
-        .get(&offset)
-        .map(|name| {
-            let size = provider.function_sizes.get(&offset).copied().unwrap_or(8);
-            lre_worker::NativeWorker::encode_function_shell_doc(
-                provider.ram_space_index as u32,
-                &[(offset, name.as_str(), size)],
-            )
-        })
-        .unwrap_or_else(|| {
-            lre_worker::NativeWorker::encode_function_shell_doc(
-                provider.ram_space_index as u32,
-                &[],
-            )
-        });
+    let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(
         &mut provider,
         &specs.0,
@@ -131,16 +117,7 @@ fn run(
         &specs.3,
         &function_shell,
     )?;
-    if let Some(signature) = provider.prototypes.get(&offset).cloned() {
-        let function_name = provider
-            .function_names
-            .get(&offset)
-            .cloned()
-            .ok_or_else(|| {
-                lre_worker::WorkerError::Setup("prototype target has no function name".into())
-            })?;
-        worker.set_function_signature(&mut provider, offset, &function_name, &signature)?;
-    }
+    worker.prepare_function(&mut provider, offset)?;
     worker.set_action(&mut provider, "decompile", "")?;
     let ram = provider.ram_space_index as u32;
     let raw = worker.decompile_at(&mut provider, ram, offset)?;

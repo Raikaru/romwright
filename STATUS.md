@@ -1804,6 +1804,19 @@ M2 — Program-model parity
   parameters, 1 idle worker. Workspace 154 tests; corpus 5/5; string regression
   20/20 with recall 1.0. No inferred writes or revision invalidation are claimed.
 
+### m2-006-c2 evidence
+- `7a75600` committed the failing warm-caller and call-only edge regressions.
+  Both pooled and standalone callers now reflect an asserted callee arity
+  change from 2 to 1; pooled revision advances from 5 to 8. The target retains
+  the asserted parameter name `left`.
+- Call edges exclude branches/data, deduplicate call kinds, preserve typed
+  spaces, and sort numeric offsets across the 32-bit boundary. Callee lookup
+  uses stored extents, not the next function entry. No schema migration.
+- Worker snapshot invalidation preserves pool job history; a concurrent
+  revision change discards the returned document. Inference writes remain pending.
+- Verification: 155 workspace tests, corpus 5/5, both real prototype scripts,
+  and string regression 20/20 with recall 1.0.
+
 ## Blocked on
 - None.
 
@@ -1812,8 +1825,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Registration is supervised. Next, invalidate stale fact snapshots and carry
-  one absolute deadline through the full inference request.
+  Registration and fact snapshots are supervised. Next, unlock inferred
+  targets for recovery and carry one absolute deadline through inference.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
