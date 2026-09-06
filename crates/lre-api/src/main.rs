@@ -1,4 +1,4 @@
-use lre_api::{serve_stdio, serve_tcp, ApiService};
+use lre_api::{ApiService, serve_stdio, serve_tcp};
 use lre_core::Core;
 use std::env;
 use std::net::TcpListener;
