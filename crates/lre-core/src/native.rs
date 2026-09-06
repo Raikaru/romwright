@@ -2083,4 +2083,67 @@ mod tests {
         assert!(strict.iter().all(|fact| fact.value != 0x4000),
             "strict constant queries must not inherit reference-inference heuristics: {strict:?}");
     }
+
+    #[test]
+    fn elf_plt_register_context_is_scoped() {
+        use crate::native_runtime::find_console;
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut bytes = vec![0u8; 0x300];
+        bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
+        for (offset, value) in [(16, 2u16), (18, 3), (40, 52), (42, 32), (44, 3),
+            (46, 40), (48, 5), (50, 4)] {
+            bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+        }
+        for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
+            bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        for (index, header) in [
+            [1u32, 0x100, 0x1000, 0x1000, 6, 6, 5, 1],
+            [1, 0x120, 0x3000, 0x3000, 0x30, 0x30, 6, 1],
+            [2, 0x140, 0x3020, 0x3020, 16, 16, 6, 4],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 52 + index * 32 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        bytes[0x100..0x106].copy_from_slice(&[0x8b, 0x43, 4, 0x31, 0xc0, 0xc3]);
+        bytes[0x140..0x144].copy_from_slice(&3u32.to_le_bytes()); // DT_PLTGOT
+        bytes[0x144..0x148].copy_from_slice(&0x3000u32.to_le_bytes());
+        let names = b"\0.plt\0.got\0.dynamic\0.shstrtab\0.text\0";
+        bytes[0x180..0x180 + names.len()].copy_from_slice(names);
+        for (index, header) in [
+            [1u32, 1, 6, 0x1000, 0x100, 6, 0, 0, 1, 0],
+            [6, 1, 3, 0x3000, 0x120, 16, 0, 0, 4, 0],
+            [11, 6, 3, 0x3020, 0x140, 16, 0, 0, 4, 8],
+            [20, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 0x200 + (index + 1) * 40 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        let analyze = |bytes: &[u8]| {
+            let mut import = import_elf(bytes).unwrap();
+            import.cfg = cfg.clone();
+            let mut session = discovery::discover_seeded(&mut import).unwrap();
+            import.xrefs.clear();
+            infer_data_references(&mut import, &mut session).unwrap();
+            import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004, "READ".into())],
+            "ELF PLT references use the loader-declared GOT register context");
+        bytes[0x140..0x144].fill(0);
+        assert!(analyze(&bytes).is_empty(), "a GOT section cannot substitute for DT_PLTGOT");
+        bytes[0x140..0x144].copy_from_slice(&3u32.to_le_bytes());
+        bytes[0x228..0x22c].copy_from_slice(&30u32.to_le_bytes()); // rename .plt to .text
+        assert!(analyze(&bytes).is_empty(), "PLT register context must not leak into ordinary code");
+    }
 }
