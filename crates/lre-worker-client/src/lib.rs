@@ -136,16 +136,17 @@ impl WorkerSession {
         } else {
             self.decompile(address)?
         };
-        let (tokens, prototype) =
+        let decoded =
             lre_worker::decode_document_with_ram_space(&raw, Some(self.ram_space() as u64));
-        if recover && prototype.is_none() {
+        if recover && decoded.prototype.is_none() {
             return Err(WorkerError::Decompiler(format!(
                 "function {address:#x} returned no prototype"
             )));
         }
         Ok(DecompDoc {
-            tokens,
-            prototype,
+            tokens: decoded.tokens,
+            prototype: decoded.prototype,
+            jump_tables: decoded.jump_tables,
             address: Address::ram(address),
             revision: 0,
         })

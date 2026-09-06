@@ -38,8 +38,9 @@ def main():
         'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    env = os.environ.copy()
-    env.pop('VENTRIS_SLA', None)
+    env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
+    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+        env.pop(name, None)
 
     def run(command, **kwargs):
         return subprocess.run(command, cwd=ROOT, env=env, text=True,
@@ -75,6 +76,7 @@ def main():
         assert pooled[1].get('jump_tables') == [], pooled[1]
         assert len({document['revision'] for document in pooled}) == 1, pooled
         report = dict(task='m2-007', scope='temporary positive acceptance, not locked corpus',
+            commit=subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
             passed=True, oracle=oracle, standalone=standalone['jump_tables'],
             pooled=[document['jump_tables'] for document in pooled])
         if args.report:

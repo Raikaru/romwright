@@ -20,10 +20,11 @@ fn inferred_targets_recover_but_assertions_remain_locked() {
     let ram = provider.ram_space_index as u32;
     worker.prepare_function(&mut provider, address).unwrap();
     let read = worker.decompile_at(&mut provider, ram, address).unwrap();
-    let (tokens, proto) = lre_worker::decode_document_with_ram_space(&read, Some(ram as u64));
-    assert_eq!(proto.unwrap().parameters.len(), 0);
+    let decoded = lre_worker::decode_document_with_ram_space(&read, Some(ram as u64));
+    assert_eq!(decoded.prototype.unwrap().parameters.len(), 0);
     assert!(
-        !tokens
+        !decoded
+            .tokens
             .iter()
             .any(|token| token.text.contains("old_inferred_name")),
         "an inferred signature must not rename the function"
@@ -33,7 +34,7 @@ fn inferred_targets_recover_but_assertions_remain_locked() {
         .prepare_function_for_inference(&mut provider, address)
         .unwrap();
     let recovered = worker.decompile_at(&mut provider, ram, address).unwrap();
-    let (_, proto) = lre_worker::decode_document_with_ram_space(&recovered, Some(ram as u64));
+    let proto = lre_worker::decode_document_with_ram_space(&recovered, Some(ram as u64)).prototype;
     assert_eq!(
         proto.unwrap().parameters.len(),
         2,
@@ -50,7 +51,7 @@ fn inferred_targets_recover_but_assertions_remain_locked() {
         .prepare_function_for_inference(&mut provider, address)
         .unwrap();
     let asserted = worker.decompile_at(&mut provider, ram, address).unwrap();
-    let (_, proto) = lre_worker::decode_document_with_ram_space(&asserted, Some(ram as u64));
+    let proto = lre_worker::decode_document_with_ram_space(&asserted, Some(ram as u64)).prototype;
     assert_eq!(
         proto.unwrap().parameters.len(),
         0,
@@ -170,8 +171,9 @@ fn inferred_declarations_roundtrip_array_and_variadic_callback_pointers() {
     let raw = worker
         .decompile_at(&mut provider, ram, address.offset)
         .unwrap();
-    let (_, recovered) = lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
-    let recovered = recovered.unwrap();
+    let recovered = lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64))
+        .prototype
+        .unwrap();
     assert_eq!(recovered.return_type.metatype.as_deref(), Some("ptr"));
     assert_eq!(
         recovered

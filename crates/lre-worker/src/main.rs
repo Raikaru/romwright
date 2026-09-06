@@ -126,11 +126,11 @@ fn run(
     // PackedDecode.java and preserves token metadata; concatenation is only
     // the legacy CLI presentation boundary.
     if std::env::var_os("WORKER_STRUCTURED").is_some() {
-        let (tokens, prototype) =
-            lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
+        let decoded = lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
         let doc = lre_model::DecompDoc {
-            tokens,
-            prototype,
+            tokens: decoded.tokens,
+            prototype: decoded.prototype,
+            jump_tables: decoded.jump_tables,
             address: lre_model::Address::ram(offset),
             revision: 0,
         };

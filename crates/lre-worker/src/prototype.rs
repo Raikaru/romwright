@@ -262,8 +262,8 @@ mod tests {
     use super::*;
     use crate::doc::decode_document_with_ram_space;
     use crate::wire::{
-        attr_type, encode_attribute, encode_header, encode_string_attribute, ELEMENT_END,
-        ELEMENT_START,
+        ELEMENT_END, ELEMENT_START, attr_type, encode_attribute, encode_header,
+        encode_string_attribute,
     };
 
     fn element(out: &mut Vec<u8>, id: u32, body: impl FnOnce(&mut Vec<u8>)) {
@@ -319,8 +319,9 @@ mod tests {
                 prototype(out, "__stdcall", false, int_type);
             })
         });
-        let (_, recovered) = decode_document_with_ram_space(&packed, Some(3));
-        let recovered = recovered.unwrap();
+        let recovered = decode_document_with_ram_space(&packed, Some(3))
+            .prototype
+            .unwrap();
         assert_eq!(recovered.calling_convention, "__stdcall");
         assert!(!recovered.variadic);
         assert_eq!(recovered.return_type.name.as_deref(), Some("int"));
@@ -353,11 +354,15 @@ mod tests {
                 prototype(out, "__cdecl", false, int_type);
             })
         });
-        assert!(decode_document_with_ram_space(&packed, Some(3)).1.is_none());
+        assert!(
+            decode_document_with_ram_space(&packed, Some(3))
+                .prototype
+                .is_none()
+        );
         let raw = include_bytes!("../fixtures/doc_add.bin");
         assert!(
             decode_document_with_ram_space(&raw[..raw.len() - 1], Some(3))
-                .1
+                .prototype
                 .is_none()
         );
     }
@@ -382,6 +387,10 @@ mod tests {
                 prototype(out, "__cdecl", false, int_type);
             })
         });
-        assert!(decode_document_with_ram_space(&packed, Some(3)).1.is_none());
+        assert!(
+            decode_document_with_ram_space(&packed, Some(3))
+                .prototype
+                .is_none()
+        );
     }
 }

@@ -294,6 +294,14 @@ pub struct FuncProto {
     pub variadic: bool,
 }
 
+/// Recovered indirect branch targets, in native table order. Several case
+/// entries may share a target; this does not claim a default-case identity.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct JumpTable {
+    pub branch: Address,
+    pub targets: Vec<Address>,
+}
+
 /// The structured decompiler document for one function (WORKER-004): a
 /// token stream the UI renders without re-parsing C text.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -302,6 +310,9 @@ pub struct DecompDoc {
     /// Recovered native facts; absent for legacy or incomplete documents.
     #[serde(default)]
     pub prototype: Option<FuncProto>,
+    /// None means unavailable metadata; an empty list means no recovered tables.
+    #[serde(default)]
+    pub jump_tables: Option<Vec<JumpTable>>,
     pub address: Address,
     pub revision: u64,
 }
