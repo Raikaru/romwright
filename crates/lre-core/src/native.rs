@@ -1099,7 +1099,7 @@ pub fn store_import(
             kind: x.kind.clone(),
             // Containment resolves at query time from the function table.
             function: None,
-            provenance: lre_model::XrefProvenance {
+            provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,
                 source: if x.provenance.is_empty() {
                     "native-import".into()

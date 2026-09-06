@@ -156,7 +156,7 @@ pub struct XrefRow {
     pub function: Option<String>,
     /// Ownership, producing pass, and optional confidence of this fact.
     #[serde(default)]
-    pub provenance: XrefProvenance,
+    pub provenance: FactProvenance,
 }
 
 /// Assertions survive replacement of inferred analysis results.
@@ -169,7 +169,7 @@ pub enum FactKind {
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
-pub struct XrefProvenance {
+pub struct FactProvenance {
     pub kind: FactKind,
     pub source: String,
     /// A supplied confidence in [0, 1]; None means unknown, not zero.
@@ -444,6 +444,29 @@ pub struct PatchRow {
 
 
 
+/// Primitive semantics, independent of display names and legacy kind labels.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PrimitiveKind {
+    SignedInteger,
+    UnsignedInteger,
+    Float,
+    Boolean,
+    Void,
+}
+
+impl PrimitiveKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::SignedInteger => "signed_integer",
+            Self::UnsignedInteger => "unsigned_integer",
+            Self::Float => "float",
+            Self::Boolean => "boolean",
+            Self::Void => "void",
+        }
+    }
+}
+
 /// A named data type with its composite metadata.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct TypeDefRow {
@@ -454,6 +477,12 @@ pub struct TypeDefRow {
     pub alignment: Option<u64>,
     pub base_type: Option<String>,
     pub provenance: String,
+    /// None preserves an unclassified legacy primitive without guessing.
+    #[serde(default)]
+    pub primitive: Option<PrimitiveKind>,
+    /// Declared array length; zero and an unknown length are distinct.
+    #[serde(default)]
+    pub element_count: Option<u64>,
 }
 
 /// One field in a composite type.
@@ -468,12 +497,14 @@ pub struct TypeFieldRow {
 }
 
 /// Function prototype and calling convention.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PrototypeRow {
     pub function: Address,
     pub signature: String,
     pub calling_convention: Option<String>,
     pub return_type: Option<String>,
+    #[serde(default)]
+    pub provenance: FactProvenance,
 }
 
 /// One recovered stack variable.

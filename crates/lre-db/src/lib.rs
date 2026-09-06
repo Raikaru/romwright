@@ -9,13 +9,13 @@ use lre_model::{
     BookmarkRow, CollaborationOp, CommentRow, DataTypeRow, FunctionRow, GraphEdge, GraphNode,
     JournalEntry, MemoryRegion, PatchRow, ProgramId, PrototypeRow, Provenance, RevisionEvent,
     SearchHit, StackVariableRow, StringRow, SymbolRow, TraceEvent, TypeDefRow, TypeFieldRow,
-    TypeGraphNode, TypeLinkRow, XrefRow, FactKind, XrefProvenance,
+    TypeGraphNode, TypeLinkRow, XrefRow, FactKind, FactProvenance,
 };
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 6;
+pub const SCHEMA_VERSION: i64 = 7;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -35,8 +35,8 @@ pub enum DbError {
     /// Stored collaboration operation was not present.
     #[error("collaboration operation not found: {0}")]
     OperationNotFound(String),
-    #[error("invalid xref provenance: {0}")]
-    InvalidXrefProvenance(String),
+    #[error("invalid fact provenance: {0}")]
+    InvalidFactProvenance(String),
 
 }
 /// Convenience alias with the error defaulted per project convention.
@@ -387,6 +387,19 @@ impl ProjectDb {
             }
             // Version 6 permits typed non-RAM address cells; existing RAM
             // hex cells are unchanged. Older readers must reject this format.
+            if v < 7 {
+                tx.execute_batch(
+                    "ALTER TABLE prototypes ADD COLUMN provenance TEXT NOT NULL DEFAULT '';
+                     ALTER TABLE prototypes ADD COLUMN provenance_kind TEXT NOT NULL DEFAULT 'asserted'
+                         CHECK(provenance_kind IN ('asserted', 'inferred'));
+                     ALTER TABLE prototypes ADD COLUMN confidence REAL
+                         CHECK(confidence >= 0 AND confidence <= 1);
+                     ALTER TABLE type_defs ADD COLUMN primitive TEXT
+                         CHECK(primitive IN ('signed_integer', 'unsigned_integer', 'float', 'boolean', 'void'));
+                     ALTER TABLE type_defs ADD COLUMN element_count INTEGER
+                         CHECK(element_count >= 0);",
+                )?;
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -494,7 +507,7 @@ impl ProjectDb {
         &self, program: ProgramId, source: &str, rows: &[XrefRow],
     ) -> Result<()> {
         if source.trim().is_empty() {
-            return Err(DbError::InvalidXrefProvenance("inference source is empty".into()));
+            return Err(DbError::InvalidFactProvenance("inference source is empty".into()));
         }
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
@@ -527,21 +540,12 @@ impl ProjectDb {
             if expected_source.is_some_and(|source|
                 provenance.kind != FactKind::Inferred || provenance.source != source)
             {
-                return Err(DbError::InvalidXrefProvenance("row does not belong to the inference pass".into()));
+                return Err(DbError::InvalidFactProvenance("row does not belong to the inference pass".into()));
             }
-            if provenance.kind == FactKind::Inferred && provenance.source.trim().is_empty() {
-                return Err(DbError::InvalidXrefProvenance("inference source is empty".into()));
-            }
-            if provenance.confidence.is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value)) {
-                return Err(DbError::InvalidXrefProvenance("confidence must be finite and within [0, 1]".into()));
-            }
+            let ownership = validate_fact_provenance(provenance)?;
             if !seen.insert((&row.from, &row.to, row.kind.as_str(), provenance.kind)) {
                 continue;
             }
-            let ownership = match provenance.kind {
-                FactKind::Inferred => "inferred",
-                FactKind::Asserted => "asserted",
-            };
             stmt.execute(params![
                 program.0, addr_cell(&row.from), addr_cell(&row.to), row.kind,
                 provenance.source, ownership, provenance.confidence,
@@ -1304,12 +1308,14 @@ impl ProjectDb {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "INSERT INTO type_defs(
-                 program_id, name, kind, definition, size, alignment, base_type, provenance
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                 program_id, name, kind, definition, size, alignment, base_type, provenance,
+                 primitive, element_count
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
              ON CONFLICT(program_id, name) DO UPDATE SET
                  kind = excluded.kind, definition = excluded.definition,
                  size = excluded.size, alignment = excluded.alignment,
-                 base_type = excluded.base_type, provenance = excluded.provenance",
+                 base_type = excluded.base_type, provenance = excluded.provenance,
+                 primitive = excluded.primitive, element_count = excluded.element_count",
             params![
                 program.0,
                 row.name,
@@ -1318,7 +1324,9 @@ impl ProjectDb {
                 row.size,
                 row.alignment,
                 row.base_type,
-                row.provenance
+                row.provenance,
+                row.primitive.map(lre_model::PrimitiveKind::as_str),
+                row.element_count
             ],
         )?;
         self.bump_and_record(&tx, program, "type-def", &row.name)?;
@@ -1357,8 +1365,9 @@ impl ProjectDb {
         tx.execute("DELETE FROM type_defs WHERE program_id = ?1", params![program.0])?;
         let mut stmt = tx.prepare(
             "INSERT INTO type_defs(
-                 program_id, name, kind, definition, size, alignment, base_type, provenance
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+                 program_id, name, kind, definition, size, alignment, base_type, provenance,
+                 primitive, element_count
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         )?;
         for row in rows {
             stmt.execute(params![
@@ -1369,7 +1378,9 @@ impl ProjectDb {
                 row.size,
                 row.alignment,
                 row.base_type,
-                row.provenance
+                row.provenance,
+                row.primitive.map(lre_model::PrimitiveKind::as_str),
+                row.element_count
             ])?;
         }
         drop(stmt);
@@ -1381,7 +1392,8 @@ impl ProjectDb {
     /// Lists rich type definitions by name.
     pub fn type_defs(&self, program: ProgramId) -> Result<Vec<TypeDefRow>> {
         let mut stmt = self.conn.prepare(
-            "SELECT name, kind, definition, size, alignment, base_type, provenance
+            "SELECT name, kind, definition, size, alignment, base_type, provenance,
+                    primitive, element_count
              FROM type_defs WHERE program_id = ?1 ORDER BY name",
         )?;
         Ok(stmt
@@ -1394,6 +1406,14 @@ impl ProjectDb {
                     alignment: row.get::<_, Option<i64>>(4)?.map(|value| value as u64),
                     base_type: row.get(5)?,
                     provenance: row.get(6)?,
+                    primitive: row.get::<_, Option<String>>(7)?.map(|value| {
+                        serde_json::from_value(serde_json::Value::String(value)).map_err(|error| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                7, rusqlite::types::Type::Text, Box::new(error),
+                            )
+                        })
+                    }).transpose()?,
+                    element_count: row.get(8)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?)
@@ -1470,57 +1490,62 @@ impl ProjectDb {
         Ok((nodes, self.type_links(program)?))
     }
 
-    /// Replaces function prototypes.
+    /// Replaces inferred prototypes while retaining existing assertions.
     pub fn replace_prototypes(&self, program: ProgramId, rows: &[PrototypeRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM prototypes WHERE program_id = ?1", params![program.0])?;
-        let mut stmt = tx.prepare(
-            "INSERT INTO prototypes(program_id, function, signature, calling_convention, return_type)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
+        tx.execute(
+            "DELETE FROM prototypes WHERE program_id = ?1 AND provenance_kind = 'inferred'",
+            params![program.0],
         )?;
-        for row in rows {
-            stmt.execute(params![
-                program.0,
-                addr_cell(&row.function),
-                row.signature,
-                row.calling_convention,
-                row.return_type
-            ])?;
-        }
-        drop(stmt);
+        Self::insert_prototypes(&tx, program, rows)?;
         self.bump_and_record(&tx, program, "replace-prototypes", &rows.len().to_string())?;
         tx.commit()?;
         Ok(())
     }
 
-    /// Upserts one function prototype.
+    /// Upserts one prototype; an inference cannot overwrite an assertion.
     pub fn set_prototype(&self, program: ProgramId, row: &PrototypeRow) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute(
+        Self::insert_prototypes(&tx, program, std::slice::from_ref(row))?;
+        self.bump_and_record(&tx, program, "prototype", &row.function.hex())?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    fn insert_prototypes(
+        tx: &rusqlite::Transaction<'_>, program: ProgramId, rows: &[PrototypeRow],
+    ) -> Result<()> {
+        let mut stmt = tx.prepare(
             "INSERT INTO prototypes(
-                 program_id, function, signature, calling_convention, return_type
-             ) VALUES (?1, ?2, ?3, ?4, ?5)
+                 program_id, function, signature, calling_convention, return_type,
+                 provenance, provenance_kind, confidence
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
              ON CONFLICT(program_id, function) DO UPDATE SET
                  signature = excluded.signature,
                  calling_convention = excluded.calling_convention,
-                 return_type = excluded.return_type",
-            params![
-                program.0,
-                addr_cell(&row.function),
-                row.signature,
-                row.calling_convention,
-                row.return_type
-            ],
+                 return_type = excluded.return_type,
+                 provenance = excluded.provenance,
+                 provenance_kind = excluded.provenance_kind,
+                 confidence = excluded.confidence
+             WHERE prototypes.provenance_kind = 'inferred'
+                OR excluded.provenance_kind = 'asserted'",
         )?;
-        self.bump_and_record(&tx, program, "prototype", &row.function.hex())?;
-        tx.commit()?;
+        for row in rows {
+            let ownership = validate_fact_provenance(&row.provenance)?;
+            stmt.execute(params![
+                program.0, addr_cell(&row.function), row.signature,
+                row.calling_convention, row.return_type, row.provenance.source,
+                ownership, row.provenance.confidence,
+            ])?;
+        }
         Ok(())
     }
 
     /// Lists prototypes ordered by function address.
     pub fn prototypes(&self, program: ProgramId) -> Result<Vec<PrototypeRow>> {
         let mut stmt = self.conn.prepare(
-            "SELECT function, signature, calling_convention, return_type
+            "SELECT function, signature, calling_convention, return_type,
+                    provenance, provenance_kind, confidence
              FROM prototypes WHERE program_id = ?1 ORDER BY function",
         )?;
         Ok(stmt
@@ -1530,6 +1555,7 @@ impl ProjectDb {
                     signature: row.get(1)?,
                     calling_convention: row.get(2)?,
                     return_type: row.get(3)?,
+                    provenance: map_fact_provenance(row, 4)?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?)
@@ -2105,26 +2131,43 @@ fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
     })
 }
 
-fn map_xref(r: &Row<'_>) -> rusqlite::Result<XrefRow> {
-    let ownership: String = r.get(5)?;
+fn validate_fact_provenance(provenance: &FactProvenance) -> Result<&'static str> {
+    if provenance.kind == FactKind::Inferred && provenance.source.trim().is_empty() {
+        return Err(DbError::InvalidFactProvenance("inference source is empty".into()));
+    }
+    if provenance.confidence.is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value)) {
+        return Err(DbError::InvalidFactProvenance("confidence must be finite and within [0, 1]".into()));
+    }
+    Ok(match provenance.kind {
+        FactKind::Inferred => "inferred",
+        FactKind::Asserted => "asserted",
+    })
+}
+
+fn map_fact_provenance(r: &Row<'_>, source_index: usize) -> rusqlite::Result<FactProvenance> {
+    let ownership: String = r.get(source_index + 1)?;
     let kind = match ownership.as_str() {
         "inferred" => FactKind::Inferred,
         "asserted" => FactKind::Asserted,
         _ => return Err(rusqlite::Error::FromSqlConversionFailure(
-            5, rusqlite::types::Type::Text,
-            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "unknown xref ownership")),
+            source_index + 1, rusqlite::types::Type::Text,
+            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "unknown fact ownership")),
         )),
     };
+    Ok(FactProvenance {
+        source: r.get(source_index)?,
+        kind,
+        confidence: r.get(source_index + 2)?,
+    })
+}
+
+fn map_xref(r: &Row<'_>) -> rusqlite::Result<XrefRow> {
     Ok(XrefRow {
         from: addr_from_cell(r.get(0)?, 0)?,
         to: addr_from_cell(r.get(1)?, 1)?,
         kind: r.get(2)?,
         function: r.get(3)?,
-        provenance: XrefProvenance {
-            source: r.get(4)?,
-            kind,
-            confidence: r.get(6)?,
-        },
+        provenance: map_fact_provenance(r, 4)?,
     })
 }
 
@@ -2440,7 +2483,7 @@ mod tests {
             from: lre_model::Address::ram(0x400488),
             to: lre_model::Address::ram(0x400466),
             kind: "UNCONDITIONAL_CALL".into(),
-            provenance: XrefProvenance::default(),
+            provenance: FactProvenance::default(),
         }];
         db.replace_xrefs(id, &rows).unwrap();
         assert_eq!(db.xrefs_to(id, &lre_model::Address::ram(0x400466)).unwrap().len(), 1);
@@ -2450,7 +2493,7 @@ mod tests {
 
     #[test]
     fn inferred_xrefs_replace_only_their_pass_and_preserve_assertions() {
-        use lre_model::{FactKind, XrefProvenance};
+        use lre_model::{FactKind, FactProvenance};
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("refs", "x86:LE:64:default", &prov()).unwrap();
         let source = "native-analysis:constant-propagation";
@@ -2459,7 +2502,7 @@ mod tests {
             to: lre_model::Address::ram(0x3000),
             kind: "READ".into(),
             function: None,
-            provenance: XrefProvenance {
+            provenance: FactProvenance {
                 kind,
                 source: producer.into(),
                 confidence: None,
@@ -2504,6 +2547,11 @@ mod tests {
                 src TEXT NOT NULL, dst TEXT NOT NULL, kind TEXT NOT NULL,
                 provenance TEXT NOT NULL DEFAULT '',
                 PRIMARY KEY (program_id, src, dst, kind));
+             ALTER TABLE prototypes DROP COLUMN provenance;
+             ALTER TABLE prototypes DROP COLUMN provenance_kind;
+             ALTER TABLE prototypes DROP COLUMN confidence;
+             ALTER TABLE type_defs DROP COLUMN primitive;
+             ALTER TABLE type_defs DROP COLUMN element_count;
              UPDATE meta SET value = '4' WHERE key = 'schema_version';"
         ).unwrap();
         for (from, source) in [("00001000", "legacy-author"), ("00001010", "native-import")] {
@@ -2523,6 +2571,37 @@ mod tests {
         assert_eq!(rows[1].provenance.confidence, None);
         db.replace_xrefs(id, &[]).unwrap();
         assert_eq!(db.xrefs(id).unwrap(), vec![rows[0].clone()]);
+    }
+
+    #[test]
+    fn prototype_inference_preserves_assertions_and_rolls_back_invalid_confidence() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("prototypes", "x86:LE:64:default", &prov()).unwrap();
+        let row = |address, kind, source: &str| PrototypeRow {
+            function: lre_model::Address::ram(address),
+            signature: format!("int {source}(void)"),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance { kind, source: source.into(), confidence: None },
+        };
+        let asserted = row(0x1000, FactKind::Asserted, "analyst");
+        let old = row(0x1010, FactKind::Inferred, "analysis");
+        db.replace_prototypes(id, &[asserted.clone(), old.clone()]).unwrap();
+        let mut invalid = row(0x1020, FactKind::Inferred, "analysis");
+        invalid.provenance.confidence = Some(f64::NAN);
+        let revision = db.revision(id).unwrap();
+        assert!(matches!(db.replace_prototypes(id, &[invalid]),
+            Err(DbError::InvalidFactProvenance(_))));
+        assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), old]);
+        assert_eq!(db.revision(id).unwrap(), revision);
+        let conflict = row(0x1000, FactKind::Inferred, "analysis");
+        let mut fresh = row(0x1020, FactKind::Inferred, "analysis");
+        fresh.provenance.confidence = Some(0.9);
+        db.replace_prototypes(id, &[conflict.clone(), fresh.clone()]).unwrap();
+        db.set_prototype(id, &conflict).unwrap();
+        assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), fresh]);
+        db.replace_prototypes(id, &[]).unwrap();
+        assert_eq!(db.prototypes(id).unwrap(), vec![asserted]);
     }
 
     #[test]
@@ -2657,7 +2736,7 @@ mod tests {
                 from: entry.clone(),
                 to: lre_model::Address::ram(0x401000),
                 kind: "DATA".into(),
-                provenance: XrefProvenance::default(),
+                provenance: FactProvenance::default(),
             }],
         )
         .unwrap();
@@ -2713,6 +2792,8 @@ mod tests {
                 alignment: Some(4),
                 base_type: None,
                 provenance: "native-analysis".into(),
+                primitive: None,
+                element_count: None,
             }],
         )
         .unwrap();
@@ -2746,6 +2827,7 @@ mod tests {
                 signature: "int main(void)".into(),
                 calling_convention: Some("__cdecl".into()),
                 return_type: Some("int".into()),
+                provenance: FactProvenance::default(),
             }],
         )
         .unwrap();
