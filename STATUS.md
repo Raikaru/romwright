@@ -1514,6 +1514,12 @@ M2 — Program-model parity
   i386 O0/O2/C++/many recall is 16/17, 15/16, 24/25, 13/14.
   Other architectures' row scores are unchanged.
 
+## m2-002g3 writable-image reference policy
+- Acceptance `inferred_references_use_writable_image_values` must fail before
+  matching `ConstantPropagationAnalyzer`'s default writable-memory trust.
+  Keep the explicit strict constant-query mode unchanged.
+- Publish implementation and the complete generated matrix report separately.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
