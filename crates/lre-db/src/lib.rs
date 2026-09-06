@@ -2730,6 +2730,55 @@ mod tests {
     }
 
     #[test]
+    fn version_seven_migration_keeps_functions_and_starts_return_facts_unknown() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("return-migration", "x86:LE:64:default", &prov()).unwrap();
+        db.replace_functions(id, &[FunctionRow {
+            entry: lre_model::Address::ram(0x1000), name: "analyst_name".into(), size: 9,
+            signature: Some("int analyst_name(void)".into()), calling_convention: None,
+        }]).unwrap();
+        let revision = db.revision(id).unwrap();
+        db.conn.execute_batch(
+            "DROP TABLE IF EXISTS return_behaviors;
+             UPDATE meta SET value = '7' WHERE key = 'schema_version';"
+        ).unwrap();
+        db.migrate().unwrap();
+        assert!(db.return_behaviors(id).unwrap().is_empty());
+        let rows = db.functions(id).unwrap();
+        assert_eq!(rows[0].name, "analyst_name");
+        assert_eq!(rows[0].signature.as_deref(), Some("int analyst_name(void)"));
+        assert_eq!(rows[0].size, 9);
+        assert_eq!(db.revision(id).unwrap(), revision);
+    }
+
+    #[test]
+    fn return_behavior_assertions_override_inference_without_spurious_revisions() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("return-ownership", "x86:LE:64:default", &prov()).unwrap();
+        let inferred = lre_model::ReturnBehaviorRow {
+            function: lre_model::Address::ram(0x1000), no_return: true,
+            provenance: FactProvenance {
+                kind: FactKind::Inferred, source: "flow".into(), confidence: None,
+            },
+        };
+        db.set_return_behavior(id, &inferred).unwrap();
+        let mut asserted = inferred.clone();
+        asserted.no_return = false;
+        asserted.provenance.kind = FactKind::Asserted;
+        asserted.provenance.source = "analyst".into();
+        db.set_return_behavior(id, &asserted).unwrap();
+        let revision = db.revision(id).unwrap();
+        db.set_return_behavior(id, &inferred).unwrap();
+        db.set_return_behavior(id, &asserted).unwrap();
+        assert_eq!(db.return_behaviors(id).unwrap(), vec![asserted.clone()]);
+        assert_eq!(db.revision(id).unwrap(), revision);
+        asserted.provenance.confidence = Some(f64::NAN);
+        assert!(matches!(db.set_return_behavior(id, &asserted),
+            Err(DbError::InvalidFactProvenance(_))));
+        assert_eq!(db.revision(id).unwrap(), revision);
+    }
+
+    #[test]
     fn version_six_migration_preserves_prototypes_and_structured_types() {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("legacy-types", "x86:LE:64:default", &prov()).unwrap();
