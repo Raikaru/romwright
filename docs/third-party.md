@@ -297,6 +297,10 @@ accessors; it does not modify the pinned source tree. Cached labels are
 transient console context, not function discoveries or durable renames.
 Scalar classification uses original SLEIGH control-flow targets even when
 the compiler's fixup replaces a CALL in the raw function.
+Symbolic alignment follows `VarnodeContext.and`'s alignment-mask policy.
+The native state keeps a usable opaque frame but retires its previous
+register and memory aliases before reusing the abstract origin. It does not
+assume the unknown pre-alignment pointer already satisfied the alignment.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

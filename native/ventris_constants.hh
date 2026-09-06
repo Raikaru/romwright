@@ -497,6 +497,21 @@ class Propagation {
     if (sameStorage && (code == CPUI_INT_XOR || code == CPUI_INT_SUB))
       return Value::constant(0, size);
     if (size == op.getIn(0)->getSize() && inputs == 2) {
+      if (code == CPUI_INT_AND && right.base >= 0 &&
+          left.complete(size) && op.getIn(1)->getSize() == size)
+        std::swap(left, right);
+      if (code == CPUI_INT_AND && left.base >= 0 &&
+          right.complete(op.getIn(1)->getSize()) && right.bits != 0 && (right.bits & 1) == 0) {
+        // VarnodeContext.and preserves a symbolic origin for alignment masks.
+        // Rebase it conservatively: old pointers/slots must not alias the new
+        // frame merely because both use the same reusable abstract base id.
+        state.registers.forgetRelativeBase(left.base);
+        state.memory.forgetRelativeBase(left.base);
+        state.memory.retain([&](int id, Word, int) {
+          return id >= 0 || (-1 - id) / spaceCount != left.base;
+        });
+        return Value::relative(left.base, left.bits & right.bits, size);
+      }
       if (left.base >= 0 && right.complete(op.getIn(1)->getSize()) &&
           (code == CPUI_INT_ADD || code == CPUI_INT_SUB))
         return Value::relative(left.base, code == CPUI_INT_ADD ? left.bits + right.bits :
