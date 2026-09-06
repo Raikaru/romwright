@@ -1756,6 +1756,9 @@ M2 — Program-model parity
 - b: export fresh stock parameter-ID results from stripped binaries and add
   the frozen proto.arity comparator/report. Never seed either analysis with
   DWARF; preserve matching denominators and all mismatches in evidence.
+  Split b into b1 (stock exporter and comparator tooling), b2 (per-architecture
+  reference evidence), and b3 (native gate integration after c/d). Commit
+  generated reference evidence per architecture, separately from tooling.
 - c: bound pool registration and decompile operations, refresh workers after
   fact revisions, and apply stored callee prototypes before caller analysis.
 - d: implement Core-owned inferred writes and the API inference operation,
