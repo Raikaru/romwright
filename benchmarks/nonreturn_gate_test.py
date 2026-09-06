@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Boundary tolerance and matched-denominator checks for m2-008."""
 import unittest
-from nonreturn_gate import bounds_score
+from nonreturn_gate import bounds_score, compare_return_flags
 
 
 def function(entry, size):
@@ -41,6 +41,18 @@ class BoundsTest(unittest.TestCase):
             reference, set(reference))
         self.assertEqual((score['matched'], score['correct']), (2, 1))
         self.assertEqual([row['entry'] for row in score['mismatches']], ['00002000'])
+
+
+class ReturnMetadataTest(unittest.TestCase):
+    def test_unflagged_stock_function_is_not_a_returning_assertion(self):
+        comparison = compare_return_flags({'00001000', '00002000'}, {'00002000'})
+        self.assertTrue(comparison['stock_positives_covered'])
+        self.assertEqual(comparison['native_only'], ['00001000'])
+
+    def test_missing_stock_positive_is_still_a_failure(self):
+        comparison = compare_return_flags({'00001000'}, {'00002000'})
+        self.assertFalse(comparison['stock_positives_covered'])
+        self.assertEqual(comparison['stock_only'], ['00002000'])
 
 
 if __name__ == '__main__':
