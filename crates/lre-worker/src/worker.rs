@@ -8,7 +8,7 @@
 //! no-JVM replacement for the Stage-1 bridge, per ADR-0001.
 
 use lre_db::ProjectDb;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
@@ -44,6 +44,13 @@ pub enum WorkerError {
 /// Convenience alias with the error defaulted per project convention.
 pub type Result<T, E = WorkerError> = std::result::Result<T, E>;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum PrototypeMode {
+    Asserted,
+    Inferred,
+    Recovery,
+}
+
 /// A running `ghidra_opt` child with one registered program.
 pub struct NativeWorker {
     /// The child, behind a mutex so a watchdog thread can kill it (deadline
@@ -54,7 +61,7 @@ pub struct NativeWorker {
     pub(crate) out_buf: Vec<u8>,
     /// Architecture slot returned by registerProgram.
     arch_id: i32,
-    applied_prototypes: HashSet<u64>,
+    applied_prototypes: HashMap<u64, PrototypeMode>,
     /// Path passed to ghidra_opt for diagnostics.
     pub binary: PathBuf,
 }
@@ -81,7 +88,7 @@ impl NativeWorker {
         Ok(Self {
             child: std::sync::Arc::new(std::sync::Mutex::new(Some(child))),
             arch_id: 0,
-            applied_prototypes: HashSet::new(),
+            applied_prototypes: HashMap::new(),
             stdin: Some(stdin),
             stdout,
             out_buf: Vec::new(),
@@ -92,6 +99,25 @@ impl NativeWorker {
     /// Activates stored prototypes for this function and its direct callees.
     /// Unrelated prototypes must not affect an independent decompile.
     pub fn prepare_function(&mut self, provider: &mut ProgramProvider, address: u64) -> Result<()> {
+        self.prepare_function_mode(provider, address, false)
+    }
+
+    /// Recovers an inferred target anew while retaining locked callee facts.
+    /// Analyst assertions remain locked even when they are the target.
+    pub fn prepare_function_for_inference(
+        &mut self,
+        provider: &mut ProgramProvider,
+        address: u64,
+    ) -> Result<()> {
+        self.prepare_function_mode(provider, address, true)
+    }
+
+    fn prepare_function_mode(
+        &mut self,
+        provider: &mut ProgramProvider,
+        address: u64,
+        recover: bool,
+    ) -> Result<()> {
         if let Some(&size) = provider.function_sizes.get(&address) {
             let first = provider
                 .call_edges
@@ -101,23 +127,30 @@ impl NativeWorker {
                     break;
                 }
                 let callee = provider.call_edges[index].1.offset;
-                self.apply_stored_prototype(provider, callee)?;
+                self.apply_stored_prototype(provider, callee, false)?;
             }
         }
-        self.apply_stored_prototype(provider, address)
+        self.apply_stored_prototype(provider, address, recover)
     }
 
     fn apply_stored_prototype(
         &mut self,
         provider: &mut ProgramProvider,
         address: u64,
+        recover: bool,
     ) -> Result<()> {
-        if self.applied_prototypes.contains(&address) {
-            return Ok(());
-        }
-        let Some(signature) = provider.prototypes.get(&address).cloned() else {
+        let Some(prototype) = provider.prototypes.get(&address) else {
             return Ok(());
         };
+        let mode = match prototype.provenance.kind {
+            lre_model::FactKind::Asserted => PrototypeMode::Asserted,
+            lre_model::FactKind::Inferred if recover => PrototypeMode::Recovery,
+            lre_model::FactKind::Inferred => PrototypeMode::Inferred,
+        };
+        if self.applied_prototypes.get(&address) == Some(&mode) {
+            return Ok(());
+        }
+        let signature = prototype.signature.clone();
         let name = provider
             .function_names
             .get(&address)
@@ -127,8 +160,8 @@ impl NativeWorker {
                     "prototype target {address:#x} has no function name"
                 ))
             })?;
-        self.set_function_signature(provider, address, &name, &signature)?;
-        self.applied_prototypes.insert(address);
+        self.set_function_signature(provider, address, &name, &signature, mode)?;
+        self.applied_prototypes.insert(address, mode);
         Ok(())
     }
 
@@ -211,12 +244,13 @@ impl NativeWorker {
 
     /// Applies a C declaration to a preloaded function through the native
     /// decompiler's own prototype parser.
-    pub fn set_function_signature(
+    fn set_function_signature(
         &mut self,
         provider: &mut ProgramProvider,
         function_address: u64,
         function_name: &str,
         signature: &str,
+        mode: PrototypeMode,
     ) -> Result<()> {
         let arch_id = self.arch_id.to_string();
         let address = format!("{function_address:x}");
@@ -234,6 +268,11 @@ impl NativeWorker {
                 function_name.as_bytes(),
                 normalized.as_bytes(),
                 address.as_bytes(),
+                match mode {
+                    PrototypeMode::Asserted => b"asserted",
+                    PrototypeMode::Inferred => b"inferred",
+                    PrototypeMode::Recovery => b"recovery",
+                },
             ],
         )?;
         if !response.is_empty() {

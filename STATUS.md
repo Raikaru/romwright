@@ -1777,6 +1777,8 @@ M2 — Program-model parity
 - d: implement Core-owned inferred writes and the API inference operation,
   with at most 3 rounds, caller-only re-analysis, a time budget, and assertion
   retention. Existing prototype storage remains authoritative.
+  Split d into d1 (structured declaration rendering and atomic inferred
+  persistence) and d2 (bounded pool/API orchestration and caller scheduling).
 - e: run the full unchanged DWARF corpus gate, fix demonstrated mismatches,
   and publish measured reports. Split any implementation slice further before
   exceeding 800 changed lines; no metric or corpus change is authorized.
@@ -1817,6 +1819,18 @@ M2 — Program-model parity
 - Verification: 155 workspace tests, corpus 5/5, both real prototype scripts,
   and string regression 20/20 with recall 1.0.
 
+### m2-006-c3 evidence
+- `b0f63a8` committed the missing recovery API/provenance acceptance first.
+  The real native test now observes stored inferred arity 0, recovered arity 2,
+  and asserted arity 0 in one process; inferred names do not rename functions.
+- Repeated application exposed native stream accumulation (`inferredrecovery`).
+  The command now clears all 4 string parameters before reading them. Pinned
+  `ghidra_arch.cc` confirms append semantics; `fspec.hh` confirms all 3 locks.
+- Native build succeeded; the explicit recovery test passed in 0.12 s.
+  Workspace: 155 passed, 1 native test ignored by default and exercised above.
+  Corpus 5/5, both prototype API/CLI scripts, string regression 20/20 at 1.0.
+- Core persistence and bounded inference orchestration remain unfinished.
+
 ## Blocked on
 - None.
 
@@ -1825,8 +1839,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Registration and fact snapshots are supervised. Next, unlock inferred
-  targets for recovery and carry one absolute deadline through inference.
+  Registration, fact snapshots, and recovery locks are implemented. Next,
+  persist structured inferred prototypes atomically and implement bounded rounds.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

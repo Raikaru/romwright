@@ -73,7 +73,7 @@ impl WorkerSession {
             if !prototype.signature.is_empty() {
                 provider
                     .prototypes
-                    .insert(prototype.function.offset, prototype.signature);
+                    .insert(prototype.function.offset, prototype);
             }
         }
         for string in db.strings(pid)? {

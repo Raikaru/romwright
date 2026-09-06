@@ -73,8 +73,8 @@ pub struct ProgramProvider {
     pub external_names: HashMap<u64, String>,
     /// String data indexed by address for getStringData.
     pub strings: HashMap<u64, String>,
-    /// Entry address -> prototype signature override (from the store).
-    pub prototypes: HashMap<u64, String>,
+    /// Entry address -> stored prototype, including its assertion status.
+    pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
     /// RAM call edges ordered by source/destination offset.
     pub call_edges: Vec<(lre_model::Address, lre_model::Address)>,
     /// Track which space index `ram` occupies once the tspec registers it.
