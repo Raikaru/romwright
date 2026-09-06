@@ -16,6 +16,7 @@ from prototype_gate import run_api
 SOURCE = r'''
 .text
 .globl entry, relay, stop, ordinary, unknown, indirect, dead_entry, dead_relay
+.globl known_caller, dead_known
 .type entry,@function
 entry:
 .cfi_startproc
@@ -64,6 +65,16 @@ indirect:
  ret
 .cfi_endproc
 .size indirect,.-indirect
+.type known_caller,@function
+known_caller:
+.cfi_startproc
+ xor %edi,%edi
+ call exit@PLT
+dead_known:
+ call ordinary
+ ret
+.cfi_endproc
+.size known_caller,.-known_caller
 .section .note.GNU-stack,"",@progbits
 '''
 
@@ -79,8 +90,9 @@ def main():
         work = Path(temporary)
         twin, binary, project = work / 'fixture.unstripped', work / 'fixture.bin', work / 'project'
         subprocess.run(['gcc', '-nostdlib', '-no-pie', '-Wl,-e,entry', '-x', 'assembler', '-',
-            '-o', str(twin)], input=SOURCE, text=True, check=True, capture_output=True)
+            '-o', str(twin), '-lc'], input=SOURCE, text=True, check=True, capture_output=True)
         names = {'entry', 'relay', 'stop', 'ordinary', 'unknown', 'indirect', 'dead_entry', 'dead_relay'}
+        names.update({'known_caller', 'dead_known'})
         symbols = {parts[0]: int(parts[2], 16) for line in subprocess.check_output(
             ['nm', '-P', str(twin)], text=True).splitlines()
             if len(parts := line.split()) >= 3 and parts[0] in names}
@@ -92,12 +104,17 @@ def main():
         invoke = lambda requests: run_api(ROOT, project, requests, 120, env)
         refs = lambda name: ('xrefs', dict(program='fixture', address=address(name), incoming=False))
         doc = ('decompile_doc', dict(**context, address=address('relay')))
+        _, initial_functions = invoke([
+            ('import_native', dict(binary=str(binary), name='fixture')),
+            ('functions', dict(program='fixture'))])
+        exit_entry = next(row['entry'] for row in initial_functions if row['name'] == 'exit')
+        known_doc = ('decompile_doc', dict(**context, address=address('known_caller')))
         assertion = dict(function=address('stop'), signature='void stop(void)',
             calling_convention=None, return_type='void',
             provenance=dict(kind='asserted', source='nonreturn-acceptance', confidence=None))
         operation = dict(op_id='assert-stop', actor='acceptance', lamport=1,
             kind='set_prototype', payload=json.dumps(assertion), applied=False, provenance='acceptance')
-        before = invoke([('import_native', dict(binary=str(binary), name='fixture'))] + [
+        before = invoke([
             ('rename', dict(program='fixture', address=address(name), name=name))
             for name in names if not name.startswith('dead_')] + [
                 ('append_collab_op', dict(program='fixture', operation=operation)),
@@ -106,6 +123,9 @@ def main():
         for rows in before[-3:-1]:
             assert any(row['to'] == address('ordinary') and 'CALL' in row['kind'] for row in rows), rows
         assert any(token['text'] == 'ordinary' for token in before[-1]['tokens']), before[-1]
+        known_before = invoke([refs('dead_known'), known_doc])
+        assert any('CALL' in row['kind'] for row in known_before[0]), known_before
+        assert any(token['text'] == 'ordinary' for token in known_before[1]['tokens']), known_before[1]
         # Keep a child warm across publication: revision invalidation must prevent
         # the old returning-callee assumptions from surviving the inference.
         _, report, after_doc = invoke([doc, ('infer_nonreturning', context), doc])
@@ -114,12 +134,19 @@ def main():
             ('functions', dict(program='fixture')), ('prototypes', dict(program='fixture'))])
         assert prototypes == [assertion], prototypes
         inferred = {row['function']['offset'] for row in facts if row['no_return']}
-        assert inferred == {symbols['stop'], symbols['relay']}, facts
+        assert inferred == {symbols['stop'], symbols['relay'], symbols['known_caller'], exit_entry['offset']}, facts
         assert all(row['provenance']['kind'] == 'inferred' and row['provenance']['source'] for row in facts), facts
         assert not any('CALL' in row['kind'] for row in entry_refs + relay_refs), (entry_refs, relay_refs)
         relay = next(row for row in functions if row['entry'] == address('relay'))
         assert relay['name'] == 'relay' and relay['size'] == symbols['dead_relay'] - symbols['relay'], relay
+        known = next(row for row in functions if row['entry'] == address('known_caller'))
+        assert known['size'] == symbols['dead_known'] - symbols['known_caller'], known
+        known_refs, known_after = invoke([refs('dead_known'), known_doc])
+        assert not any('CALL' in row['kind'] for row in known_refs), known_refs
+        assert not any(token['text'] == 'ordinary' for token in known_after['tokens']), known_after
+        assert known_after['prototype']['no_return'] is True, known_after
         assert not any(token['text'] == 'ordinary' for token in after_doc['tokens']), after_doc
+        assert after_doc['prototype']['no_return'] is True, after_doc
         assert after_doc['revision'] > before[-1]['revision'], (before[-1], after_doc)
         standalone = subprocess.run([str(ROOT / 'target/debug/lre-cli'), 'decompile-native-doc',
             str(binary), hex(symbols['relay']), '--project', str(project), '--name', 'fixture'],
@@ -130,8 +157,8 @@ def main():
         assert repeated['changed'] == [] and final_doc['revision'] == after_doc['revision'], repeated
         assert final_facts == facts, (final_facts, facts)
         evidence = dict(task='m2-008', passed=True, scope='temporary positive acceptance, not locked corpus',
-            inferred_functions=2, returning_controls=2, unresolved_indirect_controls=2,
-            removed_call_xrefs=2, standalone=1, pooled=True, report=report, repeated=repeated)
+            inferred_functions=4, returning_controls=2, unresolved_indirect_controls=2,
+            removed_call_xrefs=3, standalone=1, pooled=True, report=report, repeated=repeated)
         if args.report:
             args.report.write_text(json.dumps(evidence, indent=2) + '\n')
         print(json.dumps(evidence))

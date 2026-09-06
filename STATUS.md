@@ -1985,6 +1985,20 @@ M2 — Program-model parity
   - e1: add the locked-corpus acceptance and stock return-behavior exporter.
   - e2–e5: commit x86-64, i386, AArch64, and PowerPC reference evidence
     separately. e6: commit the aggregate report and task closure.
+- f1: complete the ratified known-name requirement using the pinned ELF/PE
+  no-return lists, including `exit`; extend the failing acceptance first.
+- f2: produce and consume positive completed-decompiler flow hints. Preserve
+  assertions and unknown-flow rejection; do not infer from rendered C text.
+- f3: export exact oracle body ranges, reuse `code-functions-v1` eligibility,
+  and record before/after `fn.bounds` on the unchanged optimized recipes.
+
+### m2-008 partial evidence
+- `df32929` passes the direct-flow acceptance: 2 inferred functions and
+  2 removed call xrefs; 163 workspace tests and corpus 5/5 pass.
+- The first full comparison is 12 pass, 8 fail, 0 skipped. It includes stock
+  synthetic externals and exposes missing known-name behavior. No gate pass
+  or task completion is claimed. The ratified task also requires known names,
+  decompiler hints, and optimized-corpus boundary evidence; those remain open.
 
 ## Blocked on
 - None.
