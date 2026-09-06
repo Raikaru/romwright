@@ -2,8 +2,8 @@
   "gate": "nonreturn",
   "milestone": "M2",
   "task": "m2-008",
-  "commit": "df3cb5de29727c249933170dc750e543fa614289",
-  "date": "2026-09-06T16:25:45.144389+00:00",
+  "commit": "471f1982d6c97d51f23c3c6445dfe19891cc9fea",
+  "date": "2026-09-06T23:02:14.166885+00:00",
   "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
   "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
   "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
@@ -16,8 +16,8 @@
     },
     "after": {
       "matched": 1789,
-      "correct": 1773,
-      "fn.bounds": 0.9910564561207379
+      "correct": 1774,
+      "fn.bounds": 0.9916154276131918
     }
   },
   "optimized_bounds_improved": true,
@@ -175,7 +175,7 @@
     },
     {
       "id": "powerpc_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
       "twin_sha256": "5d6d9b486062fd3c64103b9e2af80bd0e593b795bbe707496a195701c0e1f0b6",
       "analysis_context": {
@@ -214,26 +214,22 @@
         },
         "after": {
           "matched": 19,
-          "correct": 18,
-          "fn.bounds": 0.9473684210526315,
-          "incorrect_count": 1,
-          "incorrect_evidence": {
-            "path": "m2-008-powerpc-mismatches/powerpc_cpp_o2-after-5cc3ed3013c7feb8.jsonl",
-            "sha256": "5cc3ed3013c7feb89d09fc6a2e70f348a0a168476981277c771a4e1e92092e2b"
-          }
+          "correct": 19,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
         }
       },
-      "native_nonreturning": [],
+      "native_nonreturning": [
+        "100108b0"
+      ],
       "stock_nonreturning": [
         "100108b0"
       ],
-      "unknown_functions": 12,
-      "rediscovered_callers": 0,
-      "stock_positives_covered": false,
+      "unknown_functions": 11,
+      "rediscovered_callers": 2,
+      "stock_positives_covered": true,
       "native_only": [],
-      "stock_only": [
-        "100108b0"
-      ]
+      "stock_only": []
     },
     {
       "id": "powerpc_many_o2",
