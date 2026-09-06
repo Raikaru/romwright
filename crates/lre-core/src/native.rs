@@ -2166,6 +2166,77 @@ mod tests {
     }
 
     #[test]
+    fn powerpc_pic_context_follows_calls_not_unrelated_functions() {
+        use crate::native_runtime::{ConsoleSession, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "PowerPC:BE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/PowerPC/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut bytes = vec![0u8; 0x500];
+        bytes[..7].copy_from_slice(b"\x7fELF\x01\x02\x01");
+        for (offset, value) in [(16, 2u16), (18, 20), (40, 52), (42, 32), (44, 3),
+            (46, 40), (48, 5), (50, 4)] {
+            bytes[offset..offset + 2].copy_from_slice(&value.to_be_bytes());
+        }
+        for (offset, value) in [(20, 1u32), (24, 0x1100), (28, 52), (32, 0x400)] {
+            bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+        }
+        for (index, header) in [
+            [1u32, 0x100, 0x1000, 0x1000, 0x208, 0x208, 5, 4],
+            [1, 0x320, 0x3000, 0x3000, 0x20, 0x20, 6, 4],
+            [2, 0x330, 0x3010, 0x3010, 16, 16, 6, 4],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 52 + index * 32 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+            }
+        }
+        for (offset, instruction) in [
+            (0x100, 0x807e0004u32), (0x104, 0x4e800020), // lwz r3,4(r30); blr
+            (0x200, 0x3fc00000), (0x204, 0x63de3000), // lis/ori r30,0x3000
+            (0x208, 0x4bfffef9), (0x20c, 0x4e800020), // bl 0x1000; blr
+            (0x300, 0x807e0008), (0x304, 0x4e800020), // uncalled load
+            (0x330, 0x70000000), (0x334, 0x3000), // DT_PPC_GOT
+        ] {
+            bytes[offset..offset + 4].copy_from_slice(&instruction.to_be_bytes());
+        }
+        let names = b"\0.text\0.got\0.dynamic\0.shstrtab\0";
+        bytes[0x360..0x360 + names.len()].copy_from_slice(names);
+        for (index, header) in [
+            [1u32, 1, 6, 0x1000, 0x100, 0x208, 0, 0, 4, 0],
+            [7, 1, 3, 0x3000, 0x320, 16, 0, 0, 4, 0],
+            [12, 6, 3, 0x3010, 0x330, 16, 0, 0, 4, 8],
+            [21, 3, 0, 0, 0x360, names.len() as u32, 0, 0, 1, 0],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 0x400 + (index + 1) * 40 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
+            }
+        }
+        let analyze = |bytes: &[u8]| {
+            let mut import = import_elf(bytes).unwrap();
+            import.cfg = cfg.clone();
+            import.functions = [(0x1000, 8), (0x1100, 16), (0x1200, 8)].into_iter()
+                .map(|(entry, size)| NativeFunction { entry, size, name: format!("FUN_{entry:x}") })
+                .collect();
+            let mut session = ConsoleSession::new(&cfg).unwrap();
+            session.load_mapped(&import).unwrap();
+            infer_data_references(&mut import, &mut session).unwrap();
+            assert!(session.constants(0x1000, 0x1008, &import.mappings, false).unwrap().is_empty(),
+                "call-derived reference context must not enter strict constant queries");
+            import.xrefs.into_iter().filter(|xref| xref.kind == "READ")
+                .map(|xref| (xref.from, xref.to)).collect::<Vec<_>>()
+        };
+        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004)],
+            "only the called function inherits the actual r30 value, independent of query order");
+        bytes[0x330..0x334].fill(0);
+        assert!(analyze(&bytes).is_empty(), "a GOT section alone cannot enable r30 propagation");
+    }
+
+    #[test]
     fn elf_linkage_references_do_not_require_functions() {
         use crate::native_runtime::{find_console, ConsoleSession};
         let mut cfg = crate::session::RuntimeConfig::from_env();
