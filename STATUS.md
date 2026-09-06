@@ -1982,6 +1982,9 @@ M2 — Program-model parity
   publish evidence and update the next task. No new metric threshold or
   corpus member is introduced. Split additional evidence commits below
   800 changed lines if required.
+  - e1: add the locked-corpus acceptance and stock return-behavior exporter.
+  - e2–e5: commit x86-64, i386, AArch64, and PowerPC reference evidence
+    separately. e6: commit the aggregate report and task closure.
 
 ## Blocked on
 - None.
