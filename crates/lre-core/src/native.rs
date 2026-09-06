@@ -2113,7 +2113,7 @@ mod tests {
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
             }
         }
-        bytes[0x100..0x106].copy_from_slice(&[0x8b, 0x43, 4, 0x31, 0xc0, 0xc3]);
+        bytes[0x100..0x106].copy_from_slice(&[0x8b, 0x43, 4, 0xff, 0x63, 8]);
         bytes[0x140..0x144].copy_from_slice(&3u32.to_le_bytes()); // DT_PLTGOT
         bytes[0x144..0x148].copy_from_slice(&0x3000u32.to_le_bytes());
         let names = b"\0.plt\0.got\0.dynamic\0.shstrtab\0.text\0";
@@ -2135,10 +2135,13 @@ mod tests {
             let mut session = discovery::discover_seeded(&mut import).unwrap();
             import.xrefs.clear();
             infer_data_references(&mut import, &mut session).unwrap();
+            let strict = session.constants(0x1000, 0x1006, &import.mappings, false).unwrap();
+            assert!(strict.is_empty(), "reference-only context must not seed strict queries: {strict:?}");
             import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
                 .collect::<Vec<_>>()
         };
-        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004, "READ".into())],
+        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004, "READ".into()),
+            (0x1003, 0x3008, "READ".into())],
             "ELF PLT references use the loader-declared GOT register context");
         bytes[0x140..0x144].fill(0);
         assert!(analyze(&bytes).is_empty(), "a GOT section cannot substitute for DT_PLTGOT");
