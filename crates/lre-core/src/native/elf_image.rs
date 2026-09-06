@@ -54,6 +54,9 @@ pub(super) fn prepare(
     }
     complete_load_segments(data, import, width, be, bias)?;
     let machine = word(data, 18, 2, be)?;
+    if machine == 20 && width == 4 && dynamic_value(data, width, be, 0x70000000)?.is_some() {
+        import.reference_call_register = Some("r30"); // DT_PPC_GOT: old ELF32 PIC ABI.
+    }
     let linkage_types = match machine {
         3 | 62 => [6, 7],
         20 | 21 => [20, 21],

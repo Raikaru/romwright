@@ -51,6 +51,10 @@ struct ReferenceFact {
   }
 };
 
+struct CallRegisterFact {
+  Word pc, target, value;
+};
+
 struct Snapshot {
   State registers, memory;
   std::map<Location, unsigned char> modified;
@@ -115,6 +119,32 @@ class Propagation {
   std::vector<ParameterPieces> pointerStorage;
   std::vector<const BlockBasic *> originPending, originVisited;
   std::vector<RegisterSeed> registerSeeds;
+  const VarnodeData *trackedRegister = nullptr;
+  std::vector<CallRegisterFact> callRegisters;
+
+  void callRegister(const PcodeOp &op, Snapshot &state) {
+    if (trackedRegister == nullptr || (op.code() != CPUI_CALL && op.code() != CPUI_CALLIND))
+      return;
+    Value value = state.registers.get(trackedRegister->space->getIndex(),
+                                     trackedRegister->offset, trackedRegister->size);
+    if (!value.complete(trackedRegister->size) || value.bits == 0)
+      return;
+    Word target;
+    if (op.code() == CPUI_CALL) {
+      const FuncCallSpecs *call = function.getCallSpecs(&op);
+      if (call == nullptr || call->getEntryAddress().isInvalid())
+        return;
+      target = call->getEntryAddress().getOffset();
+    } else {
+      Value destination = get(state, op.getIn(0));
+      if (!destination.complete(pointerSize))
+        return;
+      target = destination.bits;
+    }
+    const Region *mapped = region(target);
+    if (mapped != nullptr && (mapped->flags & 4) != 0)
+      callRegisters.push_back({op.getAddr().getOffset(), target, value.bits});
+  }
 
   void initializePointerStorage() {
     PrototypePieces prototype;
@@ -596,6 +626,7 @@ class Propagation {
       if (collectReferences) {
         memoryReferences(op, state);
         useReferences(op, state);
+        callRegister(op, state);
       }
       if (code == CPUI_CBRANCH && op.numInput() == 2) {
         Value condition = get(state, op.getIn(1));
@@ -709,12 +740,14 @@ class Propagation {
 
 public:
   Propagation(Architecture &architecture, Funcdata &data, const std::vector<Region> &mapped,
-              Word start, Word finish, bool trust, std::vector<RegisterSeed> seeds = {})
+              Word start, Word finish, bool trust, std::vector<RegisterSeed> seeds = {},
+              const VarnodeData *tracked = nullptr)
       : arch(architecture), function(data), regions(mapped),
         dataSpace(arch.getDefaultDataSpace()), codeSpace(arch.getDefaultCodeSpace()),
         first(start), end(finish), pointerSize(arch.types->getSizeOfPointer()),
         uniqueSpace(arch.getUniqueSpace()->getIndex()), spaceCount(arch.numSpaces()),
-        bigEndian(dataSpace->isBigEndian()), trustWritable(trust), registerSeeds(std::move(seeds)) {
+        bigEndian(dataSpace->isBigEndian()), trustWritable(trust), registerSeeds(std::move(seeds)),
+        trackedRegister(tracked) {
     AddrSpace *stack = arch.getStackSpace();
     if (stack != nullptr && stack->numSpacebase() != 0)
       stackRegister = &stack->getSpacebase(0);
@@ -780,6 +813,12 @@ public:
     return facts;
   }
 
+  const std::vector<CallRegisterFact> &callRegisterFacts() {
+    std::sort(callRegisters.begin(), callRegisters.end(),
+        [](const CallRegisterFact &a, const CallRegisterFact &b) { return a.pc < b.pc; });
+    return callRegisters;
+  }
+
   const std::vector<ReferenceFact> &referenceFacts() {
     std::sort(references.begin(), references.end(),
         [](const ReferenceFact &a, const ReferenceFact &b) { return a.key() < b.key(); });
@@ -828,6 +867,7 @@ public:
       throw IfaceParseError("Expected propagation <start> <end-exclusive> <trust-writable:0|1> <start> <end> <flags> ...");
     vector<ventris_constants::Region> regions;
     vector<ventris_constants::RegisterSeed> seeds;
+    const VarnodeData *tracked = nullptr;
     while (true) {
       input >> ws;
       if (input.eof())
@@ -835,15 +875,23 @@ public:
       if (input.peek() == '-') {
         string option, name;
         uintb value;
-        if (!(input >> option >> name >> value) || option != "--register")
-          throw IfaceParseError("Expected --register <name> <value>");
+        if (!(input >> option >> name) ||
+            (option != "--register" && option != "--track-register"))
+          throw IfaceParseError("Expected --register <name> <value> or --track-register <name>");
         const VarnodeData &storage = dcp->conf->translate->getRegister(name);
         if (storage.space->getType() != IPTR_PROCESSOR ||
             storage.space == dcp->conf->getDefaultCodeSpace() ||
             storage.space == dcp->conf->getDefaultDataSpace() ||
-            storage.size < 1 || storage.size > 8 ||
-            value > ventris_constants::widthMask(storage.size))
+            storage.size < 1 || storage.size > 8)
           throw IfaceParseError("Invalid propagation register context");
+        if (option == "--track-register") {
+          if (!referenceMode || tracked != nullptr)
+            throw IfaceParseError("Reference propagation accepts one tracked register");
+          tracked = &storage;
+          continue;
+        }
+        if (!(input >> value) || value > ventris_constants::widthMask(storage.size))
+          throw IfaceParseError("Invalid propagation register value");
         seeds.push_back({storage, value});
         continue;
       }
@@ -875,7 +923,7 @@ public:
     Funcdata &function = *symbol.added->getFunction();
     function.followFlow(entry, Address(space, end - 1));
     ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0,
-                                                std::move(seeds));
+                                                std::move(seeds), tracked);
     vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;
     out << (referenceMode ? "REFERENCES [" : "CONSTANTS [") << dec;
@@ -899,6 +947,17 @@ public:
           << ",\"size\":" << fact.varnode->getSize() << "}}";
     }
     out << "]\n";
+    if (tracked != nullptr) {
+      out << "CALL_REGISTERS [";
+      first = true;
+      for (const auto &fact : propagation.callRegisterFacts()) {
+        if (!first) out << ',';
+        first = false;
+        out << "{\"pc\":" << fact.pc << ",\"target\":" << fact.target
+            << ",\"value\":" << fact.value << "}";
+      }
+      out << "]\n";
+    }
     out.flush();
   }
 };
