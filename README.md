@@ -272,6 +272,11 @@ tables. Metadata addresses are space-qualified in the desktop table
 (`.shstrtab::0x1`), not displayed or cached as RAM. Database format 6 retains
 typed non-RAM addresses; existing RAM hex cells require no re-encoding.
 
+Worker string queries serve those RAM facts as UTF-8, without guessing strings
+from unclassified backing bytes. Their character limits follow Ghidra's UTF-16
+code-unit convention; responses include the byte length, truncation flag, and
+NUL terminator. Missing facts and valid empty strings remain distinct.
+
 `benchmarks/string_gate.py` compares the unchanged 20-entry corpus against
 defined reference strings. Its summary links hashed per-binary difference
 files in `<report-stem>-details/`; no missing or extra addresses are discarded.

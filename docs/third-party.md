@@ -375,3 +375,10 @@ minimum of four Unicode scalar values. BOMs, string-start data references,
 and UTF-16 alignment resolve overlapping interpretations. The upstream
 `StringsAnalyzer` defaults to ASCII-only discovery; its n-gram model is
 not copied into the native decoder.
+
+Worker string responses follow `ArchitectureGhidra::getStringData`
+(`ghidra_arch.cc:774–816`) and `DecompileProcess.getStringData`: two six-bit
+length fields, truncation byte, A-biased UTF-8 bytes, and a NUL terminator.
+`DecompileCallback.StringData` counts UTF-16 code units; a split surrogate
+uses Java's UTF-8 `?` replacement. These APIs are from the pinned Apache-2.0
+Ghidra sources. Payloads are bounded by the protocol's 12-bit byte length.
