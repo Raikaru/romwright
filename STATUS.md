@@ -1572,6 +1572,15 @@ M2 — Program-model parity
   excluded; strict constant queries remain unchanged.
 - Match `SymbolicPropogator.addLoadStoreReference` and the existing constant
   evaluator filters. This is generic p-code behavior, not a PowerPC pattern.
+- Acceptance `2bc129d` passes, including stack aliases, original call flow,
+  and strict-query separation. `cargo test --workspace`: 140 pass;
+  `tests/corpus.sh`: 5/5 pass. Console and worker rebuild.
+- `benchmarks/reports/m2-002-g6.json`: 19 pass, 1 fail, 0 skipped;
+  all data precisions are 1.0. PowerPC PIE remains 20/26.
+- A raw PowerPC probe produces the expected symbolic-offset DATA reference
+  when its target is mapped. The ELF import's first mapping is `0x10194`,
+  leaving the three targets `0x10048`, `0x1004c`, and `0x10054` unmapped.
+  Next: preserve PT_LOAD bytes outside allocated sections, then PIC call context.
 - Publication sub-tasks: g6 implementation, then g6-report generated evidence.
 
 ## Blocked on

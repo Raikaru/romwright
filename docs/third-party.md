@@ -319,6 +319,11 @@ supply bounded code entries independently of the function table or section
 name. Existing function queries take precedence at the same entry.
 As in `ConstantPropagationAnalyzer.analyzeLocation`, analysis follows flow
 from a defined entry; it does not sweep disconnected bytes or create functions.
+`SymbolicPropogator.addLoadStoreReference` also treats a large mapped offset
+from a non-stack symbolic base as speculative DATA. Native inference applies
+the existing constant filters to that offset; it does not claim that the
+unknown base is zero. Stack aliases and original call instructions are
+excluded. Constant-value queries do not receive these speculative facts.
 
 Reference ownership uses `Reference.getSource` and the documented `SourceType`
 priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and

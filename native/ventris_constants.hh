@@ -9,6 +9,7 @@
 #include "ventris_operand_refs.hh"
 #include "ventris_x86_references.hh"
 #include <algorithm>
+#include <cstring>
 #include <deque>
 #include <tuple>
 
@@ -335,8 +336,27 @@ class Propagation {
   void memoryReferences(const PcodeOp &op, Snapshot &state) {
     OpCode code = op.code();
     if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
-      reference(op, op.getIn(0)->getSpaceFromConst(), get(state, op.getIn(1)),
-                code == CPUI_LOAD ? 1 : 2);
+      AddrSpace *space = op.getIn(0)->getSpaceFromConst();
+      Value pointer = get(state, op.getIn(1));
+      unsigned access = code == CPUI_LOAD ? 1 : 2;
+      Location candidate;
+      if (pointer.base >= 0 && pointer.base != stackBase &&
+          location(space, Value(pointer.bits, pointer.known, -1, pointer.size), candidate) &&
+          region(candidate.offset) != nullptr) {
+        const auto *sleigh = dynamic_cast<const Sleigh *>(arch.translate);
+        if (sleigh == nullptr)
+          throw LowlevelError("Symbolic reference validation requires a SLEIGH translator");
+        MetadataOnlyEmit emitted;
+        InstructionFlow flow;
+        sleigh->oneInstructionFlow(emitted, op.getAddr(), flow);
+        const char *kind = flow.type().kind;
+        if (std::strcmp(kind, "CALL") != 0 && std::strcmp(kind, "CALLIND") != 0) {
+          // A non-stack symbolic offset is speculative DATA, not a proved load/store.
+          pointer.base = -1;
+          access = 4;
+        }
+      }
+      reference(op, space, pointer, access);
       if (code == CPUI_STORE)
         reference(op, dataSpace, get(state, op.getIn(2)), 4);
     }
