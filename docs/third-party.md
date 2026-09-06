@@ -94,6 +94,10 @@ function; discovery must associate the slot with loader metadata.
 Seeded ELF/PE imports and the DOL sweep share the same recognition rule:
 an unconditional branch target can establish a separate entry only when
 bounded SLEIGH linkage evidence resolves a loader-recorded external slot.
+Proven direct-call targets enter the same evaluation: a call establishes its
+target entry independently, so submitting it costs no extra promotion authority
+and recovers architectures whose PLT layout is not table-recognized. Naming
+still requires the loader-recorded slot; unresolved stubs keep generated names.
 Conditional branches alone do not establish linkage entries. Local unresolved
 inputs require independent caller evidence, not an assumed global register value.
 For PIC linkage, the native evaluator follows at most 64 straight-line caller

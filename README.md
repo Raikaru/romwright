@@ -356,6 +356,8 @@ fact that removes live inputs from callers. Analyst-supplied signatures still
 apply normally.
 Context-dependent entries require a bounded pure-linkage shape plus one
 consistent imported read slot from completed propagation within that exact span.
+Direct-call targets are evaluated by that same proof, so import names come from
+relocation slots on architectures without a recognized PLT table layout.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
