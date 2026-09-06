@@ -1527,6 +1527,13 @@ M2 — Program-model parity
   linkage/resolver rows. Implementation and generated evidence are published
   separately; no M2 gate pass is claimed.
 
+## m2-002g4 ELF PLT register context
+- Acceptance `elf_plt_register_context_is_scoped` must fail before transporting
+  `X86_32_ElfExtension`'s DT_PLTGOT-derived EBX value into reference analysis.
+  Require the dynamic tag and restrict the context to executable PLT sections.
+- Keep context transient and separate from function discovery and strict
+  constant queries. Publish implementation and generated evidence separately.
+
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
   explicitly authorized; m2-002 acceptance is not yet passing.
