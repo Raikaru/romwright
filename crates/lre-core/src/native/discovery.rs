@@ -324,6 +324,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     size: linkage.length as u64,
                 });
                 imp.externals.push((address, name.clone()));
+                imp.thunks.push(crate::native::NativeThunk {
+                    entry: address,
+                    destination: slot,
+                    kind: lre_model::ThunkKind::Linkage,
+                });
             }
         }
     }
@@ -498,6 +503,18 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                     thunk_continuations.insert(addr + info.length as u64, root);
                                 }
                                 thunk_jumps.push((addr, t));
+                                // The thunk is the owning entry, not the jump
+                                // address: one leading no-op may precede it.
+                                if let Some(&entry) = landing_entries
+                                    .get(&addr)
+                                    .or(Some(&addr).filter(|_| entries.contains(&addr)))
+                                {
+                                    imp.thunks.push(crate::native::NativeThunk {
+                                        entry,
+                                        destination: t,
+                                        kind: lre_model::ThunkKind::Direct,
+                                    });
+                                }
                                 addr_origin.insert(t, t);
                                 if !visited.contains(&t) {
                                     next_active.push(t);
@@ -999,7 +1016,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             .any(|x| x.from == from && x.to == to && x.kind == "UNCONDITIONAL_JUMP")
         {
             let provenance = if entries.contains(&to) {
-                "native-import:thunk"
+                crate::native::THUNK_SOURCE
             } else {
                 "native-import"
             };
@@ -1032,6 +1049,20 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         }
     }
     imp.functions = merged;
+    // Only retained functions carry facts, and a direct destination must be a
+    // retained entry of its own. Unproven candidates leave no thunk row.
+    let retained: HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+    let mut owners = HashSet::new();
+    let mut thunks = std::mem::take(&mut imp.thunks);
+    thunks.retain(|thunk| {
+        retained.contains(&thunk.entry)
+            && thunk.destination != thunk.entry
+            && (thunk.kind != lre_model::ThunkKind::Direct
+                || retained.contains(&thunk.destination))
+            && owners.insert(thunk.entry)
+    });
+    thunks.sort_unstable_by_key(|thunk| thunk.entry);
+    imp.thunks = thunks;
 
     let mut xrefs = imp.xrefs.clone();
     let mut seen_xrefs: HashSet<(u64, u64)> = xrefs.iter().map(|x| (x.from, x.to)).collect();

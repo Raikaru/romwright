@@ -19,6 +19,10 @@ use std::process::Command;
 mod image;
 use image::MappedImage;
 
+/// Exact refusal from `Propagation::run` in `native/ventris_constants.hh`:
+/// the range has no decodable flow, so it carries no propagation facts.
+const UNDECODABLE: &str = "Constant propagation requires decodable function flow";
+
 /// Facade error for the native runtime (string-typed: these are setup and
 /// child-process failures, reported verbatim to the caller).
 #[derive(Debug)]
@@ -811,10 +815,23 @@ impl ConsoleSession {
         mappings: &[crate::native::Mapping],
         trust_writable: bool,
     ) -> Result<Vec<ConstantFact>> {
-        self.propagation_query("constants", "CONSTANTS ", start, end, mappings, trust_writable)
+        self.propagation_query("constants", "CONSTANTS ", start, end, mappings, trust_writable)?
+            .ok_or_else(|| NativeRuntimeError(format!("constants at {start:#x} are undecodable")))
     }
 
     /// Infer read/write/data references without mutating the loaded image.
+    /// `None` means the console refused this range as undecodable.
+    pub fn optional_references(
+        &mut self,
+        start: u64,
+        end: u64,
+        mappings: &[crate::native::Mapping],
+        trust_writable: bool,
+    ) -> Result<Option<Vec<ReferenceFact>>> {
+        self.propagation_query("references", "REFERENCES ", start, end, mappings, trust_writable)
+    }
+
+    /// Facts for a range the caller already knows decodes.
     pub fn references(
         &mut self,
         start: u64,
@@ -822,7 +839,8 @@ impl ConsoleSession {
         mappings: &[crate::native::Mapping],
         trust_writable: bool,
     ) -> Result<Vec<ReferenceFact>> {
-        self.propagation_query("references", "REFERENCES ", start, end, mappings, trust_writable)
+        self.optional_references(start, end, mappings, trust_writable)?
+            .ok_or_else(|| NativeRuntimeError(format!("references at {start:#x} are undecodable")))
     }
 
     pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
@@ -877,7 +895,7 @@ impl ConsoleSession {
         end: u64,
         mappings: &[crate::native::Mapping],
         trust_writable: bool,
-    ) -> Result<Vec<T>> {
+    ) -> Result<Option<Vec<T>>> {
         use std::fmt::Write as _;
         let mut script = String::with_capacity(64 + mappings.len() * 48);
         let _ = write!(
@@ -915,12 +933,14 @@ impl ConsoleSession {
         script.push('\n');
         self.send(&script)?;
         let response = read_until_prompt(&mut self.reader)?;
-        let payload = response
-            .lines()
-            .find_map(|line| line.trim().strip_prefix(prefix))
-            .ok_or_else(|| {
-                NativeRuntimeError(format!("{command} query failed: {response}"))
-            })?;
+        let payload = match response.lines().find_map(|line| line.trim().strip_prefix(prefix)) {
+            Some(payload) => payload,
+            // The console refuses one undecodable range without ending the
+            // session; unknown flow yields no facts and aborts nothing. Any
+            // other failure still stops the caller.
+            None if response.contains(UNDECODABLE) => return Ok(None),
+            None => return Err(NativeRuntimeError(format!("{command} query failed: {response}"))),
+        };
         let facts = serde_json::from_str(payload)
             .map_err(|error| NativeRuntimeError(format!("invalid {command} facts: {error}")))?;
         if command == "references" {
@@ -945,7 +965,7 @@ impl ConsoleSession {
                 }
             }
         }
-        Ok(facts)
+        Ok(Some(facts))
     }
 
     /// Ask the console for the control-flow of one instruction.

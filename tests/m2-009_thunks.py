@@ -120,11 +120,13 @@ def main():
             ('thunks', dict(program='fixture'))])[1]
         assert repeated == thunks, (repeated, thunks)
         # An analyst assertion is a separate owner: re-import must not drop it.
+        # The stripped fixture has generated names, so seed by proven address.
         with sqlite3.connect(project / 'project.sqlite') as database:
             database.execute('''INSERT INTO thunks
                 (program_id, function, thunked, kind, provenance, provenance_kind, confidence)
-                SELECT program_id, entry, ?, 'direct', 'thunk-acceptance', 'asserted', NULL
-                FROM functions WHERE name = 'ordinary' ''', (format(symbols['real'], '08x'),))
+                SELECT id, ?, ?, 'direct', 'thunk-acceptance', 'asserted', NULL FROM programs
+                WHERE name = 'fixture' ''',
+                (format(symbols['ordinary'], '08x'), format(symbols['real'], '08x')))
             database.execute('UPDATE programs SET revision = revision + 1')
         asserted = invoke([('import_native', dict(binary=str(binary), name='fixture')),
             ('thunks', dict(program='fixture'))])[1]
