@@ -54,7 +54,10 @@ pub struct Address {
 impl Address {
     /// Builds a RAM address, the overwhelmingly common case.
     pub fn ram(offset: u64) -> Self {
-        Self { space: AddressSpace::Ram, offset }
+        Self {
+            space: AddressSpace::Ram,
+            offset,
+        }
     }
 
     /// Parses a canonical RAM hex string (`"00400466"`, `"0x400466"`),
@@ -106,7 +109,10 @@ impl<'de> serde::Deserialize<'de> for Address {
                     .map_err(|_| E::custom(format!("bad hex address: {v}")))?;
                 Ok(Address { space, offset })
             }
-            fn visit_map<A: serde::de::MapAccess<'de>>(self, mut map: A) -> Result<Address, A::Error> {
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<Address, A::Error> {
                 let mut space = AddressSpace::Ram;
                 let mut offset = 0u64;
                 while let Some(key) = map.next_key::<String>()? {
@@ -160,7 +166,9 @@ pub struct XrefRow {
 }
 
 /// Assertions survive replacement of inferred analysis results.
-#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash)]
+#[derive(
+    Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq, Eq, Hash,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum FactKind {
     Inferred,
@@ -255,6 +263,37 @@ pub struct DecompToken {
     pub indent: Option<i64>,
 }
 
+/// A data-type reference or inline shape carried by a recovered prototype.
+/// IDs are decompiler identities, not durable database IDs. Named references
+/// may omit size and metatype; absence must not be interpreted as void.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct DecompType {
+    pub name: Option<String>,
+    pub id: Option<u64>,
+    pub size: Option<u64>,
+    pub metatype: Option<String>,
+    pub element_count: Option<u64>,
+    pub target: Option<Box<DecompType>>,
+    pub prototype: Option<Box<FuncProto>>,
+}
+
+/// One recovered input parameter, ordered by the native symbol category index.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FuncParam {
+    pub ordinal: u32,
+    pub name: String,
+    pub data_type: DecompType,
+}
+
+/// Native prototype facts, independent of rendered C and not yet persisted.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FuncProto {
+    pub calling_convention: String,
+    pub return_type: DecompType,
+    pub parameters: Vec<FuncParam>,
+    pub variadic: bool,
+}
+
 /// The structured decompiler document for one function (WORKER-004): a
 /// token stream the UI renders without re-parsing C text.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -324,7 +363,7 @@ pub struct JournalEntry {
 pub struct RevisionEvent {
     /// Revision the program reached with this change.
     pub revision: u64,
-    /// Machine kind: "rename", "replace-functions", ... 
+    /// Machine kind: "rename", "replace-functions", ...
     pub kind: String,
     /// Human/detail payload (new name, replaced row count, ...).
     pub detail: String,
@@ -441,8 +480,6 @@ pub struct PatchRow {
     pub patched: Vec<u8>,
     pub enabled: bool,
 }
-
-
 
 /// Primitive semantics, independent of display names and legacy kind labels.
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
@@ -593,7 +630,10 @@ mod tests {
     fn parses_ghidra_address_strings() {
         assert_eq!(AddressSpace::from_ghidra_str("00400466"), AddressSpace::Ram);
         assert_eq!(AddressSpace::from_ghidra_str("ram:1000"), AddressSpace::Ram);
-        assert_eq!(AddressSpace::from_ghidra_str("ext:1000"), AddressSpace::External);
+        assert_eq!(
+            AddressSpace::from_ghidra_str("ext:1000"),
+            AddressSpace::External
+        );
         assert!(matches!(
             AddressSpace::from_ghidra_str("ov1:1000"),
             AddressSpace::Other(s) if s == "ov1"
