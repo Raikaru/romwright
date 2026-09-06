@@ -394,3 +394,15 @@ another wire grammar. Symbol category indices order recovered parameters;
 nested function-pointer prototypes do not replace the enclosing function's
 prototype. Missing references remain unknown, and malformed or truncated
 documents do not publish a partial prototype. No pinned source is modified.
+
+## Benchmark DWARF arity truth
+
+`benchmarks/dwarf_arity.py` invokes GNU `readelf` (GPL-3.0-or-later) on
+the locked unstripped ELF twins. No Binutils implementation is copied or
+linked into a runtime crate. The projection counts `DW_TAG_formal_parameter`
+children, including artificial parameters, and follows abstract origins and
+specifications without filtering parameters by available locations. Inline
+instances and declaration-only DIEs are not separate functions. Unresolved
+origins, conflicting entry arities, and unsupported range-only subprograms
+fail the export instead of silently reducing the truth set. Analyzers receive
+the stripped twins, never these benchmark-only DWARF facts.
