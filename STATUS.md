@@ -1561,9 +1561,18 @@ M2 — Program-model parity
 - `benchmarks/reports/m2-002-g5.json`: 19 pass, 1 fail, 0 skipped;
   all 20 data precisions are 1.0. PowerPC PIE recall is 20/26.
 - Remaining classes: three READs needing incoming PIC register context,
-  and three DATA refs from PowerPC dual-instruction operand markup.
+  and three DATA refs from non-stack symbolic load offsets.
   No M2 gate pass is claimed.
 - Publication sub-tasks: g5 implementation, then g5-report generated evidence.
+
+## m2-002g6 non-stack symbolic offsets
+- Acceptance: `non_stack_symbolic_offsets_are_data_references`. A mapped
+  large offset from an unknown non-stack base is a DATA candidate, never a
+  proven memory access. Stack aliases and original call instructions are
+  excluded; strict constant queries remain unchanged.
+- Match `SymbolicPropogator.addLoadStoreReference` and the existing constant
+  evaluator filters. This is generic p-code behavior, not a PowerPC pattern.
+- Publication sub-tasks: g6 implementation, then g6-report generated evidence.
 
 ## Blocked on
 - None. Both the source correction and task-specific metric scope have been
