@@ -1,0 +1,289 @@
+{
+  "gate": "nonreturn",
+  "milestone": "M2",
+  "task": "m2-008",
+  "commit": "df3cb5de29727c249933170dc750e543fa614289",
+  "date": "2026-09-06T16:25:45.144389+00:00",
+  "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
+  "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
+  "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
+  "comparison": "code-functions-v1 stock positive flags and II.3 fn.bounds; stock false is unknown; not the full M2 gate",
+  "optimized_bounds": {
+    "before": {
+      "matched": 1789,
+      "correct": 1771,
+      "fn.bounds": 0.98993851313583
+    },
+    "after": {
+      "matched": 1789,
+      "correct": 1773,
+      "fn.bounds": 0.9910564561207379
+    }
+  },
+  "optimized_bounds_improved": true,
+  "architecture": "powerpc",
+  "corpus": [
+    {
+      "id": "powerpc_plain_o0",
+      "status": "pass",
+      "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
+      "twin_sha256": "97b3662bd95e93df818571151aac96950dcb3b269bddefeb696f5251a5098e46",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "d48ad3b7f94447dabb22b2f5e295fc67bd4e26f4c8d0279b048586f1deea943e",
+      "raw_reference_sha256": "9c4aaabb10b58db562999d6a65e05facbedaa4262d6802879c269a78c09d170a",
+      "excluded_functions": 3,
+      "reference": "PowerPC-BE-32-default/default/1771c20918929540/baseline-ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557.json",
+      "reference_sha256": "3701227c99801c5626301961b416b95f08ec3bab9f7bf256ecc8f65b110da9c2",
+      "reference_evidence": {
+        "path": "m2-008-references/powerpc_plain_o0-7ac5d90692fb50a4.json.gz",
+        "sha256": "7ac5d90692fb50a45be07a485cfb37663ed45547d9b7ba46ff644d26b505447a"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 12,
+      "stock_functions": 12,
+      "scores": {
+        "before": {
+          "matched": 12,
+          "correct": 12,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 12,
+          "correct": 12,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [],
+      "stock_nonreturning": [],
+      "unknown_functions": 7,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [],
+      "stock_only": []
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "pass",
+      "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
+      "twin_sha256": "a2aa29568245f14890b5e36c748dfb26f5a4871bcef84cc3e66ff86e26ad5493",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "708f44353cd0c74002d377e9ee18661b95a266f29dc5e1f950a8dc11ea3efbf6",
+      "raw_reference_sha256": "7336a7b3e7cb2c2dffa92c6910b445d49c52fd671ee9346aebce48620d2e6bc6",
+      "excluded_functions": 3,
+      "reference": "PowerPC-BE-32-default/default/c6d0e9e431c0b094/baseline-27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9.json",
+      "reference_sha256": "3f8febe6f96372d50d30fde75bfe1bbc4d694ba70682622cd4d9b048bf49915e",
+      "reference_evidence": {
+        "path": "m2-008-references/powerpc_plain_o2-2254f4865cdcb742.json.gz",
+        "sha256": "2254f4865cdcb7427ca2aa3ad7c1ad5f8bbd365b0872d0edf7db95429ee1c265"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 12,
+      "stock_functions": 12,
+      "scores": {
+        "before": {
+          "matched": 12,
+          "correct": 12,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 12,
+          "correct": 12,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [],
+      "stock_nonreturning": [],
+      "unknown_functions": 7,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [],
+      "stock_only": []
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "pass",
+      "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
+      "twin_sha256": "b3e0062dde8ee5d4435cbc2ef95314d267746e58b234d8b7bd106b9f2822fce8",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "8cbd7df8c682473186c6fc6dd4af8274ca53a01615e7b1af56d342368dcccf92",
+      "raw_reference_sha256": "36169967991790e49f7fd3656f14d3944c7ced4feba3d61e9560392fbbfb4d7e",
+      "excluded_functions": 6,
+      "reference": "PowerPC-BE-32-default/default/4cd9bd640e7286b4/baseline-0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452.json",
+      "reference_sha256": "e7c0439bf5eafc1831f27a551cf3cbdfe1124a9f55945c655482034ccbcb52d2",
+      "reference_evidence": {
+        "path": "m2-008-references/powerpc_plain_pie-5e3cd83961525894.json.gz",
+        "sha256": "5e3cd839615258942a368d4f5a51812b9728569c70e23050a4c9be367bdef174"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 13,
+      "stock_functions": 13,
+      "scores": {
+        "before": {
+          "matched": 13,
+          "correct": 13,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 13,
+          "correct": 13,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [],
+      "stock_nonreturning": [],
+      "unknown_functions": 8,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [],
+      "stock_only": []
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "fail",
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "twin_sha256": "5d6d9b486062fd3c64103b9e2af80bd0e593b795bbe707496a195701c0e1f0b6",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "9379be51b1cffd0d27c4c7ba7755246ee19a95a927d9d8f19c50cbb80ea9e86f",
+      "raw_reference_sha256": "9abaa11207f150dbb67433032668561670ad3dbe44cfa2a4320ee8b75b2269fb",
+      "excluded_functions": 9,
+      "reference": "PowerPC-BE-32-default/default/4028a77381de2cd5/baseline-682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf.json",
+      "reference_sha256": "46ed9671e839f060f4ee5b1d640a97a1b293b7aa2e1d7862fabb7b448617b8f4",
+      "reference_evidence": {
+        "path": "m2-008-references/powerpc_cpp_o2-f64b596abd3405ba.json.gz",
+        "sha256": "f64b596abd3405ba2884474037099c2c9b4872481a5fe0213989aab818408c0e"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 19,
+      "stock_functions": 19,
+      "scores": {
+        "before": {
+          "matched": 19,
+          "correct": 18,
+          "fn.bounds": 0.9473684210526315,
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-008-powerpc-mismatches/powerpc_cpp_o2-before-5cc3ed3013c7feb8.jsonl",
+            "sha256": "5cc3ed3013c7feb89d09fc6a2e70f348a0a168476981277c771a4e1e92092e2b"
+          }
+        },
+        "after": {
+          "matched": 19,
+          "correct": 18,
+          "fn.bounds": 0.9473684210526315,
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-008-powerpc-mismatches/powerpc_cpp_o2-after-5cc3ed3013c7feb8.jsonl",
+            "sha256": "5cc3ed3013c7feb89d09fc6a2e70f348a0a168476981277c771a4e1e92092e2b"
+          }
+        }
+      },
+      "native_nonreturning": [],
+      "stock_nonreturning": [
+        "100108b0"
+      ],
+      "unknown_functions": 12,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": false,
+      "native_only": [],
+      "stock_only": [
+        "100108b0"
+      ]
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "pass",
+      "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
+      "twin_sha256": "019ba2359b9a494d642933df418a9f33d83879b1dd0437371d407a3fc4c9cd32",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "322907cf888f388c4e6391e2ee502674de9ac1b39f1b08a9aeb2cb8fa66374af",
+      "raw_reference_sha256": "c650bcedfc3e301f27aa11f2a641f96b8bf57982fb4295841051f8987b8b213e",
+      "excluded_functions": 2,
+      "reference": "PowerPC-BE-32-default/default/4c54a36d8bc44406/baseline-4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3.json",
+      "reference_sha256": "7896c1b6a7ab86bab06ba33b6964b4172bd97559e1e45109259e1bd625c50151",
+      "reference_evidence": {
+        "path": "m2-008-references/powerpc_many_o2-4d866898815aecf8.json.gz",
+        "sha256": "4d866898815aecf8b52d0b50825f1c29a585da70e0785d4fbbdc02281384fefb"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "53d7f488dcb6788b9ccc4090b51547c0fc3cd45c33e6c16e7703254e67ce69cd",
+        "cspec.xml": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
+        "tspec.xml": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+        "coretypes.xml": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+        "registers.txt": "25fa859e3865a9cce99cdb2b1183b67cda41a0cc4f5c722007b0732d0f80d123"
+      },
+      "native_functions": 410,
+      "stock_functions": 410,
+      "scores": {
+        "before": {
+          "matched": 410,
+          "correct": 410,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 410,
+          "correct": 410,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [],
+      "stock_nonreturning": [],
+      "unknown_functions": 6,
+      "rediscovered_callers": 0,
+      "stock_positives_covered": true,
+      "native_only": [],
+      "stock_only": []
+    }
+  ]
+}
