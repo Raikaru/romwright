@@ -1946,15 +1946,30 @@ M2 — Program-model parity
   above 32 bits, and non-RAM spaces. Every truncated prefix stays unavailable.
 - Verification: 158 workspace tests, 2 explicit native recovery tests, corpus
   5/5, and standalone/pooled prototype, bounded-inference, and revision checks.
-  Full corpus evidence publication remains c2–c6.
+  Positive evidence is committed in `fb19d3d`; corpus evidence follows below.
+
+### m2-007-c2–c6 evidence
+- `846fa0e`, `3151fbc`, `b4f4865`, and `42eb5f1` pin 20 stock references
+  across x86-64, i386, AArch64, and PowerPC, in commits of 553, 570, 591,
+  and 554 added lines respectively. No existing baseline was edited.
+- `6df0ab2` commits `benchmarks/reports/m2-007.json`, produced against
+  `42eb5f1`: 20 equal comparisons, 0 failed, 0 skipped. A second fresh stock
+  run matched all 20 immutable references; all 20 reference hashes were checked.
+- Native decompiled 1,903 functions; stock exported 2,008. All have 0 recovered
+  tables, including the 105 stock-only functions. These corpus observations
+  are not positive recovery evidence or a claim of function-set equality.
+- The separate x86-64 positive fixture remains the switch-recovery proof.
+  Missing-input smoke reported 20 skipped cases, `passed=false`, and exit 1.
+- m2-007 is complete. No metric definition, corpus member, persistence
+  operation, or rediscovery pass changed. Full M2 parity remains open.
 
 ## Blocked on
 - None.
 
 ## Next task
-- m2-007: recover indirect switch targets through workers.
+- m2-008: infer non-returning functions and rediscover callers.
   Write and commit its failing acceptance before implementation, following the
-  ratified roadmap. m2-006 is complete; no switch-recovery work began here.
+  ratified roadmap. m2-007 is complete; m2-008 implementation has not begun.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
