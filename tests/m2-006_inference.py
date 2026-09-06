@@ -29,16 +29,32 @@ def main():
         inference = dict(**context, budget_ms=60000)
         address = dict(space='Ram', offset=0x400466)
         decompile = dict(**context, address=address)
-        _, report = invoke([('import_native', dict(binary=str(binary), name='tiny_bin')),
-            ('infer_prototypes', inference)])
+        _, functions, report, jobs = invoke([
+            ('import_native', dict(binary=str(binary), name='tiny_bin')),
+            ('functions', dict(program='tiny_bin')),
+            ('infer_prototypes', inference), ('jobs_page', dict(limit=1000))])
         assert 1 <= report['rounds'] <= 3, report
         assert report['stop_reason'] in ('converged', 'round_limit'), report
+        entries = {row['entry']['offset'] for row in functions}
+        analyzed = [row['address'] for row in jobs['rows']]
+        assert set(analyzed[:len(entries)]) == entries, jobs
+        assert len(analyzed) <= 3 * len(entries), jobs
+        # add has no callees; main calls add and must see its first inferred fact.
+        assert 0x400466 not in analyzed[len(entries):], jobs
+        assert 0x40047a in analyzed[len(entries):], jobs
         stored, doc = invoke([('prototypes', dict(program='tiny_bin')), ('decompile_doc', decompile)])
         inferred = next(row for row in stored if row['function'] == address)
         assert inferred['provenance']['kind'] == 'inferred', inferred
         assert inferred['provenance']['source'], inferred
         assert doc['prototype']['return_type']['name'] == 'int', doc
         assert len(doc['prototype']['parameters']) == 2, doc
+
+        before, cancelled, after, jobs = invoke([
+            ('prototypes', dict(program='tiny_bin')),
+            ('infer_prototypes', dict(**context, budget_ms=0)),
+            ('prototypes', dict(program='tiny_bin')), ('jobs_page', {})])
+        assert cancelled['rounds'] == 0 and cancelled['stop_reason'] == 'budget', cancelled
+        assert before == after and jobs['total'] == 0, (cancelled, jobs)
 
         assertion = dict(function=address, signature='int add(int left, int right)',
             calling_convention=None, return_type='int',

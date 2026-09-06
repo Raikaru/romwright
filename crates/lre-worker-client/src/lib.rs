@@ -595,7 +595,7 @@ mod tests {
         ));
         std::fs::create_dir(&root).unwrap();
         let decompiler = root.join("hang");
-        std::fs::write(&decompiler, "#!/bin/sh\nexec sleep 2\n").unwrap();
+        std::fs::write(&decompiler, "#!/bin/sh\nprintf x >> \"$0.started\"\nexec sleep 2\n").unwrap();
         std::fs::set_permissions(&decompiler, std::fs::Permissions::from_mode(0o755)).unwrap();
         let binary = root.join("raw.bin");
         std::fs::write(&binary, [0x90, 0xc3]).unwrap();
@@ -640,6 +640,9 @@ mod tests {
         // A second attempt must launch a fresh child, not reuse poisoned I/O.
         let results = [pool.decompile_doc(0), pool.decompile_doc(0)];
         let elapsed = started.elapsed();
+        let deadline = Instant::now() + Duration::from_millis(250);
+        let shared = [pool.recover_doc(0, deadline), pool.recover_doc(0, deadline)];
+        let starts = std::fs::read(root.join("hang.started")).unwrap();
         // A protocol failure must remain an error, not wait for EOF until the
         // deadline turns it into a timeout. This child deliberately ignores EOF.
         std::fs::write(
@@ -653,6 +656,10 @@ mod tests {
         for result in results {
             assert!(matches!(&result, Err(PoolError::Deadline(_))), "{result:?}");
         }
+        for result in shared {
+            assert!(matches!(result, Err(PoolError::Deadline(_))), "{result:?}");
+        }
+        assert_eq!(starts, b"xxx", "an expired shared deadline must not launch another child");
         assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
         assert!(
             matches!(&rejected, Err(PoolError::Worker(_))),
