@@ -1,0 +1,314 @@
+{
+  "gate": "nonreturn",
+  "milestone": "M2",
+  "task": "m2-008",
+  "commit": "df3cb5de29727c249933170dc750e543fa614289",
+  "date": "2026-09-06T16:25:45.144389+00:00",
+  "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
+  "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
+  "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
+  "comparison": "code-functions-v1 stock positive flags and II.3 fn.bounds; stock false is unknown; not the full M2 gate",
+  "optimized_bounds": {
+    "before": {
+      "matched": 1789,
+      "correct": 1771,
+      "fn.bounds": 0.98993851313583
+    },
+    "after": {
+      "matched": 1789,
+      "correct": 1773,
+      "fn.bounds": 0.9910564561207379
+    }
+  },
+  "optimized_bounds_improved": true,
+  "architecture": "aarch64",
+  "corpus": [
+    {
+      "id": "aarch64_plain_o0",
+      "status": "pass",
+      "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+      "twin_sha256": "3aa0bf7efbab75891c725118f175beac8e9c2ffeb51be6731bc16dc96648aaad",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "1658abe0242ce024367c983988448ac9c1dda6c43350f076fdcf23c2aea56688",
+      "raw_reference_sha256": "c9100e5c8e3b761ecc508d9d04dff7d9651dc74b36c9d0cfa8875d833dc845f5",
+      "excluded_functions": 6,
+      "reference": "AARCH64-LE-64-v8A/default/d7ed201288453198/baseline-66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f.json",
+      "reference_sha256": "f4cf6f70fed2625eda843659ec4ca378d8017895fcff4b51728a3a5258053a06",
+      "reference_evidence": {
+        "path": "m2-008-references/aarch64_plain_o0-d9e5d7d0f65e5224.json.gz",
+        "sha256": "d9e5d7d0f65e5224ebfc4e171f0fd9a6cfd3499bf8973ecae3768b50b7a31260"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 17,
+      "scores": {
+        "before": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [
+        "002106c0",
+        "00210880"
+      ],
+      "stock_nonreturning": [
+        "00210880"
+      ],
+      "unknown_functions": 8,
+      "rediscovered_callers": 1,
+      "stock_positives_covered": true,
+      "native_only": [
+        "002106c0"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "pass",
+      "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
+      "twin_sha256": "1a5355a6fdf07651017d6866c59bdd016d0b613f8f8bb8f2bde066d8cf19454d",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "e7910d70c090880d2f1fe02c17e9c9b37d310af26e2b1fee9aefeccc76993c71",
+      "raw_reference_sha256": "4d3a857ea3a18f3b52aeb4b09417f186435c887a9a19db3bf00a3f3b38703913",
+      "excluded_functions": 6,
+      "reference": "AARCH64-LE-64-v8A/default/d1408a8f70be2675/baseline-ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a.json",
+      "reference_sha256": "b76b19f7a6dd1e0f83449703f8c6f6aceccba70db46726cffc28004b855f3867",
+      "reference_evidence": {
+        "path": "m2-008-references/aarch64_plain_o2-4d9657464a50cd7f.json.gz",
+        "sha256": "4d9657464a50cd7f491611d551646fe026794a86018375b08ed99d28d7d56367"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 17,
+      "scores": {
+        "before": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [
+        "002106c0",
+        "00210840"
+      ],
+      "stock_nonreturning": [
+        "00210840"
+      ],
+      "unknown_functions": 8,
+      "rediscovered_callers": 1,
+      "stock_positives_covered": true,
+      "native_only": [
+        "002106c0"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "pass",
+      "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
+      "twin_sha256": "20d555bb798d4dc6f52279846df3181cdf005b80161d50cb0243022a2727a11e",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "c0e5590717d7d4719159c18fd7c263d1a86144840cbffe188b52579f4cfb8d6c",
+      "raw_reference_sha256": "0699586264633f01f66b49cb29cead851cc4630ef7993c2027f7ac3f3f320e4c",
+      "excluded_functions": 7,
+      "reference": "AARCH64-LE-64-v8A/default/a289a2a3e18c777e/baseline-130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555.json",
+      "reference_sha256": "5a87622c678503b6ed1323e470eebbec6e04a899b32e4471ddf057916b8e4f45",
+      "reference_evidence": {
+        "path": "m2-008-references/aarch64_plain_pie-d3a21a6633511002.json.gz",
+        "sha256": "d3a21a663351100252fab51d14f6acd0d40a94df2375eeb3a0ef9dfd7dff24f6"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 17,
+      "stock_functions": 17,
+      "scores": {
+        "before": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 17,
+          "correct": 17,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [
+        "00110740",
+        "001108d0"
+      ],
+      "stock_nonreturning": [
+        "001108d0"
+      ],
+      "unknown_functions": 9,
+      "rediscovered_callers": 1,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00110740"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "pass",
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "twin_sha256": "c03b2ca9e12d2555b02768ec88052c5738ccc07fd1ab9f24b3e14e1299ce45fa",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "7ad7d484bc4a16b77a6b6c16f370ef2d325bde2836454a8e0b0de1dad173e0a7",
+      "raw_reference_sha256": "2dcc56c97aeea1f689caf0305e33d44574df782d7bafa7515d1b78ccef832c01",
+      "excluded_functions": 12,
+      "reference": "AARCH64-LE-64-v8A/default/72a8da254d4c4922/baseline-670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9.json",
+      "reference_sha256": "c4a6319d749aa948e7fee98ba6c7abda47dfa458672449169e346dbb1688f0a2",
+      "reference_evidence": {
+        "path": "m2-008-references/aarch64_cpp_o2-64228d3ff673351e.json.gz",
+        "sha256": "64228d3ff673351e894508f0867bc989ea0247336609b11e2a6752a0ec913c45"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 24,
+      "stock_functions": 24,
+      "scores": {
+        "before": {
+          "matched": 24,
+          "correct": 24,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 24,
+          "correct": 24,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [
+        "002109c0",
+        "00210c50",
+        "00210c90"
+      ],
+      "stock_nonreturning": [
+        "00210c50",
+        "00210c90"
+      ],
+      "unknown_functions": 12,
+      "rediscovered_callers": 3,
+      "stock_positives_covered": true,
+      "native_only": [
+        "002109c0"
+      ],
+      "stock_only": []
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "pass",
+      "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
+      "twin_sha256": "2d9c54d3c99b3c7f3a36191c5ac8370e677245b91f535a81becfd85ed18656ad",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "scoring_policy": "code-functions-v1",
+      "scoring_sha256": "78fb8c7e4512ae64a09b8dbe0d53fcd0da2397191713ad6808631dfbcecda4ef",
+      "raw_reference_sha256": "a06e417f92321183dc4dec7034e34a6265bc3589b9f4d73bc5c5804d06a23dd9",
+      "excluded_functions": 5,
+      "reference": "AARCH64-LE-64-v8A/default/2f5cc84a96d7d004/baseline-61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809.json",
+      "reference_sha256": "2fc1b84962b3cf6cb157ae872ec24fd31846936ffdce53293472bfc7d84a4bb3",
+      "reference_evidence": {
+        "path": "m2-008-references/aarch64_many_o2-d8339aa3e03da29a.json.gz",
+        "sha256": "d8339aa3e03da29a34ca611491c731e67f87b290b3cbbbe4388336b50f98608b"
+      },
+      "native_specs_sha256": {
+        "pspec.xml": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+        "cspec.xml": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+        "tspec.xml": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+        "coretypes.xml": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+        "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
+      },
+      "native_functions": 415,
+      "stock_functions": 415,
+      "scores": {
+        "before": {
+          "matched": 415,
+          "correct": 415,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        },
+        "after": {
+          "matched": 415,
+          "correct": 415,
+          "fn.bounds": 1.0,
+          "incorrect_count": 0
+        }
+      },
+      "native_nonreturning": [
+        "00213200",
+        "002152b0"
+      ],
+      "stock_nonreturning": [
+        "002152b0"
+      ],
+      "unknown_functions": 7,
+      "rediscovered_callers": 1,
+      "stock_positives_covered": true,
+      "native_only": [
+        "00213200"
+      ],
+      "stock_only": []
+    }
+  ]
+}
