@@ -1,0 +1,596 @@
+{
+  "gate": "m2-006-b2-reference",
+  "milestone": "M2",
+  "commit": "0dd935eb04e2d571b4ca4a93bc1dc8bd3894fc31",
+  "date": "2026-09-06T09:46:42.583384+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd",
+      "twin_sha256": "fc25106ff6b68589649210e5bf69230a4d7b94429c026d94314a16163c237e9d",
+      "reference": "x86-LE-64-default/gcc/c738e5eb618ecbe7/baseline-ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd.json",
+      "reference_sha256": "85e8275e48e07b4eaddd3017ab55ba9620f22f3c11a324c42c8298501bc27b0c",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e",
+      "twin_sha256": "1cb15ed8e8ae142fc09d68a832a9decd9aed2054a6cdc1e9f7b4996782a9cde0",
+      "reference": "x86-LE-64-default/gcc/2238cd6de7355096/baseline-8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e.json",
+      "reference_sha256": "eac5db3ca51b1987f946f96a05d00fa564b4217b10b0edc5d74158422265424a",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d",
+      "twin_sha256": "9e5339a12c6ba9338af52eb765794212afb822e574189dd25f02822e686cd3b7",
+      "reference": "x86-LE-64-default/gcc/9ffc66a302c9b3f4/baseline-8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d.json",
+      "reference_sha256": "e69277b8f3fb359aaeee5c29176f982e45f2dd8a68ea06e8a43d11158984156c",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "twin_sha256": "59801887729fd74104dfa2b417954980759ede94cc95af011f6b0981c8f031a0",
+      "reference": "x86-LE-64-default/gcc/ae226b22b9bd188d/baseline-1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d.json",
+      "reference_sha256": "f196f308d46a068ecf4f9172b75b146abfa1baf5bfebbbbe3f93ac51cabda397",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75",
+      "twin_sha256": "8f85ae21cea8a7c8a38276ca2bf12ba1715906acedf1018ccdae3afa2b5b483d",
+      "reference": "x86-LE-64-default/gcc/9ba9b2b300372c16/baseline-13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75.json",
+      "reference_sha256": "d0bbaf9a88ce7c98019d5e7b2c1a9e56b88a08bdfc15b59a51399ec53ddeb2c3",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-reference-mismatches/x86_64_many_o2-ghidra-51047b5804cfa3d4.jsonl",
+            "sha256": "51047b5804cfa3d41ec3ad0b9e0bd0b8da892688983342a1c47a184bd54f44c1"
+          }
+        }
+      }
+    },
+    {
+      "id": "i386_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba",
+      "twin_sha256": "0a5f83884f4c5507faacdbc78f7f7193500a68c38a709f240631c5c17f9b5cba",
+      "reference": "x86-LE-32-default/gcc/b6d94d352db0ef21/baseline-cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba.json",
+      "reference_sha256": "9ca0f7e2197a26d0f2de66f14d674931f9957805a7a00369d03707e89918b99f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "i386_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3",
+      "twin_sha256": "7110a5c2d8e3c32f4b6863d253ec21197f5949d7c0f5d24a9ef97e8e8c1d1fba",
+      "reference": "x86-LE-32-default/gcc/999a9f78cc395e3d/baseline-7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3.json",
+      "reference_sha256": "d27ed99a060b8464a5d9618e7577232a27b45dec7f1e123434aa2e4bc6716aa7",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "i386_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c",
+      "twin_sha256": "9d0db8fbd3db207c5a7eceae9afd138fe27d2954184a423784e20c03107236d0",
+      "reference": "x86-LE-32-default/gcc/820e21abe052b885/baseline-0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c.json",
+      "reference_sha256": "105192fa02179fc23d080f1e0076fadde69b6453fbef91be17c536c9708e1921",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "i386_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
+      "twin_sha256": "e00e6f89c277547b9f8da6df57a2f201246d3d01faa52e0c570ff456ca7e6e45",
+      "reference": "x86-LE-32-default/gcc/861f2863456e1c84/baseline-55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc.json",
+      "reference_sha256": "257c8c54a6b917086c9db7eab9ce3bb989d88e291ae2332a212d2f03ba3e5b0f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "i386_many_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 0.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f",
+      "twin_sha256": "0164176fd5ac2f28275c4187b52507e9722e18f9f7e2aa53c2e65804f07f9d0f",
+      "reference": "x86-LE-32-default/gcc/c7039be76b3fca25/baseline-9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f.json",
+      "reference_sha256": "c252760ea4ff2cad1d2a5a2d896854c615946cb020ba258032b6c51aaae34c5c",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 401,
+          "correct": 0,
+          "value": 0.0,
+          "unmatched_truth": [],
+          "incorrect_count": 401,
+          "incorrect_evidence": {
+            "path": "m2-006-reference-mismatches/i386_many_o2-ghidra-90b422238ef5568a.jsonl",
+            "sha256": "90b422238ef5568a5bbd7c0cf21c8396d913c908a3fee6f67924c77489018b8c"
+          }
+        }
+      }
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+      "twin_sha256": "3aa0bf7efbab75891c725118f175beac8e9c2ffeb51be6731bc16dc96648aaad",
+      "reference": "AARCH64-LE-64-v8A/default/54831ee74b814f60/baseline-66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f.json",
+      "reference_sha256": "09b1addd4a7a4d721e723c3850bccdeec7249c6d91787f9a56bbbeed133e5e18",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
+      "twin_sha256": "1a5355a6fdf07651017d6866c59bdd016d0b613f8f8bb8f2bde066d8cf19454d",
+      "reference": "AARCH64-LE-64-v8A/default/9309bc4915cc92f3/baseline-ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a.json",
+      "reference_sha256": "4c7a1116f53b09c122a995273df5a46c1f9dead2ee55d1a530375204d06c1f70",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
+      "twin_sha256": "20d555bb798d4dc6f52279846df3181cdf005b80161d50cb0243022a2727a11e",
+      "reference": "AARCH64-LE-64-v8A/default/0988e4d3d8eb91e9/baseline-130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555.json",
+      "reference_sha256": "43802e28b6c83505fc54519cabe5e90f32d55aeb296cabb0b2697b78c9e61751",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "twin_sha256": "c03b2ca9e12d2555b02768ec88052c5738ccc07fd1ab9f24b3e14e1299ce45fa",
+      "reference": "AARCH64-LE-64-v8A/default/b1960f8ccf019ac7/baseline-670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9.json",
+      "reference_sha256": "4d019a8adcd0cd2f07f21666c5d11ecc11480f652028aede5aa8725cc0041f85",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
+      "twin_sha256": "2d9c54d3c99b3c7f3a36191c5ac8370e677245b91f535a81becfd85ed18656ad",
+      "reference": "AARCH64-LE-64-v8A/default/27c5de6429efbf50/baseline-61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809.json",
+      "reference_sha256": "d12ae2be0873db65665d9a5637e28c9302d6028ef4bc1f136828b5fedc780f9a",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-reference-mismatches/aarch64_many_o2-ghidra-e50fb39080d2e4a0.jsonl",
+            "sha256": "e50fb39080d2e4a048cfda6bda54c9bb0f7059633fa0f138ec3ff62186230759"
+          }
+        }
+      }
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
+      "twin_sha256": "97b3662bd95e93df818571151aac96950dcb3b269bddefeb696f5251a5098e46",
+      "reference": "PowerPC-BE-32-default/default/6724a577a70a7870/baseline-ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557.json",
+      "reference_sha256": "b43874ccf05a53a82b0284b203e4a2f420e9d974d7345103146dd8c3195d3a90",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
+      "twin_sha256": "a2aa29568245f14890b5e36c748dfb26f5a4871bcef84cc3e66ff86e26ad5493",
+      "reference": "PowerPC-BE-32-default/default/31e6f8fae452277f/baseline-27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9.json",
+      "reference_sha256": "7f44bbf66d27567d03ed003fc07691d8f9a2c3d3fe287dee8d9e5b564ae48dcb",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
+      "twin_sha256": "b3e0062dde8ee5d4435cbc2ef95314d267746e58b234d8b7bd106b9f2822fce8",
+      "reference": "PowerPC-BE-32-default/default/57a4ab9ac48d0d4a/baseline-0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452.json",
+      "reference_sha256": "329716c41f5546a999048cc24bb237ffe8dd1e8c1e30bb06bc1130094b48f7b6",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 2,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 2,
+          "correct": 2,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 1.0
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "twin_sha256": "5d6d9b486062fd3c64103b9e2af80bd0e593b795bbe707496a195701c0e1f0b6",
+      "reference": "PowerPC-BE-32-default/default/a0a8ac8e5686ff4e/baseline-682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf.json",
+      "reference_sha256": "5829e7dc6166fac820848c6bb8ea3a1b3d464a90cfda8fb329bcf7906d0f0be5",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 3,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 3,
+          "correct": 3,
+          "value": 1.0,
+          "unmatched_truth": [],
+          "incorrect_count": 0
+        }
+      }
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "pass",
+      "metrics": {
+        "ghidra.proto.arity": 0.9975062344139651
+      },
+      "thresholds": {},
+      "runs": 0,
+      "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
+      "twin_sha256": "019ba2359b9a494d642933df418a9f33d83879b1dd0437371d407a3fc4c9cd32",
+      "reference": "PowerPC-BE-32-default/default/57e3047e610b5676/baseline-4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3.json",
+      "reference_sha256": "6c947388349ba69c1288efc1ff1ce7216f64dc5f1668bcc73428c931648e84a8",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "truth_functions": 401,
+      "unmapped_truth": [],
+      "scores": {
+        "ghidra": {
+          "matched": 401,
+          "correct": 400,
+          "value": 0.9975062344139651,
+          "unmatched_truth": [],
+          "incorrect_count": 1,
+          "incorrect_evidence": {
+            "path": "m2-006-reference-mismatches/powerpc_many_o2-ghidra-3257723d0b7cc023.jsonl",
+            "sha256": "3257723d0b7cc023c72ff83e3b008fe161f444b9fd76184094dde3f825f0d908"
+          }
+        }
+      }
+    }
+  ],
+  "summary": {
+    "pass": 20,
+    "fail": 0,
+    "skipped": 0
+  },
+  "passed": true
+}
