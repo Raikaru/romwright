@@ -1688,6 +1688,17 @@ M2 — Program-model parity
   has not yet been observed for this change. Smoke drivers were removed.
 - m2-003 is complete. The full M2 parity gate remains open.
 
+## m2-004 implementation slices
+- a: failing version-6 migration acceptance, then format 7 with prototype
+  ownership/source/confidence and primitive classification/array count in the
+  existing `type_defs` table. Preserve legacy prototype/type/field records.
+  Generalize the existing fact-provenance model without a compatibility alias.
+- b: migrate consumers and preserve structured metadata through type editing;
+  exercise store/API roundtrips and ownership/confidence boundaries.
+- c: run workspace and corpus verification, publish measured evidence, and
+  document the storage contract. Keep each implementation commit below 800
+  changed lines; do not add a parallel type store or grow the Java bridge.
+
 ## Blocked on
 - None.
 

@@ -2526,6 +2526,96 @@ mod tests {
     }
 
     #[test]
+    fn version_six_migration_preserves_prototypes_and_structured_types() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("legacy-types", "x86:LE:64:default", &prov()).unwrap();
+        db.conn.execute_batch(
+            "DROP TABLE prototypes;
+             CREATE TABLE prototypes (
+                 program_id INTEGER NOT NULL REFERENCES programs(id),
+                 function TEXT NOT NULL, signature TEXT NOT NULL,
+                 calling_convention TEXT, return_type TEXT,
+                 PRIMARY KEY(program_id, function));
+             DROP TABLE type_defs;
+             CREATE TABLE type_defs (
+                 program_id INTEGER NOT NULL REFERENCES programs(id),
+                 name TEXT NOT NULL, kind TEXT NOT NULL, definition TEXT NOT NULL,
+                 size INTEGER, alignment INTEGER, base_type TEXT,
+                 provenance TEXT NOT NULL DEFAULT '',
+                 PRIMARY KEY(program_id, name));
+             UPDATE meta SET value = '6' WHERE key = 'schema_version';"
+        ).unwrap();
+        db.conn.execute(
+            "INSERT INTO prototypes VALUES (?1, '00001000', 'unsigned int legacy(void)', 'cdecl', 'Count')",
+            params![id.0],
+        ).unwrap();
+        for (name, kind, size, alignment, base) in [
+            ("Count", "primitive", 4, 4, None),
+            ("CountPtr", "pointer", 8, 8, Some("Count")),
+            ("CountArray", "array", 12, 4, Some("Count")),
+            ("Node", "structure", 16, 8, None),
+        ] {
+            db.conn.execute(
+                "INSERT INTO type_defs VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, 'legacy-author')",
+                params![id.0, name, kind, size, alignment, base],
+            ).unwrap();
+        }
+        db.conn.execute(
+            "INSERT INTO type_fields VALUES (?1, 'Node', 0, 'next', 8, 8, 'CountPtr')",
+            params![id.0],
+        ).unwrap();
+        db.migrate().unwrap();
+        db.migrate().unwrap();
+        let ownership: (String, String, Option<f64>) = db.conn.query_row(
+            "SELECT provenance_kind, provenance, confidence FROM prototypes WHERE program_id = ?1",
+            params![id.0], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        ).unwrap();
+        assert_eq!(ownership, ("asserted".into(), String::new(), None));
+        let prototype = db.prototypes(id).unwrap().remove(0);
+        assert_eq!(prototype.function.offset, 0x1000);
+        assert_eq!(prototype.signature, "unsigned int legacy(void)");
+        assert_eq!(prototype.calling_convention.as_deref(), Some("cdecl"));
+        assert_eq!(prototype.return_type.as_deref(), Some("Count"));
+        let types = db.type_defs(id).unwrap();
+        assert_eq!(types.iter().map(|row| (row.name.as_str(), row.kind.as_str(),
+            row.size, row.alignment, row.base_type.as_deref(), row.provenance.as_str()))
+            .collect::<Vec<_>>(), vec![
+                ("Count", "primitive", Some(4), Some(4), None, "legacy-author"),
+                ("CountArray", "array", Some(12), Some(4), Some("Count"), "legacy-author"),
+                ("CountPtr", "pointer", Some(8), Some(8), Some("Count"), "legacy-author"),
+                ("Node", "structure", Some(16), Some(8), None, "legacy-author"),
+            ]);
+        let fields = db.type_fields(id, None).unwrap();
+        assert_eq!(fields, vec![TypeFieldRow { type_name: "Node".into(), ordinal: 0,
+            field_name: "next".into(), offset: 8, size: Some(8), type_ref: Some("CountPtr".into()) }]);
+        for mut row in types {
+            let mut value = serde_json::to_value(&row).unwrap();
+            if row.name == "Count" { value["primitive"] = serde_json::json!("unsigned_integer"); }
+            if row.name == "CountArray" { value["element_count"] = serde_json::json!(3); }
+            row = serde_json::from_value(value).unwrap();
+            db.set_type_def(id, &row).unwrap();
+        }
+        let updated = db.type_defs(id).unwrap();
+        assert_eq!(serde_json::to_value(&updated[0]).unwrap()["primitive"], "unsigned_integer");
+        assert_eq!(serde_json::to_value(&updated[1]).unwrap()["element_count"], 3);
+        let inferred: PrototypeRow = serde_json::from_value(serde_json::json!({
+            "function": {"space": "Ram", "offset": 4112},
+            "signature": "Count recovered(void)", "calling_convention": "cdecl",
+            "return_type": "Count",
+            "provenance": {"kind": "inferred", "source": "test-analysis", "confidence": 0.875}
+        })).unwrap();
+        db.set_prototype(id, &inferred).unwrap();
+        let stored = serde_json::to_value(&db.prototypes(id).unwrap()[1]).unwrap();
+        assert_eq!(stored["provenance"], serde_json::json!({
+            "kind": "inferred", "source": "test-analysis", "confidence": 0.875
+        }));
+        let version: String = db.conn.query_row(
+            "SELECT value FROM meta WHERE key = 'schema_version'", [], |row| row.get(0),
+        ).unwrap();
+        assert_eq!(version, "7");
+    }
+
+    #[test]
     fn analysis_records_search_graph_memory_bookmarks_and_patches() {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
