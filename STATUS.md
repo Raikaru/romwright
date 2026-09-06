@@ -1649,6 +1649,11 @@ M2 — Program-model parity
 - b: native data-section sweep for ASCII/UTF-8 and endian-aware UTF-16,
   preserving decoded text and m2-002 references. Exercise supplementary
   characters and minimum character count, not byte or UTF-16 code-unit count.
+- b1: retain ELF string-table facts with their declared UTF-8 encoding and
+  loaded or metadata address spaces. Baseline recall is 0.02857–0.07547:
+  `.shstrtab` addresses and declared encodings are not optional oracle rows.
+  First commit `elf_string_tables_preserve_namespaces_and_utf8` failing;
+  do not remove non-loaded strings from the metric.
 - c: verify worker string delivery, complete differential acceptance, and CI.
   Publish implementation and generated reports in separate commits below
   800 changed lines.
