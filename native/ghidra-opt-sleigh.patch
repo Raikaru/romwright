@@ -182,7 +182,7 @@ index a93aa00..9ba9404 100644
    if (open == -1) {
      open = archlist.size();
      archlist.push_back((ArchitectureGhidra *)0);
-@@ -209,6 +229,49 @@ void RegisterProgram::sendResult(void)
+@@ -209,6 +229,62 @@ void RegisterProgram::sendResult(void)
    GhidraCommand::sendResult();
  }
  
@@ -190,14 +190,22 @@ index a93aa00..9ba9404 100644
 +
 +{
 +  GhidraCommand::loadParameters();
++  // Command instances are reused; readStringStream appends to its output.
++  functionName.clear();
++  signature.clear();
++  functionAddress.clear();
++  mode.clear();
 +  ArchitectureGhidra::readStringStream(sin,functionName);
 +  ArchitectureGhidra::readStringStream(sin,signature);
 +  ArchitectureGhidra::readStringStream(sin,functionAddress);
++  ArchitectureGhidra::readStringStream(sin,mode);
 +}
 +
 +void SetFunctionSignature::rawAction(void)
 +
 +{
++  if (mode != "asserted" && mode != "inferred" && mode != "recovery")
++    throw ParseError("Unknown prototype mode: " + mode);
 +  istringstream input(signature);
 +  PrototypePieces pieces;
 +  parse_protopieces(pieces,input,ghidra);
@@ -220,7 +228,12 @@ index a93aa00..9ba9404 100644
 +  if (fd == (Funcdata *)0)
 +    throw ParseError("Unknown function address: " + functionAddress);
 +  fd->getFuncProto().setPieces(pieces);
-+  if (requestedName != functionName) {
++  if (mode == "recovery") {
++    fd->getFuncProto().setInputLock(false);
++    fd->getFuncProto().setOutputLock(false);
++    fd->getFuncProto().setModelLock(false);
++  }
++  if (mode == "asserted" && requestedName != functionName) {
 +    ScopeGhidra *ghidraScope = dynamic_cast<ScopeGhidra *>(ghidra->symboltab->getGlobalScope());
 +    if (ghidraScope == (ScopeGhidra *)0)
 +      throw LowlevelError("Global scope is not Ghidra-backed");
@@ -232,7 +245,7 @@ index a93aa00..9ba9404 100644
  void DeregisterProgram::loadParameters(void)
  
  {
-@@ -497,6 +560,7 @@ void GhidraDecompCapability::initialize(void)
+@@ -497,6 +573,7 @@ void GhidraDecompCapability::initialize(void)
  
  {
    commandmap["registerProgram"] = new RegisterProgram();
@@ -264,7 +277,7 @@ index db72be5..a6b4bd2 100644
    virtual void loadParameters(void);
    virtual void sendResult(void);
  public:
-@@ -118,6 +120,20 @@ public:
+@@ -118,6 +120,21 @@ public:
    virtual void rawAction(void);
  };
  
@@ -277,6 +290,7 @@ index db72be5..a6b4bd2 100644
 +  string functionName;
 +  string signature;
 +  string functionAddress;
++  string mode;
 +  virtual void loadParameters(void);
 +public:
 +  virtual void rawAction(void);

@@ -314,11 +314,15 @@ Pool snapshots follow the store revision: edits invalidate idle workers, and a
 revision change during analysis discards the result. Both native entrypoints
 apply stored callee signatures before analyzing a caller, using call xrefs and
 stored function extents rather than neighboring function-entry distances.
+Recovery unlocks inferred target parameters, return type, and calling convention;
+stored callees and analyst assertions remain locked. Inferred declarations never
+rename functions. The native command resets its parameters between applications.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
 python3 tests/m2-005_prototype.py
 python3 tests/m2-006_revision.py
+cargo test -p lre-worker --test prototype_recovery -- --ignored
 ```
 
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped
