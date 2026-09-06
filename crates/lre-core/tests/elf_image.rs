@@ -107,6 +107,30 @@ fn fixture(width: usize, be: bool, relocation: u64, image_base: u64) -> Vec<u8> 
 }
 
 #[test]
+fn shared_data_strings_use_alignment_and_reference_evidence() {
+    use lre_core::native::{Mapping, NativeImport, NativeXref, store_import};
+    for (padding, referenced) in [(2, false), (1, true)] {
+        let mut bytes = vec![0; padding];
+        for unit in "A😀BC".encode_utf16().chain([0]) {
+            bytes.extend_from_slice(&unit.to_le_bytes());
+        }
+        let address = 0x3000 + padding as u64;
+        let import = NativeImport {
+            language: "x86:LE:64:default".into(), format: "raw".into(),
+            mappings: vec![Mapping { vaddr: 0x3000, size: bytes.len() as u64, file_off: 0, flags: 2, bytes }],
+            xrefs: if referenced { vec![NativeXref::new(0x1000, address, "READ")] } else { Vec::new() },
+            ..Default::default()
+        };
+        let db = lre_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
+        store_import(&db, "shared-data", &import).unwrap();
+        let rows = db.strings(db.program_id("shared-data").unwrap()).unwrap();
+        let actual: Vec<_> = rows.into_iter().map(|row| (row.address.offset, row.value, row.kind)).collect();
+        assert_eq!(actual, vec![(address, "A😀BC".into(), "UTF-16LE".into())],
+            "padding must not make a shifted UTF-16 interpretation hide the aligned or referenced string");
+    }
+}
+
+#[test]
 fn elf_string_tables_preserve_namespaces_and_utf8() {
     for loaded in [false, true] {
         let mut data = fixture(8, false, 4, 0x400000);
