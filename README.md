@@ -322,12 +322,19 @@ store. Nested pointer/array/callback declarations are rendered from structured
 types; absent types are rejected rather than replaced by `void`. The write
 checks its input revision, retains assertions, and leaves unchanged facts at
 the same revision. Native round-trips cover variadic callback pointers.
+The API method `infer_prototypes` takes `binary`, `program`, optional `base`,
+and `budget_ms` (default 60000). It analyzes all functions once, then only
+callers of changed callees, for at most 3 rounds under one absolute deadline.
+It reports completed `rounds`, `analyzed` functions, changed facts, and a
+`stop_reason` of `converged`, `round_limit`, or `budget`. An interrupted partial
+round is discarded; zero budget starts no worker and writes no facts.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
 python3 tests/m2-005_prototype.py
 python3 tests/m2-006_revision.py
 cargo test -p lre-worker --test prototype_recovery -- --ignored
+python3 tests/m2-006_inference.py
 ```
 
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped

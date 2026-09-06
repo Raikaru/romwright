@@ -1845,6 +1845,19 @@ M2 — Program-model parity
   0.11 s, corpus 5/5, both prototype scripts, string regression 20/20 at 1.0.
   API orchestration and native arity parity remain unfinished.
 
+### m2-006-d2 evidence
+- `5b62686` committed caller scheduling, zero-budget, and shared-deadline
+  acceptance. The real inference API passes: 2 initial rounds, 1 repeated round,
+  inferred `add` arity 2, and the exact analyst assertion retained.
+- The caller regression re-analyzes `main`, not leaf `add`. A zero-budget
+  request produces 0 rounds, 0 jobs, and no prototype changes.
+- Production deadline regression passes in 0.77 s: two separate 250 ms leases,
+  then one shared 250 ms deadline; the expired second shared lease launches no
+  fourth child. Protocol errors remain distinct from deadline expiry.
+- Verification: 156 workspace tests; 2 explicit native tests in 0.12 s;
+  corpus 5/5; inference, prototype, and revision scripts; string regression
+  20/20 with recall 1.0. Native corpus arity parity remains unmeasured.
+
 ## Blocked on
 - None.
 
@@ -1853,8 +1866,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Registration, snapshots, recovery locks, and atomic persistence are implemented.
-  Next: bounded API rounds with caller-only scheduling and one absolute deadline.
+  Inference API and bounded rounds are implemented. Next: integrate and run
+  the full native arity gate against the 20 frozen stock references.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

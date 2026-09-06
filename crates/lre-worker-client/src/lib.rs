@@ -123,9 +123,26 @@ impl WorkerSession {
     /// is zero because the response is not a store mutation; a Core/session
     /// caller stamps its current program revision when publishing it.
     pub fn decompile_doc(&mut self, address: u64) -> lre_worker::Result<DecompDoc> {
-        let raw = self.decompile(address)?;
+        self.decompile_doc_mode(address, false)
+    }
+
+    fn decompile_doc_mode(&mut self, address: u64, recover: bool) -> lre_worker::Result<DecompDoc> {
+        let raw = if recover {
+            self.worker
+                .prepare_function_for_inference(&mut self.provider, address)?;
+            let space = self.ram_space();
+            self.worker
+                .decompile_at(&mut self.provider, space, address)?
+        } else {
+            self.decompile(address)?
+        };
         let (tokens, prototype) =
             lre_worker::decode_document_with_ram_space(&raw, Some(self.ram_space() as u64));
+        if recover && prototype.is_none() {
+            return Err(WorkerError::Decompiler(format!(
+                "function {address:#x} returned no prototype"
+            )));
+        }
         Ok(DecompDoc {
             tokens,
             prototype,
@@ -147,7 +164,7 @@ pub enum PoolError {
     Db(#[from] lre_db::DbError),
     #[error("core: {0}")]
     Core(#[from] lre_core::CoreError),
-    #[error("deadline exceeded (>{0:?}); worker killed, session poisoned")]
+    #[error("worker deadline exceeded (lease budget {0:?})")]
     Deadline(Duration),
     #[error("worker exceed memory cap (rss {0} bytes > cap {1} bytes); killed")]
     MemCap(u64, u64),
@@ -380,26 +397,32 @@ impl WorkerPool {
         &mut self,
         op: impl FnOnce(&mut WorkerSession) -> lre_worker::Result<T>,
     ) -> PoolResult<T> {
-        self.with_worker_named("worker", None, op)
+        let deadline = Instant::now() + self.config.deadline;
+        self.with_worker_named("worker", None, deadline, op)
     }
 
     fn with_worker_named<T>(
         &mut self,
         operation: &str,
         address: Option<u64>,
+        deadline: Instant,
         op: impl FnOnce(&mut WorkerSession) -> lre_worker::Result<T>,
     ) -> PoolResult<T> {
         let job = self.begin_job(operation, address);
-        let result = self.run_worker(op);
+        let result = self.run_worker(deadline, op);
         self.finish_job(job, result.as_ref().err().map(ToString::to_string));
         result
     }
 
     fn run_worker<T>(
         &mut self,
+        deadline: Instant,
         op: impl FnOnce(&mut WorkerSession) -> lre_worker::Result<T>,
     ) -> PoolResult<T> {
-        let deadline = Instant::now() + self.config.deadline;
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+            return Err(PoolError::Deadline(remaining));
+        }
         let (done, completion) = std::sync::mpsc::sync_channel(1);
         let mut watchdog = None;
         let result: PoolResult<(WorkerSession, T)> = (|| {
@@ -429,7 +452,7 @@ impl WorkerPool {
         if Instant::now() >= deadline {
             // Never publish late output or return a timed-out session to idle.
             drop(result);
-            return Err(PoolError::Deadline(self.config.deadline));
+            return Err(PoolError::Deadline(remaining));
         }
         let (session, value) = result?;
         let key = self.key();
@@ -465,7 +488,8 @@ impl WorkerPool {
 
     /// Convenience: decompile one address with the pool's deadline.
     pub fn decompile(&mut self, address: u64) -> PoolResult<Vec<u8>> {
-        self.with_worker_named("decompile", Some(address), |session| {
+        let deadline = Instant::now() + self.config.deadline;
+        self.with_worker_named("decompile", Some(address), deadline, |session| {
             session.decompile(address)
         })
     }
@@ -473,14 +497,39 @@ impl WorkerPool {
     /// Convenience: decompile and decode one structured document with the
     /// pool's deadline/restart semantics.
     pub fn decompile_doc(&mut self, address: u64) -> PoolResult<DecompDoc> {
-        self.with_worker_named("decompile", Some(address), |session| {
+        let deadline = Instant::now() + self.config.deadline;
+        self.with_worker_named("decompile", Some(address), deadline, |session| {
             session.decompile_doc(address)
+        })
+    }
+
+    fn recover_doc(&mut self, address: u64, deadline: Instant) -> PoolResult<DecompDoc> {
+        self.with_worker_named("infer_prototype", Some(address), deadline, |session| {
+            session.decompile_doc_mode(address, true)
         })
     }
 
     fn invalidate_facts(&mut self) {
         self.idle.clear();
     }
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InferenceStopReason {
+    Converged,
+    RoundLimit,
+    Budget,
+}
+
+/// Completed rounds and actual work; a budget interruption discards its partial round.
+#[derive(Debug, Serialize)]
+pub struct InferenceReport {
+    pub rounds: u8,
+    pub stop_reason: InferenceStopReason,
+    pub analyzed: u64,
+    /// Number of changed facts across completed rounds, not unique functions.
+    pub changed: u64,
 }
 
 /// Owns the pool selected for the current API program and binary.
@@ -568,6 +617,113 @@ impl WorkerPoolManager {
         Ok(doc)
     }
 
+    /// Recovers all functions, then only callers of changed callees, for at most
+    /// three rounds. One caller-supplied deadline covers setup and every lease.
+    pub fn infer_prototypes(
+        &mut self,
+        core: &lre_core::Core,
+        binary: &Path,
+        program: &str,
+        base: Option<u64>,
+        deadline: Instant,
+    ) -> PoolResult<InferenceReport> {
+        let mut report = InferenceReport {
+            rounds: 0,
+            stop_reason: InferenceStopReason::Budget,
+            analyzed: 0,
+            changed: 0,
+        };
+        if Instant::now() >= deadline {
+            return Ok(report);
+        }
+        let store = core.store_handle()?;
+        let id = store.program_id(program)?;
+        let graph_revision = store.revision(id)?;
+        let mut functions = store.functions(id)?;
+        functions.retain(|function| function.entry.space == lre_model::AddressSpace::Ram);
+        let mut edges = store.call_edges(id)?;
+        edges.retain(|(from, to)| {
+            from.space == lre_model::AddressSpace::Ram && to.space == lre_model::AddressSpace::Ram
+        });
+        let mut callers: HashMap<u64, Vec<usize>> = HashMap::new();
+        for (index, function) in functions.iter().enumerate() {
+            let entry = function.entry.offset;
+            let first = edges.partition_point(|(from, _)| from.offset < entry);
+            for (from, to) in &edges[first..] {
+                if from.offset - entry >= function.size as u64 {
+                    break;
+                }
+                let owners = callers.entry(to.offset).or_default();
+                if owners.last() != Some(&index) {
+                    owners.push(index);
+                }
+            }
+        }
+        let mut revision = graph_revision;
+        let mut pending: Vec<usize> = (0..functions.len()).collect();
+        let mut dirty = vec![false; functions.len()];
+        let mut recovered = Vec::with_capacity(functions.len());
+        while report.rounds < 3 && !pending.is_empty() {
+            if Instant::now() >= deadline {
+                return Ok(report);
+            }
+            let current = store.revision(id)?;
+            if current != revision {
+                return Err(PoolError::StaleRevision(revision, current));
+            }
+            let pool = self.ensure_pool(core, binary, program, base.unwrap_or(0), revision)?;
+            for &index in &pending {
+                let function = &functions[index];
+                let doc = match pool.recover_doc(function.entry.offset, deadline) {
+                    Ok(doc) => doc,
+                    Err(PoolError::Deadline(_)) => return Ok(report),
+                    Err(error) => return Err(error),
+                };
+                let current = store.revision(id)?;
+                if current != revision {
+                    pool.invalidate_facts();
+                    return Err(PoolError::StaleRevision(revision, current));
+                }
+                report.analyzed += 1;
+                recovered.push((
+                    function.entry.clone(),
+                    doc.prototype.expect("recovery requires a prototype"),
+                ));
+            }
+            if Instant::now() >= deadline {
+                return Ok(report);
+            }
+            let changed = core.persist_inferred_prototypes(program, revision, &recovered)?;
+            report.rounds += 1;
+            report.changed += changed.len() as u64;
+            // The merge is the only mutation accepted between these rounds.
+            // A concurrent edit after it is still rejected by the next check.
+            if !changed.is_empty() {
+                revision += 1;
+            }
+            pending.clear();
+            for function in changed {
+                if let Some(owners) = callers.get(&function.offset) {
+                    for &owner in owners {
+                        dirty[owner] = true;
+                    }
+                }
+            }
+            for (index, changed) in dirty.iter_mut().enumerate() {
+                if std::mem::take(changed) {
+                    pending.push(index);
+                }
+            }
+            recovered.clear();
+        }
+        report.stop_reason = if pending.is_empty() {
+            InferenceStopReason::Converged
+        } else {
+            InferenceStopReason::RoundLimit
+        };
+        Ok(report)
+    }
+
     /// Returns pool history and counters, even before the first decompile.
     pub fn jobs_page(&self, memory_cap_bytes: u64, offset: u64, limit: u64) -> JobsPage {
         self.pool
@@ -595,7 +751,11 @@ mod tests {
         ));
         std::fs::create_dir(&root).unwrap();
         let decompiler = root.join("hang");
-        std::fs::write(&decompiler, "#!/bin/sh\nprintf x >> \"$0.started\"\nexec sleep 2\n").unwrap();
+        std::fs::write(
+            &decompiler,
+            "#!/bin/sh\nprintf x >> \"$0.started\"\nexec sleep 2\n",
+        )
+        .unwrap();
         std::fs::set_permissions(&decompiler, std::fs::Permissions::from_mode(0o755)).unwrap();
         let binary = root.join("raw.bin");
         std::fs::write(&binary, [0x90, 0xc3]).unwrap();
@@ -659,7 +819,10 @@ mod tests {
         for result in shared {
             assert!(matches!(result, Err(PoolError::Deadline(_))), "{result:?}");
         }
-        assert_eq!(starts, b"xxx", "an expired shared deadline must not launch another child");
+        assert_eq!(
+            starts, b"xxx",
+            "an expired shared deadline must not launch another child"
+        );
         assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
         assert!(
             matches!(&rejected, Err(PoolError::Worker(_))),

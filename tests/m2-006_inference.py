@@ -22,7 +22,8 @@ def main():
                 text=True, capture_output=True, check=True, timeout=120)
             rows = [json.loads(line) for line in response.stdout.splitlines()]
             assert len(rows) == len(requests), rows
-            assert all(not row.get('error') for row in rows), rows
+            errors = [row for row in rows if row.get('error')]
+            assert not errors, errors
             return [row['result'] for row in rows]
 
         context = dict(binary=str(binary), program='tiny_bin')
