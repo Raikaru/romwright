@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
-  "date": "2026-09-06T12:01:07.764159+00:00",
+  "commit": "f45df591e70787e00f32a26984bed6d99788203f",
+  "date": "2026-09-06T12:38:37.054456+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -12,6 +12,7 @@
   "budget_ms": 60000,
   "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
   "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "native_linkage_sha256": "5d2e2cee98c38072c9780529850d0b13909d8c91d5c3a6df9f5e2fd8bff23715",
   "architecture": "aarch64",
   "corpus": [
     {
@@ -43,13 +44,13 @@
         "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
       },
       "inference": {
-        "analyzed": 21,
-        "changed": 18,
+        "analyzed": 20,
+        "changed": 13,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 17,
-      "persisted_prototypes": 17,
+      "persisted_prototypes": 13,
       "scores": {
         "native": {
           "matched": 2,
@@ -96,13 +97,13 @@
         "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
       },
       "inference": {
-        "analyzed": 21,
-        "changed": 18,
+        "analyzed": 19,
+        "changed": 13,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 17,
-      "persisted_prototypes": 17,
+      "persisted_prototypes": 13,
       "scores": {
         "native": {
           "matched": 2,
@@ -149,13 +150,13 @@
         "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
       },
       "inference": {
-        "analyzed": 21,
-        "changed": 18,
+        "analyzed": 19,
+        "changed": 12,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 17,
-      "persisted_prototypes": 17,
+      "persisted_prototypes": 12,
       "scores": {
         "native": {
           "matched": 2,
@@ -175,7 +176,7 @@
     },
     {
       "id": "aarch64_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
       "twin_sha256": "c03b2ca9e12d2555b02768ec88052c5738ccc07fd1ab9f24b3e14e1299ce45fa",
       "reference": "AARCH64-LE-64-v8A/default/b1960f8ccf019ac7/baseline-670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9.json",
@@ -187,7 +188,7 @@
       "truth_functions": 3,
       "unmapped_truth": [],
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -202,24 +203,20 @@
         "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
       },
       "inference": {
-        "analyzed": 29,
-        "changed": 26,
+        "analyzed": 26,
+        "changed": 15,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 24,
-      "persisted_prototypes": 24,
+      "persisted_prototypes": 15,
       "scores": {
         "native": {
           "matched": 3,
-          "correct": 2,
-          "value": 0.6666666666666666,
+          "correct": 3,
+          "value": 1.0,
           "unmatched_truth": [],
-          "incorrect_count": 1,
-          "incorrect_evidence": {
-            "path": "m2-006-aarch64-mismatches/aarch64_cpp_o2-native-0c5eec4f2d45265a.jsonl",
-            "sha256": "0c5eec4f2d45265ab29608a7f15b5d9c74ad573fc9818ac24ec7eb4a1f5fc764"
-          }
+          "incorrect_count": 0
         },
         "ghidra": {
           "matched": 3,
@@ -259,13 +256,13 @@
         "registers.txt": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0"
       },
       "inference": {
-        "analyzed": 419,
-        "changed": 416,
+        "analyzed": 418,
+        "changed": 412,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 415,
-      "persisted_prototypes": 415,
+      "persisted_prototypes": 412,
       "scores": {
         "native": {
           "matched": 401,

@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "1a9d622826914790540025ca89932049fc12f2d7",
-  "date": "2026-09-06T12:01:07.764159+00:00",
+  "commit": "f45df591e70787e00f32a26984bed6d99788203f",
+  "date": "2026-09-06T12:38:37.054456+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -12,6 +12,7 @@
   "budget_ms": 60000,
   "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
   "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "native_linkage_sha256": "5d2e2cee98c38072c9780529850d0b13909d8c91d5c3a6df9f5e2fd8bff23715",
   "architecture": "i386",
   "corpus": [
     {
@@ -44,12 +45,12 @@
       },
       "inference": {
         "analyzed": 20,
-        "changed": 16,
+        "changed": 14,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 15,
-      "persisted_prototypes": 15,
+      "persisted_prototypes": 13,
       "scores": {
         "native": {
           "matched": 2,
@@ -96,13 +97,13 @@
         "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
       },
       "inference": {
-        "analyzed": 20,
-        "changed": 16,
+        "analyzed": 19,
+        "changed": 14,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 15,
-      "persisted_prototypes": 15,
+      "persisted_prototypes": 13,
       "scores": {
         "native": {
           "matched": 2,
@@ -149,13 +150,13 @@
         "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
       },
       "inference": {
-        "analyzed": 23,
-        "changed": 17,
+        "analyzed": 22,
+        "changed": 14,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 16,
-      "persisted_prototypes": 16,
+      "persisted_prototypes": 13,
       "scores": {
         "native": {
           "matched": 2,
@@ -175,7 +176,7 @@
     },
     {
       "id": "i386_cpp_o2",
-      "status": "fail",
+      "status": "pass",
       "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
       "twin_sha256": "e00e6f89c277547b9f8da6df57a2f201246d3d01faa52e0c570ff456ca7e6e45",
       "reference": "x86-LE-32-default/gcc/861f2863456e1c84/baseline-55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc.json",
@@ -187,7 +188,7 @@
       "truth_functions": 3,
       "unmapped_truth": [],
       "metrics": {
-        "proto.arity": 0.6666666666666666,
+        "proto.arity": 1.0,
         "ghidra.proto.arity": 1.0
       },
       "thresholds": {
@@ -202,24 +203,20 @@
         "registers.txt": "4484221b34cb44fa396264bd055af902592852c3d9ea1f80f89107d3040a6582"
       },
       "inference": {
-        "analyzed": 29,
-        "changed": 25,
+        "analyzed": 27,
+        "changed": 16,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 23,
-      "persisted_prototypes": 23,
+      "persisted_prototypes": 15,
       "scores": {
         "native": {
           "matched": 3,
-          "correct": 2,
-          "value": 0.6666666666666666,
+          "correct": 3,
+          "value": 1.0,
           "unmatched_truth": [],
-          "incorrect_count": 1,
-          "incorrect_evidence": {
-            "path": "m2-006-i386-mismatches/i386_cpp_o2-native-34a2e6766521890e.jsonl",
-            "sha256": "34a2e6766521890e00c487407136343042ca6aab9cf56eef63746d020c5b3b2a"
-          }
+          "incorrect_count": 0
         },
         "ghidra": {
           "matched": 3,
@@ -260,12 +257,12 @@
       },
       "inference": {
         "analyzed": 418,
-        "changed": 415,
+        "changed": 414,
         "rounds": 2,
         "stop_reason": "converged"
       },
       "native_functions": 413,
-      "persisted_prototypes": 413,
+      "persisted_prototypes": 412,
       "scores": {
         "native": {
           "matched": 401,
