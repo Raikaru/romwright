@@ -299,6 +299,9 @@ pub struct FuncProto {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct DecompDoc {
     pub tokens: Vec<DecompToken>,
+    /// Recovered native facts; absent for legacy or incomplete documents.
+    #[serde(default)]
+    pub prototype: Option<FuncProto>,
     pub address: Address,
     pub revision: u64,
 }

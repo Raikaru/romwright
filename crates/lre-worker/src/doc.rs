@@ -144,7 +144,9 @@ fn read_id_after_header(packed: &[u8], p: &mut usize, h: u8) -> Option<u32> {
 fn read_groups(packed: &[u8], p: &mut usize, groups: usize) -> Option<u64> {
     let mut value = 0u64;
     for _ in 0..groups {
-        value = value.checked_shl(7)? | (*packed.get(*p)? & 0x7f) as u64;
+        value = value
+            .checked_mul(128)?
+            .checked_add((*packed.get(*p)? & 0x7f) as u64)?;
         *p += 1;
     }
     Some(value)
@@ -466,6 +468,11 @@ mod tests {
         }
         let text: String = tokens.iter().map(|token| token.text.as_str()).collect();
         assert!(text.contains("return param_2 + param_1"), "{text}");
+        assert_eq!(
+            serde_json::to_value(&tokens).unwrap(),
+            serde_json::to_value(decode_tokens_with_ram_space(raw, Some(3))).unwrap(),
+            "prototype collection must preserve the complete token metadata"
+        );
     }
 
     #[test]

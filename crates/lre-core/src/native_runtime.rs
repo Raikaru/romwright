@@ -195,7 +195,7 @@ pub fn listing_native(
 /// spec bundle (native/specs/<lang>, generated once via `dump-specs`).
 /// Falls back to the configured x86 defaults when the language is the
 /// default x86-64 or the env explicitly set the pieces.
-fn language_decompile_config(
+pub fn language_decompile_config(
     cfg: &RuntimeConfig,
     language: &str,
 ) -> Result<(

@@ -58,9 +58,11 @@ pub struct NativeWorker {
 }
 
 impl NativeWorker {
-    /// Spawns `ghidra_opt` from the pinned build.
-    pub fn launch(ghidra_opt: &Path) -> Result<Self> {
-        let mut child = Command::new(ghidra_opt)
+    /// Spawns a configured native decompiler command. Language inputs belong
+    /// on this child command, not in process-global environment mutations.
+    pub fn launch(mut command: Command) -> Result<Self> {
+        let binary = PathBuf::from(command.get_program());
+        let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
@@ -80,7 +82,7 @@ impl NativeWorker {
             stdin: Some(stdin),
             stdout,
             out_buf: Vec::new(),
-            binary: ghidra_opt.to_path_buf(),
+            binary,
         })
     }
 
@@ -154,7 +156,9 @@ impl NativeWorker {
         self.arch_id = std::str::from_utf8(&response)
             .ok()
             .and_then(|value| value.trim().parse().ok())
-            .ok_or_else(|| WorkerError::Protocol("registerProgram returned no architecture id".into()))?;
+            .ok_or_else(|| {
+                WorkerError::Protocol("registerProgram returned no architecture id".into())
+            })?;
         Ok(())
     }
 
@@ -195,10 +199,7 @@ impl NativeWorker {
 
     /// Encodes the packed document accepted as registerProgram's fifth
     /// parameter. Entries are `(RAM address, function name, byte size)`.
-    pub fn encode_function_shell_doc(
-        space_index: u32,
-        entries: &[(u64, &str, u64)],
-    ) -> Vec<u8> {
+    pub fn encode_function_shell_doc(space_index: u32, entries: &[(u64, &str, u64)]) -> Vec<u8> {
         let mut doc = Vec::new();
         crate::wire::encode_header(&mut doc, crate::wire::ELEMENT_START, crate::wire::elem::DOC);
         for (offset, name, size) in entries {
@@ -212,8 +213,16 @@ impl NativeWorker {
                 crate::wire::ELEMENT_START,
                 crate::wire::elem::FUNCTIONSHELL,
             );
-            crate::wire::encode_string_attribute(&mut doc, crate::wire::attr::NAME, name.as_bytes());
-            crate::wire::encode_string_attribute(&mut doc, crate::wire::attr::LABEL, name.as_bytes());
+            crate::wire::encode_string_attribute(
+                &mut doc,
+                crate::wire::attr::NAME,
+                name.as_bytes(),
+            );
+            crate::wire::encode_string_attribute(
+                &mut doc,
+                crate::wire::attr::LABEL,
+                name.as_bytes(),
+            );
             crate::wire::encode_header(
                 &mut doc,
                 crate::wire::ELEMENT_END,
@@ -298,7 +307,10 @@ impl NativeWorker {
                 let _ = writeln!(
                     f,
                     "<-- {}",
-                    chunk[..n].iter().map(|b| format!("{b:02x}")).collect::<String>()
+                    chunk[..n]
+                        .iter()
+                        .map(|b| format!("{b:02x}"))
+                        .collect::<String>()
                 );
             }
             self.out_buf.extend_from_slice(&chunk[..n]);
@@ -321,7 +333,10 @@ impl NativeWorker {
     /// readResponse loop: the C++ encodes the result via packed element
     /// writes that themselves trigger client queries (e.g. namespaces),
     /// which arrive as 0x04 frames between result bytes.
-    pub(crate) fn read_string_payload(&mut self, provider: &mut ProgramProvider) -> Result<Vec<u8>> {
+    pub(crate) fn read_string_payload(
+        &mut self,
+        provider: &mut ProgramProvider,
+    ) -> Result<Vec<u8>> {
         let mut out = Vec::new();
         loop {
             let byte = self.raw_byte()?;
@@ -388,7 +403,10 @@ impl NativeWorker {
                 let _ = writeln!(
                     f,
                     "<-- {}",
-                    chunk[..n].iter().map(|b| format!("{b:02x}")).collect::<String>()
+                    chunk[..n]
+                        .iter()
+                        .map(|b| format!("{b:02x}"))
+                        .collect::<String>()
                 );
             }
             self.out_buf.extend_from_slice(&chunk[..n]);
@@ -445,7 +463,6 @@ impl NativeWorker {
             out.push(got);
         }
     }
-
 }
 
 impl Drop for NativeWorker {
@@ -545,8 +562,7 @@ mod tests {
 
     #[test]
     fn check_setup_rejects_missing_binary() {
-        let err = check_setup(Path::new("/nonexistent/ghidra_opt"), Path::new("/tmp"))
-            .unwrap_err();
+        let err = check_setup(Path::new("/nonexistent/ghidra_opt"), Path::new("/tmp")).unwrap_err();
         assert!(matches!(err, WorkerError::Setup(_)));
     }
 }

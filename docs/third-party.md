@@ -382,3 +382,15 @@ length fields, truncation byte, A-biased UTF-8 bytes, and a NUL terminator.
 `DecompileCallback.StringData` counts UTF-16 code units; a split surrogate
 uses Java's UTF-8 `?` replacement. These APIs are from the pinned Apache-2.0
 Ghidra sources. Payloads are bounded by the protocol's 12-bit byte length.
+
+## Recovered native prototypes
+
+`crates/lre-worker/src/prototype.rs` follows the pinned Ghidra 12.1.3
+`Funcdata::encode`, `FuncProto::encode`, `ProtoStoreInternal::encode`,
+`Symbol::encodeHeader`, and datatype `encodeRef`/`encode` methods
+(`funcdata.cc`, `fspec.cc`, `database.cc`, `type.cc`; Apache-2.0).
+It shares the existing packed decoder rather than parsing C text or adding
+another wire grammar. Symbol category indices order recovered parameters;
+nested function-pointer prototypes do not replace the enclosing function's
+prototype. Missing references remain unknown, and malformed or truncated
+documents do not publish a partial prototype. No pinned source is modified.
