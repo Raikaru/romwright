@@ -91,6 +91,11 @@ struct Snapshot {
   }
 };
 
+struct RegisterSeed {
+  VarnodeData storage;
+  Word value;
+};
+
 class Propagation {
   Architecture &arch;
   Funcdata &function;
@@ -108,6 +113,7 @@ class Propagation {
   std::size_t scalarReferenceCount = 0;
   std::vector<ParameterPieces> pointerStorage;
   std::vector<const BlockBasic *> originPending, originVisited;
+  std::vector<RegisterSeed> registerSeeds;
 
   void initializePointerStorage() {
     PrototypePieces prototype;
@@ -330,7 +336,7 @@ class Propagation {
     OpCode code = op.code();
     if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
       reference(op, op.getIn(0)->getSpaceFromConst(), get(state, op.getIn(1)),
-                code == CPUI_LOAD ? loadAccess(op) : 2);
+                code == CPUI_LOAD ? 1 : 2);
       if (code == CPUI_STORE)
         reference(op, dataSpace, get(state, op.getIn(2)), 4);
     }
@@ -675,17 +681,20 @@ class Propagation {
       previousSpace = entry.first.space;
       previousEnd = entry.first.offset + Word(entry.second);
     }
+    for (const RegisterSeed &seed : registerSeeds)
+      initial.registers.put(seed.storage.space->getIndex(), seed.storage.offset,
+                            seed.storage.size, Value::constant(seed.value, seed.storage.size));
     return initial;
   }
 
 public:
   Propagation(Architecture &architecture, Funcdata &data, const std::vector<Region> &mapped,
-              Word start, Word finish, bool trust)
+              Word start, Word finish, bool trust, std::vector<RegisterSeed> seeds = {})
       : arch(architecture), function(data), regions(mapped),
         dataSpace(arch.getDefaultDataSpace()), codeSpace(arch.getDefaultCodeSpace()),
         first(start), end(finish), pointerSize(arch.types->getSizeOfPointer()),
         uniqueSpace(arch.getUniqueSpace()->getIndex()), spaceCount(arch.numSpaces()),
-        bigEndian(dataSpace->isBigEndian()), trustWritable(trust) {
+        bigEndian(dataSpace->isBigEndian()), trustWritable(trust), registerSeeds(std::move(seeds)) {
     AddrSpace *stack = arch.getStackSpace();
     if (stack != nullptr && stack->numSpacebase() != 0)
       stackRegister = &stack->getSpacebase(0);
@@ -798,10 +807,26 @@ public:
     if (!(input >> start >> end >> trust) || start >= end || trust > 1)
       throw IfaceParseError("Expected propagation <start> <end-exclusive> <trust-writable:0|1> <start> <end> <flags> ...");
     vector<ventris_constants::Region> regions;
+    vector<ventris_constants::RegisterSeed> seeds;
     while (true) {
       input >> ws;
       if (input.eof())
         break;
+      if (input.peek() == '-') {
+        string option, name;
+        uintb value;
+        if (!(input >> option >> name >> value) || option != "--register")
+          throw IfaceParseError("Expected --register <name> <value>");
+        const VarnodeData &storage = dcp->conf->translate->getRegister(name);
+        if (storage.space->getType() != IPTR_PROCESSOR ||
+            storage.space == dcp->conf->getDefaultCodeSpace() ||
+            storage.space == dcp->conf->getDefaultDataSpace() ||
+            storage.size < 1 || storage.size > 8 ||
+            value > ventris_constants::widthMask(storage.size))
+          throw IfaceParseError("Invalid propagation register context");
+        seeds.push_back({storage, value});
+        continue;
+      }
       ventris_constants::Region range;
       if (!(input >> range.start >> range.end >> range.flags) ||
           range.start >= range.end || range.flags > 7)
@@ -829,7 +854,8 @@ public:
     symbol.added = symbol.owner->addFunction(entry, "ventris_constants");
     Funcdata &function = *symbol.added->getFunction();
     function.followFlow(entry, Address(space, end - 1));
-    ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0);
+    ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0,
+                                                std::move(seeds));
     vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;
     out << (referenceMode ? "REFERENCES [" : "CONSTANTS [") << dec;
