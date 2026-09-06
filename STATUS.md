@@ -1886,6 +1886,12 @@ M2 — Program-model parity
   16 passed, 4 failed, 0 skipped. Each C++ case scores 2/3 versus stock 3/3;
   the other 16 cases equal the reference. Gate reports include spec hashes.
 - Next: e2 imported-thunk uncertainty, then e3 final parity evidence.
+- Regeneration follow-up: `daf1b0e` exposed rejection of equivalent producer
+  inputs. Three ELF copies with unmapped trailing padding now reproduce all
+  15 spec files without rewriting any manifest. Context/output hashes remain
+  mandatory; the original representative hash remains provenance.
+  Verification: static native acceptance on all 3 contexts, 156 workspace
+  tests, corpus 5/5. No locked corpus file or baseline was changed.
 
 ### m2-006-e2 evidence
 - `23b22ab` first demonstrated x86-64 caller arity falling from 2 to 1.

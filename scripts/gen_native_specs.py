@@ -113,18 +113,23 @@ def main():
         if digest(binary) != item['binary_sha256']:
             raise ValueError(f'Corpus binary hash mismatch: {binary}')
         context = CONTEXTS[architecture]
-        expected = dict(schema_version=1, producer='dump_specs', **producer, **context,
-            representative_sha256=item['binary_sha256'])
+        expected = dict(schema_version=1, producer='dump_specs', **producer, **context)
         if not args.check:
             with tempfile.TemporaryDirectory(prefix='native-spec-export-') as temporary:
                 output = export_bundle(command, binary, context, Path(temporary), args.timeout)
-                if digest(binary) != expected['representative_sha256']:
+                if digest(binary) != item['binary_sha256']:
                     raise ValueError('Provisioning input changed during export')
-                result = dict(**expected, files={name: dict(sha256=digest(output / name),
-                    bytes=(output / name).stat().st_size) for name in FILES})
+                result = dict(**expected, representative_sha256=item['binary_sha256'],
+                    files={name: dict(sha256=digest(output / name),
+                        bytes=(output / name).stat().st_size) for name in FILES})
                 directory, destination = bundle_paths(args.out_dir, context['language'])
-                if destination.exists() and json.loads(destination.read_text()) != result:
-                    raise ValueError(f'Fresh export differs from recorded manifest: {destination}')
+                if destination.exists():
+                    recorded = json.loads(destination.read_text())
+                    # The first producer input remains provenance, not a
+                    # requirement that equivalent corpus rebuilds be identical.
+                    required = dict(**expected, files=result['files'])
+                    if any(recorded.get(key) != value for key, value in required.items()):
+                        raise ValueError(f'Fresh export differs from recorded manifest: {destination}')
                 directory.mkdir(parents=True, exist_ok=True)
                 for name in FILES:
                     shutil.copyfile(output / name, directory / name)
