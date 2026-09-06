@@ -2651,6 +2651,47 @@ mod tests {
     }
 
     #[test]
+    fn inferred_batches_are_revision_checked_atomic_and_idempotent() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("inference", "x86:LE:64:default", &prov()).unwrap();
+        let inferred = |address, signature: &str| PrototypeRow {
+            function: lre_model::Address::ram(address),
+            signature: signature.into(),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance {
+                kind: FactKind::Inferred, source: "native recovery".into(), confidence: None,
+            },
+        };
+        let mut asserted = inferred(0x1000, "int analyst(void)");
+        asserted.provenance.kind = FactKind::Asserted;
+        db.set_prototype(id, &asserted).unwrap();
+        let revision = db.revision(id).unwrap();
+        let conflict = inferred(0x1000, "int conflict(int x)");
+        let fresh = inferred(0x1010, "int recovered(int x)");
+        let batch = [conflict, fresh.clone()];
+        assert_eq!(db.merge_inferred_prototypes(id, revision, &batch).unwrap(),
+            vec![fresh.function.clone()]);
+        let updated = db.revision(id).unwrap();
+        assert_eq!(updated, revision + 1);
+        assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), fresh.clone()]);
+        assert!(db.merge_inferred_prototypes(id, updated, &batch).unwrap().is_empty());
+        assert_eq!(db.revision(id).unwrap(), updated);
+
+        let next = inferred(0x1020, "int next(void)");
+        assert!(matches!(db.merge_inferred_prototypes(id, revision, &[next.clone()]),
+            Err(DbError::StaleRevision { .. })));
+        let mut invalid = inferred(0x1030, "int invalid(void)");
+        invalid.provenance.confidence = Some(f64::NAN);
+        assert!(matches!(db.merge_inferred_prototypes(id, updated, &[next, invalid]),
+            Err(DbError::InvalidFactProvenance(_))));
+        assert!(matches!(db.merge_inferred_prototypes(id, updated, &[asserted.clone()]),
+            Err(DbError::InvalidFactProvenance(_))));
+        assert_eq!(db.prototypes(id).unwrap(), vec![asserted, fresh]);
+        assert_eq!(db.revision(id).unwrap(), updated);
+    }
+
+    #[test]
     fn version_six_migration_preserves_prototypes_and_structured_types() {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("legacy-types", "x86:LE:64:default", &prov()).unwrap();
