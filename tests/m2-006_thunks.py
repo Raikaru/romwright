@@ -43,6 +43,7 @@ def main():
         imported = {row['address']['offset'] for row in symbols if row['external']}
         assert imported, symbols
         assert not [row for row in prototypes if row['function']['offset'] in imported], prototypes
+        assert any(row['function'] == target['address'] for row in prototypes), prototypes
         print(json.dumps(dict(passed=True, architecture=args.architecture, entry=entry,
             parameters=2, rounds=report['rounds'], imported_symbols=len(imported))))
 

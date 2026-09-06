@@ -319,16 +319,16 @@ public:
         emit.bad = true;
       }
       bool valid = emit.complete(table);
+      bool context = !from && emit.needsContext(table);
       *status->fileoptr << "LINKAGE {\"address\":" << dec << start.getOffset()
-                        << ",\"length\":" << (valid ? length : 0)
+                        << ",\"length\":" << (valid || context ? length : 0)
                         << ",\"slot\":";
       if (valid)
         *status->fileoptr << emit.slot;
       else
         *status->fileoptr << "null";
       *status->fileoptr << ",\"needs_context\":"
-                        << (!from && emit.needsContext(table) ? "true"
-                                                              : "false")
+                        << (context ? "true" : "false")
                         << "}" << endl;
     }
   }

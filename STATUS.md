@@ -1887,6 +1887,19 @@ M2 — Program-model parity
   the other 16 cases equal the reference. Gate reports include spec hashes.
 - Next: e2 imported-thunk uncertainty, then e3 final parity evidence.
 
+### m2-006-e2 evidence
+- `23b22ab` first demonstrated x86-64 caller arity falling from 2 to 1.
+  `caa24ac` extended the failing acceptance to context-dependent PowerPC stubs.
+- Both now retain 2 caller inputs after 2 rounds, with 16 and 18 imported
+  symbol addresses respectively. Ordinary caller prototypes remain persisted.
+- Flow-proven linkage identities survive import. Completed propagation resolves
+  context-dependent entries only with a bounded pure-linkage shape and one
+  consistent imported read slot inside its exact span; no ISA-specific rule.
+- Unknown external prototypes are not written as `void(void)`. All functions
+  are still analyzed initially; assertions and caller-only repeat rounds remain.
+- Verification: console rebuild, 156 workspace tests, corpus 5/5, both thunk
+  regressions and bounded-inference acceptance. Final report publication is e3.
+
 ## Blocked on
 - None.
 
@@ -1895,8 +1908,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Native gate has 16 pass / 4 fail. Next: prevent unknown imported-thunk
-  prototypes from poisoning callers (e2), then rerun the full gate (e3).
+  Next: e3 rerun and commit full native parity evidence against the committed
+  e2 implementation, then record the next task.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

@@ -328,6 +328,13 @@ callers of changed callees, for at most 3 rounds under one absolute deadline.
 It reports completed `rounds`, `analyzed` functions, changed facts, and a
 `stop_reason` of `converged`, `round_limit`, or `budget`. An interrupted partial
 round is discarded; zero budget starts no worker and writes no facts.
+Imported linkage entries retain their flow-proven external identity in the
+store. Their unresolved callee signatures are not persisted as `void(void)`;
+inference must not turn an unknown library prototype into a locked zero-argument
+fact that removes live inputs from callers. Analyst-supplied signatures still
+apply normally.
+Context-dependent entries require a bounded pure-linkage shape plus one
+consistent imported read slot from completed propagation within that exact span.
 
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
@@ -335,6 +342,8 @@ python3 tests/m2-005_prototype.py
 python3 tests/m2-006_revision.py
 cargo test -p lre-worker --test prototype_recovery -- --ignored
 python3 tests/m2-006_inference.py
+python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus
+python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus --architecture powerpc
 ```
 
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped

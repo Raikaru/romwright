@@ -323,6 +323,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     name: name.clone(),
                     size: linkage.length as u64,
                 });
+                imp.externals.push((address, name.clone()));
             }
         }
     }
@@ -1092,6 +1093,7 @@ fn promote_linkage(
         name: name.clone(),
         size: linkage.length as u64,
     });
+    imp.externals.push((target, name.clone()));
     entries.push(target);
     origins.insert(target, target);
     let start = instructions.partition_point(|&(address, _)| address < target);
