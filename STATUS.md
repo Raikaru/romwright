@@ -1671,6 +1671,13 @@ M2 — Program-model parity
   changed lines; no committed baseline is modified.
 - Initial acceptance failed: only ASCII `word` was found; UTF-8 and UTF-16
   strings were absent and executable `CODE` bytes were incorrectly included.
+- Native implementation: `1305ebf`; ELF namespaces and supplementary-character
+  regressions pass. The Qt smoke displays UTF-8, both UTF-16 byte orders, and
+  `.shstrtab`-qualified addresses.
+- Worker acceptance `0c1b101` first failed on a typed string query (`None`
+  instead of RAM address `0x401178`). Four string protocol regressions and
+  nine independent protocol-peer callback cases now pass, including namespace
+  isolation, missing/empty strings, UTF-16 limits, and the 12-bit length bound.
 
 ## Blocked on
 - None.

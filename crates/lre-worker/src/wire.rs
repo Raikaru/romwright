@@ -62,8 +62,9 @@ pub fn decode_burst(data: &[u8], pos: &mut usize) -> Option<u8> {
         let b = data[*pos];
         *pos += 1;
         match b {
-            0 => continue,              // alignment
-            0x01 => {                    // code follows
+            0 => continue, // alignment
+            0x01 => {
+                // code follows
                 if *pos >= data.len() {
                     return None;
                 }
@@ -71,7 +72,7 @@ pub fn decode_burst(data: &[u8], pos: &mut usize) -> Option<u8> {
                 *pos += 1;
                 return Some(code);
             }
-            _ => return Some(b),         // lenient: some peers emit bare codes
+            _ => return Some(b), // lenient: some peers emit bare codes
         }
     }
 }
@@ -81,6 +82,53 @@ pub fn encode_string_stream(out: &mut Vec<u8>, payload: &[u8]) {
     encode_burst(out, burst::STRINGSTREAM_OPEN);
     out.extend_from_slice(payload);
     encode_burst(out, burst::STRINGSTREAM_CLOSE);
+}
+
+/// Encodes getStringData as consumed by ghidra_arch.cc:774-816. Character
+/// limits follow DecompileCallback.StringData's UTF-16 code-unit count,
+/// including Java's `?` replacement when the limit splits a surrogate pair.
+pub fn encode_string_data_response(out: &mut Vec<u8>, value: Option<&str>, max_chars: usize) {
+    let Some(value) = value else {
+        out.reserve(8);
+        encode_burst(out, burst::QRESPONSE_OPEN);
+        encode_burst(out, burst::QRESPONSE_CLOSE);
+        return;
+    };
+    // The two six-bit length fields must also fit the trailing NUL.
+    const MAX_UTF8_BYTES: usize = (1 << 12) - 2;
+    let mut end = 0;
+    let mut units = 0;
+    let mut replacement = false;
+    for ch in value.chars() {
+        if units + ch.len_utf16() > max_chars {
+            replacement = units < max_chars && end < MAX_UTF8_BYTES;
+            break;
+        }
+        if end + ch.len_utf8() > MAX_UTF8_BYTES {
+            break;
+        }
+        units += ch.len_utf16();
+        end += ch.len_utf8();
+    }
+    let size = end + usize::from(replacement) + 1;
+    out.reserve(19 + size * 2);
+    encode_burst(out, burst::QRESPONSE_OPEN);
+    encode_burst(out, burst::BYTESTREAM_OPEN);
+    out.extend_from_slice(&[
+        ((size & 0x3f) + 0x20) as u8,
+        (((size >> 6) & 0x3f) + 0x20) as u8,
+        u8::from(end < value.len()),
+    ]);
+    for byte in value.as_bytes()[..end]
+        .iter()
+        .copied()
+        .chain(replacement.then_some(b'?'))
+        .chain(std::iter::once(0))
+    {
+        out.extend_from_slice(&[(byte >> 4) + b'A', (byte & 0xf) + b'A']);
+    }
+    encode_burst(out, burst::BYTESTREAM_CLOSE);
+    encode_burst(out, burst::QRESPONSE_CLOSE);
 }
 
 // ---- Packed element encoding (marshal.hh PackedFormat) --------------------
@@ -208,7 +256,7 @@ pub fn encode_packed_int(out: &mut Vec<u8>, value: u64) {
     // Ground truth (PackedEncode::encodeLength, marshal.cc): every 7-bit
     // group carries RAWDATA_MARKER, written most-significant group first.
     let mut sa = 63 - value.leading_zeros(); // highest set bit index
-    sa -= sa % 7;                            // align to a group boundary
+    sa -= sa % 7; // align to a group boundary
     while sa > 0 {
         let piece = ((value >> sa) & 0x7f) as u8 | RAWDATA_MARKER;
         out.push(piece);
@@ -285,7 +333,16 @@ mod tests {
 
     #[test]
     fn decode_skips_alignment_nuls() {
-        let data = [0u8, 0, 0, 0x01, burst::QUERY_OPEN, 0, 0x01, burst::QUERY_CLOSE];
+        let data = [
+            0u8,
+            0,
+            0,
+            0x01,
+            burst::QUERY_OPEN,
+            0,
+            0x01,
+            burst::QUERY_CLOSE,
+        ];
         let mut pos = 0;
         assert_eq!(decode_burst(&data, &mut pos), Some(burst::QUERY_OPEN));
         assert_eq!(decode_burst(&data, &mut pos), Some(burst::QUERY_CLOSE));
@@ -318,11 +375,74 @@ mod tests {
         // Element 11; attrs SPACE(20,type 5) and OFFSET(16,type 4).
         let mut out = Vec::new();
         encode_addr_element(&mut out, 3, 0x40047a);
-        assert_eq!(out, vec![
-            0x4b,             // element 11
-            0xd4, 0x51, 0x83, // attr 20, type 5, 1 group: 3
-            0xd0, 0x44, 0x82, 0x80, 0x88, 0xfa, // attr 16, type 4, 4 groups
-            0x8b,             // element end 11
-        ]);
+        assert_eq!(
+            out,
+            vec![
+                0x4b, // element 11
+                0xd4, 0x51, 0x83, // attr 20, type 5, 1 group: 3
+                0xd0, 0x44, 0x82, 0x80, 0x88, 0xfa, // attr 16, type 4, 4 groups
+                0x8b, // element end 11
+            ]
+        );
+    }
+
+    fn string_response(value: Option<&str>, limit: usize) -> Option<(String, bool)> {
+        let mut frame = Vec::new();
+        encode_string_data_response(&mut frame, value, limit);
+        let mut pos = 0;
+        assert_eq!(decode_burst(&frame, &mut pos), Some(burst::QRESPONSE_OPEN));
+        let kind = decode_burst(&frame, &mut pos);
+        if kind == Some(burst::QRESPONSE_CLOSE) {
+            assert_eq!(pos, frame.len());
+            return None;
+        }
+        assert_eq!(kind, Some(burst::BYTESTREAM_OPEN));
+        let size = (frame[pos] - 0x20) as usize | (((frame[pos + 1] - 0x20) as usize) << 6);
+        let truncated = frame[pos + 2] != 0;
+        pos += 3;
+        let bytes: Vec<_> = frame[pos..pos + size * 2]
+            .chunks_exact(2)
+            .map(|pair| ((pair[0] - b'A') << 4) | (pair[1] - b'A'))
+            .collect();
+        pos += size * 2;
+        assert_eq!(
+            decode_burst(&frame, &mut pos),
+            Some(burst::BYTESTREAM_CLOSE)
+        );
+        assert_eq!(decode_burst(&frame, &mut pos), Some(burst::QRESPONSE_CLOSE));
+        assert_eq!(pos, frame.len());
+        assert_eq!(bytes.last(), Some(&0));
+        Some((
+            String::from_utf8(bytes[..size - 1].to_vec()).unwrap(),
+            truncated,
+        ))
+    }
+
+    #[test]
+    fn string_response_preserves_utf8_and_java_character_limits() {
+        assert_eq!(
+            string_response(Some("café"), 4),
+            Some(("café".into(), false))
+        );
+        assert_eq!(
+            string_response(Some("A😀BC"), 3),
+            Some(("A😀".into(), true))
+        );
+        assert_eq!(string_response(Some("A😀BC"), 2), Some(("A?".into(), true)));
+    }
+
+    #[test]
+    fn string_response_distinguishes_absent_empty_and_zero_limit() {
+        assert_eq!(string_response(None, 10), None);
+        assert_eq!(string_response(Some(""), 0), Some(("".into(), false)));
+        assert_eq!(string_response(Some("café"), 0), Some(("".into(), true)));
+    }
+
+    #[test]
+    fn string_response_bounds_twelve_bit_length() {
+        assert_eq!(
+            string_response(Some(&"é".repeat(2050)), usize::MAX),
+            Some(("é".repeat(2047), true))
+        );
     }
 }

@@ -21,23 +21,32 @@ impl BinaryBacking {
     pub fn from_file(path: &Path, raw_base: u64) -> Result<Self> {
         let image = lre_core::session::ProgramImage::open_with_raw_base(path, Some(raw_base))
             .map_err(|e| WorkerError::Setup(e.to_string()))?;
-        Ok(Self { image: Arc::new(image) })
+        Ok(Self {
+            image: Arc::new(image),
+        })
     }
 
     pub fn read(&self, vaddr: u64, size: u64) -> Option<Vec<u8>> {
         // DecompileCallback.getBytes returns a zero-initialized buffer after
         // a valid short read; an unmapped initial address is still an error.
-        let region_at = |address| self.image.regions().iter()
-            .find(|r| address >= r.vaddr && address - r.vaddr < r.size);
+        let region_at = |address| {
+            self.image
+                .regions()
+                .iter()
+                .find(|r| address >= r.vaddr && address - r.vaddr < r.size)
+        };
         region_at(vaddr)?;
         let mut bytes = vec![0; usize::try_from(size).ok()?];
         let mut copied = 0usize;
         while copied < bytes.len() {
             let at = vaddr.checked_add(copied as u64)?;
-            let Some(region) = region_at(at) else { break; };
+            let Some(region) = region_at(at) else {
+                break;
+            };
             let available = usize::try_from(region.size - (at - region.vaddr)).ok()?;
             let count = available.min(bytes.len() - copied);
-            self.image.read_into(at, &mut bytes[copied..copied + count])?;
+            self.image
+                .read_into(at, &mut bytes[copied..copied + count])?;
             copied += count;
         }
         Some(bytes)
@@ -134,12 +143,10 @@ fn find_space_index(tspec: &str, name: &str) -> Option<i64> {
         let end = tag.find('>')?;
         let start_tag = &tag[..end];
         let has_name = start_tag.contains(&format!("name=\"{name}\""));
-        let has_index = start_tag
-            .find("index=\"")
-            .and_then(|i| {
-                let after = &start_tag[i + 7..];
-                after.find('"').map(|j| after[..j].to_string())
-            });
+        let has_index = start_tag.find("index=\"").and_then(|i| {
+            let after = &start_tag[i + 7..];
+            after.find('"').map(|j| after[..j].to_string())
+        });
         if let (Some(i), true) = (has_index, has_name) {
             return i.parse().ok();
         }
@@ -201,13 +208,11 @@ impl NativeWorker {
                     let tp = self.read_string_stream()?;
                     let msg = self.read_string_stream()?;
                     let _ = self.expect_burst(burst::EXCEP_CLOSE)?;
-                    return Err(WorkerError::Decompiler(
-                        format!(
-                            "{}: {}",
-                            String::from_utf8_lossy(&tp),
-                            String::from_utf8_lossy(&msg)
-                        ),
-                    ));
+                    return Err(WorkerError::Decompiler(format!(
+                        "{}: {}",
+                        String::from_utf8_lossy(&tp),
+                        String::from_utf8_lossy(&msg)
+                    )));
                 }
                 other => {
                     return Err(WorkerError::Protocol(format!(
@@ -347,11 +352,7 @@ impl NativeWorker {
     /// HighSymbol.encodeMapSym); anything else answers an empty response,
     /// which readAll treats as "no data" (a hole).
     /// Resolves labels from durable symbols and function names.
-    fn answer_code_label(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
+    fn answer_code_label(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let (_, address, _) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad getCodeLabel address".into()))?;
         let name = provider
@@ -364,11 +365,7 @@ impl NativeWorker {
     }
 
     /// Answers `isNameUsed` from all durable function and symbol names.
-    fn answer_name_used(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
+    fn answer_name_used(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let name = find_name_attribute(payload).unwrap_or_default();
         let used = provider.function_names.values().any(|value| value == &name)
             || provider.symbol_names.values().any(|value| value == &name);
@@ -377,50 +374,25 @@ impl NativeWorker {
 
     /// Returns UTF-8 string bytes using the exact A-biased byte-stream shape
     /// consumed by ArchitectureGhidra::getStringData.
-    fn answer_string_data(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
-        let (_, address, _) = decode_addr_element(payload)
+    fn answer_string_data(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
+        let (space, address, _) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad getStringData address".into()))?;
-        let max_size = find_numeric_attribute(payload, wire::attr::MAXSIZE)
+        let max_chars = find_numeric_attribute(payload, wire::attr::MAXSIZE)
             .and_then(|value| usize::try_from(value).ok())
-            .unwrap_or(4096)
-            .min(1024 * 1024);
-        let bytes = provider
-            .strings
-            .get(&address)
-            .map(|value| value.as_bytes().to_vec())
-            .or_else(|| {
-                provider
-                    .backing
-                    .read(address, max_size as u64)
-            })
-            .unwrap_or_default();
-        let mut utf8 = bytes;
-        if let Some(nul) = utf8.iter().position(|byte| *byte == 0) {
-            utf8.truncate(nul);
-        }
-        utf8.truncate(max_size);
+            .ok_or_else(|| WorkerError::Protocol("bad getStringData character limit".into()))?;
+        let value = if space == provider.ram_space_index {
+            provider.strings.get(&address).map(String::as_str)
+        } else {
+            None
+        };
         let mut buf = Vec::new();
-        encode_burst(&mut buf, burst::QRESPONSE_OPEN);
-        encode_burst(&mut buf, burst::BYTESTREAM_OPEN);
-        for byte in &utf8 {
-            buf.extend_from_slice(&[(byte >> 4) + b'A', (byte & 0xf) + b'A']);
-        }
-        encode_burst(&mut buf, burst::BYTESTREAM_CLOSE);
-        encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+        wire::encode_string_data_response(&mut buf, value, max_chars);
         self.write_frame(&buf)
     }
 
     /// Encodes store comments in the packed `<commentdb>` form consumed by
     /// CommentDatabaseInternal::decode.
-    fn answer_comments(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
+    fn answer_comments(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let (_, function, _) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad getComments address".into()))?;
         let mut doc = Vec::new();
@@ -450,11 +422,7 @@ impl NativeWorker {
     /// Encodes a conservative basic datatype response. The durable type
     /// definition is intentionally retained as store text; the decompiler
     /// needs the name/size/metatype wire fields to continue safely.
-    fn answer_datatype(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
+    fn answer_datatype(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let name = find_name_attribute(payload).unwrap_or_default();
         let mut buf = Vec::new();
         encode_burst(&mut buf, burst::QRESPONSE_OPEN);
@@ -467,8 +435,14 @@ impl NativeWorker {
             wire::encode_string_attribute(
                 &mut doc,
                 wire::attr::METATYPE,
-                datatype_metatype(provider.datatypes.get(&name).map(String::as_str).unwrap_or(""))
-                    .as_bytes(),
+                datatype_metatype(
+                    provider
+                        .datatypes
+                        .get(&name)
+                        .map(String::as_str)
+                        .unwrap_or(""),
+                )
+                .as_bytes(),
             );
             wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::TYPE);
             encode_string_stream(&mut buf, &doc);
@@ -489,18 +463,10 @@ impl NativeWorker {
         encode_burst(&mut buf, burst::QRESPONSE_OPEN);
         if let Some(name) = provider.external_names.get(&address) {
             let mut doc = Vec::new();
-            wire::encode_header(
-                &mut doc,
-                wire::ELEMENT_START,
-                wire::elem::EXTERNREFSYMBOL,
-            );
+            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::EXTERNREFSYMBOL);
             wire::encode_string_attribute(&mut doc, wire::attr::NAME, name.as_bytes());
             wire::encode_addr_element(&mut doc, provider.ram_space_index as u32, address);
-            wire::encode_header(
-                &mut doc,
-                wire::ELEMENT_END,
-                wire::elem::EXTERNREFSYMBOL,
-            );
+            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::EXTERNREFSYMBOL);
             encode_string_stream(&mut buf, &doc);
         }
         encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
@@ -514,8 +480,8 @@ impl NativeWorker {
     ) -> Result<()> {
         let (space, vaddr, _size) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad packed <addr>".into()))?;
-        let is_function = space == provider.ram_space_index
-            && provider.functions.binary_search(&vaddr).is_ok();
+        let is_function =
+            space == provider.ram_space_index && provider.functions.binary_search(&vaddr).is_ok();
         let mut buf = Vec::new();
         if !is_function {
             encode_burst(&mut buf, burst::QRESPONSE_OPEN);
@@ -535,7 +501,12 @@ impl NativeWorker {
             // Scope id must be nonzero/unique: Funcdata::decode creates a
             // ScopeLocal with this id; id 0 collides with the global scope
             // (database.cc:822). The entry address is unique per function.
-            wire::encode_attribute(&mut doc, wire::attr::ID, wire::attr_type::UNSIGNED_INT, vaddr);
+            wire::encode_attribute(
+                &mut doc,
+                wire::attr::ID,
+                wire::attr_type::UNSIGNED_INT,
+                vaddr,
+            );
             wire::encode_string_attribute(&mut doc, wire::attr::NAME, name.as_bytes());
             let size = provider.function_sizes.get(&vaddr).copied().unwrap_or(8);
             wire::encode_attribute(
@@ -561,11 +532,7 @@ impl NativeWorker {
     /// getRegister (ArchitectureGhidra::getRegister): the answer is a
     /// packed `<addr>` in the register space (encodeRegister in Java); an
     /// unknown register is an exception, matching the Java client.
-    fn answer_getregister(
-        &mut self,
-        provider: &mut ProgramProvider,
-        payload: &[u8],
-    ) -> Result<()> {
+    fn answer_getregister(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let name = find_name_attribute(payload)
             .ok_or_else(|| WorkerError::Protocol("getregister without name".into()))?;
         let mut buf = Vec::new();
@@ -585,10 +552,7 @@ impl NativeWorker {
             None => {
                 encode_burst(&mut buf, burst::EXCEP_OPEN);
                 encode_string_stream(&mut buf, b"RuntimeException");
-                encode_string_stream(
-                    &mut buf,
-                    format!("No Register Defined: {name}").as_bytes(),
-                );
+                encode_string_stream(&mut buf, format!("No Register Defined: {name}").as_bytes());
                 encode_burst(&mut buf, burst::EXCEP_CLOSE);
             }
         }
@@ -652,10 +616,14 @@ pub fn decode_addr_element(data: &[u8]) -> Option<(i64, u64, u64)> {
             }
             h if h == wire::ATTRIBUTE_EQ => {
                 let (aid, ty) = decode_attr_header(header, data, &mut pos)?;
-                let value = match ty >> 4 {
-                    wire::attr_type::STRING => continue, // raw string attrs not numeric
-                    _ => decode_int_value(&data, pos, &mut pos, (ty & 0xf) as usize)?,
-                };
+                let value = decode_int_value(data, pos, &mut pos, (ty & 0xf) as usize)?;
+                if ty >> 4 == wire::attr_type::STRING {
+                    pos = pos.checked_add(usize::try_from(value).ok()?)?;
+                    if pos > data.len() {
+                        return None;
+                    }
+                    continue;
+                }
                 match (aid, ty >> 4) {
                     (wire::attr::SPACE, wire::attr_type::SPACE) => space = Some(value as i64),
                     (wire::attr::OFFSET, wire::attr_type::UNSIGNED_INT) => {
@@ -881,10 +849,24 @@ mod tests {
     #[test]
     fn string_query_decodes_address_after_datatype_name() {
         let mut payload = Vec::new();
-        wire::encode_header(&mut payload, wire::ELEMENT_START, wire::query::GETSTRINGDATA);
-        wire::encode_attribute(&mut payload, wire::attr::MAXSIZE, wire::attr_type::POSITIVE_INT, 64);
+        wire::encode_header(
+            &mut payload,
+            wire::ELEMENT_START,
+            wire::query::GETSTRINGDATA,
+        );
+        wire::encode_attribute(
+            &mut payload,
+            wire::attr::MAXSIZE,
+            wire::attr_type::POSITIVE_INT,
+            64,
+        );
         wire::encode_string_attribute(&mut payload, wire::attr::TYPE, b"char");
-        wire::encode_attribute(&mut payload, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
+        wire::encode_attribute(
+            &mut payload,
+            wire::attr::ID,
+            wire::attr_type::UNSIGNED_INT,
+            0,
+        );
         wire::encode_addr_element(&mut payload, 3, 0x401178);
         wire::encode_header(&mut payload, wire::ELEMENT_END, wire::query::GETSTRINGDATA);
         assert_eq!(decode_addr_element(&payload), Some((3, 0x401178, 0)));

@@ -64,7 +64,7 @@ jobs:
         run: python3 tests/m1-006_pdb_test.py
 
   corpus-oracle:
-    name: M1 Discovery and M2 Data References (ubuntu-latest)
+    name: M1 Discovery and M2 References/Strings (ubuntu-latest)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -134,6 +134,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
             --report "$RUNNER_TEMP/discovery/data-xref-report.json"
+      - name: Enforce complete M2 string gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 benchmarks/string_gate.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --oracle-dir "$RUNNER_TEMP/discovery/string-oracle" \
+            --report "$RUNNER_TEMP/discovery/strings-report.json"
       - name: Retain discovery reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -150,6 +158,15 @@ jobs:
           path: |
             ${{ runner.temp }}/discovery/data-xref-report.json
             ${{ runner.temp }}/discovery/xref-oracle/
+      - name: Retain string evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-string-reports
+          path: |
+            ${{ runner.temp }}/discovery/strings-report.json
+            ${{ runner.temp }}/discovery/strings-report-details/
+            ${{ runner.temp }}/discovery/string-oracle/
 
   corpus-windows:
     name: MSVC Corpus (windows-latest)
