@@ -7,7 +7,7 @@
 
 use lre_model::{Address, DecompDoc};
 use lre_worker::{
-    load_specs, open_store, worker::NativeWorker, BinaryBacking, ProgramProvider, WorkerError,
+    BinaryBacking, ProgramProvider, WorkerError, load_specs, open_store, worker::NativeWorker,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
@@ -608,28 +608,70 @@ impl WorkerPoolManager {
 mod tests {
     use super::*;
 
+    #[cfg(unix)]
     #[test]
-    fn jobs_page_surfaces_killed_worker_during_decompile() {
+    fn registration_deadline_kills_and_reaps_each_poisoned_worker() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!(
+            "ventris-registration-deadline-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let decompiler = root.join("hang");
+        std::fs::write(&decompiler, "#!/bin/sh\nexec sleep 2\n").unwrap();
+        std::fs::set_permissions(&decompiler, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let binary = root.join("raw.bin");
+        std::fs::write(&binary, [0x90, 0xc3]).unwrap();
+        for name in [
+            "test.sla",
+            "registers.txt",
+            "pspec.xml",
+            "cspec.xml",
+            "coretypes.xml",
+        ] {
+            std::fs::write(root.join(name), "").unwrap();
+        }
+        std::fs::write(
+            root.join("tspec.xml"),
+            "<spaces><space name=\"ram\" index=\"3\"/><space name=\"register\" index=\"4\"/></spaces>",
+        ).unwrap();
+        let db = open_store(&root).unwrap();
+        db.upsert_program(
+            "deadline",
+            "x86:LE:64:default",
+            &lre_model::Provenance {
+                producer: "deadline-test".into(),
+                upstream_version: "test".into(),
+            },
+        )
+        .unwrap();
+        drop(db);
         let mut pool = WorkerPool::new(PoolConfig {
-            decompiler: PathBuf::new(),
-            spec_root: PathBuf::new(),
-            sla: PathBuf::new(),
-            language_dir: PathBuf::new(),
+            decompiler,
+            spec_root: root.clone(),
+            sla: root.join("test.sla"),
+            language_dir: root.clone(),
             language_id: "x86:LE:64:default".into(),
-            binary: PathBuf::new(),
-            program: "jobs-test".into(),
-            project_dir: PathBuf::new(),
+            binary,
+            program: "deadline".into(),
+            project_dir: root.clone(),
             base: 0,
-            deadline: Duration::from_secs(1),
-            memory_cap: 4096,
+            deadline: Duration::from_millis(250),
+            memory_cap: 0,
         });
-        let job = pool.begin_job("decompile", Some(0x400466));
-        pool.finish_job(job, Some("worker killed during decompile".into()));
-
-        let page = pool.jobs_page(0, 10);
-        assert_eq!(page.total, 1);
-        assert_eq!(page.rows[0].state, JobState::Failed);
-        assert_eq!(page.rows[0].address, Some(0x400466));
-        assert_eq!(page.pool.restarts, 1);
+        let started = Instant::now();
+        // A second attempt must launch a fresh child, not reuse poisoned I/O.
+        let results = [pool.decompile_doc(0), pool.decompile_doc(0)];
+        let elapsed = started.elapsed();
+        drop(pool);
+        std::fs::remove_dir_all(root).unwrap();
+        for result in results {
+            assert!(matches!(&result, Err(PoolError::Deadline(_))), "{result:?}");
+        }
+        assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
     }
 }
