@@ -1634,15 +1634,19 @@ M2 — Program-model parity
   invalid compiler rejected; 91 Core tests passed with the console available.
   Workflow YAML parses. `actionlint` is unavailable on this workstation;
   hosted GitHub CI has not yet been observed for this change.
+- m2-002 complete: CI integration `f80681a`, fresh-input report
+  `benchmarks/reports/m2-002-h.json` committed in `a8e1f6f`.
+  Workspace: 142 passed; corpus smoke: 5/5; data-reference acceptance: 20/20.
+  This closes the data-reference task, not the full M2 parity gate.
 
 ## Blocked on
-- None. The m2-002 acceptance and fresh-input CI commands pass locally.
-  Final CI integration and fresh-input evidence publication remain.
+- None.
 
 ## Next task
-- m2-002: persist inferred data-reference facts with provenance. Write and
-  commit its failing acceptance before implementation; m2-001 supplies the
-  mapped-pointer query, not reference creation.
+- m2-003: sweep ASCII, UTF-8, and UTF-16 strings in data sections, minimum
+  length 4; attach references from m2-002. Ratified acceptance: str.recall
+  >= 0.95 versus the oracle. Write and commit the failing acceptance before
+  implementation; do not change the corpus or metric definition.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
