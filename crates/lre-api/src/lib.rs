@@ -9,7 +9,7 @@ use lre_debug::{BackendKind, DebugBackend, DebugCommand};
 use lre_model::{Address, AddressSpace};
 use lre_worker_client::WorkerPoolManager;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::PathBuf;
@@ -162,7 +162,11 @@ impl ApiService {
             "xrefs" => {
                 let program = string_param(params, "program")?;
                 let address = address_param(params, "address")?;
-                if params.get("incoming").and_then(Value::as_bool).unwrap_or(true) {
+                if params
+                    .get("incoming")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true)
+                {
                     value(self.core.xrefs_to(&program, &address))
                 } else {
                     value(self.core.xrefs_from(&program, &address))
@@ -170,13 +174,18 @@ impl ApiService {
             }
             "xrefs_page" => {
                 let program = string_param(params, "program")?;
-                value(self.core.xrefs_page(
-                    &program,
-                    &address_param(params, "address")?,
-                    params.get("incoming").and_then(Value::as_bool).unwrap_or(true),
-                    u64_param(params, "offset")?.unwrap_or(0),
-                    u64_param(params, "limit")?.unwrap_or(256),
-                ))
+                value(
+                    self.core.xrefs_page(
+                        &program,
+                        &address_param(params, "address")?,
+                        params
+                            .get("incoming")
+                            .and_then(Value::as_bool)
+                            .unwrap_or(true),
+                        u64_param(params, "offset")?.unwrap_or(0),
+                        u64_param(params, "limit")?.unwrap_or(256),
+                    ),
+                )
             }
             "comments" => {
                 let program = string_param(params, "program")?;
@@ -193,7 +202,10 @@ impl ApiService {
             "search" => {
                 let program = string_param(params, "program")?;
                 let term = string_param(params, "term")?;
-                value(self.core.search(&program, &term, u64_param(params, "limit")?.unwrap_or(256)))
+                value(
+                    self.core
+                        .search(&program, &term, u64_param(params, "limit")?.unwrap_or(256)),
+                )
             }
             "function_graph" => {
                 let program = string_param(params, "program")?;
@@ -238,15 +250,17 @@ impl ApiService {
                 let start = address_param(params, "start")?;
                 let count = u32::try_from(u64_param(params, "count")?.unwrap_or(64))
                     .map_err(|_| DispatchError::Request("count is too large".into()))?;
-                value(self.core.listing_window(
-                    &binary,
-                    &start,
-                    count,
-                    params
-                        .get("overscan_fraction")
-                        .and_then(Value::as_f64)
-                        .unwrap_or(0.25) as f32,
-                ))
+                value(
+                    self.core.listing_window(
+                        &binary,
+                        &start,
+                        count,
+                        params
+                            .get("overscan_fraction")
+                            .and_then(Value::as_f64)
+                            .unwrap_or(0.25) as f32,
+                    ),
+                )
             }
             "jobs_page" => {
                 let offset = u64_param(params, "offset")?.unwrap_or(0);
@@ -268,6 +282,25 @@ impl ApiService {
                 let count = u32::try_from(u64_param(params, "count")?.unwrap_or(16))
                     .map_err(|_| DispatchError::Request("count is too large".into()))?;
                 value(self.core.disasm_native(&binary, &address.hex(), count))
+            }
+            "infer_prototypes" => {
+                let binary = path_param(params, "binary")?;
+                let program = string_param(params, "program")?;
+                let base = u64_param(params, "base")?;
+                let budget = std::time::Duration::from_millis(
+                    u64_param(params, "budget_ms")?.unwrap_or(60000),
+                );
+                let deadline = std::time::Instant::now()
+                    .checked_add(budget)
+                    .ok_or_else(|| DispatchError::Request("budget_ms is too large".into()))?;
+                let mut pool = self
+                    .worker_pool
+                    .lock()
+                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
+                let report = pool
+                    .infer_prototypes(&self.core, &binary, &program, base, deadline)
+                    .map_err(|error| DispatchError::Worker(error.to_string()))?;
+                Ok(json!(report))
             }
             "decompile_doc" => {
                 let binary = path_param(params, "binary")?;
@@ -299,12 +332,11 @@ impl ApiService {
                     .get("function")
                     .map(|value| serde_json::from_value(value.clone()))
                     .transpose()
-                    .map_err(|error| DispatchError::Request(format!("function is invalid: {error}")))?
+                    .map_err(|error| {
+                        DispatchError::Request(format!("function is invalid: {error}"))
+                    })?
                     .unwrap_or_else(|| address.clone());
-                let kind = params
-                    .get("kind")
-                    .and_then(Value::as_str)
-                    .unwrap_or("eol");
+                let kind = params.get("kind").and_then(Value::as_str).unwrap_or("eol");
                 let text = string_param(params, "text")?;
                 self.core
                     .comment_command(&program, &address, &function, kind, &text)?;
@@ -340,10 +372,10 @@ impl ApiService {
             }
             "type_fields" => {
                 let program = string_param(params, "program")?;
-                value(self.core.type_fields(
-                    &program,
-                    params.get("type_name").and_then(Value::as_str),
-                ))
+                value(
+                    self.core
+                        .type_fields(&program, params.get("type_name").and_then(Value::as_str)),
+                )
             }
             "prototypes" => {
                 let program = string_param(params, "program")?;
@@ -355,7 +387,9 @@ impl ApiService {
                     .get("function")
                     .map(|value| serde_json::from_value(value.clone()))
                     .transpose()
-                    .map_err(|error| DispatchError::Request(format!("function is invalid: {error}")))?;
+                    .map_err(|error| {
+                        DispatchError::Request(format!("function is invalid: {error}"))
+                    })?;
                 value(self.core.stack_variables(&program, function.as_ref()))
             }
             "type_graph" => {
@@ -404,16 +438,19 @@ impl ApiService {
             "debug_memory" => {
                 let address = u64_param(params, "address")?
                     .ok_or_else(|| DispatchError::Request("params.address is required".into()))?;
-                let count = u32::try_from(
-                    u64_param(params, "count")?
-                        .ok_or_else(|| DispatchError::Request("params.count is required".into()))?,
-                )
-                .map_err(|_| DispatchError::Request("params.count is too large".into()))?;
+                let count =
+                    u32::try_from(u64_param(params, "count")?.ok_or_else(|| {
+                        DispatchError::Request("params.count is required".into())
+                    })?)
+                    .map_err(|_| DispatchError::Request("params.count is too large".into()))?;
                 debug_output(params, DebugCommand::Memory { address, count })
             }
             "events_since" => {
                 let program = string_param(params, "program")?;
-                value(self.core.events_since(&program, u64_param(params, "since")?.unwrap_or(0)))
+                value(
+                    self.core
+                        .events_since(&program, u64_param(params, "since")?.unwrap_or(0)),
+                )
             }
             _ => Err(DispatchError::UnknownMethod(method.into())),
         }
@@ -486,7 +523,9 @@ fn u64_param(params: &Value, key: &str) -> Result<Option<u64>, DispatchError> {
     if let Some(string) = value.as_str() {
         return u64::from_str_radix(string.trim_start_matches("0x"), 16)
             .map(Some)
-            .map_err(|error| DispatchError::Request(format!("params.{key} is not a number: {error}")));
+            .map_err(|error| {
+                DispatchError::Request(format!("params.{key} is not a number: {error}"))
+            });
     }
     Err(DispatchError::Request(format!(
         "params.{key} must be an unsigned integer"
@@ -501,10 +540,7 @@ fn address_param(params: &Value, key: &str) -> Result<Address, DispatchError> {
         .map_err(|error| DispatchError::Request(format!("params.{key} is invalid: {error}")))
 }
 
-fn from_param<T: for<'de> Deserialize<'de>>(
-    params: &Value,
-    key: &str,
-) -> Result<T, DispatchError> {
+fn from_param<T: for<'de> Deserialize<'de>>(params: &Value, key: &str) -> Result<T, DispatchError> {
     let value = params
         .get(key)
         .ok_or_else(|| DispatchError::Request(format!("params.{key} is required")))?;
@@ -598,15 +634,17 @@ fn handle_http(service: &ApiService, stream: &mut TcpStream) -> Result<(), ApiEr
             }
         }
     }
-    let length = content_length.ok_or_else(|| ApiError::Request("missing content length".into()))?;
+    let length =
+        content_length.ok_or_else(|| ApiError::Request("missing content length".into()))?;
     if length > 4 * 1024 * 1024 {
         return Err(ApiError::Request("request body is too large".into()));
     }
     let mut body = vec![0; length];
     reader.read_exact(&mut body)?;
-    let response = service.handle_line(std::str::from_utf8(&body).map_err(|error| {
-        ApiError::Request(format!("request body is not UTF-8: {error}"))
-    })?);
+    let response = service.handle_line(
+        std::str::from_utf8(&body)
+            .map_err(|error| ApiError::Request(format!("request body is not UTF-8: {error}")))?,
+    );
     write_http(stream, "200 OK", &response)
 }
 
@@ -624,8 +662,8 @@ fn write_http(stream: &mut TcpStream, status: &str, body: &str) -> Result<(), Ap
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
     use std::io::{Read, Write};
+    use std::path::Path;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
     static COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -696,7 +734,9 @@ mod tests {
     #[test]
     fn live_memory_dispatch_returns_target_bytes() {
         fn frame(payload: &[u8]) -> Vec<u8> {
-            let checksum = payload.iter().fold(0u8, |sum, byte| sum.wrapping_add(*byte));
+            let checksum = payload
+                .iter()
+                .fold(0u8, |sum, byte| sum.wrapping_add(*byte));
             let mut result = vec![b'$'];
             result.extend_from_slice(payload);
             result.extend_from_slice(format!("#{checksum:02x}").as_bytes());
@@ -739,7 +779,8 @@ mod tests {
                 "size": 2
             }
         });
-        let response: Value = serde_json::from_str(&service().handle_line(&request.to_string())).unwrap();
+        let response: Value =
+            serde_json::from_str(&service().handle_line(&request.to_string())).unwrap();
         server.join().unwrap();
         assert_eq!(response["result"]["source"], "live");
         assert_eq!(response["result"]["size"], 2);
