@@ -1698,15 +1698,30 @@ M2 — Program-model parity
 - c: run workspace and corpus verification, publish measured evidence, and
   document the storage contract. Keep each implementation commit below 800
   changed lines; do not add a parallel type store or grow the Java bridge.
+- Acceptance `c296d79` failed on the missing prototype provenance column in a
+  version-6 fixture. Migration implementation `5c5c139` preserves legacy
+  signatures, conventions, type definitions, and fields in format 7.
+- Ownership regression covers assertion retention, inferred replacement, and
+  atomic rollback for invalid confidence. `cargo test --workspace`: 151
+  passed across 22 suites. `tests/corpus.sh`: 5/5.
+- Qt implementation `9bd4d65` was exercised offscreen against the real bridge.
+  A separate API process reopened 4 types, 1 field, and 1 prototype:
+  signed-integer classification, array count 0, and asserted `ui` provenance
+  with null confidence. Initial API roundtrip also retained inferred
+  confidence 0.75. Persisted facts: `benchmarks/reports/m2-004.json`.
+- String regression rerun on `9bd4d65`: 20 passed, 0 failed, 0 skipped,
+  recall 1.0 on every binary; refreshed `benchmarks/reports/m2-003.json`.
+  Generated support matrix remains current. Smoke drivers were removed.
+- m2-004 is complete. Prototype recovery and the full M2 parity gate remain
+  open; no new Java bridge state or runtime dependency was introduced.
 
 ## Blocked on
 - None.
 
 ## Next task
-- m2-004: add provenance and confidence to prototypes, and typed primitive,
-  pointer, array, and struct records. Write and commit the failing migration
-  acceptance before implementation. The current store format is 6; the
-  roadmap's original version-2 target predates the intervening migrations.
+- m2-005: return recovered FuncProto (parameters, return type, and calling
+  convention) alongside worker decompile tokens. Marshal the decompiler's
+  packed prototype and write the failing fixture-`add` acceptance first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
