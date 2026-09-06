@@ -1,0 +1,192 @@
+{
+  "gate": "nonreturn",
+  "milestone": "M2",
+  "task": "m2-008",
+  "commit": "df3cb5de29727c249933170dc750e543fa614289",
+  "date": "2026-09-06T16:25:45.144389+00:00",
+  "gate_sha256": "77cb43ed78571f8106534782c85ff5f0ba3041734ebae281ae8ab5bbb908b7cc",
+  "exporter_sha256": "a32c4afc4dc5dd87ea2930a2118a44e6aa97787d4d110c6cb20288fe1add7a14",
+  "optimized_bounds_scope": "all locked *_o2 recipes, not architecture-filtered",
+  "comparison": "code-functions-v1 stock positive flags and II.3 fn.bounds; stock false is unknown; not the full M2 gate",
+  "optimized_bounds": {
+    "before": {
+      "matched": 1789,
+      "correct": 1771,
+      "fn.bounds": 0.98993851313583
+    },
+    "after": {
+      "matched": 1789,
+      "correct": 1773,
+      "fn.bounds": 0.9910564561207379
+    }
+  },
+  "optimized_bounds_improved": true,
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-x86_64.json",
+        "sha256": "2898709f7ce776d1d45b9f4e67368580fe32e2fd0b6a4d2a6ca41dd2270ed68a"
+      }
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-x86_64.json",
+        "sha256": "2898709f7ce776d1d45b9f4e67368580fe32e2fd0b6a4d2a6ca41dd2270ed68a"
+      }
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-x86_64.json",
+        "sha256": "2898709f7ce776d1d45b9f4e67368580fe32e2fd0b6a4d2a6ca41dd2270ed68a"
+      }
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-x86_64.json",
+        "sha256": "2898709f7ce776d1d45b9f4e67368580fe32e2fd0b6a4d2a6ca41dd2270ed68a"
+      }
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-x86_64.json",
+        "sha256": "2898709f7ce776d1d45b9f4e67368580fe32e2fd0b6a4d2a6ca41dd2270ed68a"
+      }
+    },
+    {
+      "id": "i386_plain_o0",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-i386.json",
+        "sha256": "ae74702b86dee86f2539bc70d40112363c500170ac1437ad11a89934ccd6babd"
+      }
+    },
+    {
+      "id": "i386_plain_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-i386.json",
+        "sha256": "ae74702b86dee86f2539bc70d40112363c500170ac1437ad11a89934ccd6babd"
+      }
+    },
+    {
+      "id": "i386_plain_pie",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-i386.json",
+        "sha256": "ae74702b86dee86f2539bc70d40112363c500170ac1437ad11a89934ccd6babd"
+      }
+    },
+    {
+      "id": "i386_cpp_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-i386.json",
+        "sha256": "ae74702b86dee86f2539bc70d40112363c500170ac1437ad11a89934ccd6babd"
+      }
+    },
+    {
+      "id": "i386_many_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-i386.json",
+        "sha256": "ae74702b86dee86f2539bc70d40112363c500170ac1437ad11a89934ccd6babd"
+      }
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-aarch64.json",
+        "sha256": "cee86f9087989eadad171944e50909e99439b29df8066a74b46c74264d99d14c"
+      }
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-aarch64.json",
+        "sha256": "cee86f9087989eadad171944e50909e99439b29df8066a74b46c74264d99d14c"
+      }
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-aarch64.json",
+        "sha256": "cee86f9087989eadad171944e50909e99439b29df8066a74b46c74264d99d14c"
+      }
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-aarch64.json",
+        "sha256": "cee86f9087989eadad171944e50909e99439b29df8066a74b46c74264d99d14c"
+      }
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-aarch64.json",
+        "sha256": "cee86f9087989eadad171944e50909e99439b29df8066a74b46c74264d99d14c"
+      }
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-powerpc.json",
+        "sha256": "0f2649d4cfdd9994c0d0e5c8061d665ad0188a4884bfdc6a42a5251a637442e2"
+      }
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-powerpc.json",
+        "sha256": "0f2649d4cfdd9994c0d0e5c8061d665ad0188a4884bfdc6a42a5251a637442e2"
+      }
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-powerpc.json",
+        "sha256": "0f2649d4cfdd9994c0d0e5c8061d665ad0188a4884bfdc6a42a5251a637442e2"
+      }
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "fail",
+      "evidence": {
+        "path": "m2-008-powerpc.json",
+        "sha256": "0f2649d4cfdd9994c0d0e5c8061d665ad0188a4884bfdc6a42a5251a637442e2"
+      }
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "pass",
+      "evidence": {
+        "path": "m2-008-powerpc.json",
+        "sha256": "0f2649d4cfdd9994c0d0e5c8061d665ad0188a4884bfdc6a42a5251a637442e2"
+      }
+    }
+  ],
+  "summary": {
+    "pass": 19,
+    "fail": 1,
+    "skipped": 0
+  },
+  "passed": false
+}
