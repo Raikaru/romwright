@@ -1763,6 +1763,9 @@ M2 — Program-model parity
   4 Python boundary tests, 154 workspace tests, corpus 5/5, and string
   regression 20/20 passed. Full stock collection finished; b2 evidence commits
   are pending (including all 401 i386-many arity mismatches).
+  b2 report detail is split from the aggregate: per-binary JSONL mismatch
+  evidence retains every entry/expected/actual tuple, with a SHA-256 link.
+  Commit that detail separately from the aggregate report to stay below 800 lines.
 - c: bound pool registration and decompile operations, refresh workers after
   fact revisions, and apply stored callee prototypes before caller analysis.
   Split c into c1 (production registration deadlines and child teardown),

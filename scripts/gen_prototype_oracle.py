@@ -16,7 +16,7 @@ from gen_corpus import get_load_segments, parse_elf_sections, validate_elf_twin
 from gen_oracle import ROOT, address, digest, provenance, write_reference
 sys.path.insert(0, str(ROOT / 'benchmarks'))
 from dwarf_arity import extract
-from prototype_gate import score_arity
+from prototype_gate import score_arity, write_arity_report
 from ui_gate import physical_memory_gb
 from xref_gate import CONTEXTS
 
@@ -74,6 +74,8 @@ def main():
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
         'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--timeout', type=int, default=180)
+    parser.add_argument('--check', action='store_true',
+        help='verify and score immutable references without rerunning stock analysis')
     args = parser.parse_args()
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     required = [row for row in lock['entries'] if row['format'] == 'elf']
@@ -96,7 +98,7 @@ def main():
     rows = []
     for recipe in required:
         key = (recipe['architecture'], recipe['variant'])
-        row = dict(id='_'.join(key), status='skipped', metrics={}, thresholds={}, runs=1)
+        row = dict(id='_'.join(key), status='skipped', metrics={}, thresholds={}, runs=0 if args.check else 1)
         try:
             if setup_error:
                 raise setup_error
@@ -119,8 +121,18 @@ def main():
             context = CONTEXTS[key[0]]
             expected = dict(schema_version=1, sha256=sha, binary_size=binary.stat().st_size,
                 **producer, **context)
-            with tempfile.TemporaryDirectory(prefix='prototype-reference-') as work:
-                reference = dict(**expected, **export(args.ghidra, binary, context, Path(work), args.timeout))
+            destination = reference_path(args.oracle_dir, expected)
+            if args.check:
+                reference = json.loads(destination.read_text())
+                if any(reference.get(key) != value for key, value in expected.items()):
+                    raise ValueError('Immutable reference context mismatch')
+                if not reference['arities'] or any(
+                        address(entry) != entry or type(arity) is not int or arity < 0
+                        for entry, arity in reference['arities'].items()):
+                    raise ValueError('Invalid immutable arity reference')
+            else:
+                with tempfile.TemporaryDirectory(prefix='prototype-reference-') as work:
+                    reference = dict(**expected, **export(args.ghidra, binary, context, Path(work), args.timeout))
             if digest(binary) != sha or digest(twin) != item['unstripped_twin_sha256']:
                 raise ValueError('Input changed during export')
             load_base = min(address for address, size, _, _, _ in get_load_segments(data) if size)
@@ -128,18 +140,18 @@ def main():
             if digest(twin) != truth['binary_sha256'] or truth['binary_sha256'] != item['unstripped_twin_sha256']:
                 raise ValueError('DWARF twin changed during projection')
             score = score_arity(truth['functions'], reference['arities'])
-            destination = reference_path(args.oracle_dir, expected)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            if destination.exists():
-                if json.loads(destination.read_text()) != reference:
-                    raise ValueError('Fresh analysis differs from immutable baseline; existing reference retained')
-            else:
-                write_reference(destination, reference)
+            if not args.check:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                if destination.exists():
+                    if json.loads(destination.read_text()) != reference:
+                        raise ValueError('Fresh analysis differs from immutable baseline; existing reference retained')
+                else:
+                    write_reference(destination, reference)
             row.update(status='pass', sha256=sha, twin_sha256=truth['binary_sha256'],
                 reference=str(destination.relative_to(args.oracle_dir)), reference_sha256=digest(destination),
                 analysis_context=context, truth_functions=len(truth['functions']),
                 unmapped_truth=truth['unmapped'],
-                score=score, metrics={'ghidra.proto.arity': score['value']})
+                scores={'ghidra': score}, metrics={'ghidra.proto.arity': score['value']})
         except (OSError, subprocess.SubprocessError) as error:
             row['reason'] = str(error)
         except (ValueError, KeyError, TypeError, AssertionError) as error:
@@ -153,8 +165,7 @@ def main():
         machine=dict(os=platform.platform(), cpu=platform.processor() or platform.machine(), ram_gb=physical_memory_gb()),
         dwarf_reader_sha256=digest(ROOT / 'benchmarks/dwarf_arity.py'),
         corpus=rows, summary=summary, passed=len(rows) == 20 and summary['pass'] == 20)
-    args.report.parent.mkdir(parents=True, exist_ok=True)
-    args.report.write_text(json.dumps(report, indent=2) + '\n')
+    write_arity_report(args.report, report)
     print(json.dumps(dict(summary=summary, passed=report['passed'])))
     return 0 if report['passed'] else 1
 
