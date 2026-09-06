@@ -2155,4 +2155,50 @@ mod tests {
             "a match across a scan-buffer boundary still needs its complete byte sequence"
         );
     }
+
+    #[test]
+    fn non_stack_symbolic_offsets_are_data_references() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        for (setup, transfer, candidate) in [
+            ([0x48, 0x89, 0xf8], 0x60, true), // rax = unknown rdi; jmp [rax+offset]
+            ([0x48, 0x89, 0xe0], 0x60, false), // rax = stack alias; jmp [rax+offset]
+            ([0x48, 0x89, 0xf8], 0x50, false), // original call [rax+offset]
+        ] {
+            let mut code = setup.to_vec();
+            code.extend_from_slice(&[0x48, 0x05, 0, 0, 1, 0]); // add rax,0x10000
+            code.extend_from_slice(&[0xff, transfer, 0x48, 0xc3]);
+            let end = 0x1000 + code.len() as u64;
+            let import = NativeImport {
+                language: cfg.language_id.clone(),
+                mappings: vec![
+                    crate::native::Mapping {
+                        vaddr: 0x1000, size: code.len() as u64, file_off: 0,
+                        flags: 6, bytes: code,
+                    },
+                    crate::native::Mapping {
+                        vaddr: 0x10048, size: 8, file_off: 0, flags: 2, bytes: vec![0; 8],
+                    },
+                ],
+                ..Default::default()
+            };
+            let mut session = ConsoleSession::new(&cfg).unwrap();
+            session.load_mapped(&import).unwrap();
+            let facts = session.references(0x1000, end, &import.mappings, false).unwrap();
+            let triples: Vec<_> = facts.iter().map(|fact| (fact.from, fact.to, fact.kind)).collect();
+            let expected = if candidate {
+                vec![(0x1009, 0x10048, ReferenceKind::Data)]
+            } else {
+                Vec::new()
+            };
+            assert_eq!(triples, expected, "setup={setup:x?}, transfer={transfer:x}");
+            assert!(session.constants(0x1000, end, &import.mappings, false).unwrap().is_empty(),
+                "a symbolic offset is not a proven constant pointer");
+        }
+    }
 }
