@@ -1,0 +1,660 @@
+{
+  "gate": "strings",
+  "milestone": "M2",
+  "task": "m2-003",
+  "commit": "5ffe7e9eee8a4b8694a5d5cf4cecb64c2b9f04c5",
+  "date": "2026-09-06",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64",
+    "ram_gb": 14.84
+  },
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "ec6f8b8aa9e8579fbc0dd2235b939b1e30f943a398a46bb63b5cd65cb05ff4cd",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "cfabaf73f36ee077d302a2cf8b7256e32c37373e92e752765941f0de5dc9f37a",
+      "native_language": "x86:LE:64:default",
+      "oracle_strings": 36,
+      "native_strings": 41,
+      "matched": 36,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 5,
+      "differences": {
+        "path": "m2-003-details/x86_64_plain_o0.json",
+        "sha256": "a24269f4779aeac0f7c2099ff99920a92bb6113d881d00e1fcdf8bca4eed442d"
+      }
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "8d8449402227ed0a84038427f1504af8ca306652943d316abaf67de884998c3e",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "b83f52417bd882f38ee1403ed481101d83ef3cb8c50c5839635664fcde067f03",
+      "native_language": "x86:LE:64:default",
+      "oracle_strings": 36,
+      "native_strings": 39,
+      "matched": 36,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 3,
+      "differences": {
+        "path": "m2-003-details/x86_64_plain_o2.json",
+        "sha256": "eff10657c2d6907a62e3059c30becdc5164715a90b60645a45032703ef95277f"
+      }
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "8896d98e0b536f5cbf80fb81a26236965c234abb64f5ea34519480c95a8d7f8d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "a597fccb55f6469305a46932e133fb464147a6aa3e2de320782c619ead1ae86b",
+      "native_language": "x86:LE:64:default",
+      "oracle_strings": 38,
+      "native_strings": 41,
+      "matched": 38,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 3,
+      "differences": {
+        "path": "m2-003-details/x86_64_plain_pie.json",
+        "sha256": "fe95cd67b6fcafed42541aa8bd20d01797edda2094e87da50dd99c20a1909f66"
+      }
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "80f2139963a2181ff049b7f7c2a10a7c82bd1057ce9d61430696c12b9abcfd30",
+      "native_language": "x86:LE:64:default",
+      "oracle_strings": 53,
+      "native_strings": 58,
+      "matched": 53,
+      "strings_with_references": 2,
+      "missing_count": 0,
+      "extra_count": 5,
+      "differences": {
+        "path": "m2-003-details/x86_64_cpp_o2.json",
+        "sha256": "347583363ccba9449b1c4bb0eeafc39b2ba1c66b88557d12ee44b05449288674"
+      }
+    },
+    {
+      "id": "x86_64_many_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "13f9b71ab975d5c441a383812e0f261ba1e91a7c38bb5b3160d3d48ad2af4f75",
+      "analysis_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:64:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "afe4916a88fcb27977d7967cc8328be3bf4f4adbc506a00252e0d89a34102807",
+      "native_language": "x86:LE:64:default",
+      "oracle_strings": 32,
+      "native_strings": 84,
+      "matched": 32,
+      "strings_with_references": 0,
+      "missing_count": 0,
+      "extra_count": 52,
+      "differences": {
+        "path": "m2-003-details/x86_64_many_o2.json",
+        "sha256": "ae0deb66e96043dfd9210b7894ea5a59b972db8057e04292060b8cd73ce2bc66"
+      }
+    },
+    {
+      "id": "i386_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "befb702023e82c6309b009cb4351aebb2deabbd4d5aace77599bd3b59f119de3",
+      "native_language": "x86:LE:32:default",
+      "oracle_strings": 37,
+      "native_strings": 52,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 15,
+      "differences": {
+        "path": "m2-003-details/i386_plain_o0.json",
+        "sha256": "09b3889c0d4f0f67ffeb998ffc0699b9f3f348f80038b2691476f0488a12fcf5"
+      }
+    },
+    {
+      "id": "i386_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "7af25a75c98eb8752c1bf478d9d538d4871a29a571de81dc53560cd25b02a4e3",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "434f720beb23e6a9e649f0c722f8d8e66d23506b6a4c29a99b8f1a408d090bf2",
+      "native_language": "x86:LE:32:default",
+      "oracle_strings": 37,
+      "native_strings": 51,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 14,
+      "differences": {
+        "path": "m2-003-details/i386_plain_o2.json",
+        "sha256": "6de47c4529d735887235840130f93922ef0e5a5121dba08e2a98883ae1c4ec2b"
+      }
+    },
+    {
+      "id": "i386_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "0898f32174a89ab70623820982c066d63ad2d2124524068e663cef8d9910d05c",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "f8329d9164ee87703949f0354b489589916bf20665363667b0e15852108242e9",
+      "native_language": "x86:LE:32:default",
+      "oracle_strings": 39,
+      "native_strings": 49,
+      "matched": 39,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 10,
+      "differences": {
+        "path": "m2-003-details/i386_plain_pie.json",
+        "sha256": "abdb5f5af34aebfb75018cb603ee36e5f5b803f0a1d41b644e56f91a64fe1634"
+      }
+    },
+    {
+      "id": "i386_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "d3a07bfe2cae6788657f6ec95f20e2fa23bae1417abf89f95510f96e60ea2f1b",
+      "native_language": "x86:LE:32:default",
+      "oracle_strings": 53,
+      "native_strings": 70,
+      "matched": 53,
+      "strings_with_references": 2,
+      "missing_count": 0,
+      "extra_count": 17,
+      "differences": {
+        "path": "m2-003-details/i386_cpp_o2.json",
+        "sha256": "0d1810fa7ea4b0b1b76afe3cb9a8313868cca5d78f877c9a014855a20a460b06"
+      }
+    },
+    {
+      "id": "i386_many_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "9b6dd63608b16cb652f13ad8332b0a78b0864eb574c78d2f85740b174632a70f",
+      "analysis_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_context": {
+        "language": "x86:LE:32:default",
+        "compiler": "gcc"
+      },
+      "oracle_sha256": "b85ab6ab2f8622715ccd0a571d9ba6a580f2a92bcb91751d3d6470ac0e11b112",
+      "native_language": "x86:LE:32:default",
+      "oracle_strings": 34,
+      "native_strings": 88,
+      "matched": 34,
+      "strings_with_references": 0,
+      "missing_count": 0,
+      "extra_count": 54,
+      "differences": {
+        "path": "m2-003-details/i386_many_o2.json",
+        "sha256": "fc2e512fcaf0b468995d3cd9a9c1628a1da6402ea0e2c3b8e91ee5c949062a26"
+      }
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_sha256": "6872d1e04f8c4fb68a5326caf9061eff8b85e0492e84d46183eff34a0d5cf4a8",
+      "native_language": "AARCH64:LE:64:v8A",
+      "oracle_strings": 37,
+      "native_strings": 40,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 3,
+      "differences": {
+        "path": "m2-003-details/aarch64_plain_o0.json",
+        "sha256": "f4e002a82be87c51a25c6740a3ae19cdfe38b79fd754f37d5e9d789de99eaaa3"
+      }
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "ad94df285201e3991d655094de17778d47ddb823bf2f3300405f0f79c9526c4a",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_sha256": "994d92ece5056b2562e48876580e3ff0248582a5df0937a43bfbcfbd261d7a78",
+      "native_language": "AARCH64:LE:64:v8A",
+      "oracle_strings": 37,
+      "native_strings": 40,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 3,
+      "differences": {
+        "path": "m2-003-details/aarch64_plain_o2.json",
+        "sha256": "41ed010fbf784a7154230f0c55427f3f6791242a0b7e9a7ff3a2b7617d7cce6f"
+      }
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "130cc59f1a678db98aaca4ad7116d8912d8ae366c1000ef744ce0871547e5555",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_sha256": "c1540fb1fc2e0c63386085788a3583a7d2c6620ac6af6c1d3ab35b8c9b0c0e49",
+      "native_language": "AARCH64:LE:64:v8A",
+      "oracle_strings": 38,
+      "native_strings": 41,
+      "matched": 38,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 3,
+      "differences": {
+        "path": "m2-003-details/aarch64_plain_pie.json",
+        "sha256": "4300c8cfa1fa7f6f9acdcd86a1868f8bf39d41fee124471bf63d029c2b8cc791"
+      }
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_sha256": "d69b26fd40d684c0e479ba70725f50f48a970fdf66e35783dc9d7808b20353db",
+      "native_language": "AARCH64:LE:64:v8A",
+      "oracle_strings": 53,
+      "native_strings": 59,
+      "matched": 53,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 6,
+      "differences": {
+        "path": "m2-003-details/aarch64_cpp_o2.json",
+        "sha256": "32734d837b2cc5a86b027909855fcc34513cf615c0195dfef7206d0cbba9d1b7"
+      }
+    },
+    {
+      "id": "aarch64_many_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "61f5eecf169c1a4ba8405b79d6a08c19a7d4359a7eccaea426dfaee430f60809",
+      "analysis_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "AARCH64:LE:64:v8A",
+        "compiler": "default"
+      },
+      "oracle_sha256": "c604de37a91207410844d4e3c0c238d0a010063bb1cb47360b3adf297e42adf8",
+      "native_language": "AARCH64:LE:64:v8A",
+      "oracle_strings": 35,
+      "native_strings": 81,
+      "matched": 35,
+      "strings_with_references": 0,
+      "missing_count": 0,
+      "extra_count": 46,
+      "differences": {
+        "path": "m2-003-details/aarch64_many_o2.json",
+        "sha256": "29fce48c47bff4be45861bc531b8f2d2ad21adfcd06dbde7f6a4d14d4fbf62d4"
+      }
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_sha256": "2e59a8a36bc81bb1804477b8470239ec05fdd1b51d1a616ad87baea03798eada",
+      "native_language": "PowerPC:BE:32:default",
+      "oracle_strings": 37,
+      "native_strings": 52,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 15,
+      "differences": {
+        "path": "m2-003-details/powerpc_plain_o0.json",
+        "sha256": "6c76bf02e588b83606ee43d2d0a57636512d495787a53937d3eb1dacb031af34"
+      }
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "27b28ed915b89555b6ca45880d36f1f1c28615d70c8c98d3df34a270452ca8a9",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_sha256": "6baa0fe3402e1d4ba8a9c66a975d391ee24255713e74b4154bea6cb0b14b05cd",
+      "native_language": "PowerPC:BE:32:default",
+      "oracle_strings": 37,
+      "native_strings": 51,
+      "matched": 37,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 14,
+      "differences": {
+        "path": "m2-003-details/powerpc_plain_o2.json",
+        "sha256": "4bdd8c0034a93cbd1e1238a0688eb6a5b6e406248895c11e33df204175d09c71"
+      }
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "0748d6bdf5d167bdbc75102c31a09a8792215e646e10ba723d16fef0cde78452",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_sha256": "2053369b6dbc5d6322abc9fa8906b7f8f18242de8016294d05f08552ec7b367e",
+      "native_language": "PowerPC:BE:32:default",
+      "oracle_strings": 40,
+      "native_strings": 57,
+      "matched": 40,
+      "strings_with_references": 1,
+      "missing_count": 0,
+      "extra_count": 17,
+      "differences": {
+        "path": "m2-003-details/powerpc_plain_pie.json",
+        "sha256": "614d7a437dc37e03ea5c6d05253c119a5040d9d1570d90f0d664023493c841c4"
+      }
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_sha256": "05f61251dd4d91fc3f8991977b33c8049b37061a9f29c38b6c4557046275cdda",
+      "native_language": "PowerPC:BE:32:default",
+      "oracle_strings": 53,
+      "native_strings": 75,
+      "matched": 53,
+      "strings_with_references": 2,
+      "missing_count": 0,
+      "extra_count": 22,
+      "differences": {
+        "path": "m2-003-details/powerpc_cpp_o2.json",
+        "sha256": "b0539cb36f0ec26c83277d6718bc524d5ffeb2b74917b21f9994742b4a589f13"
+      }
+    },
+    {
+      "id": "powerpc_many_o2",
+      "status": "pass",
+      "metrics": {
+        "str.recall": 1.0
+      },
+      "thresholds": {
+        "str.recall": 0.95
+      },
+      "runs": 1,
+      "sha256": "4b5d370ec6ccdd53e77eb4c9c0bf69212d3c614c38f840579cded8471c3247b3",
+      "analysis_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_context": {
+        "language": "PowerPC:BE:32:default",
+        "compiler": "default"
+      },
+      "oracle_sha256": "4790a5b29d8b2d71c13225194197f4fae4883a0ff2da14155d07fbc10c305826",
+      "native_language": "PowerPC:BE:32:default",
+      "oracle_strings": 34,
+      "native_strings": 90,
+      "matched": 34,
+      "strings_with_references": 0,
+      "missing_count": 0,
+      "extra_count": 56,
+      "differences": {
+        "path": "m2-003-details/powerpc_many_o2.json",
+        "sha256": "4ecfe289298b76fa9b0a4cbd8e0a46e3c64a578a10e3de684a06f5f81be3070d"
+      }
+    }
+  ],
+  "summary": {
+    "pass": 20,
+    "fail": 0,
+    "skipped": 0
+  },
+  "passed": true
+}
