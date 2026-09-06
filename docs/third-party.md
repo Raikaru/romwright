@@ -406,3 +406,13 @@ instances and declaration-only DIEs are not separate functions. Unresolved
 origins, conflicting entry arities, and unsupported range-only subprograms
 fail the export instead of silently reducing the truth set. Analyzers receive
 the stripped twins, never these benchmark-only DWARF facts.
+
+The stock arity reference runs Ghidra 12.1.3's
+`DecompilerParameterIdCmd` after ordinary headless analysis, using
+`DecompilerFunctionAnalyzer`'s defaults: clear ANALYSIS signatures, commit
+data types, do not force void returns, and allow 60 seconds per decompile
+(Apache-2.0). This analyzer is normally disabled for ELF, so the exporter
+invokes it explicitly. `Function.getParameterCount` includes auto-parameters;
+no C rendering is parsed. Immutable `baseline-*.json` records pin stripped
+input hashes, exporter identity, language/compiler, and the loaded image base.
+DWARF and stock results are joined only in the benchmark, after analysis.

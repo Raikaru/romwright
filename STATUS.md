@@ -1759,6 +1759,9 @@ M2 — Program-model parity
   Split b into b1 (stock exporter and comparator tooling), b2 (per-architecture
   reference evidence), and b3 (native gate integration after c/d). Commit
   generated reference evidence per architecture, separately from tooling.
+  b1 verification: stock headless `plain_o0` arity 2/2 against DWARF;
+  4 Python boundary tests, 154 workspace tests, corpus 5/5, and string
+  regression 20/20 passed. Full reference generation is the next b2 action.
 - c: bound pool registration and decompile operations, refresh workers after
   fact revisions, and apply stored callee prototypes before caller analysis.
 - d: implement Core-owned inferred writes and the API inference operation,
