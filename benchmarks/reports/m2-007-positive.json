@@ -1,0 +1,164 @@
+{
+  "task": "m2-007",
+  "scope": "temporary positive acceptance, not locked corpus",
+  "commit": "3327bb83e64d42ba2f79d3baff7d9461e379f5dd",
+  "passed": true,
+  "oracle": {
+    "schema_version": 1,
+    "sha256": "12f2ad426eb31113a2cbd2f3d4fe1d5bdde6708910c787cff90c5f923a0bf8a0",
+    "exporter_sha256": "06adff0a5bab8f0b69086fd7dcf699817eaab781307d0993698a1f1030b5f262",
+    "producer": "ghidra-headless",
+    "upstream_version": "12.1.3",
+    "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+    "language": "x86:LE:64:default",
+    "compiler": "gcc",
+    "image_base": "00400000",
+    "functions": {
+      "004001c0": [],
+      "004001d0": [
+        {
+          "branch": "004001dd",
+          "targets": [
+            "004001e4",
+            "004001e4",
+            "004001f3",
+            "004001e9",
+            "00400202",
+            "004001f8",
+            "004001fd",
+            "004001ee"
+          ]
+        }
+      ]
+    }
+  },
+  "standalone": [
+    {
+      "branch": {
+        "space": "Ram",
+        "offset": 4194781
+      },
+      "targets": [
+        {
+          "space": "Ram",
+          "offset": 4194788
+        },
+        {
+          "space": "Ram",
+          "offset": 4194788
+        },
+        {
+          "space": "Ram",
+          "offset": 4194803
+        },
+        {
+          "space": "Ram",
+          "offset": 4194793
+        },
+        {
+          "space": "Ram",
+          "offset": 4194818
+        },
+        {
+          "space": "Ram",
+          "offset": 4194808
+        },
+        {
+          "space": "Ram",
+          "offset": 4194813
+        },
+        {
+          "space": "Ram",
+          "offset": 4194798
+        }
+      ]
+    }
+  ],
+  "pooled": [
+    [
+      {
+        "branch": {
+          "offset": 4194781,
+          "space": "Ram"
+        },
+        "targets": [
+          {
+            "offset": 4194788,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194788,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194803,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194793,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194818,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194808,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194813,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194798,
+            "space": "Ram"
+          }
+        ]
+      }
+    ],
+    [],
+    [
+      {
+        "branch": {
+          "offset": 4194781,
+          "space": "Ram"
+        },
+        "targets": [
+          {
+            "offset": 4194788,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194788,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194803,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194793,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194818,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194808,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194813,
+            "space": "Ram"
+          },
+          {
+            "offset": 4194798,
+            "space": "Ram"
+          }
+        ]
+      }
+    ]
+  ]
+}

@@ -1930,6 +1930,23 @@ M2 — Program-model parity
   unchanged corpus cases, including zero-table observations and missing inputs.
   The recorded task provides no numeric threshold. No new metric, persistence
   operation, rediscovery pass, or full M2 parity claim is introduced here.
+  Evidence publication is split below so each commit stays under 800 changed
+  lines: c1 positive fixture; c2 x86-64 references; c3 i386 references;
+  c4 AArch64 references; c5 PowerPC references; c6 aggregate report and closure.
+
+### m2-007-a/b evidence
+- `e034a98` committed the real fixture acceptance after it failed on unavailable
+  switch metadata; `6b432d9` committed packed boundaries before the result field
+  existed. Implementation is `3327bb8`.
+- `benchmarks/reports/m2-007-positive.json` records 1 recovered indirect branch
+  and 7 distinct targets, equal to stock in 1 standalone and 2 pooled dispatch
+  documents. The intervening pooled plain function has 0 tables; all 3 pooled
+  documents retain 1 store revision.
+- Packed regressions preserve target order, duplicate destinations, addresses
+  above 32 bits, and non-RAM spaces. Every truncated prefix stays unavailable.
+- Verification: 158 workspace tests, 2 explicit native recovery tests, corpus
+  5/5, and standalone/pooled prototype, bounded-inference, and revision checks.
+  Full corpus evidence publication remains c2–c6.
 
 ## Blocked on
 - None.
