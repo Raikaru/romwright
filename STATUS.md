@@ -1876,6 +1876,17 @@ M2 — Program-model parity
 - Verification: 156 workspace tests, corpus 5/5, 4 arity/DWARF boundary tests.
   The native gate is not passed.
 
+### m2-006-e1 evidence
+- `1a9d622` committed the failing static-bundle acceptance. Provisioned 3
+  locked contexts, 5 files each; committed manifests record hashes and
+  generation provenance. Regeneration refuses a changed manifest.
+- Real native acceptance recovers 2 inputs at i386 `0x401440`, AArch64
+  `0x2107c4`, and PowerPC `0x100104e4`; runtime starts no bridge.
+- Verification: 156 workspace tests, corpus 5/5. Full native arity gate:
+  16 passed, 4 failed, 0 skipped. Each C++ case scores 2/3 versus stock 3/3;
+  the other 16 cases equal the reference. Gate reports include spec hashes.
+- Next: e2 imported-thunk uncertainty, then e3 final parity evidence.
+
 ## Blocked on
 - None.
 
@@ -1884,8 +1895,8 @@ M2 — Program-model parity
   callers; bound to N=3 rounds or a time budget. Follow the verified pinned
   DecompilerFunctionAnalyzer/DecompilerParameterIdCmd behavior.
   Criterion: proto.arity on the DWARF corpus >= Ghidra baseline - 0.02.
-  Native gate has 4 pass / 16 fail. Next: provision the 3 static language
-  bundles and prevent unknown imported-thunk prototypes from poisoning callers.
+  Native gate has 16 pass / 4 fail. Next: prevent unknown imported-thunk
+  prototypes from poisoning callers (e2), then rerun the full gate (e3).
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

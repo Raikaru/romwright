@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "producer": "dump_specs",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "bridge_sources_sha256": "98070e6b5d7dc352bfac29edf21c98154b4ea41bd4709f81129070c254c96056",
+  "language": "AARCH64:LE:64:v8A",
+  "compiler": "default",
+  "representative_sha256": "66f3eb9783d1ab80a3bab9b6e4fd27d226a45a18d1e2c7d2f8079ef8fe64195f",
+  "files": {
+    "pspec.xml": {
+      "sha256": "45784c3d7374bc84aacba3707c5e21fc9b5ac36cce485167a22d72d96dde82c9",
+      "bytes": 5561
+    },
+    "cspec.xml": {
+      "sha256": "16365f3594f6e0dff20ac00f6abb7f4da2ed6bf20b6cc4e3b70536d28aa78471",
+      "bytes": 8907
+    },
+    "tspec.xml": {
+      "sha256": "05edfc910d511a7b4a160c271677e831feb3705ecaf93f14362c29bb5444ca65",
+      "bytes": 563
+    },
+    "coretypes.xml": {
+      "sha256": "bc6e8c3fc51f0467a9c5b3067132f965b50ebe900da0b52e5b79a71995c213e2",
+      "bytes": 2670
+    },
+    "registers.txt": {
+      "sha256": "578aaa8da00685c4a34d089c4259eab52caf2e5aa6d672b7d3710826922b26e0",
+      "bytes": 10074
+    }
+  }
+}

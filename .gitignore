@@ -30,6 +30,10 @@ Thumbs.db
 
 # Native build outputs (regenerable: native/build_ghidra_opt.sh)
 /native/build/
+# Static language caches are regenerated from committed hash manifests.
+/native/specs/x86-LE-32-default/
+/native/specs/AARCH64-LE-64-v8A/
+/native/specs/PowerPC-BE-32-default/
 third_party/ghidra/decompiler/com_opt/
 third_party/ghidra/decompiler/ghi_opt/
 third_party/ghidra/decompiler/ghidra_opt
