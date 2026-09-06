@@ -2036,4 +2036,49 @@ mod tests {
         assert!(facts.iter().all(|fact| fact.pc < 0x1009),
             "realignment must not produce constants from stale frame aliases: {facts:?}");
     }
+
+    #[test]
+    fn inferred_references_use_writable_image_values() {
+        use crate::native_runtime::{ConsoleSession, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:64:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut import = NativeImport {
+            language: cfg.language_id.clone(), compiler: Some("gcc"),
+            format: "elf".into(), cfg: cfg.clone(),
+            functions: vec![NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() }],
+            mappings: vec![
+                Mapping {
+                    vaddr: 0x1000, size: 14, file_off: 0, flags: 6,
+                    bytes: vec![
+                        0x48, 0x8b, 0x04, 0x25, 0, 0x30, 0, 0, // mov rax,[0x3000]
+                        0x48, 0x8b, 0x08, // mov rcx,[rax]
+                        0x31, 0xc0, 0xc3,
+                    ],
+                },
+                Mapping {
+                    vaddr: 0x3000, size: 8, file_off: 0, flags: 3,
+                    bytes: 0x4000u64.to_le_bytes().to_vec(),
+                },
+                Mapping {
+                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        infer_data_references(&mut import, &mut session).unwrap();
+        let refs: Vec<_> = import.xrefs.iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
+        assert_eq!(refs, vec![(0x1000, 0x3000, "READ"), (0x1008, 0x4000, "READ")],
+            "reference inference follows the selected analyzer's writable-image policy");
+        let strict = session.constants(0x1000, 0x100e, &import.mappings, false).unwrap();
+        assert!(strict.iter().all(|fact| fact.value != 0x4000),
+            "strict constant queries must not inherit reference-inference heuristics: {strict:?}");
+    }
 }
