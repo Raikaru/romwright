@@ -51,3 +51,8 @@ third_party/ghidra/decompiler/sleigh_opt
 # Python
 __pycache__/
 *.py[cod]
+# Generated oracle caches: gates regenerate these per run, and committing
+# them once swept a quarter of a million lines into a review.
+/oracle/xrefs-v1/
+/oracle/strings-v1/
+/oracle/nonreturn-v1/
