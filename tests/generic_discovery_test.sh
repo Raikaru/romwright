@@ -4,10 +4,19 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [ -x "$ROOT/target/release/lre-cli" ]; then
-    CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
+# Build what is being tested: a stale binary here once passed a gate for a
+# change that had already altered its output. The release binary is preferred
+# when one exists, because this gate imports libc.
+if [ -z "${LRE_CLI:-}" ]; then
+    if [ -x "$ROOT/target/release/lre-cli" ]; then
+        cargo build -q --manifest-path "$ROOT/Cargo.toml" --release -p lre-cli
+        CLI="$ROOT/target/release/lre-cli"
+    else
+        cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
+        CLI="$ROOT/target/debug/lre-cli"
+    fi
 else
-    CLI="${LRE_CLI:-$ROOT/target/debug/lre-cli}"
+    CLI="$LRE_CLI"
 fi
 LIBC_BIN="${1:-/usr/lib64/libc.so.6}"
 PPC_BIN="/home/raikaru/Projects/agent-under-fire/orig/GQFE78/files/base.elf"

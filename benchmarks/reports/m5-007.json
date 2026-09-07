@@ -1,0 +1,18 @@
+{
+  "id": "m5-007",
+  "recorded_at": "2026-09-07T06:33:29.604362+00:00",
+  "status": "pass",
+  "passed": true,
+  "summary": "promotion off by default; on, nds.arm7 recall 1.0000 over 4 DWARF functions with 0 invented; 20 locked ELF inputs scored with the flag on: 0 invented functions, no recall below the m3-001 baseline",
+  "metrics": {
+    "promoted": "037f8000",
+    "arm7.dwarf.fn.recall": 1.0,
+    "corpus_unattributed": 0
+  },
+  "corpus": {
+    "rows": 20,
+    "unattributed": 0,
+    "function_count_deltas": {},
+    "gate_passed": true
+  }
+}

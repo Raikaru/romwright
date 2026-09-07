@@ -48,6 +48,10 @@ pub struct RuntimeConfig {
     /// model claims (m4-001). Off by default: II.1 reserves enabling an M4
     /// pass, so it changes user-visible output only when asked.
     pub register_params: bool,
+    /// Promote the target of a proven tail call to a function (m5-007).
+    /// Stock Ghidra does not create these, so the pass moves output past
+    /// the frozen baseline; off by default for the same II.1 reason.
+    pub promote_tailcalls: bool,
 }
 
 /// One console per physical core, capped at eight. Each shard is a separate
@@ -173,6 +177,7 @@ impl RuntimeConfig {
             worker_memory_cap: 256 * 1024 * 1024,
             console_shards,
             register_params: std::env::var_os("VENTRIS_REGISTER_PARAMS").is_some(),
+            promote_tailcalls: std::env::var_os("VENTRIS_PROMOTE_TAILCALLS").is_some(),
         }
     }
 
