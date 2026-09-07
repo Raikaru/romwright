@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Recover the roots a PE declares
+        run: |
+          python3 tests/m8-004_pe_roots.py \
+            --report "$RUNNER_TEMP/pe-roots.json"
       - name: Score PE32 x86 recovery against stock Ghidra
         run: |
           python3 tests/m8-002_pe32_roots.py \
