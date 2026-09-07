@@ -16,14 +16,15 @@ PROJECT="${DIFF_PROJECT:-$WORK/project}"
 # Stale Ghidra project lock after an aborted JVM (documented risk: the lock
 # file is only meaningful while its owner JVM lives).
 rm -f "$PROJECT/bridge-projects"/*.lock* 2>/dev/null || true
-SPIKE=/tmp/spike
-DECOMP="$SPIKE/decomp_native"
-LANGDIR="$SPIKE/langs"
-GHROOT="$SPIKE/ghroot"
+# The console's own defaults (crate::session::RuntimeConfig::from_env), not the
+# pre-pinned-tree spike layout: /tmp/spike no longer exists on a clean host.
+CONSOLE="${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}"
+GHIDRA_DEFAULT="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
+DECOMP="$CONSOLE"
+LANGDIR="${VENTRIS_LANGUAGE_DIR:-$GHIDRA_DEFAULT/Ghidra/Processors/x86/data/languages}"
+GHROOT="${VENTRIS_GHROOT:-$GHIDRA_DEFAULT}"
 # The SLEIGH console is the one component needing binutils-devel to build
 # (native/build_console.sh); worker steps below do not need it.
-CONSOLE="${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}"
-[ -x "$CONSOLE" ] || CONSOLE="$SPIKE/decomp_native"
 CONSOLE_AVAILABLE=1
 [ -x "$CONSOLE" ] || { CONSOLE_AVAILABLE=0; echo "NOTE: no SLEIGH console at $CONSOLE — console steps skipped (install binutils-devel, run native/build_console.sh)"; }
 BIN="$ROOT/tests/fixtures-src/tiny_bin"

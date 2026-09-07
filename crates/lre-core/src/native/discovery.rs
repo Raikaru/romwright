@@ -295,13 +295,13 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             for (&(address, width), linkage) in
                 chunk.iter().zip(flow_provider.plt_linkages(&addresses))
             {
+                let known = imp
+                    .functions
+                    .iter()
+                    .any(|function| function.entry == address);
                 if linkage.address != address
                     || linkage.length == 0
                     || linkage.length as u64 > width
-                    || imp
-                        .functions
-                        .iter()
-                        .any(|function| function.entry == address)
                     || !code.iter().any(|&(start, end)| {
                         start <= address && address < end && linkage.length as u64 <= end - address
                     })
@@ -311,19 +311,43 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 let Some(slot) = linkage.slot else {
                     continue;
                 };
-                let Some((_, name)) = imp
+                let external = imp
                     .externals
                     .iter()
                     .find(|(slot_address, _)| *slot_address == slot && slot != 0)
-                else {
+                    .map(|(_, name)| name.clone());
+                let Some(name) = external else {
+                    // An ifunc slot names no import, but its relocation proves
+                    // one in-image resolver: the same evidence that promotes an
+                    // imported stub, without a name to copy.
+                    if let Ok(index) = imp
+                        .ifunc_slots
+                        .binary_search_by_key(&slot, |&(candidate, _)| candidate)
+                    {
+                        let destination = imp.ifunc_slots[index].1;
+                        if !known {
+                            imp.functions.push(NativeFunction {
+                                entry: address,
+                                name: format!("FUN_{address:08x}"),
+                                size: linkage.length as u64,
+                            });
+                        }
+                        imp.thunks.push(crate::native::NativeThunk {
+                            entry: address,
+                            destination,
+                            kind: lre_model::ThunkKind::Direct,
+                        });
+                    }
                     continue;
                 };
-                imp.functions.push(NativeFunction {
-                    entry: address,
-                    name: name.clone(),
-                    size: linkage.length as u64,
-                });
-                imp.externals.push((address, name.clone()));
+                if !known {
+                    imp.functions.push(NativeFunction {
+                        entry: address,
+                        name: name.clone(),
+                        size: linkage.length as u64,
+                    });
+                    imp.externals.push((address, name));
+                }
                 imp.thunks.push(crate::native::NativeThunk {
                     entry: address,
                     destination: slot,
@@ -350,6 +374,10 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     let mut thunk_roots = HashMap::new();
     let mut thunk_continuations = HashMap::new();
     let mut landing_entries = HashMap::new();
+    // Ghidra CreateThunkFunctionCmd.getSimpleFlow: one unconditional transfer
+    // is a thunk when it is a jump, or a call that terminates flow. Only a
+    // proven non-returning destination makes a call terminal here.
+    let mut terminal_transfers: HashMap<u64, u64> = HashMap::new();
     let mut proven_bodies: std::collections::HashMap<u64, u64> =
         std::collections::HashMap::with_capacity(4096);
     let mut addr_origin: std::collections::HashMap<u64, u64> =
@@ -468,6 +496,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
 
                 match info.kind {
                     FlowKind::Call => {
+                        if info.targets.len() == 1 && !info.conditional {
+                            terminal_transfers.insert(addr, info.targets[0]);
+                        }
                         for t in &info.targets {
                             if has_linkage_slots && in_code(*t) {
                                 linkage_candidates.insert(*t);
@@ -483,6 +514,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         }
                     }
                     FlowKind::Branch => {
+                        if info.targets.len() == 1 && !info.conditional {
+                            terminal_transfers.insert(addr, info.targets[0]);
+                        }
                         if let Some(&t) = info.targets.first() {
                             if has_linkage_slots && t != span {
                                 branch_targets.push(t);
@@ -737,6 +771,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
 
                             match info.kind {
                                 FlowKind::Call => {
+                                    if info.targets.len() == 1 && !info.conditional {
+                                        terminal_transfers.insert(addr, info.targets[0]);
+                                    }
                                     for t in &info.targets {
                                         if has_linkage_slots && in_code(*t) {
                                             linkage_candidates.insert(*t);
@@ -752,6 +789,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                     }
                                 }
                                 FlowKind::Branch => {
+                                    if info.targets.len() == 1 && !info.conditional {
+                                        terminal_transfers.insert(addr, info.targets[0]);
+                                    }
                                     if let Some(&t) = info.targets.first() {
                                         if has_linkage_slots && t != span {
                                             branch_targets.push(t);
@@ -1049,6 +1089,23 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         }
     }
     imp.functions = merged;
+    let no_return: HashSet<u64> = imp
+        .functions
+        .iter()
+        .filter(|f| crate::nonreturn::known_no_return(&imp.format, &f.name))
+        .map(|f| f.entry)
+        .collect();
+    // A transfer that cannot return ends the body, so an entry holding one is
+    // a thunk to that destination. Unknown destinations stay ordinary flow.
+    for (&entry, &destination) in &terminal_transfers {
+        if no_return.contains(&destination) {
+            imp.thunks.push(crate::native::NativeThunk {
+                entry,
+                destination,
+                kind: lre_model::ThunkKind::Direct,
+            });
+        }
+    }
     // Only retained functions carry facts, and a direct destination must be a
     // retained entry of its own. Unproven candidates leave no thunk row.
     let retained: HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();

@@ -137,6 +137,8 @@ pub struct NativeImport {
     pub functions: Vec<NativeFunction>,
     pub xrefs: Vec<NativeXref>,
     pub externals: Vec<(u64, String)>,
+    /// Proven ifunc pointer slots and their in-image resolvers.
+    pub ifunc_slots: Vec<(u64, u64)>,
     /// Flow-proven thunk entries and their destinations.
     pub thunks: Vec<NativeThunk>,
     /// Relocation code targets to be verified as candidate function entries.
@@ -301,6 +303,8 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     }
 
     let mut functions = Vec::new();
+    let mut symbol_functions: std::collections::HashMap<u64, (u8, String, u64)> =
+        std::collections::HashMap::new();
     let mut externals = Vec::new();
     // SHT_SYMTAB (2) and SHT_DYNSYM (11): 16-byte Elf32_Sym.
     for s in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
@@ -330,17 +334,22 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
                 .unwrap_or_default();
             let typ = info & 0xf;
             if typ == 2 && shndx != 0 && value != 0 && !name.is_empty() {
-                functions.push(NativeFunction {
-                    entry: value,
-                    name: name.clone(),
-                    size: size.max(1),
-                });
+                let rank = symbol_rank(info, &name);
+                let slot = symbol_functions.entry(value).or_insert((rank, name.clone(), size.max(1)));
+                if rank < slot.0 {
+                    *slot = (rank, name.clone(), size.max(1));
+                }
             }
             if shndx == 0 && !name.is_empty() {
                 externals.push((0, name.clone()));
             }
         }
     }
+    functions.extend(
+        symbol_functions
+            .into_iter()
+            .map(|(entry, (_, name, size))| NativeFunction { entry, name, size }),
+    );
     collect_elf_section_starts(&sections, &mut functions);
     if entry != 0 && !functions.iter().any(|f| f.entry == entry) {
         functions.push(NativeFunction {
@@ -462,6 +471,15 @@ fn elf_specs(machine: u16, big_endian: bool, flags: u32) -> Result<(&'static str
 }
 
 /// ELF64 parse. Returns (mappings, functions from symtab + entry, externals).
+/// ELF symbol preference for one address: exported before local, and an
+/// unversioned name before its `name@@VERSION` alias. Ghidra's analyzers read
+/// the primary symbol, so an internal alias must not shadow the public name.
+fn symbol_rank(info: u8, name: &str) -> u8 {
+    let local = info >> 4 == 0;
+    let versioned = name.contains('@');
+    (u8::from(local) << 1) | u8::from(versioned)
+}
+
 pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if data.get(0..4) != Some(b"\x7fELF") {
         return err("not an ELF");
@@ -504,6 +522,8 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
 
     // Symbols: the SHT_SYMTAB (type 2) and its sh_link strtab.
     let mut functions = Vec::new();
+    let mut symbol_functions: std::collections::HashMap<u64, (u8, String, u64)> =
+        std::collections::HashMap::new();
     let mut externals = Vec::new();
     for s in sections.iter() {
         if s.typ != 2 {
@@ -536,11 +556,11 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
                 .unwrap_or_default();
             let typ = info & 0xf;
             if typ == 2 && value != 0 && !name.is_empty() {
-                functions.push(NativeFunction {
-                    entry: value,
-                    name: name.clone(),
-                    size: size.max(1),
-                });
+                let rank = symbol_rank(info, &name);
+                let slot = symbol_functions.entry(value).or_insert((rank, name.clone(), size.max(1)));
+                if rank < slot.0 {
+                    *slot = (rank, name.clone(), size.max(1));
+                }
             }
             if value == 0 && typ == 1 && !name.is_empty() {
                 externals.push((0, name));
@@ -575,6 +595,11 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
         }
     }
+    functions.extend(
+        symbol_functions
+            .into_iter()
+            .map(|(entry, (_, name, size))| NativeFunction { entry, name, size }),
+    );
     collect_elf_section_starts(&sections, &mut functions);
     if entry != 0 && !functions.iter().any(|f| f.entry == entry) {
         functions.push(NativeFunction {
@@ -1431,6 +1456,64 @@ mod tests {
         assert_eq!(f.size, 4);
         assert_eq!(imp.mappings[0].vaddr, 0x401000);
         assert_eq!(imp.language, "x86:LE:64:default");
+    }
+
+    #[test]
+    fn exported_symbol_names_win_over_internal_aliases() {
+        // Three FUNC symbols share one address, as glibc does for `abort`:
+        // a LOCAL alias, a versioned export, and the plain export.
+        let mut b = vec![0u8; 0x1000];
+        b[0..4].copy_from_slice(b"\x7fELF");
+        b[4] = 2;
+        b[5] = 1;
+        b[18..20].copy_from_slice(&0x3eu16.to_le_bytes());
+        b[24..32].copy_from_slice(&0x401000u64.to_le_bytes());
+        b[40..48].copy_from_slice(&0x200u64.to_le_bytes());
+        b[58..60].copy_from_slice(&64u16.to_le_bytes());
+        b[60..62].copy_from_slice(&4u16.to_le_bytes());
+        b[62..64].copy_from_slice(&3u16.to_le_bytes());
+        for (o, typ, flags, addr, off, size, link) in [
+            (0x200usize, 0u32, 0u64, 0u64, 0u64, 0u64, 0u32),
+            (0x240, 1, 0x2, 0x401000, 0x300, 0x10, 0),
+            (0x280, 2, 0, 0, 0x400, 72, 3),
+            (0x2c0, 3, 0, 0, 0x380, 40, 0),
+        ] {
+            b[o..o + 4].copy_from_slice(&0u32.to_le_bytes());
+            b[o + 4..o + 8].copy_from_slice(&typ.to_le_bytes());
+            b[o + 8..o + 16].copy_from_slice(&flags.to_le_bytes());
+            b[o + 16..o + 24].copy_from_slice(&addr.to_le_bytes());
+            b[o + 24..o + 32].copy_from_slice(&off.to_le_bytes());
+            b[o + 32..o + 40].copy_from_slice(&size.to_le_bytes());
+            b[o + 40..o + 44].copy_from_slice(&link.to_le_bytes());
+        }
+        let strtab = b"\0__GI_abort\0abort@@GLIBC_2.2.5\0abort\0";
+        b[0x380..0x380 + strtab.len()].copy_from_slice(strtab);
+        // st_info: 0x02 = LOCAL FUNC, 0x12 = GLOBAL FUNC.
+        for (index, (name_off, info)) in [(1u32, 0x02u8), (12, 0x12), (31, 0x12)]
+            .into_iter()
+            .enumerate()
+        {
+            let o = 0x400 + index * 24;
+            b[o..o + 4].copy_from_slice(&name_off.to_le_bytes());
+            b[o + 4] = info;
+            b[o + 8..o + 16].copy_from_slice(&0x401000u64.to_le_bytes());
+            b[o + 16..o + 24].copy_from_slice(&8u64.to_le_bytes());
+        }
+        let shstr = b".text\0.symtab\0.strtab\0";
+        b[0x800..0x800 + shstr.len()].copy_from_slice(shstr);
+        for (o, off) in [(0x240usize, 1usize), (0x280, 7), (0x2c0, 14)] {
+            b[o..o + 4].copy_from_slice(&(off as u32).to_le_bytes());
+        }
+        let functions = import_elf(&b).unwrap().functions;
+        let named: Vec<_> = functions
+            .iter()
+            .filter(|f| f.entry == 0x401000)
+            .map(|f| f.name.as_str())
+            .collect();
+        assert_eq!(
+            named, ["abort"],
+            "an internal alias must not shadow the exported name a name list matches"
+        );
     }
 
     #[test]
