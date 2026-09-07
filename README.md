@@ -965,14 +965,22 @@ difference (`tests/m4-003_language_parity.py`,
 | differing, every one attributed to a named fact | 31 |
 | differing with nothing to explain it | **0** |
 
-The classes are the remaining work, in the open: `flow`
-14, `missing-external-prototype`
-18 (an import the store names
-but holds no signature for), `function-facts`
-15 (the two stores name or type the
-function differently) and `data-type-unknown`
-1. Four tasks have shrunk them by
-carrying facts the image itself declares:
+The classes separate the gaps from the choices. Gaps:
+`missing-external-prototype` 18
+(an import the store names but holds no signature for), `flow`
+14, `function-facts`
+11 (the two stores type the function
+differently) and `data-type-unknown`
+1. Choices:
+`name-convention` 4 -- the whole
+difference is a name we picked on purpose, decided mechanically by
+substituting the oracle's name into its own text and finding the token streams
+equal. `_plt` names the section that proved the start, `_init` the section
+whose function it is; stock calls the first `FUN_00201710`. A name that is
+*missing* is not a choice: if ours were the decompiler's own default and the
+oracle had a real name, the gate would count `missing-name` instead.
+
+Four tasks have shrunk the gaps by carrying facts the image itself declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
   `DAT_002038f8` and `s_sum___d__002004d0` where it printed
@@ -982,11 +990,10 @@ carrying facts the image itself declares:
   `FUN_00201600` instead of decompiling to `return;` with its call discarded;
 * the PLT header (`tests/m4-006_plt_header.py`): the System V ABI reserves
   `DT_PLTGOT + 2 words` for the dynamic linker's resolver, so the jump that
-  reads it is a `callreturn` override -- a per-instruction fact, like
-  Ghidra's, because stock records no thunk there;
-* the reserved words themselves (`tests/m4-007_got_pointers.py`): all
-  3 are 8-byte
-  pointers, so the decompiler stops overlaying a wider global of its own.
+  reads it is a `callreturn` override, recorded per instruction as Ghidra
+  records its own;
+* the reserved words themselves (`tests/m4-007_got_pointers.py`): all three
+  are pointers, so the decompiler stops overlaying a wider global of its own.
 
 Token identity has gone **18 -> 25**
 of 56 across those tasks, with no class
@@ -1555,7 +1562,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-type-unknown` 1; `parity.class.flow` 14; `parity.class.function-facts` 15; `parity.class.missing-external-prototype` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 31; `parity.functions_token_identical` 25; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-type-unknown` 1; `parity.class.flow` 14; `parity.class.function-facts` 11; `parity.class.missing-external-prototype` 18; `parity.class.name-convention` 4; `parity.functions_compared` 56; `parity.functions_fact_attributed` 31; `parity.functions_token_identical` 25; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
