@@ -861,38 +861,82 @@ impl ProjectDb {
         // whose [entry, entry+size) range holds the source address.
         let (sql_win, key) = if incoming {
             ("SELECT x.src, x.dst, x.kind, \
-              (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
-               AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
+              NULL, \
               x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.dst = ?2
               ORDER BY x.src LIMIT ?3 OFFSET ?4", dst)
         } else {
             ("SELECT x.src, x.dst, x.kind, \
-              (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
-               AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
+              NULL, \
               x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.src = ?2
               ORDER BY x.dst LIMIT ?3 OFFSET ?4", src)
         };
         let mut stmt = self.conn.prepare(sql_win)?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map(params![program.0, key, limit, offset], map_xref)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
+        self.resolve_containing(program, &mut rows)?;
         Ok((rows, Some(total as u64), self.revision(program)?))
+    }
+
+    /// Function extents in entry order, for resolving the function that
+    /// contains a reference's source address.
+    ///
+    /// This was a correlated subquery comparing `x.src` (hex text) with
+    /// `f.entry + f.size` (an integer expression). SQLite coerced the text
+    /// entry to a decimal integer -- `'0040033c'` became 40033 -- so the
+    /// containment test compared unrelated numbers and named whichever row
+    /// the scan reached first. Parsing the addresses is the only way to
+    /// compare them.
+    fn function_extents(&self, program: ProgramId) -> Result<Vec<(u64, u64, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT entry, size, name FROM functions WHERE program_id = ?1")?;
+        let mut extents = stmt
+            .query_map(params![program.0], |row| {
+                let entry: String = row.get(0)?;
+                let size: i64 = row.get(1)?;
+                let name: String = row.get(2)?;
+                let entry = addr_from_cell(entry, 0)?;
+                Ok((entry.offset, entry.offset.saturating_add(size.max(0) as u64), name))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        extents.sort_unstable_by(|left, right| left.0.cmp(&right.0));
+        Ok(extents)
+    }
+
+    /// Names the function containing each row's source address; a source
+    /// outside every function body keeps `None`, which is what a reference
+    /// from data is.
+    fn resolve_containing(&self, program: ProgramId, rows: &mut [XrefRow]) -> Result<()> {
+        if rows.is_empty() {
+            return Ok(());
+        }
+        let extents = self.function_extents(program)?;
+        for row in rows {
+            let index = extents.partition_point(|(entry, _, _)| *entry <= row.from.offset);
+            row.function = index
+                .checked_sub(1)
+                .and_then(|index| extents.get(index))
+                .filter(|(_, end, _)| row.from.offset < *end)
+                .map(|(_, _, name)| name.clone());
+        }
+        Ok(())
     }
 
     /// Lists xrefs pointing at `address`.
     pub fn xrefs_to(&self, program: ProgramId, address: &lre_model::Address) -> Result<Vec<XrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT x.src, x.dst, x.kind, \
-              (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
-               AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
+              NULL, \
               x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.dst = ?2 ORDER BY x.src",
         )?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map(params![program.0, addr_cell(address)], map_xref)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
+        self.resolve_containing(program, &mut rows)?;
         Ok(rows)
     }
 
@@ -900,28 +944,28 @@ impl ProjectDb {
     pub fn xrefs_from(&self, program: ProgramId, address: &lre_model::Address) -> Result<Vec<XrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT x.src, x.dst, x.kind, \
-              (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
-               AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
+              NULL, \
               x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 AND x.src = ?2 ORDER BY x.dst",
         )?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map(params![program.0, addr_cell(address)], map_xref)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
+        self.resolve_containing(program, &mut rows)?;
         Ok(rows)
     }
     /// Lists all xrefs of a program ordered by source and destination.
     pub fn xrefs(&self, program: ProgramId) -> Result<Vec<XrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT x.src, x.dst, x.kind, \
-              (SELECT f.name FROM functions f WHERE f.program_id = x.program_id \
-               AND f.entry <= x.src AND x.src < f.entry + f.size LIMIT 1), \
+              NULL, \
               x.provenance, x.provenance_kind, x.confidence \
               FROM xrefs x WHERE x.program_id = ?1 ORDER BY x.src, x.dst",
         )?;
-        let rows = stmt
+        let mut rows = stmt
             .query_map(params![program.0], map_xref)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
+        self.resolve_containing(program, &mut rows)?;
         Ok(rows)
     }
 
@@ -2494,6 +2538,68 @@ mod tests {
         db.rename_function(id, &lre_model::Address::ram(0x400000), "main").unwrap();
         assert_eq!(db.revision(id).unwrap(), before + 1);
         assert_eq!(db.functions(id).unwrap()[0].name, "main");
+    }
+
+    /// The containing function is resolved by address, not by whichever row a
+    /// scan reaches first: the old SQL compared hex text with an integer
+    /// expression and named `_init` for a reference inside `main`.
+    #[test]
+    fn xref_names_the_function_that_contains_its_source() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        db.replace_functions(
+            id,
+            &[
+                FunctionRow {
+                    entry: lre_model::Address::ram(0x0040_033c),
+                    name: "_init".into(),
+                    size: 27,
+                    signature: None,
+                    calling_convention: None,
+                },
+                FunctionRow {
+                    entry: lre_model::Address::ram(0x0040_047a),
+                    name: "main".into(),
+                    size: 43,
+                    signature: None,
+                    calling_convention: None,
+                },
+            ],
+        )
+        .unwrap();
+        let row = |from: u64, to: u64, kind: &str| XrefRow {
+            from: lre_model::Address::ram(from),
+            to: lre_model::Address::ram(to),
+            kind: kind.into(),
+            function: None,
+            provenance: lre_model::FactProvenance::default(),
+        };
+        db.replace_xrefs(
+            id,
+            &[
+                // inside `main`
+                row(0x0040_0488, 0x0040_0466, "UNCONDITIONAL_CALL"),
+                // in data: no function contains it
+                row(0x0040_11a8, 0x0040_0466, "DATA"),
+                // one byte past `main`'s proven end
+                row(0x0040_04a5, 0x0040_0466, "DATA"),
+            ],
+        )
+        .unwrap();
+        let named: Vec<_> = db
+            .xrefs_to(id, &lre_model::Address::ram(0x0040_0466))
+            .unwrap()
+            .into_iter()
+            .map(|xref| (xref.from.offset, xref.function))
+            .collect();
+        assert_eq!(
+            named,
+            vec![
+                (0x0040_0488, Some("main".to_string())),
+                (0x0040_04a5, None),
+                (0x0040_11a8, None),
+            ]
+        );
     }
 
     #[test]
