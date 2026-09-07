@@ -47,6 +47,11 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Check every provenance class is explained
+        run: |
+          python3 tests/m9-001_provenance_explained.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/provenance.json"
       - name: Publish PE parity as one milestone
         run: |
           python3 tests/m8-006_pe_parity.py \

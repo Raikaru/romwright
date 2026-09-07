@@ -50,11 +50,14 @@ DECLARED = re.compile(r'"(native-(?:import|analysis)(?::[a-z0-9-]+)*)"')
 
 
 def declared_classes() -> set[str]:
+    """The classes the shipped code can emit; test modules are not vocabulary."""
     found: set[str] = set()
     for source in (ROOT / "crates").rglob("*.rs"):
         if "/target/" in str(source):
             continue
-        found.update(DECLARED.findall(source.read_text(encoding="utf-8")))
+        text = source.read_text(encoding="utf-8")
+        cut = text.find("#[cfg(test)]")
+        found.update(DECLARED.findall(text if cut < 0 else text[:cut]))
     return found
 
 
@@ -131,9 +134,11 @@ def main() -> int:
             # every fact in it must, not a sample.
             if api_checked == 0:
                 database = sqlite3.connect(project / "project.sqlite")
-                address = next(database.execute(
-                    "SELECT dst FROM xrefs ORDER BY dst LIMIT 1"), (None,))[0]
-                if address:
+                # The busiest destinations, so the check covers several
+                # classes rather than whichever fact sorts first.
+                addresses = [row[0] for row in database.execute(
+                    "SELECT dst FROM xrefs GROUP BY dst ORDER BY COUNT(*) DESC LIMIT 3")]
+                for address in addresses:
                     facts = api_explanations(project, address)
                     silent = [fact for fact in facts
                               if not fact.get("provenance", {}).get("explanation")]
@@ -146,17 +151,32 @@ def main() -> int:
                     assert not wrong, (
                         f"{image.name}: the API explanation differs from the table: "
                         f"{wrong[:2]}")
-                    api_checked = len(facts)
+                    api_checked += len(facts)
 
     unexplained_observed = sorted(name for name in observed if not published.get(name))
     assert not unexplained_observed, (
         f"these provenance values appear in a store with no sentence: "
         f"{unexplained_observed}")
-    assert api_checked > 0, "no fixture produced a fact to check through the API"
+    assert api_checked >= 5, (
+        f"only {api_checked} facts were checked through the API, which proves "
+        f"too little")
 
     ui = REPORTS / "ui-gate.json"
     assert ui.is_file(), "benchmarks/reports/ui-gate.json is not committed"
-    ui_metrics = json.loads(ui.read_text()).get("metrics", {})
+    ui_report = json.loads(ui.read_text())
+    # The committed report keeps its numbers per corpus entry; take the worst.
+    rows = [row.get("metrics", {}) for row in ui_report.get("corpus", [])]
+    assert rows, "the committed UI gate report has no corpus entry"
+    ui_metrics = {
+        "ui.xrefs.unexplained": max(
+            (row["ui.xrefs.unexplained"] for row in rows
+             if "ui.xrefs.unexplained" in row), default=None),
+        "ui.xrefs.rows": min(
+            (row["ui.xrefs.rows"] for row in rows if "ui.xrefs.rows" in row),
+            default=0),
+    }
+    if ui_metrics["ui.xrefs.unexplained"] is None:
+        ui_metrics.pop("ui.xrefs.unexplained")
     assert "ui.xrefs.unexplained" in ui_metrics, (
         "the committed UI gate does not measure ui.xrefs.unexplained, so the "
         "desktop's rendering is assumed rather than measured")

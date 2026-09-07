@@ -4,6 +4,7 @@
 #include "json_util.h"
 
 #include <QHeaderView>
+#include <QJsonObject>
 #include <QTabWidget>
 #include <QTableWidget>
 
@@ -14,12 +15,13 @@ XrefsDock::XrefsDock(CoreBridge *bridge, QWidget *parent)
 
     auto *tabs = new QTabWidget(this);
     auto make_xrefs_table = [this](QTabWidget *parent_widget, const QString &object_name) {
-        auto *table = new QTableWidget(0, 4, parent_widget);
+        auto *table = new QTableWidget(0, 5, parent_widget);
         table->setObjectName(object_name);
         table->setHorizontalHeaderLabels({QStringLiteral("Address"),
                                           QStringLiteral("Function"),
                                           QStringLiteral("Kind"),
-                                          QStringLiteral("Target")});
+                                          QStringLiteral("Target"),
+                                          QStringLiteral("Evidence")});
         table->horizontalHeader()->setStretchLastSection(true);
         table->verticalHeader()->setVisible(false);
         table->setSelectionBehavior(QAbstractItemView::SelectRows);
@@ -43,6 +45,9 @@ void XrefsDock::loadXrefs(const QString &program, const QString &address) {
     if (program.isEmpty() || address.isEmpty()) {
         return;
     }
+    rendered_rows_ = 0;
+    unexplained_rows_ = 0;
+    pending_ = 2;
     auto fill = [this, program, address](QTableWidget *table, bool incoming) {
         const QString job_name = QStringLiteral("xrefs %1 %2")
                                      .arg(incoming ? QStringLiteral("to")
@@ -59,6 +64,9 @@ void XrefsDock::loadXrefs(const QString &program, const QString &address) {
                              QString error;
                              if (!successful(response, &error)) {
                                  emit jobFinished(job_name, false, error);
+                                 if (--pending_ == 0) {
+                                     emit loadFinished();
+                                 }
                                  return;
                              }
                              const QJsonArray rows = response.value("result")
@@ -82,9 +90,28 @@ void XrefsDock::loadXrefs(const QString &program, const QString &address) {
                                                 new QTableWidgetItem(
                                                     row.value("kind").toString()));
                                  table->setItem(index, 3, new QTableWidgetItem(to));
+                                 // The sentence comes from the core's shared
+                                 // table, never from a copy kept here.
+                                 const QJsonObject provenance =
+                                     row.value("provenance").toObject();
+                                 const QString evidence =
+                                     provenance.value("explanation").toString();
+                                 auto *item = new QTableWidgetItem(
+                                     evidence.isEmpty()
+                                         ? provenance.value("source").toString()
+                                         : evidence);
+                                 item->setToolTip(provenance.value("source").toString());
+                                 table->setItem(index, 4, item);
+                                 rendered_rows_ += 1;
+                                 if (evidence.isEmpty()) {
+                                     unexplained_rows_ += 1;
+                                 }
                              }
                              emit jobFinished(job_name, true,
                                               QStringLiteral("%1 xrefs").arg(rows.size()));
+                             if (--pending_ == 0) {
+                                 emit loadFinished();
+                             }
                          });
     };
     fill(xrefs_to_, true);

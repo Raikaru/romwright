@@ -1,13 +1,13 @@
 {
  "id": "m5-012",
- "recorded_at": "2026-09-07T12:44:57.199301+00:00",
+ "recorded_at": "2026-09-07T12:58:54.818575+00:00",
  "status": "pass",
  "passed": true,
- "summary": "73 current reports indexed, 58 published ids, 12 diagnostic runs separated, 72 generated rows",
+ "summary": "74 current reports indexed, 59 published ids, 12 diagnostic runs separated, 73 generated rows",
  "metrics": {
-  "current_reports": 73,
-  "published_ids": 58,
+  "current_reports": 74,
+  "published_ids": 59,
   "diagnostic_runs": 12,
-  "generated_rows": 72
+  "generated_rows": 73
  }
 }

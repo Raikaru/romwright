@@ -3432,16 +3432,54 @@ m3-003, all three wired into continuous integration)
 - Five additive metric names (`pe.classes.*`, `pe.references`,
   `pe.externals`); no II.3 definition changed.
 
+### m9-001 evidence
+- `dad2bfe` commits the failing acceptance
+  (`tests/m9-001_provenance_explained.py`): there was no table to fail
+  against -- `lre-cli provenance` did not exist, and the desktop's xrefs dock
+  had **no provenance column at all**, so a user could not learn what a base
+  relocation proves.
+- `crates/lre-model/src/provenance.rs` holds one table: 15 classes, each a
+  sentence. `FactProvenance` now serialises `explanation` from it via a
+  hand-written `Serialize`, so every API and CLI consumer receives the
+  sentence with the fact and no construction site has to remember it.
+- Surfaces read that table rather than copying it: `lre-cli provenance
+  [<program>] [--json]` prints it (or only the classes one program holds and
+  fails on an unexplained one), and `XrefsDock` renders the sentence in an
+  Evidence column with the raw class as tooltip.
+- **The desktop number is measured.** `XrefsDock` counts the rows it filled
+  and how many arrived without a sentence, emits `loadFinished` when both
+  tables have answered, and `GateRunner` publishes `ui.xrefs.rows` and
+  `ui.xrefs.unexplained`; `benchmarks/ui_gate.py` takes the worst run for
+  counts (min rows, max unexplained) and fails the gate on either.
+  First attempt read the counters from a zero-delay timer and measured an
+  empty table -- fixed by waiting for the signal.
+- Measured (`benchmarks/reports/m9-001.json`): 15 classes in the table, 15
+  declared in the crates, 11 observed in stores over four corpus entries and
+  four PE fixtures, `provenance.unexplained` **0**, 10 facts checked through a
+  real `lre-api`, and the desktop rendered 19 xref rows with **0**
+  unexplained.
+- Controls: deleting one class's sentence fails, a UI report claiming three
+  unexplained rows fails, and a UI report that stops measuring the metric at
+  all fails.
+- `crates/lre-db` had a test pinning the exact provenance JSON; it now pins
+  the new shape, including `explanation: null` for a source the table does not
+  know.
+- Regression: `cargo test --workspace` 237 pass; `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`, `m6-001`, `m6-002`,
+  `m6-005`, `m6-006`, `m8-006`, `m5-012` all pass.
+- Seven additive metric names (`provenance.*`, `ui.xrefs.*`); no II.3
+  definition changed.
+
 ## Next task
-- m9-001: the desktop shows PE facts it has no way to explain. `m8-004` and
-  `m8-005` added `native-import:pe-tls`, `native-import:pe-export` and import
-  externals, and `desktop/ventris-qt` renders a provenance string verbatim in
-  its facts dock, so a user sees `native-import:pe-export` with no statement
-  of what proved it. The acceptance must drive the packaged desktop through a
-  PE fixture with `ui_gate`-style measured metrics, assert every provenance
-  class the store holds renders with a human sentence taken from one table
-  shared with the CLI, and fail when a class has no sentence. Its acceptance
-  test does not exist yet; write it first.
+- m9-002: the store labels a fact but not its confidence, and the API's
+  `confidence` field is `null` for every native fact. `docs/core-api.md`
+  documents it as "a supplied confidence in [0, 1]; None means unknown", so a
+  consumer cannot rank two facts that disagree -- a swept string against a
+  linker-proven symbol. The acceptance must define confidence per provenance
+  class from what the class proves (loader-declared, flow-proven, inferred),
+  publish it through the API beside the explanation, and fail when a class
+  carries a number nothing derives. Its acceptance test does not exist yet;
+  write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

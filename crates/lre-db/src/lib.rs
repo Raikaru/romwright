@@ -3053,8 +3053,11 @@ mod tests {
         })).unwrap();
         db.set_prototype(id, &inferred).unwrap();
         let stored = serde_json::to_value(&db.prototypes(id).unwrap()[1]).unwrap();
+        // Provenance now serialises its explanation from the shared table; an
+        // unknown source has none, and the rest of the object is unchanged.
         assert_eq!(stored["provenance"], serde_json::json!({
-            "kind": "inferred", "source": "test-analysis", "confidence": 0.875
+            "kind": "inferred", "source": "test-analysis", "confidence": 0.875,
+            "explanation": null
         }));
     }
 

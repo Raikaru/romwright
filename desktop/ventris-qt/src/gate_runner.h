@@ -22,6 +22,7 @@ private:
     void startLargestFunction();
     void startDecompile(const QString &address);
     void startGraph();
+    void startXrefs();
     void finish(bool ok, const QString &detail = {});
 
     MainWindow *window_;

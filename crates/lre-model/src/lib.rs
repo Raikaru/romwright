@@ -5,6 +5,8 @@
 //! does not pretend they can. Entities use compact stable IDs (spec 8.2).
 
 /// Stable ID for a program inside a project.
+pub mod provenance;
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ProgramId(pub u64);
 
@@ -176,13 +178,28 @@ pub enum FactKind {
     Asserted,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, serde::Deserialize, PartialEq)]
 pub struct FactProvenance {
     pub kind: FactKind,
     pub source: String,
     /// A supplied confidence in [0, 1]; None means unknown, not zero.
     #[serde(default)]
     pub confidence: Option<f64>,
+}
+
+impl serde::Serialize for FactProvenance {
+    /// Adds `explanation` from the shared table: a consumer that shows a fact
+    /// can always say what proved it, without mapping the string itself.
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeStruct;
+        let explanation = provenance::explain(&self.source);
+        let mut row = serializer.serialize_struct("FactProvenance", 4)?;
+        row.serialize_field("kind", &self.kind)?;
+        row.serialize_field("source", &self.source)?;
+        row.serialize_field("confidence", &self.confidence)?;
+        row.serialize_field("explanation", &explanation)?;
+        row.end()
+    }
 }
 
 /// One symbol row.
