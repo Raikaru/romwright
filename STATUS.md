@@ -2297,27 +2297,73 @@ M2 — Program-model parity
   `tests/m2-008_nonreturn.py`, `tests/m2-008_ppc_linkage.py`,
   `tests/m2-009_thunks.py` all pass.
 
-## Measured regressions found this session (not fixed)
-- `tests/m1-003_batched_flow.sh` is red. Release build, this host,
-  `/usr/lib64/libc.so.6`: full native import 24.52 s; with the m2-002
-  data-reference pass skipped 5.70 s. The reference pass therefore costs
-  ~18.8 s (77%), while flow discovery plus every other pass costs 5.70 s
-  against the 4.27 s recorded at m1-003 and its 5.0 s threshold. The gate now
-  measures m2-002's per-function console propagation, not batched flow. The
-  threshold stays as committed; the fix is to batch the reference pass's
-  console requests the way m1-003 batched flow.
-- `tests/m1-008b_pointer_seeds.py` is red for provenance, not recall: the
-  `x86_64_plain_o0` and `x86_64_cpp_o2` oracles carry bridge source hashes
-  from before the m2-002c/m2-003-b service edits, so the test refuses them
-  ("Oracle bridge_sources_sha256 mismatch"). They need regeneration with the
-  current bridge, committed with a fresh report.
+## m2-016 implementation slices
+- a: commit the failing acceptance (`tests/m2-016_import_budget.py`): phases
+  must be measured, sharding must be fact-invariant, the reference pass must
+  shard at least 2x, and the flow phase must stay inside m1-003's budget.
+- b: measure the pipeline (`import --timings`, `PhaseTiming`, `FlowStats`)
+  and shard the console work that is independent inside a round.
+- c: rescope the m1-003 acceptance onto the phase it names, refresh the
+  bridge-produced oracle provenance, wire continuous integration and publish
+  the evidence. Slices stay below 800 changed lines each.
+
+### m2-016 evidence
+- `9276c58` commits the failing acceptance (no `TIMINGS` line existed).
+- What the diagnosis found, and why the recorded plan was wrong: the
+  reference pass issued **3 958 requests in 1 round with 0 repeats**, so
+  batching had nothing to buy. The 5.1 ms per request is console work --
+  `followFlow` lifting the function, then propagation -- and the only lever
+  is running more consoles. The pass now shards across one console per
+  physical core, and flow batches shard the same way.
+- Measured on this host (release, `/usr/lib64/libc.so.6`, 6 physical cores),
+  one console vs six:
+  | phase | 1 console | 6 consoles |
+  |---|---|---|
+  | flow | 4.70 s | 2.86 s |
+  | discovery | 5.39 s | 3.60 s |
+  | references | 17.44 s | 5.32 s |
+  | total | 23.11 s | 9.30 s |
+- Shards change wall time and nothing else: 3 961 functions, 29 442 xrefs,
+  18 410 strings, 26 symbols and the thunk set are byte-identical between the
+  one-console and six-console imports (SHA-256 per table, asserted by the
+  acceptance and recorded in `benchmarks/reports/m2-016.json`).
+- Default shard count is physical cores, capped at eight: six shards measured
+  2.86 s of flow against 3.09 s at eight and 3.11 s at twelve, because SMT
+  siblings contend on the same execution units. `VENTRIS_CONSOLE_SHARDS` pins
+  it; `VENTRIS_REF_SHARDS` never shipped.
+- `tests/m1-003_batched_flow.sh` rescoped (user-authorised): the 5.0 s number
+  is unchanged but now reads the `flow` phase instead of total import time,
+  best of three runs after a discarded warm-up. It also asserts what batching
+  actually claims and no machine speed can flatter: **297 390 instructions
+  over 3 146 console requests = 94.5 per request**, against a floor of 20.
+  Flow measured 2.96 s.
+- Oracle provenance refreshed: the committed `oracle/` tree carried bridge
+  source hashes from before the m2-002c/m2-002g0/m2-003-b service edits, so
+  every provenance-checking local gate refused it. Regenerated all 20
+  references and their scoring views; **entry sets are identical in all 20**,
+  the only changes being `bridge_sources_sha256`, a now-recorded `compiler`
+  field, and the views' `raw_reference_sha256`. Continuous integration was
+  never affected: it generates its own oracles per run.
+  `tests/m1-008b_pointer_seeds.py` gained `--oracle-dir` so a local run can
+  point at freshly generated references; it now passes.
+- Verification: `cargo test --workspace` 187 pass/2 ignored;
+  `tests/m2-016_import_budget.py` PASS (6 consoles, references 2.94x, flow
+  2.86 s, total 9.30 s); `tests/m1-003_batched_flow.sh` PASS;
+  `tests/corpus.sh` 5/5; `tests/differential.sh`, `tests/workflow.sh`,
+  `tests/data_xrefs.sh`, `tests/generic_discovery_test.sh`,
+  `tests/m1-004_pie.sh`, `tests/m1-005_pe_relocs.sh`,
+  `tests/m1-008b_pointer_seeds.py`, `tests/m2-015_native_default.py`,
+  `tests/m1-008_languages.py`, `tests/m2-005_prototype.py`,
+  `tests/m2-006_revision.py`, `tests/m2-007_switches.py`,
+  `tests/m2-008_nonreturn.py`, `tests/m2-008_ppc_linkage.py`,
+  `tests/m2-009_thunks.py` pass; gates re-run green after the change:
+  discovery (20/20), xref, string, nonreturn, prototype, switch, rtti, thunk.
 
 ## Next task
-- m2-016: restore the m1-003 import budget by batching the m2-002
-  data-reference pass's console requests, then publish the measured
-  program-model parity gate evidence. Its acceptance test does not exist yet;
-  write it first (it must fail: release libc import is 24.52 s today against
-  the committed 5.0 s threshold, of which 18.8 s is the reference pass).
+- m2-017: unblock the M2 closure list -- `tests/m1-008b_pointer_seeds.py` and
+  `benchmarks/discovery_gate.py` now pass locally, so the remaining M2 debt is
+  the DOL/private-input gate and the support-matrix regeneration. Its
+  acceptance test does not exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

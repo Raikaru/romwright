@@ -399,6 +399,26 @@ pub struct Page<T> {
     pub revision: u64,
 }
 
+/// Wall time of one import phase, in seconds. Phases are measured, never
+/// estimated: a consumer that reports a budget must report these numbers.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct PhaseTiming {
+    /// Phase name (`parse`, `discovery`, `references`, `store`).
+    pub phase: String,
+    /// Measured wall time in seconds.
+    pub seconds: f64,
+}
+
+/// What the flow phase asked of the SLEIGH console. Batched flow is a claim
+/// about `instructions` per `requests`, which no machine speed can flatter.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
+pub struct FlowStats {
+    /// Commands written to every console during discovery.
+    pub requests: u64,
+    /// Instructions the console decoded for the flow walk.
+    pub instructions: u64,
+}
+
 /// Program summary returned by import/open.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ProgramSummary {
@@ -408,6 +428,12 @@ pub struct ProgramSummary {
     pub functions: u64,
     /// Ghidra language ID, e.g. `x86:LE:64:default`.
     pub language: String,
+    /// Measured phase wall times; empty for paths that do not measure.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub phases: Vec<PhaseTiming>,
+    /// Console request accounting for the flow phase, when it ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flow: Option<FlowStats>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

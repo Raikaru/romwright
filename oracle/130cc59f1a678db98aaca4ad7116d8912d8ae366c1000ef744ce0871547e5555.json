@@ -5,11 +5,12 @@
   "producer": "ghidra-bridge",
   "upstream_version": "12.1.3",
   "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
-  "bridge_sources_sha256": "22cbedc03aea3c0d788db78b314f80eabbe0731d2d84c8bd035a110860644a81",
+  "bridge_sources_sha256": "98070e6b5d7dc352bfac29edf21c98154b4ea41bd4709f81129070c254c96056",
   "analysis": "GhidraProject.analyze:defaults",
   "language_selection": "automatic",
   "address_basis": "ghidra",
   "language": "AARCH64:LE:64:v8A",
+  "compiler": "default",
   "image_base": "00100000",
   "imported_function_count": 24,
   "entries": [

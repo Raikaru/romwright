@@ -21,6 +21,9 @@ from gen_function_scoring import POLICY, expected_view, validate_view
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
+    # Oracles are bridge-produced and carry their producer's source hash, so a
+    # local run against freshly generated ones must be able to say where.
+    parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
     parser.add_argument("--update-report", action="store_true")
     args = parser.parse_args()
     subprocess.run(["cargo", "build", "-q", "-p", "lre-cli"], cwd=ROOT, check=True)
@@ -47,7 +50,7 @@ def main():
                 sha = digest(binary)
                 assert sha == item["binary_sha256"], "Primary hash mismatch"
                 row["sha256"] = sha
-                reference_path = ROOT / "oracle" / f"{sha}.json"
+                reference_path = args.oracle_dir / f"{sha}.json"
                 reference = json.loads(reference_path.read_text())
                 validate_reference(reference, {"schema_version": 1, "sha256": sha,
                     "binary_size": binary.stat().st_size, **producer, "address_basis": "ghidra"})

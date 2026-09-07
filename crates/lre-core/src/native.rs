@@ -176,6 +176,10 @@ pub struct NativeImport {
     pub cfg: crate::session::RuntimeConfig,
     /// Path to the binary used for console-driven x86 flow.
     pub binary: std::path::PathBuf,
+    /// Measured wall time of each completed import phase.
+    pub phases: Vec<lre_model::PhaseTiming>,
+    /// Console request accounting for the flow phase, when it ran.
+    pub flow: Option<lre_model::FlowStats>,
 }
 fn err<T>(msg: impl Into<String>) -> Result<T> {
     Err(ImportError::Bad(msg.into()))
@@ -986,29 +990,79 @@ pub fn load_native_mappings(binary: &Path) -> Result<Vec<Mapping>> {
     Ok(imp.mappings)
 }
 
+/// Records one measured phase on the import.
+fn phase(imp: &mut NativeImport, name: &str, started: std::time::Instant) {
+    imp.phases.push(lre_model::PhaseTiming {
+        phase: name.to_string(),
+        seconds: started.elapsed().as_secs_f64(),
+    });
+}
+
 /// Loads `<binary>` natively and closes its seeds through SLEIGH flow.
 pub fn load_native(binary: &Path) -> Result<NativeImport> {
+    let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
     let mut imp = parse_native(&data)?;
     imp.binary = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     imp.cfg = crate::session::RuntimeConfig::from_env();
     imp.cfg.adopt_language(&imp.language);
-    let session = if imp.format == "dol" {
+    phase(&mut imp, "parse", parse_started);
+    let discovery_started = std::time::Instant::now();
+    let lanes = if imp.format == "dol" {
         Some(discovery::discover_mapped(&mut imp)?)
     } else {
         elf_pointers::confirm_initializers(&mut imp);
         discovery::discover_seeded(&mut imp)
     };
-    if let Some(mut session) = session {
-        infer_data_references(&mut imp, &mut session)?;
+    phase(&mut imp, "discovery", discovery_started);
+    if let Some(lanes) = lanes {
+        let references_started = std::time::Instant::now();
+        let mut session = lanes.session;
+        infer_data_references(&mut imp, &mut session, lanes.shards)?;
+        phase(&mut imp, "references", references_started);
     }
     Ok(imp)
+}
+
+/// One console reference query. ConstantPropagationAnalyzer's default trusts
+/// initial writable values; this inferred-reference policy does not change
+/// strict constant queries. A root or stripped entry that does not decode
+/// contributes no references and must not abort the whole image's import.
+fn query_references(
+    session: &mut crate::native_runtime::ConsoleSession,
+    start: u64,
+    end: u64,
+    mappings: &[Mapping],
+) -> Result<Option<Vec<crate::native_runtime::ReferenceFact>>> {
+    session
+        .optional_references(start, end, mappings, true)
+        .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))
+}
+
+/// One lane of a sharded round: claim ranges until the round is drained.
+fn claim_references(
+    session: &mut crate::native_runtime::ConsoleSession,
+    ranges: &[(usize, u64, u64)],
+    cursor: &std::sync::atomic::AtomicUsize,
+    mappings: &[Mapping],
+) -> Result<Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)>> {
+    let mut facts = Vec::new();
+    loop {
+        let next = cursor.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let Some(&(index, start, end)) = ranges.get(next) else {
+            return Ok(facts);
+        };
+        if let Some(found) = query_references(session, start, end, mappings)? {
+            facts.push((index, found));
+        }
+    }
 }
 
 fn infer_data_references(
     import: &mut NativeImport,
     session: &mut crate::native_runtime::ConsoleSession,
+    lanes: Vec<crate::native_runtime::ConsoleSession>,
 ) -> Result<()> {
     use crate::native_runtime::ReferenceKind;
     session.prepare_reference_context(import)
@@ -1029,20 +1083,84 @@ fn infer_data_references(
     for (start, end) in roots {
         work.push((start, end, Vec::new(), true));
     }
-    let mut pending: std::collections::VecDeque<_> = (0..work.len()).collect();
+    let mut pending: Vec<usize> = (0..work.len()).collect();
+    // One console per hardware thread: the per-function cost is the console
+    // lifting that function, so the pass scales with processes, not with
+    // fewer requests. Shards start from the round's context and never read
+    // one discovered inside it, so their facts equal a single session's.
+    // Discovery already opened these consoles on this image; they only need
+    // this pass's context, not another startup.
+    let mut shards = lanes;
+    let mut prepared = false;
+    let shard_target = import.cfg.console_shards.max(1);
     loop {
-        while let Some(index) = pending.pop_front() {
-            let (start, end, _, _) = work[index];
+        let batch = std::mem::take(&mut pending);
+        for &index in &batch {
             work[index].3 = false;
-            // ConstantPropagationAnalyzer's default trusts initial writable values.
-            // This inferred-reference policy does not change strict constant queries.
-            // A root or stripped entry that does not decode contributes no
-            // references; it must not abort the whole image's import.
-            let Some(facts) = session.optional_references(start, end, &import.mappings, true)
-                .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))?
-            else {
-                continue;
-            };
+        }
+        let ranges: Vec<(usize, u64, u64)> = batch
+            .iter()
+            .map(|&index| (index, work[index].0, work[index].1))
+            .collect();
+        let wanted = shard_target.min(ranges.len()).saturating_sub(1);
+        shards.truncate(wanted);
+        if !prepared && !shards.is_empty() {
+            let spec = session.reference_shard_spec();
+            // A shard is an optimization: one that cannot take the context is
+            // dropped, and the pass stays correct on the remaining lanes.
+            shards.retain_mut(|shard| shard.prepare_as_reference_shard(&spec, import).is_ok());
+            prepared = true;
+        }
+        if shards.len() < wanted {
+            let spec = session.reference_shard_spec();
+            let mut opened =
+                crate::native_runtime::ConsoleSession::open_image_shards(import, wanted - shards.len());
+            opened.retain_mut(|shard| shard.prepare_as_reference_shard(&spec, import).is_ok());
+            shards.extend(opened);
+        }
+        let keep = session.reference_contexts().len();
+        let mut results: Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)> = Vec::new();
+        let mut discovered: Vec<NativeRegisterContext> = Vec::new();
+        if shards.is_empty() || ranges.len() < 2 {
+            for &(index, start, end) in &ranges {
+                if let Some(facts) = query_references(session, start, end, &import.mappings)? {
+                    results.push((index, facts));
+                }
+            }
+        } else {
+            let mappings = &import.mappings;
+            for shard in shards.iter_mut() {
+                shard.sync_reference_context(session.reference_contexts());
+            }
+            // Function cost varies by orders of magnitude, so lanes claim the
+            // next range instead of taking a fixed stride: one huge function
+            // must not decide the round's wall time.
+            let cursor = std::sync::atomic::AtomicUsize::new(0);
+            let outcome: Result<Vec<_>> = std::thread::scope(|scope| {
+                let mut handles = Vec::with_capacity(shards.len());
+                for shard in shards.iter_mut() {
+                    let ranges = &ranges;
+                    let cursor = &cursor;
+                    handles.push(scope.spawn(move || {
+                        claim_references(shard, ranges, cursor, mappings)
+                    }));
+                }
+                let mut collected = vec![claim_references(session, &ranges, &cursor, mappings)?];
+                for handle in handles {
+                    collected.push(handle.join().unwrap_or_else(|_| {
+                        Err(ImportError::Bad("reference shard panicked".into()))
+                    })?);
+                }
+                Ok(collected)
+            });
+            for lane in outcome? {
+                results.extend(lane);
+            }
+            for shard in shards.iter_mut() {
+                discovered.extend(shard.drain_discovered_contexts(keep));
+            }
+        }
+        for (index, facts) in results {
             let known = &mut work[index].2;
             if known.is_empty() {
                 *known = facts;
@@ -1053,15 +1171,32 @@ fn infer_data_references(
             }
         }
         // Finish local evidence before applying this round's call context.
-        for target in session.take_reference_context_targets() {
+        // Shard order must not decide the context list, so merge sorted.
+        discovered.extend(session.drain_discovered_contexts(keep));
+        discovered.sort_by(|left, right| {
+            (left.start, left.end, &left.register, left.value)
+                .cmp(&(right.start, right.end, &right.register, right.value))
+        });
+        discovered.dedup_by(|left, right| {
+            left.start == right.start
+                && left.end == right.end
+                && left.register == right.register
+                && left.value == right.value
+        });
+        let mut targets = session.adopt_reference_contexts(discovered);
+        targets.sort_unstable();
+        targets.dedup();
+        for target in targets {
             if let Some(next) = work.iter().position(|item| item.0 == target) {
                 if !work[next].3 {
                     work[next].3 = true;
-                    pending.push_back(next);
+                    pending.push(next);
                 }
             }
         }
-        if pending.is_empty() { break; }
+        if pending.is_empty() {
+            break;
+        }
     }
     // Propagated caller context can resolve a linkage whose base register was
     // unknown during discovery. Require the existing pure-linkage proof and
@@ -1256,6 +1391,8 @@ pub fn store_import(
         program: program.to_string(),
         functions: functions.len() as u64,
         language: imp.language.clone(),
+        phases: imp.phases.clone(),
+        flow: imp.flow,
     })
 }
 
@@ -2207,7 +2344,7 @@ mod tests {
         };
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         let refs: Vec<_> = import.xrefs.iter()
             .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
         assert_eq!(refs, vec![(0x1005, 0x4000, "DATA")],
@@ -2224,7 +2361,7 @@ mod tests {
         import.functions[0].size = 17;
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         let refs: Vec<_> = import.xrefs.iter()
             .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
         assert_eq!(refs, vec![(0x1008, 0x4000, "DATA")],
@@ -2234,7 +2371,7 @@ mod tests {
         import.functions.truncate(1);
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         assert!(import.xrefs.is_empty(), "a pattern alone cannot establish a function");
 
         import.functions.push(NativeFunction {
@@ -2244,7 +2381,7 @@ mod tests {
         import.mappings[1].size = 5;
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         assert!(import.xrefs.is_empty(), "ordinary calls retain unknown register context");
 
         import.mappings[0].bytes = vec![
@@ -2301,7 +2438,7 @@ mod tests {
         };
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         let refs: Vec<_> = import.xrefs.iter()
             .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
         assert_eq!(refs, vec![(0x1000, 0x3000, "READ"), (0x1008, 0x4000, "READ")],
@@ -2359,9 +2496,9 @@ mod tests {
         let analyze = |bytes: &[u8]| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
-            let mut session = discovery::discover_seeded(&mut import).unwrap();
+            let mut session = discovery::discover_seeded(&mut import).unwrap().session;
             import.xrefs.clear();
-            infer_data_references(&mut import, &mut session).unwrap();
+            infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
             let strict = session.constants(0x1000, 0x1006, &import.mappings, false).unwrap();
             assert!(strict.is_empty(), "reference-only context must not seed strict queries: {strict:?}");
             import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
@@ -2437,7 +2574,7 @@ mod tests {
             if caller_first { import.functions.swap(0, 1); }
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
-            infer_data_references(&mut import, &mut session).unwrap();
+            infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
             assert!(session.constants(0x1000, 0x1008, &import.mappings, false).unwrap().is_empty(),
                 "call-derived reference context must not enter strict constant queries");
             let mut data = Vec::new();
@@ -2523,7 +2660,7 @@ mod tests {
             import.xrefs.clear();
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
-            infer_data_references(&mut import, &mut session).unwrap();
+            infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
             assert!(import.functions.is_empty(), "reference coverage must not manufacture functions");
             import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
                 .collect::<Vec<_>>()
@@ -2576,7 +2713,7 @@ mod tests {
                 .is_none(),
             "the console must refuse the undecodable root instead of answering"
         );
-        infer_data_references(&mut import, &mut session).unwrap();
+        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
         assert_eq!(
             import
                 .xrefs

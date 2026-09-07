@@ -30,7 +30,7 @@ fn main() {
 fn usage() {
     eprintln!(
         "usage:
-  lre-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--project DIR]
+  lre-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--timings] [--project DIR]
   lre-cli decompile <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   lre-cli decompile-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   lre-cli disasm <binary> <address> [-n N]
@@ -326,9 +326,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         .collect::<Vec<_>>()
                 })
                 .collect();
+            let started = std::time::Instant::now();
             let (summary, signatures) = core
                 .import_native_with_signatures(Path::new(&binary), &program, &databases)
                 .map_err(|e| e.to_string())?;
+            let total = started.elapsed().as_secs_f64();
             println!(
                 "imported {} natively ({} functions, {})",
                 summary.program, summary.functions, summary.language
@@ -337,6 +339,30 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!(
                     "signatures: {} records, {} matched, {} renamed, {} conflicts",
                     report.records, report.matched, report.renamed, report.conflicts
+                );
+            }
+            // Measured phases, for budget gates. Reporting a budget without
+            // these numbers is how a threshold stops meaning anything.
+            if has_flag(args, "--timings") {
+                let phases = summary
+                    .phases
+                    .iter()
+                    .map(|phase| format!("\"{}\":{:.6}", phase.phase, phase.seconds))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                let flow = summary.flow.map_or_else(
+                    || "null".to_string(),
+                    |flow| {
+                        format!(
+                            "{{\"requests\":{},\"instructions\":{}}}",
+                            flow.requests, flow.instructions
+                        )
+                    },
+                );
+                println!(
+                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}}}",
+                    summary.functions,
+                    core.runtime_config().console_shards
                 );
             }
         }
