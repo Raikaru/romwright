@@ -261,6 +261,7 @@ dependencies = [
  "lre-core",
  "lre-db",
  "lre-model",
+ "lre-sig",
  "serde",
  "serde_json",
 ]

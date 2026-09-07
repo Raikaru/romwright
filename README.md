@@ -430,6 +430,27 @@ loads DWARF into either analyzer. References are immutable; `--check` verifies
 and scores them without rerunning stock analysis. Reports retain complete
 mismatches in SHA-256-linked JSONL files.
 
+`lre-cli signatures build` turns one static archive into a `.vsig` database
+(`docs/vsig.md`): every exported `STT_FUNC` symbol becomes a byte pattern whose
+relocated bytes are masked out, using the public relocation widths for that
+architecture. A relocation type with no ABI width in the tables skips its
+function instead of guessing, patterns carrying fewer than `--min-bytes`
+compared bytes are dropped, and one name defined twice with different bodies is
+dropped entirely. Package and license are required arguments: they are
+declared, never inferred. `signatures info` decodes a database and reports its
+records, languages, packages and licenses.
+
+```sh
+lre-cli signatures build --archive libc.a --package glibc-2.36-8 \
+  --license LGPL-2.1-or-later --out libc.vsig --report libc.json
+lre-cli signatures info --db libc.vsig
+python3 benchmarks/signature_gate.py --report benchmarks/reports/m2-011.json
+```
+
+The gate builds databases from the pinned cross sysroot archives, checks that a
+rebuild is byte-identical, and reports record count and byte size per source.
+Missing archives are recorded as skipped with a reason, not silently passed.
+
 ```sh
 python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json
