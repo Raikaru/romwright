@@ -250,6 +250,13 @@ jobs:
           python3 tests/m4-007_got_pointers.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/got-pointers.json"
+      - name: Render the image's own widths, exits and names
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-011_widths_exits_names.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/widths-exits-names.json"
       - name: Put each stub's override on the branch that transfers
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

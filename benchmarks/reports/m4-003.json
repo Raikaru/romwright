@@ -1,22 +1,23 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T21:43:00.591747+00:00",
+ "recorded_at": "2026-09-07T22:34:17.632422+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 29 of 56 functions token-identical, 27 differing only where a named fact differs (data-type-unknown 1, flow 13, function-facts 16, missing-external-prototype 14, name-convention 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 28 of 56 functions token-identical, 28 differing only where a named fact differs (data-type-unknown 1, flow 12, function-facts 16, missing-external-prototype 11, name-convention 4, type-stronger 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
   "parity.languages_blocked": 5,
   "parity.functions_compared": 56,
-  "parity.functions_token_identical": 29,
-  "parity.functions_fact_attributed": 27,
+  "parity.functions_token_identical": 28,
+  "parity.functions_fact_attributed": 28,
   "parity.functions_unattributed": 0,
   "parity.class.data-type-unknown": 1,
-  "parity.class.flow": 13,
+  "parity.class.flow": 12,
   "parity.class.function-facts": 16,
-  "parity.class.missing-external-prototype": 14,
-  "parity.class.name-convention": 4
+  "parity.class.missing-external-prototype": 11,
+  "parity.class.name-convention": 4,
+  "parity.class.type-stronger": 4
  },
  "measured": [
   {
@@ -49,11 +50,12 @@
     "flow",
     "function-facts",
     "missing-external-prototype",
-    "name-convention"
+    "name-convention",
+    "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "f353743b84f81282cc42170aa98819df7ed97560cc8147aff41a98775d9911dc"
+    "sha256": "06c710d2ee41b465162ae4b160a33769eca97f34d492c86c39bfab408d26ddff"
    }
   },
   {
@@ -67,28 +69,30 @@
     "flow",
     "function-facts",
     "missing-external-prototype",
-    "name-convention"
+    "name-convention",
+    "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "9e92b76e8d6a1d562b29fa643b869b4c13f8b8d4a02f04abda992e1468f1c19c"
+    "sha256": "a77a80b0b7250f74b55800993ac76bac7e4a6f47a8974b36475ef9ef0c49bd73"
    }
   },
   {
    "language": "x86:LE:32:default",
    "program": "i386_plain_o0.bin",
    "shared": 15,
-   "identical": 8,
-   "identical_tokens": 135,
-   "attributed": 7,
+   "identical": 7,
+   "identical_tokens": 115,
+   "attributed": 8,
    "classes": [
     "flow",
     "function-facts",
-    "missing-external-prototype"
+    "missing-external-prototype",
+    "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "f683c93148c5530879e42bc47f4438412f7161d6a4193fbf733b7e12da4bf2ca"
+    "sha256": "0d7b6ec8edb1835664d9892407b1a6c1d4aa6b7fb775c05a15d9df71b82f6631"
    }
   }
  ],

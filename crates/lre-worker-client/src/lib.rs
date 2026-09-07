@@ -831,7 +831,8 @@ mod tests {
         }
         std::fs::write(
             root.join("tspec.xml"),
-            "<spaces><space name=\"ram\" index=\"3\"/><space name=\"register\" index=\"4\"/></spaces>",
+            "<spaces><space name=\"ram\" index=\"3\" size=\"8\"/>\
+             <space name=\"register\" index=\"4\" size=\"8\"/></spaces>",
         ).unwrap();
         let db = open_store(&root).unwrap();
         db.upsert_program(

@@ -1,0 +1,24 @@
+{
+ "id": "m4-011",
+ "recorded_at": "2026-09-07T22:56:13.226029+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "typed pointers are the language's width on 2 32-bit rows with no field extraction anywhere, 1 pinned no-return imports carry the fact so the entry function stops at its call, and 2 names a C identifier cannot carry are rendered with the characters replaced while the store keeps what the image declared",
+ "metrics": {
+  "render.pointer_widths": 2,
+  "render.field_extractions": 0,
+  "render.no_return_facts": 1,
+  "render.sanitised_names": 2
+ },
+ "widths": {
+  "powerpc_plain_o0": 4,
+  "i386_plain_o0": 4
+ },
+ "exits": {
+  "00210880": "native-import:known-name"
+ },
+ "names": {
+  "00401469": "__i686.get_pc_thunk.bx",
+  "00401480": "__i686.get_pc_thunk.bx"
+ }
+}

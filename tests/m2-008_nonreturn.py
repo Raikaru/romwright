@@ -151,9 +151,14 @@ def main():
         for rows in before[-3:-1]:
             assert any(row['to'] == address('ordinary') and 'CALL' in row['kind'] for row in rows), rows
         assert any(token['text'] == 'ordinary' for token in before[-1]['tokens']), before[-1]
+        # The import already knows `exit` does not return: its name is on
+        # Ghidra's pinned list, and the loader records that (m4-011). So the
+        # dead call after it is gone before inference runs, and what remains
+        # for inference to prove is the caller's own behaviour.
         known_before = invoke([refs('dead_known'), known_doc])
         assert any('CALL' in row['kind'] for row in known_before[0]), known_before
-        assert any(token['text'] == 'ordinary' for token in known_before[1]['tokens']), known_before[1]
+        assert not any(token['text'] == 'ordinary' for token in known_before[1]['tokens']), \
+            known_before[1]
         hint_before = invoke([('decompile_doc', dict(**context, address=address('hint_loop')))])[0]
         assert len(hint_before['jump_tables']) == 1, hint_before['jump_tables']
         assert len({row['offset'] for row in hint_before['jump_tables'][0]['targets']}) == 4, hint_before['jump_tables']
@@ -164,7 +169,22 @@ def main():
         facts, entry_refs, relay_refs, functions, prototypes = invoke([
             ('return_behaviors', dict(program='fixture')), refs('dead_entry'), refs('dead_relay'),
             ('functions', dict(program='fixture')), ('prototypes', dict(program='fixture'))])
-        assert prototypes == [assertion], prototypes
+        # The asserted prototype is retained. Library imports also carry the
+        # declarations the pinned archive holds (m4-009), each with its own
+        # provenance, so this is a set the assertion belongs to rather than
+        # the only row in it.
+        asserted = [row for row in prototypes
+                    if row['provenance']['kind'] == 'asserted']
+        assert len(asserted) == 1, prototypes
+        assert {key: asserted[0][key] for key in
+                ('function', 'signature', 'calling_convention', 'return_type')} == \
+            {key: assertion[key] for key in
+             ('function', 'signature', 'calling_convention', 'return_type')}, prototypes
+        assert {key: asserted[0]['provenance'][key] for key in
+                ('kind', 'source', 'confidence')} == assertion['provenance'], prototypes
+        others = [row['provenance']['source'] for row in prototypes
+                  if row['provenance']['kind'] != 'asserted']
+        assert all(source == 'native-import:type-archive' for source in others), prototypes
         inferred = {row['function']['offset'] for row in facts if row['no_return']}
         assert inferred == {symbols['stop'], symbols['relay'], symbols['known_caller'],
             symbols['hint_loop'], exit_entry['offset']}, facts
@@ -190,7 +210,12 @@ def main():
         assert repeated['changed'] == [] and final_doc['revision'] == after_doc['revision'], repeated
         assert final_facts == facts, (final_facts, facts)
         # Seed store states through its SQL schema; the public DB setter's
-        # ownership/revision behavior has its own Rust coverage.
+        # ownership/revision behavior has its own Rust coverage. The seeded
+        # source is the one the inference pass owns -- the loader also writes
+        # return facts now (m4-011), and a pass never retracts another's rows.
+        inference_source = next(
+            row['provenance']['source'] for row in facts
+            if row['function']['offset'] == symbols['stop'])
         def put_return(name, no_return, kind):
             with sqlite3.connect(project / 'project.sqlite') as database:
                 database.execute('''INSERT INTO return_behaviors
@@ -199,7 +224,7 @@ def main():
                     ON CONFLICT(program_id, function) DO UPDATE SET
                     no_return=excluded.no_return, provenance=excluded.provenance,
                     provenance_kind=excluded.provenance_kind, confidence=NULL''',
-                    (no_return, facts[0]['provenance']['source'] if kind == 'inferred'
+                    (no_return, inference_source if kind == 'inferred'
                         else 'nonreturn-acceptance', kind, name))
                 database.execute('UPDATE programs SET revision=revision+1')
                 database.execute('''INSERT INTO revision_events(program_id, revision, kind, detail)

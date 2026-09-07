@@ -35,6 +35,10 @@
   "evidence": "declared",
   "derives_confidence": false
  },
+ "native-import:known-name": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
  "native-import:pe-export": {
   "evidence": "declared",
   "derives_confidence": false

@@ -76,6 +76,9 @@ DYNAMIC = re.compile(r"\b_?(?:UNK|DAT|LAB|SUB|EXT|OFF|PTR|s)_[0-9A-Za-z_]+")
 # `cRam00000000002038f8` (`Scope::buildDefaultName`, decompiler database.cc).
 FALLBACK = re.compile(r"\b[a-z]{1,4}Ram([0-9a-f]{8,16})\b")
 WARNING = re.compile(r"/\* WARNING:.*?\*/", re.S)
+# A C cast to a pointer of a core type, e.g. `(code *)`.
+CAST = re.compile(r"\(\s*(?:code|undefined[0-9]?|byte|char|u?int|u?long|u?short)"
+                  r"\s*\*+\s*\)")
 TOKEN = re.compile(
     r"""/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_]\w*"""
     r"""|0[xX][0-9a-fA-F]+|\d+|[^\s]""", re.S)
@@ -207,6 +210,15 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
             default = re.match(r"(?:FUN|SUB|UNK)_[0-9a-f]+$", native_name)
             return {"missing-name" if default else "name-convention":
                     [oracle_name, native_name]}
+
+    # A cast the oracle needs and we do not: it types an import slot
+    # `undefined *` and casts at the call, while the store knows the slot holds
+    # a code pointer. Dropping those casts from the oracle's own text decides
+    # it -- if the streams then match, the only difference is that our type is
+    # the stronger one.
+    casts = re.findall(CAST, oracle_text)
+    if casts and tokens(re.sub(CAST, "", oracle_text)) == tokens(native_text):
+        return {"type-stronger": sorted({cast.strip() for cast in casts})}
 
     if differing:
         classes["function-facts"] = differing

@@ -4051,17 +4051,64 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 92 reports indexed, both generators in
   sync.
 
+### m4-011 evidence
+- Three defects, one per kind of fact, each visible as text a person reads:
+  - **width.** The worker's pointer width was the constant 8, so PowerPC BE32
+    rendered `PTR___gmon_start___10020730._0_4_` -- the decompiler carving
+    four bytes out of something it was told was eight. It now comes from the
+    language's own tspec (`<space name="ram" size="4">`); 0 field extractions
+    remain on either 32-bit row.
+  - **exit.** Nothing recorded that `abort` does not return, so the AArch64
+    entry function walked past the call and printed the *next* function's body
+    (`FUN_002107c4`, `printf`). The name is on Ghidra's pinned list, which the
+    tree already read for its thunk rule; the loader now records the fact
+    (`native-import:known-name`) and the function ends at
+    `/* WARNING: Subroutine does not return */ abort();`, the oracle's shape.
+  - **name.** Ghidra's own x86 pattern file labels a stub
+    `__i686.get_pc_thunk.bx`, and we printed it into C, where `.` is a member
+    access. The worker now renders `__i686_get_pc_thunk_bx` while the store
+    keeps what the image declared.
+- Measured: token identity 29 -> **28**, and the reason is recorded rather
+  than hidden -- correcting the pointer width removed a cast the oracle still
+  needs, so one function moved into a new class, `type-stronger` (**4**): the
+  only difference is that the store types an import slot as a code pointer
+  where the oracle types it `undefined *` and casts at the call.
+  `missing-external-prototype` **15 -> 11** with it, `flow` **13 -> 12**.
+  28 identical plus 4 stronger-typed is 32 of 56 functions where the native
+  text is the oracle's or better.
+- Three controls fire: assuming the width brings the field carving back
+  (`10010588: ._0_4_`), not recording the pinned exit leaves the store empty
+  (`['00210880']; the store holds {}`), and printing the name verbatim emits
+  `void __i686.` into C.
+- **Three older tests pinned the previous staging and were narrowed to the
+  contract**, not re-pinned to new text: `m2-008` asserted a known no-return
+  name was invisible until inference ran (it is a loader fact now) and that
+  the asserted prototype was the *only* row (library imports carry archive
+  declarations now); its stale-positive seeding took its source from
+  `facts[0]`, which is no longer the inference pass's row, so the source is
+  named explicitly. `lre-worker-client`'s synthetic tspec had no ram width,
+  which the contract now requires; the fixture declares one.
+- Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-011`,
+  `m3-001`, `m3-003`, `m2-006`, `m2-008`, `m2-009`, `m5-001`, `m5-002`,
+  `m5-008`, `m9-001`..`m9-003`, `m9-005`, `m6-002`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh`, `generic_discovery_test.sh` pass. 93 reports indexed, both
+  generators in sync.
+
 ## Next task
-- m4-011: the gaps left are `function-facts` (16) and `flow` (13), and both
-  now need a *type* fact rather than a flow one: every remaining
-  `function-facts` case differs in signature or return type, and the AArch64
-  and PowerPC `flow` cases that are left warn about globals the store types as
-  one byte where the code reads a word. Diagnose one of each, name the fact,
-  and carry it or record it as a named non-goal with numbers. Its acceptance
-  test does not exist yet; write it first.
-- Not started, and not to be started implicitly: the instruction-match-rate
-  metric and its milestone are recorded under "Proposed changes" for the
-  human, per II.1 and II.3.
+- m4-012: the parity gate still lets a divergence through on one named class
+  even when that class does not account for the whole difference -- 16
+  `function-facts` rows name a differing signature while the residual tokens
+  are unexamined. Make the gate account for every differing token: allow only
+  tokens a named class explains (a name it substitutes, a dynamic label, a
+  derived variable, a warning comment, a type keyword a missing prototype
+  would supply), and fail on anything left. Diagnosis already done: the whole
+  residue across 56 functions is `processEntry` on the x86 entry rows -- the
+  calling convention `ElfProgramBuilder.processEntryPoints:667` applies to the
+  ELF entry point, which our cspec defines and the loader does not apply.
+  Acceptance: the accounting is exact, the entry convention is applied with
+  provenance, and the baseline is re-recorded. Its acceptance test does not
+  exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

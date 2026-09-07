@@ -62,18 +62,21 @@ fn run(
     for f in db.functions(pid)? {
         let off = f.entry.offset;
         provider.functions.push(off);
-        provider.function_names.insert(off, f.name);
+        provider
+            .function_names
+            .insert(off, lre_worker::c_identifier(&f.name));
         provider.function_sizes.insert(off, f.size as u64);
     }
     for symbol in db.symbols(pid)? {
+        let rendered = lre_worker::c_identifier(&symbol.name);
         provider
             .symbol_names
             .entry(symbol.address.offset)
-            .or_insert_with(|| symbol.name.clone());
+            .or_insert_with(|| rendered.clone());
         if symbol.external {
             provider
                 .external_names
-                .insert(symbol.address.offset, symbol.name);
+                .insert(symbol.address.offset, rendered);
         }
     }
     for comment in db.comments(pid)? {
