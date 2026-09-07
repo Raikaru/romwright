@@ -499,7 +499,7 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M2 — Program-model parity
+M3 — Ground truth (DWARF scoring, stock-Ghidra baseline, regression gates)
 
 ## M1 progress
 - m1-003-d: benchmarked hand decoder vs console flow on libc and the x86-64 corpus.
@@ -2359,11 +2359,49 @@ M2 — Program-model parity
   `tests/m2-009_thunks.py` pass; gates re-run green after the change:
   discovery (20/20), xref, string, nonreturn, prototype, switch, rtti, thunk.
 
+## M3 implementation slices
+- m3-001: score function recovery against DWARF truth on the locked corpus,
+  with stock Ghidra scored on the same truth as the baseline column.
+- m3-002: record the immutable stock-Ghidra ground-truth baseline that M4
+  improvements are measured against.
+- m3-003: wire the DWARF regression gates into continuous integration and
+  publish the evidence.
+
+### m3-001 evidence
+- `6a4d9ba` commits the failing acceptance (`tests/m3-001_dwarf_truth.py`;
+  no gate existed).
+- New metric definitions, additive -- no II.3 definition changed:
+  - `dwarf.fn.recall`: concrete `DW_TAG_subprogram` entries recovered over
+    those the compiler emitted, restricted to executable segments and biased
+    to the store's own image base for ET_DYN. DWARF records link-time
+    addresses; without the bias the three PIE rows score 0.0000, which is how
+    the metric was shown to be sensitive.
+  - `dwarf.fn.unattributed`: recovered entries that DWARF does not describe
+    and nothing else explains -- not a symbol in the unstripped twin, not a
+    store thunk row, not a linker stub inside a `.plt*` section, and not a
+    function stock Ghidra also created. DWARF is silent about CRT and PLT
+    code both tools legitimately recover, so this replaces a precision
+    number that DWARF cannot support. Threshold 0.
+  - `ghidra.dwarf.fn.recall`: the same recall over the pinned stock-Ghidra
+    oracle for the same image -- the M3 baseline column.
+- Measured on all 20 locked ELF inputs (`benchmarks/reports/m3-001.json`):
+  **1 640 DWARF functions, native recall 1.000000, stock Ghidra recall
+  1.000000, 0 unattributed of 263 undescribed** (1 903 native entries total).
+  The 263 break down as named twin symbols, store-proven thunks, `.plt*`
+  stubs, and entries stock Ghidra also created -- including the i386
+  `_start+0x29` four-byte tails, which are in the pinned oracle, so they are
+  a CRT artifact both tools see and not a native invention.
+- Every row carries provenance: binary, twin and oracle digests plus the
+  oracle's `bridge_sources_sha256`; the gate refuses an oracle that does not
+  validate against the pinned bridge.
+- Verification: `tests/m3-001_dwarf_truth.py` PASS (20/20 rows); the gate is
+  wired into the `corpus-linux` CI job after the import-budget step.
+
 ## Next task
-- m2-017: unblock the M2 closure list -- `tests/m1-008b_pointer_seeds.py` and
-  `benchmarks/discovery_gate.py` now pass locally, so the remaining M2 debt is
-  the DOL/private-input gate and the support-matrix regeneration. Its
-  acceptance test does not exist yet; write it first.
+- m3-002: record the immutable stock-Ghidra ground-truth baseline (function
+  entries, arity, data references and strings on the locked corpus) that M4
+  improvements are measured against. Its acceptance test does not exist yet;
+  write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

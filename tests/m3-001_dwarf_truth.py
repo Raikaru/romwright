@@ -74,7 +74,7 @@ def main() -> int:
             raise AssertionError(
                 f"{row['id']}: {row['metrics']['native.dwarf.fn.unattributed']} recovered "
                 f"entries are neither DWARF, symbol, thunk, stub nor Ghidra: "
-                f"{row['unattributed']}")
+                f"{row.get('unattributed')}")
 
     totals = report["totals"]
     for producer in ("native", "ghidra"):

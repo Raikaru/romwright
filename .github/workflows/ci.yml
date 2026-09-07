@@ -155,6 +155,13 @@ jobs:
         run: |
           python3 tests/m2-016_import_budget.py \
             --report "$RUNNER_TEMP/discovery/import-budget.json"
+      - name: Enforce the M3 DWARF ground-truth gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m3-001_dwarf_truth.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/dwarf-truth.json"
       - name: Verify reference analysis contracts
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
