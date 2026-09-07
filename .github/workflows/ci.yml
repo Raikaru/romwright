@@ -54,6 +54,8 @@ jobs:
             --report "$RUNNER_TEMP/documented-api.json"
           python3 tests/m6-005_scripting.py \
             --report "$RUNNER_TEMP/scripting.json"
+          python3 tests/m6-006_documentation_coverage.py \
+            --report "$RUNNER_TEMP/documentation-coverage.json"
   corpus-linux:
     name: Multi-Arch Corpus (ubuntu-latest)
     runs-on: ubuntu-latest

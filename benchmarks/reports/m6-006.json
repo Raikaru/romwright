@@ -1,0 +1,44 @@
+{
+ "id": "m6-006",
+ "recorded_at": "2026-09-07T09:59:11.361058+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "13 surfaces named in prose, 5 pages gated command-by-command, 30 blocks excused with a recorded reason, 79 measured metric names, no stale citation",
+ "metrics": {
+  "surfaces": 13,
+  "gated_pages": 5,
+  "excused_blocks": 30,
+  "metric_names": 79,
+  "pages": 11
+ },
+ "surfaces": {
+  "binaries": [
+   "lre-api",
+   "lre-cli",
+   "lre-debug",
+   "lre-worker"
+  ],
+  "desktop": [
+   "ventris-qt"
+  ],
+  "python": [
+   "ventris_ai.py",
+   "ventris_console.py",
+   "ventris_plugin_host.py",
+   "ventris_sdk.py"
+  ],
+  "packaging": [
+   "sbom.py",
+   "stage_release.py",
+   "update_manifest.py",
+   "verify_update.py"
+  ]
+ },
+ "gated_pages": [
+  "docs/core-api.md",
+  "docs/desktop.md",
+  "docs/getting-started.md",
+  "docs/releasing.md",
+  "docs/scripting.md"
+ ]
+}

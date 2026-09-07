@@ -58,6 +58,7 @@ third_party/ghidra pinned Ghidra 12.1.3 decompiler C++ + language sources
 
 ## Build
 
+<!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
 ```sh
 cargo build --workspace
 # Native decompiler worker (patched ghidra_opt; raw-SLEIGH, no JVM)
@@ -80,6 +81,7 @@ The versioned Core API uses newline-delimited JSON over stdio or `POST /v2`
 over HTTP. It is the same `lre-core` service used by the CLI and desktop
 bridge:
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 ./target/debug/lre-api --project ./proj
 ./target/debug/lre-api --project ./proj --listen 127.0.0.1:8787
@@ -117,6 +119,7 @@ share durable analysis changes without sharing SQLite connections.
 
 ## End-to-end (supported workflow, no JVM)
 
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```sh
 export VENTRIS_SLA=$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages/x86-64.sla
 export VENTRIS_GHIDRA=$HOME/ghidra_12.1.3_PUBLIC          # console defaults
@@ -140,6 +143,7 @@ shards change wall time and nothing else — `tests/m2-016_import_budget.py`
 asserts that a one-console import and an N-console import write identical
 function, xref, string, symbol and thunk sets.
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 ./target/debug/lre-cli import /usr/lib64/libc.so.6 --name libc \
     --project ./proj --timings
@@ -153,6 +157,7 @@ Only `--oracle` starts the JVM: `import --oracle`, `decompile --oracle`,
 `disasm --oracle` and `dump-specs --oracle --out DIR` accept `--ghidra DIR`
 or the service jar, and exist for oracle generation, not for daily use.
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 ./target/debug/lre-cli import ./smoke_bin --oracle --project ./oracle-proj
 python3 tests/m2-015_native_default.py
@@ -164,6 +169,7 @@ inside BSS bounds. Discovery requires the native console and installed
 image and supplies instruction flow to the generic worklist. No symbol ELF
 is supplied to the importer. `.rel` loading is not implemented.
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 ./target/debug/lre-cli import /path/to/sys/main.dol --name dol --project ./proj
 python3 tests/m1-009_dol.py --dol /path/to/sys/main.dol --oracle /path/to/files/boot.elf
@@ -175,6 +181,7 @@ that CI possesses or tests the game binary.
 
 ## Verification
 
+<!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
 ```sh
 cargo test --workspace
 VENTRIS_SLA=... ./tests/differential.sh     # native vs Ghidra oracle
@@ -229,6 +236,7 @@ records its reason and evidence; each view hashes its raw reference and exporter
 Permissions or address-range membership alone never exclude a function.
 Executable PLT stubs, thunks and unreferenced code remain scored.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 scripts/gen_function_scoring.py --corpus-dir CORPUS \
   --check --report /tmp/function-scoring.json
@@ -266,6 +274,7 @@ improvement against a recorded number.
 | native import | 1 640 | 1 640 | **1.0000** | **0** of 263 undescribed |
 | stock Ghidra 12.1.3 | 1 640 | 1 640 | **1.0000** | baseline column |
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m3-001_dwarf_truth.py --corpus-dir CORPUS
 ```
@@ -437,6 +446,7 @@ AArch64 and PowerPC, and **0.0000 on i386 `many_o2`** — Ghidra's
 stock result, not an export artifact, and it is the clearest M4 target on
 record.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m3-002_baseline.py --corpus-dir CORPUS
 ```
@@ -463,6 +473,7 @@ Discovery finds the rest from flow.
 | entries with no attribution | **0** |
 | native decompilation | verified on a recovered function |
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m5-001_gba.py
 ```
@@ -507,6 +518,7 @@ the same stripped bytes too** -- it absorbs the range into the caller's
 extent. The gate pins that one address; a new miss fails, and recovering it
 requires updating the record.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m5-002_nds.py
 ```
@@ -555,6 +567,7 @@ Two rules, and one honest admission:
 - Native currently *equals* the baseline everywhere. M3 measures; M4 is where
   exceeding it is the job.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m3-003_regression.py --corpus-dir CORPUS
 ```
@@ -657,6 +670,7 @@ rendered C. This does not infer case labels/default identities, persist new
 functions, or trigger rediscovery. The positive acceptance exercises one
 seven-target indirect branch through standalone and warm pooled workers:
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m2-007_switches.py
 cargo test -p lre-worker --test jump_tables
@@ -703,6 +717,7 @@ consistent imported read slot from completed propagation within that exact span.
 Direct-call targets are evaluated by that same proof, so import names come from
 relocation slots on architectures without a recognized PLT table layout.
 
+<!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
 ```sh
 cargo build -p lre-cli -p lre-api -p lre-worker
 python3 tests/m2-005_prototype.py
@@ -727,6 +742,7 @@ remain protected; unsupported previous inferences are retracted. Repeating an
 unchanged analysis does not bump the revision. Standalone and pooled workers
 apply stored no-return flags without overwriting asserted prototypes.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m2-008_nonreturn.py --report benchmarks/reports/m2-008-positive.json
 python3 tests/m2-008_ppc_linkage.py --corpus-dir /path/to/corpus
@@ -756,6 +772,7 @@ call from inside a larger body is not a thunk. Facts are owned per producer, so
 re-import refreshes them while assertions and other owners survive. Schema v9
 stores them; an unchanged pass bumps no revision.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m2-009_thunks.py
 python3 benchmarks/thunk_gate.py --report benchmarks/reports/m2-009.json
@@ -784,6 +801,7 @@ dropped entirely. Package and license are required arguments: they are
 declared, never inferred. `signatures info` decodes a database and reports its
 records, languages, packages and licenses.
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 lre-cli signatures build --archive libc.a --package glibc-2.36-8 \
   --license LGPL-2.1-or-later --out libc.vsig --report libc.json
@@ -803,6 +821,7 @@ confidence; it renames only generated `FUN_*` names, and databases that
 disagree about a function leave it unnamed. Schema v10 owns the facts per
 producer, so a repeated pass writes no new revision.
 
+<!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
 lre-cli import ./program --name p --signatures libc.vsig
 python3 benchmarks/match_gate.py --report benchmarks/reports/m2-012.json
@@ -822,6 +841,7 @@ shape (`class`, `single_base`, `multiple_base`) and the base list with offsets
 and virtual/public flags. Names are demangled only for the grammar the parser
 covers; anything else keeps its mangled form. Schema v11 owns the facts.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 benchmarks/rtti_gate.py --corpus-dir /path/to/corpus \
   --report benchmarks/reports/m2-013.json
@@ -838,6 +858,7 @@ images — a self reference that fixes the image base without reading a header.
 Bases come from the class hierarchy descriptor's base array, with the `PMD`
 displacement triple deciding offset and virtual inheritance.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 benchmarks/msvc_rtti_gate.py --corpus-dir /path/to/corpus \
   --report benchmarks/reports/m2-014.json
@@ -847,6 +868,7 @@ That gate links a freestanding MSVC-ABI fixture for both machine widths — no
 MSVC installation needed — and compares recovery with the link map's own
 `??_R4` complete object locators.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json
@@ -862,6 +884,7 @@ The committed m2-006 run passes 20/20 cases with no skips and equals stock in
 every case. This includes i386 `many_o2`, where both score 0/401; relative
 parity is not an absolute accuracy claim.
 
+<!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 scripts/gen_native_specs.py --corpus-dir "$CORPUS"
 python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
@@ -900,6 +923,19 @@ replace an assertion that was previously handed to it:
 external configuration). Both go false when they should -- a build-tree binary
 and a configured run each fail the gate. The report names the platform it ran
 on; the CI `qt` job runs it on Linux, macOS and Windows.
+
+## Documentation coverage
+
+`tests/m6-006_documentation_coverage.py` states what the documentation
+milestone means, with the surfaces enumerated from the repository rather than
+from a list in the test: the workspace's `bin` targets, the desktop CMake
+target, the modules under `python/`, and the scripts under `packaging/` must
+each be named by `README.md` or a page under `docs/`. Every `console`/`json`
+block sits on a page some gate executes; every `sh`/`bash` block -- including
+one on a gated page -- carries `<!-- not gated: reason -->`, so an
+illustrative command cannot pass as a proven one. And no page may cite a
+metric name no committed report carries, which is how a retired metric would
+be caught in prose.
 
 ## Scripting
 
@@ -991,12 +1027,13 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 60; `diagnostic_runs` 12; `generated_rows` 59; `published_ids` 45 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 61; `diagnostic_runs` 12; `generated_rows` 60; `published_ids` 46 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
 | `m6-004.json` | `m6-004` | M6 | pass | `artifacts` 5; `commands` 9; `sbom_packages` 60; `skipped_blocks` 0 | `tests/m6-004_release_artifacts.py` |
 | `m6-005.json` | `m6-005` | M6 | pass | `client_helpers` 23; `commands` 1; `output_lines` 8 | `tests/m6-005_scripting.py` |
+| `m6-006.json` | `m6-006` | M6 | pass | `excused_blocks` 30; `gated_pages` 5; `metric_names` 79; `pages` 11; `surfaces` 13 | `tests/m6-006_documentation_coverage.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

@@ -16,6 +16,7 @@ compiles without a sysroot, but the linker needs the target `crt*.o` and `libc.s
 
 Install the pinned Debian bookworm sysroots:
 
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 python3 tools/fetch_cross_sysroots.py
 ```
@@ -64,12 +65,14 @@ Each architecture builds the 5 corpus variants:
 ## Example Invocations
 
 ### x86-64
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 clang --target=x86_64-linux-gnu -fuse-ld=lld -O2 -s src.c -o x86_64_o2.bin
 clang --target=x86_64-linux-gnu -fuse-ld=lld -O2 -fPIE -pie src.c -o x86_64_pie.bin
 ```
 
 ### x86-32
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 clang --target=i686-linux-gnu \
   --sysroot=third_party/sysroots/i386 \
@@ -85,6 +88,7 @@ clang --target=i686-linux-gnu \
 ```
 
 ### AArch64
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 clang --target=aarch64-linux-gnu \
   --sysroot=third_party/sysroots/aarch64 \
@@ -100,6 +104,7 @@ clang --target=aarch64-linux-gnu \
 ```
 
 ### PowerPC 32-bit Big-Endian
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 clang --target=powerpc-linux-gnu \
   --sysroot=third_party/sysroots/powerpc \
@@ -138,6 +143,7 @@ the twin's name, RVA, virtual/raw sizes and bytes.
 
 On Linux, install JDK 25 and the pinned Ghidra 12.1.3 release, then run:
 
+<!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
 python3 scripts/gen_corpus.py --architectures x86_64,i386,aarch64,powerpc --out-dir /tmp/ventris-corpus
 python3 scripts/gen_oracle.py --corpus-dir /tmp/ventris-corpus --report /tmp/ventris-oracle-report.json
