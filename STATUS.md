@@ -2680,18 +2680,55 @@ m3-003, all three wired into continuous integration)
   table. `tests/support_matrix_test.py` and `tests/m5-005_platform_matrix.py`
   both now pass and both run in the CI `support matrix` step.
 
+### m5-006 evidence
+- `5509ed8` commits the failing acceptance (`tests/m5-006_tailcall.py`).
+- **A branch that leaves its function is now a recorded reference.** The
+  transfer into `nds.arm7`'s `mix` (`037f802c -> 037f8000`) was invisible:
+  no reference of any kind existed for it. It is now an
+  `UNCONDITIONAL_JUMP` row with provenance `native-import:branch`.
+- **The kind follows Ghidra, verified in the pinned sources.**
+  `SharedReturnAnalysisCmd.processFunctionJumpReferences:376-425` applies a
+  `CALL_RETURN` flow override when an unconditional jump leaves its function
+  for another function's entry, and skips the override when the branch
+  instruction is itself a function entry (the thunk case). Ventris now
+  records the first as `UNCONDITIONAL_CALL` and the second as
+  `UNCONDITIONAL_JUMP`. One pass decides the kind of every branch-derived
+  reference, including rows the thunk pass produced, so the model cannot
+  disagree with itself.
+- The pass runs after every pass that can still create a function, and is
+  idempotent, because "is the target a function" has no stable answer until
+  then. This was found by measurement, not review: deciding the kind inside
+  the flow walker mislabelled 5 of 20 corpus entries.
+- Measured against the stock-Ghidra oracle over the 20 locked ELF inputs
+  (`benchmarks/reports/m5-006.json`), kind-exact:
+  `flow_xref.jump.precision` **1.0000**, `flow_xref.jump.cross_recall`
+  **1.0000**, `flow_xref.call.precision` **1.0000**,
+  `flow_xref.call.recall` **0.9830** (1735 / 1765, up from 1730 before this
+  task -- the five thunk rows Ghidra calls calls).
+- Four new additive metric names (`flow_xref.*`); no II.3 definition changed.
+- Negative controls, each failing the gate: recording every branch as a jump
+  (`jump.precision` 0.4412), disabling the pass (the `mix` transfer
+  disappears), and rendering loops as transfers (the fixture's two loop
+  branches).
+- `crates/lre-core/src/native/discovery/tests.rs` renamed and re-pointed:
+  its landing-prefix fixture is exactly the x86-64 `endbr64; jmp target`
+  shape the oracle records as a call, so its old expectation pinned
+  non-parity behaviour.
+
 ## Next task
-- m5-006: close the recorded tail-call deficit. `nds.arm7` reaches `mix`
-  only through `b`, and the store keeps no jump xref for that transfer, so
-  the first step is recording the fact -- a jump reference from the tail
-  call to its target -- and only then deciding whether a function may be
-  created from it. Stock Ghidra misses the same function on the same bytes,
-  so this is an improvement over the baseline, not parity repair. Its
-  acceptance test does not exist yet; write it first.
-- Recorded deficit to close later: a tail-called leaf function is invisible
-  to flow analysis in both Ventris and stock Ghidra. The transfer itself is
-  not even recorded -- the store keeps no jump xref for the tail call -- so
-  the first honest step is recording the fact, not inventing the function.
+- m5-007: decide whether a function may be created at a recorded tail-call
+  target that no call reaches. The fact now exists; what is missing is
+  evidence that promoting it is right. Stock Ghidra does not create
+  `037f8000` either, so the measurement is against DWARF truth on the
+  locked corpus plus the console fixtures: any promotion rule must not add
+  an unattributed function anywhere in the 20 ELF inputs. Its acceptance
+  test does not exist yet; write it first.
+- Recorded deficit, now half closed: a tail-called leaf function is
+  invisible to flow analysis in both Ventris and stock Ghidra. **The
+  transfer is recorded as of m5-006** (`037f802c -> 037f8000`,
+  `UNCONDITIONAL_JUMP`); the function is still not created, and neither
+  does stock Ghidra create it. Promoting it is m5-007 and needs evidence,
+  not a rule that happens to fit one fixture.
 
 ## Console sequencing decision (agent judgement, 2026-09-07)
 The ten platforms recorded in "Reserved decisions" split by what can be

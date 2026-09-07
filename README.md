@@ -275,6 +275,34 @@ producers, `dwarf.fn.unattributed == 0`. Evidence:
 `benchmarks/reports/m3-001.json` (20 rows, per-row provenance digests for the
 binary, its twin and the pinned oracle).
 
+### Transfers out of a function
+
+An unconditional branch that leaves its function is recorded as a reference,
+because that is how a tail call reaches its target; a branch that lands inside
+its own function is a loop and is not recorded. The reference kind follows
+Ghidra: `SharedReturnAnalysisCmd.processFunctionJumpReferences` gives a jump
+that leaves its function for **another function's entry** a `CALL_RETURN`
+override, which makes the reference a call, so Ventris records those as
+`UNCONDITIONAL_CALL`. A jump to an address that is *not* a function entry
+keeps its `UNCONDITIONAL_JUMP` reference: that is a tail call into code
+nobody recovered, and the only record that the code is reached.
+
+Scored against the stock-Ghidra oracle over the 20 locked ELF inputs
+(`tests/m5-006_tailcall.py --corpus-dir`, evidence in
+`benchmarks/reports/m5-006.json`):
+
+| Metric | Value |
+|---|---|
+| `flow_xref.jump.precision` | **1.0000** |
+| `flow_xref.jump.cross_recall` | **1.0000** |
+| `flow_xref.call.precision` | **1.0000** |
+| `flow_xref.call.recall` | **0.9830** (1735 / 1765) |
+
+The comparison is kind-exact, so a transfer recorded under the wrong kind
+counts against both precision and recall. Recording the transfer does not
+create the function: `close_call_targets` acts on call references only, and
+the gate asserts the discovered function set is unchanged.
+
 ### The frozen stock-Ghidra baseline (M3)
 
 M4 exists to improve on stock Ghidra, and that claim is worthless against a

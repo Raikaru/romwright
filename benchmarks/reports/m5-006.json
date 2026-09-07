@@ -1,0 +1,212 @@
+{
+  "id": "m5-006",
+  "recorded_at": "2026-09-07T06:07:02.489406+00:00",
+  "status": "pass",
+  "thresholds": {
+    "flow_xref.jump.precision": 1.0,
+    "flow_xref.jump.cross_recall": 1.0,
+    "flow_xref.call.precision": 1.0,
+    "flow_xref.call.recall": 0.98
+  },
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "native_jumps": 0,
+      "ghidra_jumps": 0,
+      "cross_function_jumps": 0,
+      "cross_recorded": 0,
+      "native_calls": 4,
+      "ghidra_calls": 5
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "native_jumps": 0,
+      "ghidra_jumps": 0,
+      "cross_function_jumps": 0,
+      "cross_recorded": 0,
+      "native_calls": 3,
+      "ghidra_calls": 4
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "native_jumps": 0,
+      "ghidra_jumps": 0,
+      "cross_function_jumps": 0,
+      "cross_recorded": 0,
+      "native_calls": 4,
+      "ghidra_calls": 6
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "native_jumps": 0,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 0,
+      "cross_recorded": 0,
+      "native_calls": 11,
+      "ghidra_calls": 18
+    },
+    {
+      "id": "x86_64_many_o2",
+      "native_jumps": 0,
+      "ghidra_jumps": 0,
+      "cross_function_jumps": 0,
+      "cross_recorded": 0,
+      "native_calls": 402,
+      "ghidra_calls": 402
+    },
+    {
+      "id": "i386_plain_o0",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 7,
+      "ghidra_calls": 9
+    },
+    {
+      "id": "i386_plain_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 6,
+      "ghidra_calls": 8
+    },
+    {
+      "id": "i386_plain_pie",
+      "native_jumps": 1,
+      "ghidra_jumps": 2,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 10,
+      "ghidra_calls": 13
+    },
+    {
+      "id": "i386_cpp_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 2,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 14,
+      "ghidra_calls": 22
+    },
+    {
+      "id": "i386_many_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 405,
+      "ghidra_calls": 406
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 8,
+      "ghidra_calls": 8
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 7,
+      "ghidra_calls": 7
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 7,
+      "ghidra_calls": 7
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 2,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 12,
+      "ghidra_calls": 15
+    },
+    {
+      "id": "aarch64_many_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 1,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 406,
+      "ghidra_calls": 406
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "native_jumps": 1,
+      "ghidra_jumps": 5,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 5,
+      "ghidra_calls": 5
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 5,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 4,
+      "ghidra_calls": 4
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "native_jumps": 1,
+      "ghidra_jumps": 10,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 5,
+      "ghidra_calls": 5
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 7,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 12,
+      "ghidra_calls": 12
+    },
+    {
+      "id": "powerpc_many_o2",
+      "native_jumps": 1,
+      "ghidra_jumps": 5,
+      "cross_function_jumps": 1,
+      "cross_recorded": 1,
+      "native_calls": 403,
+      "ghidra_calls": 403
+    }
+  ],
+  "passed": true,
+  "summary": "1 cross-function transfer(s) recorded, 2 loop branch(es) correctly not recorded, function set unchanged; scored 20 corpus entries against Ghidra: jump precision 1.0000, cross-function recall 1.0000, call precision 1.0000, call recall 0.9830",
+  "metrics": {
+    "transfers_recorded": 1,
+    "loops_excluded": 2,
+    "flow_xref.jump.precision": 1.0,
+    "flow_xref.jump.cross_recall": 1.0,
+    "flow_xref.call.precision": 1.0,
+    "flow_xref.call.recall": 0.9830028328611898
+  },
+  "rows": {
+    "nds.arm7": [
+      [
+        "037f802c",
+        "037f8000"
+      ]
+    ],
+    "nds.arm9": []
+  }
+}
