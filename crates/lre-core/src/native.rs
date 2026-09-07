@@ -1250,8 +1250,8 @@ pub fn store_import(
     db.replace_inferred_thunks(pid, THUNK_SOURCE, &thunks)?;
     // Itanium class facts come from the image's own relocations and data, so
     // the loader can publish them without a console or a worker.
-    let (classes, _) = crate::rtti::recover(imp);
-    db.replace_inferred_classes(pid, crate::rtti::SOURCE, &classes)?;
+    let recovery = crate::rtti::recover(imp);
+    db.replace_inferred_classes(pid, recovery.source, &recovery.classes)?;
     Ok(ProgramSummary {
         program: program.to_string(),
         functions: functions.len() as u64,

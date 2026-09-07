@@ -487,6 +487,22 @@ The gate compares recovered classes with the compiler's own `_ZTV` symbols in
 unstripped twins, across PIE and non-PIE links, and requires the locked corpus
 C++ entries — whose source declares no classes — to stay empty.
 
+PE images take the MSVC path into the same facts. A `TypeDescriptor` is found
+by its `.?A` decorated name, a `RTTICompleteObjectLocator` is confirmed by its
+signature, the descriptor it names, its hierarchy descriptor and — on 64-bit
+images — a self reference that fixes the image base without reading a header.
+Bases come from the class hierarchy descriptor's base array, with the `PMD`
+displacement triple deciding offset and virtual inheritance.
+
+```sh
+python3 benchmarks/msvc_rtti_gate.py --corpus-dir /path/to/corpus \
+  --report benchmarks/reports/m2-014.json
+```
+
+That gate links a freestanding MSVC-ABI fixture for both machine widths — no
+MSVC installation needed — and compares recovery with the link map's own
+`??_R4` complete object locators.
+
 ```sh
 python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json
