@@ -1,0 +1,208 @@
+{
+ "id": "m9-002",
+ "recorded_at": "2026-09-07T13:11:26.974793+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "15 classes classified as declared/decoded/inferred; 7 of 8 declared classes scored here and 1 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "thresholds": {
+  "declared class attribution": 1.0,
+  "evidence.unbacked_confidence": 0
+ },
+ "metrics": {
+  "evidence.classes": 15,
+  "evidence.declared": 8,
+  "evidence.declared_exercised": 7,
+  "evidence.declared_elsewhere": 1,
+  "evidence.unbacked_confidence": 0,
+  "evidence.references": 4665,
+  "evidence.attributed.native-analysis:constant-propagation": 1.0,
+  "evidence.attributed.native-import": 1.0,
+  "evidence.attributed.native-import:branch": 1.0,
+  "evidence.attributed.native-import:elf-pointer": 1.0,
+  "evidence.attributed.native-import:elf-reloc": 1.0,
+  "evidence.attributed.native-import:elf-unwind": 1.0,
+  "evidence.attributed.native-import:pe-export": 1.0,
+  "evidence.attributed.native-import:pe-reloc": 1.0,
+  "evidence.attributed.native-import:pe-tls": 1.0,
+  "evidence.attributed.native-import:pe-unwind": 1.0,
+  "evidence.attributed.native-import:thunk": 1.0
+ },
+ "classes": {
+  "native-analysis": {
+   "derives_confidence": false,
+   "evidence": "inferred",
+   "explanation": "Derived by a native analysis pass over decoded instructions, not read from the image.",
+   "source": "native-analysis"
+  },
+  "native-analysis:constant-propagation": {
+   "derives_confidence": false,
+   "evidence": "inferred",
+   "explanation": "A constant the decompiler propagated to this instruction: the address is computed by the code, not stored in the image.",
+   "source": "native-analysis:constant-propagation"
+  },
+  "native-import": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "Read from the image's own headers by the native loader: a section, an entry point, or a symbol the file declares.",
+   "source": "native-import"
+  },
+  "native-import:branch": {
+   "derives_confidence": false,
+   "evidence": "decoded",
+   "explanation": "A transfer of control the SLEIGH decoder proved by decoding the instruction that performs it.",
+   "source": "native-import:branch"
+  },
+  "native-import:elf-pointer": {
+   "derives_confidence": false,
+   "evidence": "inferred",
+   "explanation": "A pointer to code stored in ELF data, confirmed by decoding what it points at rather than by its shape.",
+   "source": "native-import:elf-pointer"
+  },
+  "native-import:elf-pointer-table": {
+   "derives_confidence": false,
+   "evidence": "inferred",
+   "explanation": "A contiguous table of code pointers in ELF data, every entry of which decoded as code.",
+   "source": "native-import:elf-pointer-table"
+  },
+  "native-import:elf-reloc": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "An ELF relocation: the loader will write this address into that slot, so the linker named the target.",
+   "source": "native-import:elf-reloc"
+  },
+  "native-import:elf-relocation-map": {
+   "derives_confidence": true,
+   "evidence": "inferred",
+   "explanation": "A relocation-masked signature match: the bytes agree once the relocated fields are ignored.",
+   "source": "native-import:elf-relocation-map"
+  },
+  "native-import:elf-unwind": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded unwind data for a function starting here.",
+   "source": "native-import:elf-unwind"
+  },
+  "native-import:pe-export": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A slot in the PE export directory: the image publishes this address under the name recorded here.",
+   "source": "native-import:pe-export"
+  },
+  "native-import:pe-reloc": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A PE base relocation: the loader will rebase this slot, so the value in it is an address rather than a number.",
+   "source": "native-import:pe-reloc"
+  },
+  "native-import:pe-tls": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A slot in the PE TLS callback array: the loader calls this address before the entry point runs.",
+   "source": "native-import:pe-tls"
+  },
+  "native-import:pe-unwind": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A `RUNTIME_FUNCTION` record in the PE exception directory: the compiler recorded unwind data for a function starting here.",
+   "source": "native-import:pe-unwind"
+  },
+  "native-import:platform-map": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "Declared by the platform rather than the file: a console's memory map names this region, and the cartridge carries no header for it.",
+   "source": "native-import:platform-map"
+  },
+  "native-import:thunk": {
+   "derives_confidence": false,
+   "evidence": "decoded",
+   "explanation": "A stub whose whole body transfers to another address, proved by decoding it; the reference is the transfer it performs.",
+   "source": "native-import:thunk"
+  }
+ },
+ "scored": {
+  "native-analysis:constant-propagation": {
+   "references": 26,
+   "attributed": 26,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "inferred"
+  },
+  "native-import": {
+   "references": 2569,
+   "attributed": 2569,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:branch": {
+   "references": 42,
+   "attributed": 42,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "decoded"
+  },
+  "native-import:elf-pointer": {
+   "references": 36,
+   "attributed": 36,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "inferred"
+  },
+  "native-import:elf-reloc": {
+   "references": 11,
+   "attributed": 11,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:elf-unwind": {
+   "references": 1691,
+   "attributed": 1691,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:pe-export": {
+   "references": 3,
+   "attributed": 3,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:pe-reloc": {
+   "references": 62,
+   "attributed": 62,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:pe-tls": {
+   "references": 8,
+   "attributed": 8,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:pe-unwind": {
+   "references": 192,
+   "attributed": 192,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
+  "native-import:thunk": {
+   "references": 25,
+   "attributed": 25,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "decoded"
+  }
+ },
+ "declared_elsewhere": {
+  "native-import:platform-map": [
+   "evidence-classes.json",
+   "m5-001.json",
+   "m9-001.json"
+  ]
+ }
+}

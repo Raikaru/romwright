@@ -640,21 +640,27 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 }
                 None => None,
             };
-            let rows: Vec<_> = lre_model::provenance::EXPLANATIONS
+            let rows: Vec<_> = lre_model::provenance::CLASSES
                 .iter()
-                .filter(|(name, _)| held.as_ref().is_none_or(|held| held.contains(*name)))
+                .filter(|entry| held.as_ref().is_none_or(|held| held.contains(entry.source)))
                 .collect();
             if has_flag(args, "--json") {
                 let payload: Vec<_> = rows
                     .iter()
-                    .map(|(name, sentence)| {
-                        serde_json::json!({"source": name, "explanation": sentence})
+                    .map(|entry| {
+                        serde_json::json!({
+                            "source": entry.source,
+                            "explanation": entry.explanation,
+                            "evidence": entry.evidence.as_str(),
+                            "derives_confidence": entry.derives_confidence,
+                        })
                     })
                     .collect();
                 println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
             } else {
-                for (name, sentence) in &rows {
-                    println!("{name}\n    {sentence}");
+                for entry in &rows {
+                    println!("{} [{}]\n    {}", entry.source, entry.evidence.as_str(),
+                             entry.explanation);
                 }
                 println!("-- {} provenance classes", rows.len());
             }

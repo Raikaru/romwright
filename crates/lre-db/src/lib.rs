@@ -3057,7 +3057,7 @@ mod tests {
         // unknown source has none, and the rest of the object is unchanged.
         assert_eq!(stored["provenance"], serde_json::json!({
             "kind": "inferred", "source": "test-analysis", "confidence": 0.875,
-            "explanation": null
+            "explanation": null, "evidence": null
         }));
     }
 

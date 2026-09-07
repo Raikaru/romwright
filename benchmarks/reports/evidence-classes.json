@@ -1,0 +1,62 @@
+{
+ "native-analysis": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-analysis:constant-propagation": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-import": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:branch": {
+  "evidence": "decoded",
+  "derives_confidence": false
+ },
+ "native-import:elf-pointer": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-import:elf-pointer-table": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
+ "native-import:elf-reloc": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:elf-relocation-map": {
+  "evidence": "inferred",
+  "derives_confidence": true
+ },
+ "native-import:elf-unwind": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:pe-export": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:pe-reloc": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:pe-tls": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:pe-unwind": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:platform-map": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:thunk": {
+  "evidence": "decoded",
+  "derives_confidence": false
+ }
+}

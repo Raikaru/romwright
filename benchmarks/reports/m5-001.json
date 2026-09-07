@@ -1,6 +1,6 @@
 {
   "id": "m5-001",
-  "recorded_at": "2026-09-07T05:42:37.400994+00:00",
+  "recorded_at": "2026-09-07T13:07:57.638321+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98
   },
@@ -28,6 +28,10 @@
     "unattributed": 0
   },
   "entry": "08000158",
+  "region_sources": [
+    "native-import",
+    "native-import:platform-map"
+  ],
   "regions": {
     "gba:rom": "08000000",
     "gba:ewram": "02000000",

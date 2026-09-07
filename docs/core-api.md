@@ -61,8 +61,11 @@ space, and a program can have more than one.
 ## Facts carry their provenance
 
 Every derived fact says which pass produced it and whether it is inferred or
-asserted, and carries the sentence that explains that pass, so a consumer
-never maps the string itself. A consumer that treats a swept string like a
+asserted, carries the sentence that explains that pass, and says what kind of
+evidence that pass has -- `declared` (the image states it), `decoded` (SLEIGH
+decoded the instruction) or `inferred` (a pass concluded it). `confidence`
+stays `null` unless something derives a number: today only a signature match,
+whose number is the share of the record's bytes that were compared. A consumer that treats a swept string like a
 linker-proven symbol is making that choice itself, with the evidence in hand.
 
 ```json

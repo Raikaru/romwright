@@ -136,6 +136,11 @@ def main() -> int:
             raise AssertionError(f"language is {language} , expected ARM:LE:32:v4t")
         regions = {name: (int(start, 16), size, permissions) for name, start, size, permissions
                    in store.execute("SELECT name, start, size, permissions FROM memory_regions")}
+        # Which provenance class declared these regions: a cartridge carries no
+        # header for its RAM, so the platform is the evidence, and `m9-002`
+        # reads this back to check that class is exercised somewhere.
+        region_sources = sorted({source for (source,) in
+                                 store.execute("SELECT DISTINCT source FROM memory_regions")})
         missing = EXPECTED_REGIONS - set(regions)
         if missing:
             raise AssertionError(f"undeclared console regions: {sorted(missing)}")
@@ -193,7 +198,8 @@ def main() -> int:
                                           "recorded_deficits": []}]},
                   metrics={"dwarf.fn.recall": recall, "dwarf.functions": len(truth),
                            "functions": len(observed), "unattributed": len(unattributed)},
-                  entry=f"{seed:08x}", regions={name: f"{start:08x}"
+                  entry=f"{seed:08x}", region_sources=region_sources,
+                  regions={name: f"{start:08x}"
                                                 for name, (start, _, _) in regions.items()},
                   decompiled={"address": f"{target:08x}",
                               "text": decompiled.stdout.strip()[:400]})
