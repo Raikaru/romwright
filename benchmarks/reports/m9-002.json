@@ -1,18 +1,18 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-07T13:11:26.974793+00:00",
+ "recorded_at": "2026-09-07T19:04:00.742497+00:00",
  "status": "pass",
  "passed": true,
- "summary": "15 classes classified as declared/decoded/inferred; 7 of 8 declared classes scored here and 1 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "16 classes classified as declared/decoded/inferred; 7 of 9 declared classes scored here and 2 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 15,
-  "evidence.declared": 8,
+  "evidence.classes": 16,
+  "evidence.declared": 9,
   "evidence.declared_exercised": 7,
-  "evidence.declared_elsewhere": 1,
+  "evidence.declared_elsewhere": 2,
   "evidence.unbacked_confidence": 0,
   "evidence.references": 4665,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
@@ -112,6 +112,12 @@
    "explanation": "Declared by the platform rather than the file: a console's memory map names this region, and the cartridge carries no header for it.",
    "source": "native-import:platform-map"
   },
+  "native-import:plt-header": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "An indirect transfer that reads the word the System V ABI reserves for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it behaves like a call.",
+   "source": "native-import:plt-header"
+  },
   "native-import:thunk": {
    "derives_confidence": false,
    "evidence": "decoded",
@@ -203,6 +209,10 @@
    "evidence-classes.json",
    "m5-001.json",
    "m9-001.json"
+  ],
+  "native-import:plt-header": [
+   "evidence-classes.json",
+   "m4-006.json"
   ]
  }
 }

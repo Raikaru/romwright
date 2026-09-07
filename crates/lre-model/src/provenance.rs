@@ -70,6 +70,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:plt-header",
+        explanation:         "An indirect transfer that reads the word the System V ABI reserves \
+         for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it \
+         behaves like a call.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:thunk",
         explanation:         "A stub whose whole body transfers to another address, proved by \
          decoding it; the reference is the transfer it performs.",
