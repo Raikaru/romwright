@@ -499,7 +499,9 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M3 — Ground truth (DWARF scoring, stock-Ghidra baseline, regression gates)
+M4 — Measured improvements over the frozen ground-truth baseline
+(M3 complete: DWARF scoring m3-001, frozen baseline m3-002, regression gate
+m3-003, all three wired into continuous integration)
 
 ## M1 progress
 - m1-003-d: benchmarked hand decoder vs console flow on libc and the x86-64 corpus.
@@ -2426,11 +2428,46 @@ M3 — Ground truth (DWARF scoring, stock-Ghidra baseline, regression gates)
   identical, cross-checked against every `ghidra.dwarf.fn.recall` in
   `benchmarks/reports/m3-001.json`); wired into the `corpus-linux` CI job.
 
+### m3-003 evidence
+- `1a762e9` commits the failing acceptance (`tests/m3-003_regression.py`; no
+  regression gate existed).
+- `benchmarks/regression_gate.py` joins native DWARF scoring to the frozen
+  baseline per corpus row and enforces two rules: **native >= baseline per
+  row** for entries and prototype arity, and a **pinned deficit set** -- any
+  row where either producer scores below 0.98 against truth is named, so
+  matching a broken reference cannot read as success.
+- Published in `benchmarks/reports/m3-003.json` (20 rows): native entries
+  1.000000 vs baseline 1.000000; native arity 0.753659 vs baseline 0.753659;
+  one recorded deficit, `i386_many_o2:proto.arity`, where both producers
+  score 0.0000. Native equals the baseline everywhere -- M3 measures, M4 owns
+  exceeding it.
+- Evidence is re-measured by default (48.9 s: the prototype pass plus the
+  DWARF gate) and refused when stale: an artifact must carry source hashes
+  that still match the tree.
+- **Stale evidence found and fixed**: `benchmarks/reports/m2-006.json` was
+  recorded at `f45df59`, before `e2ff96c` changed
+  `native/ghidra-opt-sleigh.patch`, so its own freshness pin was broken.
+  Re-measured with the current tree: every per-row metric is identical, only
+  the commit and patch pins moved. The m3-001 report now carries
+  `sources.dwarf_gate_sha256` and `sources.dwarf_reader_sha256` so consumers
+  can tell fresh evidence from stale.
+- Three negative controls run this session, each with the gate declining to
+  pass:
+  1. feeding the stale `m2-006.json` -> `passed: false` on freshness;
+  2. raising the frozen baseline's i386 arity to 1.0 -> refused with
+     `arity reference 0.0 disagrees with the frozen baseline 1.0`, before any
+     comparison, which is the right order for a tampered baseline;
+  3. doctoring native entry recall to 0.5 on `aarch64_many_o2` ->
+     `FAIL aarch64_many_o2: entries 0.5000 vs 1.0000`, one row failing and the
+     aggregate falling to 0.877439.
+- Verification: `tests/m3-003_regression.py` PASS; all three M3 gates wired
+  into the `corpus-linux` CI job.
+
 ## Next task
-- m3-003: wire the DWARF regression gates so native cannot silently fall below
-  the frozen baseline -- score native arity against DWARF truth in the same
-  artifact family, require native >= baseline per row, and publish the
-  comparison. Its acceptance test does not exist yet; write it first.
+- m4-001: close the `i386_many_o2:proto.arity` deficit -- recover x86-32
+  stack parameters that `DecompilerParameterIdCmd` leaves at zero, behind a
+  flag, with oracle mode preserved (II.1 reserves enabling any M4 pass by
+  default). Its acceptance test does not exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

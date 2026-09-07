@@ -124,6 +124,9 @@ def main() -> int:
     report = {"id": "m3-001", "recorded_at": datetime.now(timezone.utc).isoformat(),
               "thresholds": {"dwarf.fn.recall": RECALL_THRESHOLD,
                              "dwarf.fn.unattributed": 0},
+              # Pins so a consumer can tell fresh evidence from stale.
+              "sources": {"dwarf_gate_sha256": digest(Path(__file__)),
+                          "dwarf_reader_sha256": digest(ROOT / "benchmarks/dwarf_arity.py")},
               "rows": [], "totals": {}}
     totals = {"truth_functions": 0, "native_matched": 0, "ghidra_matched": 0,
               "native_observed": 0, "native.dwarf.fn.unattributed": 0,

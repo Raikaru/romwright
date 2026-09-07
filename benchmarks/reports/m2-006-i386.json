@@ -2,8 +2,8 @@
   "gate": "prototypes",
   "milestone": "M2",
   "task": "m2-006",
-  "commit": "f45df591e70787e00f32a26984bed6d99788203f",
-  "date": "2026-09-06T12:38:37.054456+00:00",
+  "commit": "1a762e988359973574f948ba4f8f97ab4d4e670f",
+  "date": "2026-09-07T03:33:57.670802+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -11,7 +11,7 @@
   },
   "budget_ms": 60000,
   "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785",
-  "native_patch_sha256": "deb5c134b4ddda28e94f2120641f8eb92ba795491bfa1b049c27da7d621fc397",
+  "native_patch_sha256": "424d713c8264af6594ae0436a60646108b537be75abdc0f1c368375dd72199ed",
   "native_linkage_sha256": "5d2e2cee98c38072c9780529850d0b13909d8c91d5c3a6df9f5e2fd8bff23715",
   "architecture": "i386",
   "corpus": [

@@ -302,6 +302,35 @@ record.
 python3 tests/m3-002_baseline.py --corpus-dir CORPUS
 ```
 
+### The ground-truth regression gate (M3)
+
+`benchmarks/regression_gate.py` joins the two: native against DWARF from
+m3-001, the frozen stock baseline from m3-002, per corpus row. It
+re-measures both by default (about a minute) because stale evidence is the
+likeliest failure, and it refuses evidence whose recorded source hashes no
+longer match the tree.
+
+| Family | native | frozen baseline |
+|---|---|---|
+| `dwarf.fn.recall` (1 640 functions) | **1.0000** | 1.0000 |
+| `proto.arity` (1 640 matched) | **0.7537** | 0.7537 |
+
+Two rules, and one honest admission:
+
+- **native >= baseline per row.** Falling behind stock Ghidra fails, even
+  where the absolute number still looks respectable.
+- **The deficit set is pinned.** A row where *either* producer scores below
+  0.98 against truth is named in the report, so matching a broken reference
+  cannot read as success. Today exactly one: `i386_many_o2:proto.arity`,
+  where stock Ghidra and native both score 0.0000. A new deficit fails the
+  gate; a fixed one has to be recorded rather than quietly absorbed.
+- Native currently *equals* the baseline everywhere. M3 measures; M4 is where
+  exceeding it is the job.
+
+```sh
+python3 tests/m3-003_regression.py --corpus-dir CORPUS
+```
+
 Native ELF32/ELF64 discovery shares `.init`, `.fini` and `.plt` section-start
 seeds, alongside unwind-index entries, PLT metadata, flow-confirmed
 initializer/data pointers and the existing batched flow walker.
