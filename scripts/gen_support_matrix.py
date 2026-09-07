@@ -84,7 +84,7 @@ def generate_matrix() -> str:
     aarch64_status = "selected SLEIGH bundle required; not parity-gated"
     arm_status = "selected SLEIGH bundle required; not parity-gated"
     mips_status = "selected SLEIGH bundle required; not parity-gated"
-    riscv_status = "selected SLEIGH bundle required; not parity-gated"
+    riscv_status = "no spec bundle in native/specs and no corpus row; unmeasured"
     ppc_status = (
         "e500 BE32 parity verified on Agent Under Fire; broader targets not gated"
     )
@@ -99,12 +99,32 @@ def generate_matrix() -> str:
         aarch64_status = "discovery gated; decompile parity pending"
         ppc_status = "BE32 discovery gated; e500 parity verified; other configurations not gated"
 
+    # Token identity against the JVM oracle, per language (m4-003).
+    language_parity = load_json(REPORTS_DIR / "m4-003.json")
+    x86_status = "**supported and gated**" if elf_x86_gated else "in progress"
+    x86_32_status = "supported; parity unmeasured"
+    if language_parity and language_parity.get("passed"):
+        def parity(language: str) -> str | None:
+            row = next((item for item in language_parity["measured"]
+                        if item["language"] == language), None)
+            if row is None:
+                note = language_parity["blocked"].get(language)
+                return f"no oracle comparison: {note['reason']}" if note else None
+            compared = len(row["identical"]) + len(row["attributed"])
+            return (f"**parity measured**: {len(row['identical'])} of {compared} "
+                    f"functions token-identical to the JVM oracle, the rest "
+                    f"attributed to named facts "
+                    f"(`tests/m4-003_language_parity.py`)")
+        x86_status = f"{x86_status}; {parity('x86:LE:64:default')}"
+        x86_32_status = parity("x86:LE:32:default") or x86_32_status
+        aarch64_status = parity("AARCH64:LE:64:v8A") or aarch64_status
+        arm_status = parity("ARM:LE:32:v4t") or arm_status
+        mips_status = parity("MIPS:LE:32:default") or mips_status
+        ppc_status = f"{parity('PowerPC:BE:32:default')}; e500 verified on Agent Under Fire"
+
     rows = [
-        (
-            "ELF x86-64",
-            "supported",
-            "**supported and gated**" if elf_x86_gated else "in progress",
-        ),
+        ("ELF x86-64", "supported", x86_status),
+        ("ELF x86-32", "supported", x86_32_status),
         ("PE32+ x86-64", "supported", pe_status),
         ("PE32 x86", "supported", pe32_status),
         ("ELF AARCH64 LE64", "supported", aarch64_status),
