@@ -1,0 +1,87 @@
+{
+  "gate": "signature-match",
+  "milestone": "M2",
+  "task": "m2-012",
+  "commit": "47727952d10b2075ec85360aadfc2618c714633e",
+  "date": "2026-09-07T00:41:56.445651+00:00",
+  "gate_sha256": "7be1ca9749a8f432f68c7a6195dbc766b493f009bd9e0e8c47cdf86f9c33c0dc",
+  "comparison": "named library functions and their false-positive rate against unstripped statically linked twins; gate inputs, not corpus members; not an II.3 metric",
+  "architectures": [
+    {
+      "id": "aarch64",
+      "status": "pass",
+      "package": "libc6-dev-arm64-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "language": "AARCH64:LE:64:v8A",
+      "database_records": 1028,
+      "database_bytes": 1120263,
+      "binary_sha256": "9f9c9291b1b51b00a0e3d203ee30c361a512961d848bd853f5ab4a5673f94a18",
+      "functions": 1033,
+      "matches": 303,
+      "correct": 303,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "helpers_named": [
+        "abort",
+        "strcmp"
+      ],
+      "wrong": []
+    },
+    {
+      "id": "i386",
+      "status": "pass",
+      "package": "libc6-dev-i386-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "language": "x86:LE:32:default",
+      "database_records": 1416,
+      "database_bytes": 1691796,
+      "binary_sha256": "0696914c1b0b1f70860e477e70bd2244d08d401fd99457c9caf3adc0fea6d5c1",
+      "functions": 1071,
+      "matches": 297,
+      "correct": 297,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "helpers_named": [
+        "abort",
+        "memcpy",
+        "strlen"
+      ],
+      "wrong": []
+    },
+    {
+      "id": "powerpc",
+      "status": "pass",
+      "package": "libc6-dev-powerpc-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "language": "PowerPC:BE:32:default",
+      "database_records": 1292,
+      "database_bytes": 1557295,
+      "binary_sha256": "adfacbf8373e600b2e2d9403071de5d685f865548d14ca7ce0f5784e05ad6583",
+      "functions": 955,
+      "matches": 270,
+      "correct": 270,
+      "false_positives": 0,
+      "false_positive_rate": 0.0,
+      "helpers_named": [
+        "abort",
+        "memcpy",
+        "memset",
+        "strcmp",
+        "strlen"
+      ],
+      "wrong": []
+    }
+  ],
+  "summary": {
+    "pass": 3,
+    "fail": 0,
+    "skipped": 0
+  },
+  "totals": {
+    "matches": 870,
+    "correct": 870,
+    "false_positives": 0,
+    "false_positive_rate": 0.0
+  },
+  "passed": true
+}
