@@ -180,6 +180,9 @@ pub struct NativeImport {
     /// Instructions whose transfer the image's own structure proves behaves
     /// like a call, with the rule that proved each.
     pub flow_overrides: Vec<(u64, &'static str)>,
+    /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
+    /// branch rather than the load it follows reads these.
+    pub indirect_transfers: Vec<u64>,
     /// Relocation code targets to be verified as candidate function entries.
     pub reloc_candidates: Vec<u64>,
     /// Untrusted data pointers; never functions until flow confirms them.
@@ -1627,20 +1630,25 @@ pub fn store_import(
         })
         .collect();
     db.replace_xrefs(pid, &xrows)?;
-    let overrides: Vec<lre_model::FlowOverrideRow> = imp
-        .flow_overrides
-        .iter()
-        .map(|(address, source)| lre_model::FlowOverrideRow {
-            address: lre_model::Address::ram(*address),
-            kind: "callreturn".into(),
-            provenance: lre_model::FactProvenance {
-                kind: lre_model::FactKind::Inferred,
-                source: (*source).into(),
-                confidence: None,
-            },
-        })
-        .collect();
-    db.replace_inferred_flow_overrides(pid, PLT_HEADER_SOURCE, &overrides)?;
+    // Each rule owns its rows: the ABI-reserved slot and a stub's own branch
+    // are different evidence for the same kind of correction.
+    for source in [PLT_HEADER_SOURCE, THUNK_SOURCE] {
+        let overrides: Vec<lre_model::FlowOverrideRow> = imp
+            .flow_overrides
+            .iter()
+            .filter(|(_, rule)| *rule == source)
+            .map(|(address, rule)| lre_model::FlowOverrideRow {
+                address: lre_model::Address::ram(*address),
+                kind: "callreturn".into(),
+                provenance: lre_model::FactProvenance {
+                    kind: lre_model::FactKind::Inferred,
+                    source: (*rule).into(),
+                    confidence: None,
+                },
+            })
+            .collect();
+        db.replace_inferred_flow_overrides(pid, source, &overrides)?;
+    }
     let definitions: Vec<lre_model::DataDefinitionRow> = imp
         .plt_reserved_slots
         .iter()

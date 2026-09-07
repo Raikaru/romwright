@@ -1,6 +1,6 @@
 {
  "id": "m4-005",
- "recorded_at": "2026-09-07T17:38:53.381422+00:00",
+ "recorded_at": "2026-09-07T21:33:17.250237+00:00",
  "status": "pass",
  "passed": true,
  "summary": "the store's transfer facts reach the decompiler: the direct thunk at 00201670 calls FUN_00201600 with no discarded blocks, the linkage stub at 00201720 needs no jumptable, and 6 functions with no stored transfer are untouched",

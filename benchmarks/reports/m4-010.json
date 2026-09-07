@@ -1,0 +1,27 @@
+{
+ "id": "m4-010",
+ "recorded_at": "2026-09-07T21:53:47.162273+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "8 linkage stubs across 3 architectures each carry a `callreturn` override on the branch that performs the transfer, not the load before it, and none of them asks for a jumptable; 11 overrides in total, all inside a stub or a function reading a reserved slot",
+ "metrics": {
+  "stubs.rows_measured": 3,
+  "stubs.linkage_stubs": 8,
+  "stubs.overrides": 11,
+  "stubs.jumptable_warnings": 0
+ },
+ "rows": {
+  "aarch64_plain_o0": {
+   "stubs": 4,
+   "overrides": 5
+  },
+  "powerpc_plain_o0": {
+   "stubs": 3,
+   "overrides": 3
+  },
+  "x86_64_plain_o0": {
+   "stubs": 1,
+   "overrides": 3
+  }
+ }
+}
