@@ -3767,14 +3767,53 @@ m3-003, all three wired into continuous integration)
   what it measures -- the same trap `tests/differential.sh` records in its
   header.
 
+### m4-003 evidence
+- The gate enumerates the languages `native/specs` bundles (**9**) and, for
+  each, either measures token identity against the JVM oracle on a committed
+  corpus row or names a blocker it verifies. Report:
+  `benchmarks/reports/m4-003.json`, pinned by
+  `benchmarks/reports/parity-baseline.json`.
+- Measured: **4 languages, 56 functions** compared both ways on the same
+  stripped image. **18 token-identical**, 38 differing, **0 unexplained**.
+  Per language: x86-64 4/12, x86-32 5/15, AArch64 5/17, PowerPC BE32 4/12.
+- Every difference names its cause, and the counts are pinned so neither a
+  regression nor an improvement passes unrecorded: `flow` 22,
+  `missing-external-prototype` 19, `function-facts` 15,
+  `missing-data-symbol` 8, `string-not-rendered` 4.
+- **5 languages blocked**, all for the same reason: no ELF row exists for them
+  in the corpus lock and adding one is II.1-reserved. The images that do exist
+  are containers the oracle has no loader for -- verified by asking the oracle
+  to load the GBA ROM and recording its refusal.
+- **Four controls fire**: a divergence class that stops being recognised (the
+  pinned classes move), a blocked language that gains a corpus row, a spec
+  bundle nobody classified, and a container the oracle loads after all -- the
+  last caught for real when the check first pointed at the ELF twin instead of
+  the ROM.
+- The support matrix now carries these numbers instead of "decompile parity
+  pending"; `gen_support_matrix.py` derives them, and an `ELF x86-32` row was
+  added because the corpus has i386 ELF rows and nothing reported them.
+- Regression: `cargo test --workspace` 238 pass; `m4-002`, `m3-003`,
+  `m10-003`, `m10-004`, `m9-005`, `m6-001`, `m6-002`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` pass. 86 reports indexed, both generators in sync.
+
 ## Next task
-- m4-003: the support matrix still reads "decompile parity pending" for
-  AArch64 and "not parity-gated" for ARM LE32, MIPS LE32, RISC-V LE64 and the
-  non-BE32 PowerPC configurations, while `tests/differential.sh` proves
-  token-identical output against the JVM oracle for x86-64 only. Extend that
-  comparison to the languages whose spec bundles `native/specs` already ships,
-  on the committed corpus rows, and record a measured row or a named blocker
-  for each. Its acceptance test does not exist yet; write it first.
+- m4-004: close `string-not-rendered` (4) and `missing-data-symbol` (8). The
+  store already holds the string (`strings` row `sum: %d\n` at `002004d0`)
+  and the data reference, but `lre-worker` forwards only function and symbol
+  names, so the decompiler prints `0x2004d0` and `cRam00000000002038f8` where
+  the oracle prints the literal and `DAT_002038f8`. Name data-reference
+  targets the way the pinned tree documents
+  (`SymbolUtilities.DYNAMIC_PREFIX_ARRAY`: `DAT_`, `PTR_`, `LAB_`, plus the
+  built-in data-type prefixes) and pass them, with the string values, into the
+  worker's provider. Acceptance: those two classes fall to 0 with the parity
+  baseline re-recorded in the same commit, no other class grows, and every new
+  name carries provenance. Its acceptance test does not exist yet; write it
+  first.
+- Then m4-005 (`missing-external-prototype`, 19: apply the pinned install's
+  GDT prototypes to named imports through the existing `ventris-gdt` reader)
+  and m4-006 (`flow`, 22: the native side drops the tail-called
+  `FUN_00201600` in `_INIT_0` and warns about jumptables the oracle resolves).
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
