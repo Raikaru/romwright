@@ -234,6 +234,13 @@ jobs:
           python3 tests/m5-006_tailcall.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/tailcall.json"
+      - name: Publish measured improvement over stock as one milestone
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-002_improvement_milestone.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/improvement-milestone.json"
       - name: Enforce set-level thunk parity
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
