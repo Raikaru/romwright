@@ -73,6 +73,10 @@ pub struct ProgramProvider {
     pub external_names: HashMap<u64, String>,
     /// String data indexed by address for getStringData.
     pub strings: HashMap<u64, String>,
+    /// Addresses a stored data reference names, with no other fact: the
+    /// dynamic-label case Ghidra composes on demand rather than storing
+    /// (`SymbolUtilities.getDynamicName`).
+    pub data_targets: HashSet<u64>,
     /// Entry address -> stored prototype, including its assertion status.
     pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
     /// RAM entries with a stored non-returning fact.
@@ -83,6 +87,11 @@ pub struct ProgramProvider {
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
     pub register_space_index: i64,
+    /// Core type name -> (id, size) from the language's `coretypes.xml`.
+    /// A type the language does not define is never referenced.
+    pub core_types: HashMap<String, (u64, u64)>,
+    /// Pointer width in bytes, from the language's tspec.
+    pub pointer_size: u64,
     /// Register name -> (offset, size) from registers.txt (register space).
     pub registers: HashMap<String, (u64, u64)>,
 }
@@ -101,11 +110,14 @@ impl ProgramProvider {
             datatypes: HashMap::new(),
             external_names: HashMap::new(),
             strings: HashMap::new(),
+            data_targets: HashSet::new(),
             prototypes: HashMap::new(),
             non_returning: HashSet::new(),
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
+            core_types: HashMap::new(),
+            pointer_size: 8,
             registers: HashMap::new(),
         }
     }
@@ -565,6 +577,55 @@ impl NativeWorker {
                 wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::MAPSYM);
                 wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::DOC);
                 encode_string_stream(&mut buf, &doc);
+            } else {
+                // Not a function: the store may still hold a fact about this
+                // location, and Ghidra composes the label for it on demand
+                // (`DecompileCallback.encodeData`, DecompileCallback.java:835-855)
+                // rather than storing one.
+                let mut doc = Vec::new();
+                let core = |name: &str| provider.core_types.get(name).copied();
+                if let (Some(text), Some((char_id, _))) =
+                    (provider.strings.get(&vaddr), core("char"))
+                {
+                    // A string is `char[len + 1]`: the stored value excludes
+                    // the terminator the image carries.
+                    let count = text.len() as u64 + 1;
+                    let name = string_label(text, vaddr);
+                    open_document(&mut doc);
+                    wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {
+                        wire::encode_array_type(out, ("char", char_id), count);
+                    });
+                    close_document(&mut doc);
+                } else if let (Some(target), Some((code_id, _))) =
+                    (provider.external_names.get(&vaddr), core("code"))
+                {
+                    // An import slot: a pointer whose target the store names,
+                    // so the label is `PTR_<name>_<address>`
+                    // (`PointerDataType.getLabelString`, :212-238).
+                    let name = format!("PTR_{target}_{vaddr:08x}");
+                    let size = provider.pointer_size;
+                    open_document(&mut doc);
+                    wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {
+                        wire::encode_pointer_type(out, ("code", code_id), size);
+                    });
+                    close_document(&mut doc);
+                } else if provider.data_targets.contains(&vaddr) {
+                    // Only a reference: a name, with no claim about width or
+                    // type. Ghidra sends the same shape for a symbol that is
+                    // not defined data, and its own analyzers are what turn
+                    // such a location into typed data.
+                    let name = provider
+                        .symbol_names
+                        .get(&vaddr)
+                        .cloned()
+                        .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
+                    open_document(&mut doc);
+                    wire::encode_label_symbol(&mut doc, space as u32, vaddr, &name);
+                    close_document(&mut doc);
+                }
+                if !doc.is_empty() {
+                    encode_string_stream(&mut buf, &doc);
+                }
             }
         }
         encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
@@ -851,6 +912,58 @@ pub fn find_numeric_attribute(data: &[u8], target: u32) -> Option<i64> {
     None
 }
 
+/// The language's core types, as `coretypes.xml` declares them: the ids the
+/// decompiler resolves `<typeref>` by (`TypeFactory::decodeType`,
+/// type.cc:4643-4664) come from that file, not from the name.
+pub fn parse_core_types(xml: &str) -> HashMap<String, (u64, u64)> {
+    let mut types = HashMap::new();
+    for element in xml.split("<type ").skip(1) {
+        let attribute = |key: &str| -> Option<&str> {
+            let start = element.find(&format!("{key}=\""))? + key.len() + 2;
+            let end = element[start..].find('"')? + start;
+            Some(&element[start..end])
+        };
+        let (Some(name), Some(size), Some(id)) =
+            (attribute("name"), attribute("size"), attribute("id"))
+        else {
+            continue;
+        };
+        let id = u64::from_str_radix(id.trim_start_matches("0x"), 16);
+        if let (Ok(size), Ok(id)) = (size.parse::<u64>(), id) {
+            types.insert(name.to_string(), (id, size));
+        }
+    }
+    types
+}
+
+/// `<doc id="0">` wraps every query answer the C++ scope decodes
+/// (`ScopeGhidra::processResult`).
+fn open_document(out: &mut Vec<u8>) {
+    wire::encode_header(out, wire::ELEMENT_START, wire::elem::DOC);
+    wire::encode_attribute(out, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
+}
+
+fn close_document(out: &mut Vec<u8>) {
+    wire::encode_header(out, wire::ELEMENT_END, wire::elem::DOC);
+}
+
+/// Ghidra's label for string data: the `s` prefix its string types report
+/// (`SymbolUtilities.getDynamicDataTypePrefixes`, SymbolUtilities.java:105),
+/// an abbreviation of the content, then the address (`getDynamicDataName`,
+/// :541-544). Characters a symbol name cannot carry become underscores, as
+/// `SymbolUtilities.replaceInvalidChars` does.
+fn string_label(text: &str, address: u64) -> String {
+    let mut body = String::new();
+    for ch in text.chars().take(20) {
+        if ch.is_ascii_alphanumeric() {
+            body.push(ch);
+        } else {
+            body.push('_');
+        }
+    }
+    format!("s_{body}_{address:08x}")
+}
+
 fn comment_type_name(kind: &str) -> &'static str {
     match kind.to_ascii_lowercase().as_str() {
         "header" | "plate" | "pre" => "header",
@@ -887,6 +1000,19 @@ pub fn spec_dir(root: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn core_types_come_from_the_shipped_spec_with_their_ids() {
+        let xml = std::fs::read_to_string("../../native/specs/coretypes.xml")
+            .expect("the shipped x86-64 core types");
+        let types = parse_core_types(&xml);
+        // The decompiler resolves `<typeref>` by id; a parser that lost the
+        // id would silently make every data symbol unresolvable.
+        assert_eq!(types.get("code"), Some(&(0xe000000000000001, 1)));
+        assert_eq!(types.get("char").map(|(_, size)| *size), Some(1));
+        assert_eq!(types.get("undefined8").map(|(_, size)| *size), Some(8));
+        assert!(types.get("char").unwrap().0 != 0);
+    }
 
     #[test]
     fn string_query_decodes_address_after_datatype_name() {

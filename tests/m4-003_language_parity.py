@@ -70,7 +70,7 @@ BLOCKED = {
 # Ghidra's dynamic label prefixes, from the pinned tree
 # (`SymbolUtilities.DYNAMIC_PREFIX_ARRAY`, SymbolUtilities.java:84-86) plus the
 # built-in data-type prefixes it appends (`getDynamicDataTypePrefixes`, :105).
-DYNAMIC = re.compile(r"\b(?:UNK|DAT|LAB|SUB|EXT|OFF|PTR|s)_[0-9A-Za-z_]+")
+DYNAMIC = re.compile(r"\b_?(?:UNK|DAT|LAB|SUB|EXT|OFF|PTR|s)_[0-9A-Za-z_]+")
 # The C++ decompiler's own fallback when the program holds no symbol at an
 # address: a type letter, the space name and the offset, e.g.
 # `cRam00000000002038f8` (`Scope::buildDefaultName`, decompiler database.cc).
@@ -221,6 +221,20 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
             without.append(name)
     if without:
         classes["missing-external-prototype"] = sorted(set(without))
+
+    # Both sides name the location, and disagree about what is there: the
+    # store holds a reference, the oracle holds defined data with a type.
+    typed = []
+    for match in DYNAMIC.finditer(oracle_text):
+        address = re.search(r"([0-9a-f]{6,16})$", match.group(0))
+        if address is None:
+            continue
+        native_names = {item.group(0) for item in DYNAMIC.finditer(native_text)
+                        if item.group(0).endswith(address.group(1))}
+        if native_names and match.group(0) not in native_names:
+            typed.append({"oracle": match.group(0), "native": sorted(native_names)})
+    if typed:
+        classes["data-type-unknown"] = typed
 
     # Flow the two sides disagree about, on the same bytes.
     native_warnings = {re.sub(r"\s+", " ", item) for item in WARNING.findall(native_text)}

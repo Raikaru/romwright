@@ -1,98 +1,92 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T16:00:15.376549+00:00",
+ "recorded_at": "2026-09-07T16:30:42.724784+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 18 of 56 functions token-identical, 38 differing only where a named fact differs (flow 22, function-facts 15, missing-data-symbol 8, missing-external-prototype 19, string-not-rendered 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 23 of 56 functions token-identical, 33 differing only where a named fact differs (data-type-unknown 4, flow 22, function-facts 15, missing-external-prototype 19), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
   "parity.languages_blocked": 5,
   "parity.functions_compared": 56,
-  "parity.functions_token_identical": 18,
-  "parity.functions_fact_attributed": 38,
+  "parity.functions_token_identical": 23,
+  "parity.functions_fact_attributed": 33,
   "parity.functions_unattributed": 0,
+  "parity.class.data-type-unknown": 4,
   "parity.class.flow": 22,
   "parity.class.function-facts": 15,
-  "parity.class.missing-data-symbol": 8,
-  "parity.class.missing-external-prototype": 19,
-  "parity.class.string-not-rendered": 4
+  "parity.class.missing-external-prototype": 19
  },
  "measured": [
   {
    "language": "x86:LE:64:default",
    "program": "x86_64_plain_o0.bin",
    "shared": 12,
-   "identical": 4,
-   "identical_tokens": 47,
-   "attributed": 8,
+   "identical": 5,
+   "identical_tokens": 75,
+   "attributed": 7,
    "classes": [
+    "data-type-unknown",
     "flow",
     "function-facts",
-    "missing-data-symbol",
-    "missing-external-prototype",
-    "string-not-rendered"
+    "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default.jsonl",
-    "sha256": "f86d14edfc5052f03a10a43a182db518be348909c80fef21af60b4cfc2448ff5"
+    "sha256": "d3fa12e71e1084a19011726c7225fe7e939dc8ccc671bbb8af6b6ed95c7fda45"
    }
   },
   {
    "language": "AARCH64:LE:64:v8A",
    "program": "aarch64_plain_o0.bin",
    "shared": 17,
-   "identical": 5,
-   "identical_tokens": 58,
-   "attributed": 12,
+   "identical": 7,
+   "identical_tokens": 110,
+   "attributed": 10,
    "classes": [
+    "data-type-unknown",
     "flow",
     "function-facts",
-    "missing-data-symbol",
-    "missing-external-prototype",
-    "string-not-rendered"
+    "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "f85e6a3b29cd163a031dbc6cddb1b8cd9f81a876d2db97cd002fb3f1cdf05b63"
+    "sha256": "e3fa98ca9204af7e4bb83503227f8ad538664d7ce3280ec61ef67e508310210d"
    }
   },
   {
    "language": "PowerPC:BE:32:default",
    "program": "powerpc_plain_o0.bin",
    "shared": 12,
-   "identical": 4,
-   "identical_tokens": 52,
-   "attributed": 8,
+   "identical": 5,
+   "identical_tokens": 78,
+   "attributed": 7,
    "classes": [
     "flow",
     "function-facts",
-    "missing-data-symbol",
-    "missing-external-prototype",
-    "string-not-rendered"
+    "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "c800069015549ced5e70175f6a43646ece7abbd35d8a8a20bc2fc77e8b4d74d1"
+    "sha256": "0a0739c790f13b694aa9ee1c8a0cf97be5994900912e64168c85270c93f20436"
    }
   },
   {
    "language": "x86:LE:32:default",
    "program": "i386_plain_o0.bin",
    "shared": 15,
-   "identical": 5,
-   "identical_tokens": 58,
-   "attributed": 10,
+   "identical": 6,
+   "identical_tokens": 86,
+   "attributed": 9,
    "classes": [
+    "data-type-unknown",
     "flow",
     "function-facts",
-    "missing-data-symbol",
-    "missing-external-prototype",
-    "string-not-rendered"
+    "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "220491574286599eb954db7e4adf9a78d5081f145ca737756f4fc20abf04173d"
+    "sha256": "978193a2c4873202791244d536ddcab2d80888c9d7709e6c66a73a7308fdb338"
    }
   }
  ],

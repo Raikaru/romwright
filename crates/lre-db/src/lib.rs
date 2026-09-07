@@ -1015,6 +1015,21 @@ impl ProjectDb {
         Ok(edges)
     }
 
+    /// Distinct destinations of data references, address spaces preserved.
+    /// The decompiler names such a location on demand, so the worker needs
+    /// the set rather than one edge at a time.
+    pub fn data_reference_targets(&self, program: ProgramId) -> Result<Vec<lre_model::Address>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT dst FROM xrefs
+             WHERE program_id = ?1 AND kind IN ('DATA', 'READ', 'WRITE')",
+        )?;
+        let mut targets = stmt
+            .query_map(params![program.0], |row| addr_from_cell(row.get(0)?, 0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        targets.sort_unstable_by_key(|address| address.offset);
+        Ok(targets)
+    }
+
 
     /// Lists symbols of a program ordered by address.
     pub fn symbols(&self, program: ProgramId) -> Result<Vec<SymbolRow>> {

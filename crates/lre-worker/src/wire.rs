@@ -156,6 +156,8 @@ pub mod elem {
     pub const SYMBOL: u32 = 6;
     /// ELEM_FUNCTIONSHELL (database.cc:34)
     pub const FUNCTIONSHELL: u32 = 72;
+    /// ELEM_LABELSYM (database.cc:37).
+    pub const LABELSYM: u32 = 75;
     /// ELEM_MAPSYM (database.cc:38)
     pub const MAPSYM: u32 = 76;
     /// ELEM_FUNCTION (funcdata.cc:23)
@@ -197,6 +199,10 @@ pub mod attr {
     pub const SIZE: u32 = 19;
     /// ATTRIB_SPACE (marshal.cc:1253).
     pub const SPACE: u32 = 20;
+    /// ATTRIB_ARRAYSIZE (type.cc:30).
+    pub const ARRAYSIZE: u32 = 48;
+    /// ATTRIB_NAMELOCK (marshal.cc:1246).
+    pub const NAMELOCK: u32 = 15;
     /// ATTRIB_METATYPE (marshal.cc:1243).
     pub const METATYPE: u32 = 12;
     /// ATTRIB_TYPE (marshal.cc:1253).
@@ -355,6 +361,84 @@ pub(crate) fn encode_function_element(
         encode_header(out, ELEMENT_END, elem::PROTOTYPE);
     }
     encode_header(out, ELEMENT_END, elem::FUNCTION);
+}
+
+/// A named location the store holds a fact for, in the shape
+/// `Scope::addMapSym` accepts: `<mapsym><symbol …><type …/></symbol><addr/>
+/// <rangelist/></mapsym>` (database.cc:1564-1606, SymbolEntry::decode:206).
+/// The symbol's type is written by `body`, which must emit exactly one type
+/// element (`TypeFactory::decodeType`, type.cc:4638).
+pub(crate) fn encode_data_symbol(
+    out: &mut Vec<u8>,
+    space: u32,
+    address: u64,
+    name: &str,
+    body: impl FnOnce(&mut Vec<u8>),
+) {
+    encode_header(out, ELEMENT_START, elem::MAPSYM);
+    encode_header(out, ELEMENT_START, elem::SYMBOL);
+    encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, 0);
+    encode_string_attribute(out, attr::NAME, name.as_bytes());
+    // The name is the store's fact; the type is this pass's inference, so
+    // only the name is locked (Symbol::decodeHeader, database.cc:394-434).
+    encode_header(out, ATTRIBUTE, attr::NAMELOCK);
+    out.push((attr_type::BOOLEAN << 4) | 1);
+    body(out);
+    encode_header(out, ELEMENT_END, elem::SYMBOL);
+    encode_addr_element(out, space, address);
+    encode_header(out, ELEMENT_START, elem::RANGELIST);
+    encode_header(out, ELEMENT_END, elem::RANGELIST);
+    encode_header(out, ELEMENT_END, elem::MAPSYM);
+}
+
+/// A name for a location the store holds no type for: `<labelsym>`, which the
+/// C++ decodes into a `LabSymbol` -- one byte of `TYPE_UNKNOWN`
+/// (database.cc:728-757), the same shape Ghidra's own `encodeLabel` sends for
+/// a symbol that is not data (DecompileCallback.java:872-876).
+pub(crate) fn encode_label_symbol(out: &mut Vec<u8>, space: u32, address: u64, name: &str) {
+    encode_header(out, ELEMENT_START, elem::MAPSYM);
+    encode_header(out, ELEMENT_START, elem::LABELSYM);
+    encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, 0);
+    encode_string_attribute(out, attr::NAME, name.as_bytes());
+    encode_header(out, ATTRIBUTE, attr::NAMELOCK);
+    out.push((attr_type::BOOLEAN << 4) | 1);
+    encode_header(out, ELEMENT_END, elem::LABELSYM);
+    encode_addr_element(out, space, address);
+    encode_header(out, ELEMENT_START, elem::RANGELIST);
+    encode_header(out, ELEMENT_END, elem::RANGELIST);
+    encode_header(out, ELEMENT_END, elem::MAPSYM);
+}
+
+/// A reference to a core type (`<typeref>`, type.cc:4643-4664). The id is
+/// required: `findById` resolves by id and falls back to the name hash, which
+/// never matches the ids `coretypes.xml` assigns.
+pub(crate) fn encode_typeref(out: &mut Vec<u8>, name: &str, id: u64) {
+    encode_header(out, ELEMENT_START, elem::TYPEREF);
+    encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, id);
+    encode_string_attribute(out, attr::NAME, name.as_bytes());
+    encode_header(out, ELEMENT_END, elem::TYPEREF);
+}
+
+/// An array of a core type (`TypeArray::decode`, type.cc:1500-1520, which
+/// requires `arraysize * element size == size`).
+pub(crate) fn encode_array_type(out: &mut Vec<u8>, element: (&str, u64), count: u64) {
+    encode_header(out, ELEMENT_START, elem::TYPE);
+    encode_string_attribute(out, attr::NAME, b"");
+    encode_string_attribute(out, attr::METATYPE, b"array");
+    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, count);
+    encode_attribute(out, attr::ARRAYSIZE, attr_type::POSITIVE_INT, count);
+    encode_typeref(out, element.0, element.1);
+    encode_header(out, ELEMENT_END, elem::TYPE);
+}
+
+/// A pointer to a core type (`TypePointer::decode`, type.cc).
+pub(crate) fn encode_pointer_type(out: &mut Vec<u8>, target: (&str, u64), size: u64) {
+    encode_header(out, ELEMENT_START, elem::TYPE);
+    encode_string_attribute(out, attr::NAME, b"");
+    encode_string_attribute(out, attr::METATYPE, b"ptr");
+    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
+    encode_typeref(out, target.0, target.1);
+    encode_header(out, ELEMENT_END, elem::TYPE);
 }
 
 #[cfg(test)]

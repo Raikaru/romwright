@@ -3797,23 +3797,57 @@ m3-003, all three wired into continuous integration)
   `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
   `data_xrefs.sh` pass. 86 reports indexed, both generators in sync.
 
+### m4-004 evidence
+- Two `m4-003` divergence classes are closed by passing facts the store
+  already held: `string-not-rendered` **4 -> 0** and `missing-data-symbol`
+  **8 -> 0**. Token identity against the oracle rose **18 -> 23** of 56, and
+  no other class grew (`flow` 22, `missing-external-prototype` 19,
+  `function-facts` 15 unchanged); `benchmarks/reports/parity-baseline.json`
+  is re-recorded in this commit.
+- What was missing was the `getMappedSymbols` answer for anything that is not
+  a function: the worker replied empty, so the decompiler named locations
+  itself (`cRam00000000002038f8`). It now answers, in the shapes the pinned
+  tree decodes: `<symbol>` + `char[n]` for a stored string
+  (`s_sum___d__002004d0`), `<symbol>` + pointer-to-`code` for a named import
+  slot (`PTR_printf_002038f0`), and `<labelsym>` for a location only a data
+  reference names (`DAT_002038f8`).
+- Rules verified in the pinned sources, not guessed:
+  `SymbolUtilities.DYNAMIC_PREFIX_ARRAY` (:84-86) and `getDynamicDataName`
+  (:541-544) for the names, `PointerDataType.getLabelString` (:212-238) for
+  the pointer form, `Scope::addMapSym` (database.cc:1564-1606) and
+  `SymbolEntry::decode` (:206) for the framing, `LabSymbol` (:728-757) for the
+  untyped case, and `TypeFactory::decodeType` (type.cc:4638-4666) for types.
+- **Three defects found while wiring it**, each visible only by running the
+  thing: the decompiler resolves `<typeref>` by **id**, so name-only
+  references failed with `Unable to resolve type: char` and silently emptied
+  the function -- the ids now come from the language's own `coretypes.xml`
+  (`parse_core_types`, unit-tested against the shipped file). Data references
+  live under kinds `DATA`, `READ` and `WRITE`, and filtering on `DATA` alone
+  missed the byte `_FINI_0` guards. And the runtime launches
+  `target/debug/lre-worker`, so a release-only build measured a stale worker.
+- Residual, now named rather than hidden: `data-type-unknown` 4 -- both sides
+  name the location and only the oracle knows a pointer is there, because its
+  analyzers define data and the native store records a reference. That is the
+  next task's subject.
+- Regression: `cargo test --workspace` **239 pass** (one new unit test);
+  `m4-002`, `m4-003`, `m4-004`, `m3-001`, `m3-003`, `m2-005`, `m2-009`,
+  `m5-009`, `m5-011`, `m6-002`, `m6-006`, `m5-012`, `support_matrix_test.py`,
+  `m9-005`, `m10-004`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` pass. 87 reports indexed, both generators in sync.
+
 ## Next task
-- m4-004: close `string-not-rendered` (4) and `missing-data-symbol` (8). The
-  store already holds the string (`strings` row `sum: %d\n` at `002004d0`)
-  and the data reference, but `lre-worker` forwards only function and symbol
-  names, so the decompiler prints `0x2004d0` and `cRam00000000002038f8` where
-  the oracle prints the literal and `DAT_002038f8`. Name data-reference
-  targets the way the pinned tree documents
-  (`SymbolUtilities.DYNAMIC_PREFIX_ARRAY`: `DAT_`, `PTR_`, `LAB_`, plus the
-  built-in data-type prefixes) and pass them, with the string values, into the
-  worker's provider. Acceptance: those two classes fall to 0 with the parity
-  baseline re-recorded in the same commit, no other class grows, and every new
-  name carries provenance. Its acceptance test does not exist yet; write it
+- m4-005: close `missing-external-prototype` (19). The store names imports
+  (`printf` at its IAT/PLT slot) and holds no signature for them, so the
+  decompilation prints `printf(s_sum___d__002004d0, uVar1)` where the oracle
+  prints `printf("sum: %d\n", (ulong)uVar1)` -- with a `char *` first
+  parameter the same string renders as a literal. The pinned install ships the
+  prototypes in its GDT archives and `crates/ventris-gdt` already reads them.
+  Acceptance: an import named by relocation evidence gets its declared
+  prototype applied with provenance naming the archive and the symbol,
+  `missing-external-prototype` falls to 0 with the parity baseline
+  re-recorded, no class grows, and no prototype is applied to a name the
+  archive does not declare. Its acceptance test does not exist yet; write it
   first.
-- Then m4-005 (`missing-external-prototype`, 19: apply the pinned install's
-  GDT prototypes to named imports through the existing `ventris-gdt` reader)
-  and m4-006 (`flow`, 22: the native side drops the tail-called
-  `FUN_00201600` in `_INIT_0` and warns about jumptables the oracle resolves).
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
