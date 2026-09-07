@@ -2651,12 +2651,43 @@ m3-003, all three wired into continuous integration)
   platform gates plus `tests/differential.sh` and `tests/workflow.sh` with
   `VENTRIS_SLA` exported: all pass, and the x86-64 parity path is unchanged.
 
+### m5-005 evidence
+- `db1ad45` commits the failing acceptance (`tests/m5-005_platform_matrix.py`).
+- **The four console rows in the README support matrix are now generated
+  from the platform's own gate report**, not written by hand. Each of
+  `benchmarks/reports/m5-00{1,2,3,4}.json` carries a `platform` block
+  (input label, family, test path, and one entry per imported program with
+  its language, DWARF recall, function count and recorded deficits), and
+  `scripts/gen_support_matrix.py` renders the row from those fields.
+- The generator rewrites the block between `<!-- support-matrix:begin -->`
+  and `<!-- support-matrix:end -->`, which is what lets it emit the
+  supported table and the blocked table in one pass.
+- **A support claim with no measurement cannot be printed.** Verified by
+  three negative controls, each of which fails the gate: hard-coding the
+  recall in the generator, removing the tier-1 evidence check, and
+  rendering a failed gate as gated. Deleting a report removes its row
+  rather than leaving a stale claim.
+- `docs/platform-tiers.json` records the five blocked platforms with the
+  fact that stops each one and where that fact was checked in Ghidra 12.1.3:
+  PSP (zero `allegrex`/`vfpu` matches under `Ghidra/Processors`), PS2
+  (`mips.ldefs:127` names r5900 only as an IDA-PRO alias; no MMI mnemonics
+  in any `MIPS/data/languages/*.sinc`), PS3 SPU (no SPU processor directory
+  at all), Xbox 360 (`ppc_common.sinc:150` defines vs0..vs63 and nothing
+  matches `vmx128`), and encrypted Vita/3DS containers (no keys here, and
+  AGENTS.md II.1 reserves the network call that would fetch them).
+- Fixed while landing this: **the m0-010 staleness gate was red** from
+  m5-001 onward, because the console rows were hand-added to a generated
+  table. `tests/support_matrix_test.py` and `tests/m5-005_platform_matrix.py`
+  both now pass and both run in the CI `support matrix` step.
+
 ## Next task
-- m5-005: record the console platform matrix as measured evidence -- one gate
-  report per platform, a support table generated from those reports rather
-  than hand-written, and the tier-2 blockers (PSP VFPU, PS2 R5900, Cell SPU,
-  VMX128, encrypted containers) named in the same artifact. Its acceptance
-  test does not exist yet; write it first.
+- m5-006: close the recorded tail-call deficit. `nds.arm7` reaches `mix`
+  only through `b`, and the store keeps no jump xref for that transfer, so
+  the first step is recording the fact -- a jump reference from the tail
+  call to its target -- and only then deciding whether a function may be
+  created from it. Stock Ghidra misses the same function on the same bytes,
+  so this is an improvement over the baseline, not parity repair. Its
+  acceptance test does not exist yet; write it first.
 - Recorded deficit to close later: a tail-called leaf function is invisible
   to flow analysis in both Ventris and stock Ghidra. The transfer itself is
   not even recorded -- the store keeps no jump xref for the tail call -- so

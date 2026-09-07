@@ -43,7 +43,9 @@ jobs:
       - run: python packaging/update_manifest.py --version ci --root . --output "$RUNNER_TEMP/update.json" LICENSE
       - run: python packaging/verify_update.py "$RUNNER_TEMP/update.json" --root .
       - name: Check support matrix evidence and staleness
-        run: python tests/support_matrix_test.py
+        run: |
+          python tests/support_matrix_test.py
+          python tests/m5-005_platform_matrix.py
   corpus-linux:
     name: Multi-Arch Corpus (ubuntu-latest)
     runs-on: ubuntu-latest

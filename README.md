@@ -731,6 +731,7 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 
 ## Support matrix
 
+<!-- support-matrix:begin -->
 | Input | Structural native import | Native flow/decode/decompile |
 |---|---|---|
 | ELF x86-64 | supported | **supported and gated** |
@@ -740,10 +741,22 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 | ELF MIPS LE32 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF RISC-V LE64 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF PowerPC | supported | BE32 discovery gated; e500 parity verified; other configurations not gated |
-| GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 on the built fixture, native ARM decompilation verified (`tests/m5-001_gba.py`) |
-| NDS cartridge (ARM9 + ARM7) | supported | **gated**: two programs, one per CPU; ARM9 recall 1.0000, ARM7 0.7500 with one recorded deficit (`tests/m5-002_nds.py`) |
-| PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000, native MIPS decompilation verified (`tests/m5-003_psx.py`) |
-| Nintendo 64 ROM (`.z64`) | supported | **gated**: DWARF recall 1.0000 on `MIPS:BE:64:64-32addr`; byte-swapped dumps refused by name (`tests/m5-004_n64.py`) |
+| GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |
+| NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
+| PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:LE:32:default` (`tests/m5-003_psx.py`) |
+| Nintendo 64 ROM (`.z64`) | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:BE:64:64-32addr` (`tests/m5-004_n64.py`) |
+
+**Not supported.** Each row names the fact that blocks it, and where
+that fact was checked.
+
+| Platform | Blocker | Checked |
+|---|---|---|
+| PS Vita and Nintendo 3DS (encrypted containers) | Retail images are encrypted, and the keys are not in this repository or in the pinned Ghidra install. Fetching them would require a network call at runtime, which AGENTS.md II.1 reserves to the human and the project's offline guarantee forbids. Decrypted input supplied by the user is a separate, smaller task: it still needs a loader and a gate. | AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; no key material or decryption code exists in this repository. |
+| PlayStation 2 (R5900 ELF) | The Emotion Engine's 128-bit multimedia instructions (MMI) and VU macro-mode operations do not decode: the pinned MIPS language mentions r5900 only as an IDA-PRO name mapping and defines no R5900 variant. Importing a PS2 ELF would decode the scalar subset and silently drop the rest. | MIPS/data/languages/mips.ldefs:127 external_name tool="IDA-PRO" name="r5900r" with no matching variant; zero matches for PADDW, PSUBW, QFSRV or PMFHL across MIPS/data/languages/*.sinc. |
+| PlayStation 3 (Cell SPU objects) | There is no SPU processor at all in the pinned tree, so SPU modules have no decoder. The PPU side is PowerPC, but an RE platform that decompiles only the PPU half of a PS3 title would misrepresent what it recovered. | Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor. |
+| Sony PSP (Allegrex ELF/PBP) | The Allegrex core's VFPU is not modelled by any pinned SLEIGH language, so PSP code that uses vector instructions cannot be decoded, let alone decompiled. Adding it means writing a SLEIGH extension, which is its own task with its own gate. | Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only. |
+| Xbox 360 (XEX) | VMX128 is not modelled: the pinned PowerPC language defines 64 VSX registers and no VMX128 variant, while the Xenon core exposes 128 vector registers with different encodings. Retail XEX images are also encrypted and compressed, which the encrypted-container row also covers. | PowerPC/data/languages/ppc_common.sinc:150 defines vs0..vs63; zero matches for 'vmx128' anywhere under Ghidra/Processors; ppc.ldefs offers Altivec variants only. |
+<!-- support-matrix:end -->
 
 The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
 requires the matching compiled SLEIGH language and static specification bundle.

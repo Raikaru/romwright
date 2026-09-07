@@ -1,12 +1,26 @@
 {
   "id": "m5-001",
-  "recorded_at": "2026-09-07T05:00:18.114063+00:00",
+  "recorded_at": "2026-09-07T05:42:37.400994+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98
   },
   "status": "pass",
   "passed": true,
   "summary": "imported gba natively (7 functions, ARM:LE:32:v4t)",
+  "platform": {
+    "input": "GBA cartridge ROM",
+    "family": "console",
+    "test": "tests/m5-001_gba.py",
+    "programs": [
+      {
+        "name": "gba",
+        "language": "ARM:LE:32:v4t",
+        "dwarf.fn.recall": 1.0,
+        "dwarf.functions": 6,
+        "recorded_deficits": []
+      }
+    ]
+  },
   "metrics": {
     "dwarf.fn.recall": 1.0,
     "dwarf.functions": 6,

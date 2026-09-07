@@ -1,0 +1,18 @@
+{
+ "id": "m5-005",
+ "recorded_at": "2026-09-07T05:44:22.643831+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "4 console platforms generated from gate reports, 5 blocked platforms named with their blockers",
+ "metrics": {
+  "generated_rows": 4,
+  "blocked_platforms": 5,
+  "catalog_platforms": 5
+ },
+ "inputs": [
+  "GBA cartridge ROM",
+  "NDS cartridge (ARM9 + ARM7)",
+  "PlayStation PS-EXE",
+  "Nintendo 64 ROM (`.z64`)"
+ ]
+}

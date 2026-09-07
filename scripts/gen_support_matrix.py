@@ -16,6 +16,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
 REPORTS_DIR = ROOT / "benchmarks" / "reports"
+CATALOG = ROOT / "docs" / "platform-tiers.json"
+
+# The generated block is delimited so two tables can be regenerated together
+# without a regex guessing where the hand-written prose starts.
+BEGIN = "<!-- support-matrix:begin -->"
+END = "<!-- support-matrix:end -->"
 
 
 def load_json(path: Path) -> dict | list | None:
@@ -78,14 +84,111 @@ def generate_matrix() -> str:
         ("ELF MIPS LE32", "supported", mips_status),
         ("ELF RISC-V LE64", "supported", riscv_status),
         ("ELF PowerPC", "supported", ppc_status),
-    ]
+    ] + console_rows()
 
     header = [
         "| Input | Structural native import | Native flow/decode/decompile |",
         "|---|---|---|",
     ]
     table_lines = header + [f"| {r[0]} | {r[1]} | {r[2]} |" for r in rows]
-    return "\n".join(table_lines)
+    return "\n".join(table_lines) + "\n" + blocked_table()
+
+
+def console_reports() -> list[tuple[str, dict, dict]]:
+    """Committed console gate reports, oldest id first.
+
+    A report qualifies by carrying a `platform` block: the row is rendered
+    from those fields, so a platform with no report gets no row.
+    """
+    found = []
+    for path in sorted(REPORTS_DIR.glob("m5-*.json")):
+        report = load_json(path)
+        if not isinstance(report, dict):
+            continue
+        platform = report.get("platform")
+        if isinstance(platform, dict) and platform.get("family") == "console":
+            found.append((path.stem, report, platform))
+    return found
+
+
+def console_rows() -> list[tuple[str, str, str]]:
+    rows = []
+    for report_id, report, platform in console_reports():
+        rows.append((platform["input"], "supported", console_status(report_id, report, platform)))
+    return rows
+
+
+def console_status(report_id: str, report: dict, platform: dict) -> str:
+    """Render one console platform's claim from its measurement."""
+    test = platform.get("test", "")
+    citation = f"`{test}`" if test else f"`benchmarks/reports/{report_id}.json`"
+    if not report.get("passed"):
+        return (
+            f"import supported; the gate report `{report_id}.json` records "
+            f"status {report.get('status', 'unknown')}, so no claim is made "
+            f"({citation})"
+        )
+
+    programs = platform.get("programs", [])
+    if not programs:
+        return f"import supported; the gate report records no programs ({citation})"
+
+    measured = []
+    for program in programs:
+        # One program per platform is the common case, and naming it there
+        # would only repeat the input column.
+        label = f"{program['name']} " if len(programs) > 1 else ""
+        piece = (
+            f"{label}{program['dwarf.fn.recall']:.4f} over "
+            f"{program['dwarf.functions']} functions on `{program['language']}`"
+        )
+        deficits = program.get("recorded_deficits") or []
+        if deficits:
+            plural = "s" if len(deficits) > 1 else ""
+            piece += f" with {len(deficits)} recorded deficit{plural}"
+        measured.append(piece)
+    return f"**gated**: DWARF recall {'; '.join(measured)} ({citation})"
+
+
+def catalog_platforms() -> list[dict]:
+    catalog = load_json(CATALOG)
+    if not isinstance(catalog, dict) or not isinstance(catalog.get("platforms"), list):
+        raise ValueError(f"platform tier catalog missing or unreadable: {CATALOG}")
+    return catalog["platforms"]
+
+
+def blocked_table() -> str:
+    """Platforms that are not supported, each with its blocker."""
+    blocked = [p for p in catalog_platforms() if p.get("tier") == 2]
+    lines = [
+        "",
+        "**Not supported.** Each row names the fact that blocks it, and where",
+        "that fact was checked.",
+        "",
+        "| Platform | Blocker | Checked |",
+        "|---|---|---|",
+    ]
+    for platform in sorted(blocked, key=lambda p: p["input"]):
+        lines.append(
+            f"| {platform['input']} | {platform['blocker']} | {platform['evidence']} |"
+        )
+    return "\n".join(lines)
+
+
+def unproven_claims() -> list[str]:
+    """Tier-1 catalog entries whose gate report is not committed."""
+    measured = {report_id for report_id, report, _ in console_reports() if report.get("passed")}
+    unproven = []
+    for platform in catalog_platforms():
+        if platform.get("tier") != 1:
+            continue
+        gate = platform.get("gate")
+        if gate not in measured:
+            unproven.append(
+                f"{platform.get('input')!r} claims tier-1 support but its gate "
+                f"report {gate!r} is not committed or did not pass"
+            )
+    return unproven
 
 
 def update_readme(check: bool) -> bool:
@@ -96,23 +199,25 @@ def update_readme(check: bool) -> bool:
     generated_table = generate_matrix()
 
     pattern = re.compile(
-        r"(## Support matrix\n\n)(?:\|[^\n]+\n)+",
-        re.MULTILINE,
+        re.escape(BEGIN) + r"\n.*?\n" + re.escape(END),
+        re.DOTALL,
     )
     match = pattern.search(content)
     if not match:
-        raise ValueError("Could not find '## Support matrix' section in README.md")
+        raise ValueError(
+            f"README.md has no generator markers ({BEGIN} ... {END}); the "
+            f"support matrix cannot be regenerated without hand editing"
+        )
 
-    expected_section = match.group(1) + generated_table + "\n"
+    expected_section = f"{BEGIN}\n{generated_table}\n{END}"
     current_section = match.group(0)
 
-    if current_section.strip() != (match.group(1) + generated_table).strip():
+    if current_section != expected_section:
         if check:
             print("Support matrix in README.md is stale!", file=sys.stderr)
             print("Run 'python scripts/gen_support_matrix.py' to regenerate it.", file=sys.stderr)
             return False
-        # Replace in place
-        new_content = pattern.sub(expected_section, content)
+        new_content = content.replace(current_section, expected_section, 1)
         README.write_text(new_content, encoding="utf-8")
         print("Updated README.md support matrix successfully.")
         return True
@@ -130,6 +235,13 @@ def main() -> int:
         help="Check if README matrix is up to date without modifying",
     )
     args = parser.parse_args()
+
+    # A support claim with no committed measurement is never printed.
+    unproven = unproven_claims()
+    if unproven:
+        for problem in unproven:
+            print(f"error: {problem}", file=sys.stderr)
+        return 1
 
     ok = update_readme(check=args.check)
     return 0 if ok else 1
