@@ -1,6 +1,6 @@
 {
   "id": "m3-003",
-  "recorded_at": "2026-09-07T03:34:52.503517+00:00",
+  "recorded_at": "2026-09-07T04:59:51.286933+00:00",
   "thresholds": {
     "native.vs.baseline": "native >= baseline per row",
     "truth_threshold": 0.98
