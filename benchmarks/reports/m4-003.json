@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T20:43:25.458013+00:00",
+ "recorded_at": "2026-09-07T21:43:00.591747+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 29 of 56 functions token-identical, 27 differing only where a named fact differs (data-type-unknown 1, flow 14, function-facts 16, missing-external-prototype 14, name-convention 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 29 of 56 functions token-identical, 27 differing only where a named fact differs (data-type-unknown 1, flow 13, function-facts 16, missing-external-prototype 14, name-convention 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -13,7 +13,7 @@
   "parity.functions_fact_attributed": 27,
   "parity.functions_unattributed": 0,
   "parity.class.data-type-unknown": 1,
-  "parity.class.flow": 14,
+  "parity.class.flow": 13,
   "parity.class.function-facts": 16,
   "parity.class.missing-external-prototype": 14,
   "parity.class.name-convention": 4
@@ -53,7 +53,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "c7b9a6c0452221a03d6eda61179e6f93a77f55ffb8d5ada57b33331b4752b48c"
+    "sha256": "f353743b84f81282cc42170aa98819df7ed97560cc8147aff41a98775d9911dc"
    }
   },
   {
@@ -71,7 +71,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "b10c7857d3201de3969c7c0e317f1e62509d1064d5f604303b1f165759b74ba5"
+    "sha256": "9e92b76e8d6a1d562b29fa643b869b4c13f8b8d4a02f04abda992e1468f1c19c"
    }
   },
   {

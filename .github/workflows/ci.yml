@@ -250,6 +250,13 @@ jobs:
           python3 tests/m4-007_got_pointers.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/got-pointers.json"
+      - name: Put each stub's override on the branch that transfers
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-010_stub_transfers.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/stub-transfers.json"
       - name: Correct the PLT header's flow from the image's ABI
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

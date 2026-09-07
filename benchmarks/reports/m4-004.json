@@ -1,6 +1,6 @@
 {
  "id": "m4-004",
- "recorded_at": "2026-09-07T20:33:18.959877+00:00",
+ "recorded_at": "2026-09-07T21:33:23.042691+00:00",
  "status": "pass",
  "passed": true,
  "summary": "the store's data facts reach the decompiler: DAT_002038f8 for a held reference, s_sum___d__002004d0 for a held string, and PTR___libc_start_main_002028c0 for a named import slot, with no fallback name and nothing invented across 3 functions",

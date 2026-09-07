@@ -190,15 +190,19 @@ def main() -> int:
                 f"{name}: these overrides sit on the load rather than the "
                 f"branch: {misplaced}")
 
-            # 2. The stubs decompile without asking for a jumptable.
+            # 2. Every function carrying an override decompiles without
+            #    asking for a jumptable -- stubs and the PLT header alike.
+            owners = sorted({containing(row["functions"], item["address"])
+                             for item in row["overrides"]} - {None})
+            assert owners, f"{name}: no function owns an override"
             warned = []
-            for stub in stubs:
-                text = cli("decompile", str(binary), f"{stub['entry']:08x}",
+            for entry in owners:
+                text = cli("decompile", str(binary), f"{entry:08x}",
                            "--project", str(project), timeout=arguments.timeout)
                 if text.returncode == 0 and JUMPTABLE.search(text.stdout):
-                    warned.append(f"{stub['entry']:08x}")
+                    warned.append(f"{entry:08x}")
             assert not warned, (
-                f"{name}: these stubs still ask for a jumptable: {warned}")
+                f"{name}: these still ask for a jumptable: {warned}")
 
             # 3. Nothing else is overridden.
             stray = []

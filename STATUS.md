@@ -2989,6 +2989,40 @@ m3-003, all three wired into continuous integration)
   reports `ui.install.store_only_ok: false`.
 
 ## Proposed changes (reserved for the human)
+- **New II.3 metric: instruction match rate.** Definition for approval, not
+  in use: for one function, emit C, compile it with a named toolchain and
+  flags, disassemble both the compiled object and the original image over that
+  function's extent, normalise (drop symbol names, resolve branch targets to
+  offsets within the function, keep mnemonic + operand shape), and score
+  `matched_instructions / truth_instructions`, plus `matched_functions` at
+  rate 1.0000. It needs no oracle and no JVM: the ground truth is the image
+  itself, which makes it the strongest metric in the repo -- stronger than
+  DWARF recall or oracle token identity, both of which measure agreement with
+  a tool. Inputs it pins: the toolchain identity and flags per corpus row, the
+  normalisation rules, and the extent source (the store's recovered body).
+  II.1 reserves adding a metric definition, so nothing here is implemented.
+- **Proposed milestone (M11), first task is the harness, not the emitter.**
+  Task one scores *current* `decomp_native` output on the locked corpus and
+  commits the number, however low. Only then is the emitter question
+  answerable: Ghidra's `PrintC` is already a C backend, and what breaks
+  matching is the pipeline before it -- the simplifying actions and the
+  printer's cosmetic choices -- both of which this repo already reaches
+  through `native/ghidra-opt-sleigh.patch` and the action pool. So the first
+  candidate is a *constrained emission mode* of the existing backend behind a
+  flag, in the shape the M4 passes already use (`VENTRIS_REGISTER_PARAMS`,
+  `VENTRIS_PROMOTE_TAILCALLS`, off by default per II.1): keep the
+  transformations soundness requires, drop the ones that discard
+  instruction-level structure, name locals after ABI storage, spell stack
+  slots explicitly. A second emitter is only unavoidable for what a mode
+  cannot do -- per-toolchain idioms if suppression proves too invasive, and
+  emitting anything that is not C, which is the real fork: matching projects
+  fall back to per-function inline asm or `.s` for what will not match, and
+  "C or nothing" is not the contract. Which side of that fork is needed is a
+  measurement, not a judgement.
+- **Clean-room note for that milestone.** `m2c` (MIT) is the documented
+  precedent for the technique. Under the clean-room policy the *approach* is
+  citable with a `docs/third-party.md` entry recording the licence; its code
+  is never linked or copied.
 - Retire `ui.install.ok` from the M0 UI gate. It reports whether
   `VENTRIS_UI_INSTALL_OK` is set, not whether an installation works, and
   `ui.install.prefix_ok` plus `ui.install.store_only_ok` (m6-003) measure the
@@ -3983,16 +4017,51 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 91 reports indexed, both generators in
   sync.
 
+### m4-010 evidence
+- The override was on the wrong instruction outside x86. A stub loads its slot
+  and branches through it; on AArch64 and PowerPC those are two instructions,
+  so `m4-005`'s rule keyed the correction to the load and the branch stayed a
+  jumptable candidate. The importer now records the **indirect branch the flow
+  walk proved** -- the same ending `linkage_flow_shape` accepted -- and the
+  direct-thunk case records the branch the reference pass recorded.
+- Measured: 8 linkage stubs across 3 architectures carry a `callreturn`
+  override on their branch (AArch64 `0021088c`, `0021089c`, `002108ac`,
+  `002108bc`; PowerPC `10010574`, `10010584`, `100105d8`; x86-64 `00201720`),
+  the AArch64 PLT header's own branch `00210870` with it, and none of those
+  functions asks for a jumptable. `flow` **14 -> 13**, token identity 29 of 56
+  held.
+- **The worker stopped guessing.** It used to derive call-like branches from
+  thunk rows plus xrefs at decompile time; that heuristic is deleted. The
+  branch address is a fact the importer records, with its own provenance, and
+  the worker only reads it.
+- **Two regressions of my own, caught by the batteries and fixed before the
+  commit**: removing the worker heuristic dropped the *direct* thunk case
+  (`_INIT_0` lost its call again) until the importer covered it, keeping
+  Ghidra's rule that an entry-point branch gets no shared-return override; and
+  `m4-006`'s "nothing else is corrected" rule had to scope to its own
+  provenance, because a stub's transfer is now another producer's row.
+- Controls: not recording stub transfers leaves all four AArch64 stubs with no
+  override, and taking the address from the reference table instead of the flow
+  walk records nothing at all there -- the reference pass has not run when the
+  stub is proven, which is precisely why the fact belongs to the walk.
+- Regression: `cargo test --workspace` 244 pass; `m4-002`..`m4-010`,
+  `m3-001`, `m3-003`, `m2-006`, `m5-001`..`m5-004`, `m5-008`..`m5-011`,
+  `m9-001`, `m9-002`, `m6-006`, `m5-012`, `support_matrix_test.py`,
+  `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 92 reports indexed, both generators in
+  sync.
+
 ## Next task
-- m4-010: `flow` (14) is now the largest gap and the remaining cases are not
-  x86-64: AArch64 and PowerPC each hold several functions where the two sides
-  warn differently on the same bytes. Diagnose one, name the fact behind it
-  (a transfer the store can prove, or a fact stock has and we do not), and
-  either carry it or record it as a named non-goal with numbers. Acceptance:
-  either `flow` falls with the parity baseline re-recorded and a positive
-  regression for the new fact, or the case is recorded with the evidence that
-  justifies leaving it. Its acceptance test does not exist yet; write it
-  first.
+- m4-011: the gaps left are `function-facts` (16) and `flow` (13), and both
+  now need a *type* fact rather than a flow one: every remaining
+  `function-facts` case differs in signature or return type, and the AArch64
+  and PowerPC `flow` cases that are left warn about globals the store types as
+  one byte where the code reads a word. Diagnose one of each, name the fact,
+  and carry it or record it as a named non-goal with numbers. Its acceptance
+  test does not exist yet; write it first.
+- Not started, and not to be started implicitly: the instruction-match-rate
+  metric and its milestone are recorded under "Proposed changes" for the
+  human, per II.1 and II.3.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

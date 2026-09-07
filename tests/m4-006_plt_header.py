@@ -185,9 +185,11 @@ def main() -> int:
             f"resolver slot {resolver:08x} (DT_PLTGOT {elf['pltgot']:08x} + 2 * "
             f"{elf['width']}); it holds {corrections}")
         assert len(reading) == 1, f"more than one override claims the slot: {reading}"
-        # Nothing else is corrected: every override the store holds must read
-        # the reserved slot, or the rule is firing on ordinary data reads.
-        stray = [item for item in corrections if item not in reading]
+        # Nothing else is corrected *by this rule*: a stub's own transfer is
+        # another producer's row (`m4-010`), so only this provenance is scoped
+        # here -- otherwise the rule could fire on ordinary data reads unseen.
+        stray = [item for item in corrections
+                 if "plt-header" in item["provenance"] and item not in reading]
         assert not stray, (
             f"these instructions were corrected without reading the reserved "
             f"slot: {[(f'{i["address"]:08x}', i['provenance']) for i in stray]}")
@@ -226,7 +228,8 @@ def main() -> int:
                         timeout=arguments.timeout)
         assert pe_import.returncode == 0, (
             f"PE import failed: {pe_import.stderr.strip()}")
-        invented = overrides(pe_project, pe.name)
+        invented = [item for item in overrides(pe_project, pe.name)
+                    if "plt-header" in item["provenance"]]
         assert not invented, (
             f"a PE image with no DT_PLTGOT got PLT-header rows: {invented}")
         findings["pe_rows"] = len(overrides(pe_project, pe.name))

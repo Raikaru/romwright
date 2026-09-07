@@ -1272,6 +1272,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         };
     }
     imp.functions = merged;
+    // Bodies are known now, so a stub's terminal branch can be identified.
+    flow_endings.sort_unstable();
+    record_stub_transfers(imp, &flow_endings);
+    imp.indirect_transfers = flow_endings
+        .iter()
+        .filter(|&&(_, indirect)| indirect)
+        .map(|&(address, _)| address)
+        .collect();
     let no_return: HashSet<u64> = imp
         .functions
         .iter()
@@ -1619,7 +1627,9 @@ pub(crate) fn record_plt_header_flow(imp: &mut NativeImport) {
     let readers: Vec<u64> = imp
         .xrefs
         .iter()
-        .filter(|xref| xref.to == slot && xref.kind == "DATA")
+        .filter(|xref| {
+            xref.to == slot && matches!(xref.kind.as_str(), "DATA" | "READ" | "WRITE")
+        })
         .map(|xref| xref.from)
         .collect();
     // Stock Ghidra records no thunk here -- its own thunk table is empty for
@@ -1644,12 +1654,90 @@ pub(crate) fn record_plt_header_flow(imp: &mut NativeImport) {
                 .saturating_sub(entry),
             size => size,
         };
-        if from < entry.saturating_add(span)
-            && !imp.flow_overrides.iter().any(|(address, _)| *address == from)
+        if from >= entry.saturating_add(span) {
+            continue;
+        }
+        // The load proves which function it is; the branch is what transfers.
+        let branch = imp
+            .indirect_transfers
+            .iter()
+            .copied()
+            .filter(|address| *address >= entry && *address < entry + span)
+            .next_back()
+            .unwrap_or(from);
+        if !imp
+            .flow_overrides
+            .iter()
+            .any(|(address, _)| *address == branch)
         {
             imp.flow_overrides
-                .push((from, crate::native::PLT_HEADER_SOURCE));
+                .push((branch, crate::native::PLT_HEADER_SOURCE));
         }
     }
 
+}
+
+/// Records the branch that performs each thunk's transfer.
+///
+/// A linkage stub loads a slot and branches through it; on AArch64 and PowerPC
+/// those are different instructions, so the override has to name the branch --
+/// the indirect ending the same walk proved when it accepted the stub's shape
+/// (`linkage_flow_shape`). A direct thunk's transfer is a direct branch, which
+/// the reference pass records as an edge to the thunked address.
+///
+/// Ghidra sets no shared-return override when the branch instruction is itself
+/// a function entry (`SharedReturnAnalysisCmd.processFunctionJumpReferences`,
+/// SharedReturnAnalysisCmd.java:400-423). A linkage stub is the exception: its
+/// transfer goes through a slot the image names as an import, so it is a call
+/// whatever its shape.
+fn record_stub_transfers(imp: &mut NativeImport, endings: &[(u64, bool)]) {
+    let entries: HashSet<u64> = imp.functions.iter().map(|function| function.entry).collect();
+    let thunks: Vec<(u64, u64, u64, lre_model::ThunkKind)> = imp
+        .thunks
+        .iter()
+        .filter_map(|thunk| {
+            let size = imp
+                .functions
+                .iter()
+                .find(|function| function.entry == thunk.entry)
+                .map(|function| function.size.max(1))?;
+            Some((thunk.entry, size, thunk.destination, thunk.kind))
+        })
+        .collect();
+    for (entry, size, destination, kind) in thunks {
+        let end = entry.saturating_add(size);
+        let branch = match kind {
+            lre_model::ThunkKind::Linkage => {
+                let start = endings.partition_point(|&(address, _)| address < entry);
+                endings[start..]
+                    .iter()
+                    .take_while(|&&(address, _)| address < end)
+                    .filter(|&&(_, indirect)| indirect)
+                    .map(|&(address, _)| address)
+                    .last()
+            }
+            lre_model::ThunkKind::Direct => imp
+                .xrefs
+                .iter()
+                .filter(|xref| {
+                    xref.to == destination && xref.from >= entry && xref.from < end
+                })
+                .map(|xref| xref.from)
+                .max(),
+        };
+        let Some(address) = branch else {
+            continue;
+        };
+        if kind == lre_model::ThunkKind::Direct && entries.contains(&address) {
+            continue;
+        }
+        if !imp
+            .flow_overrides
+            .iter()
+            .any(|(recorded, _)| *recorded == address)
+        {
+            imp.flow_overrides
+                .push((address, crate::native::THUNK_SOURCE));
+        }
+    }
 }

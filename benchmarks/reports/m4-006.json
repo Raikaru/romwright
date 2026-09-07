@@ -1,6 +1,6 @@
 {
  "id": "m4-006",
- "recorded_at": "2026-09-07T18:40:09.625120+00:00",
+ "recorded_at": "2026-09-07T21:33:15.812328+00:00",
  "status": "pass",
  "passed": true,
  "summary": "the PLT header's jump at 00201716 is a `callreturn` override reading the ABI-reserved resolver slot 002038e8 (DT_PLTGOT + 2 words), recorded as native-import:plt-header; the function decompiles with no jumptable warning and names the slot PTR_002038e8, 2 thunk facts are unchanged, and a PE image gets none",

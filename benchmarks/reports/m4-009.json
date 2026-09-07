@@ -1,6 +1,6 @@
 {
  "id": "m4-009",
- "recorded_at": "2026-09-07T20:02:22.992061+00:00",
+ "recorded_at": "2026-09-07T21:33:24.415566+00:00",
  "status": "pass",
  "passed": true,
  "summary": "the pinned C library archive declares 6627 functions; the import at 00201720 carries its declared prototype (int printf(char * __format, ...)) with provenance native-import:type-archive, the call site renders \"sum: %d\\n\" as a literal, and no prototype names a symbol the archive does not declare",
