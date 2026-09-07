@@ -23,7 +23,6 @@ import json
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 BASELINE = ROOT / "benchmarks/reports/baseline-ghidra-truth.json"
@@ -39,27 +38,29 @@ def main() -> int:
         raise AssertionError(f"no committed baseline at {BASELINE.relative_to(ROOT)}")
     committed = BASELINE.read_bytes()
 
-    with tempfile.TemporaryDirectory(prefix="m3-002-") as temporary:
-        recomputed = Path(temporary) / "baseline.json"
-        run = subprocess.run(
-            [sys.executable, str(ROOT / "benchmarks/ground_truth_baseline.py"),
-             "--corpus-dir", str(arguments.corpus_dir),
-             "--baseline", str(recomputed), "--write"],
-            cwd=ROOT, capture_output=True, text=True)
-        print(run.stdout.strip())
-        if run.returncode != 0:
-            raise AssertionError(
-                f"baseline recompute failed: {run.stderr.strip() or run.stdout.strip()}")
-        produced = recomputed.read_bytes()
-
-    if produced != committed:
-        baseline = json.loads(committed)
-        fresh = json.loads(produced)
-        changed = [row["id"] for row, other in zip(baseline["rows"], fresh["rows"])
-                   if row.get("metrics") != other.get("metrics")]
+    run = subprocess.run(
+        [sys.executable, str(ROOT / "benchmarks/ground_truth_baseline.py"),
+         "--corpus-dir", str(arguments.corpus_dir)],
+        cwd=ROOT, capture_output=True, text=True)
+    # The verifier runs the reference validator first; take its own verdict.
+    verdict = next((line for line in reversed(run.stdout.splitlines())
+                    if line.startswith("{") and '"verified"' in line), "")
+    if run.returncode != 0:
         raise AssertionError(
-            "the committed baseline is not reproducible; "
-            f"metrics changed on {changed or 'no row (provenance or shape differs)'}")
+            f"the committed baseline is not reproducible: "
+            f"{run.stderr.strip() or run.stdout.strip()}")
+    verified = json.loads(verdict) if verdict else {}
+    if not verified.get("verified"):
+        raise AssertionError(f"verifier produced no verdict: {run.stdout.strip()}")
+    if not verified["verified_bytes"]:
+        # Same numbers through a different DWARF reader is honest; say so.
+        if verified["recorded_toolchain"] == verified["local_toolchain"]:
+            raise AssertionError(
+                "baseline bytes differ under the recorded toolchain: "
+                f"{verified}")
+        print(f"NOTE: metrics verified, bytes differ under "
+              f"{verified['local_toolchain']} vs recorded "
+              f"{verified['recorded_toolchain']}")
 
     baseline = json.loads(committed)
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())

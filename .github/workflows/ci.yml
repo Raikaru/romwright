@@ -162,6 +162,11 @@ jobs:
           python3 tests/m3-001_dwarf_truth.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/dwarf-truth.json"
+      - name: Verify the frozen stock-Ghidra ground-truth baseline
+        run: |
+          python3 tests/m3-002_baseline.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/ground-truth-baseline.json"
       - name: Verify reference analysis contracts
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
