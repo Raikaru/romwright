@@ -3924,19 +3924,42 @@ m3-003, all three wired into continuous integration)
   `differential.sh`, `workflow.sh`, `data_xrefs.sh` pass. 90 reports indexed,
   both generators in sync.
 
+### m4-008 evidence
+- The parity gate was counting a *choice* as a *gap*. Four of the 15
+  `function-facts` divergences were nothing but our own loader-derived names:
+  `_plt` vs `FUN_00201710`, `_init` vs `_DT_INIT`, `_fini` vs `_DT_FINI`,
+  `_entry` vs `entry`. The split is decided mechanically -- substitute the
+  oracle's name into its own text and compare token streams -- so no judgement
+  enters the count: `function-facts` **15 -> 11**, `name-convention` **4**.
+- A missing name is still a gap: when ours is the decompiler's own default
+  (`FUN_`, `SUB_`, `UNK_`) and the oracle has a real name, the gate counts
+  `missing-name`, so the new class cannot be used as cover. None occur today.
+- The names were checked against the pinned tree before being called a
+  convention: Ghidra names the ELF entry `ElfLoader.ELF_ENTRY_FUNCTION_NAME`
+  and gives it the `processEntry` convention
+  (`ElfProgramBuilder.processEntryPoints`:651-675), and creates `_INIT_0` /
+  `_FINI_0` from `DT_INIT`/`DT_FINI` (:678-686) -- which the store already
+  matches at `00201670`. The differing four are section-derived names that say
+  more than `FUN_00201710` does, so they stand.
+- Not a defect list: 11 `function-facts` remain and every one of them differs
+  in signature or return type as well, which is the prototype gap the next
+  task owns.
+- Regression: `m4-003` re-recorded and passing; evidence index, support matrix
+  and documentation-coverage gates in sync.
+
 ## Next task
-- m4-008: `missing-external-prototype` (18) is now the largest class and the
-  only one with a single cause: the store names imports and holds no signature
-  for them, so `printf(s_sum___d__002004d0, uVar1)` stands where the oracle
-  prints `printf("sum: %d\n", (ulong)uVar1)` -- with a `char *` first
-  parameter the same string renders as a literal. There is no GDT reader in
-  this tree, so the declaration source has to be decided from what the clean-
-  room policy allows: the pinned install's own archives, or public SDK
-  headers. Acceptance: an import named by relocation evidence gets its
-  declared prototype with provenance naming the source and the symbol, the
-  class falls with the parity baseline re-recorded, no class grows, and no
-  prototype is applied to a name the source does not declare. Its acceptance
-  test does not exist yet; write it first.
+- m4-009: `missing-external-prototype` (18) is the largest gap and it has one
+  cause: the store names imports and holds no signature for them, so
+  `printf(s_sum___d__002004d0, uVar1)` stands where the oracle prints
+  `printf("sum: %d\n", (ulong)uVar1)`. There is no GDT reader in this tree.
+  Decide the declaration source under the clean-room policy -- the pinned
+  install's own archives (a `.gdt` reader) or public SDK headers -- and record
+  the decision with its reason. Acceptance: an import named by relocation
+  evidence gets its declared prototype with provenance naming the source and
+  the symbol, `missing-external-prototype` falls with the parity baseline
+  re-recorded, no class grows, and no prototype is applied to a name the
+  source does not declare. Its acceptance test does not exist yet; write it
+  first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

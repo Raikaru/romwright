@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T19:22:29.219364+00:00",
+ "recorded_at": "2026-09-07T19:52:01.557215+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 1, flow 14, function-facts 15, missing-external-prototype 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 1, flow 14, function-facts 11, missing-external-prototype 18, name-convention 4), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -14,8 +14,9 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-type-unknown": 1,
   "parity.class.flow": 14,
-  "parity.class.function-facts": 15,
-  "parity.class.missing-external-prototype": 18
+  "parity.class.function-facts": 11,
+  "parity.class.missing-external-prototype": 18,
+  "parity.class.name-convention": 4
  },
  "measured": [
   {
@@ -28,11 +29,12 @@
    "classes": [
     "flow",
     "function-facts",
-    "missing-external-prototype"
+    "missing-external-prototype",
+    "name-convention"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default.jsonl",
-    "sha256": "b9ba2e95831b7565376bd13f5ee175db0fb257c7a240826d2baf95f0f5b396e6"
+    "sha256": "5ddcb063f3f1cfa830e8080bf3573c8581ce30e1c2b9402bb9a6c8e07c4eb3ea"
    }
   },
   {
@@ -46,11 +48,12 @@
     "data-type-unknown",
     "flow",
     "function-facts",
-    "missing-external-prototype"
+    "missing-external-prototype",
+    "name-convention"
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "df6ed2f78ede6b01f2af214c8cc9daa3139049ba3fb1d38968ace6dffdf311ee"
+    "sha256": "2e84012601e0b7f9cb3df878c5eb41412fd97aa02f1094698909438add5ee817"
    }
   },
   {
@@ -63,11 +66,12 @@
    "classes": [
     "flow",
     "function-facts",
-    "missing-external-prototype"
+    "missing-external-prototype",
+    "name-convention"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "b600c600d050982ff3090f3a889d0298886ad5b3cde7c6e7899a40f3f940dec5"
+    "sha256": "10df1ba8c3a433d7f9b10901086c5a5c33fe334d68e5988b66a74c2f29e587cc"
    }
   },
   {

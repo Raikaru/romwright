@@ -191,6 +191,23 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     differing = {key: [oracle_row.get(key), native_row.get(key)]
                  for key in ("name", "signature", "return_type")
                  if oracle_row.get(key) != native_row.get(key)}
+
+    # A name is a choice, not a gap: the loader-derived names differ on
+    # purpose (`_plt` says which section proved the start; Ghidra's
+    # `FUN_00201710` says nothing). Substituting one for the other decides
+    # whether the name is the *only* difference, so a deliberate convention is
+    # never counted as a missing fact.
+    native_name, oracle_name = native_row.get("name"), oracle_row.get("name")
+    if native_name and oracle_name and native_name != oracle_name:
+        substituted = re.sub(rf"\b{re.escape(oracle_name)}\b", native_name, oracle_text)
+        if tokens(substituted) == tokens(native_text):
+            # Only a name we chose is a convention. If ours is the decompiler's
+            # own default and the oracle has a real name, the name is missing,
+            # not different.
+            default = re.match(r"(?:FUN|SUB|UNK)_[0-9a-f]+$", native_name)
+            return {"missing-name" if default else "name-convention":
+                    [oracle_name, native_name]}
+
     if differing:
         classes["function-facts"] = differing
 
