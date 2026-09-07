@@ -55,6 +55,10 @@
   "evidence": "declared",
   "derives_confidence": false
  },
+ "native-import:plt-header": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
  "native-import:thunk": {
   "evidence": "decoded",
   "derives_confidence": false
