@@ -102,12 +102,20 @@ fn run(
     {
         provider.strings.insert(string.address.offset, string.value);
     }
+    // Locations a stored data reference names and nothing else describes:
+    // the dynamic-label case (`SymbolUtilities.getDynamicName`).
+    for target in db.data_reference_targets(pid)? {
+        if target.space == lre_model::AddressSpace::Ram {
+            provider.data_targets.insert(target.offset);
+        }
+    }
     provider.load_call_edges(&db, pid)?;
     provider.load_return_behaviors(&db, pid, false)?;
 
     let offset = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
         .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))?;
     let specs = lre_worker::load_specs(Path::new(lang_dir))?;
+    provider.core_types = lre_worker::parse_core_types(&specs.3);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(

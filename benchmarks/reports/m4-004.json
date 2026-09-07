@@ -1,0 +1,24 @@
+{
+ "id": "m4-004",
+ "recorded_at": "2026-09-07T16:31:32.841359+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "the store's data facts reach the decompiler: DAT_002038e8 for a held reference, s_sum___d__002004d0 for a held string, and PTR___libc_start_main_002028c0 for a named import slot, with no fallback name and nothing invented across 3 functions",
+ "metrics": {
+  "data.labels_rendered": 1,
+  "data.strings_rendered": 1,
+  "data.slots_rendered": 1,
+  "data.fallback_names": 0,
+  "data.invented_labels": 0
+ },
+ "rendered": {
+  "data_label": "DAT_002038e8",
+  "string": "s_sum___d__002004d0",
+  "slot_label": "PTR___libc_start_main_002028c0",
+  "functions": [
+   "00201710",
+   "002016a0",
+   "00201590"
+  ]
+ }
+}

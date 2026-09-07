@@ -1,32 +1,31 @@
 {
  "id": "parity-baseline",
- "recorded_at": "2026-09-07T15:37:15.220939+00:00",
+ "recorded_at": "2026-09-07T16:25:54.368130+00:00",
  "note": "token identity against the JVM oracle per language, and the fact class each divergence comes from; recorded once and compared against afterwards",
  "counts": {
   "languages": {
    "x86:LE:64:default": {
-    "identical": 4,
-    "attributed": 8
+    "identical": 5,
+    "attributed": 7
    },
    "AARCH64:LE:64:v8A": {
-    "identical": 5,
-    "attributed": 12
+    "identical": 7,
+    "attributed": 10
    },
    "PowerPC:BE:32:default": {
-    "identical": 4,
-    "attributed": 8
+    "identical": 5,
+    "attributed": 7
    },
    "x86:LE:32:default": {
-    "identical": 5,
-    "attributed": 10
+    "identical": 6,
+    "attributed": 9
    }
   },
   "classes": {
+   "data-type-unknown": 4,
    "flow": 22,
    "function-facts": 15,
-   "missing-data-symbol": 8,
-   "missing-external-prototype": 19,
-   "string-not-rendered": 4
+   "missing-external-prototype": 19
   }
  }
 }
