@@ -28,6 +28,9 @@ proprietary signature format documentation, database or tool output was
 consulted, and nothing is byte-compatible with one. Every record carries the
 exact package build it was extracted from and that package's license, so a
 shipped database can be audited and redistributed on those terms.
+The matcher fills Ghidra's FunctionID role only: it names a function when
+library bytes match, and never re-derives analysis from a proprietary database.
+No FunctionID database, signature file or tool output was read.
 
 ## GameCube DOL format
 

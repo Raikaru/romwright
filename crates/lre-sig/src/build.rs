@@ -6,7 +6,7 @@
 use crate::{
     Signature, SignatureDb, VsigError,
     archive::{self, ArchiveError},
-    object::{self, ObjectError, SkipReason},
+    object::{self, ObjectError},
 };
 use std::collections::BTreeMap;
 
@@ -44,8 +44,16 @@ pub struct BuildReport {
     /// Exported functions the objects defined, before policy.
     pub functions: usize,
     pub records: usize,
+    /// Local function bodies kept only as competitors.
+    pub competitors: usize,
     /// Skip counts keyed by reason, including this pass's own policy.
     pub skipped: BTreeMap<String, usize>,
+}
+
+/// One extracted body. Weak bodies are competitors, never records.
+struct Body {
+    bytes: (Vec<u8>, Vec<u8>),
+    weak: bool,
 }
 
 /// Minimum compared bytes a record must carry to be worth storing. A short
@@ -69,8 +77,11 @@ pub fn from_archive(
 ) -> Result<(SignatureDb, BuildReport), BuildError> {
     let mut report = BuildReport::default();
     let mut identity: Option<(u16, bool, bool, u32)> = None;
-    // name -> pattern/mask, or None once two members disagreed about it.
-    let mut candidates: BTreeMap<String, Option<(Vec<u8>, Vec<u8>)>> = BTreeMap::new();
+    // name -> body, or None once two members disagreed about it.
+    let mut candidates: BTreeMap<String, Option<Body>> = BTreeMap::new();
+    // Local bodies never carry a name outside their object, but an exported
+    // record indistinguishable from one would name it by mistake.
+    let mut competitors: Vec<Body> = Vec::new();
     for member in archive::members(bytes)? {
         let object = match object::relocatable(member.data, crate::MAX_PATTERN) {
             Ok(object) => object,
@@ -106,20 +117,32 @@ pub fn from_archive(
                 .entry(skip.reason.as_str().to_string())
                 .or_default() += 1;
         }
+        for function in object.locals {
+            competitors.push(Body {
+                weak: function.mask.iter().filter(|&&keep| keep != 0).count() < min_compared,
+                bytes: (function.pattern, function.mask),
+            });
+        }
         for function in object.functions {
             report.functions += 1;
-            if function.mask.iter().filter(|&&keep| keep != 0).count() < min_compared {
+            // Weak bodies never become records, but they still compete: a
+            // record that cannot be told apart from one would name it.
+            let weak =
+                function.mask.iter().filter(|&&keep| keep != 0).count() < min_compared;
+            if weak {
                 *report.skipped.entry("too-weak".to_string()).or_default() += 1;
-                continue;
             }
-            let bytes = (function.pattern, function.mask);
+            let body = Body {
+                bytes: (function.pattern, function.mask),
+                weak,
+            };
             match candidates.entry(function.name) {
                 std::collections::btree_map::Entry::Vacant(slot) => {
-                    slot.insert(Some(bytes));
+                    slot.insert(Some(body));
                 }
                 std::collections::btree_map::Entry::Occupied(mut slot) => {
                     // One name with two different bodies cannot name anything.
-                    if slot.get().as_ref() != Some(&bytes) {
+                    if slot.get().as_ref().map(|kept| &kept.bytes) != Some(&body.bytes) {
                         if slot.get().is_some() {
                             *report.skipped.entry("conflicting".to_string()).or_default() += 1;
                         }
@@ -136,17 +159,59 @@ pub fn from_archive(
     let language = resolve_language(machine, big_endian, flags)
         .ok_or(BuildError::UnsupportedMachine { machine })?;
     report.language = language.clone();
+    // Masks can make one body match another function: glibc's tunable setters
+    // and alias wrappers differ only where a relocation was masked out. Two
+    // records that no window can tell apart identify nothing, so both go.
+    report.competitors = competitors.len();
+    let mut bodies: Vec<(Option<&String>, &Body)> = candidates
+        .iter()
+        .filter_map(|(name, body)| body.as_ref().map(|body| (Some(name), body)))
+        .collect();
+    bodies.extend(competitors.iter().map(|body| (None, body)));
+    let mut ambiguous = vec![false; bodies.len()];
+    for (left, (_, first)) in bodies.iter().enumerate() {
+        for (right, (_, second)) in bodies.iter().enumerate().skip(left + 1) {
+            if !indistinguishable(&first.bytes, &second.bytes) {
+                continue;
+            }
+            // A body below the evidence threshold still competes when it is
+            // the same length: at one entry either name would fit.
+            let same_length = first.bytes.0.len() == second.bytes.0.len();
+            if !first.weak || same_length {
+                ambiguous[right] = true;
+            }
+            if !second.weak || same_length {
+                ambiguous[left] = true;
+            }
+        }
+    }
     let mut signatures = Vec::new();
-    for (name, bytes) in candidates {
-        let Some((pattern, mask)) = bytes else {
+    for (index, (name, body)) in bodies.iter().enumerate() {
+        let Some(name) = name else {
             continue;
         };
+        if body.weak {
+            continue;
+        }
+        if ambiguous[index] {
+            *report.skipped.entry("ambiguous".to_string()).or_default() += 1;
+            continue;
+        }
         signatures.push(Signature::new(
-            &language, &name, package, license, &pattern, &mask,
+            &language, name, package, license, &body.bytes.0, &body.bytes.1,
         )?);
     }
     report.records = signatures.len();
     Ok((SignatureDb::from_signatures(signatures)?, report))
+}
+
+/// True when some byte window satisfies both records: they agree wherever both
+/// compare, over the shorter pattern.
+fn indistinguishable(left: &(Vec<u8>, Vec<u8>), right: &(Vec<u8>, Vec<u8>)) -> bool {
+    let shared = left.0.len().min(right.0.len());
+    (0..shared).all(|index| {
+        left.1[index] == 0 || right.1[index] == 0 || left.0[index] == right.0[index]
+    })
 }
 
 #[cfg(test)]

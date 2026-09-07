@@ -451,6 +451,23 @@ The gate builds databases from the pinned cross sysroot archives, checks that a
 rebuild is byte-identical, and reports record count and byte size per source.
 Missing archives are recorded as skipped with a reason, not silently passed.
 
+`import-native --signatures DB[,DB]` runs the matcher after the import; the API
+takes the same list as `import_native`'s `signatures` parameter, `apply_signatures`
+repeats the pass on a stored program, and `signature_matches` reads the facts.
+Each match is an inferred fact with its package, license, compared bytes and
+confidence; it renames only generated `FUN_*` names, and databases that
+disagree about a function leave it unnamed. Schema v10 owns the facts per
+producer, so a repeated pass writes no new revision.
+
+```sh
+lre-cli import-native ./program --name p --signatures libc.vsig
+python3 benchmarks/match_gate.py --report benchmarks/reports/m2-012.json
+```
+
+The match gate statically links a corpus source against a pinned `libc.a`,
+strips it, and scores every match against the unstripped twin: `docs/vsig.md`
+records the measured false-positive rate.
+
 ```sh
 python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json

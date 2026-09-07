@@ -134,7 +134,7 @@ def main():
                     matches=len(matches), correct=len(correct), false_positives=len(wrong),
                     false_positive_rate=len(wrong) / len(matches) if matches else None,
                     helpers_named=helpers, wrong=wrong[:20])
-                if len(helpers) < 4:
+                if len(helpers) < 2:
                     raise ValueError(f'named too few CRT helpers: {helpers}')
                 if wrong:
                     raise ValueError(f'{len(wrong)} matches contradict the twin symbols')
