@@ -607,6 +607,20 @@ pub struct ThunkRow {
     pub provenance: FactProvenance,
 }
 
+/// A name a signature database claimed for a function, with the evidence.
+/// `confidence` is the share of the pattern that was actually compared.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct SignatureMatchRow {
+    pub function: Address,
+    pub name: String,
+    /// Exact package build the signature was extracted from.
+    pub package: String,
+    pub license: String,
+    pub compared_bytes: u64,
+    pub confidence: f64,
+    pub provenance: FactProvenance,
+}
+
 /// One recovered stack variable.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct StackVariableRow {
