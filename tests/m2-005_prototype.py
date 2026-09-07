@@ -27,8 +27,8 @@ def main():
     with tempfile.TemporaryDirectory(prefix='ventris-m2-005-') as temporary:
         project = Path(temporary) / 'project'
         cli = str(root / 'target/debug/lre-cli')
-        run([cli, 'import-native', str(binary), '--project', str(project)])
-        standalone = json.loads(run([cli, 'decompile-native-doc', str(binary),
+        run([cli, 'import', str(binary), '--project', str(project)])
+        standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             '0x400466', '--project', str(project)]).stdout)
         requests = [dict(api=2, id=index, method='decompile_doc', params=dict(
             binary=str(binary), program='tiny_bin', address=dict(space='Ram', offset=address)))

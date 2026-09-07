@@ -17,10 +17,14 @@ claims no drop-in compatibility.
 
 The bridge is an implementation aid, not the final architecture. The Rust
 core owns durable facts (functions, symbols, xrefs, renames) in SQLite with
-provenance. The supported workflow — native import, store browsing, native
-disassembly, native decompilation — runs with **no JVM in the process
-tree**; the bridge starts only for capabilities deliberately kept on the
-Ghidra side (stock `import`, `decompile`, `disasm`, `dump-specs` on demand).
+provenance. Every user path is native and runs with **no JVM in the process
+tree**: `lre-cli import <binary>`, `decompile`, `decompile-doc`, `disasm` and
+store browsing. The Stage-1 Java bridge is reachable only through `--oracle`,
+which exists to produce comparison oracles — `import --oracle`,
+`decompile --oracle`, `disasm --oracle` and `dump-specs --oracle` — and needs
+`--ghidra DIR` or the service jar. Continuous integration takes that path only
+in oracle-generating steps. Native decompilation still reads SLEIGH language
+data from the Ghidra install; that is data, not a JVM.
 
 ## Layout
 
@@ -58,7 +62,7 @@ third_party/ghidra pinned Ghidra 12.1.3 decompiler C++ + language sources
 cargo build --workspace
 # Native decompiler worker (patched ghidra_opt; raw-SLEIGH, no JVM)
 ./native/build_ghidra_opt.sh
-# Optional: SLEIGH console (disasm-native / import-native --discover)
+# Optional: SLEIGH console (disasm / import --discover)
 ./native/build_console.sh   # needs binutils-devel
 # Versioned Core API (stdio by default, HTTP with --listen)
 cargo build -p lre-api
@@ -117,17 +121,23 @@ share durable analysis changes without sharing SQLite connections.
 export VENTRIS_SLA=$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages/x86-64.sla
 export VENTRIS_GHIDRA=$HOME/ghidra_12.1.3_PUBLIC          # console defaults
 
-./target/debug/lre-cli import-native ./smoke_bin --name smoke --project ./proj
+./target/debug/lre-cli import ./smoke_bin --name smoke --project ./proj
 ./target/debug/lre-cli functions smoke --project ./proj   # store only
 ./target/debug/lre-cli xrefs smoke --to 00400466 --project ./proj
 ./target/debug/lre-cli rename smoke 00400466 my_add --project ./proj
 ./target/debug/lre-cli open smoke --project ./proj        # reopen, no reanalysis
-./target/debug/lre-cli disasm-native ./smoke_bin 00400466 -n 8
-./target/debug/lre-cli decompile-native ./smoke_bin 00400466 --name smoke --project ./proj
+./target/debug/lre-cli disasm ./smoke_bin 00400466 -n 8
+./target/debug/lre-cli decompile ./smoke_bin 00400466 --name smoke --project ./proj
 ```
 
-Bridge (compatibility) equivalents remain: `import`, `decompile`, `disasm`,
-`dump-specs` with `--ghidra DIR` / the service jar.
+Only `--oracle` starts the JVM: `import --oracle`, `decompile --oracle`,
+`disasm --oracle` and `dump-specs --oracle --out DIR` accept `--ghidra DIR`
+or the service jar, and exist for oracle generation, not for daily use.
+
+```sh
+./target/debug/lre-cli import ./smoke_bin --oracle --project ./oracle-proj
+python3 tests/m2-015_native_default.py
+```
 
 GameCube DOL import maps the section table and preserves initialized data
 inside BSS bounds. Discovery requires the native console and installed
@@ -136,7 +146,7 @@ image and supplies instruction flow to the generic worklist. No symbol ELF
 is supplied to the importer. `.rel` loading is not implemented.
 
 ```sh
-./target/debug/lre-cli import-native /path/to/sys/main.dol --name dol --project ./proj
+./target/debug/lre-cli import /path/to/sys/main.dol --name dol --project ./proj
 python3 tests/m1-009_dol.py --dol /path/to/sys/main.dol --oracle /path/to/files/boot.elf
 ```
 
@@ -183,7 +193,7 @@ RUNS=3 VENTRIS_SLA=... ./benchmarks/gate.sh # memory/perf gates
   alias differences). Function-set agreement, not just count proximity.
 - **Gate semantics**: `benchmarks/gate.sh` distinguishes a COMPLETE run
   (every required phase executed) from a PARTIAL one (missing SLEIGH
-  console → `"complete": false, "skipped": ["disasm-native"],
+  console → `"complete": false, "skipped": ["disasm"],
   "functional_pass": false, "performance_pass": true`, exit 2). A complete
   PASS (exit 0) requires all phases; the current environment (no
   binutils-devel, no sudo) yields PARTIAL on both the gate and the
@@ -451,7 +461,7 @@ The gate builds databases from the pinned cross sysroot archives, checks that a
 rebuild is byte-identical, and reports record count and byte size per source.
 Missing archives are recorded as skipped with a reason, not silently passed.
 
-`import-native --signatures DB[,DB]` runs the matcher after the import; the API
+`import --signatures DB[,DB]` runs the matcher after the import; the API
 takes the same list as `import_native`'s `signatures` parameter, `apply_signatures`
 repeats the pass on a stored program, and `signature_matches` reads the facts.
 Each match is an inferred fact with its package, license, compared bytes and
@@ -460,7 +470,7 @@ disagree about a function leave it unnamed. Schema v10 owns the facts per
 producer, so a repeated pass writes no new revision.
 
 ```sh
-lre-cli import-native ./program --name p --signatures libc.vsig
+lre-cli import ./program --name p --signatures libc.vsig
 python3 benchmarks/match_gate.py --report benchmarks/reports/m2-012.json
 ```
 

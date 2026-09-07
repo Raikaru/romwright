@@ -993,7 +993,7 @@ pub fn load_native(binary: &Path) -> Result<NativeImport> {
     let mut imp = parse_native(&data)?;
     imp.binary = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     imp.cfg = crate::session::RuntimeConfig::from_env();
-    imp.cfg.language_id = imp.language.clone();
+    imp.cfg.adopt_language(&imp.language);
     let session = if imp.format == "dol" {
         Some(discovery::discover_mapped(&mut imp)?)
     } else {

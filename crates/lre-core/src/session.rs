@@ -25,7 +25,7 @@ pub struct RuntimeConfig {
     pub decompiler_path: PathBuf,
     /// Spec root directory (pspec/cspec/tspec/coretypes + registers.txt).
     pub spec_root: PathBuf,
-    /// SLEIGH console binary (disasm-native / console discovery), if built.
+    /// SLEIGH console binary (disasm / console discovery), if built.
     pub console_path: Option<PathBuf>,
     /// Selected Ghidra language id (defaults to x86-64).
     pub language_id: String,
@@ -37,6 +37,9 @@ pub struct RuntimeConfig {
     pub ghidra_install: PathBuf,
     /// Peak RSS permitted for one worker process (bytes).
     pub worker_memory_cap: u64,
+    /// True when `language_dir` came from an explicit pin; a pinned
+    /// directory survives adopting an image's own language.
+    pub language_dir_pinned: bool,
 }
 
 impl Default for RuntimeConfig {
@@ -72,9 +75,9 @@ impl RuntimeConfig {
             });
         let language_id = std::env::var("VENTRIS_LANGUAGE")
             .unwrap_or_else(|_| "x86:LE:64:default".into());
-        let language_dir = std::env::var("VENTRIS_LANGUAGE_DIR")
-            .map(PathBuf::from)
-            .ok()
+        let pinned_dir = std::env::var("VENTRIS_LANGUAGE_DIR").ok().map(PathBuf::from);
+        let language_dir_pinned = pinned_dir.is_some();
+        let language_dir = pinned_dir
             .or_else(|| {
                 crate::architecture::directory_for_id(&install, &language_id)
                     .ok()
@@ -119,10 +122,26 @@ impl RuntimeConfig {
             spec_root,
             language_id,
             language_dir,
+            language_dir_pinned,
             console_path,
             sla_path,
             ghidra_install: install,
             worker_memory_cap: 256 * 1024 * 1024,
+        }
+    }
+
+    /// Adopts the language a loaded image declares. The SLEIGH console
+    /// resolves an id inside one installed processor directory, so the
+    /// directory follows the id unless the caller pinned one.
+    pub fn adopt_language(&mut self, id: &str) {
+        if self.language_id != id {
+            self.language_id = id.to_string();
+        }
+        if self.language_dir_pinned {
+            return;
+        }
+        if let Ok(Some(dir)) = crate::architecture::directory_for_id(&self.ghidra_install, id) {
+            self.language_dir = dir;
         }
     }
 }

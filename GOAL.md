@@ -12,7 +12,7 @@ Ghidra (C1), improvements over stock Ghidra measured against ground truth
 | 1 | Rust core + SQLite store + Java JSON-RPC bridge, e2e verified | **done** |
 | 1.5 | Baseline benchmarks + native-worker feasibility spike + ADR-0001 | **done** (39.5 MB spike vs 375 MiB stock; see benchmarks/reports/) |
 | 2 | Store owns all facts; bridge on-demand only; reopen Java-free | **done** (schema v2: comments/datatypes; reopen verified no-JVM) |
-| 3 | Native SLEIGH/disasm + decompiler worker replaces bridge (x86-64); differential tests pass | **done** (raw-SLEIGH worker wired into CLI `decompile-native`; differential passes) |
+| 3 | Native SLEIGH/disasm + decompiler worker replaces bridge (x86-64); differential tests pass | **done** (raw-SLEIGH worker wired into CLI `decompile`; differential passes) |
 | 4 | JVM-free supported workflow, ELF+PE native import, memory/perf gates, support matrix | **done — gated** (benchmarks/gate.sh: 39.9 MB peak vs 375 MiB stock, 0.32 s median wall (3 runs); support matrix in README/STATUS) |
 
 ## Hard rules

@@ -37,7 +37,7 @@ def main():
                 method=method, params=params)) + '\n' for index, (method, params) in enumerate(requests)),
             text=True, capture_output=True, check=True, timeout=120)
         standalone = json.loads(subprocess.run([
-            str(root / 'target/debug/lre-cli'), 'decompile-native-doc', str(binary),
+            str(root / 'target/debug/lre-cli'), 'decompile-doc', str(binary),
             '0x40047a', '--project', temporary], cwd=root, env=env, text=True,
             capture_output=True, check=True, timeout=120).stdout)
     replies = [json.loads(line) for line in response.stdout.splitlines()]

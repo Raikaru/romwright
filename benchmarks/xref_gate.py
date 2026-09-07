@@ -180,7 +180,7 @@ def main():
                 continue
             try:
                 project = Path(temporary) / row["id"]
-                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import-native", str(binary),
+                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import", str(binary),
                     "--name", row["id"], "--project", str(project)],
                     capture_output=True, text=True, timeout=args.timeout)
                 if result.returncode:

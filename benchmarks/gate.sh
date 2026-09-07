@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Stage-4 gate: the full JVM-free supported workflow, measured and bounded.
 #
-#   import-native -> functions -> xrefs -> rename -> open -> disasm-native
-#   -> decompile-native        (the JVM never starts; the bridge is not used)
+#   import -> functions -> xrefs -> rename -> open -> disasm
+#   -> decompile        (the JVM never starts; the bridge is not used)
 #
 # Asserts peak RSS per native phase stays under GATE_KB (default 100000 KB
 # = 100 MB; the stock-Ghidra baseline is ~375 MiB peak) and total wall time
@@ -49,8 +49,8 @@ for i in $(seq 1 "$RUNS"); do
     PROJECT="$OUTDIR/gate-project-$i"
     start=$(date +%s.%N)
 
-    # import-native (no JVM): parse + flow discovery + store
-    /usr/bin/time -v "$CLI" import-native "$BIN" --name gate --project "$PROJECT" \
+    # import (no JVM): parse + flow discovery + store
+    /usr/bin/time -v "$CLI" import "$BIN" --name gate --project "$PROJECT" \
         > "$OUTDIR/import_$i.out" 2> "$OUTDIR/import_$i.time" || { cat "$OUTDIR/import_$i.out" >&2; exit 1; }
     # store-only facts (no JVM)
     "$CLI" functions gate --project "$PROJECT" > "$OUTDIR/functions_$i.out"
@@ -68,7 +68,7 @@ PY
     "$CLI" open gate --project "$PROJECT" > "$OUTDIR/open_$i.out"
     "$CLI" open gate --project "$PROJECT" > "$OUTDIR/reopen_$i.out"
     if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-        /usr/bin/time -v "$CLI" disasm-native "$BIN" 00400466 -n 4 \
+        /usr/bin/time -v "$CLI" disasm "$BIN" 00400466 -n 4 \
             > "$OUTDIR/disasm_$i.out" 2> "$OUTDIR/disasm_$i.time" || { cat "$OUTDIR/disasm_$i.out" >&2; exit 1; }
     else
         echo 'skip' > "$OUTDIR/disasm_$i.time"
@@ -78,8 +78,8 @@ PY
     if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
         disasm_kb=$(rss "$OUTDIR/disasm_$i.time")
     fi
-    # decompile-native (patched ghidra_opt, no JVM)
-    /usr/bin/time -v "$CLI" decompile-native "$BIN" 00400466 --name gate --project "$PROJECT" \
+    # decompile (patched ghidra_opt, no JVM)
+    /usr/bin/time -v "$CLI" decompile "$BIN" 00400466 --name gate --project "$PROJECT" \
         > "$OUTDIR/decompile_$i.out" 2> "$OUTDIR/decompile_$i.time" || { cat "$OUTDIR/decompile_$i.out" >&2; exit 1; }
 
     end=$(date +%s.%N)
@@ -110,8 +110,8 @@ def med(v):
 def peak(k):
     return max(r[k] for r in runs)
 report = {
-    "workflow": ["import-native", "functions", "xrefs", "rename", "open",
-                 "disasm-native", "decompile-native"],
+    "workflow": ["import", "functions", "xrefs", "rename", "open",
+                 "disasm", "decompile"],
     "runs": runs,
     "median_wall_s": med([r["wall_s"] for r in runs]),
     "peak_import_kb": peak("import_kb"),
@@ -120,7 +120,7 @@ report = {
     "gates": {"peak_kb": gate_kb, "wall_s": gate_wall,
               "stock_ghidra_baseline_kb": 384000},
     "complete": console_available,
-    "skipped": [] if console_available else ["disasm-native"],
+    "skipped": [] if console_available else ["disasm"],
     "performance_pass": (peak("import_kb") <= gate_kb
                          and peak("decompile_kb") <= gate_kb
                          and (not peak("disasm_kb") or peak("disasm_kb") <= gate_kb)

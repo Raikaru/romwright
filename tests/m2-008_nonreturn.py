@@ -181,7 +181,7 @@ def main():
         assert not any(token['text'] == 'ordinary' for token in after_doc['tokens']), after_doc
         assert after_doc['prototype']['no_return'] is True, after_doc
         assert after_doc['revision'] > before[-1]['revision'], (before[-1], after_doc)
-        standalone = subprocess.run([str(ROOT / 'target/debug/lre-cli'), 'decompile-native-doc',
+        standalone = subprocess.run([str(ROOT / 'target/debug/lre-cli'), 'decompile-doc',
             str(binary), hex(symbols['relay']), '--project', str(project), '--name', 'fixture'],
             capture_output=True, text=True, check=True, timeout=120, env=env)
         assert not any(token['text'] == 'ordinary' for token in json.loads(standalone.stdout)['tokens'])

@@ -91,7 +91,7 @@ for line in out.splitlines():
     fi
 
     # Import stripped binary natively
-    "$CLI" import-native "$stripped" --name "$name" --project "$proj" > /dev/null 2>&1
+    "$CLI" import "$stripped" --name "$name" --project "$proj" > /dev/null 2>&1
 
     discovered_file="$WORK/${name}_discovered.txt"
     "$CLI" functions "$name" --project "$proj" \

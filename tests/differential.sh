@@ -114,7 +114,7 @@ fi
 step "native import parity (store-only, no JVM)"
 NPROJ="$WORK/native-project"
 mkdir -p "$NPROJ"
-"$ROOT/target/debug/lre-cli" import-native "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
+"$ROOT/target/debug/lre-cli" import "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
 "$ROOT/target/debug/lre-cli" functions tiny_native --project "$NPROJ" \
     | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/native_entries.txt"
 "$ROOT/target/debug/lre-cli" functions tiny_bin --project "$PROJECT" \
@@ -131,29 +131,29 @@ else
     echo "  import parity: native-only entries:"
     comm -23 "$WORK/native_entries.txt" "$WORK/oracle_entries.txt" | head -5 || true
 fi
-# ---- CLI decompile-native (the supported JVM-free route) ------------------
+# ---- CLI decompile (the supported JVM-free route) ------------------
 if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ]; then
-    step "CLI decompile-native (bridge-imported project -> exact parity)"
-    "$CLI" decompile-native "$BIN" 00400466 --name tiny_bin --project "$PROJECT" \
+    step "CLI decompile (bridge-imported project -> exact parity)"
+    "$CLI" decompile "$BIN" 00400466 --name tiny_bin --project "$PROJECT" \
         > "$WORK/cli_native_add.c" 2> "$WORK/cli_native_err.txt" \
-        || { cat "$WORK/cli_native_err.txt" >&2; fail "CLI decompile-native failed"; }
+        || { cat "$WORK/cli_native_err.txt" >&2; fail "CLI decompile failed"; }
     # The worker's C text is the token stream in lexical order (no layout
     # whitespace), so byte-exact comparison against Ghidra's pretty-printed
     # C is wrong; require token-identical modulo whitespace, like the
     # protocol-worker check.
     if diff -q "$WORK/oracle_add.c" "$WORK/cli_native_add.c" > /dev/null; then
-        echo "  CLI decompile-native add: EXACT oracle parity"
+        echo "  CLI decompile add: EXACT oracle parity"
     elif diff <(tr -s ' \n' ' ' < "$WORK/oracle_add.c") \
              <(tr -s ' \n' ' ' < "$WORK/cli_native_add.c") | grep -q .; then
-        echo "  CLI decompile-native add: CONTENT DIFFERS"
+        echo "  CLI decompile add: CONTENT DIFFERS"
         diff "$WORK/oracle_add.c" "$WORK/cli_native_add.c" | head -8 || true
-        fail "CLI decompile-native diverged from the oracle"
+        fail "CLI decompile diverged from the oracle"
     else
-        echo "  CLI decompile-native add: token-identical (whitespace-normalized)"
+        echo "  CLI decompile add: token-identical (whitespace-normalized)"
     fi
-    step "CLI decompile-native (native-imported project, full JVM-free chain)"
-    "$CLI" decompile-native "$BIN" 00400466 --name tiny_native --project "$NPROJ" \
-        > "$WORK/cli_nativeproj_add.c" 2>/dev/null || fail "CLI decompile-native (native project) failed"
+    step "CLI decompile (native-imported project, full JVM-free chain)"
+    "$CLI" decompile "$BIN" 00400466 --name tiny_native --project "$NPROJ" \
+        > "$WORK/cli_nativeproj_add.c" 2>/dev/null || fail "CLI decompile (native project) failed"
     grep -q 'return param_2 + param_1' "$WORK/cli_nativeproj_add.c" \
         && echo "  native project add: OK (return A + B)" \
         || { echo "  native project add: UNEXPECTED: $(cat "$WORK/cli_nativeproj_add.c")"; fail; }
@@ -203,10 +203,10 @@ EOF
     fi
 fi
 if [ -f "$SSTRIP" ]; then
-    step "stripped CLI import-native discovery (no console, no JVM)"
+    step "stripped CLI import discovery (no console, no JVM)"
     SCLI_PROJ="$WORK/stripped-cli-project"
     mkdir -p "$SCLI_PROJ"
-    "$CLI" import-native "$SSTRIP" --name strip_cli --project "$SCLI_PROJ" > /dev/null 2>&1 || true
+    "$CLI" import "$SSTRIP" --name strip_cli --project "$SCLI_PROJ" > /dev/null 2>&1 || true
     "$CLI" functions strip_cli --project "$SCLI_PROJ" \
         | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/stripped_cli.txt"
     echo "  pure-Rust discovered entries: $(wc -l < "$WORK/stripped_cli.txt")"
@@ -227,7 +227,7 @@ PE_SPECS="$WORK/pe-specs"
 PE_PROJ="$WORK/pe-store"
 if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
     mkdir -p "$PE_PROJ"
-    "$ROOT/target/debug/lre-cli" import-native "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
+    "$ROOT/target/debug/lre-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
     step "PE protocol worker (add)"
     "$ROOT/target/debug/lre-worker" "$WORKER" "$PE_SPECS" \
         "$PE" tiny_pe.exe 140001450 --project "$WORK/pe-store" \

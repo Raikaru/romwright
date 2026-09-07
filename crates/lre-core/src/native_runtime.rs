@@ -1,8 +1,8 @@
 //! Native (no-JVM) runtime services: SLEIGH console + the decompiler worker.
 //!
 //! These were CLI-local until the review that tightened the facade contract
-//! (a GUI — the intended consumer — could not reuse `decompile-native` /
-//! `disasm-native` without copying `Command::new` spawn logic out of
+//! (a GUI — the intended consumer — could not reuse `decompile` /
+//! `disasm` without copying `Command::new` spawn logic out of
 //! lre-cli/main.rs). They now live behind the Core facade so every consumer
 //! (CLI, GUI, agents) speaks only Core API methods.
 //!
@@ -162,7 +162,7 @@ fn filtered_listing(output: &str, count: u32, include_structural: bool) -> Vec<S
     lines
 }
 
-/// Performs `disasm-native`: one function mapped + disassembled by the
+/// Performs `disasm`: one function mapped + disassembled by the
 /// SLEIGH console, returning only address-prefixed instruction lines.
 pub fn disasm_native(
     cfg: &RuntimeConfig,
@@ -255,7 +255,7 @@ pub fn language_decompile_config(
     Ok((sla, bundle, lang_dir, language.to_string()))
 }
 
-/// Performant `decompile-native`: one address decompiled by the patched
+/// Performant `decompile`: one address decompiled by the patched
 /// `ghidra_opt` through `lre-worker` (raw-SLEIGH, no JVM).
 fn run_decompiler(
     cfg: &RuntimeConfig,
@@ -333,7 +333,7 @@ fn run_decompiler(
     Ok(out.stdout)
 }
 
-/// Perform `decompile-native`: one address decompiled by the patched
+/// Perform `decompile`: one address decompiled by the patched
 /// `ghidra_opt` through `lre-worker` (raw-SLEIGH, no JVM).
 pub fn decompile_native(
     cfg: &RuntimeConfig,

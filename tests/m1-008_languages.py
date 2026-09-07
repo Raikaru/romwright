@@ -76,7 +76,7 @@ def main():
                 assert definition.get("instructionEndian", endian) == ("little" if be8 else endian)
                 assert (directory / definition.attrib["slafile"]).is_file(), "Compiled language missing"
                 project = work / name
-                result = subprocess.run([str(CLI), "import-native", str(binary), "--name", name,
+                result = subprocess.run([str(CLI), "import", str(binary), "--name", name,
                                          "--project", str(project)], capture_output=True, text=True, timeout=60)
                 assert result.returncode == 0, result.stdout + result.stderr
                 selected = re.search(r"\(\d+ functions, ([^)]+)\)", result.stdout)

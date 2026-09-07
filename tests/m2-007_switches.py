@@ -65,8 +65,8 @@ def main():
         assert oracle['functions'][f"{symbols['plain']:08x}"] == [], oracle
         project = work / 'project'
         cli = str(ROOT / 'target/debug/lre-cli')
-        run([cli, 'import-native', str(binary), '--project', str(project)])
-        standalone = json.loads(run([cli, 'decompile-native-doc', str(binary),
+        run([cli, 'import', str(binary), '--project', str(project)])
+        standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             hex(symbols['dispatch']), '--project', str(project)]).stdout)
         pooled = run_api(ROOT, project, [('decompile_doc', dict(binary=str(binary),
             program=binary.name, address=dict(space='Ram', offset=symbols[name])))

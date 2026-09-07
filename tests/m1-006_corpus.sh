@@ -319,8 +319,8 @@ for entry in run_manifest["entries"]:
         runtime_check = {"positive": 0, "caught_exception": 1, "runner": command[0] if command else "native"}
 
     # Native import verification
-    res = subprocess.run([str(cli_path), "import-native", str(bin_path), "--project", str(out_dir / "project")], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    assert res.returncode == 0, f"import-native failed on {bin_path.name}: {res.stderr.decode()}"
+    res = subprocess.run([str(cli_path), "import", str(bin_path), "--project", str(out_dir / "project")], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    assert res.returncode == 0, f"import failed on {bin_path.name}: {res.stderr.decode()}"
     stdout = res.stdout.decode()
     exp_lang = auth["expected_language"]
     assert exp_lang in stdout, f"Expected language {exp_lang} in output for {bin_path.name}, got: {stdout}"
