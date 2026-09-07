@@ -289,9 +289,18 @@ pub(super) fn prepare(
     // through. The third is therefore a call destination the image declares,
     // not a value discovery has to guess.
     if let Some(pltgot) = dynamic_value(data, width, be, 3)? {
-        import.plt_resolver_slot = pltgot
-            .checked_add(bias)
-            .and_then(|base| base.checked_add(2 * width as u64));
+        if let Some(base) = pltgot.checked_add(bias) {
+            import.plt_reserved_slots = (0..3)
+                .filter_map(|index| {
+                    base.checked_add(index * width as u64)
+                        .map(|address| (address, width as u64))
+                })
+                .collect();
+            import.plt_resolver_slot = import
+                .plt_reserved_slots
+                .get(2)
+                .map(|(address, _)| *address);
+        }
     }
     // ElfProgramBuilder.markupSectionHeaders references each loaded sh_addr.
     // An executable section start is a code root, not a function or a sweep.

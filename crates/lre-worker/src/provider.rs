@@ -87,9 +87,8 @@ pub struct ProgramProvider {
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
     pub register_space_index: i64,
-    /// Slots a stored thunk transfers through: by construction they hold a
-    /// code pointer, whether or not a relocation names its target.
-    pub pointer_slots: HashSet<u64>,
+    /// Locations the store types, address -> (type name, width).
+    pub data_definitions: HashMap<u64, (String, u64)>,
     /// Function entry -> branch instructions the store proves transfer
     /// control the way a call does (a thunk's jump).
     pub call_return_branches: HashMap<u64, Vec<u64>>,
@@ -122,7 +121,7 @@ impl ProgramProvider {
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
-            pointer_slots: HashSet::new(),
+            data_definitions: HashMap::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
             pointer_size: 8,
@@ -613,7 +612,10 @@ impl NativeWorker {
                     close_document(&mut doc);
                 } else if let (true, Some((code_id, _))) = (
                     provider.external_names.contains_key(&vaddr)
-                        || provider.pointer_slots.contains(&vaddr),
+                        || matches!(
+                            provider.data_definitions.get(&vaddr),
+                            Some((kind, _)) if kind == "pointer"
+                        ),
                     core("code"),
                 ) {
                     // A slot holding a code pointer. Ghidra's label is
@@ -625,7 +627,11 @@ impl NativeWorker {
                         Some(target) => format!("PTR_{target}_{vaddr:08x}"),
                         None => format!("PTR_{vaddr:08x}"),
                     };
-                    let size = provider.pointer_size;
+                    let size = provider
+                        .data_definitions
+                        .get(&vaddr)
+                        .map(|(_, width)| *width)
+                        .unwrap_or(provider.pointer_size);
                     open_document(&mut doc);
                     wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {
                         wire::encode_pointer_type(out, ("code", code_id), size);

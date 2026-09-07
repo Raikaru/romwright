@@ -128,6 +128,8 @@ pub const THUNK_SOURCE: &str = "native-import:thunk";
 /// The PLT header's jump reads `DT_PLTGOT + 2 * pointer size`, which the
 /// System V ABI reserves for the dynamic linker's resolver.
 pub const PLT_HEADER_SOURCE: &str = "native-import:plt-header";
+/// The same reservation types the three words themselves: each is a pointer.
+pub const PLT_RESERVED_SOURCE: &str = "native-import:plt-reserved";
 
 /// A loader-bound data relocation that names a symbol: `copies` marks the
 /// COPY form, where the loader duplicates the symbol's bytes at `address`.
@@ -172,6 +174,9 @@ pub struct NativeImport {
     /// `DT_PLTGOT + 2 * pointer size`: the slot the System V ABI reserves for
     /// the dynamic linker's resolver, which the PLT header jumps through.
     pub plt_resolver_slot: Option<u64>,
+    /// The `DT_PLTGOT` words the ABI reserves, each holding a pointer, with
+    /// the image's pointer width.
+    pub plt_reserved_slots: Vec<(u64, u64)>,
     /// Instructions whose transfer the image's own structure proves behaves
     /// like a call, with the rule that proved each.
     pub flow_overrides: Vec<(u64, &'static str)>,
@@ -1636,6 +1641,21 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_flow_overrides(pid, PLT_HEADER_SOURCE, &overrides)?;
+    let definitions: Vec<lre_model::DataDefinitionRow> = imp
+        .plt_reserved_slots
+        .iter()
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: "pointer".into(),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: PLT_RESERVED_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
     // Each rule owns its rows, so one pass never deletes another's facts.
     for source in [THUNK_SOURCE] {
         let thunks: Vec<lre_model::ThunkRow> = imp

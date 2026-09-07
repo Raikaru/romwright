@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T18:31:08.410981+00:00",
+ "recorded_at": "2026-09-07T19:22:29.219364+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 2, flow 16, function-facts 15, missing-external-prototype 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 1, flow 14, function-facts 15, missing-external-prototype 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -12,8 +12,8 @@
   "parity.functions_token_identical": 25,
   "parity.functions_fact_attributed": 31,
   "parity.functions_unattributed": 0,
-  "parity.class.data-type-unknown": 2,
-  "parity.class.flow": 16,
+  "parity.class.data-type-unknown": 1,
+  "parity.class.flow": 14,
   "parity.class.function-facts": 15,
   "parity.class.missing-external-prototype": 18
  },
@@ -32,7 +32,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default.jsonl",
-    "sha256": "b27d9161350266646e1abc67659cc971207348efc1913e2f19b89bd23c73526e"
+    "sha256": "b9ba2e95831b7565376bd13f5ee175db0fb257c7a240826d2baf95f0f5b396e6"
    }
   },
   {
@@ -50,7 +50,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "1d05518cdc3ea2afc46c983101694406ffee3a39ce9c2888a41754659099924d"
+    "sha256": "df6ed2f78ede6b01f2af214c8cc9daa3139049ba3fb1d38968ace6dffdf311ee"
    }
   },
   {
@@ -67,7 +67,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "37370ee3b5248a94691fd47f62ab37bd2ec51cb0ea97e14851274e1da2bc3f78"
+    "sha256": "b600c600d050982ff3090f3a889d0298886ad5b3cde7c6e7899a40f3f940dec5"
    }
   },
   {
@@ -84,7 +84,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "1247605414ccdf61b40696c5ffcf0f2ea11d6e6d35fdbceac393c821caffcae0"
+    "sha256": "9dc5c8eeedfd1aa8e9ff25996720edeb926b68dd3886492696fca6715eaa71ce"
    }
   }
  ],

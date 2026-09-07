@@ -641,6 +641,19 @@ pub struct TypeFieldRow {
 }
 
 /// Function prototype and calling convention.
+/// One location whose contents a fact types: an address, what is there and how
+/// wide it is. Ghidra holds the same as defined data, and composes labels from
+/// it (`SymbolUtilities.getDynamicDataName`).
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct DataDefinitionRow {
+    pub address: Address,
+    /// A core type name, e.g. `pointer`.
+    pub data_type: String,
+    /// Width in bytes.
+    pub size: u64,
+    pub provenance: FactProvenance,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct PrototypeRow {
     pub function: Address,

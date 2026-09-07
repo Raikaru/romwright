@@ -107,14 +107,14 @@ fn run(
     // A thunk's jump transfers control the way a call does. The store proves
     // both halves: the thunk row names entry and destination, and the xref
     // row names the instruction that performs the transfer.
-    let thunks = db.thunks(pid)?;
-    for thunk in &thunks {
-        if thunk.kind == lre_model::ThunkKind::Linkage
-            && thunk.thunked.space == lre_model::AddressSpace::Ram
-        {
-            provider.pointer_slots.insert(thunk.thunked.offset);
+    for row in db.data_definitions(pid)? {
+        if row.address.space == lre_model::AddressSpace::Ram && row.size > 0 {
+            provider
+                .data_definitions
+                .insert(row.address.offset, (row.data_type, row.size));
         }
     }
+    let thunks = db.thunks(pid)?;
     if !thunks.is_empty() {
         let functions: Vec<(u64, u64)> = provider
             .functions
@@ -161,26 +161,7 @@ fn run(
     }
     // Instruction flow the store corrects: each override belongs to the
     // function that contains it, which is how the decompiler keys them.
-    let overrides = db.flow_overrides(pid)?;
-    if !overrides.is_empty() {
-        // The slot such an instruction reads holds a code pointer: that is
-        // what makes its transfer a call.
-        let corrected: Vec<u64> = overrides
-            .iter()
-            .filter(|row| row.address.space == lre_model::AddressSpace::Ram)
-            .map(|row| row.address.offset)
-            .collect();
-        for xref in db.xrefs(pid)? {
-            if xref.kind == "DATA"
-                && xref.to.space == lre_model::AddressSpace::Ram
-                && xref.from.space == lre_model::AddressSpace::Ram
-                && corrected.contains(&xref.from.offset)
-            {
-                provider.pointer_slots.insert(xref.to.offset);
-            }
-        }
-    }
-    for row in overrides {
+    for row in db.flow_overrides(pid)? {
         if row.address.space != lre_model::AddressSpace::Ram || row.kind != "callreturn" {
             continue;
         }
