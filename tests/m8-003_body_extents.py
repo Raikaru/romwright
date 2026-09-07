@@ -16,9 +16,21 @@ requires:
   * `body.crossing == 0` -- no recovered body strictly contains another
     recovered entry. Two functions cannot overlap, so a body that spans one is
     wrong regardless of what truth says;
-  * every matched body to end inside its truth range, or to overshoot it by
-    less than one alignment slot (16 bytes) into bytes no other entry owns.
-    A larger overshoot is unexplained and fails.
+  * every matched body to end inside its truth range, or for the overshoot to
+    be **classified against the image**: under one alignment slot (16 bytes)
+    of padding, or running *into* a single DWARF function the importer did not
+    discover and stopping inside it -- the recall deficit `m8-002` records,
+    not a wrong extent. Crossing a second undiscovered start, running past
+    the end of the one it entered, or overshooting into bytes no truth
+    describes is unexplained and fails. That is what catches a size taken
+    from the distance to the next entry rather than from flow: it swallowed
+    `__tmainCRTStartup` and `WinMainCRTStartup` whole;
+  * a body that stops short of its truth range to leave behind only bytes
+    **nothing recovered points at**: no entry starts there and no reference
+    lands there. Four bodies stop 7 to 36 bytes short at tails no flow
+    reaches -- a C++ landing pad is reached by the personality routine, not by
+    a branch -- and that is honest only while nothing in the store claims
+    those bytes exist.
 
 Usage:
     python3 tests/m8-003_body_extents.py --corpus-dir DIR [--report OUT.json]
@@ -106,8 +118,8 @@ def is_shared_object(binary: Path, big_endian: bool) -> bool:
     return int.from_bytes(header, "big" if big_endian else "little") == 3
 
 
-def store_bodies(binary: Path, work: Path) -> tuple[dict[int, int], int]:
-    """entry -> size from a fresh import, with the store's image base."""
+def store_bodies(binary: Path, work: Path) -> tuple[dict[int, int], int, set[int]]:
+    """entry -> size from a fresh import, the image base, and reference targets."""
     project = work / f"{binary.stem}-extents"
     result = subprocess.run(
         [str(ROOT / "target/release/lre-cli"), "import", str(binary),
@@ -119,12 +131,13 @@ def store_bodies(binary: Path, work: Path) -> tuple[dict[int, int], int]:
               for entry, size in store.execute("SELECT entry, size FROM functions")}
     base = min(int(row[0], 16)
                for row in store.execute("SELECT start FROM memory_regions"))
-    return bodies, base
+    targets = {int(row[0], 16) for row in store.execute("SELECT dst FROM xrefs")}
+    return bodies, base, targets
 
 
 def score(image: Path, twin: Path, identifier: str, work: Path,
           big_endian: bool) -> dict:
-    bodies, base = store_bodies(image, work)
+    bodies, base, targets = store_bodies(image, work)
     bias = base if twin.read_bytes()[:4] == b"\x7fELF" and is_shared_object(
         twin, big_endian) else 0
     executable = executable_ranges(twin)
@@ -142,7 +155,8 @@ def score(image: Path, twin: Path, identifier: str, work: Path,
                              "swallows": len(inside),
                              "first": f"{inside[0]:08x}"})
 
-    padding, unexplained = [], []
+    missed = sorted(low for low in truth if low not in bodies)
+    padding, into_missed, unexplained = [], [], []
     for entry, high in sorted(truth.items()):
         if entry not in bodies:
             continue
@@ -152,7 +166,38 @@ def score(image: Path, twin: Path, identifier: str, work: Path,
         overshoot = end - high
         row = {"entry": f"{entry:08x}", "truth_end": f"{high:08x}",
                "body_end": f"{end:08x}", "overshoot": overshoot}
-        (padding if overshoot < ALIGNMENT else unexplained).append(row)
+        # A body running into a function nobody discovered is the recall
+        # deficit m8-002 records showing up as bytes, not a wrong extent -- but
+        # only if it runs *into* that function. Crossing a second start, or
+        # running past the end of the one it entered, means the extent came
+        # from somewhere other than flow.
+        swallowed = [low for low in missed if high <= low < end]
+        if overshoot < ALIGNMENT:
+            padding.append(row)
+        elif len(swallowed) == 1 and end <= truth[swallowed[0]]:
+            row["into"] = f"{swallowed[0]:08x}"
+            into_missed.append(row)
+        else:
+            row["crosses"] = [f"{low:08x}" for low in swallowed[:3]]
+            unexplained.append(row)
+
+    # A body may stop short only if nothing recovered claims the tail.
+    undershoot, claimed_tail = [], []
+    for entry, high in sorted(truth.items()):
+        if entry not in bodies:
+            continue
+        end = entry + bodies[entry]
+        if end >= high:
+            continue
+        row = {"entry": f"{entry:08x}", "truth_end": f"{high:08x}",
+               "body_end": f"{end:08x}", "short": high - end}
+        inside = sorted(address for address in targets | set(bodies)
+                        if end <= address < high)
+        if inside:
+            row["claimed"] = f"{inside[0]:08x}"
+            claimed_tail.append(row)
+        else:
+            undershoot.append(row)
 
     matched = [entry for entry in truth if entry in bodies]
     exact = sum(1 for entry in matched if entry + bodies[entry] == truth[entry])
@@ -165,12 +210,21 @@ def score(image: Path, twin: Path, identifier: str, work: Path,
             "body.crossing": len(crossing),
             "body.exact": exact / len(matched) if matched else 0.0,
             "body.padding_overshoot": len(padding),
+            "body.overshoot_into_missed": len(into_missed),
             "body.unexplained_overshoot": len(unexplained),
+            "body.undershoot": len(undershoot),
+            "body.claimed_tail": len(claimed_tail),
+            "body.undershoot_bytes.max": max(
+                (row["short"] for row in undershoot + claimed_tail), default=0),
             "body.overshoot_bytes.max": max(
-                (row["overshoot"] for row in padding + unexplained), default=0),
+                (row["overshoot"] for row in padding + into_missed + unexplained),
+                default=0),
         },
         "crossing": crossing[:6],
+        "into_missed": into_missed[:4],
         "unexplained": unexplained[:6],
+        "undershoot": undershoot[:4],
+        "claimed_tail": claimed_tail[:6],
     }
 
 
@@ -217,10 +271,18 @@ def main() -> int:
     unexplained = {row["id"]: row["unexplained"] for row in rows
                    if row["metrics"]["body.unexplained_overshoot"]}
     assert not unexplained, (
-        "bodies run past their truth range by more than one alignment slot: "
+        "bodies run past their truth range into bytes no truth describes: "
         + "; ".join(f"{identifier}: {rows_[0]['entry']} to {rows_[0]['body_end']} "
                     f"(+{rows_[0]['overshoot']})"
                     for identifier, rows_ in list(unexplained.items())[:4]))
+
+    claimed = {row["id"]: row["claimed_tail"] for row in rows
+               if row["metrics"]["body.claimed_tail"]}
+    assert not claimed, (
+        "bodies stop short of bytes the store itself claims: "
+        + "; ".join(f"{identifier}: {rows_[0]['entry']} ends "
+                    f"{rows_[0]['body_end']} but {rows_[0]['claimed']} is claimed"
+                    for identifier, rows_ in list(claimed.items())[:4]))
 
     totals = {
         "body.crossing": sum(row["metrics"]["body.crossing"] for row in rows),
@@ -229,6 +291,11 @@ def main() -> int:
                        / max(sum(row["matched"] for row in rows), 1)),
         "body.padding_overshoot": sum(row["metrics"]["body.padding_overshoot"]
                                       for row in rows),
+        "body.overshoot_into_missed": sum(
+            row["metrics"]["body.overshoot_into_missed"] for row in rows),
+        "body.undershoot": sum(row["metrics"]["body.undershoot"] for row in rows),
+        "body.undershoot_bytes.max": max(
+            row["metrics"]["body.undershoot_bytes.max"] for row in rows),
         "body.overshoot_bytes.max": max(row["metrics"]["body.overshoot_bytes.max"]
                                         for row in rows),
     }
@@ -236,8 +303,11 @@ def main() -> int:
                f"DWARF range: 0 crossing another entry, "
                f"{totals['body.exact']:.4f} ending exactly where the compiler "
                f"says, {totals['body.padding_overshoot']} ending inside one "
-               f"alignment slot past it (worst "
-               f"{totals['body.overshoot_bytes.max']} bytes)")
+               f"alignment slot past it, {totals['body.overshoot_into_missed']} "
+               f"running into a function nobody discovered (worst "
+               f"{totals['body.overshoot_bytes.max']} bytes), 0 unexplained, "
+               f"{totals['body.undershoot']} stopping short at tails nothing "
+               f"claims (worst {totals['body.undershoot_bytes.max']} bytes)")
 
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
@@ -248,7 +318,7 @@ def main() -> int:
             "passed": True,
             "summary": summary,
             "thresholds": {"body.crossing": 0, "body.unexplained_overshoot": 0,
-                           "alignment_bytes": ALIGNMENT},
+                           "body.claimed_tail": 0, "alignment_bytes": ALIGNMENT},
             "totals": totals,
             "images": rows,
         }, indent=1) + "\n")

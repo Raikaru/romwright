@@ -1483,9 +1483,12 @@ pub fn store_import(
 ) -> Result<ProgramSummary> {
     let mut functions = imp.functions.clone();
     functions.sort_by_key(|f| f.entry);
-    // Fill sizes from the next function's entry when unknown.
+    // Fill sizes from the next function's entry only where none was proven.
+    // A proven one-byte body is a fact, not a placeholder: overwriting it with
+    // the distance to the next entry made a one-instruction CRT stub own a
+    // kilobyte of unrelated code.
     for i in 0..functions.len() {
-        if functions[i].size <= 1 {
+        if functions[i].size == 0 {
             let end = functions
                 .get(i + 1)
                 .map(|n| n.entry)

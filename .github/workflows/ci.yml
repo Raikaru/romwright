@@ -246,6 +246,13 @@ jobs:
           python3 tests/m7-003_session_envelope.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/session-envelope.json"
+      - name: Gate recovered body extents against DWARF ranges
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m8-003_body_extents.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/body-extents.json"
       - name: Enforce the M3 DWARF ground-truth gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

@@ -985,6 +985,41 @@ thunk the store proved), while removing the symbol class fails 29 entries.
 Neither gated fixture carries a chained record, so that rule is pinned by a
 unit test rather than claimed from these images.
 
+### How long a function is
+
+A recovered body is the furthest instruction the flow walk attributed to an
+entry, and one fallthrough across inter-function padding used to stretch that
+over everything after it: `FUN_00401c80` in `tiny_pe32.exe` claimed
+**27 KB across 69 other functions**. That number is what the store reports as
+`size`, what a containing-function lookup resolves with, and what a listing
+renders.
+
+Two rules now hold it. A body ends where the next entry begins, because two
+functions cannot overlap. And a size of zero means *no body was proven*, which
+the store fills from the next entry -- while a **proven** size of one is a
+fact, not a placeholder: the MinGW CRT really contains a one-instruction
+function, and filling that one in made it own a kilobyte of unrelated code.
+
+Extents are scored against the compiler's own `DW_AT_low_pc`/`DW_AT_high_pc`
+per image (`tests/m8-003_body_extents.py`, `benchmarks/reports/m8-003.json`):
+
+| Metric | 23 images, 1895 matched bodies |
+|---|---|
+| `body.crossing` | **0** bodies contain another entry |
+| `body.exact` | **0.9873** end exactly where the compiler says |
+| `body.padding_overshoot` | 19 end within one 16-byte alignment slot past it |
+| `body.overshoot_into_missed` | 1 run into a function nobody discovered |
+| `body.undershoot` | 4 stop short at a tail nothing claims (worst 36 bytes) |
+
+Every deviation is classified against the image rather than tolerated. An
+overshoot may run *into* one undiscovered DWARF function and stop inside it --
+that is the recall deficit `m8-002` records, showing up as bytes -- but
+crossing a second start or running past the end of the one it entered fails,
+which is exactly what a size taken from the distance to the next entry does.
+A body may stop short only when no entry starts and no reference lands in the
+bytes it left behind; the four that do are C++ landing pads, reached by the
+personality routine rather than by a branch.
+
 ## What an import costs
 
 Both producers import the same 20 locked ELF entries, measured the same way
@@ -1172,7 +1207,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 69; `diagnostic_runs` 12; `generated_rows` 68; `published_ids` 54 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 70; `diagnostic_runs` 12; `generated_rows` 69; `published_ids` 55 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1184,6 +1219,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m7-003.json` | `m7-003` | M7 | pass | `session.drift_excess_ms.max` -0.8630; `session.drift_ratio.max` 1.6800; `session.growth_kb.max` 28; `session.growth_kb.median` 14.0000; `session.latency_ms.decompile_doc.median` 6.0020; `session.latency_ms.functions.median` 0.2650; `session.latency_ms.memory_regions.median` 0.2600; `session.latency_ms.search.median` 0.3890; `session.latency_ms.strings.median` 0.4670; `session.latency_ms.symbols.median` 0.1590; `session.latency_ms.xrefs.median` 0.1880; `session.peak_kb.median` 42940.0000 | `tests/m7-003_session_envelope.py` |
 | `m8-001.json` | `m8-001` | M8 | pass | `pe.dwarf.fn.recall` 1.0000; `pe.dwarf.fn.unattributed` 0 | `tests/m8-001_pe_unwind.py` |
 | `m8-002.json` | `m8-002` | M8 | pass | `ghidra.dwarf.fn.recall` 0.7634; `ghidra.functions` 106; `pe32.dwarf.fn.recall` 0.8065; `pe32.dwarf.fn.unattributed` 0; `pe32.functions` 110; `pe32.undescribed` 35 | `tests/m8-002_pe32_roots.py` |
+| `m8-003.json` | `m8-003` | M8 | pass | `body.crossing` 0 | `tests/m8-003_body_extents.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

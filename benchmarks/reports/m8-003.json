@@ -1,0 +1,567 @@
+{
+ "id": "m8-003",
+ "recorded_at": "2026-09-07T11:51:56.106930+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "23 images, 1895 bodies matched to a DWARF range: 0 crossing another entry, 0.9873 ending exactly where the compiler says, 19 ending inside one alignment slot past it, 1 running into a function nobody discovered (worst 84 bytes), 0 unexplained, 4 stopping short at tails nothing claims (worst 36 bytes)",
+ "thresholds": {
+  "body.crossing": 0,
+  "body.unexplained_overshoot": 0,
+  "body.claimed_tail": 0,
+  "alignment_bytes": 16
+ },
+ "totals": {
+  "body.crossing": 0,
+  "body.matched": 1895,
+  "body.exact": 0.987335092348285,
+  "body.padding_overshoot": 19,
+  "body.overshoot_into_missed": 1,
+  "body.undershoot": 4,
+  "body.undershoot_bytes.max": 36,
+  "body.overshoot_bytes.max": 84
+ },
+ "images": [
+  {
+   "id": "x86_64_plain_o0",
+   "functions": 12,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "functions": 12,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "functions": 12,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "functions": 20,
+   "truth_ranges": 3,
+   "matched": 3,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "functions": 409,
+   "truth_ranges": 401,
+   "matched": 401,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "functions": 15,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "functions": 15,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "functions": 16,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "functions": 23,
+   "truth_ranges": 3,
+   "matched": 3,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.6666666666666666,
+    "body.padding_overshoot": 1,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 4
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "i386_many_o2",
+   "functions": 413,
+   "truth_ranges": 401,
+   "matched": 401,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "functions": 17,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "functions": 17,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "functions": 17,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "aarch64_cpp_o2",
+   "functions": 24,
+   "truth_ranges": 3,
+   "matched": 3,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.6666666666666666,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 1,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 36,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [
+    {
+     "entry": "00210b34",
+     "truth_end": "00210be8",
+     "body_end": "00210bc4",
+     "short": 36
+    }
+   ],
+   "claimed_tail": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "functions": 415,
+   "truth_ranges": 401,
+   "matched": 401,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "functions": 12,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "functions": 12,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "functions": 13,
+   "truth_ranges": 2,
+   "matched": 2,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "functions": 19,
+   "truth_ranges": 3,
+   "matched": 3,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "powerpc_many_o2",
+   "functions": 410,
+   "truth_ranges": 401,
+   "matched": 401,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "tiny_pe.exe",
+   "functions": 120,
+   "truth_ranges": 90,
+   "matched": 90,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9222222222222223,
+    "body.padding_overshoot": 6,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 1,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 25,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [
+    {
+     "entry": "140001cd0",
+     "truth_end": "140001e8d",
+     "body_end": "140001e74",
+     "short": 25
+    }
+   ],
+   "claimed_tail": []
+  },
+  {
+   "id": "dispatch.exe",
+   "functions": 122,
+   "truth_ranges": 90,
+   "matched": 90,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9222222222222223,
+    "body.padding_overshoot": 6,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 1,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 25,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [
+    {
+     "entry": "140001cb0",
+     "truth_end": "140001e6d",
+     "body_end": "140001e54",
+     "short": 25
+    }
+   ],
+   "claimed_tail": []
+  },
+  {
+   "id": "tiny_pe32.exe",
+   "functions": 110,
+   "truth_ranges": 93,
+   "matched": 75,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.8933333333333333,
+    "body.padding_overshoot": 6,
+    "body.overshoot_into_missed": 1,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 1,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 7,
+    "body.overshoot_bytes.max": 84
+   },
+   "crossing": [],
+   "into_missed": [
+    {
+     "entry": "00401910",
+     "truth_end": "00401c1e",
+     "body_end": "00401c72",
+     "overshoot": 84,
+     "into": "00401c20"
+    }
+   ],
+   "unexplained": [],
+   "undershoot": [
+    {
+     "entry": "00404480",
+     "truth_end": "0040505c",
+     "body_end": "00405055",
+     "short": 7
+    }
+   ],
+   "claimed_tail": []
+  }
+ ]
+}
