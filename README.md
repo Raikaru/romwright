@@ -941,11 +941,35 @@ analysis, and stay inside a recorded envelope
 | `cost.peak_ratio.median` | **12.11x** less memory |
 | `cost.wall_ratio.median` | **32.91x** faster |
 
-`benchmarks/reports/cost-envelope.json` records the native peak per entry and
-is never edited: the gate allows 25% headroom for host noise and fails on
+Decompiling one function is measured the same way, with import and analysis
+done first and untimed in both producers -- `lre-cli decompile` against an
+imported project, `analyzeHeadless -process -noanalysis -postScript
+scripts/DecompileOne.java` against an analysed and saved one. Both decompile
+`main` **by name** in each entry's unstripped twin, so no address is guessed
+and PIE image bases cannot make the two disagree about what was decompiled
+(`tests/m7-002_decompile_envelope.py`, `benchmarks/reports/m7-002.json`):
+
+| Metric | Median over 20 entries |
+|---|---|
+| `decompile.native.peak_kb.median` | **34 594 KiB** |
+| `decompile.stock.peak_kb.median` | 286 368 KiB |
+| `decompile.native.wall_s.median` | **0.091 s** |
+| `decompile.stock.wall_s.median` | 5.933 s |
+| `decompile.peak_ratio.median` | **8.32x** less memory |
+| `decompile.wall_ratio.median` | **74.03x** faster |
+
+Both producers must emit a real function body, asserted rather than assumed:
+the native run has to print a body for the resolved address and the stock
+script has to report a non-empty `getC()`.
+
+`benchmarks/reports/cost-envelope.json` and
+`benchmarks/reports/decompile-envelope.json` record the native peak per entry and
+are never edited: the gates allow 25% headroom for host noise and fail on
 anything larger, so a regression appears as a failure rather than as a new
 number. Shrinking one envelope entry, deleting one, and asking `--write` to
-overwrite the file all fail the gate.
+overwrite the file all fail both gates, as does asking for a function the
+store does not have. `benchmarks/cost.py` holds the single definition of what
+"it cost" means, so the two gates cannot drift apart.
 
 Stock analysis does more than a native import does -- it runs Ghidra's full
 analysis chain -- so this is a cost comparison of the two default paths, not of
@@ -1003,6 +1027,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | Report | Gate | Milestone | Status | Measured | Produced by |
 |---|---|---|---|---|---|
 | `cost-envelope.json` | `cost-envelope` | - | recorded | `headroom` 1.2500 | - |
+| `decompile-envelope.json` | `decompile-envelope` | - | recorded | `headroom` 1.2500 | - |
 | `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.1600; `peak_decompile_kb` 39160; `peak_disasm_kb` 0; `peak_import_kb` 5908 | - |
 | `ui-gate.json` | `ui` | M0 | pass | 1 pass, 0 fail, 0 skipped | `benchmarks/ui_gate.py` |
 | `discovery-gate.json` | `discovery` | M1 | pass | 20 pass, 0 fail, 0 skipped | `benchmarks/discovery_gate.py` |
@@ -1056,14 +1081,15 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 63; `diagnostic_runs` 12; `generated_rows` 62; `published_ids` 48 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 65; `diagnostic_runs` 12; `generated_rows` 64; `published_ids` 50 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
 | `m6-004.json` | `m6-004` | M6 | pass | `artifacts` 5; `commands` 9; `sbom_packages` 60; `skipped_blocks` 0 | `tests/m6-004_release_artifacts.py` |
 | `m6-005.json` | `m6-005` | M6 | pass | `client_helpers` 23; `commands` 1; `output_lines` 8 | `tests/m6-005_scripting.py` |
 | `m6-006.json` | `m6-006` | M6 | pass | `excused_blocks` 30; `gated_pages` 5; `metric_names` 79; `pages` 11; `surfaces` 13 | `tests/m6-006_documentation_coverage.py` |
-| `m7-001.json` | `m7-001` | M7 | pass | `cost.native.peak_kb.median` 36038.0000; `cost.native.wall_s.median` 0.2680; `cost.peak_ratio.median` 11.4800; `cost.stock.peak_kb.median` 422716.0000; `cost.stock.wall_s.median` 7.9920; `cost.wall_ratio.median` 30.1300 | `tests/m7-001_cost_envelope.py` |
+| `m7-001.json` | `m7-001` | M7 | pass | `cost.native.peak_kb.median` 36090.0000; `cost.native.wall_s.median` 0.2670; `cost.peak_ratio.median` 12.0900; `cost.stock.peak_kb.median` 423274.0000; `cost.stock.wall_s.median` 8.4260; `cost.wall_ratio.median` 29.7000 | `tests/m7-001_cost_envelope.py` |
+| `m7-002.json` | `m7-002` | M7 | pass | `decompile.native.peak_kb.median` 34594.0000; `decompile.native.wall_s.median` 0.0910; `decompile.peak_ratio.median` 8.3200; `decompile.stock.peak_kb.median` 286368.0000; `decompile.stock.wall_s.median` 5.9330; `decompile.wall_ratio.median` 74.0300 | `tests/m7-002_decompile_envelope.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

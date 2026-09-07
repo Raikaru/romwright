@@ -1,0 +1,32 @@
+{
+ "id": "decompile-envelope",
+ "recorded_at": "2026-09-07T10:28:33.737258+00:00",
+ "host": {
+  "system": "Linux",
+  "machine": "x86_64"
+ },
+ "headroom": 1.25,
+ "note": "native peak RSS for decompiling main in each locked corpus entry; recorded once, compared against afterwards",
+ "entries": {
+  "x86_64_plain_o0": 39400,
+  "x86_64_plain_o2": 39324,
+  "x86_64_plain_pie": 39208,
+  "x86_64_cpp_o2": 39328,
+  "x86_64_many_o2": 55652,
+  "i386_plain_o0": 32032,
+  "i386_plain_o2": 32040,
+  "i386_plain_pie": 32212,
+  "i386_cpp_o2": 32104,
+  "i386_many_o2": 44448,
+  "aarch64_plain_o0": 34780,
+  "aarch64_plain_o2": 34660,
+  "aarch64_plain_pie": 34540,
+  "aarch64_cpp_o2": 34648,
+  "aarch64_many_o2": 41696,
+  "powerpc_plain_o0": 18500,
+  "powerpc_plain_o2": 18500,
+  "powerpc_plain_pie": 18500,
+  "powerpc_cpp_o2": 18500,
+  "powerpc_many_o2": 20640
+ }
+}

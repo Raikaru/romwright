@@ -101,8 +101,10 @@ def stock_decompile(install: Path, binary: Path, identifier: str, temporary: Pat
     assert code == 0, f"{identifier}: stock decompile exited {code}"
     reported = [line for line in log.read_text().splitlines() if "DECOMPILED" in line]
     assert reported, f"{identifier}: stock decompile printed nothing: {log.read_text()[-400:]}"
+    # "INFO  DecompileOne.java> DECOMPILED main 002016a0 chars 185 (GhidraScript)"
     fields = reported[0].split()
-    address, characters = fields[fields.index("DECOMPILED") + 2], int(fields[-1])
+    address = fields[fields.index("DECOMPILED") + 2]
+    characters = int(fields[fields.index("chars") + 1])
     assert characters > 0, f"{identifier}: stock decompile produced no C"
     return wall, peak, address, characters
 
