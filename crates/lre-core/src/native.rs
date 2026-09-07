@@ -13,7 +13,9 @@ use lre_db::ProjectDb;
 use std::collections::HashSet;
 use std::path::Path;
 mod gba;
+mod n64;
 mod nds;
+mod psx;
 pub(crate) mod dol;
 mod discovery;
 mod elf_pointers;
@@ -996,6 +998,11 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
         import_elf(data)
     } else if data.starts_with(b"MZ") {
         import_pe(data)
+    } else if n64::is_rom(data) || n64::is_swapped_dump(data) {
+        // A swapped dump is recognised only to refuse it by name.
+        n64::import(data)
+    } else if psx::is_executable(data) {
+        psx::import(data)
     } else if gba::is_cartridge(data) {
         gba::import(data)
     } else if nds::is_cartridge(data) {

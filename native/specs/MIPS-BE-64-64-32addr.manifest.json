@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "producer": "dump_specs",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "bridge_sources_sha256": "19e07748760b320be92f0c05bdf9546f96f34d29db91d1e13018d172bf86e2f7",
+  "language": "MIPS:BE:64:64-32addr",
+  "compiler": "default",
+  "representative_sha256": "8ae10e37b651fe4ea3da2421d474c8c5bed9166da5b8035a52feeccc403c9059",
+  "files": {
+    "pspec.xml": {
+      "sha256": "680f8fce6bfd9faa73bdbd13188c7cf6af2bada219c86a54670e751793244df3",
+      "bytes": 3786
+    },
+    "cspec.xml": {
+      "sha256": "d8b2e4278f9ad11b81bc74e3d739a24c9cd30627678a9dcf8b35e54d44760ab6",
+      "bytes": 3700
+    },
+    "tspec.xml": {
+      "sha256": "ff2677b084daafb2eba0d02370a3c9c440686f248589de724bb2c100ef51224f",
+      "bytes": 1251
+    },
+    "coretypes.xml": {
+      "sha256": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+      "bytes": 2678
+    },
+    "registers.txt": {
+      "sha256": "6f74cd0adc5ea809fbe4e7bb00a04094b7718628598914cd9ba15a61070dbe7a",
+      "bytes": 9310
+    }
+  }
+}
