@@ -46,6 +46,8 @@ jobs:
         run: |
           python tests/support_matrix_test.py
           python tests/m5-005_platform_matrix.py
+      - name: Check the evidence index
+        run: python tests/m5-012_evidence_index.py
   corpus-linux:
     name: Multi-Arch Corpus (ubuntu-latest)
     runs-on: ubuntu-latest
