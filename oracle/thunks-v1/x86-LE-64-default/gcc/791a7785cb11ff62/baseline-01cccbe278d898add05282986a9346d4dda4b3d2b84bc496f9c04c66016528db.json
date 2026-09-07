@@ -1,0 +1,549 @@
+{
+  "schema_version": 1,
+  "sha256": "01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db",
+  "exporter_sha256": "e881a45451a28ffc7ee8f0bf798324acdcd1ddb9c146336da50220dfb4734a8f",
+  "producer": "ghidra-headless",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "language": "x86:LE:64:default",
+  "compiler": "gcc",
+  "image_base": "00100000",
+  "functions": 3987,
+  "thunks": {
+    "00100770": {
+      "thunked": "0018aaf0",
+      "external": false,
+      "name": "strnlen"
+    },
+    "00100790": {
+      "thunked": "0018a7d0",
+      "external": false,
+      "name": "strncasecmp"
+    },
+    "001007a0": {
+      "thunked": "00187980",
+      "external": false,
+      "name": "mempcpy"
+    },
+    "001007b0": {
+      "thunked": "001ac490",
+      "external": false,
+      "name": "wmemset"
+    },
+    "001007d0": {
+      "thunked": "0019e060",
+      "external": false,
+      "name": "wcpncpy"
+    },
+    "001007e0": {
+      "thunked": "0018adc0",
+      "external": false,
+      "name": "strspn"
+    },
+    "001007f0": {
+      "thunked": "00186e00",
+      "external": false,
+      "name": "memchr"
+    },
+    "00100810": {
+      "thunked": "00187870",
+      "external": false,
+      "name": "memmove"
+    },
+    "00100820": {
+      "thunked": "001ac360",
+      "external": false,
+      "name": "wmemchr"
+    },
+    "00100830": {
+      "thunked": "00187d00",
+      "external": false,
+      "name": "stpcpy"
+    },
+    "00100840": {
+      "thunked": "002028e0",
+      "external": false,
+      "name": "__memmove_chk"
+    },
+    "00100850": {
+      "thunked": "001ac3e0",
+      "external": false,
+      "name": "wmemcmp"
+    },
+    "00100870": {
+      "thunked": "0018aa20",
+      "external": false,
+      "name": "strncpy"
+    },
+    "00100880": {
+      "thunked": "0018a750",
+      "external": false,
+      "name": "strlen"
+    },
+    "00100890": {
+      "thunked": "0019e3c0",
+      "external": false,
+      "name": "wcscat"
+    },
+    "001008a0": {
+      "thunked": "00187e80",
+      "external": false,
+      "name": "strcasecmp_l"
+    },
+    "001008b0": {
+      "thunked": "00189c40",
+      "external": false,
+      "name": "strcpy"
+    },
+    "001008c0": {
+      "thunked": "0019e420",
+      "external": false,
+      "name": "wcschr"
+    },
+    "001008f0": {
+      "thunked": "001ac490",
+      "external": false,
+      "name": "wmemset"
+    },
+    "00100900": {
+      "thunked": "00186e80",
+      "external": false,
+      "name": "memcmp"
+    },
+    "00100910": {
+      "thunked": "00188ac0",
+      "external": false,
+      "name": "strchrnul"
+    },
+    "00100920": {
+      "thunked": "0018a870",
+      "external": false,
+      "name": "strncasecmp_l"
+    },
+    "00100940": {
+      "thunked": "001889d0",
+      "external": false,
+      "name": "strcat"
+    },
+    "00100950": {
+      "thunked": "0019f460",
+      "external": false,
+      "name": "wcscpy"
+    },
+    "00100960": {
+      "thunked": "00189cb0",
+      "external": false,
+      "name": "strcspn"
+    },
+    "00100970": {
+      "thunked": "00187de0",
+      "external": false,
+      "name": "strcasecmp"
+    },
+    "00100980": {
+      "thunked": "0018a980",
+      "external": false,
+      "name": "strncmp"
+    },
+    "00100990": {
+      "thunked": "001ac360",
+      "external": false,
+      "name": "wmemchr"
+    },
+    "001009b0": {
+      "thunked": "00187d70",
+      "external": false,
+      "name": "stpncpy"
+    },
+    "001009c0": {
+      "thunked": "0019e4c0",
+      "external": false,
+      "name": "wcscmp"
+    },
+    "001009e0": {
+      "thunked": "0018aba0",
+      "external": false,
+      "name": "rindex"
+    },
+    "001009f0": {
+      "thunked": "00202b00",
+      "external": false,
+      "name": "__memset_chk"
+    },
+    "00100a00": {
+      "thunked": "00188a40",
+      "external": false,
+      "name": "strchr"
+    },
+    "00100a20": {
+      "thunked": "0019e420",
+      "external": false,
+      "name": "wcschr"
+    },
+    "00100a30": {
+      "thunked": "00186f70",
+      "external": false,
+      "name": "memcpy"
+    },
+    "00100a40": {
+      "thunked": "0019ff40",
+      "external": false,
+      "name": "wcsncpy"
+    },
+    "00100a60": {
+      "thunked": "00187a90",
+      "external": false,
+      "name": "memrchr"
+    },
+    "00100a70": {
+      "thunked": "002027d0",
+      "external": false,
+      "name": "__memcpy_chk"
+    },
+    "00100a90": {
+      "thunked": "002029f0",
+      "external": false,
+      "name": "__mempcpy_chk"
+    },
+    "00100ab0": {
+      "thunked": "0019f680",
+      "external": false,
+      "name": "wcslen"
+    },
+    "00100ac0": {
+      "thunked": "00187b10",
+      "external": false,
+      "name": "memset"
+    },
+    "00100ad0": {
+      "thunked": "0019ffa0",
+      "external": false,
+      "name": "wcsnlen"
+    },
+    "00100af0": {
+      "thunked": "00188b40",
+      "external": false,
+      "name": "strcmp"
+    },
+    "00100b10": {
+      "thunked": "0018ab70",
+      "external": false,
+      "name": "strpbrk"
+    },
+    "00100b40": {
+      "thunked": "0018aaf0",
+      "external": false,
+      "name": "strnlen"
+    },
+    "00101788": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "_nl_load_domain.cold"
+    },
+    "00101823": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__makecontext.cold"
+    },
+    "00101874": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "strfromd.cold"
+    },
+    "0010187e": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "strfromf.cold"
+    },
+    "00101888": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "strfroml.cold"
+    },
+    "00101892": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "strfromf128.cold"
+    },
+    "00101e45": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "_IO_seekoff_unlocked.cold"
+    },
+    "001027ff": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__libc_message_impl.cold"
+    },
+    "001028c3": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__nptl_free_stacks.cold"
+    },
+    "00102c27": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "re_compile_internal.cold"
+    },
+    "00102c2c": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__regerror.cold"
+    },
+    "0010312e": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "getifaddrs_internal.cold"
+    },
+    "001032b1": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "send_dg.cold"
+    },
+    "0010335c": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__GI_authunix_create.cold"
+    },
+    "00103361": {
+      "thunked": "0010178d",
+      "external": false,
+      "name": "__GI_authunix_create_default.cold"
+    },
+    "0013c800": {
+      "thunked": "0013c6f0",
+      "external": false,
+      "name": "register_printf_function"
+    },
+    "00166630": {
+      "thunked": "0015c010",
+      "external": false,
+      "name": "pclose"
+    },
+    "00167260": {
+      "thunked": "0016d560",
+      "external": false,
+      "name": "fcloseall"
+    },
+    "0017bab0": {
+      "thunked": "00178240",
+      "external": false,
+      "name": "call_once"
+    },
+    "0017bb10": {
+      "thunked": "001719b0",
+      "external": false,
+      "name": "cnd_destroy"
+    },
+    "0017bc60": {
+      "thunked": "00175950",
+      "external": false,
+      "name": "mtx_destroy"
+    },
+    "0017c060": {
+      "thunked": "00174b70",
+      "external": false,
+      "name": "tss_delete"
+    },
+    "0017c070": {
+      "thunked": "00174910",
+      "external": false,
+      "name": "tss_get"
+    },
+    "00184110": {
+      "thunked": "00183500",
+      "external": false,
+      "name": "memalign"
+    },
+    "00189ee0": {
+      "thunked": "0015a100",
+      "external": false,
+      "name": "strerrordesc_np"
+    },
+    "00189ef0": {
+      "thunked": "0015a130",
+      "external": false,
+      "name": "strerrorname_np"
+    },
+    "001c0200": {
+      "thunked": "001c7680",
+      "external": false,
+      "name": "__bsd_getpgrp"
+    },
+    "001ea3e0": {
+      "thunked": "001ea880",
+      "external": false,
+      "name": "cfgetobaud"
+    },
+    "001ea3f0": {
+      "thunked": "001ea890",
+      "external": false,
+      "name": "cfgetibaud"
+    },
+    "001ea400": {
+      "thunked": "001ea8a0",
+      "external": false,
+      "name": "cfsetobaud"
+    },
+    "001ea410": {
+      "thunked": "001ea8d0",
+      "external": false,
+      "name": "cfsetibaud"
+    },
+    "001ea450": {
+      "thunked": "001ea460",
+      "external": false,
+      "name": "cfsetbaud"
+    },
+    "00203910": {
+      "thunked": "0019e0c0",
+      "external": false,
+      "name": "__wcrtomb_chk"
+    },
+    "002072d0": {
+      "thunked": "00207180",
+      "external": false,
+      "name": "inet6_option_alloc"
+    },
+    "0023b490": {
+      "thunked": "0023ac30",
+      "external": false,
+      "name": "svcunixfd_create"
+    },
+    "00240c90": {
+      "thunked": "00240650",
+      "external": false,
+      "name": "svcfd_create"
+    },
+    "002420c0": {
+      "thunked": "00241f00",
+      "external": false,
+      "name": "xdr_longlong_t"
+    },
+    "002420d0": {
+      "thunked": "00241fe0",
+      "external": false,
+      "name": "xdr_u_longlong_t"
+    },
+    "002429e0": {
+      "thunked": "00242910",
+      "external": false,
+      "name": "xdr_quad_t"
+    },
+    "00242ac0": {
+      "thunked": "002429f0",
+      "external": false,
+      "name": "xdr_u_quad_t"
+    },
+    "00245f30": {
+      "thunked": "002441d0",
+      "external": false,
+      "name": "endutxent"
+    },
+    "00245f60": {
+      "thunked": "00244010",
+      "external": false,
+      "name": "getutxent"
+    },
+    "00245f70": {
+      "thunked": "00244220",
+      "external": false,
+      "name": "getutxid"
+    },
+    "00245f80": {
+      "thunked": "00244350",
+      "external": false,
+      "name": "getutxline"
+    },
+    "00245f90": {
+      "thunked": "00244150",
+      "external": false,
+      "name": "pututxline"
+    },
+    "00245fa0": {
+      "thunked": "00244080",
+      "external": false,
+      "name": "setutxent"
+    },
+    "00245fb0": {
+      "thunked": "00244f60",
+      "external": false,
+      "name": "updwtmpx"
+    },
+    "00245fc0": {
+      "thunked": "00245e30",
+      "external": false,
+      "name": "utmpxname"
+    },
+    "00247360": {
+      "thunked": "001dd120",
+      "external": false,
+      "name": "pthread_yield"
+    },
+    "002f9010": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_find_dso_for_object"
+    },
+    "002f9020": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_deallocate_tls"
+    },
+    "002f9028": {
+      "thunked": null,
+      "external": true,
+      "name": "__tls_get_addr"
+    },
+    "002f9040": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_signal_error"
+    },
+    "002f9048": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_signal_exception"
+    },
+    "002f9050": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_audit_symbind_alt"
+    },
+    "002f9060": {
+      "thunked": null,
+      "external": true,
+      "name": "__tunable_is_initialized"
+    },
+    "002f9068": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_rtld_di_serinfo"
+    },
+    "002f9070": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_allocate_tls"
+    },
+    "002f9078": {
+      "thunked": null,
+      "external": true,
+      "name": "__tunable_get_val"
+    },
+    "002f9080": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_catch_exception"
+    },
+    "002f9088": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_allocate_tls_init"
+    },
+    "002f9098": {
+      "thunked": null,
+      "external": true,
+      "name": "_dl_audit_preinit"
+    }
+  }
+}
