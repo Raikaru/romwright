@@ -128,8 +128,12 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-worker"], cwd=ROOT, check=True, env=environment())
+    # The CLI is the release binary; the worker it launches is the debug one
+    # (`RuntimeConfig::from_env`), so both are built or a stale worker answers.
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+                   cwd=ROOT, check=True, env=environment())
+    subprocess.run(["cargo", "build", "-q", "-p", "lre-worker"],
+                   cwd=ROOT, check=True, env=environment())
     lock = json.loads(LOCK.read_text())
     recipe = next(row for row in lock["entries"]
                   if f"{row['architecture']}_{row['variant']}" == ROW)
@@ -144,42 +148,60 @@ def main() -> int:
         assert imported.returncode == 0, f"import failed: {imported.stderr.strip()}"
         facts = store(project, binary.name)
 
-        # 1. A data reference whose target the store holds no name for.
-        unnamed = [(source, target) for source, target, kind in facts["references"]
-                   if kind == "DATA" and target not in facts["symbols"]
-                   and target not in facts["functions"]
-                   and containing(facts, source) is not None
-                   and target not in facts["strings"]]
-        assert unnamed, "the corpus row holds no unnamed data reference to name"
-        source, target = unnamed[0]
-        owner = containing(facts, source)
+        # The three cases are chosen by what the decompilation of the
+        # referring function actually mentions -- the address in any form --
+        # so a regression that drops a label still selects the same case and
+        # still fails, rather than selecting itself away.
+        cache: dict[int, str] = {}
 
-        # 2. A string the store holds, referenced from a function.
-        strings = [(src, dst) for src, dst, _ in facts["references"]
-                   if dst in facts["strings"] and containing(facts, src) is not None]
-        assert strings, "no function references a string the store holds"
-        string_source, string_target = strings[0]
-        string_owner = containing(facts, string_source)
+        def text_for(entry: int) -> str:
+            if entry not in cache:
+                result = cli("decompile", str(binary), f"{entry:08x}",
+                             "--project", str(project), timeout=arguments.timeout)
+                assert result.returncode == 0, (
+                    f"decompile of {entry:08x} failed: {result.stderr.strip()}")
+                cache[entry] = result.stdout
+            return cache[entry]
 
-        # 3. A linkage slot the store names as an import, outside any function.
+        def mentions(entry: int, address: int) -> bool:
+            body = text_for(entry)
+            return (f"{address:08x}" in body or f"{address:x}" in body
+                    or f"{address:#x}" in body)
+
+        def pick(targets: list[int]) -> tuple[int, int] | None:
+            for address in targets:
+                for source, destination, _ in facts["references"]:
+                    if destination != address:
+                        continue
+                    owner = containing(facts, source)
+                    if owner is not None and mentions(owner, address):
+                        return owner, address
+            return None
+
+        plain = sorted({destination for _, destination, kind in facts["references"]
+                        if kind == "DATA" and destination not in facts["symbols"]
+                        and destination not in facts["functions"]
+                        and destination not in facts["strings"]})
+        found = pick(plain)
+        assert found, "no decompilation mentions an unnamed data reference target"
+        owner, target = found
+
+        strings = sorted(address for address in facts["strings"]
+                         if any(destination == address
+                                for _, destination, _ in facts["references"]))
+        found = pick(strings)
+        assert found, "no decompilation mentions a string the store holds"
+        string_owner, string_target = found
+
         slots = sorted(address for address, row in facts["symbols"].items()
                        if row["external"] and address not in facts["functions"]
                        and containing(facts, address) is None)
-        assert slots, "the store holds no import slot outside a function"
-        slot = slots[0]
-        slot_users = [src for src, dst, _ in facts["references"] if dst == slot
-                      and containing(facts, src) is not None]
-        assert slot_users, f"nothing references the import slot {slot:08x}"
-        slot_owner = containing(facts, slot_users[0])
+        found = pick(slots)
+        assert found, "no decompilation mentions an import slot the store names"
+        slot_owner, slot = found
 
-        texts = {}
-        for label, entry in (("data", owner), ("string", string_owner),
-                             ("slot", slot_owner)):
-            result = cli("decompile", str(binary), f"{entry:08x}",
-                         "--project", str(project), timeout=arguments.timeout)
-            assert result.returncode == 0, (
-                f"{label}: decompile of {entry:08x} failed: {result.stderr.strip()}")
-            texts[label] = result.stdout
+        texts = {"data": text_for(owner), "string": text_for(string_owner),
+                 "slot": text_for(slot_owner)}
 
         expected_label = f"DAT_{target:08x}"
         assert expected_label in texts["data"], (
@@ -187,10 +209,17 @@ def main() -> int:
             f"reference, but the decompilation names no {expected_label}: "
             f"{texts['data'].strip()[:300]}")
 
-        literal = json.dumps(facts["strings"][string_target])[1:-1]
-        assert literal in texts["string"], (
+        # Ghidra's label for string data: the `s` prefix its string types
+        # report, an abbreviation of the content, then the address
+        # (`SymbolUtilities.getDynamicDataName`, :541-544). Rendering the
+        # literal instead needs a `char *` parameter type, which is a
+        # prototype fact and not this task's.
+        value = facts["strings"][string_target]
+        body = "".join(c if c.isascii() and c.isalnum() else "_" for c in value[:20])
+        string_label = f"s_{body}_{string_target:08x}"
+        assert string_label in texts["string"], (
             f"{string_owner:08x} references the string at {string_target:08x} "
-            f"({literal!r}) and the decompilation does not render it: "
+            f"({value!r}) and the decompilation names no {string_label}: "
             f"{texts['string'].strip()[:300]}")
         assert f"{string_target:#x}" not in texts["string"], (
             f"the string address is still printed as a bare constant: "
@@ -216,7 +245,7 @@ def main() -> int:
             f"these labels name addresses the store holds no fact for: {invented}")
         assert not fallbacks, (
             f"the decompiler still falls back to its own naming: {fallbacks}")
-        findings = {"data_label": expected_label, "string": literal,
+        findings = {"data_label": expected_label, "string": string_label,
                     "slot_label": f"PTR_{slot_name}_{slot:08x}",
                     "functions": [f"{owner:08x}", f"{string_owner:08x}",
                                   f"{slot_owner:08x}"]}
@@ -225,7 +254,7 @@ def main() -> int:
                "data.slots_rendered": 1, "data.fallback_names": 0,
                "data.invented_labels": 0}
     summary = (f"the store's data facts reach the decompiler: {findings['data_label']} "
-               f"for a held reference, {findings['string']!r} for a held string, and "
+               f"for a held reference, {findings['string']} for a held string, and "
                f"{findings['slot_label']} for a named import slot, with no fallback "
                f"name and nothing invented across {len(findings['functions'])} functions")
 
