@@ -1091,3 +1091,36 @@ fn a_computing_tail_call_is_not_a_thunk() {
         );
     }
 }
+
+#[test]
+fn overlapping_relocation_candidates_are_case_labels_not_functions() {
+    // A PE32 switch table proposes one candidate per case. The cases' chains
+    // interleave through the switch's shared tail, so one case's flow-proven
+    // span runs past the next case's start; the function beside them owns a
+    // span that abuts nothing.
+    let mut imp = image();
+    imp.reloc_candidates = vec![0x1100, 0x1200, 0x1210];
+    flow_discover_with_provider(&mut imp, |addresses| {
+        addresses
+            .iter()
+            .map(|&a| match a {
+                0x1000 | 0x1100 => result(a, FlowKind::Return, None, false),
+                // First case: falls through, then jumps to the far tail.
+                0x1200 => result(a, FlowKind::Fallthrough, None, false),
+                0x1202 => result(a, FlowKind::Branch, Some(0x1240), true),
+                // Second case: falls through, then jumps to the near tail.
+                0x1210 => result(a, FlowKind::Fallthrough, None, false),
+                0x1212 => result(a, FlowKind::Branch, Some(0x1230), true),
+                _ => result(a, FlowKind::Return, None, false),
+            })
+            .collect()
+    });
+    assert_eq!(
+        imp.functions
+            .iter()
+            .map(|function| function.entry)
+            .collect::<Vec<_>>(),
+        [0x1000, 0x1100],
+        "candidates whose proven spans overlap must not become functions"
+    );
+}

@@ -949,9 +949,34 @@ Before the pass, recall on `tiny_pe.exe` was 0.5667: 39 of 90 functions --
 `WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
 of the CRT -- were unreachable by flow from the entry point.
 
-PE32 x86 is the recorded deficit: 32-bit PE carries no exception directory, so
-those 31 recovered entries have no unwind record to confirm them and its
-recall has nothing behind it yet.
+### PE32 x86, where there is no unwind directory
+
+32-bit PE declares no exception directory, so nothing proves a function start
+from outside the code. The first measurement showed what that costs: 31
+recovered entries no evidence described. They were case labels inside
+`___mingw_pformat` -- a PE32 switch table holds absolute addresses, so every
+case carries a base relocation, and a relocation into code is exactly what the
+importer treats as a candidate function.
+
+What separates a case label from a function is the shape of its flow-proven
+span, not a byte pattern: **two functions cannot share code**. The cases'
+chains interleave through the switch's shared tail, so one case's span runs
+past the next case's start, while a real function's span abuts its
+neighbour's. Overlapping spans are retracted unless a call reaches them
+(`crates/lre-core/src/native/discovery.rs`).
+
+| Metric | `tiny_pe32.exe` |
+|---|---|
+| `pe32.dwarf.fn.recall` | **0.8065** over 93 functions |
+| `pe32.dwarf.fn.unattributed` | **0**, from 31 |
+| `ghidra.dwarf.fn.recall` | 0.7634 on the same stripped image |
+
+Stock Ghidra is the bar for recall here, not a number picked in this
+repository: it reads the same image with the same absent evidence. The
+18 functions still missed are classified against the image --
+18 reachable only through a symbol the strip removed, 0 reached only
+through an indirect transfer -- and an unclassified miss fails the gate, so
+the deficit cannot grow quietly.
 
 Every recovered entry must be described by DWARF or named by a COFF symbol in
 the unstripped fixture; nothing else excuses one. Two further excuses were
@@ -1147,7 +1172,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 68; `diagnostic_runs` 12; `generated_rows` 67; `published_ids` 53 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 69; `diagnostic_runs` 12; `generated_rows` 68; `published_ids` 54 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1158,6 +1183,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m7-002.json` | `m7-002` | M7 | pass | `decompile.native.peak_kb.median` 34594.0000; `decompile.native.wall_s.median` 0.0910; `decompile.peak_ratio.median` 8.3200; `decompile.stock.peak_kb.median` 286368.0000; `decompile.stock.wall_s.median` 5.9330; `decompile.wall_ratio.median` 74.0300 | `tests/m7-002_decompile_envelope.py` |
 | `m7-003.json` | `m7-003` | M7 | pass | `session.drift_excess_ms.max` -0.8630; `session.drift_ratio.max` 1.6800; `session.growth_kb.max` 28; `session.growth_kb.median` 14.0000; `session.latency_ms.decompile_doc.median` 6.0020; `session.latency_ms.functions.median` 0.2650; `session.latency_ms.memory_regions.median` 0.2600; `session.latency_ms.search.median` 0.3890; `session.latency_ms.strings.median` 0.4670; `session.latency_ms.symbols.median` 0.1590; `session.latency_ms.xrefs.median` 0.1880; `session.peak_kb.median` 42940.0000 | `tests/m7-003_session_envelope.py` |
 | `m8-001.json` | `m8-001` | M8 | pass | `pe.dwarf.fn.recall` 1.0000; `pe.dwarf.fn.unattributed` 0 | `tests/m8-001_pe_unwind.py` |
+| `m8-002.json` | `m8-002` | M8 | pass | `ghidra.dwarf.fn.recall` 0.7634; `ghidra.functions` 106; `pe32.dwarf.fn.recall` 0.8065; `pe32.dwarf.fn.unattributed` 0; `pe32.functions` 110; `pe32.undescribed` 35 | `tests/m8-002_pe32_roots.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix
@@ -1167,7 +1193,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 |---|---|---|
 | ELF x86-64 | supported | **supported and gated** |
 | PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
-| PE32 x86 | supported | recorded, not gated: DWARF recall 0.8065 over 93 functions with no exception directory to prove starts (`benchmarks/reports/m8-001.json`) |
+| PE32 x86 | supported | **gated**: DWARF recall 0.8065 over 93 functions, 0 unattributed, stock Ghidra 0.7634 on the same image (`tests/m8-002_pe32_roots.py`) |
 | ELF AARCH64 LE64 | supported | discovery gated; decompile parity pending |
 | ELF ARM LE32 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF MIPS LE32 | supported | selected SLEIGH bundle required; not parity-gated |

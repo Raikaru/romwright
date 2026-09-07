@@ -1,0 +1,46 @@
+{
+ "id": "m8-002",
+ "recorded_at": "2026-09-07T11:37:42.813125+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "tiny_pe32.exe: recall 0.8065 over 93 DWARF functions, 0 unattributed of 35 undescribed, 18 misses all classified; stock Ghidra recall 0.7634 on the same image",
+ "fixture": "tiny_pe32.exe",
+ "truth": 93,
+ "metrics": {
+  "pe32.dwarf.fn.recall": 0.8064516129032258,
+  "pe32.dwarf.fn.unattributed": 0,
+  "pe32.functions": 110,
+  "pe32.undescribed": 35,
+  "ghidra.dwarf.fn.recall": 0.7634408602150538,
+  "ghidra.functions": 106
+ },
+ "missing_classes": {
+  "symbol_only": [
+   "00401010 __tmainCRTStartup",
+   "004013f0 WinMainCRTStartup",
+   "00401560 __do_global_ctors",
+   "004016d0 __tlregdtor",
+   "00401c20 __mingw_raise_matherr",
+   "00401eb0 ___w64_mingwthr_add_key_dtor",
+   "00401f30 ___w64_mingwthr_remove_key_dtor",
+   "004020f0 ?",
+   "00402120 ?",
+   "00402160 _FindPESectionByName",
+   "004022c0 _FindPESectionExec",
+   "00402380 _IsNonwritableInCurrentImage",
+   "00402410 __mingw_enum_import_library_names",
+   "00407c50 __d2b_D2A",
+   "00407e00 __strcp_D2A",
+   "00407f60 wcsrtombs",
+   "004082c0 mbsrtowcs",
+   "00408400 mbrlen"
+  ]
+ },
+ "provenance_kinds": [
+  "native-analysis:constant-propagation",
+  "native-import",
+  "native-import:branch",
+  "native-import:pe-reloc",
+  "native-import:thunk"
+ ]
+}
