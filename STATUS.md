@@ -3125,14 +3125,47 @@ m3-003, all three wired into continuous integration)
   over an existing envelope fails.
 - Six additive metric names (`cost.*`); no II.3 definition changed.
 
+### m7-002 evidence
+- `790146b` commits the failing acceptance
+  (`tests/m7-002_decompile_envelope.py`): the envelope did not exist yet.
+- Both producers decompile **`main` resolved by name** in each locked entry's
+  unstripped twin, so no address is guessed and PIE image bases cannot make
+  the two disagree about what was decompiled. Import and analysis run first
+  and are **not** timed -- `lre-cli import` for the native path, an
+  `analyzeHeadless -import` that analyses and saves for stock. Each timed run
+  opens the stored program and decompiles one function
+  (`analyzeHeadless -process -noanalysis -postScript scripts/DecompileOne.java`,
+  options verified in `.ghidra-java/ghidra/app/util/headless/AnalyzeHeadless.java`;
+  `getGlobalFunctions`, `DecompInterface.decompileFunction` and
+  `DecompiledFunction.getC` verified in the extracted sources).
+- Measured (`benchmarks/reports/m7-002.json`), median over 20 entries:
+  `decompile.native.peak_kb.median` **34 594 KiB** against
+  `decompile.stock.peak_kb.median` 286 368 KiB, and
+  `decompile.native.wall_s.median` **0.091 s** against
+  `decompile.stock.wall_s.median` 5.933 s -- **8.32x less memory, 74.03x
+  faster**. Per entry the gate requires the native decompile to peak lower
+  *and* finish sooner; both hold on all 20.
+- Output is asserted, not assumed: the native run must print a body
+  containing `main(`, and the stock script must report a non-empty `getC()`.
+- `benchmarks/cost.py` now holds the one definition of the measurement and of
+  the write-once envelope rule; `m7-001` was moved onto it and re-verified
+  (12.09x memory, 29.7x wall), so the two gates cannot drift apart.
+- Negative controls: shrinking one envelope entry fails
+  (`aarch64_cpp_o2: (34848, 1280)`), deleting an entry fails, `--write` over
+  an existing envelope fails, and asking for a function the store does not
+  have fails.
+- Six additive metric names (`decompile.*`); no II.3 definition changed.
+
 ## Next task
-- m7-002: measure the same envelope for the decompile path, not just import.
-  `m7-001` covers `import`; a user's second question is what one decompiled
-  function costs, and `benchmarks/gate.sh` measures that only for the tiny
-  fixture. The acceptance must decompile the same function in both producers
-  per corpus entry, publish peak RSS and wall time per entry, and record the
-  envelope the same write-once way. Its acceptance test does not exist yet;
-  write it first.
+- m7-003: bound the cost of the whole session, not one command. `m7-001` and
+  `m7-002` each measure a single process; the desktop and the API service
+  hold a project open and answer many requests, and nothing measures what
+  that costs after N requests. The acceptance must drive a fixed request
+  sequence through one long-lived `lre-api` process per corpus entry, record
+  peak RSS and per-request latency, and fail when either grows past a
+  recorded envelope or when memory grows monotonically across repeats of the
+  same request (a leak, as distinct from a warm cache). Its acceptance test
+  does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

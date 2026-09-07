@@ -32,38 +32,23 @@ import statistics
 import subprocess
 import sys
 import tempfile
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "benchmarks"))
+from cost import HEADROOM, check_envelope, measure, record_envelope  # noqa: E402
+
 ENVELOPE = ROOT / "benchmarks" / "reports" / "cost-envelope.json"
-# Host noise moves peak RSS by a few percent; a quarter is generous without
-# hiding a real regression, which shows up as a multiple.
-HEADROOM = 1.25
 
 
-def measure(command: list[str], environment: dict[str, str] | None = None
-            ) -> tuple[float, int, int]:
-    """Wall seconds, peak RSS in KiB, exit code for one process tree."""
-    started = time.monotonic()
-    process = subprocess.Popen(command, cwd=ROOT, env=environment,
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    _, status, usage = os.wait4(process.pid, 0)
-    elapsed = time.monotonic() - started
-    peak = usage.ru_maxrss
-    if platform.system() == "Darwin":  # ru_maxrss is bytes there, KiB on Linux
-        peak //= 1024
-    return elapsed, peak, os.waitstatus_to_exitcode(status)
-
-
-def native(binary: Path, timeout: int) -> tuple[float, int]:
+def native(binary: Path) -> tuple[float, int]:
     with tempfile.TemporaryDirectory(prefix="m7-001-native-") as temporary:
         elapsed, peak, code = measure(
             [str(ROOT / "target/release/lre-cli"), "import", str(binary),
-             "--name", "cost", "--project", str(Path(temporary) / "project")])
+             "--name", "cost", "--project", str(Path(temporary) / "project")],
+            cwd=ROOT)
     assert code == 0, f"native import of {binary.name} exited {code}"
-    del timeout
     return elapsed, peak
 
 
@@ -71,7 +56,7 @@ def stock(install: Path, binary: Path) -> tuple[float, int]:
     with tempfile.TemporaryDirectory(prefix="m7-001-stock-") as temporary:
         elapsed, peak, code = measure(
             [str(install / "support/analyzeHeadless"), temporary, "cost",
-             "-import", str(binary), "-deleteProject"],
+             "-import", str(binary), "-deleteProject"], cwd=ROOT,
             environment=dict(os.environ, DEBUGINFOD_URLS=""))
     assert code == 0, f"stock analysis of {binary.name} exited {code}"
     return elapsed, peak
@@ -85,7 +70,6 @@ def main() -> int:
                         help="record the envelope; refuses to overwrite one")
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
         "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
-    parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
@@ -102,7 +86,7 @@ def main() -> int:
     for entry in entries:
         identifier = f"{entry['architecture']}_{entry['variant']}"
         binary = arguments.corpus_dir / entry["binary"]
-        wall, peak = native(binary, arguments.timeout)
+        wall, peak = native(binary)
         row = {"id": identifier, "native.wall_s": round(wall, 3),
                "native.peak_kb": peak}
         if stock_available:
@@ -118,34 +102,13 @@ def main() -> int:
                 f"{identifier}: native took {wall:.3f}s, stock {stock_wall:.3f}s")
         rows.append(row)
 
+    peaks = {row["id"]: row["native.peak_kb"] for row in rows}
     if arguments.write:
-        assert not ENVELOPE.is_file(), (
-            f"{ENVELOPE.relative_to(ROOT)} already exists; a recorded envelope "
-            f"is never overwritten")
-        ENVELOPE.write_text(json.dumps({
-            "id": "cost-envelope",
-            "recorded_at": datetime.now(timezone.utc).isoformat(),
-            "host": {"system": platform.system(), "machine": platform.machine()},
-            "headroom": HEADROOM,
-            "note": "native import peak RSS per locked corpus entry; recorded "
-                    "once, compared against afterwards",
-            "entries": {row["id"]: row["native.peak_kb"] for row in rows},
-        }, indent=1) + "\n")
+        record_envelope(ENVELOPE, peaks,
+                        "native import peak RSS per locked corpus entry; "
+                        "recorded once, compared against afterwards")
         print(f"recorded {ENVELOPE.relative_to(ROOT)} for {len(rows)} entries")
-
-    assert ENVELOPE.is_file(), (
-        f"{ENVELOPE.relative_to(ROOT)} does not exist; record it once with "
-        f"--write")
-    envelope = json.loads(ENVELOPE.read_text())
-    recorded = envelope["entries"]
-    missing = sorted(row["id"] for row in rows if row["id"] not in recorded)
-    assert not missing, f"the envelope has no entry for: {missing}"
-    over = {}
-    for row in rows:
-        bound = recorded[row["id"]] * envelope.get("headroom", HEADROOM)
-        if row["native.peak_kb"] > bound:
-            over[row["id"]] = (row["native.peak_kb"], round(bound))
-    assert not over, f"native peak RSS grew past the recorded envelope: {over}"
+    check_envelope(ENVELOPE, peaks)
 
     metrics = {
         "cost.native.peak_kb.median":
@@ -186,6 +149,7 @@ def main() -> int:
             "passed": True,
             "summary": summary,
             "host": {"system": platform.system(), "machine": platform.machine()},
+            "headroom": HEADROOM,
             "metrics": metrics,
             "corpus": rows,
             "skipped": skipped,
