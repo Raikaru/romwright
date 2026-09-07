@@ -162,6 +162,17 @@ def main() -> int:
         if unattributed:
             raise AssertionError(f"invented functions: {unattributed}")
 
+        # The bundle must carry real injection bodies. `CompilerSpec.encode`
+        # cannot reproduce them, and a raw-SLEIGH worker compiles what the
+        # bundle says: a placeholder would silently make ARM `bx` a no-op.
+        cspec = (ROOT / "native/specs/ARM-LE-32-v4t/cspec.xml").read_text()
+        if "setISAMode" not in cspec:
+            raise AssertionError("the ARM bundle declares no setISAMode injection")
+        if "local tmp:1 = 0;" in cspec:
+            raise AssertionError(
+                "the ARM bundle carries placeholder injection bodies; re-export it "
+                "with scripts/gen_native_specs.py")
+
         # A platform is not supported because an import succeeded.
         target = min(matched)
         decompiled = subprocess.run(

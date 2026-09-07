@@ -298,8 +298,18 @@ fn run_decompiler(
         None => {
             let data = std::fs::read(binary)
                 .map_err(|e| NativeRuntimeError(format!("{}: {e}", binary.display())))?;
+            // A container header names the base; a raw platform image does
+            // not, so the loader that mapped it is asked instead of falling
+            // back to a base that would leave the address unmapped.
             pe_image_base(&data)
                 .or_else(|| elf_image_base(&data))
+                .or_else(|| {
+                    crate::native::parse_native(&data)
+                        .ok()
+                        .and_then(|import| {
+                            import.mappings.iter().map(|mapping| mapping.vaddr).min()
+                        })
+                })
                 .unwrap_or(0x400000)
         }
     };

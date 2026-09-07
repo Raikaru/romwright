@@ -1,0 +1,30 @@
+{
+  "id": "m5-001",
+  "recorded_at": "2026-09-07T05:00:18.114063+00:00",
+  "thresholds": {
+    "dwarf.fn.recall": 0.98
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "imported gba natively (7 functions, ARM:LE:32:v4t)",
+  "metrics": {
+    "dwarf.fn.recall": 1.0,
+    "dwarf.functions": 6,
+    "functions": 7,
+    "unattributed": 0
+  },
+  "entry": "08000158",
+  "regions": {
+    "gba:rom": "08000000",
+    "gba:ewram": "02000000",
+    "gba:iwram": "03000000",
+    "gba:io": "04000000",
+    "gba:palette": "05000000",
+    "gba:vram": "06000000",
+    "gba:oam": "07000000"
+  },
+  "decompiled": {
+    "address": "080000c0",
+    "text": "int FUN_080000c0(int param_1){return param_1 * 3 + 1;}"
+  }
+}
