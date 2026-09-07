@@ -28,6 +28,9 @@ GHROOT="${VENTRIS_GHROOT:-$GHIDRA_DEFAULT}"
 CONSOLE_AVAILABLE=1
 [ -x "$CONSOLE" ] || { CONSOLE_AVAILABLE=0; echo "NOTE: no SLEIGH console at $CONSOLE — console steps skipped (install binutils-devel, run native/build_console.sh)"; }
 BIN="$ROOT/tests/fixtures-src/tiny_bin"
+# Build what is being tested: a stale binary here once passed a gate for
+# a change that had already altered its output.
+cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
 CLI="$ROOT/target/debug/lre-cli"
 GHIDRA="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
 export VENTRIS_SERVICE_JAR="$ROOT/service/build/ventris-service.jar"

@@ -164,6 +164,14 @@ jobs:
           python3 tests/m5-006_tailcall.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/tailcall.json"
+      - name: Enforce the tail-call promotion gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m5-007_tailcall_promotion.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
+            --report "$RUNNER_TEMP/discovery/promotion.json"
       - name: Enforce the M3 DWARF ground-truth gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

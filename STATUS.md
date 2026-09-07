@@ -2715,14 +2715,52 @@ m3-003, all three wired into continuous integration)
   shape the oracle records as a call, so its old expectation pinned
   non-parity behaviour.
 
+### m5-007 evidence
+- `0c38cb3` commits the failing acceptance
+  (`tests/m5-007_tailcall_promotion.py`).
+- Promotion is **off by default** (`VENTRIS_PROMOTE_TAILCALLS`): stock Ghidra
+  creates none of these functions, so the pass moves output past the frozen
+  baseline and II.1 reserves enabling it. The gate asserts both states.
+- A candidate faces the m1-005 evidence standard, not the branch alone: code
+  and image-backed, not inside a body another entry proved, and its own flow
+  decoded from the entry to a terminator without running into another
+  entry (`proven_body_end`). The extent stored is the one that walk proved.
+- Measured (`benchmarks/reports/m5-007.json`): `nds.arm7` recall
+  **0.7500 -> 1.0000** (recovers `mix`, a leaf entered only by `b`), zero
+  invented functions on either NDS CPU, and the promoted function
+  decompiles. Over the 20 locked ELF inputs with the flag on: **0
+  unattributed**, no row below the committed m3-001 recall, and **0
+  promotions** -- every transfer in that corpus already lands on a known
+  function, so the corpus is a safety check, not the evidence of gain.
+- Coverage split, stated because it is uneven: the acceptance pins the flag,
+  the outcome and corpus safety; the *refusals* are pinned by
+  `promotion_refuses_targets_without_their_own_evidence` and
+  `a_proven_tail_call_target_is_promoted_only_when_asked` in
+  `crates/lre-core/src/native/discovery/tests.rs`. Removing the evidence walk
+  fails those two unit tests and no Python gate, which is why they exist.
+- Negative controls: forcing the flag on fails the acceptance ("promoted with
+  the flag off"); removing the evidence walk fails the unit tests.
+
+### A stale binary passed four shell gates
+- `tests/data_xrefs.sh` required an `UNCONDITIONAL_JUMP` row in `tiny_bin`.
+  After m5-006 that transfer is a call (its target is a function), so the
+  requirement was stale -- and stock Ghidra records no unconditional-jump
+  reference in that image either. It now requires the kinds Ghidra records,
+  and jump references are scored against the oracle by m5-006 instead.
+- The reason m5-006 landed without noticing: `data_xrefs.sh`, `corpus.sh`,
+  `differential.sh` and `generic_discovery_test.sh` all ran
+  `target/debug/lre-cli` **without building it**, so they tested whatever
+  binary happened to be there. All four now build the CLI they test.
+
 ## Next task
-- m5-007: decide whether a function may be created at a recorded tail-call
-  target that no call reaches. The fact now exists; what is missing is
-  evidence that promoting it is right. Stock Ghidra does not create
-  `037f8000` either, so the measurement is against DWARF truth on the
-  locked corpus plus the console fixtures: any promotion rule must not add
-  an unattributed function anywhere in the 20 ELF inputs. Its acceptance
-  test does not exist yet; write it first.
+- m5-008: record the ARM7 tail call as a jump reference *in the store's
+  thunk model too*, or record why it must not be. `nds.arm7`'s
+  `037f8010 -> mix` transfer is a tail call whose source function returns
+  through the callee; `imp.thunks` stays empty for it, and m2-009 pins thunk
+  parity, so the question is whether Ghidra would call this a thunk at all
+  (`CreateThunkFunctionCmd.getSimpleFlow` is the rule to check). Answer it
+  from the pinned sources first, then write the acceptance the answer
+  demands.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

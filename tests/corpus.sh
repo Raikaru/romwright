@@ -13,6 +13,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CFG="$(mktemp -d /tmp/ventris-corpus.XXXXXX)"
 OUT="${OUT:-$ROOT/benchmarks/reports/corpus.json}"
+# Build what is being tested: a stale binary here once passed a gate for
+# a change that had already altered its output.
+cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
 CLI="$ROOT/target/debug/lre-cli"
 CC="${CC:-cc}"
 CXX="${CXX:-c++}"

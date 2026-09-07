@@ -303,6 +303,27 @@ counts against both precision and recall. Recording the transfer does not
 create the function: `close_call_targets` acts on call references only, and
 the gate asserts the discovered function set is unchanged.
 
+### Promoting a tail-call target (off by default)
+
+`VENTRIS_PROMOTE_TAILCALLS=1` lets a recorded transfer create the function it
+reaches. Stock Ghidra creates none of these, so the pass moves output past the
+frozen baseline and stays off unless asked -- AGENTS.md II.1 reserves enabling
+it. The evidence a candidate must supply is the evidence a relocation
+candidate supplies (m1-005):
+
+* the address is executable, image-backed code;
+* it does not sit inside a body another entry already proved;
+* its own flow decodes from that address to a terminator, and does not run
+  into another function's entry -- code reached without a prologue belongs to
+  that function.
+
+Measured (`benchmarks/reports/m5-007.json`): on the NDS fixture the pass
+recovers `mix`, a leaf entered only by `b`, taking `nds.arm7` from
+**0.7500 to 1.0000** DWARF recall with zero invented functions; over the 20
+locked ELF inputs it promotes **nothing** -- every transfer there already
+lands on a known function -- and adds **0 unattributed functions**, with no
+row below the committed m3-001 recall.
+
 ### The frozen stock-Ghidra baseline (M3)
 
 M4 exists to improve on stock Ghidra, and that claim is worthless against a

@@ -942,3 +942,114 @@ fn possible_pattern_batch_waits_for_its_own_disassembly() {
         [0x1000, 0x1004, 0x1014]
     );
 }
+
+/// m5-007: the flag decides whether a proven tail-call target is promoted.
+/// Every other rule below is about the evidence, not the flag.
+///
+/// The seeded function sits above its tail-call target, because a target
+/// *after* the branch is ordinary forward flow: the walk proves it part of
+/// the same body, and no transfer leaves the function at all.
+fn tailcall_image(promote: bool) -> NativeImport {
+    let mut imp = image();
+    imp.cfg.promote_tailcalls = promote;
+    imp.functions = vec![NativeFunction {
+        entry: 0x1100,
+        size: 1,
+        name: "entry".into(),
+    }];
+    imp
+}
+
+#[test]
+fn a_proven_tail_call_target_is_promoted_only_when_asked() {
+    // 0x1100 falls through to a branch that leaves it for 0x1000, which
+    // nothing else reaches; 0x1000 falls through once and returns.
+    let flow = |addresses: &[u64]| {
+        addresses
+            .iter()
+            .map(|&a| match a {
+                0x1100 => result(a, FlowKind::Fallthrough, None, false),
+                0x1102 => result(a, FlowKind::Branch, Some(0x1000), true),
+                0x1000 => result(a, FlowKind::Fallthrough, None, false),
+                _ => result(a, FlowKind::Return, None, false),
+            })
+            .collect()
+    };
+
+    let mut off = tailcall_image(false);
+    flow_discover_with_provider(&mut off, flow);
+    assert_eq!(
+        off.functions.iter().map(|f| f.entry).collect::<Vec<_>>(),
+        vec![0x1100],
+        "the target must not become a function unless the pass is enabled"
+    );
+    assert!(off
+        .xrefs
+        .iter()
+        .any(|x| (x.from, x.to) == (0x1102, 0x1000) && x.kind == "UNCONDITIONAL_JUMP"));
+
+    let mut on = tailcall_image(true);
+    flow_discover_with_provider(&mut on, flow);
+    assert_eq!(
+        on.functions
+            .iter()
+            .map(|f| (f.entry, f.size))
+            .collect::<Vec<_>>(),
+        vec![(0x1000, 4), (0x1100, 4)],
+        "the promoted entry carries the extent its own flow proved"
+    );
+    // The target is a function now, so Ghidra's CALL_RETURN rule applies.
+    assert!(on
+        .xrefs
+        .iter()
+        .any(|x| (x.from, x.to) == (0x1102, 0x1000) && x.kind == "UNCONDITIONAL_CALL"));
+}
+
+#[test]
+fn promotion_refuses_targets_without_their_own_evidence() {
+    for case in ["undecodable", "runs-into-another-entry", "inside-a-proven-body"] {
+        let interior = case == "inside-a-proven-body";
+        let target = if interior { 0x1004 } else { 0x1000 };
+        let mut imp = tailcall_image(true);
+        if interior {
+            // A seeded function whose own flow proves a body over the target:
+            // the code there belongs to it, reached without a prologue.
+            imp.functions.push(NativeFunction {
+                entry: 0x1000,
+                size: 1,
+                name: "owner".into(),
+            });
+        }
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&a| match a {
+                    // The branch sits deep enough in the seeded function that
+                    // the owner's body is proved before the transfer is seen.
+                    0x1108 => result(a, FlowKind::Branch, Some(target), true),
+                    // A call establishes 0x1004 as a function of its own, so
+                    // the walk from 0x1000 runs into code that is owned.
+                    0x1102 if case == "runs-into-another-entry" => {
+                        result(a, FlowKind::Call, Some(0x1004), false)
+                    }
+                    0x1100..=0x1106 => result(a, FlowKind::Fallthrough, None, false),
+                    0x1000 if case == "undecodable" => result(a, FlowKind::Bad, None, false),
+                    0x1000 | 0x1002 | 0x1004 => {
+                        result(a, FlowKind::Fallthrough, None, false)
+                    }
+                    _ => result(a, FlowKind::Return, None, false),
+                })
+                .collect()
+        });
+        let promoted = imp.functions.iter().any(|f| f.entry == target);
+        assert!(
+            !promoted,
+            "{case}: {target:#x} was promoted without its own evidence; \
+             functions {:?}",
+            imp.functions
+                .iter()
+                .map(|f| (f.entry, f.size))
+                .collect::<Vec<_>>()
+        );
+    }
+}

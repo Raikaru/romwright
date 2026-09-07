@@ -752,6 +752,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 .chain(imp.pointer_candidates.iter())
                 .chain(imp.initializer_candidates.iter())
                 .chain(candidates.iter())
+                // A tail call's target is a candidate, never a conclusion: it
+                // faces the same address and flow evidence as a relocation
+                // candidate below. II.1 reserves enabling this by default.
+                .chain(
+                    branch_transfers
+                        .iter()
+                        .map(|(_, target)| target)
+                        .filter(|_| imp.cfg.promote_tailcalls),
+                )
                 .copied()
                 .collect()
         };
@@ -1157,6 +1166,37 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         }
     }
 
+    // A tail call's target is a function only with its own evidence: the
+    // address must be code, must not sit inside a body another entry already
+    // proved, and its own flow must decode from that address to a terminator.
+    // Stock Ghidra creates none of these, so II.1 keeps the pass off unless
+    // asked (`VENTRIS_PROMOTE_TAILCALLS`).
+    if imp.cfg.promote_tailcalls {
+        let known: HashSet<u64> = entries.iter().copied().collect();
+        let mut candidates: Vec<u64> = branch_transfers
+            .iter()
+            .map(|&(_, target)| target)
+            .filter(|target| {
+                in_code(*target)
+                    && !known.contains(target)
+                    && !proven_bodies
+                        .iter()
+                        .any(|(&origin, &end)| origin < *target && *target < end)
+            })
+            .collect();
+        candidates.sort_unstable();
+        candidates.dedup();
+        for candidate in candidates {
+            if let Some(end) = proven_body_end(candidate, flow_provider, &known, &in_code) {
+                entries.push(candidate);
+                addr_origin.insert(candidate, candidate);
+                proven_bodies.insert(candidate, end);
+            }
+        }
+        entries.sort_unstable();
+        entries.dedup();
+    }
+
     let mut merged = imp.functions.clone();
     for e in entries {
         if !merged.iter().any(|f| f.entry == e) {
@@ -1223,6 +1263,50 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     imp.branch_transfers.dedup();
     record_branch_transfers(imp);
     Ok(())
+}
+
+/// Proves a candidate entry's own body, returning the address after its last
+/// instruction.
+///
+/// The walk follows fallthrough only, so the extent it proves is a lower
+/// bound rather than a guess: it starts at the candidate, requires every
+/// instruction to decode, and stops at the first instruction that does not
+/// fall through. `None` refuses the candidate -- an instruction that does not
+/// decode, a body that runs into another entry (the code belongs to that
+/// function, reached without a prologue), or a body with no terminator inside
+/// the bound.
+fn proven_body_end<P: FlowProvider>(
+    entry: u64,
+    flow_provider: &mut P,
+    known_entries: &HashSet<u64>,
+    in_code: &impl Fn(u64) -> bool,
+) -> Option<u64> {
+    // A function longer than this is not being refused for being long: the
+    // bound stops a runaway walk through decoded padding.
+    const MAX_INSTRUCTIONS: usize = 4096;
+    let mut address = entry;
+    for _ in 0..MAX_INSTRUCTIONS {
+        if !in_code(address) || (address != entry && known_entries.contains(&address)) {
+            return None;
+        }
+        let info = flow_provider.flow(&[address]).into_iter().next()?;
+        if info.address != address
+            || info.length == 0
+            || matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl)
+        {
+            return None;
+        }
+        let end = address.checked_add(info.length as u64)?;
+        match info.fallthrough {
+            // Conditional terminators and ordinary instructions continue.
+            Some(next) if next == end => address = next,
+            // A fallthrough that is not the next address is a decoder
+            // disagreement, not a body.
+            Some(_) => return None,
+            None => return Some(end),
+        }
+    }
+    None
 }
 
 /// The provenance of a reference recorded from an unconditional branch that

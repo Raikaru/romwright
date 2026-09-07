@@ -8,6 +8,12 @@ CLI="${LRE_CLI:-$ROOT/target/debug/lre-cli}"
 TINY_BIN="$ROOT/tests/fixtures-src/tiny_bin"
 LIBC_BIN="${1:-/usr/lib64/libc.so.6}"
 
+# Build what is being tested: a stale binary here once passed this gate for a
+# change that had already altered its output.
+if [ -z "${LRE_CLI:-}" ]; then
+    cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
+fi
+
 if [ ! -f "$TINY_BIN" ]; then
     echo "fixture not found: $TINY_BIN" >&2
     exit 1
@@ -39,7 +45,11 @@ kinds = {r[0] for r in cur.fetchall()}
 
 # Native import proves references and calls; a conditional branch is flow, not
 # a reference, so it stays in the function's extent instead of the xref table.
-required_kinds = {"DATA", "READ", "UNCONDITIONAL_CALL", "UNCONDITIONAL_JUMP"}
+# An unconditional jump is only a *jump* reference when its target is not a
+# function entry: this image's one such transfer lands on a function, so
+# Ghidra's CALL_RETURN rule makes it a call (m5-006). Jump references are
+# scored against the oracle by tests/m5-006_tailcall.py, not asserted here.
+required_kinds = {"DATA", "READ", "UNCONDITIONAL_CALL"}
 missing_kinds = required_kinds - kinds
 if missing_kinds:
     sys.exit(f"missing expected xref kinds in tiny_bin: {missing_kinds}")
