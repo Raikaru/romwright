@@ -47,6 +47,8 @@ fn usage() {
   lre-cli search <program> <term> [--limit N] [--project DIR]
   lre-cli graph <program> [--largest --binary BINARY] [--project DIR]
   lre-cli memory-regions <program> [--project DIR]
+  lre-cli programs [--project DIR]
+  lre-cli locate <address-hex> [--project DIR]
   lre-cli bookmarks <program> [--project DIR]
   lre-cli bookmark <program> <address> <label> [comment] [--project DIR]
   lre-cli patches <program> [--project DIR]
@@ -673,6 +675,37 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     return Err(format!("provenance with no explanation: {unexplained:?}"));
                 }
             }
+        }
+        "programs" => {
+            // What this project holds: a project is not one image, and a DS
+            // pair or an executable with overlays is the ordinary case.
+            let rows = core.programs().map_err(|e| e.to_string())?;
+            for row in &rows {
+                println!(
+                    "{}  {}  {} functions  revision {}",
+                    row.program, row.language, row.functions, row.revision
+                );
+            }
+            println!("-- {} programs", rows.len());
+        }
+        "locate" => {
+            let address_arg = args.get(2).ok_or("locate needs an address")?;
+            let address = lre_model::Address::parse_ram_hex(address_arg)
+                .ok_or_else(|| format!("bad address: {address_arg}"))?;
+            let rows = core.locate(&address).map_err(|e| e.to_string())?;
+            for row in &rows {
+                println!(
+                    "{}  {}  {} {:#x}+{:#x} {}  {}",
+                    row.program,
+                    row.language,
+                    row.region.name,
+                    row.region.start.offset,
+                    row.region.size,
+                    row.region.permissions,
+                    row.function.as_deref().unwrap_or("-")
+                );
+            }
+            println!("-- {} programs map {}", rows.len(), address);
         }
         "memory-regions" => {
             let program = args.get(2).ok_or("memory-regions needs a program name")?.clone();

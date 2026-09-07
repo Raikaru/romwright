@@ -1,0 +1,22 @@
+{
+ "id": "m10-001",
+ "recorded_at": "2026-09-07T13:48:52.949048+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "two images in one project: 16 reads per-program identical to single-image projects over 607 rows, both listed by `programs`, and `locate` naming both at the overlapping address 00401000, one at an address only the ELF maps, none outside either",
+ "metrics": {
+  "images.programs": 2,
+  "images.reads_compared": 16,
+  "images.rows_compared": 607,
+  "images.overlapping_address": 4198400
+ },
+ "rows_per_read": {
+  "functions": 124,
+  "memory_regions": 40,
+  "prototypes": 0,
+  "return_behaviors": 0,
+  "strings": 324,
+  "symbols": 85,
+  "thunks": 34
+ }
+}

@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Answer cross-program questions in one project
+        run: |
+          python3 tests/m10-001_multi_image.py \
+            --report "$RUNNER_TEMP/multi-image.json"
       - name: Publish fact explanation as one milestone
         run: |
           python3 tests/m9-005_explanation_milestone.py \

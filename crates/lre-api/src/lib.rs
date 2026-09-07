@@ -119,6 +119,8 @@ impl ApiService {
         match method {
             "ping" => Ok(json!({"service": "lre-core", "api": API_VERSION})),
             "architectures" => value(self.core.architectures()),
+            "programs" => value(self.core.programs()),
+            "locate" => value(self.core.locate(&address_param(params, "address")?)),
             "open" => {
                 let program = string_param(params, "program")?;
                 value(self.core.open_program(&program))

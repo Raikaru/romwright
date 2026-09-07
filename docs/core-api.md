@@ -131,9 +131,27 @@ containing function.
 recovered prototype, jump tables and storage — rather than a string, so a UI
 can render and a script can inspect without re-parsing C.
 
+## A project holds more than one image
+
+A Nintendo DS cartridge is two CPU images; an executable can have overlays.
+`programs` lists what a project holds, and `locate` answers the question an
+address alone cannot -- **which** image maps it -- because images overlap: a
+stripped `tiny_pe32.exe` and `tiny_bin` both start at `0x400000`.
+
+```json
+{"api": 2, "id": 13, "method": "programs"}
+{"api": 2, "id": 13, "result": [{"program": "tiny", "language": "x86:LE:64:default"}]}
+{"api": 2, "id": 14, "method": "locate", "params": {"address": "00400466"}}
+{"api": 2, "id": 14, "result": [{"program": "tiny", "function": "add"}]}
+```
+
+Each row names the region that maps the address and the function containing
+it, or `null` when no function does. A read still answers for one `program`:
+sharing a project changes no answer.
+
 ## Every method
 
-`ping`, `architectures`, `open`, `import_native`, `functions`,
+`ping`, `architectures`, `programs`, `locate`, `open`, `import_native`, `functions`,
 `functions_page`, `symbols`, `symbols_page`, `xrefs`, `xrefs_page`,
 `comments`, `comment`, `datatypes`, `type_defs`, `type_fields`, `type_graph`,
 `propagate_type_links`, `strings`, `search`, `function_graph`,

@@ -948,6 +948,25 @@ put in the table and the UI gate publishes it, so a class the core stops
 explaining shows up as a rendered row with no sentence
 (`tests/m9-001_provenance_explained.py`, `benchmarks/reports/m9-001.json`).
 
+## A project is not one image
+
+A DS cartridge is two CPU images and an executable can carry overlays, so a
+project holds several programs -- and they overlap: a stripped `tiny_pe32.exe`
+and `tiny_bin` both map `0x00401000`. `programs`
+lists what a project holds; `locate` names every program mapping an address,
+with the region that maps it and the function containing it
+(`tests/m10-001_multi_image.py`, `benchmarks/reports/m10-001.json`):
+
+| Checked | Measured |
+|---|---|
+| sharing a project changes no answer | 16 reads per program identical to single-image projects, over 607 rows |
+| the inventory names both, with language, functions and revision | 2 programs |
+| `locate` names both at an overlapping address, one where only the ELF maps, none outside either | region and function verified against the program that owns them |
+| a malformed address is refused | `invalid_params` |
+
+Two controls fire: a `locate` that ignores whether the region holds the
+address, and one that stops at the first program.
+
 ## Fact explanation, as one measured claim
 
 Every surface that shows a fact is enumerated from the repository and then
@@ -1356,6 +1375,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m1-008b-v1.json` | `m1-008b` | M1 | pass | 2 pass, 0 fail, 0 skipped | `tests/m1-008b_pointer_seeds.py` |
 | `m1-008b-scoring.json` | `m1-008b-scoring` | M1 | pass | 20 pass, 0 fail, 0 skipped | `tests/m1-008b_pointer_seeds.py` |
 | `m1-009.json` | `m1-009` | M1 | pass | 1 pass, 0 fail, 0 skipped | `tests/m1-009_dol.py` |
+| `m10-001.json` | `m10-001` | M10 | pass | `images.overlapping_address` 4198400; `images.programs` 2; `images.reads_compared` 16; `images.rows_compared` 607 | `tests/m10-001_multi_image.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |
@@ -1398,7 +1418,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 79; `diagnostic_runs` 12; `generated_rows` 78; `published_ids` 63 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 80; `diagnostic_runs` 12; `generated_rows` 79; `published_ids` 64 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

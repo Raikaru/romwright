@@ -3602,16 +3602,51 @@ m3-003, all three wired into continuous integration)
   `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` all pass.
 - Six additive metric names (`explanation.*`); no II.3 definition changed.
 
+### m10-001 evidence
+- `7747625` commits the failing acceptance (`tests/m10-001_multi_image.py`):
+  `programs` was `unknown_method`, so nothing could say what a project holds.
+- `ProjectDb::programs` lists every program with its language, function count
+  and revision; `ProjectDb::locate` answers which programs map an address,
+  with the region that maps it and the function containing it. Both reach
+  `lre-api` (`programs`, `locate`) and the terminal
+  (`lre-cli programs`, `lre-cli locate <hex>`).
+- **The interesting case is real, not synthetic.** A stripped `tiny_pe32.exe`
+  and `tiny_bin` both map `0x00401000`, so an address alone names no program:
+  `locate 00401000` returns `tiny` (`elf:8`, no function) and `win`
+  (`pe:0`, `FUN_00401000`).
+- Measured (`benchmarks/reports/m10-001.json`): **16 reads per program**
+  (`functions`, `symbols`, `strings`, `memory_regions`, `thunks`,
+  `return_behaviors`, `prototypes`, plus `symbols_page` window and total)
+  identical to projects holding only that image, over **607 rows**; both
+  programs listed; `locate` naming both at the overlap, one where only the ELF
+  maps, none outside either; a malformed address refused.
+- Each returned region is checked to hold the address, and each named function
+  to belong to that program and contain the address -- the row cannot name a
+  region or a function from the other image.
+- Controls: a `locate` that ignores whether the region holds the address fails
+  (`the named region does not hold the address`), and one that stops at the
+  first program fails (`named ['elf']`).
+- **A metric name collided with prose.** `project.programs` made
+  `docs/assumptions.md`'s mention of `project.sqlite` look like a stale metric
+  citation and failed `m6-006`; the metrics are `images.*` instead. The
+  documentation gate caught it, which is what it is for.
+- Regression: `cargo test --workspace` 238 pass; `m10-001`, `m9-001`..`m9-005`,
+  `m8-006`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m5-012`, `m3-001`,
+  `support_matrix_test.py`, `m2-015`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh` all pass. `m6-002` now drives 14 documented
+  exchanges and `m6-001` checks 27 verbs.
+- Four additive metric names (`images.*`); no II.3 definition changed.
+
 ## Next task
-- m10-001: the store answers about one program at a time, and a user working
-  on a game has several -- a main executable plus overlays, or a DS pair of
-  CPU images. `lre-cli` takes `--name` per import and every read takes one
-  `program`, so a cross-image question ("which image declares this address?")
-  has no answer. The acceptance must import two images into one project,
-  prove each program's facts stay separate under every paged read, and answer
-  one cross-program question -- which programs map a given address, with the
-  region that maps it -- through the Core API. Its acceptance test does not
-  exist yet; write it first.
+- m10-002: a project that holds several images should let a user move between
+  them. `programs` and `locate` answer, and no surface uses them: the desktop
+  opens one program named on the command line with no way to switch, and
+  `lre-cli` has no way to follow an address into the image that maps it. The
+  acceptance must add a program selector to the desktop that reloads the docks
+  for the chosen program, prove through the UI gate that switching changes the
+  function list to the other image's, and add `--follow` to `lre-cli locate`
+  so a terminal can print the listing at that address in the program that maps
+  it. Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
