@@ -150,6 +150,10 @@ pub struct NativeImport {
     pub string_tables: Vec<NativeStringTable>,
     pub functions: Vec<NativeFunction>,
     pub xrefs: Vec<NativeXref>,
+    /// Unconditional direct branches seen by flow, kept so the pass that
+    /// records transfers out of a function can run after every pass that
+    /// can still create one.
+    pub branch_transfers: Vec<(u64, u64)>,
     pub externals: Vec<(u64, String)>,
     /// Proven ifunc pointer slots and their in-image resolvers.
     pub ifunc_slots: Vec<(u64, u64)>,
@@ -1080,6 +1084,9 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         infer_data_references(imp, &mut session, lanes.shards)?;
         phase(imp, "references", references_started);
     }
+    // Whether a branch target is a function can only be answered once every
+    // pass that creates one has run.
+    discovery::record_branch_transfers(imp);
     Ok(())
 }
 

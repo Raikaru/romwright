@@ -49,7 +49,7 @@ fn landing(address: u64) -> FlowResult {
 }
 
 #[test]
-fn landing_prefix_preserves_entry_extent_and_actual_jump_xref() {
+fn landing_prefix_preserves_entry_extent_and_records_the_tail_call() {
     let mut imp = image();
     flow_discover_with_provider(&mut imp, |addresses| {
         addresses
@@ -69,13 +69,17 @@ fn landing_prefix_preserves_entry_extent_and_actual_jump_xref() {
             .collect::<Vec<_>>(),
         vec![(0x1000, 6), (0x2000, 6), (0x2100, 2)]
     );
+    // The branch is not itself the function entry -- a no-op landing precedes
+    // it -- so Ghidra's SharedReturnAnalysisCmd gives it a CALL_RETURN
+    // override, and the reference to the target function is a call. The row
+    // stays owned by the thunk pass that found the transfer.
     for (from, to) in [(0x1004, 0x2000), (0x2004, 0x2100)] {
         assert!(imp.xrefs.iter().any(|x| x.from == from
             && x.to == to
-            && x.kind == "UNCONDITIONAL_JUMP"
+            && x.kind == "UNCONDITIONAL_CALL"
             && x.provenance == "native-import:thunk"));
     }
-    assert!(!imp.xrefs.iter().any(|x| x.kind.contains("CALL")));
+    assert!(!imp.xrefs.iter().any(|x| x.kind == "UNCONDITIONAL_JUMP"));
 }
 
 #[test]

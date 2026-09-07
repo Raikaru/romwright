@@ -79,9 +79,107 @@ def containing(functions: dict[int, int], address: int) -> int | None:
     return None
 
 
+THRESHOLDS = {
+    "flow_xref.jump.precision": 1.0,
+    "flow_xref.jump.cross_recall": 1.0,
+    "flow_xref.call.precision": 1.0,
+    "flow_xref.call.recall": 0.98,
+}
+
+
+def score_against_ghidra(cli: Path, corpus: Path, oracle_dir: Path,
+                         timeout: int) -> dict[str, object]:
+    """Score branch-derived references against the stock-Ghidra oracle.
+
+    Ghidra records a reference for every flow, so its own export is the only
+    honest judge of a reference this project invents. The comparison is
+    kind-exact: a transfer recorded under the wrong kind counts as a miss on
+    one side and a false positive on the other.
+    """
+    manifest = json.loads((corpus / "manifest.json").read_text())
+    oracle = {}
+    for path in sorted(oracle_dir.rglob("*.json")):
+        exported = json.loads(path.read_text())
+        if "xrefs" in exported:
+            oracle[exported["sha256"]] = exported
+
+    totals = dict(jump=0, jump_hit=0, cross=0, cross_hit=0, call=0, call_hit=0,
+                  ghidra_call=0, scored=0)
+    rows = []
+    for entry in manifest["entries"]:
+        exported = oracle.get(entry["binary_sha256"])
+        if exported is None:
+            continue
+        binary = corpus / entry["binary"]
+        ghidra_jump = {(x["from"].lower(), x["to"].lower())
+                       for x in exported["xrefs"] if x["kind"] == "UNCONDITIONAL_JUMP"}
+        ghidra_call = {(x["from"].lower(), x["to"].lower())
+                       for x in exported["xrefs"] if x["kind"] == "UNCONDITIONAL_CALL"}
+        with tempfile.TemporaryDirectory(prefix="m5-006-corpus-") as temporary:
+            project = Path(temporary) / "project"
+            imported = subprocess.run(
+                [str(cli), "import", str(binary), "--name", "t",
+                 "--project", str(project)],
+                cwd=ROOT, capture_output=True, text=True, timeout=timeout)
+            assert imported.returncode == 0, (
+                f"{entry['binary']}: import failed: {imported.stderr.strip()}")
+            store = sqlite3.connect(project / "project.sqlite")
+            native_jump = {(a.lower(), b.lower()) for a, b in store.execute(
+                "SELECT src, dst FROM xrefs WHERE kind = 'UNCONDITIONAL_JUMP'")}
+            native_call = {(a.lower(), b.lower()) for a, b in store.execute(
+                "SELECT src, dst FROM xrefs WHERE kind = 'UNCONDITIONAL_CALL'")}
+            extents = sorted((int(a, 16), size) for a, size in store.execute(
+                "SELECT entry, size FROM functions"))
+
+        def leaves_its_function(source: str, target: str) -> bool:
+            owner = None
+            for start, size in extents:
+                if start <= int(source, 16) < start + size:
+                    owner = (start, size)
+            if owner is None:
+                return False
+            return not owner[0] <= int(target, 16) < owner[0] + owner[1]
+
+        cross = {edge for edge in ghidra_jump if leaves_its_function(*edge)}
+        totals["scored"] += 1
+        totals["jump"] += len(native_jump)
+        totals["jump_hit"] += len(native_jump & ghidra_jump)
+        totals["cross"] += len(cross)
+        totals["cross_hit"] += len(native_jump & cross)
+        totals["call"] += len(native_call)
+        totals["call_hit"] += len(native_call & ghidra_call)
+        totals["ghidra_call"] += len(ghidra_call)
+        rows.append({
+            "id": f"{entry['architecture']}_{entry['variant']}",
+            "native_jumps": len(native_jump),
+            "ghidra_jumps": len(ghidra_jump),
+            "cross_function_jumps": len(cross),
+            "cross_recorded": len(native_jump & cross),
+            "native_calls": len(native_call),
+            "ghidra_calls": len(ghidra_call),
+        })
+
+    assert totals["scored"] >= 20, (
+        f"only {totals['scored']} corpus entries had an oracle to score against")
+    assert totals["cross"], "no cross-function jump existed in any oracle"
+    metrics = {
+        "flow_xref.jump.precision": totals["jump_hit"] / max(totals["jump"], 1),
+        "flow_xref.jump.cross_recall": totals["cross_hit"] / max(totals["cross"], 1),
+        "flow_xref.call.precision": totals["call_hit"] / max(totals["call"], 1),
+        "flow_xref.call.recall": totals["call_hit"] / max(totals["ghidra_call"], 1),
+    }
+    for name, threshold in THRESHOLDS.items():
+        assert metrics[name] >= threshold, (
+            f"{name} is {metrics[name]:.4f}, below {threshold}")
+    return {"metrics": metrics, "corpus": rows, "totals": totals}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--corpus-dir", type=Path,
+                        help="score branch references against the Ghidra oracle")
+    parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle" / "xrefs-v1")
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
@@ -176,14 +274,33 @@ def main() -> int:
             f"references to it are {into_mix}"
         )
 
+    scored = None
+    if arguments.corpus_dir:
+        scored = score_against_ghidra(cli, arguments.corpus_dir,
+                                      arguments.oracle_dir, arguments.timeout)
+
     summary = (f"{crossing_checked} cross-function transfer(s) recorded, "
                f"{internal_checked} loop branch(es) correctly not recorded, "
                f"function set unchanged")
+    if scored:
+        summary += (
+            f"; scored {scored['totals']['scored']} corpus entries against "
+            f"Ghidra: jump precision "
+            f"{scored['metrics']['flow_xref.jump.precision']:.4f}, "
+            f"cross-function recall "
+            f"{scored['metrics']['flow_xref.jump.cross_recall']:.4f}, "
+            f"call precision {scored['metrics']['flow_xref.call.precision']:.4f}, "
+            f"call recall {scored['metrics']['flow_xref.call.recall']:.4f}"
+        )
     if arguments.report:
+        metrics = {"transfers_recorded": crossing_checked,
+                   "loops_excluded": internal_checked}
+        if scored:
+            metrics.update(scored["metrics"])
+            report["thresholds"] = THRESHOLDS
+            report["corpus"] = scored["corpus"]
         report.update(status="pass", passed=True, summary=summary,
-                      metrics={"transfers_recorded": crossing_checked,
-                               "loops_excluded": internal_checked},
-                      rows=rows_by_program)
+                      metrics=metrics, rows=rows_by_program)
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
         arguments.report.write_text(json.dumps(report, indent=2) + "\n")
     print(f"m5-006: PASS ({summary})")

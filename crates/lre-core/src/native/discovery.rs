@@ -444,6 +444,10 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     entries.dedup();
 
     let mut calls: Vec<(u64, u64)> = Vec::new();
+    // Every unconditional direct branch, kept until function extents are
+    // known: only then can a transfer out of a function be told apart from a
+    // loop inside one.
+    let mut branch_transfers: Vec<(u64, u64)> = Vec::new();
     let mut instruction_extents = Vec::new();
     let mut thunk_candidates = HashSet::new();
     let mut thunk_jumps = Vec::new();
@@ -592,6 +596,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     FlowKind::Branch => {
                         if info.targets.len() == 1 && !info.conditional {
                             terminal_transfers.insert(addr, info.targets[0]);
+                            // A transfer worth recording has a target of its
+                            // own; the fallthrough address is not one.
+                            if info.targets[0] != 0
+                                && info.targets[0] != span
+                                && in_code(info.targets[0])
+                            {
+                                branch_transfers.push((addr, info.targets[0]));
+                            }
                         }
                         if let Some(&t) = info.targets.first() {
                             if has_linkage_slots && t != span {
@@ -1206,7 +1218,89 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     }
     imp.xrefs = xrefs;
     close_call_targets(imp);
+    imp.branch_transfers = branch_transfers;
+    imp.branch_transfers.sort_unstable();
+    imp.branch_transfers.dedup();
+    record_branch_transfers(imp);
     Ok(())
+}
+
+/// The provenance of a reference recorded from an unconditional branch that
+/// leaves its function.
+const BRANCH_PROVENANCE: &str = "native-import:branch";
+
+/// Records every unconditional direct branch that leaves its own function.
+///
+/// A tail call reaches its target this way, and without the reference nothing
+/// in the program model says the target is reached at all. A branch landing
+/// inside the branching function is a loop; recording those would bury the
+/// transfers under every `while`.
+///
+/// Idempotent: rows from an earlier run are replaced, because a target only
+/// becomes a function once later passes have run.
+pub fn record_branch_transfers(imp: &mut NativeImport) {
+    if imp.branch_transfers.is_empty() {
+        return;
+    }
+    imp.xrefs.retain(|xref| xref.provenance != BRANCH_PROVENANCE);
+    let mut extents: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| (function.entry, function.entry.saturating_add(function.size)))
+        .collect();
+    extents.sort_unstable();
+    let entries: HashSet<u64> = imp.functions.iter().map(|function| function.entry).collect();
+    let mut placed: std::collections::HashMap<(u64, u64), usize> = imp
+        .xrefs
+        .iter()
+        .enumerate()
+        .map(|(index, xref)| ((xref.from, xref.to), index))
+        .collect();
+    let transfers = std::mem::take(&mut imp.branch_transfers);
+    for &(from, to) in &transfers {
+        let Some(index) = extents
+            .partition_point(|&(entry, _)| entry <= from)
+            .checked_sub(1)
+        else {
+            continue;
+        };
+        let (entry, end) = extents[index];
+        if from >= end || (entry <= to && to < end) {
+            continue;
+        }
+        // Ghidra SharedReturnAnalysisCmd.processFunctionJumpReferences:376-425
+        // gives an unconditional jump that leaves its function for another
+        // function's entry a CALL_RETURN flow override, which turns the
+        // reference into a call. A jump to an address that is not a function
+        // entry keeps its jump reference: that is the tail call into code
+        // nobody recovered, and the only record that it is reached.
+        // The override is not applied when the branch instruction is itself a
+        // function entry: Ghidra treats that as a thunk and leaves the jump
+        // reference alone (`funcMgr.getFunctionAt(refInstrAddr) != null`).
+        let kind = if entries.contains(&to) && !entries.contains(&from) {
+            "UNCONDITIONAL_CALL"
+        } else {
+            "UNCONDITIONAL_JUMP"
+        };
+        match placed.get(&(from, to)) {
+            // Another pass recorded the same transfer -- the thunk pass does.
+            // The kind of a branch reference is decided here, in one place;
+            // the row keeps the provenance of whichever pass produced it.
+            Some(&index) => {
+                let existing = &mut imp.xrefs[index];
+                if existing.kind == "UNCONDITIONAL_JUMP" || existing.kind == "UNCONDITIONAL_CALL" {
+                    existing.kind = kind.into();
+                }
+            }
+            None => {
+                placed.insert((from, to), imp.xrefs.len());
+                imp.xrefs
+                    .push(NativeXref::with_provenance(from, to, kind, BRANCH_PROVENANCE));
+            }
+        }
+    }
+    imp.branch_transfers = transfers;
 }
 
 fn linkage_flow_shape(target: u64, instructions: &[(u64, u64)], endings: &[(u64, bool)]) -> bool {
