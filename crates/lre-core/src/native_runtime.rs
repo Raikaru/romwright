@@ -886,6 +886,13 @@ impl ConsoleSession {
             .ok_or_else(|| NativeRuntimeError(format!("references at {start:#x} are undecodable")))
     }
 
+    /// Names the pinned patterns attached to the starts they proved. The
+    /// console already consumes these to install call fixups; the store wants
+    /// the same names on its functions.
+    pub(crate) fn pattern_labels(&self) -> &[(u64, String)] {
+        self.reference_labels.as_deref().unwrap_or(&[])
+    }
+
     pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
         self.reference_registers.clone_from(&import.register_contexts);
         self.active_reference_registers = self.reference_registers.len();

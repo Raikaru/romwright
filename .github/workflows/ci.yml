@@ -188,6 +188,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$VENTRIS_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/initializer-names.json"
+      - name: Enforce pattern-label naming
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m5-011_pattern_labels.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA" \
+            --report "$RUNNER_TEMP/discovery/pattern-labels.json"
       - name: Enforce the tail-call promotion gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

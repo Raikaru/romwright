@@ -1,0 +1,214 @@
+{
+  "id": "m5-011",
+  "recorded_at": "2026-09-07T08:37:51.183718+00:00",
+  "thresholds": {
+    "pattern.label.missing": 0,
+    "pattern.label.spurious": 0
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "20 corpus entries: 11 pattern labels applied and agreed with stock, 0 missing, 0 spurious",
+  "metrics": {
+    "pattern.label.applied": 11,
+    "pattern.label.missing": 0,
+    "pattern.label.spurious": 0,
+    "pattern.label.disagreed": 0
+  },
+  "totals": {
+    "applied": 11,
+    "missing": 0,
+    "spurious": 0,
+    "disagreed": 0
+  },
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "x86_64_many_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "i386_plain_o0",
+      "applied": [
+        {
+          "address": "00401469",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401480",
+          "label": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "i386_plain_o2",
+      "applied": [
+        {
+          "address": "00401469",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401480",
+          "label": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "i386_plain_pie",
+      "applied": [
+        {
+          "address": "000114c8",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "000114d0",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "000115c5",
+          "label": "__i686.get_pc_thunk.dx"
+        }
+      ],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "i386_cpp_o2",
+      "applied": [
+        {
+          "address": "00401719",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401730",
+          "label": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "i386_many_o2",
+      "applied": [
+        {
+          "address": "00403fc9",
+          "label": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00403fe0",
+          "label": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "aarch64_many_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    },
+    {
+      "id": "powerpc_many_o2",
+      "applied": [],
+      "missing": [],
+      "spurious": [],
+      "disagreed": []
+    }
+  ]
+}
