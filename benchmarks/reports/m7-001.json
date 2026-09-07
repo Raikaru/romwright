@@ -1,0 +1,202 @@
+{
+ "id": "m7-001",
+ "recorded_at": "2026-09-07T10:09:06.439231+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "20 locked entries: native median 36038.0 KiB peak and 0.268s, stock median 422716.0 KiB and 7.992s -- 11.48x less memory and 30.13x faster, every entry inside the recorded envelope",
+ "host": {
+  "system": "Linux",
+  "machine": "x86_64"
+ },
+ "metrics": {
+  "cost.native.peak_kb.median": 36038.0,
+  "cost.native.wall_s.median": 0.268,
+  "cost.stock.peak_kb.median": 422716.0,
+  "cost.stock.wall_s.median": 7.992,
+  "cost.peak_ratio.median": 11.48,
+  "cost.wall_ratio.median": 30.13
+ },
+ "corpus": [
+  {
+   "id": "x86_64_plain_o0",
+   "native.wall_s": 0.504,
+   "native.peak_kb": 40568,
+   "stock.wall_s": 12.188,
+   "stock.peak_kb": 398148,
+   "peak_ratio": 9.81,
+   "wall_ratio": 24.17
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "native.wall_s": 0.321,
+   "native.peak_kb": 40612,
+   "stock.wall_s": 7.9,
+   "stock.peak_kb": 457492,
+   "peak_ratio": 11.26,
+   "wall_ratio": 24.59
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "native.wall_s": 0.309,
+   "native.peak_kb": 40648,
+   "stock.wall_s": 7.917,
+   "stock.peak_kb": 430452,
+   "peak_ratio": 10.59,
+   "wall_ratio": 25.59
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "native.wall_s": 0.321,
+   "native.peak_kb": 40752,
+   "stock.wall_s": 8.028,
+   "stock.peak_kb": 457812,
+   "peak_ratio": 11.23,
+   "wall_ratio": 24.99
+  },
+  {
+   "id": "x86_64_many_o2",
+   "native.wall_s": 0.424,
+   "native.peak_kb": 42892,
+   "stock.wall_s": 9.092,
+   "stock.peak_kb": 485508,
+   "peak_ratio": 11.32,
+   "wall_ratio": 21.44
+  },
+  {
+   "id": "i386_plain_o0",
+   "native.wall_s": 0.279,
+   "native.peak_kb": 33704,
+   "stock.wall_s": 7.239,
+   "stock.peak_kb": 351044,
+   "peak_ratio": 10.42,
+   "wall_ratio": 25.98
+  },
+  {
+   "id": "i386_plain_o2",
+   "native.wall_s": 0.266,
+   "native.peak_kb": 33576,
+   "stock.wall_s": 7.423,
+   "stock.peak_kb": 349420,
+   "peak_ratio": 10.41,
+   "wall_ratio": 27.88
+  },
+  {
+   "id": "i386_plain_pie",
+   "native.wall_s": 0.254,
+   "native.peak_kb": 33696,
+   "stock.wall_s": 7.468,
+   "stock.peak_kb": 379856,
+   "peak_ratio": 11.27,
+   "wall_ratio": 29.4
+  },
+  {
+   "id": "i386_cpp_o2",
+   "native.wall_s": 0.27,
+   "native.peak_kb": 33780,
+   "stock.wall_s": 7.752,
+   "stock.peak_kb": 372984,
+   "peak_ratio": 11.04,
+   "wall_ratio": 28.7
+  },
+  {
+   "id": "i386_many_o2",
+   "native.wall_s": 0.376,
+   "native.peak_kb": 35792,
+   "stock.wall_s": 8.538,
+   "stock.peak_kb": 381588,
+   "peak_ratio": 10.66,
+   "wall_ratio": 22.69
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "native.wall_s": 0.215,
+   "native.peak_kb": 36284,
+   "stock.wall_s": 7.635,
+   "stock.peak_kb": 446624,
+   "peak_ratio": 12.31,
+   "wall_ratio": 35.56
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "native.wall_s": 0.217,
+   "native.peak_kb": 36284,
+   "stock.wall_s": 7.956,
+   "stock.peak_kb": 486432,
+   "peak_ratio": 13.41,
+   "wall_ratio": 36.68
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "native.wall_s": 0.214,
+   "native.peak_kb": 36428,
+   "stock.wall_s": 7.793,
+   "stock.peak_kb": 513908,
+   "peak_ratio": 14.11,
+   "wall_ratio": 36.41
+  },
+  {
+   "id": "aarch64_cpp_o2",
+   "native.wall_s": 0.217,
+   "native.peak_kb": 36388,
+   "stock.wall_s": 8.078,
+   "stock.peak_kb": 423780,
+   "peak_ratio": 11.65,
+   "wall_ratio": 37.22
+  },
+  {
+   "id": "aarch64_many_o2",
+   "native.wall_s": 0.333,
+   "native.peak_kb": 36412,
+   "stock.wall_s": 10.275,
+   "stock.peak_kb": 513676,
+   "peak_ratio": 14.11,
+   "wall_ratio": 30.86
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "native.wall_s": 0.194,
+   "native.peak_kb": 18736,
+   "stock.wall_s": 10.552,
+   "stock.peak_kb": 421652,
+   "peak_ratio": 22.5,
+   "wall_ratio": 54.43
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "native.wall_s": 0.152,
+   "native.peak_kb": 18736,
+   "stock.wall_s": 7.794,
+   "stock.peak_kb": 383768,
+   "peak_ratio": 20.48,
+   "wall_ratio": 51.27
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "native.wall_s": 0.159,
+   "native.peak_kb": 18736,
+   "stock.wall_s": 8.315,
+   "stock.peak_kb": 451504,
+   "peak_ratio": 24.1,
+   "wall_ratio": 52.3
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "native.wall_s": 0.17,
+   "native.peak_kb": 18736,
+   "stock.wall_s": 8.08,
+   "stock.peak_kb": 366212,
+   "peak_ratio": 19.55,
+   "wall_ratio": 47.63
+  },
+  {
+   "id": "powerpc_many_o2",
+   "native.wall_s": 0.272,
+   "native.peak_kb": 18736,
+   "stock.wall_s": 8.931,
+   "stock.peak_kb": 360056,
+   "peak_ratio": 19.22,
+   "wall_ratio": 32.82
+  }
+ ],
+ "skipped": []
+}
