@@ -708,6 +708,18 @@ pub struct ConsoleSession {
     active_reference_registers: usize,
     reference_call_register: Option<&'static str>,
     new_reference_targets: Vec<u64>,
+    /// Commands written to this console. Batching is a claim about this
+    /// number against the instructions decoded, not about wall time.
+    requests: u64,
+}
+
+/// One session's reference context as plain data (see
+/// `ConsoleSession::reference_shard_spec`).
+pub(crate) struct ReferenceShardSpec {
+    labels: Option<Vec<(u64, String)>>,
+    registers: Vec<crate::native::NativeRegisterContext>,
+    active: usize,
+    call_register: Option<&'static str>,
 }
 
 impl ConsoleSession {
@@ -743,6 +755,7 @@ impl ConsoleSession {
             active_reference_registers: 0,
             reference_call_register: None,
             new_reference_targets: Vec::new(),
+            requests: 0,
         })
     }
 
@@ -844,7 +857,6 @@ impl ConsoleSession {
     }
 
     pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
-        use std::fmt::Write as _;
         self.reference_registers.clone_from(&import.register_contexts);
         self.active_reference_registers = self.reference_registers.len();
         self.reference_call_register = import.reference_call_register;
@@ -858,9 +870,19 @@ impl ConsoleSession {
                 }).collect::<Result<Vec<_>>>()?;
             self.function_patterns(&ranges)?;
         }
+        self.send_reference_fixups(import)
+    }
+
+    /// Names the pattern-proven function starts inside this console, so a
+    /// propagated call lands on a real function instead of raw bytes.
+    fn send_reference_fixups(&mut self, import: &NativeImport) -> Result<()> {
+        use std::fmt::Write as _;
         let mut script = String::new();
         let mut count = 0;
-        for (address, label) in self.reference_labels.as_ref().unwrap() {
+        let Some(labels) = self.reference_labels.as_ref() else {
+            return err("reference fixups need function patterns");
+        };
+        for (address, label) in labels {
             if !import.functions.iter().any(|function| function.entry == *address && function.size > 1) {
                 continue;
             }
@@ -881,10 +903,111 @@ impl ConsoleSession {
         }
         Ok(())
     }
-    pub(crate) fn take_reference_context_targets(&mut self) -> impl Iterator<Item = u64> + '_ {
-        self.active_reference_registers = self.reference_registers.len();
-        self.new_reference_targets.drain(..)
+
+    /// Commands written to this console so far.
+    pub(crate) fn requests(&self) -> u64 {
+        self.requests
     }
+
+    /// Everything a shard needs to reach this session's exact reference
+    /// context. Plain data, so shards can be opened concurrently: console
+    /// startup is serial work otherwise, and it dominates a short round.
+    pub(crate) fn reference_shard_spec(&self) -> ReferenceShardSpec {
+        ReferenceShardSpec {
+            labels: self.reference_labels.clone(),
+            registers: self.reference_registers.clone(),
+            active: self.active_reference_registers,
+            call_register: self.reference_call_register,
+        }
+    }
+
+    /// Opens `count` more consoles on the same image, concurrently: console
+    /// startup is serial work that would otherwise dominate a short round.
+    /// A shard is an optimization, so one that fails to open is dropped.
+    pub(crate) fn open_image_shards(import: &NativeImport, count: usize) -> Vec<Self> {
+        if count == 0 {
+            return Vec::new();
+        }
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..count)
+                .map(|_| {
+                    scope.spawn(|| {
+                        let mut shard = Self::new(&import.cfg)?;
+                        shard.load_mapped(import)?;
+                        Ok::<Self, NativeRuntimeError>(shard)
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .filter_map(|handle| handle.join().ok().and_then(|shard| shard.ok()))
+                .collect()
+        })
+    }
+
+    /// Gives this console `spec`'s reference context. One round of the
+    /// reference pass never reads a context discovered inside that round, so
+    /// shards observe identical inputs and produce the same facts as a
+    /// single session would.
+    pub(crate) fn prepare_as_reference_shard(
+        &mut self,
+        spec: &ReferenceShardSpec,
+        import: &NativeImport,
+    ) -> Result<()> {
+        self.reference_labels.clone_from(&spec.labels);
+        self.reference_registers.clone_from(&spec.registers);
+        self.active_reference_registers = spec.active;
+        self.reference_call_register = spec.call_register;
+        self.new_reference_targets.clear();
+        self.send_reference_fixups(import)
+    }
+
+    /// Replaces this session's register context before a round; the whole
+    /// context is active, matching `take_reference_context_targets`.
+    pub(crate) fn sync_reference_context(&mut self, contexts: &[crate::native::NativeRegisterContext]) {
+        self.reference_registers = contexts.to_vec();
+        self.active_reference_registers = contexts.len();
+        self.new_reference_targets.clear();
+    }
+
+    /// The register context this session queries with.
+    pub(crate) fn reference_contexts(&self) -> &[crate::native::NativeRegisterContext] {
+        &self.reference_registers
+    }
+
+    /// Removes and returns the contexts this session discovered past `keep`.
+    pub(crate) fn drain_discovered_contexts(
+        &mut self,
+        keep: usize,
+    ) -> Vec<crate::native::NativeRegisterContext> {
+        self.new_reference_targets.clear();
+        if self.reference_registers.len() <= keep {
+            return Vec::new();
+        }
+        self.reference_registers.split_off(keep)
+    }
+
+    /// Adds `contexts` that are not already covered, returning their targets.
+    pub(crate) fn adopt_reference_contexts(
+        &mut self,
+        contexts: Vec<crate::native::NativeRegisterContext>,
+    ) -> Vec<u64> {
+        let mut targets = Vec::new();
+        for context in contexts {
+            if self.reference_registers.iter().any(|existing| {
+                existing.register == context.register
+                    && existing.start <= context.start
+                    && context.start < existing.end
+            }) {
+                continue;
+            }
+            targets.push(context.start);
+            self.reference_registers.push(context);
+        }
+        self.active_reference_registers = self.reference_registers.len();
+        targets
+    }
+
 
 
     fn propagation_query<T: serde::de::DeserializeOwned>(
@@ -1272,6 +1395,7 @@ impl ConsoleSession {
 
     fn send(&mut self, s: &str) -> Result<()> {
         use std::io::Write as _;
+        self.requests += 1;
         self.stdin
             .write_all(s.as_bytes())
             .and_then(|_| self.stdin.flush())

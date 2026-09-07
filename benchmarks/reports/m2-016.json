@@ -1,0 +1,79 @@
+{
+  "id": "m2-016",
+  "recorded_at": "2026-09-07T02:32:00.042058+00:00",
+  "thresholds": {
+    "flow.seconds": 5.0,
+    "references.speedup": 2.0,
+    "total.seconds": 60.0
+  },
+  "status": "pass",
+  "runs": {
+    "single": {
+      "total": 22.038304,
+      "functions": 3961,
+      "shards": 1,
+      "flow": {
+        "requests": 573,
+        "instructions": 297390
+      },
+      "phases": {
+        "parse": 0.02071,
+        "patterns": 0.116299,
+        "flow": 4.878288,
+        "discovery": 5.586498,
+        "references": 16.215269,
+        "store": 0.201151
+      }
+    },
+    "sharded": {
+      "total": 9.299938,
+      "functions": 3961,
+      "shards": 6,
+      "flow": {
+        "requests": 3146,
+        "instructions": 297390
+      },
+      "phases": {
+        "parse": 0.019601,
+        "patterns": 0.124415,
+        "flow": 2.860525,
+        "discovery": 3.570527,
+        "references": 5.513747,
+        "store": 0.185072
+      }
+    }
+  },
+  "checks": {
+    "single.accounted_seconds": 22.023628,
+    "sharded.accounted_seconds": 9.288947,
+    "fact_invariance": true,
+    "references.speedup": 2.9409,
+    "references.speedup_asserted": true,
+    "flow.seconds": 2.860525,
+    "total.seconds": 9.299938
+  },
+  "consoles": 6,
+  "facts": {
+    "functions": {
+      "rows": 3961,
+      "sha256": "3794fc0e738391b95bbfe194ab6a8bf4de17eea791577b7403f7d320482d4377"
+    },
+    "xrefs": {
+      "rows": 29442,
+      "sha256": "72eed49753aa04f2605e73267adab855ca901e8d66997e6efeb70cfc7c6a0b4a"
+    },
+    "strings": {
+      "rows": 18410,
+      "sha256": "ea8204a30abb0e39764b1c0e6736f655a9966030ce27614161bedf3ba5196431"
+    },
+    "symbols": {
+      "rows": 26,
+      "sha256": "18fb9fa6a9c2854197e78fd03effacc0379a47e856d9901d0f74408cf47e698b"
+    },
+    "thunks": {
+      "rows": 107,
+      "sha256": "e4418bc37efcebd51ce27145b7a49abc487da01c268cc11f9306d2abc233c575"
+    }
+  },
+  "passed": true
+}

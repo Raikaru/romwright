@@ -24,14 +24,29 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import sqlite3
 import subprocess
 import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-LIBC = Path(os.environ.get("VENTRIS_LIBC", "/usr/lib64/libc.so.6"))
+LIBC_CANDIDATES = (
+    "/usr/lib64/libc.so.6",
+    "/usr/lib/x86_64-linux-gnu/libc.so.6",
+    "/lib/x86_64-linux-gnu/libc.so.6",
+    "/usr/lib/libc.so.6",
+)
+
+
+def default_binary() -> Path:
+    """The largest image every supported host has: its own libc."""
+    pinned = os.environ.get("VENTRIS_LIBC")
+    if pinned:
+        return Path(pinned)
+    for candidate in LIBC_CANDIDATES:
+        if Path(candidate).is_file():
+            return Path(candidate)
+    return Path(LIBC_CANDIDATES[0])
 PHASES = ("parse", "patterns", "flow", "discovery", "references", "store")
 FLOW_BUDGET_SECONDS = 5.0
 REFERENCE_SPEEDUP = 2.0
@@ -92,7 +107,7 @@ def run_import(binary: Path, shards: int, work: Path) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path)
-    parser.add_argument("--binary", type=Path, default=LIBC)
+    parser.add_argument("--binary", type=Path, default=default_binary())
     arguments = parser.parse_args()
 
     report = {"id": "m2-016", "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -144,9 +159,13 @@ def main() -> int:
     speedup = single["timings"]["phases"]["references"] / max(
         sharded["timings"]["phases"]["references"], 1e-9)
     report["checks"]["references.speedup"] = round(speedup, 4)
-    if lanes < 4:
+    # Below a couple of seconds of single-console work, console startup is the
+    # measurement: record the ratio, do not assert it.
+    single_references = single["timings"]["phases"]["references"]
+    if lanes < 4 or single_references < 2.0:
         report["checks"]["references.speedup_asserted"] = False
-        print(f"NOTE: {lanes} console(s) available; speedup {speedup:.2f}x recorded, not asserted")
+        print(f"NOTE: {lanes} console(s), {single_references:.3f}s of single-console "
+              f"reference work; speedup {speedup:.2f}x recorded, not asserted")
     else:
         report["checks"]["references.speedup_asserted"] = True
         if speedup < REFERENCE_SPEEDUP:

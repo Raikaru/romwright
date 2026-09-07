@@ -188,6 +188,8 @@ impl Core {
             program: program.to_string(),
             functions: functions.len() as u64,
             language: self.db.program_language(id)?,
+            phases: Vec::new(),
+            flow: None,
         })
     }
 
@@ -882,7 +884,13 @@ impl Core {
     /// stripped), and store writes with native provenance.
     pub fn import_native(&self, binary: &Path, name: &str) -> Result<ProgramSummary> {
         let imp = native::load_native(binary)?;
-        Ok(native::store_import(&self.db, name, &imp)?)
+        let started = std::time::Instant::now();
+        let mut summary = native::store_import(&self.db, name, &imp)?;
+        summary.phases.push(lre_model::PhaseTiming {
+            phase: "store".into(),
+            seconds: started.elapsed().as_secs_f64(),
+        });
+        Ok(summary)
     }
 
     /// Native disassembly of `count` instructions at `address`.
@@ -1033,6 +1041,8 @@ impl Core {
             program: program.to_string(),
             functions: functions.len() as u64,
             language: self.db.program_language(id)?,
+            phases: Vec::new(),
+            flow: None,
         })
     }
 

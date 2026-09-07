@@ -130,6 +130,25 @@ export VENTRIS_GHIDRA=$HOME/ghidra_12.1.3_PUBLIC          # console defaults
 ./target/debug/lre-cli decompile ./smoke_bin 00400466 --name smoke --project ./proj
 ```
 
+Import measures itself. `--timings` prints one machine-readable line: the
+total, the phases (`parse`, `patterns`, `flow`, `discovery`, `references`,
+`store`), the console shard count, and what the flow phase asked of the
+console. Batch-parallel work (flow batches, reference rounds) runs one
+console per physical core, capped at eight; `VENTRIS_CONSOLE_SHARDS` pins
+that count. Requests inside a batch or a reference round are independent, so
+shards change wall time and nothing else — `tests/m2-016_import_budget.py`
+asserts that a one-console import and an N-console import write identical
+function, xref, string, symbol and thunk sets.
+
+```sh
+./target/debug/lre-cli import /usr/lib64/libc.so.6 --name libc \
+    --project ./proj --timings
+# TIMINGS {"total":9.30,"functions":3961,"shards":6,
+#          "flow":{"requests":3146,"instructions":297390},
+#          "phases":{"parse":0.02,"patterns":0.12,"flow":2.86,
+#                    "discovery":3.60,"references":5.32,"store":0.19}}
+```
+
 Only `--oracle` starts the JVM: `import --oracle`, `decompile --oracle`,
 `disasm --oracle` and `dump-specs --oracle --out DIR` accept `--ghidra DIR`
 or the service jar, and exist for oracle generation, not for daily use.

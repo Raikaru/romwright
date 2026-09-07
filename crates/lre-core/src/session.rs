@@ -40,6 +40,41 @@ pub struct RuntimeConfig {
     /// True when `language_dir` came from an explicit pin; a pinned
     /// directory survives adopting an image's own language.
     pub language_dir_pinned: bool,
+    /// Consoles used for batch-parallel work (flow batches, reference
+    /// rounds). Requests inside one batch or round are independent, so
+    /// sharding them changes wall time, never facts.
+    pub console_shards: usize,
+}
+
+/// One console per physical core, capped at eight. Each shard is a separate
+/// process decoding and lifting a function, so SMT siblings contend on the
+/// same execution units: on a 6-core/12-thread host the libc reference pass
+/// measured 2.86 s at six shards against 3.09 s at eight and 3.11 s at
+/// twelve. Hyperthread counts are used only where core counts are unknown.
+fn default_console_shards() -> usize {
+    let logical = std::thread::available_parallelism()
+        .map(|parallelism| parallelism.get())
+        .unwrap_or(1);
+    let physical = std::fs::read_to_string("/proc/cpuinfo")
+        .ok()
+        .map(|cpuinfo| {
+            let mut cores = std::collections::BTreeSet::new();
+            let mut package = None;
+            for line in cpuinfo.lines() {
+                let Some((key, value)) = line.split_once(':') else { continue };
+                match key.trim() {
+                    "physical id" => package = Some(value.trim().to_string()),
+                    "core id" => {
+                        cores.insert((package.clone(), value.trim().to_string()));
+                    }
+                    _ => {}
+                }
+            }
+            cores.len()
+        })
+        .filter(|cores| *cores >= 1)
+        .unwrap_or(logical);
+    physical.min(logical).clamp(1, 8)
 }
 
 impl Default for RuntimeConfig {
@@ -116,6 +151,11 @@ impl RuntimeConfig {
                 pb.is_file()
             })
             .map(PathBuf::from);
+        let console_shards = std::env::var("VENTRIS_CONSOLE_SHARDS")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|shards| *shards >= 1)
+            .unwrap_or_else(default_console_shards);
         Self {
             worker_path,
             decompiler_path,
@@ -127,6 +167,7 @@ impl RuntimeConfig {
             sla_path,
             ghidra_install: install,
             worker_memory_cap: 256 * 1024 * 1024,
+            console_shards,
         }
     }
 

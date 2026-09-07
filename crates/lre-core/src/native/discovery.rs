@@ -24,8 +24,55 @@ trait FlowProvider {
 
 struct ConsoleProvider {
     session: ConsoleSession,
+    /// Extra consoles on the same image; one flow batch splits across them.
+    shards: Vec<ConsoleSession>,
     decoded: Option<HashMap<u64, FlowResult>>,
     failure: Option<NativeRuntimeError>,
+    /// Instructions the consoles decoded for this walk.
+    instructions: u64,
+}
+
+/// Splits one flow batch across the shard consoles. Requests inside a batch
+/// are independent, so each lane answers a contiguous slice and the results
+/// concatenate in input order.
+fn flow_batch_sharded(
+    session: &mut ConsoleSession,
+    shards: &mut [ConsoleSession],
+    addresses: &[u64],
+) -> std::result::Result<Vec<FlowResult>, NativeRuntimeError> {
+    let lanes = shards.len() + 1;
+    if lanes == 1 || addresses.len() < 2 * lanes {
+        return session.flow_batch(addresses);
+    }
+    let span = addresses.len().div_ceil(lanes);
+    let slices: Vec<&[u64]> = addresses.chunks(span).collect();
+    std::thread::scope(|scope| {
+        let handles: Vec<_> = shards
+            .iter_mut()
+            .zip(slices.iter().skip(1).copied())
+            .map(|(shard, slice)| scope.spawn(move || shard.flow_batch(slice)))
+            .collect();
+        let mut flows = session.flow_batch(slices[0])?;
+        for handle in handles {
+            flows.extend(
+                handle
+                    .join()
+                    .unwrap_or_else(|_| Err(NativeRuntimeError("flow shard panicked".into())))?,
+            );
+        }
+        Ok(flows)
+    })
+}
+
+impl ConsoleProvider {
+    /// Console requests and decoded instructions for this walk.
+    fn flow_stats(&self) -> lre_model::FlowStats {
+        lre_model::FlowStats {
+            requests: self.session.requests()
+                + self.shards.iter().map(ConsoleSession::requests).sum::<u64>(),
+            instructions: self.instructions,
+        }
+    }
 }
 
 impl FlowProvider for ConsoleProvider {
@@ -33,10 +80,13 @@ impl FlowProvider for ConsoleProvider {
         // Seeded walking already visits each instruction once. Only the
         // section sweep has decoded results worth retaining and reusing.
         let Some(decoded) = self.decoded.as_mut() else {
-            return self.session.flow_batch(addresses).unwrap_or_else(|error| {
-                self.failure = Some(error);
-                Vec::new()
-            });
+            let flows = flow_batch_sharded(&mut self.session, &mut self.shards, addresses)
+                .unwrap_or_else(|error| {
+                    self.failure = Some(error);
+                    Vec::new()
+                });
+            self.instructions += flows.len() as u64;
+            return flows;
         };
         let missing: Vec<_> = addresses
             .iter()
@@ -44,8 +94,10 @@ impl FlowProvider for ConsoleProvider {
             .filter(|address| !decoded.contains_key(address))
             .collect();
         if !missing.is_empty() {
-            match self.session.flow_batch(&missing) {
+            match flow_batch_sharded(&mut self.session, &mut self.shards, &missing) {
                 Ok(flows) => {
+                    self.instructions += flows.len() as u64;
+                    let decoded = self.decoded.as_mut().expect("decoded cache");
                     decoded.extend(flows.into_iter().map(|flow| (flow.address, flow)));
                 }
                 Err(error) => {
@@ -54,6 +106,7 @@ impl FlowProvider for ConsoleProvider {
                 }
             }
         }
+        let decoded = self.decoded.as_ref().expect("decoded cache");
         addresses
             .iter()
             .filter_map(|address| decoded.get(address).cloned())
@@ -91,9 +144,16 @@ impl FlowProvider for ConsoleProvider {
     }
 }
 
+/// The consoles a finished discovery hands to later passes: the session that
+/// walked the image, plus its shards on the same image.
+pub(super) struct ConsoleLanes {
+    pub session: ConsoleSession,
+    pub shards: Vec<ConsoleSession>,
+}
+
 /// ELF/PE retain structural facts when the optional console is unavailable.
 /// All supported languages use the same mapped addresses and flow worklist.
-pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleSession> {
+pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes> {
     if import.mappings.is_empty()
         || import
             .cfg
@@ -109,6 +169,7 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleSessio
     if session.load_mapped(import).is_err() {
         return None;
     }
+    let patterns_started = std::time::Instant::now();
     let ranges = code_ranges(import);
     if ranges.is_empty() {
         return None;
@@ -116,20 +177,29 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleSessio
     let Ok(patterns) = session.function_patterns(&ranges) else {
         return None;
     };
+    super::phase(import, "patterns", patterns_started);
+    let flow_started = std::time::Instant::now();
     let mut provider = ConsoleProvider {
         session,
+        shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),
         decoded: None,
         failure: None,
+        instructions: 0,
     };
     if flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider).is_err()
         || provider.failure.is_some()
     {
         return None;
     }
-    Some(provider.session)
+    super::phase(import, "flow", flow_started);
+    import.flow = Some(provider.flow_stats());
+    Some(ConsoleLanes {
+        session: provider.session,
+        shards: provider.shards,
+    })
 }
 
-pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleSession> {
+pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes> {
     let mut session =
         ConsoleSession::new(&import.cfg).map_err(|e| ImportError::Bad(e.to_string()))?;
     session
@@ -137,7 +207,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleSessio
         .map_err(|e| ImportError::Bad(e.to_string()))?;
     let ranges = code_ranges(import);
     if ranges.is_empty() {
-        return Ok(session);
+        return Ok(ConsoleLanes { session, shards: Vec::new() });
     }
     let in_code = |address| {
         ranges
@@ -191,14 +261,20 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleSessio
         .map_err(|error| ImportError::Bad(error.to_string()))?;
     let mut provider = ConsoleProvider {
         session,
+        shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),
         decoded: Some(decoded),
         failure: None,
+        instructions: 0,
     };
     flow_discover_with_candidates(import, &candidates, Some(&patterns), &mut provider)?;
     if let Some(error) = provider.failure {
         return Err(ImportError::Bad(error.to_string()));
     }
-    Ok(provider.session)
+    import.flow = Some(provider.flow_stats());
+    Ok(ConsoleLanes {
+        session: provider.session,
+        shards: provider.shards,
+    })
 }
 fn get_canonical_origin(mut addr: u64, addr_origin: &std::collections::HashMap<u64, u64>) -> u64 {
     let mut hops = 0;

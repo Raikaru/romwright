@@ -149,6 +149,12 @@ jobs:
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --scoring-dir "$RUNNER_TEMP/discovery/scoring" \
             --report "$RUNNER_TEMP/discovery/discovery-report.json"
+      - name: Enforce the measured import budget
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m2-016_import_budget.py \
+            --report "$RUNNER_TEMP/discovery/import-budget.json"
       - name: Verify reference analysis contracts
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
