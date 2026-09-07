@@ -185,8 +185,6 @@ def main() -> int:
             assert any(row["name"] == "add"
                        for row in api.result("functions", program="tiny")), (
                 f"the rename survived its own undo: {second_undo.stdout.strip()!r}")
-            assert len(api.result("functions", program="win")) == len(
-                after["functions"]) or True, "win's functions are read below"
             findings["win_functions"] = len(api.result("functions", program="win"))
             assert findings["win_functions"] > 0, "the second image lost its functions"
         finally:

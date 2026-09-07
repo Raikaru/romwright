@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Keep analyst edits across a second import
+        run: |
+          python3 tests/m10-003_edit_durability.py \
+            --report "$RUNNER_TEMP/edit-durability.json"
       - name: Move between the images a project holds
         run: |
           python3 tests/m10-002_image_navigation.py \
