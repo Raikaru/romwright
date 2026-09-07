@@ -2230,10 +2230,38 @@ M2 — Program-model parity
 - c: document the layouts and their public sources, wire the CI step and
   publish the evidence. Slices stay below 800 changed lines each.
 
+### m2-014 evidence
+- `3d95219` commits the failing gate (5 locators, 0 classes on both widths);
+  `8bf4d4f` splits `rtti` into `itanium`/`msvc` modules behind one dispatch
+  and adds the MSVC recovery.
+- `benchmarks/reports/m2-014.json` at commit `8bf4d4f`: **2 targets pass, 0
+  fail, 5 skipped; 10 classes for 10 link-map locators, 10 base relations,
+  2 virtual bases, 0 missing and 0 invented.** Both widths recover `Base`,
+  `Middle`, `Multi`, `Other`, `Virt` as 2 `class`, 1 `single_base`,
+  2 `multiple_base`.
+- The five locked MSVC corpus entries are skipped with a reason on this host:
+  they are built by the Windows CI job. The fixture is freestanding — clang's
+  `*-pc-windows-msvc` target plus `lld-link /nodefaultlib` — so no MSVC
+  installation is needed anywhere, and the 32-bit link exercises the absolute
+  (`signature == 0`) locator form while the 64-bit link exercises the
+  image-relative form whose self reference fixes the image base.
+- Hand-checked against the link map: each class's `vtable` is the locator slot
+  one pointer before its `??_7<class>@@6B@` address point (`Base`
+  `0x140002000` vs `0x140002008`; `Virt` `0x140002240` vs `0x140002248`).
+  `Multi` reports `Middle` at 0, the indirect `Base` at 0 and `Other` at 8;
+  `Virt` reports `Base` as virtual. Primary vfptr selection uses the smallest
+  locator offset, which is what `Virt` needs: its only locator sits at 8.
+- Verification: `cargo test --workspace` 187 pass/2 ignored; the m2-013 gate
+  still passes unchanged after the module split (20 classes, 20 vtables);
+  `tests/corpus.sh` 5/5.
+- m2-014 is complete. No metric definition, corpus member, or reserved
+  decision changed.
+
 ## Next task
-- m2-014: recover MSVC RTTI (`RTTICompleteObjectLocator`, `TypeDescriptor`)
-  into class facts, with the recovered class set equal to the link map's
-  complete object locators.
+- m2-015: make native import the default user path and keep the bridge behind
+  an `--oracle` flag, with the docs updated and continuous integration using
+  the bridge only for oracle generation. Its acceptance test does not exist
+  yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

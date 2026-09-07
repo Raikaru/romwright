@@ -1,0 +1,106 @@
+{
+  "gate": "msvc-rtti",
+  "milestone": "M2",
+  "task": "m2-014",
+  "commit": "8bf4d4f04a990bfe7b5995b3bd18d5cb86ab6862",
+  "date": "2026-09-07T01:06:39.707301+00:00",
+  "gate_sha256": "0d74b599bd3d2722a995bd968b07dd5c55d734649af15110676660c298d1484f",
+  "source_sha256": "4704286165e5ffba06075e7745cb263492a571b7dbc5f8f5cf97bb316c512431",
+  "comparison": "recovered classes against the link map's complete object locators; fixtures are gate inputs, not corpus members; not an II.3 metric",
+  "targets": [
+    {
+      "id": "x86_64_msvc",
+      "status": "pass",
+      "target": "x86_64-pc-windows-msvc",
+      "language": "x86:LE:64:default",
+      "sha256": "c60f58233502860997e915eb509dfd2732446fef47eab26c0362e97cf45920e4",
+      "locators": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 5,
+      "virtual_bases": 1
+    },
+    {
+      "id": "i386_msvc",
+      "status": "pass",
+      "target": "i386-pc-windows-msvc",
+      "language": "x86:LE:32:default",
+      "sha256": "af4f73b04786bdb5936363b965e3b0b9a01a40f46ab11137f752b4afc5190337",
+      "locators": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 5,
+      "virtual_bases": 1
+    },
+    {
+      "id": "corpus_msvc_plain_o0",
+      "status": "skipped",
+      "target": "msvc",
+      "reason": "missing corpus binary msvc_plain_o0.exe"
+    },
+    {
+      "id": "corpus_msvc_plain_o2",
+      "status": "skipped",
+      "target": "msvc",
+      "reason": "missing corpus binary msvc_plain_o2.exe"
+    },
+    {
+      "id": "corpus_msvc_plain_pie",
+      "status": "skipped",
+      "target": "msvc",
+      "reason": "missing corpus binary msvc_plain_pie.exe"
+    },
+    {
+      "id": "corpus_msvc_cpp_o2",
+      "status": "skipped",
+      "target": "msvc",
+      "reason": "missing corpus binary msvc_cpp_o2.exe"
+    },
+    {
+      "id": "corpus_msvc_many_o2",
+      "status": "skipped",
+      "target": "msvc",
+      "reason": "missing corpus binary msvc_many_o2.exe"
+    }
+  ],
+  "summary": {
+    "pass": 2,
+    "fail": 0,
+    "skipped": 5
+  },
+  "totals": {
+    "locators": 10,
+    "classes": 10,
+    "bases": 10,
+    "virtual_bases": 2,
+    "missing": 0,
+    "invented": 0
+  },
+  "passed": true
+}
