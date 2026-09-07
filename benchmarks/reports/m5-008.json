@@ -1,0 +1,395 @@
+{
+  "id": "m5-008",
+  "recorded_at": "2026-09-07T07:31:35.055974+00:00",
+  "thresholds": {
+    "thunk.entry.precision": 1.0,
+    "thunk.entry.recall": 1.0,
+    "thunk.entry.unexplained": 0,
+    "thunk.destination.unexplained": 0
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "21 images: 185/185 stock thunks recorded, precision 1.0000, recall 1.0000, 114 destinations equal, 71 explained by the EXTERNAL-block model, 13 stub-for-slot entries explained by symbol, 0 unexplained",
+  "metrics": {
+    "thunk.entry.precision": 1.0,
+    "thunk.entry.exact": 0.9343434343434344,
+    "thunk.entry.unexplained": 0,
+    "thunk.entry.recall": 1.0,
+    "thunk.destination.unexplained": 0,
+    "thunk.destination.equal": 114,
+    "thunk.destination.explained": 71
+  },
+  "totals": {
+    "comparable": 185,
+    "native": 198,
+    "agree": 185,
+    "equal": 114,
+    "explained": 71,
+    "unexplained": 0,
+    "invented": 0,
+    "explained_entries": 13
+  },
+  "deficits": {},
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "stock": 5,
+      "excluded": 3,
+      "comparable": 2,
+      "native": 2,
+      "agree": 2,
+      "equal": 1,
+      "explained": 1,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "stock": 5,
+      "excluded": 3,
+      "comparable": 2,
+      "native": 2,
+      "agree": 2,
+      "equal": 1,
+      "explained": 1,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "stock": 9,
+      "excluded": 6,
+      "comparable": 3,
+      "native": 3,
+      "agree": 3,
+      "equal": 1,
+      "explained": 2,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "stock": 17,
+      "excluded": 9,
+      "comparable": 8,
+      "native": 8,
+      "agree": 8,
+      "equal": 1,
+      "explained": 7,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "x86_64_many_o2",
+      "stock": 3,
+      "excluded": 2,
+      "comparable": 1,
+      "native": 1,
+      "agree": 1,
+      "equal": 1,
+      "explained": 0,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "i386_plain_o0",
+      "stock": 6,
+      "excluded": 3,
+      "comparable": 3,
+      "native": 3,
+      "agree": 3,
+      "equal": 1,
+      "explained": 2,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "i386_plain_o2",
+      "stock": 6,
+      "excluded": 3,
+      "comparable": 3,
+      "native": 3,
+      "agree": 3,
+      "equal": 1,
+      "explained": 2,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "i386_plain_pie",
+      "stock": 10,
+      "excluded": 6,
+      "comparable": 4,
+      "native": 4,
+      "agree": 4,
+      "equal": 1,
+      "explained": 3,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "i386_cpp_o2",
+      "stock": 18,
+      "excluded": 9,
+      "comparable": 9,
+      "native": 9,
+      "agree": 9,
+      "equal": 1,
+      "explained": 8,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "i386_many_o2",
+      "stock": 4,
+      "excluded": 2,
+      "comparable": 2,
+      "native": 2,
+      "agree": 2,
+      "equal": 1,
+      "explained": 1,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "stock": 11,
+      "excluded": 6,
+      "comparable": 5,
+      "native": 5,
+      "agree": 5,
+      "equal": 1,
+      "explained": 4,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "stock": 11,
+      "excluded": 6,
+      "comparable": 5,
+      "native": 5,
+      "agree": 5,
+      "equal": 1,
+      "explained": 4,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "stock": 13,
+      "excluded": 7,
+      "comparable": 6,
+      "native": 6,
+      "agree": 6,
+      "equal": 1,
+      "explained": 5,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "stock": 22,
+      "excluded": 12,
+      "comparable": 10,
+      "native": 10,
+      "agree": 10,
+      "equal": 1,
+      "explained": 9,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "aarch64_many_o2",
+      "stock": 9,
+      "excluded": 5,
+      "comparable": 4,
+      "native": 4,
+      "agree": 4,
+      "equal": 1,
+      "explained": 3,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "stock": 7,
+      "excluded": 3,
+      "comparable": 4,
+      "native": 4,
+      "agree": 4,
+      "equal": 1,
+      "explained": 3,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "stock": 7,
+      "excluded": 3,
+      "comparable": 4,
+      "native": 4,
+      "agree": 4,
+      "equal": 1,
+      "explained": 3,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "stock": 10,
+      "excluded": 6,
+      "comparable": 4,
+      "native": 4,
+      "agree": 4,
+      "equal": 1,
+      "explained": 3,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "stock": 18,
+      "excluded": 9,
+      "comparable": 9,
+      "native": 9,
+      "agree": 9,
+      "equal": 1,
+      "explained": 8,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "powerpc_many_o2",
+      "stock": 5,
+      "excluded": 2,
+      "comparable": 3,
+      "native": 3,
+      "agree": 3,
+      "equal": 1,
+      "explained": 2,
+      "unexplained": [],
+      "explained_entries": [],
+      "invented": [],
+      "missing": {}
+    },
+    {
+      "id": "host_libc",
+      "stock": 107,
+      "excluded": 13,
+      "comparable": 94,
+      "native": 107,
+      "agree": 94,
+      "equal": 94,
+      "explained": 0,
+      "unexplained": [],
+      "explained_entries": [
+        {
+          "entry": "00100860",
+          "destination": "002eebf0",
+          "name": "_dl_find_dso_for_object"
+        },
+        {
+          "entry": "001008d0",
+          "destination": "002eec28",
+          "name": "_dl_deallocate_tls"
+        },
+        {
+          "entry": "001008e0",
+          "destination": "002eec30",
+          "name": "__tls_get_addr"
+        },
+        {
+          "entry": "00100930",
+          "destination": "002eec58",
+          "name": "_dl_signal_error"
+        },
+        {
+          "entry": "001009a0",
+          "destination": "002eec90",
+          "name": "_dl_signal_exception"
+        },
+        {
+          "entry": "001009d0",
+          "destination": "002eeca8",
+          "name": "_dl_audit_symbind_alt"
+        },
+        {
+          "entry": "00100a10",
+          "destination": "002eecc8",
+          "name": "__tunable_is_initialized"
+        },
+        {
+          "entry": "00100a50",
+          "destination": "002eece8",
+          "name": "_dl_rtld_di_serinfo"
+        },
+        {
+          "entry": "00100a80",
+          "destination": "002eed00",
+          "name": "_dl_allocate_tls"
+        },
+        {
+          "entry": "00100aa0",
+          "destination": "002eed10",
+          "name": "__tunable_get_val"
+        },
+        {
+          "entry": "00100ae0",
+          "destination": "002eed30",
+          "name": "_dl_catch_exception"
+        },
+        {
+          "entry": "00100b00",
+          "destination": "002eed40",
+          "name": "_dl_allocate_tls_init"
+        },
+        {
+          "entry": "00100b30",
+          "destination": "002eed58",
+          "name": "_dl_audit_preinit"
+        }
+      ],
+      "invented": [],
+      "missing": {}
+    }
+  ]
+}

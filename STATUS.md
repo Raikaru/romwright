@@ -2752,15 +2752,53 @@ m3-003, all three wired into continuous integration)
   `target/debug/lre-cli` **without building it**, so they tested whatever
   binary happened to be there. All four now build the CLI they test.
 
+### m5-008 evidence
+- **The ARM7 tail call must not be a thunk.** Answered from the pinned
+  sources before any code: `CreateThunkFunctionCmd.getThunkedAddr` walks from
+  the entry, and `getFlowingAddrFromFinalState` (lines 763-828) returns a
+  thunked address only when every register the body set is later used or
+  hidden (`setRegisters.size() == 0`). `nds.arm7`'s stub computes and leaves
+  its result in a register for the callee, so stock Ghidra records no thunk
+  there -- and neither does Ventris. Pinned by
+  `a_computing_tail_call_is_not_a_thunk`, with the promotion flag both off
+  and on.
+- **The existing count comparison was hiding a real difference.**
+  `benchmarks/thunk_gate.py` compares thunk counts on one host libc: 107
+  against 107. The sets differ by thirteen entries in each direction, and the
+  equality was arithmetic, not agreement.
+- `01c1798` commits the failing set-level acceptance
+  (`tests/m5-008_thunk_parity.py`). It failed three times on the way in,
+  each time naming real missing facts: PowerPC stubs, PowerPC PIE stubs, then
+  the i386 PIE stubs that the pinned deficit list had wrongly conceded.
+- **Fix:** `infer_data_references` already proved which imported slot a stub
+  reads -- that is how the stub gets its import name -- but recorded no thunk
+  fact, so every stub whose slot is only known from propagated evidence
+  (PowerPC glink, i386/PowerPC PIE stubs through a GOT register) was named
+  and not thunked. It now records the linkage thunk from the same evidence.
+  `promote_linkage` records one too, for the stubs it promotes.
+- Measured (`benchmarks/reports/m5-008.json`), 20 locked ELF inputs plus the
+  host libc: `thunk.entry.recall` **1.0000 (185/185)**,
+  `thunk.entry.precision` **1.0000**, `thunk.entry.unexplained` **0**,
+  `thunk.destination.unexplained` **0**; 114 destinations equal, 71 explained
+  by the EXTERNAL-block hop, 13 stub-for-slot entries explained by symbol
+  (the same thirteen symbols on both sides -- proven, not assumed:
+  `{our slot names} == {their EXTERNAL-block names}`).
+- Recall was 0.7582 before the fix (69/91 on the corpus alone).
+- Negative control: pointing a linkage thunk at `0xdead0000` fails the gate
+  as an unexplained destination on three rows.
+- Two additive metric families (`thunk.entry.*`, `thunk.destination.*`); no
+  II.3 definition changed, and `benchmarks/thunk_gate.py` is untouched -- its
+  count comparison stays as the m2-009 artifact it is, now with a set-level
+  gate beside it.
+
 ## Next task
-- m5-008: record the ARM7 tail call as a jump reference *in the store's
-  thunk model too*, or record why it must not be. `nds.arm7`'s
-  `037f8010 -> mix` transfer is a tail call whose source function returns
-  through the callee; `imp.thunks` stays empty for it, and m2-009 pins thunk
-  parity, so the question is whether Ghidra would call this a thunk at all
-  (`CreateThunkFunctionCmd.getSimpleFlow` is the rule to check). Answer it
-  from the pinned sources first, then write the acceptance the answer
-  demands.
+- m5-009: name the linkage stubs the store already resolves. A stub whose
+  import name is proven (it carries the symbol, and now a linkage thunk) is
+  still called `FUN_000206a8` in the function table, while stock Ghidra calls
+  it `__cxa_finalize`. Function names are user-visible and feed m3-001
+  attribution, so the acceptance must show the rename is driven by the same
+  slot evidence and never overwrites a name that came from a symbol table.
+  Its acceptance test does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

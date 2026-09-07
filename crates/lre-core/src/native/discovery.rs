@@ -1441,6 +1441,15 @@ fn promote_linkage(
         name: name.clone(),
         size: linkage.length as u64,
     });
+    // The slot that named this stub is also the destination it reaches, so
+    // the stub is a linkage thunk. Stock Ghidra records the same fact with
+    // its own EXTERNAL-block stub as the destination; the slot is the
+    // address the stub's own instructions read.
+    imp.thunks.push(crate::native::NativeThunk {
+        entry: target,
+        destination: slot,
+        kind: lre_model::ThunkKind::Linkage,
+    });
     imp.externals.push((target, name.clone()));
     entries.push(target);
     origins.insert(target, target);
