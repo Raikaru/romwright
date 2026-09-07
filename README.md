@@ -879,6 +879,17 @@ cannot drift from the tool. That gate also fails when the CLI dispatches a
 verb its own usage text does not list, which is how `xrefs`, `undo`, `open`,
 `comment`, `comments` and `types` were found missing from it.
 
+## The Core API
+
+`docs/core-api.md` documents the stdio interface every consumer speaks --
+envelope, error codes, typed addresses, fact provenance, paged reads, and
+which requests need the SLEIGH console. Every documented exchange is sent to a
+real `lre-api` process by `tests/m6-002_documented_api.py`, and each
+documented response must be a subset of the real one, so an invented field
+fails the gate. Writing that page found a live defect: the `function` field of
+a reference named whichever function row a scan reached first, because the
+containing-function test compared hex text with an integer expression in SQL.
+
 ## Evidence index
 
 Every gate writes a JSON report under `benchmarks/reports/`; the table
@@ -948,8 +959,9 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 56; `diagnostic_runs` 12; `generated_rows` 55; `published_ids` 41 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 57; `diagnostic_runs` 12; `generated_rows` 56; `published_ids` 42 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
+| `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix
