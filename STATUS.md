@@ -3370,17 +3370,51 @@ m3-003, all three wired into continuous integration)
   `UNCONDITIONAL_JUMP` from code already discovered. Stock Ghidra creates
   neither. **Not done: waiting on your decision.**
 
+### m8-005 evidence
+- `9c970fc` commits the failing acceptance (`tests/m8-005_pe_imports.py`):
+  `tiny_pe32.exe` imported into a store holding **zero symbols**.
+- `pe_roots::collect_imports` reads `IMAGE_DIRECTORY_ENTRY_IMPORT` by the
+  pinned rules (`ImportDataDirectory.parse`, `ImportDescriptor`, `ThunkData`):
+  20-byte descriptors ending when `OriginalFirstThunk` and `FirstThunk` are
+  both zero; the name table is `OriginalFirstThunk` when it maps and
+  `FirstThunk` otherwise; the walk ends at the first zero entry; the ordinal
+  flag (`1 << (width*8 - 1)`) names `Ordinal_<n>`; otherwise the value is an
+  RVA to `IMAGE_IMPORT_BY_NAME`, whose name follows a **two-byte hint**. The
+  address an import occupies is its IAT slot.
+- Measured (`benchmarks/reports/m8-005.json`): **166 imports** across four
+  fixtures from 8 library references, every one an external symbol at its IAT
+  slot named as imported, `pe.imports.misnamed` 0,
+  `pe.imports.unnamed_stubs` 0.
+- **The naming came for free, which was the point.** Populating `externals`
+  let the existing format-agnostic `name_linkage_stubs` name the PE import
+  stubs, so `tiny_pe32.exe` now shows `__set_app_type`, `_initterm`, `_cexit`
+  instead of `FUN_...` -- 81 symbols and dozens of `linkage` thunks, the same
+  shape `m5-009` gives ELF. No second convention was added.
+- An IAT slot holds a pointer, so nothing is promoted to code there; the unit
+  test `imports_name_their_iat_slots_by_name_and_by_ordinal` pins that, and it
+  is what a bound image (`TimeDateStamp != 0`, slots already resolved) would
+  otherwise invite.
+- Controls: dropping the pass fails (`missing`), and reading the name without
+  skipping the two-byte hint fails (`missing`, with names shifted off).
+- The library a symbol came from is recorded in the report, not in the store:
+  neither format models it, ELF externals carry a bare name too. Stated in
+  the README rather than left implied.
+- Regression: `cargo test --workspace` 236 pass; `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`, `m1-005`, `m8-001`,
+  `m8-002`, `m8-003`, `m8-004`, `m2-015`, `m3-001`, `m5-008`, `m5-009` all
+  pass.
+- Seven additive metric names (`pe.imports.*`); no II.3 definition changed.
+
 ## Next task
-- m8-005: PE imports are named but not modelled. `native-import:pe-reloc` and
-  the linkage passes name what a slot points at, but nothing reads
-  `IMAGE_DIRECTORY_ENTRY_IMPORT`, so a call through `__imp__printf` has no
-  external target and no library name, while the ELF path has both
-  (`m5-009`). Ghidra's `ImportDataDirectory` and `ImportInfo` are the
-  references. The acceptance must prove, per PE fixture, that every import
-  thunk resolves to a named external with its library, that the count matches
-  the import descriptors in the image, and that a bound-imports table (where
-  `TimeDateStamp` is set) does not become invented code. Its acceptance test
-  does not exist yet; write it first.
+- m8-006: close M8 by publishing PE parity as one measured milestone, the way
+  `m5-012` closed linkage parity. Five PE gates now exist (`m8-001`..`m8-005`)
+  and each writes its own report; nothing states the milestone-level claim or
+  fails when a PE surface has no gate. The acceptance must enumerate the PE
+  evidence classes **from the importer's own provenance strings**
+  (`pe-unwind`, `pe-reloc`, `pe-tls`, `pe-export`, plus the import externals),
+  require each to be measured by a committed report, and fail when a class
+  appears in the code with no gate behind it. Its acceptance test does not
+  exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

@@ -949,6 +949,36 @@ Before the pass, recall on `tiny_pe.exe` was 0.5667: 39 of 90 functions --
 `WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
 of the CRT -- were unreachable by flow from the entry point.
 
+### PE imports, named the way an ELF's are
+
+An ELF import lands in the store as an external symbol at the slot the loader
+fills, and the stub that jumps through it takes the imported name. A PE had
+none of that: `tiny_pe32.exe` imported with **zero symbols**, because nothing
+read `IMAGE_DIRECTORY_ENTRY_IMPORT`. It now holds 81, and its import stubs are
+named `__set_app_type`, `_initterm`, `_cexit` rather than `FUN_...` -- the
+existing linkage machinery names them once the slots have names, so PE and ELF
+share one path (`tests/m8-005_pe_imports.py`,
+`benchmarks/reports/m8-005.json`):
+
+| Metric | 4 PE fixtures |
+|---|---|
+| `pe.imports.declared` | **166** imports, each an external symbol at its IAT slot |
+| `pe.imports.libraries` | 8 library references |
+| `pe.imports.misnamed` | 0 -- every name matches what the image imports |
+| `pe.imports.unnamed_stubs` | 0 -- every stub through a slot carries its import's name |
+
+The rules are Ghidra's, from `ImportDataDirectory.parse` and `ThunkData`: the
+name table is `OriginalFirstThunk` when it maps and `FirstThunk` otherwise, the
+walk ends at the first zero entry, the ordinal flag names `Ordinal_<n>`, and a
+name RVA points at `IMAGE_IMPORT_BY_NAME` -- a two-byte hint *then* the string.
+Reading the name without skipping the hint fails the gate, as does dropping the
+pass. An IAT slot holds a pointer, so nothing is promoted to code there; that
+is what a bound image, whose slots already hold resolved addresses, would
+otherwise invite.
+
+The library a symbol came from is recorded in the report, not in the store:
+neither format models it yet, and ELF external symbols carry a bare name too.
+
 ### The roots a PE declares itself
 
 Two more directories name code no call reaches. The TLS directory's
@@ -1232,7 +1262,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 71; `diagnostic_runs` 12; `generated_rows` 70; `published_ids` 56 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 72; `diagnostic_runs` 12; `generated_rows` 71; `published_ids` 57 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1246,6 +1276,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-002.json` | `m8-002` | M8 | pass | `ghidra.dwarf.fn.recall` 0.7634; `ghidra.functions` 106; `pe32.dwarf.fn.recall` 0.8065; `pe32.dwarf.fn.unattributed` 0; `pe32.functions` 110; `pe32.undescribed` 35 | `tests/m8-002_pe32_roots.py` |
 | `m8-003.json` | `m8-003` | M8 | pass | `body.crossing` 0 | `tests/m8-003_body_extents.py` |
 | `m8-004.json` | `m8-004` | M8 | pass | `pe.exports` 3; `pe.exports.forwarded` 0; `pe.exports.forwarder_functions` 0; `pe.exports.misnamed` 0; `pe.exports.missing` 0; `pe.exports.unproven` 0; `pe.tls.callbacks` 8; `pe.tls.missing` 0; `pe.tls.unproven` 0 | `tests/m8-004_pe_roots.py` |
+| `m8-005.json` | `m8-005` | M8 | pass | `pe.imports.bound_descriptors` 0; `pe.imports.declared` 166; `pe.imports.libraries` 8; `pe.imports.misnamed` 0; `pe.imports.missing` 0; `pe.imports.not_external` 0; `pe.imports.unnamed_stubs` 0 | `tests/m8-005_pe_imports.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

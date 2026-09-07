@@ -1,0 +1,142 @@
+{
+ "id": "m8-005",
+ "recorded_at": "2026-09-07T12:31:50.391429+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "4 PE fixtures: 166 imports from 8 library references, each an external symbol at its IAT slot named as imported, every stub through a slot named after its import",
+ "totals": {
+  "pe.imports.declared": 166,
+  "pe.imports.libraries": 8,
+  "pe.imports.bound_descriptors": 0,
+  "pe.imports.missing": 0,
+  "pe.imports.misnamed": 0,
+  "pe.imports.not_external": 0,
+  "pe.imports.unnamed_stubs": 0
+ },
+ "fixtures": [
+  {
+   "id": "tiny_pe.exe",
+   "metrics": {
+    "pe.imports.declared": 45,
+    "pe.imports.libraries": 2,
+    "pe.imports.bound_descriptors": 0,
+    "pe.imports.missing": 0,
+    "pe.imports.misnamed": 0,
+    "pe.imports.not_external": 0,
+    "pe.imports.unnamed_stubs": 0
+   },
+   "libraries": [
+    "KERNEL32.dll",
+    "msvcrt.dll"
+   ],
+   "sample": [
+    "14000f1b8 KERNEL32.dll!DeleteCriticalSection",
+    "14000f1c0 KERNEL32.dll!EnterCriticalSection",
+    "14000f1c8 KERNEL32.dll!GetLastError",
+    "14000f1d0 KERNEL32.dll!InitializeCriticalSection",
+    "14000f1d8 KERNEL32.dll!IsDBCSLeadByteEx",
+    "14000f1e0 KERNEL32.dll!LeaveCriticalSection"
+   ],
+   "failures": {
+    "missing": [],
+    "misnamed": [],
+    "not_external": [],
+    "unnamed_stubs": [],
+    "invented": []
+   }
+  },
+  {
+   "id": "dispatch.exe",
+   "metrics": {
+    "pe.imports.declared": 45,
+    "pe.imports.libraries": 2,
+    "pe.imports.bound_descriptors": 0,
+    "pe.imports.missing": 0,
+    "pe.imports.misnamed": 0,
+    "pe.imports.not_external": 0,
+    "pe.imports.unnamed_stubs": 0
+   },
+   "libraries": [
+    "KERNEL32.dll",
+    "msvcrt.dll"
+   ],
+   "sample": [
+    "14000f1b8 KERNEL32.dll!DeleteCriticalSection",
+    "14000f1c0 KERNEL32.dll!EnterCriticalSection",
+    "14000f1c8 KERNEL32.dll!GetLastError",
+    "14000f1d0 KERNEL32.dll!InitializeCriticalSection",
+    "14000f1d8 KERNEL32.dll!IsDBCSLeadByteEx",
+    "14000f1e0 KERNEL32.dll!LeaveCriticalSection"
+   ],
+   "failures": {
+    "missing": [],
+    "misnamed": [],
+    "not_external": [],
+    "unnamed_stubs": [],
+    "invented": []
+   }
+  },
+  {
+   "id": "tiny_pe32.exe",
+   "metrics": {
+    "pe.imports.declared": 50,
+    "pe.imports.libraries": 2,
+    "pe.imports.bound_descriptors": 0,
+    "pe.imports.missing": 0,
+    "pe.imports.misnamed": 0,
+    "pe.imports.not_external": 0,
+    "pe.imports.unnamed_stubs": 0
+   },
+   "libraries": [
+    "KERNEL32.dll",
+    "msvcrt.dll"
+   ],
+   "sample": [
+    "0040f10c KERNEL32.dll!DeleteCriticalSection",
+    "0040f110 KERNEL32.dll!EnterCriticalSection",
+    "0040f114 KERNEL32.dll!FreeLibrary",
+    "0040f118 KERNEL32.dll!GetLastError",
+    "0040f11c KERNEL32.dll!GetModuleHandleA",
+    "0040f120 KERNEL32.dll!GetProcAddress"
+   ],
+   "failures": {
+    "missing": [],
+    "misnamed": [],
+    "not_external": [],
+    "unnamed_stubs": [],
+    "invented": []
+   }
+  },
+  {
+   "id": "exports32.dll",
+   "metrics": {
+    "pe.imports.declared": 26,
+    "pe.imports.libraries": 2,
+    "pe.imports.bound_descriptors": 0,
+    "pe.imports.missing": 0,
+    "pe.imports.misnamed": 0,
+    "pe.imports.not_external": 0,
+    "pe.imports.unnamed_stubs": 0
+   },
+   "libraries": [
+    "KERNEL32.dll",
+    "msvcrt.dll"
+   ],
+   "sample": [
+    "61b880ac KERNEL32.dll!DeleteCriticalSection",
+    "61b880b0 KERNEL32.dll!EnterCriticalSection",
+    "61b880b4 KERNEL32.dll!FreeLibrary",
+    "61b880b8 KERNEL32.dll!GetLastError",
+    "61b880bc KERNEL32.dll!GetModuleHandleA",
+    "61b880c0 KERNEL32.dll!GetProcAddress"
+   ],
+   "failures": {
+    "missing": [],
+    "misnamed": [],
+    "not_external": [],
+    "unnamed_stubs": [],
+    "invented": []
+   }
+  }
+ ]
+}
