@@ -3706,15 +3706,43 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` all pass.
 - Three additive metric names (`edits.*`); no II.3 definition changed.
 
+### m10-004 evidence
+- The gate enumerates its own subject: it scans every dispatch arm in
+  `crates/lre-api/src/lib.rs` that reads `params.program` -- **41 methods** --
+  and fails when one is driven nowhere. That is the hole the milestone had.
+- Measured: 54 reads answered identically in a two-image project and in a
+  project holding that image alone (13 of 26 read methods tell the images
+  apart, the rest answer equal-and-empty and are listed); 14 writes left the
+  other image byte-identical across all 27 reads while each showed its own
+  effect on the program it named; 4 writes are recorded inert on this fixture
+  with the reason and the reads that must stay empty.
+- **Five controls fire**: a read ignoring which program asked
+  (`tiny.open, tiny.functions, tiny.function_graph` and the `win` three), a
+  write landing in every program (`set_bookmark on tiny changed win's
+  ['bookmarks']`), a new undriven arm (`probe_undriven`), a carried gate that
+  stops passing (`m10-003: report does not pass`), and an active write excused
+  as inert (`set_bookmark -> ['bookmarks']`).
+- Two drafting defects fixed before the gate could claim anything: an excuse
+  for `import_native`, which the scan never claims because it names programs
+  with `name`; and a collaboration op with an empty payload, which the store
+  rejected -- it now carries the rename it replays, so applying it is a real
+  write.
+- Metric names moved from `project.*` to `images.*`: `m6-006` reads
+  `project.sqlite` in `docs/assumptions.md` prose as a metric citation, and
+  the collision made it fail. Same drift m10-001 hit.
+- Regression: `cargo test --workspace` 238 pass; `m10-001`..`m10-004`,
+  `m9-005`, `m8-006`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` pass. 83 reports indexed, both README generators in sync.
+
+## Current milestone
+- M10 closed: multi-image projects are read (`m10-001`), navigated
+  (`m10-002`), durable across a second import (`m10-003`), and published as
+  one derived claim over all 41 program-taking methods (`m10-004`).
+
 ## Next task
-- m10-004: close M10 by deriving the multi-image claim rather than stating it,
-  as `m8-006` and `m9-005` do for their milestones. Three gates exist
-  (`m10-001`..`m10-003`) and each writes its own report; nothing fails when a
-  read that takes a `program` appears with no per-program isolation behind it.
-  The acceptance must enumerate the API methods that accept a `program`
-  parameter, drive each against a two-image project, require every one to
-  answer for the named program only, and carry the three reports' metrics as
-  one claim. Its acceptance test does not exist yet; write it first.
+- Survey what remains against Part II before starting M11, then record the
+  next milestone's first task here with its acceptance named.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

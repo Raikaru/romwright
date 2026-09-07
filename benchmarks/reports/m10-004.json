@@ -1,0 +1,68 @@
+{
+ "id": "m10-004",
+ "recorded_at": "2026-09-07T14:25:17.736291+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "41 methods take a program and every one is driven or excused with a reason; 54 reads answered identically beside another image and alone, 13 of 26 telling the images apart; 14 writes left the other image byte-identical across every read while showing their own effect; three gates carry the milestone claim",
+ "metrics": {
+  "images.methods_program_scoped": 41,
+  "images.methods_excused": 0,
+  "images.reads_isolated": 54,
+  "images.reads_discriminating": 13,
+  "images.writes_isolated": 14,
+  "images.writes_inert": 4
+ },
+ "discriminating_reads": [
+  "events_since",
+  "function_graph",
+  "functions",
+  "functions_page",
+  "memory_regions",
+  "open",
+  "search",
+  "strings",
+  "symbols",
+  "symbols_page",
+  "thunks",
+  "xrefs",
+  "xrefs_page"
+ ],
+ "reads_equal_and_empty": [
+  "bookmarks",
+  "classes",
+  "collab_ops",
+  "comments",
+  "datatypes",
+  "patches",
+  "prototypes",
+  "return_behaviors",
+  "signature_matches",
+  "stack_variables",
+  "trace_events",
+  "type_defs",
+  "type_fields"
+ ],
+ "writes_inert": {
+  "recover_classes": "the fixture declares no RTTI or typeinfo, so no class is recovered for either image",
+  "apply_signatures": "no signature database is passed, so no match is stored",
+  "decompile_doc": "decompiling reads the image and returns a document; it stores no fact of its own",
+  "propagate_type_links": "the fixture carries no type links to propagate"
+ },
+ "methods_excused": {},
+ "milestone": {
+  "m10-001": {
+   "images.programs": 2,
+   "images.reads_compared": 16,
+   "images.overlapping_address": 4198400
+  },
+  "m10-002": {
+   "images.follow_facts_compared": 8,
+   "images.ui_programs": 2,
+   "images.ui_switch_functions": 112
+  },
+  "m10-003": {
+   "edits.reads_compared": 16,
+   "edits.revision_after_second_import": 9
+  }
+ }
+}

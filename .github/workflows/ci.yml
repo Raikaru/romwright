@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Publish multi-image projects as one milestone
+        run: |
+          python3 tests/m10-004_multi_image_milestone.py \
+            --report "$RUNNER_TEMP/multi-image-milestone.json"
       - name: Keep analyst edits across a second import
         run: |
           python3 tests/m10-003_edit_durability.py \

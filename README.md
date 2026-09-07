@@ -948,6 +948,26 @@ put in the table and the UI gate publishes it, so a class the core stops
 explaining shows up as a rendered row with no sentence
 (`tests/m9-001_provenance_explained.py`, `benchmarks/reports/m9-001.json`).
 
+## Multi-image projects, as one claim
+
+The methods are not listed by hand: the gate scans every dispatch arm in
+`crates/lre-api/src/lib.rs` that reads `params.program`, then drives each one
+against a project holding two images
+(`tests/m10-004_multi_image_milestone.py`, `benchmarks/reports/m10-004.json`):
+
+| Checked | Measured |
+|---|---|
+| methods take a `program`, each driven or excused with a reason | **41**, 0 excused |
+| reads answer identically beside another image and alone | 54, of which 13 tell the images apart |
+| writes leave the other image byte-identical across every read | 14, 4 recorded inert on this fixture |
+| `m10-001`..`m10-003` exist, pass, and carry their metrics | 3 gates |
+
+A method that starts taking a `program` and is driven nowhere fails the gate,
+which is what the milestone was missing. Five controls prove the rules bite: a
+read ignoring which program asked, a write landing in every program, a new
+undriven arm, a carried gate that stops passing, and an active write excused
+as inert.
+
 ## What a second import must not disturb
 
 Analysing one image and then importing another into the same project is the
@@ -1422,6 +1442,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m10-001.json` | `m10-001` | M10 | pass | `images.overlapping_address` 4198400; `images.programs` 2; `images.reads_compared` 16; `images.rows_compared` 607 | `tests/m10-001_multi_image.py` |
 | `m10-002.json` | `m10-002` | M10 | pass | `images.follow_facts_compared` 8; `images.followed_programs` 2; `images.ui_programs` 2; `images.ui_switch_functions` 112 | `tests/m10-002_image_navigation.py` |
 | `m10-003.json` | `m10-003` | M10 | pass | `edits.reads_compared` 16; `edits.revision_after_second_import` 9; `edits.win_functions` 112 | `tests/m10-003_edit_durability.py` |
+| `m10-004.json` | `m10-004` | M10 | pass | `images.methods_excused` 0; `images.methods_program_scoped` 41; `images.reads_discriminating` 13; `images.reads_isolated` 54; `images.writes_inert` 4; `images.writes_isolated` 14 | `tests/m10-004_multi_image_milestone.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |
@@ -1464,7 +1485,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 82; `diagnostic_runs` 12; `generated_rows` 81; `published_ids` 66 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 83; `diagnostic_runs` 12; `generated_rows` 82; `published_ids` 67 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
