@@ -1,0 +1,12 @@
+{"address": "002106c0", "classes": {"function-facts": {"name": ["entry", "_entry"]}, "missing-external-prototype": ["__libc_start_main", "abort"], "flow": []}, "oracle_tokens": 33, "native_tokens": 53}
+{"address": "00210704", "classes": {"missing-external-prototype": ["__gmon_start__"], "flow": ["/* WARNING: Could not recover jumptable at 0x002108ac. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 28, "native_tokens": 29}
+{"address": "0021078c", "classes": {"missing-data-symbol": ["00230ab0"]}, "oracle_tokens": 26, "native_tokens": 26}
+{"address": "00210790", "classes": {"missing-data-symbol": ["00230ab0"]}, "oracle_tokens": 26, "native_tokens": 26}
+{"address": "002107e4", "classes": {"string-not-rendered": [{"address": "00200544", "value": "sum: %d\n"}], "missing-external-prototype": ["printf"]}, "oracle_tokens": 31, "native_tokens": 29}
+{"address": "00210828", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}}, "oracle_tokens": 13, "native_tokens": 13}
+{"address": "00210840", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}}, "oracle_tokens": 9, "native_tokens": 9}
+{"address": "00210860", "classes": {"function-facts": {"name": ["FUN_00210860", "_plt"]}, "missing-data-symbol": ["00230a88"], "flow": ["/* WARNING: Could not recover jumptable at 0x00210870. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 18}
+{"address": "00210880", "classes": {"missing-external-prototype": ["abort"], "flow": ["/* WARNING: Could not recover jumptable at 0x0021088c. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 21, "native_tokens": 18}
+{"address": "00210890", "classes": {"missing-external-prototype": ["__libc_start_main"], "flow": ["/* WARNING: Could not recover jumptable at 0x0021089c. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 18}
+{"address": "002108a0", "classes": {"missing-external-prototype": ["__gmon_start__"], "flow": ["/* WARNING: Could not recover jumptable at 0x002108ac. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 18}
+{"address": "002108b0", "classes": {"missing-external-prototype": ["printf"], "flow": ["/* WARNING: Could not recover jumptable at 0x002108bc. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 37, "native_tokens": 18}

@@ -110,8 +110,8 @@ def generate_matrix() -> str:
             if row is None:
                 note = language_parity["blocked"].get(language)
                 return f"no oracle comparison: {note['reason']}" if note else None
-            compared = len(row["identical"]) + len(row["attributed"])
-            return (f"**parity measured**: {len(row['identical'])} of {compared} "
+            compared = row["identical"] + row["attributed"]
+            return (f"**parity measured**: {row['identical']} of {compared} "
                     f"functions token-identical to the JVM oracle, the rest "
                     f"attributed to named facts "
                     f"(`tests/m4-003_language_parity.py`)")
