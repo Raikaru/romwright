@@ -2069,11 +2069,42 @@ M2 — Program-model parity
 - m2-009 is complete. No metric definition, corpus member, or reserved
   decision changed.
 
+## m2-010 implementation slices
+- a: commit the failing round-trip acceptance
+  (`crates/lre-sig/tests/vsig_roundtrip.rs`) with the crate registered in the
+  workspace and no format code.
+- b: implement the container, its invariants and typed rejections; document
+  the layout in `docs/vsig.md` and the clean-room stance in
+  `docs/third-party.md`.
+
+### m2-010 evidence
+- `638df1d` commits the failing acceptance: `unresolved imports lre_sig::…`.
+- `crates/lre-sig` implements `.vsig` v1: 16-byte header (`VSIG`, version,
+  reserved flags, record count, payload length) and records carrying language,
+  name, package, license, pattern and per-byte mask. Masked pattern bytes are
+  normalized to zero and records are strictly ascending by
+  (language, name, package), so `encode(decode(bytes)) == bytes` holds for
+  every accepted file and a rebuilt database is byte-identical.
+- Rejections are typed (`VsigError`), never repairs: bad magic, unsupported
+  version, reserved flags, truncation, declared/actual payload mismatch,
+  trailing bytes, mask length mismatch, mask byte outside {0x00, 0xff},
+  non-zero masked pattern byte, fully masked pattern, empty provenance field,
+  control characters, non-UTF-8 text, duplicate key, non-canonical order.
+- The crate depends only on `thiserror`, already a workspace dependency; no
+  new runtime dependency was introduced.
+- Verification: `cargo test --workspace` 172 pass (4 acceptance tests in
+  `vsig_roundtrip`: canonical round trip, mask comparison semantics,
+  construction rejections, corrupt/non-canonical decode rejections). The
+  acceptance builds one file from the documented header layout by hand, so the
+  documentation and the encoder are pinned to each other.
+- m2-010 is complete. No metric definition, corpus member, or reserved
+  decision changed.
+
 ## Next task
-- m2-010: define the relocation-masked signature database format (`.vsig`) —
-  function byte pattern with relocation masks, name, source package and
-  license — documented in `docs/vsig.md`, with a round-trip test. Its
-  acceptance test does not exist yet; write it first.
+- m2-011: generate packaged-library signatures in continuous integration from
+  static archives (glibc, musl, MinGW CRT, libstdc++, devkitPPC), reporting
+  database size and record count. Its acceptance test does not exist yet;
+  write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
