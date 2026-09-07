@@ -52,19 +52,22 @@ def measure(command: list[str], cwd: Path | str | None = None,
     return elapsed, peak, os.waitstatus_to_exitcode(status)
 
 
-def record_envelope(path: Path, peaks: dict[str, int], note: str) -> None:
+def record_envelope(path: Path, peaks: dict[str, int], note: str,
+                    extra: dict | None = None) -> None:
     """Write the envelope once; never overwrite a recorded one."""
     assert not path.is_file(), (
         f"{path} already exists; a recorded envelope is never overwritten")
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({
+    document = {
         "id": path.stem,
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "host": {"system": platform.system(), "machine": platform.machine()},
         "headroom": HEADROOM,
         "note": note,
         "entries": peaks,
-    }, indent=1) + "\n")
+    }
+    document.update(extra or {})
+    path.write_text(json.dumps(document, indent=1) + "\n")
 
 
 def check_envelope(path: Path, peaks: dict[str, int]) -> dict:
