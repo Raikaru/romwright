@@ -2220,10 +2220,20 @@ M2 — Program-model parity
 - m2-013 is complete. No metric definition, corpus member, or reserved
   decision changed.
 
+## m2-014 implementation slices
+- a: commit the failing gate (`benchmarks/msvc_rtti_gate.py`) with a
+  freestanding MSVC-ABI fixture (`tests/fixtures-src/msvc_rtti.cpp`) for both
+  machine widths, plus the locked PE corpus entry, which declares no classes.
+- b: recover `RTTICompleteObjectLocator`, `TypeDescriptor`, the class
+  hierarchy descriptor and its base descriptors into the schema-v11 class
+  facts, sharing the model the Itanium pass writes.
+- c: document the layouts and their public sources, wire the CI step and
+  publish the evidence. Slices stay below 800 changed lines each.
+
 ## Next task
 - m2-014: recover MSVC RTTI (`RTTICompleteObjectLocator`, `TypeDescriptor`)
-  into class facts, with the PE C++ corpus entry's class count matching. Its
-  acceptance test does not exist yet; write it first.
+  into class facts, with the recovered class set equal to the link map's
+  complete object locators.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
