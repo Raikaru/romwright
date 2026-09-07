@@ -172,6 +172,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$VENTRIS_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/thunk-parity.json"
+      - name: Enforce linkage stub naming
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m5-009_linkage_names.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA" \
+            --report "$RUNNER_TEMP/discovery/linkage-names.json"
       - name: Enforce the tail-call promotion gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

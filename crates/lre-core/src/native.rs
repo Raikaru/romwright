@@ -1087,7 +1087,45 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
     discovery::record_branch_transfers(imp);
+    name_linkage_stubs(imp);
     Ok(())
+}
+
+/// Gives a stub the import name its own resolved slot proved.
+///
+/// The evidence is the one that produced the linkage thunk: the stub reads an
+/// imported slot, and that slot names a symbol. Only a generated name is
+/// replaced, so a name that came from a symbol or from the section table
+/// stands. Stock Ghidra names the same stubs from the same relocation.
+fn name_linkage_stubs(imp: &mut NativeImport) {
+    if imp.thunks.is_empty() {
+        return;
+    }
+    let named: std::collections::HashMap<u64, &str> = imp
+        .externals
+        .iter()
+        .map(|(address, name)| (*address, name.as_str()))
+        .collect();
+    let proven: Vec<(u64, String)> = imp
+        .thunks
+        .iter()
+        .filter(|thunk| thunk.kind == lre_model::ThunkKind::Linkage)
+        .filter_map(|thunk| {
+            named
+                .get(&thunk.entry)
+                .or_else(|| named.get(&thunk.destination))
+                .map(|name| (thunk.entry, (*name).to_owned()))
+        })
+        .collect();
+    for (entry, name) in proven {
+        if let Some(function) = imp
+            .functions
+            .iter_mut()
+            .find(|function| function.entry == entry && function.name.starts_with("FUN_"))
+        {
+            function.name = name;
+        }
+    }
 }
 
 /// Loads `<binary>` natively and closes its seeds through SLEIGH flow.
@@ -2552,6 +2590,44 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn linkage_naming_replaces_only_generated_names() {
+        let mut imp = NativeImport {
+            functions: vec![
+                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
+                NativeFunction { entry: 0x1100, size: 4, name: "_init".into() },
+                NativeFunction { entry: 0x1200, size: 4, name: "FUN_00001200".into() },
+            ],
+            externals: vec![
+                (0x1000, "printf".into()),
+                (0x1100, "__cxa_finalize".into()),
+            ],
+            thunks: vec![
+                NativeThunk { entry: 0x1000, destination: 0x2000,
+                              kind: lre_model::ThunkKind::Linkage },
+                NativeThunk { entry: 0x1100, destination: 0x2008,
+                              kind: lre_model::ThunkKind::Linkage },
+                // A direct thunk carries no import evidence, so no name.
+                NativeThunk { entry: 0x1200, destination: 0x1000,
+                              kind: lre_model::ThunkKind::Direct },
+            ],
+            ..Default::default()
+        };
+        name_linkage_stubs(&mut imp);
+        assert_eq!(
+            imp.functions
+                .iter()
+                .map(|function| (function.entry, function.name.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                (0x1000, "printf".to_string()),
+                // A section-derived name stands: it is evidence of its own.
+                (0x1100, "_init".to_string()),
+                (0x1200, "FUN_00001200".to_string()),
+            ]
+        );
+    }
+
     fn elf_plt_register_context_is_scoped() {
         use crate::native_runtime::find_console;
         let mut cfg = crate::session::RuntimeConfig::from_env();

@@ -335,6 +335,29 @@ Two model differences are named and asserted rather than averaged away:
 A thunk with neither explanation fails the gate, as does a stock thunk whose
 entry is in the image and which Ventris does not record.
 
+### Names at linkage stubs
+
+A stub whose slot the store resolves takes that slot's import name, from the
+same evidence that recorded its linkage thunk. Only a generated `FUN_` name is
+replaced: a name from a symbol or from the section table stands. Scored
+against stock Ghidra's own name at every thunk entry it records inside the
+image (`tests/m5-009_linkage_names.py`,
+`benchmarks/reports/m5-009.json`, 20 locked ELF inputs):
+
+| Class | Rows |
+|---|---|
+| names equal | 71 |
+| synthetic `_INIT_n` label not copied, fact held as a reference | 20 |
+| import name proven but not applied | **0** |
+| names with no symbol at their own address | **0** |
+
+`_INIT_0` is Ghidra's label for an entry of `.init_array`. Ventris does not
+copy it: the fact is the reference from the initializer array, which the store
+holds (`native-import:elf-pointer`, or `native-import:elf-reloc` for a PIE),
+and the gate accepts that class only when the reference really is there. A
+name with no symbol at its own address fails the gate even when it agrees with
+Ghidra, so agreement can never be manufactured.
+
 ### Promoting a tail-call target (off by default)
 
 `VENTRIS_PROMOTE_TAILCALLS=1` lets a recorded transfer create the function it
