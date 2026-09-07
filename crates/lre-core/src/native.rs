@@ -1656,6 +1656,7 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
+    apply_library_prototypes(db, pid, imp)?;
     // Each rule owns its rows, so one pass never deletes another's facts.
     for source in [THUNK_SOURCE] {
         let thunks: Vec<lre_model::ThunkRow> = imp
@@ -3209,4 +3210,51 @@ mod tests {
             ], "decode data strings in {language}; count characters, not encoded bytes or code units");
         }
     }
+}
+
+/// Types the imports the pinned C library archive declares.
+///
+/// The name has to come from the image: an external symbol, or a stub the
+/// linkage pass named after the slot it reads. A name the archive omits, or one
+/// whose declared types the decompiler does not have, stays untyped.
+fn apply_library_prototypes(
+    db: &ProjectDb,
+    pid: lre_model::ProgramId,
+    imp: &NativeImport,
+) -> Result<()> {
+    let Some(table) = crate::library_types::load(&imp.cfg.library_prototypes) else {
+        return Ok(());
+    };
+    let imports: std::collections::HashSet<&str> = imp
+        .externals
+        .iter()
+        .map(|(_, name)| name.as_str())
+        .collect();
+    let named: Vec<(u64, &str)> = imp
+        .functions
+        .iter()
+        .filter(|function| imports.contains(function.name.as_str()))
+        .map(|function| (function.entry, function.name.as_str()))
+        .collect();
+    let applied = crate::library_types::declared_for(&table, named);
+    if applied.is_empty() {
+        return Ok(());
+    }
+    let rows: Vec<lre_model::PrototypeRow> = applied
+        .iter()
+        .map(|(address, signature, declaration)| lre_model::PrototypeRow {
+            function: lre_model::Address::ram(*address),
+            signature: signature.clone(),
+            calling_convention: None,
+            return_type: Some(declaration.return_type.clone()),
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: crate::library_types::SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    let revision = db.revision(pid)?;
+    db.merge_inferred_prototypes(pid, revision, &rows)?;
+    Ok(())
 }

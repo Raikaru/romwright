@@ -208,12 +208,28 @@ def main() -> int:
         assert found, "no decompilation mentions an unnamed data reference target"
         owner, target = found
 
+        # A string reaches the decompiler either as Ghidra's label or, once a
+        # `char *` parameter types the call, as the literal itself. Both are
+        # the fact arriving; the bare address is not.
         strings = sorted(address for address in facts["strings"]
                          if any(destination == address
                                 for _, destination, _ in facts["references"]))
-        found = pick(strings)
-        assert found, "no decompilation mentions a string the store holds"
-        string_owner, string_target = found
+        assert strings, "the row holds no referenced string to prove anything with"
+        string_target = None
+        for address in strings:
+            value = facts["strings"][address]
+            for source, destination, _ in facts["references"]:
+                owner_entry = containing(facts, source)
+                if destination != address or owner_entry is None:
+                    continue
+                body = text_for(owner_entry)
+                if json.dumps(value)[1:-1] in body or f"{address:08x}" in body:
+                    string_target, string_owner = address, owner_entry
+                    break
+            if string_target is not None:
+                break
+        assert string_target is not None, (
+            "no decompilation shows a string the store holds")
 
         slots = sorted(address for address, row in facts["symbols"].items()
                        if row["external"] and address not in facts["functions"]
@@ -239,10 +255,11 @@ def main() -> int:
         value = facts["strings"][string_target]
         body = "".join(c if c.isascii() and c.isalnum() else "_" for c in value[:20])
         string_label = f"s_{body}_{string_target:08x}"
-        assert string_label in texts["string"], (
+        literal = json.dumps(value)
+        assert string_label in texts["string"] or literal in texts["string"], (
             f"{string_owner:08x} references the string at {string_target:08x} "
-            f"({value!r}) and the decompilation names no {string_label}: "
-            f"{texts['string'].strip()[:300]}")
+            f"({value!r}) and the decompilation shows neither {string_label} nor "
+            f"{literal}: {texts['string'].strip()[:300]}")
         assert f"{string_target:#x}" not in texts["string"], (
             f"the string address is still printed as a bare constant: "
             f"{texts['string'].strip()[:300]}")
@@ -269,6 +286,8 @@ def main() -> int:
             f"the decompiler still falls back to its own naming: {fallbacks}")
         findings = {"data_label": expected_label, "string": string_label,
                     "slot_label": f"PTR_{slot_name}_{slot:08x}",
+                    "string_shown": string_label if string_label in texts["string"]
+                    else literal,
                     "functions": [f"{owner:08x}", f"{string_owner:08x}",
                                   f"{slot_owner:08x}"]}
 

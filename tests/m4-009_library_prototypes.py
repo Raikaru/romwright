@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 TABLE = ROOT / "oracle/library-prototypes-v1/generic_clib_64.json"
-ARCHIVE = Path(os.environ.get(
+INSTALL = Path(os.environ.get(
     "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
 ROW = "x86_64_plain_o0"
 SOURCE = "native-import:type-archive"
@@ -134,7 +134,7 @@ def main() -> int:
         assert key in table, f"the table records no {key}"
     archive = Path(table["archive"])
     if not archive.is_absolute():
-        archive = ROOT / archive
+        archive = INSTALL / archive
     assert archive.is_file(), f"the table names an archive that is not here: {archive}"
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     assert digest == table["archive_sha256"], (

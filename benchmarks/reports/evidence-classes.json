@@ -66,5 +66,9 @@
  "native-import:thunk": {
   "evidence": "decoded",
   "derives_confidence": false
+ },
+ "native-import:type-archive": {
+  "evidence": "declared",
+  "derives_confidence": false
  }
 }

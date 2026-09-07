@@ -70,6 +70,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:type-archive",
+        explanation:         "A declaration the pinned C library type archive holds for a name the \
+         image imports, applied only when every type in it is one the \
+         decompiler already has.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:plt-reserved",
         explanation:         "A word the System V ABI reserves at DT_PLTGOT -- the .dynamic \
          address, the link-map, the resolver -- each of which holds a pointer.",

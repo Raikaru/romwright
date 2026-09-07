@@ -72,7 +72,16 @@ def main():
             ('prototypes', dict(program='tiny_bin')),
             ('decompile_doc', decompile)])
         assert repeated['rounds'] <= 3, repeated
-        assert next(row for row in stored if row['function'] == address) == assertion, stored
+        # The fact, not its rendering: `provenance` also carries the sentence
+        # and evidence kind the explanation table supplies (m9-001), which are
+        # derived from `source` rather than stored beside it.
+        retained = next(row for row in stored if row['function'] == address)
+        assert {key: retained[key] for key in ('function', 'signature',
+                                               'calling_convention', 'return_type')} == \
+            {key: assertion[key] for key in ('function', 'signature',
+                                             'calling_convention', 'return_type')}, stored
+        assert {key: retained['provenance'][key] for key in
+                ('kind', 'source', 'confidence')} == assertion['provenance'], stored
         assert [parameter['name'] for parameter in doc['prototype']['parameters']] == ['left', 'right'], doc
         print(json.dumps(dict(passed=True, rounds=report['rounds'],
             repeated_rounds=repeated['rounds'], inferred_add_parameters=2, assertion_retained=True)))

@@ -203,6 +203,8 @@ pub mod attr {
     pub const SIZE: u32 = 19;
     /// ATTRIB_SPACE (marshal.cc:1253).
     pub const SPACE: u32 = 20;
+    /// ATTRIB_READONLY (marshal.cc:1248).
+    pub const READONLY: u32 = 17;
     /// ATTRIB_ARRAYSIZE (type.cc:30).
     pub const ARRAYSIZE: u32 = 48;
     /// ATTRIB_NAMELOCK (marshal.cc:1246).
@@ -379,6 +381,7 @@ pub(crate) fn encode_data_symbol(
     space: u32,
     address: u64,
     name: &str,
+    read_only: bool,
     body: impl FnOnce(&mut Vec<u8>),
 ) {
     encode_header(out, ELEMENT_START, elem::MAPSYM);
@@ -389,6 +392,14 @@ pub(crate) fn encode_data_symbol(
     // only the name is locked (Symbol::decodeHeader, database.cc:394-434).
     encode_header(out, ATTRIBUTE, attr::NAMELOCK);
     out.push((attr_type::BOOLEAN << 4) | 1);
+    if read_only {
+        // `Varnode::readonly`, which is what lets the printer render a string
+        // constant instead of the symbol that names it
+        // (`PrintC::printCharacterConstant` requires `Scope::isReadOnly`,
+        // printc.cc:1772; the attribute is read in database.cc:435).
+        encode_header(out, ATTRIBUTE, attr::READONLY);
+        out.push((attr_type::BOOLEAN << 4) | 1);
+    }
     body(out);
     encode_header(out, ELEMENT_END, elem::SYMBOL);
     encode_addr_element(out, space, address);
