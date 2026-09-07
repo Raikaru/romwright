@@ -868,6 +868,78 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006.json
 ```
 
+## Evidence index
+
+Every gate writes a JSON report under `benchmarks/reports/`; the table
+below is generated from those files by `scripts/gen_evidence_index.py`,
+so it cannot claim a number no report carries. Intermediate diagnostic
+runs live in `benchmarks/reports/diagnostics/` and are not evidence of
+anything current: twelve of them record `passed: false`, because they are the
+intermediate measurements that diagnosed a problem rather than gates that
+held. A report that records a failure at the top of `benchmarks/reports/`
+fails the generator, and `tests/m5-012_evidence_index.py` additionally
+requires every acceptance test that writes a `--report` to have a committed
+report carrying its id -- a measured result cannot live only in a transcript.
+
+<!-- evidence-index:begin -->
+| Report | Gate | Milestone | Status | Measured | Produced by |
+|---|---|---|---|---|---|
+| `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.1600; `peak_decompile_kb` 39160; `peak_disasm_kb` 0; `peak_import_kb` 5908 | - |
+| `ui-gate.json` | `ui` | M0 | pass | 1 pass, 0 fail, 0 skipped | `benchmarks/ui_gate.py` |
+| `discovery-gate.json` | `discovery` | M1 | pass | 20 pass, 0 fail, 0 skipped | `benchmarks/discovery_gate.py` |
+| `m1-003.json` | `m1-003` | M1 | pass | recorded | `tests/m1-003_batched_flow.sh` |
+| `m1-006.json` | `m1-006` | M1 | recorded | `passed_entries` 20; `skipped_entries` 5; `total_entries` 25 | `tests/m1-006_corpus.sh` |
+| `m1-007.json` | `m1-007` | M1 | pass | 20 pass, 0 fail, 0 skipped | `tests/m1-007_oracle_test.py` |
+| `m1-008.json` | `m1-008` | M1 | pass | 6 pass, 0 fail, 0 skipped | `tests/m1-008_languages.py` |
+| `m1-008b-classification.json` | `m1-008b` | M1 | recorded | recorded | `tests/m1-008b_pointer_seeds.py` |
+| `m1-008b-v1.json` | `m1-008b` | M1 | pass | 2 pass, 0 fail, 0 skipped | `tests/m1-008b_pointer_seeds.py` |
+| `m1-008b-scoring.json` | `m1-008b-scoring` | M1 | pass | 20 pass, 0 fail, 0 skipped | `tests/m1-008b_pointer_seeds.py` |
+| `m1-009.json` | `m1-009` | M1 | pass | 1 pass, 0 fail, 0 skipped | `tests/m1-009_dol.py` |
+| `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
+| `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
+| `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |
+| `m2-004.json` | `m2-004` | M2 | recorded | recorded | - |
+| `m2-005.json` | `m2-005` | M2 | recorded | recorded | `tests/m2-005_prototype.py` |
+| `m2-006-aarch64.json` | `m2-006` | M2 | recorded | `budget_ms` 60000 | `tests/m2-006_inference.py` |
+| `m2-006-i386.json` | `m2-006` | M2 | recorded | `budget_ms` 60000 | `tests/m2-006_inference.py` |
+| `m2-006-powerpc.json` | `m2-006` | M2 | recorded | `budget_ms` 60000 | `tests/m2-006_inference.py` |
+| `m2-006-x86_64.json` | `m2-006` | M2 | recorded | `budget_ms` 60000 | `tests/m2-006_inference.py` |
+| `m2-006.json` | `m2-006` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-006_inference.py` |
+| `m2-006-reference.json` | `m2-006-b2-reference` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-006_inference.py` |
+| `m2-007-positive.json` | `m2-007` | M2 | pass | recorded | `tests/m2-007_switches.py` |
+| `m2-007.json` | `m2-007` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-007_switches.py` |
+| `m2-008-aarch64.json` | `m2-008` | M2 | recorded | recorded | `tests/m2-008_nonreturn.py` |
+| `m2-008-i386.json` | `m2-008` | M2 | recorded | recorded | `tests/m2-008_nonreturn.py` |
+| `m2-008-positive.json` | `m2-008` | M2 | pass | `asserted_return_controls` 2; `inferred_functions` 5; `removed_call_xrefs` 3; `restored_call_xrefs` 3 | `tests/m2-008_nonreturn.py` |
+| `m2-008-powerpc.json` | `m2-008` | M2 | recorded | recorded | `tests/m2-008_nonreturn.py` |
+| `m2-008-x86_64.json` | `m2-008` | M2 | recorded | recorded | `tests/m2-008_nonreturn.py` |
+| `m2-008.json` | `m2-008` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-008_nonreturn.py` |
+| `m2-009.json` | `m2-009` | M2 | pass | 1 pass, 0 fail, 0 skipped | `tests/m2-009_thunks.py` |
+| `m2-011.json` | `m2-011` | M2 | pass | 4 pass, 0 fail, 0 skipped | - |
+| `m2-012.json` | `m2-012` | M2 | pass | 3 pass, 0 fail, 0 skipped | - |
+| `m2-013.json` | `m2-013` | M2 | pass | 8 pass, 0 fail, 1 skipped | - |
+| `m2-014.json` | `m2-014` | M2 | pass | 2 pass, 0 fail, 5 skipped | - |
+| `m2-015.json` | `m2-015` | M2 | pass | `decompile` 1; `decompile-doc` 1; `disasm` 4; `functions` 12 | `tests/m2-015_native_default.py` |
+| `m2-016.json` | `m2-016` | M2 | pass | `flow.seconds` 2.8605; `references.speedup` 2.9409; `total.seconds` 9.2999 | `tests/m2-016_import_budget.py` |
+| `m3-001.json` | `m3-001` | M3 | pass | 20 pass, 0 fail, 0 skipped | `tests/m3-001_dwarf_truth.py` |
+| `baseline-ghidra-truth.json` | `m3-002` | M3 | recorded | `dwarf.arity_matched` 1640; `dwarf.functions` 1640; `ghidra.arity_correct` 1236; `ghidra.dwarf.fn.recall` 1.0000; `ghidra.dwarf.proto.arity` 0.7537; `ghidra.entries_matched` 1640; `ghidra.functions` 2008 | `tests/m3-002_baseline.py` |
+| `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
+| `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
+| `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
+| `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
+imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
+| `m5-003.json` | `m5-003` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 5; `functions` 5; `unattributed` 0 | `tests/m5-003_psx.py` |
+| `m5-004.json` | `m5-004` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 5; `functions` 5; `unattributed` 0 | `tests/m5-004_n64.py` |
+| `m5-005.json` | `m5-005` | M5 | pass | `blocked_platforms` 5; `catalog_platforms` 5; `generated_rows` 4 | `tests/m5-005_platform_matrix.py` |
+| `m5-006.json` | `m5-006` | M5 | pass | `flow_xref.call.precision` 1.0000; `flow_xref.call.recall` 0.9830; `flow_xref.jump.cross_recall` 1.0000; `flow_xref.jump.precision` 1.0000; `loops_excluded` 2; `transfers_recorded` 1 | `tests/m5-006_tailcall.py` |
+| `m5-007.json` | `m5-007` | M5 | pass | `arm7.dwarf.fn.recall` 1.0000; `corpus_unattributed` 0; `promoted` 037f8000 | `tests/m5-007_tailcall_promotion.py` |
+| `m5-008.json` | `m5-008` | M5 | pass | `thunk.destination.equal` 114; `thunk.destination.explained` 71; `thunk.destination.unexplained` 0; `thunk.entry.exact` 0.9343; `thunk.entry.precision` 1.0000; `thunk.entry.recall` 1.0000; `thunk.entry.unexplained` 0 | `tests/m5-008_thunk_parity.py` |
+| `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
+| `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
+| `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 55; `diagnostic_runs` 12; `generated_rows` 54; `published_ids` 40 | `tests/m5-012_evidence_index.py` |
+<!-- evidence-index:end -->
+
 ## Support matrix
 
 <!-- support-matrix:begin -->

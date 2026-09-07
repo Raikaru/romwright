@@ -2875,14 +2875,44 @@ m3-003, all three wired into continuous integration)
 - Unit test `pattern_labels_need_a_body_and_a_generated_name` pins that a
   one-byte stub and a symbol-named function are both left alone.
 
+### m5-012 evidence
+- **The recorded premise for this task was wrong, and checking it came
+  first.** The previous "next task" said `gate.sh` reads
+  `benchmarks/thunk_gate.py`'s report. It reads none of the reports: nothing
+  in the repository consumed them. What was actually missing is an index --
+  65 report files with no map from evidence to claim.
+- `1979953` commits the failing acceptance
+  (`tests/m5-012_evidence_index.py`).
+- `scripts/gen_evidence_index.py` generates a README table from the committed
+  reports: report file, gate id, milestone, status, the numbers the report
+  itself carries, and the file that produces it. Rows are derived -- a
+  measured number moves its row, deleting a report removes it, and a report
+  recording a failure makes the generator refuse rather than print it.
+  `--check` fails on a stale index, wired into the fast CI job.
+- **Twelve reports recording `passed: false` were sitting next to current
+  evidence.** They are intermediate diagnostic runs (`m2-002-g1..g7`,
+  `m1-010-d4d-*`, `m1-008b`, `m2-002-context`, `m2-002-f5`); they moved to
+  `benchmarks/reports/diagnostics/` with `git mv`, so the history stays and
+  the claim does not. A failing report at the top level now fails the gate.
+- Reports with no `passed` field are recorded state, not verdicts -- frozen
+  baselines, corpus manifests, per-architecture measurements. The index says
+  `recorded` for those rather than implying a gate held.
+- **An unpublished measurement was found by the coverage rule**:
+  `tests/m2-015_native_default.py` writes a report that had never been
+  committed. It is now `benchmarks/reports/m2-015.json`, and the gate
+  requires every acceptance test that writes a `--report` to have a committed
+  report carrying its id.
+- Measured (`benchmarks/reports/m5-012.json`): 55 current reports indexed, 40
+  published ids, 12 diagnostic runs separated, 54 generated rows.
+
 ## Next task
-- m5-012: publish the name and thunk parity numbers in the milestone gate
-  scripts rather than only in per-task reports. `benchmarks/thunk_gate.py`
-  still compares counts on one host libc and its report is what `gate.sh`
-  reads, so a reader of the M2 gate cannot see the set-level result m5-008
-  measures. The acceptance must show the milestone report carrying the
-  set-level metrics, and must fail if the count comparison is the only
-  evidence present. Its acceptance test does not exist yet; write it first.
+- m6-001: user-facing documentation for the JVM-free workflow. README is now
+  an accurate engineering record but not a way in: there is no page that
+  takes a user from `cargo build` to imported binary, function list, xrefs,
+  rename and decompile, naming which steps need the pinned Ghidra install
+  and which are JVM-free. The acceptance must run the documented commands
+  exactly as written and fail if any of them does not work as documented.
+  Its acceptance test does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,
