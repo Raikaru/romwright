@@ -2791,14 +2791,37 @@ m3-003, all three wired into continuous integration)
   count comparison stays as the m2-009 artifact it is, now with a set-level
   gate beside it.
 
+### m5-009 evidence
+- `20e58ff` commits the failing acceptance
+  (`tests/m5-009_linkage_names.py`): five stubs across `i386_plain_pie` and
+  `powerpc_plain_pie` carried `FUN_...` names while the store already held
+  the import symbol at that exact address.
+- `name_linkage_stubs` applies the name the linkage thunk's slot proved, and
+  **replaces only a generated name** -- a symbol or section-derived name
+  stands (`linkage_naming_replaces_only_generated_names`).
+- Measured (`benchmarks/reports/m5-009.json`), 20 locked ELF inputs, scored
+  against stock Ghidra's own name at every thunk entry it records inside the
+  image: 71 of 91 names equal, 20 classified, **0 import names left
+  unapplied**, **0 names without a symbol at their own address**.
+- The 20 remaining differences are all `_INIT_n`, Ghidra's label for an entry
+  of `.init_array`. That class is accepted only when our store holds the
+  reference the label presents (`native-import:elf-pointer`, or
+  `native-import:elf-reloc` for a PIE), so a missing fact cannot hide behind
+  a naming difference.
+- Negative controls: reverting the pass fails the gate on exactly the five
+  rows; making the pass invent `import_<address>` names fails it too, because
+  a name needs a symbol at its own address.
+- One additive metric family (`linkage.name.*`); no II.3 definition changed.
+
 ## Next task
-- m5-009: name the linkage stubs the store already resolves. A stub whose
-  import name is proven (it carries the symbol, and now a linkage thunk) is
-  still called `FUN_000206a8` in the function table, while stock Ghidra calls
-  it `__cxa_finalize`. Function names are user-visible and feed m3-001
-  attribution, so the acceptance must show the rename is driven by the same
-  slot evidence and never overwrites a name that came from a symbol table.
-  Its acceptance test does not exist yet; write it first.
+- m5-010: name the initializer-array entries from the array, closing the last
+  name-difference class on the corpus (20 rows). The index in `.init_array`
+  or `.fini_array` is a fact the store already references, so the name is
+  derivable rather than copied: entry *n* of the array is the *n*th
+  initializer. The acceptance must score names against stock Ghidra as
+  m5-009 does, keep the "no name without evidence at its address" rule, and
+  fail if an array index is guessed rather than read. Its acceptance test
+  does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

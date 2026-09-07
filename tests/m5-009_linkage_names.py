@@ -112,7 +112,10 @@ def classify(identifier: str, stock: dict, native: dict) -> dict:
         if name not in native["symbols"].get(entry, set()):
             unsupported.append({"entry": entry, "name": name})
 
-    return {"id": identifier, "rows": len(stock), "equal": equal,
+    comparable = (equal + len(presentation) + len(missing_import)
+                  + len(unexplained))
+    return {"id": identifier, "rows": len(stock), "comparable": comparable,
+            "equal": equal,
             "presentation": presentation, "missing_import": missing_import,
             "unexplained": unexplained, "unsupported": unsupported}
 
@@ -142,7 +145,7 @@ def main() -> int:
     cli = ROOT / "target/release/lre-cli"
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
-    rows, totals = [], {"rows": 0, "equal": 0, "presentation": 0,
+    rows, totals = [], {"rows": 0, "comparable": 0, "equal": 0, "presentation": 0,
                         "missing_import": 0, "unexplained": 0, "unsupported": 0}
     for entry in manifest["entries"]:
         if entry.get("status") != "ok":
@@ -158,6 +161,7 @@ def main() -> int:
         row = classify(identifier, stock, native)
         rows.append(row)
         totals["rows"] += row["rows"]
+        totals["comparable"] += row["comparable"]
         totals["equal"] += row["equal"]
         for key in ("presentation", "missing_import", "unexplained", "unsupported"):
             totals[key] += len(row[key])
@@ -177,7 +181,9 @@ def main() -> int:
     assert totals["presentation"], (
         "no init-array label was classified; the presentation class is untested")
     metrics = {
-        "linkage.name.agreement": totals["equal"] / max(totals["rows"], 1),
+        # Stock thunks that are not functions of ours belong to m5-008's
+        # entry classes; naming is scored only where both have a function.
+        "linkage.name.agreement": totals["equal"] / max(totals["comparable"], 1),
         "linkage.name.missing_import": totals["missing_import"],
         "linkage.name.unexplained": totals["unexplained"],
         "linkage.name.unsupported": totals["unsupported"],
@@ -186,7 +192,7 @@ def main() -> int:
     for name, threshold in THRESHOLDS.items():
         assert metrics[name] <= threshold, f"{name} is {metrics[name]}"
 
-    summary = (f"{len(rows)} corpus entries: {totals['equal']}/{totals['rows']} stock "
+    summary = (f"{len(rows)} corpus entries: {totals['equal']}/{totals['comparable']} stock "
                f"thunk names matched, {totals['presentation']} synthetic init-array "
                f"labels not copied but proven by reference, 0 missing import names, "
                f"0 unsupported names")
