@@ -1,0 +1,20 @@
+{
+ "id": "m9-004",
+ "recorded_at": "2026-09-07T13:34:00.862226+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "12 rows matched between the terminal and the service across 3 kinds, 2 addresses where a kind narrowed the set, an unknown kind refused; the window showed 0 declared of 1 rows, matching the service",
+ "metrics": {
+  "surface.cli_rows_checked": 12,
+  "surface.narrowing_addresses": 2,
+  "surface.ui_declared_rows": 0,
+  "surface.ui_rows": 1,
+  "surface.committed_ui_declared_rows": 13
+ },
+ "desktop": {
+  "address": "004003f0",
+  "rows": 1,
+  "declared_rows": 0,
+  "service_declared": 0
+ }
+}

@@ -139,27 +139,33 @@ def main() -> int:
 
             desktop = {}
             try:
-                app = ui_gate.find_app(ROOT, os.environ.get("VENTRIS_QT_APP"))
+                app = ui_gate.default_app(ROOT).resolve()
             except ui_gate.GateError as failure:
                 desktop = {"skipped": str(failure)}
                 app = None
             if app is not None:
-                address = max(functions, key=lambda row: row.get("size", 0))
-                address = f"{address['entry']['offset']:08x}"
-                metrics = ui_gate.run_app(app, project, FIXTURE, "tiny", address,
-                                          timeout=240.0)
-                declared = 0
-                for incoming in (True, False):
-                    _, total = api_rows(api, address, incoming, "declared")
-                    declared += total
+                # The window navigates to the first function it lists, so the
+                # comparison uses the address it reports rather than one picked
+                # here -- an address the app never opened would prove nothing.
+                metrics = ui_gate.run_app(app, project, FIXTURE, "tiny",
+                                          addresses[0], timeout=240.0)
+                address = f"{int(metrics['ui.xrefs.address']):08x}"
+                declared = sum(api_rows(api, address, incoming, "declared")[1]
+                               for incoming in (True, False))
                 assert metrics["ui.xrefs.declared_rows"] == declared, (
                     f"the window showed {metrics['ui.xrefs.declared_rows']} declared "
                     f"rows where the service returns {declared}")
                 assert metrics["ui.xrefs.declared_rows"] <= metrics["ui.xrefs.rows"], (
                     "a filtered window cannot hold more rows than an unfiltered one")
+                unfiltered = sum(api_rows(api, address, incoming, None)[1]
+                                 for incoming in (True, False))
+                assert metrics["ui.xrefs.rows"] == unfiltered, (
+                    f"the window showed {metrics['ui.xrefs.rows']} rows at "
+                    f"{address} where the service returns {unfiltered}")
                 desktop = {"address": address,
                            "rows": metrics["ui.xrefs.rows"],
-                           "declared_rows": metrics["ui.xrefs.declared_rows"]}
+                           "declared_rows": metrics["ui.xrefs.declared_rows"],
+                           "service_declared": declared}
         finally:
             api.close()
 

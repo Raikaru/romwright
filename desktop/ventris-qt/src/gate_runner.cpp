@@ -247,11 +247,26 @@ void GateRunner::startXrefs() {
     connect(dock, &XrefsDock::loadFinished, this, [this, dock]() {
         metrics_.insert(QStringLiteral("ui.xrefs.rows"), dock->renderedRows());
         metrics_.insert(QStringLiteral("ui.xrefs.unexplained"), dock->unexplainedRows());
+        // The address the window actually navigated to, so a checker compares
+        // the service's answer for the same address instead of guessing it.
+        metrics_.insert(QStringLiteral("ui.xrefs.address"),
+                        static_cast<double>(address_.toULongLong(nullptr, 16)));
+        startFilteredXrefs();
+    }, Qt::SingleShotConnection);
+    dock->loadXrefs(window_->program(), address_);
+}
+
+void GateRunner::startFilteredXrefs() {
+    // The same window, asked for one kind of evidence: what the selector
+    // produces is measured, not the request that was sent.
+    auto *dock = window_->xrefsDock();
+    connect(dock, &XrefsDock::loadFinished, this, [this, dock]() {
+        metrics_.insert(QStringLiteral("ui.xrefs.declared_rows"), dock->renderedRows());
         const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
         metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
         finish(true);
     }, Qt::SingleShotConnection);
-    dock->loadXrefs(window_->program(), address_);
+    dock->setEvidence(QStringLiteral("declared"));
 }
 
 void GateRunner::finish(bool ok, const QString &detail) {

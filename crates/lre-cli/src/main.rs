@@ -38,7 +38,7 @@ fn usage() {
   lre-cli open <program> [--project DIR]
   lre-cli functions <program> [--offset N] [--limit N] [--filter TEXT] [--project DIR]
   lre-cli symbols <program> [--project DIR]
-  lre-cli xrefs <program> [--to HEX | --from HEX] [--project DIR]
+  lre-cli xrefs <program> [--to HEX | --from HEX] [--project DIR] [--evidence KIND]
   lre-cli comments <program> [--project DIR]
   lre-cli comment <program> <address> <text> [--function HEX] [--project DIR]
   lre-cli types <program> [--project DIR]
@@ -752,18 +752,38 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let program = args.get(2).ok_or("xrefs needs a program name")?.clone();
 
             let addr_arg = flag(args, "--to").or_else(|| flag(args, "--from"));
-            let rows = if let Some(addr_str) = addr_arg {
-                let address = lre_model::Address::parse_ram_hex(&addr_str)
-                    .ok_or_else(|| format!("bad address: {addr_str}"))?;
-                if args.iter().any(|a| a == "--to") {
-                    core.xrefs_to(&program, &address)
-                } else {
-                    core.xrefs_from(&program, &address)
+            // The store filters by the kind of evidence a fact rests on, so an
+            // audit asks for what it wants rather than printing everything and
+            // grepping. Unknown kinds are refused, never silently ignored.
+            let evidence = match flag(args, "--evidence") {
+                Some(text) => Some(
+                    lre_model::provenance::EvidenceKind::parse(&text).ok_or_else(|| {
+                        format!("bad evidence kind: {text} (declared, decoded or inferred)")
+                    })?,
+                ),
+                None => None,
+            };
+            let rows = match (addr_arg, evidence) {
+                (Some(addr_str), _) => {
+                    let address = lre_model::Address::parse_ram_hex(&addr_str)
+                        .ok_or_else(|| format!("bad address: {addr_str}"))?;
+                    let incoming = args.iter().any(|a| a == "--to");
+                    core.xrefs_page(
+                        &program, &address, incoming, 0, u64::from(u32::MAX), evidence,
+                    )
+                    .map(|page| page.rows)
+                    .map_err(|e| e.to_string())?
                 }
-            } else {
-                core.xrefs(&program)
-            }
-            .map_err(|e| e.to_string())?;
+                // Filtering the whole program has no window to page, and
+                // pretending otherwise would answer a question not asked.
+                (None, Some(kind)) => {
+                    return Err(format!(
+                        "--evidence {} needs --to or --from",
+                        kind.as_str()
+                    ))
+                }
+                (None, None) => core.xrefs(&program).map_err(|e| e.to_string())?,
+            };
             for r in &rows {
                 let ownership = match r.provenance.kind {
                     lre_model::FactKind::Inferred => "inferred",

@@ -3,6 +3,9 @@
 #include "core_bridge.h"
 #include "json_util.h"
 
+#include <QComboBox>
+#include <QVBoxLayout>
+#include <QWidget>
 #include <QHeaderView>
 #include <QJsonObject>
 #include <QTabWidget>
@@ -38,13 +41,48 @@ XrefsDock::XrefsDock(CoreBridge *bridge, QWidget *parent)
     xrefs_from_ = make_xrefs_table(tabs, QStringLiteral("xrefsFromView"));
     tabs->addTab(xrefs_to_, QStringLiteral("To"));
     tabs->addTab(xrefs_from_, QStringLiteral("From"));
-    setWidget(tabs);
+
+    evidence_box_ = new QComboBox(this);
+    evidence_box_->setObjectName(QStringLiteral("xrefsEvidenceFilter"));
+    evidence_box_->addItem(QStringLiteral("All evidence"), QString());
+    for (const QString &kind : {QStringLiteral("declared"), QStringLiteral("decoded"),
+                                QStringLiteral("inferred")}) {
+        evidence_box_->addItem(kind, kind);
+    }
+    connect(evidence_box_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        setEvidence(evidence_box_->itemData(index).toString());
+    });
+
+    auto *panel = new QWidget(this);
+    auto *layout = new QVBoxLayout(panel);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->addWidget(evidence_box_);
+    layout->addWidget(tabs);
+    setWidget(panel);
+}
+
+void XrefsDock::setEvidence(const QString &kind) {
+    if (evidence_ == kind) {
+        return;
+    }
+    evidence_ = kind;
+    if (evidence_box_ != nullptr) {
+        const int index = evidence_box_->findData(kind);
+        if (index >= 0 && index != evidence_box_->currentIndex()) {
+            evidence_box_->setCurrentIndex(index);
+        }
+    }
+    if (!program_.isEmpty() && !address_.isEmpty()) {
+        loadXrefs(program_, address_);
+    }
 }
 
 void XrefsDock::loadXrefs(const QString &program, const QString &address) {
     if (program.isEmpty() || address.isEmpty()) {
         return;
     }
+    program_ = program;
+    address_ = address;
     rendered_rows_ = 0;
     unexplained_rows_ = 0;
     pending_ = 2;
@@ -54,12 +92,16 @@ void XrefsDock::loadXrefs(const QString &program, const QString &address) {
                                                    : QStringLiteral("from"))
                                      .arg(address);
         emit jobStarted(job_name);
-        bridge_->request(QJsonObject{{"method", "xrefs_page"},
-                                     {"program", program},
-                                     {"address", address},
-                                     {"incoming", incoming},
-                                     {"offset", 0},
-                                     {"limit", 256}},
+        QJsonObject request{{"method", "xrefs_page"},
+                            {"program", program},
+                            {"address", address},
+                            {"incoming", incoming},
+                            {"offset", 0},
+                            {"limit", 256}};
+        if (!evidence_.isEmpty()) {
+            request.insert(QStringLiteral("evidence"), evidence_);
+        }
+        bridge_->request(request,
                          [this, job_name, table](const QJsonObject &response) {
                              QString error;
                              if (!successful(response, &error)) {
