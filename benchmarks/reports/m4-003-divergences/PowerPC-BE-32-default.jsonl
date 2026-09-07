@@ -1,7 +1,7 @@
 {"address": "100103f0", "classes": {"function-facts": {"name": ["entry", "_entry"]}, "missing-external-prototype": ["__libc_start_main"], "flow": ["/* WARNING: Could not recover jumptable at 0x10010574. Too many branches */", "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 13, "native_tokens": 21}
 {"address": "10010510", "classes": {"missing-external-prototype": ["printf"]}, "oracle_tokens": 29, "native_tokens": 29}
-{"address": "10010568", "classes": {"missing-external-prototype": ["__libc_start_main"], "flow": ["/* WARNING: Could not recover jumptable at 0x10010574. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 20}
-{"address": "10010578", "classes": {"missing-external-prototype": ["printf"], "flow": ["/* WARNING: Could not recover jumptable at 0x10010584. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 33, "native_tokens": 20}
+{"address": "10010568", "classes": {"missing-external-prototype": ["__libc_start_main"]}, "oracle_tokens": 20, "native_tokens": 0}
+{"address": "10010578", "classes": {"missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 0}
 {"address": "10010588", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}, "missing-external-prototype": ["__gmon_start__"]}, "oracle_tokens": 26, "native_tokens": 24}
-{"address": "100105cc", "classes": {"missing-external-prototype": ["__gmon_start__"], "flow": ["/* WARNING: Could not recover jumptable at 0x100105d8. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 20}
+{"address": "100105cc", "classes": {"missing-external-prototype": ["__gmon_start__"]}, "oracle_tokens": 20, "native_tokens": 0}
 {"address": "100105dc", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}}, "oracle_tokens": 9, "native_tokens": 9}

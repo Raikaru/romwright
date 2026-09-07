@@ -3835,19 +3835,51 @@ m3-003, all three wired into continuous integration)
   `m9-005`, `m10-004`, `corpus.sh`, `differential.sh`, `workflow.sh`,
   `data_xrefs.sh` pass. 87 reports indexed, both generators in sync.
 
+### m4-005 evidence
+- The largest divergence class shrinks: `flow` **22 -> 16**, and token
+  identity against the oracle **23 -> 25** of 56, with no class growing
+  (`function-facts` 15, `data-type-unknown` 4 unchanged;
+  `missing-external-prototype` 19 -> 18).
+- The store already held the fact and nothing carried it. A thunk's jump is
+  now delivered as Ghidra's own `<flow type="callreturn">` override inside the
+  function element (`Override::decode`, override.cc:356-400, types :421-433;
+  accepted by `Funcdata::decode`, funcdata.cc:811). Measured effect:
+  `_INIT_0` was `void _INIT_0(void){return;}` with its call discarded as two
+  unreachable blocks and is now `void _INIT_0(void){FUN_00201600();return;}`,
+  the oracle's text exactly; the `printf` linkage stub no longer asks for a
+  jumptable.
+- **The override had to travel through the preload, not the callback.** The
+  decompiler never queries `getMappedSymbols` for a function it already has
+  from `registerProgram`, so a function whose flow the store corrects is now
+  sent whole instead of as a lazy shell.
+- **The first rule was too broad and the measurement caught it**: overriding
+  every stored transfer cost two token-identical functions on AArch64 and
+  PowerPC. Ghidra sets no shared-return override when the jumping instruction
+  is itself a function entry (`SharedReturnAnalysisCmd`:400-423); with that
+  rule restored, and a linkage stub as the stated exception (its transfer goes
+  through a slot the store names as an import), x86-64 gained one and x86-32
+  gained one, with no losses anywhere.
+- **Two controls fire**: not forwarding the store's thunk facts leaves
+  `_INIT_0` with its call discarded, and ignoring Ghidra's entry rule moves
+  the pinned per-language counts.
+- Regression: `cargo test --workspace` 239 pass; `m4-002`..`m4-005`,
+  `m3-001`, `m3-003`, `m2-009`, `m5-008`, `m5-009`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` pass. 88 reports indexed, both generators in sync.
+
 ## Next task
-- m4-005: close `missing-external-prototype` (19). The store names imports
-  (`printf` at its IAT/PLT slot) and holds no signature for them, so the
-  decompilation prints `printf(s_sum___d__002004d0, uVar1)` where the oracle
-  prints `printf("sum: %d\n", (ulong)uVar1)` -- with a `char *` first
-  parameter the same string renders as a literal. The pinned install ships the
-  prototypes in its GDT archives and `crates/ventris-gdt` already reads them.
-  Acceptance: an import named by relocation evidence gets its declared
-  prototype applied with provenance naming the archive and the symbol,
-  `missing-external-prototype` falls to 0 with the parity baseline
-  re-recorded, no class grows, and no prototype is applied to a name the
-  archive does not declare. Its acceptance test does not exist yet; write it
-  first.
+- m4-006: `flow` is down to 16 and the next shape is visible in the same
+  fixture. `_plt` at `00201710` still reports "Could not recover jumptable at
+  0x00201716" because the PLT header's indirect jump reaches a slot the store
+  records only as a data reference -- there is no thunk row for it, so nothing
+  says the transfer is a call. Decide from evidence whether the importer
+  should record a linkage thunk for a PLT-header stub (the slot is in a
+  relocation-named table) or whether the decompiler's warning is correct and
+  the oracle's silence comes from a fact we should not invent. Acceptance:
+  either `flow` falls with the parity baseline re-recorded and a positive
+  regression showing the new thunk row is backed by relocation evidence, or
+  the case is recorded as a named non-goal with the numbers that justify it.
+  Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

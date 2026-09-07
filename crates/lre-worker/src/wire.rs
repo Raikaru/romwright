@@ -156,6 +156,10 @@ pub mod elem {
     pub const SYMBOL: u32 = 6;
     /// ELEM_FUNCTIONSHELL (database.cc:34)
     pub const FUNCTIONSHELL: u32 = 72;
+    /// ELEM_OVERRIDE (override.cc:26).
+    pub const OVERRIDE: u32 = 223;
+    /// ELEM_FLOW (override.cc:22).
+    pub const FLOW: u32 = 219;
     /// ELEM_LABELSYM (database.cc:37).
     pub const LABELSYM: u32 = 75;
     /// ELEM_MAPSYM (database.cc:38)
@@ -341,12 +345,14 @@ pub(crate) fn encode_function_element(
     name: &str,
     size: u64,
     no_return: bool,
+    call_return_branches: &[u64],
 ) {
     encode_header(out, ELEMENT_START, elem::FUNCTION);
     encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, scope_id);
     encode_string_attribute(out, attr::NAME, name.as_bytes());
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_addr_element(out, space, address);
+    encode_flow_override(out, space, call_return_branches);
     if no_return {
         encode_header(out, ELEMENT_START, elem::PROTOTYPE);
         // PackedEncode::writeBool (marshal.cc:1147): value is in the type byte.
@@ -389,6 +395,25 @@ pub(crate) fn encode_data_symbol(
     encode_header(out, ELEMENT_START, elem::RANGELIST);
     encode_header(out, ELEMENT_END, elem::RANGELIST);
     encode_header(out, ELEMENT_END, elem::MAPSYM);
+}
+
+/// Flow the store proves and the raw disassembly cannot see: a branch that
+/// transfers control the way a call does. The shape is the `<override>` child
+/// `Funcdata::decode` accepts (funcdata.cc:811) carrying `<flow>` elements
+/// (`Override::decode`, override.cc:356-400); `callreturn` is the type name
+/// `Override::stringToType` maps to `CALL_RETURN` (:421-433).
+pub(crate) fn encode_flow_override(out: &mut Vec<u8>, space: u32, branches: &[u64]) {
+    if branches.is_empty() {
+        return;
+    }
+    encode_header(out, ELEMENT_START, elem::OVERRIDE);
+    for branch in branches {
+        encode_header(out, ELEMENT_START, elem::FLOW);
+        encode_string_attribute(out, attr::TYPE, b"callreturn");
+        encode_addr_element(out, space, *branch);
+        encode_header(out, ELEMENT_END, elem::FLOW);
+    }
+    encode_header(out, ELEMENT_END, elem::OVERRIDE);
 }
 
 /// A name for a location the store holds no type for: `<labelsym>`, which the
