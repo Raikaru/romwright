@@ -1,0 +1,16 @@
+{
+ "id": "m10-003",
+ "recorded_at": "2026-09-07T14:14:39.475502+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "analyst edits survived a second import: 8 reads identical for the first image and 8 identical for the second whether imported beside or alone, its revision unchanged at 9, undo on the unedited image reversing nothing, and two undos reversing the comment then the rename",
+ "metrics": {
+  "edits.reads_compared": 16,
+  "edits.revision_after_second_import": 9,
+  "edits.win_functions": 112
+ },
+ "undo": {
+  "first": "undid comment seq 2 at 00400466",
+  "second": "undid rename seq 1 (00400466 -> add)"
+ }
+}

@@ -3676,15 +3676,45 @@ m3-003, all three wired into continuous integration)
 - Four additive metric names (`images.ui_*`, `ui.programs`,
   `ui.programs_switch_functions`); no II.3 definition changed.
 
+### m10-003 evidence
+- `486c0f8` commits the acceptance (`tests/m10-003_edit_durability.py`), which
+  **passed on its first run**: the store already scopes facts, revisions and
+  the journal per program, so there was no defect to fix. That is recorded as
+  what it is -- new coverage, not a repair.
+- What it checks, after renaming a function and writing a comment in the first
+  image and then importing a second into the same project: 8 reads identical
+  for the first image with its revision unchanged at 9; the same 8 reads for
+  the second image whether imported beside another program or alone; `undo` on
+  the unedited image reversing nothing while the rename survives; and two
+  undos on the edited image reversing `undid comment seq 2 at 00400466` then
+  `undid rename seq 1 (00400466 -> add)`.
+- **Three controls prove it would notice a regression**: an import that clears
+  every program's functions fails
+  (`changed the first image's ['functions']`), one that bumps every program's
+  revision fails (`moved from 9 to 15`), and an `undo` that ignores which
+  program asked fails (`undid comment seq 2` on the unedited image).
+- **A fourth control passed and was replaced.** Making an import delete every
+  comment changed nothing, because an import writes no comments -- the control
+  exercised no path. It was replaced with the functions and revision controls,
+  which do.
+- One tautological assertion (`... or True`) written while drafting was
+  removed rather than left to look like a check.
+- Regression: `cargo test --workspace` 238 pass; `m10-001`..`m10-003`,
+  `m9-001`..`m9-005`, `m8-003`, `m6-001`, `m6-002`, `m6-005`, `m6-006`,
+  `m5-012`, `support_matrix_test.py`, `m2-015`, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` all pass.
+- Three additive metric names (`edits.*`); no II.3 definition changed.
+
 ## Next task
-- m10-003: close M10 by proving a project survives what a user does to it.
-  `m10-001` and `m10-002` read and navigate; nothing checks that a second
-  import into the same project leaves the first image's facts and analyst
-  edits alone. The acceptance must rename a function and add a comment in the
-  first image, import a second image into the same project, and prove the
-  edits survive with their journal intact, that the second import's revision
-  moves only its own program, and that undo still reverses the right edit in
-  the right image. Its acceptance test does not exist yet; write it first.
+- m10-004: close M10 by deriving the multi-image claim rather than stating it,
+  as `m8-006` and `m9-005` do for their milestones. Three gates exist
+  (`m10-001`..`m10-003`) and each writes its own report; nothing fails when a
+  read that takes a `program` appears with no per-program isolation behind it.
+  The acceptance must enumerate the API methods that accept a `program`
+  parameter, drive each against a two-image project, require every one to
+  answer for the named program only, and carry the three reports' metrics as
+  one claim. Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
