@@ -2257,11 +2257,21 @@ M2 — Program-model parity
 - m2-014 is complete. No metric definition, corpus member, or reserved
   decision changed.
 
+## m2-015 implementation slices
+- a: commit the failing cutover acceptance (`tests/m2-015_native_default.py`):
+  the default path needs no JVM, the `-native` verbs are gone, `--oracle`
+  routes to the bridge, the docs say so and no CI step takes a bridge path
+  outside oracle generation.
+- b: flip the CLI verbs — `import`, `decompile`, `decompile-doc`, `disasm`
+  become native and take `--oracle` for the bridge; `dump-specs` becomes
+  explicit oracle tooling. Migrate every caller in tests, gates and scripts.
+- c: update the docs and the CI guard, then publish the evidence. Slices stay
+  below 800 changed lines each.
+
 ## Next task
 - m2-015: make native import the default user path and keep the bridge behind
   an `--oracle` flag, with the docs updated and continuous integration using
-  the bridge only for oracle generation. Its acceptance test does not exist
-  yet; write it first.
+  the bridge only for oracle generation.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
