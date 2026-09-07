@@ -24,7 +24,8 @@ NUMERIC_METRICS = (
 )
 # Counts, not durations: a fact rendered without its evidence sentence is a
 # defect at any speed.
-COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained", "ui.xrefs.declared_rows")
+COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained", "ui.xrefs.declared_rows",
+                 "ui.programs", "ui.programs_switch_functions")
 # Recorded as-is: the address the window navigated to, which every run of one
 # store shares. Aggregating it would be meaningless, so it is carried through.
 RECORDED_METRICS = ("ui.xrefs.address",)
@@ -210,6 +211,9 @@ def aggregate(samples: list[dict[str, Any]]) -> dict[str, Any]:
             int(sample["ui.xrefs.unexplained"]) for sample in samples),
         "ui.xrefs.declared_rows": min(
             int(sample["ui.xrefs.declared_rows"]) for sample in samples),
+        "ui.programs": min(int(sample["ui.programs"]) for sample in samples),
+        "ui.programs_switch_functions": min(
+            int(sample["ui.programs_switch_functions"]) for sample in samples),
         **{metric: samples[0][metric] for metric in RECORDED_METRICS},
         "ui.install.ok": all(sample["ui.install.ok"] for sample in samples),
     }
@@ -303,11 +307,13 @@ def main() -> int:
         within_thresholds = all(
             metrics[metric] <= THRESHOLDS[metric] for metric in NUMERIC_METRICS
         )
+        navigable = (metrics["ui.programs"] > 0
+                     and metrics["ui.programs_switch_functions"] > 0)
         explained = (metrics["ui.xrefs.rows"] > 0
                      and metrics["ui.xrefs.unexplained"] == 0
                      and 0 < metrics["ui.xrefs.declared_rows"] <= metrics["ui.xrefs.rows"])
-        status = ("pass" if within_thresholds and metrics["ui.install.ok"] and explained
-                  else "fail")
+        status = ("pass" if within_thresholds and metrics["ui.install.ok"]
+                  and explained and navigable else "fail")
         document = report_document(root, binary, args.program, metrics, len(samples), status)
     except (GateError, OSError, subprocess.SubprocessError) as error:
         try:

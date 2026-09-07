@@ -48,7 +48,7 @@ fn usage() {
   lre-cli graph <program> [--largest --binary BINARY] [--project DIR]
   lre-cli memory-regions <program> [--project DIR]
   lre-cli programs [--project DIR]
-  lre-cli locate <address-hex> [--project DIR]
+  lre-cli locate <address-hex> [--follow] [--project DIR]
   lre-cli bookmarks <program> [--project DIR]
   lre-cli bookmark <program> <address> <label> [comment] [--project DIR]
   lre-cli patches <program> [--project DIR]
@@ -693,6 +693,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let address = lre_model::Address::parse_ram_hex(address_arg)
                 .ok_or_else(|| format!("bad address: {address_arg}"))?;
             let rows = core.locate(&address).map_err(|e| e.to_string())?;
+            let follow = has_flag(args, "--follow");
             for row in &rows {
                 println!(
                     "{}  {}  {} {:#x}+{:#x} {}  {}",
@@ -702,6 +703,31 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     row.region.start.offset,
                     row.region.size,
                     row.region.permissions,
+                    row.function.as_deref().unwrap_or("-")
+                );
+                if !follow {
+                    continue;
+                }
+                // What that image holds there: images overlap, so these facts
+                // belong to the program on the line above, not to the address.
+                let symbols = core
+                    .symbols(&row.program)
+                    .map_err(|e| e.to_string())?
+                    .iter()
+                    .filter(|symbol| symbol.address == address)
+                    .count();
+                let to = core
+                    .xrefs_to(&row.program, &address)
+                    .map_err(|e| e.to_string())?
+                    .len();
+                let from = core
+                    .xrefs_from(&row.program, &address)
+                    .map_err(|e| e.to_string())?
+                    .len();
+                println!(
+                    "    follow {} function={} symbols={symbols} xrefs_to={to} \
+                     xrefs_from={from}",
+                    row.program,
                     row.function.as_deref().unwrap_or("-")
                 );
             }

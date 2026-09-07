@@ -1,0 +1,32 @@
+{
+ "id": "m10-002",
+ "recorded_at": "2026-09-07T14:07:10.368854+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "`locate --follow` printed the facts each of 2 images holds at 00401000 and every number matched the service; the window listed 2 programs and held 112 functions after switching, against 12 before",
+ "metrics": {
+  "images.followed_programs": 2,
+  "images.follow_facts_compared": 8,
+  "images.ui_programs": 2,
+  "images.ui_switch_functions": 112
+ },
+ "followed": {
+  "tiny": {
+   "function": "-",
+   "symbols": 0,
+   "xrefs_to": 0,
+   "xrefs_from": 0
+  },
+  "win": {
+   "function": "FUN_00401000",
+   "symbols": 0,
+   "xrefs_to": 1,
+   "xrefs_from": 0
+  }
+ },
+ "desktop": {
+  "programs": 2,
+  "switch_functions": 112,
+  "first_program_functions": 12
+ }
+}

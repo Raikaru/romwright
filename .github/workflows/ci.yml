@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Move between the images a project holds
+        run: |
+          python3 tests/m10-002_image_navigation.py \
+            --report "$RUNNER_TEMP/image-navigation.json"
       - name: Answer cross-program questions in one project
         run: |
           python3 tests/m10-001_multi_image.py \

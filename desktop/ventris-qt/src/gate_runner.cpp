@@ -3,6 +3,7 @@
 #include "core_bridge.h"
 #include "decompiler_dock.h"
 #include "decompiler_view.h"
+#include "function_table_model.h"
 #include "functions_dock.h"
 #include "graph_canvas.h"
 #include "graph_dock.h"
@@ -262,11 +263,43 @@ void GateRunner::startFilteredXrefs() {
     auto *dock = window_->xrefsDock();
     connect(dock, &XrefsDock::loadFinished, this, [this, dock]() {
         metrics_.insert(QStringLiteral("ui.xrefs.declared_rows"), dock->renderedRows());
-        const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
-        metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
-        finish(true);
+        startProgramSwitch();
     }, Qt::SingleShotConnection);
     dock->setEvidence(QStringLiteral("declared"));
+}
+
+void GateRunner::startProgramSwitch() {
+    // A project holds several images. Listing them and switching to the last
+    // one is measured on the list the window then holds, not on the request.
+    connect(window_, &MainWindow::programsListed, this, [this](int count) {
+        metrics_.insert(QStringLiteral("ui.programs"), count);
+        if (count <= 0) {
+            finishProgramSwitch(0);
+            return;
+        }
+        connect(window_->functionsDock()->model(), &FunctionTableModel::refreshed,
+                this, [this]() {
+                    finishProgramSwitch(
+                        window_->functionsDock()->model()->rowCount(QModelIndex()));
+                }, Qt::SingleShotConnection);
+        // A selector that never switches must report what the list holds, not
+        // hang the gate: waiting forever turns a defect into a timeout.
+        QTimer::singleShot(2000, this, [this]() {
+            if (active_) {
+                finishProgramSwitch(
+                    window_->functionsDock()->model()->rowCount(QModelIndex()));
+            }
+        });
+        window_->selectProgramAt(count - 1);
+    }, Qt::SingleShotConnection);
+    window_->refreshPrograms();
+}
+
+void GateRunner::finishProgramSwitch(int functions) {
+    metrics_.insert(QStringLiteral("ui.programs_switch_functions"), functions);
+    const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
+    metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
+    finish(true);
 }
 
 void GateRunner::finish(bool ok, const QString &detail) {
@@ -282,5 +315,8 @@ void GateRunner::finish(bool ok, const QString &detail) {
         QTextStream err(stderr);
         err << "ui gate failed: " << detail << Qt::endl;
     }
+    // Stop the bridge before leaving: a request still in flight would answer
+    // into a window this exit is about to destroy.
+    bridge_->shutdown();
     QApplication::exit(ok ? 0 : 1);
 }
