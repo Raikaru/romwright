@@ -948,6 +948,32 @@ put in the table and the UI gate publishes it, so a class the core stops
 explaining shows up as a rendered row with no sentence
 (`tests/m9-001_provenance_explained.py`, `benchmarks/reports/m9-001.json`).
 
+## Measured improvement over stock, as one claim
+
+The opt-in passes are enumerated from `RuntimeConfig::from_env`, not listed by
+hand, and each is measured against DWARF truth on the locked corpus
+(`tests/m4-002_improvement_milestone.py`, `benchmarks/reports/m4-002.json`):
+
+| Checked | Measured |
+|---|---|
+| opt-in passes, each carried by a gate | **2** (`m4-001`, `m5-007`) |
+| each pass off unless asked, proved by the facts it leaves | 400 register-parameter facts with the flag, 0 without |
+| arities correct by default, equal to stock | 1236 / 1640 |
+| arities correct with the passes enabled, against stock's 1236 | **1637 / 1640** |
+| arities neither producer recovers, explained as dead parameters | 3 |
+
+The residual is a ceiling, not a defect: in each of those functions the ABI's
+second-argument register never appears in the recovered body -- 0 reads
+against 400, 801 and 802 reads of the first -- so the image carries no
+evidence for the parameter DWARF declares. Inventing it would be a rule that
+fits one fixture.
+
+Six controls prove the rules bite: an ungated opt-in pass, a pass forced on by
+default, a flag wired to nothing, a row where native drops below stock, a
+residual whose register *is* read, and a carried gate that stops passing. The
+first run of two of them passed against a stale binary; the gate now builds
+what it measures.
+
 ## Multi-image projects, as one claim
 
 The methods are not listed by hand: the gate scans every dispatch arm in
@@ -1473,6 +1499,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `baseline-ghidra-truth.json` | `m3-002` | M3 | recorded | `dwarf.arity_matched` 1640; `dwarf.functions` 1640; `ghidra.arity_correct` 1236; `ghidra.dwarf.fn.recall` 1.0000; `ghidra.dwarf.proto.arity` 0.7537; `ghidra.entries_matched` 1640; `ghidra.functions` 2008 | `tests/m3-002_baseline.py` |
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
+| `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1485,7 +1512,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 83; `diagnostic_runs` 12; `generated_rows` 82; `published_ids` 67 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 84; `diagnostic_runs` 12; `generated_rows` 83; `published_ids` 68 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

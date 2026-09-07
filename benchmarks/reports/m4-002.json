@@ -1,0 +1,64 @@
+{
+ "id": "m4-002",
+ "recorded_at": "2026-09-07T14:41:53.203000+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "2 opt-in passes, each gated and proved off with a clean environment; native matches stock on all 20 locked rows by default (1236/1640 arities) and beats it with the passes enabled (1637/1640 against stock's 1236); the 3 arities neither producer recovers are dead parameters whose register never appears in the function",
+ "metrics": {
+  "improvement.passes_gated": 2,
+  "improvement.passes_default_off": 2,
+  "improvement.arity_correct_stock": 1236,
+  "improvement.arity_correct_native_default": 1236,
+  "improvement.arity_correct_native_enabled": 1637,
+  "improvement.arity_truth_functions": 1640,
+  "improvement.residual_dead_parameters": 3
+ },
+ "passes": {
+  "VENTRIS_REGISTER_PARAMS": {
+   "field": "register_params",
+   "off": 0,
+   "on": 400
+  },
+  "VENTRIS_PROMOTE_TAILCALLS": {
+   "field": "promote_tailcalls",
+   "off": 0,
+   "on": 1
+  }
+ },
+ "residual": {
+  "x86_64_many_o2": {
+   "entry": "002041d0",
+   "body_bytes": 4408,
+   "instructions": 1606,
+   "first_argument_reads": 400,
+   "second_argument_reads": 0,
+   "truth_arity": 2
+  },
+  "aarch64_many_o2": {
+   "entry": "00213304",
+   "body_bytes": 4824,
+   "instructions": 1206,
+   "first_argument_reads": 801,
+   "second_argument_reads": 0,
+   "truth_arity": 2
+  },
+  "powerpc_many_o2": {
+   "entry": "10013034",
+   "body_bytes": 4836,
+   "instructions": 1209,
+   "first_argument_reads": 802,
+   "second_argument_reads": 0,
+   "truth_arity": 2
+  }
+ },
+ "milestone": {
+  "m4-001": {
+   "rows.i386_many_o2.on": 1.0,
+   "rows.i386_many_o2.off": 0.0
+  },
+  "m5-007": {
+   "metrics.arm7.dwarf.fn.recall": 1.0,
+   "metrics.corpus_unattributed": 0
+  }
+ }
+}
