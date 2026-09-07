@@ -1,0 +1,98 @@
+{
+  "gate": "signatures",
+  "milestone": "M2",
+  "task": "m2-011",
+  "commit": "19b24bfb19c3c2bd106a6c594d37a929e4bb35cc",
+  "date": "2026-09-07T00:20:27.017846+00:00",
+  "gate_sha256": "8209e420b129c216ec1f474064259748b40824ab02246ba27064d9c54332bae3",
+  "comparison": "record count and byte size of databases built from pinned static archives, with byte-identical rebuilds; not an II.3 metric",
+  "sources": [
+    {
+      "id": "aarch64_libc",
+      "status": "pass",
+      "package": "libc6-dev-arm64-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "archive_sha256": "e8e575befa51c9343216bcfd6c7b96a3fc0979fb3b80818d7b1bb723c792a789",
+      "language": "AARCH64:LE:64:v8A",
+      "members": 1894,
+      "functions": 3876,
+      "records": 3440,
+      "skipped": {
+        "too-weak": 436
+      },
+      "compared_bytes_min": 16,
+      "database_bytes": 2505301,
+      "database_sha256": "556446fca9d20d399a06dbb9aad71cd097d9301fe82cc64a05fcd9667662ca05",
+      "rebuild_identical": true,
+      "report_records_match": true
+    },
+    {
+      "id": "i386_libc",
+      "status": "pass",
+      "package": "libc6-dev-i386-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "archive_sha256": "b423038d0a1acf482600b1f4c7c36271c11dacfc874ae811686877a3a867ab09",
+      "language": "x86:LE:32:default",
+      "members": 1997,
+      "functions": 4077,
+      "records": 3853,
+      "skipped": {
+        "too-weak": 224
+      },
+      "compared_bytes_min": 16,
+      "database_bytes": 3113013,
+      "database_sha256": "f600323eca9e54a15ce93903982b31e8e21e567cbebdb574cacd7383ffe8b252",
+      "rebuild_identical": true,
+      "report_records_match": true
+    },
+    {
+      "id": "powerpc_libc",
+      "status": "pass",
+      "package": "libc6-dev-powerpc-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "archive_sha256": "1c97333a8f6198e0acadd95d37becab7e4f0620e993e0137655efff0c60a574d",
+      "language": "PowerPC:BE:32:default",
+      "members": 1885,
+      "functions": 4086,
+      "records": 3742,
+      "skipped": {
+        "conflicting": 2,
+        "too-weak": 342
+      },
+      "compared_bytes_min": 16,
+      "database_bytes": 3393840,
+      "database_sha256": "7bfcf3a48a5aba3e2808268a7e04497363fd531b2a207d5b2a5cde72b709522c",
+      "rebuild_identical": true,
+      "report_records_match": true
+    },
+    {
+      "id": "aarch64_libm",
+      "status": "pass",
+      "package": "libc6-dev-arm64-cross_2.36-8cross1",
+      "license": "LGPL-2.1-or-later",
+      "archive_sha256": "e2c33220ce8bb330d49a36c20feda13ab574045c08c6d2efa47ed66a44a8ab7c",
+      "language": "AARCH64:LE:64:v8A",
+      "members": 578,
+      "functions": 1476,
+      "records": 1257,
+      "skipped": {
+        "too-weak": 219
+      },
+      "compared_bytes_min": 16,
+      "database_bytes": 1280232,
+      "database_sha256": "170860ef55a455e5f5e6b8d703a4daca6c3998f2ae03720db490f8f83f007861",
+      "rebuild_identical": true,
+      "report_records_match": true
+    }
+  ],
+  "summary": {
+    "pass": 4,
+    "fail": 0,
+    "skipped": 0
+  },
+  "totals": {
+    "records": 12292,
+    "database_bytes": 10292386
+  },
+  "passed": true
+}
