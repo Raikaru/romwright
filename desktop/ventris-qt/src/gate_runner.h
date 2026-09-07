@@ -14,10 +14,11 @@ class GateRunner final : public QObject {
 public:
     explicit GateRunner(MainWindow *window, CoreBridge *bridge, QObject *parent = nullptr);
 
-    void run();
+    void run(bool store_only = false);
     void modelRefreshed();
 
 private:
+    void recordInstallFacts();
     void startLargestFunction();
     void startDecompile(const QString &address);
     void startGraph();
@@ -28,6 +29,7 @@ private:
 
     enum class Stage { Inactive, LoadingList, Filtering, ClearingFilter };
     bool active_ = false;
+    bool store_only_ = false;
     Stage stage_ = Stage::Inactive;
     QElapsedTimer timer_;
     QJsonObject metrics_;

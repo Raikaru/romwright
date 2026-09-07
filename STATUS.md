@@ -2960,15 +2960,54 @@ m3-003, all three wired into continuous integration)
   `xref_names_the_function_that_contains_its_source`, which asserts a source
   inside `main`, a source in data, and a source one byte past `main`'s end.
 
+### m6-003 evidence
+- `7427641` commits the failing acceptance
+  (`tests/m6-003_desktop_package.py`).
+- **`ui.install.ok` was never measured.** `gate_runner.cpp` read it from
+  `qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK")`, and
+  `tests/package_install_smoke.sh` sets that variable itself -- the gate
+  asserted a value its own harness supplied.
+- Two additive metrics now measure what the old one claimed, both computed by
+  the app: `ui.install.prefix_ok` (the executable is not running from a build
+  tree: no `CMakeCache.txt`/`CMakeFiles` beside it or one level up) and
+  `ui.install.store_only_ok` (the store-facing workflow completed with **no**
+  `VENTRIS_*` variable set). A new `--gate --store-only` mode stops after
+  import, list and filter, so a packaged run needs no SLEIGH data.
+- The gate builds the CPack archive with the three commands
+  `docs/desktop.md` documents, asserts the page documents those targets,
+  extracts the archive into a clean prefix, refuses an archive member that
+  escapes it, and launches the extracted binary offscreen with every
+  `VENTRIS_*` variable stripped from the environment.
+- Measured (`benchmarks/reports/m6-003.json`): `ventris-0.5-Linux-x86_64.tar.gz`
+  on Linux/x86_64 with Qt 6.11.2, `ui.install.prefix_ok` true,
+  `ui.install.store_only_ok` true, `ui.list.load_ms` 1.96 and
+  `ui.list.filter_ms` inside the M0 thresholds. **The report names its own
+  platform**, so single-machine evidence cannot read as three-OS evidence;
+  the CI `qt` job runs it on Linux, macOS and Windows and uploads each report.
+- Negative controls, run against the same binary: the build-tree executable
+  reports `ui.install.prefix_ok: false`, and setting any `VENTRIS_*` variable
+  reports `ui.install.store_only_ok: false`.
+
+## Proposed changes (reserved for the human)
+- Retire `ui.install.ok` from the M0 UI gate. It reports whether
+  `VENTRIS_UI_INSTALL_OK` is set, not whether an installation works, and
+  `ui.install.prefix_ok` plus `ui.install.store_only_ok` (m6-003) measure the
+  fact instead. AGENTS.md II.1 reserves metric-definition changes, so the
+  metric and `benchmarks/reports/ui-gate.json` are untouched;
+  `tests/package_install_smoke.sh` still passes because it still sets the
+  variable. Removing it means deleting the metric from
+  `benchmarks/ui_gate.py`'s `ALL_METRICS`, the `qEnvironmentVariableIsSet`
+  read in `desktop/ventris-qt/src/gate_runner.cpp`, and the `VENTRIS_UI_INSTALL_OK`
+  export in the smoke test, then re-recording the UI gate report.
+
 ## Next task
-- m6-003: the desktop package. `desktop/ventris-qt` builds a Qt 6 workstation
-  and `packaging/` produces a CPack TGZ, but nothing documented or gated says
-  how a user gets from a checkout to a running window, and the recorded
-  `ui.install.ok` came from a local offscreen run rather than the three-OS CI
-  matrix. The acceptance must build and launch the packaged desktop
-  offscreen, drive one real workflow through it, and record which platforms
-  the evidence covers. Its acceptance test does not exist yet; write it
-  first.
+- m6-004: publish the release. `RELEASING.md` describes the steps and
+  `packaging/` builds the update manifest and SBOM, but no gate proves a
+  release artifact is reproducible from a clean checkout, carries the SBOM it
+  claims, and verifies against the manifest. The acceptance must produce the
+  artifacts, verify the manifest and SBOM against them, and fail if a
+  documented release step does not run. Its acceptance test does not exist
+  yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

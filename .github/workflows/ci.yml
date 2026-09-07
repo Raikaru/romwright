@@ -364,3 +364,14 @@ jobs:
         run: cmake --build build/ventris-qt --config Release --target ventris-qt
       - name: Build installer archive
         run: cmake --build build/ventris-qt --config Release --target package
+      - name: Package, install and launch the desktop
+        shell: bash
+        run: |
+          python3 tests/m6-003_desktop_package.py \
+            --build-dir build/ventris-qt \
+            --report "$RUNNER_TEMP/desktop-package-${{ runner.os }}.json"
+      - name: Upload desktop package evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-package-${{ runner.os }}
+          path: ${{ runner.temp }}/desktop-package-${{ runner.os }}.json

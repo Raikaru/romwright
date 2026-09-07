@@ -180,7 +180,7 @@ MainWindow::~MainWindow() {
 
 QString MainWindow::program() const { return program_edit_->text(); }
 QString MainWindow::binary() const { return binary_edit_->text(); }
-void MainWindow::runGate() { gate_runner_->run(); }
+void MainWindow::runGate(bool store_only) { gate_runner_->run(store_only); }
 
 void MainWindow::setStatus(const QString &message, bool error) {
     if (status_ != nullptr) {

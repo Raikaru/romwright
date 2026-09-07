@@ -37,7 +37,7 @@ public:
     ~MainWindow() override;
 
     /// Runs the deterministic offscreen UI gate and exits the application.
-    void runGate();
+    void runGate(bool store_only = false);
 
     // Getters for modular docks and controllers
     FunctionsDock *functionsDock() const { return functions_dock_; }

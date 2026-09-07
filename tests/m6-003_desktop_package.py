@@ -43,6 +43,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "desktop" / "ventris-qt"
+DOC = ROOT / "docs" / "desktop.md"
 FIXTURE = ROOT / "tests" / "fixtures-src" / "tiny_bin"
 # The same list thresholds the M0 UI gate uses; unchanged.
 THRESHOLDS = {"ui.list.load_ms": 500.0, "ui.list.filter_ms": 100.0}
@@ -64,8 +65,21 @@ def qt_available() -> str | None:
     return None
 
 
+def documented_commands() -> list[str]:
+    """The build commands `docs/desktop.md` tells a reader to run."""
+    assert DOC.is_file(), f"{DOC.relative_to(ROOT)} does not exist"
+    return [line.strip() for line in DOC.read_text(encoding="utf-8").splitlines()
+            if line.startswith("cmake ")]
+
+
 def build_package(build: Path, timeout: int) -> Path:
     generator = ["-G", "Ninja"] if shutil.which("ninja") else []
+    # The page and the gate must run the same targets; a page that drifts from
+    # the build it documents is the failure this checks for.
+    documented = documented_commands()
+    for target in ("-S desktop/ventris-qt", "--target ventris-qt", "--target package"):
+        assert any(target in command for command in documented), (
+            f"docs/desktop.md documents no command with {target!r}: {documented}")
     subprocess.run(["cmake", "-S", str(SOURCE), "-B", str(build),
                     "-DCMAKE_BUILD_TYPE=Release", *generator],
                    cwd=ROOT, check=True, timeout=timeout,
