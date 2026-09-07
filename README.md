@@ -948,6 +948,26 @@ put in the table and the UI gate publishes it, so a class the core stops
 explaining shows up as a rendered row with no sentence
 (`tests/m9-001_provenance_explained.py`, `benchmarks/reports/m9-001.json`).
 
+## Asking for facts by what proved them
+
+Saying what proved a fact is only half of it; a consumer has to be able to ask
+by that standard. `symbols_page` and `xrefs_page` take `evidence` --
+`declared`, `decoded` or `inferred` -- and the filter is built from the shared
+table's sources, so it cannot mean one set in a query and another in the fact
+it returns.
+
+| Checked over the API | Measured |
+|---|---|
+| filtered rows are exactly the unfiltered rows of that kind | 20 addresses across 5 images |
+| the filtered `total` counts filtered facts, and `revision` is unchanged | 104 references, 135 symbols |
+| two half-pages reassemble the filtered set in order | every kind with two or more facts |
+| an unknown kind is `invalid_params` | refused on every image |
+
+An audit that wants only what the image states no longer fetches every
+reference to throw most away, and the page total stops describing rows the
+page cannot return (`tests/m9-003_evidence_filter.py`,
+`benchmarks/reports/m9-003.json`).
+
 ## What a class proves, and when a number may exist
 
 A sentence says what a class read; it does not say how much weight it carries.
@@ -1336,7 +1356,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 76; `diagnostic_runs` 12; `generated_rows` 75; `published_ids` 60 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 77; `diagnostic_runs` 12; `generated_rows` 76; `published_ids` 61 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1354,6 +1374,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-006.json` | `m8-006` | M8 | pass | `pe.classes.declared` 4; `pe.classes.unexercised` 0; `pe.classes.unmeasured` 0; `pe.externals` 260; `pe.references` 865 | `tests/m8-006_pe_parity.py` |
 | `m9-001.json` | `m9-001` | M9 | pass | `provenance.api_facts_checked` 10; `provenance.classes` 15; `provenance.declared` 15; `provenance.observed` 11; `provenance.unexplained` 0; `ui.xrefs.rows` 19; `ui.xrefs.unexplained` 0 | `tests/m9-001_provenance_explained.py` |
 | `m9-002.json` | `m9-002` | M9 | pass | `evidence.attributed.native-analysis:constant-propagation` 1.0000; `evidence.attributed.native-import` 1.0000; `evidence.attributed.native-import:branch` 1.0000; `evidence.attributed.native-import:elf-pointer` 1.0000; `evidence.attributed.native-import:elf-reloc` 1.0000; `evidence.attributed.native-import:elf-unwind` 1.0000; `evidence.attributed.native-import:pe-export` 1.0000; `evidence.attributed.native-import:pe-reloc` 1.0000; `evidence.attributed.native-import:pe-tls` 1.0000; `evidence.attributed.native-import:pe-unwind` 1.0000; `evidence.attributed.native-import:thunk` 1.0000; `evidence.classes` 15; `evidence.declared` 8; `evidence.declared_elsewhere` 1; `evidence.declared_exercised` 7; `evidence.references` 4665; `evidence.unbacked_confidence` 0 | `tests/m9-002_fact_confidence.py` |
+| `m9-003.json` | `m9-003` | M9 | pass | `filter.addresses` 20; `filter.facts_matched` 104; `filter.images` 5; `filter.kinds` 3; `filter.symbols_matched` 135 | `tests/m9-003_evidence_filter.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

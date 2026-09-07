@@ -23,6 +23,17 @@ pub enum EvidenceKind {
 }
 
 impl EvidenceKind {
+    /// The kind named by a request, or `None` -- a caller asking for a kind
+    /// that does not exist is refused, never answered with an empty page.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "declared" => Some(Self::Declared),
+            "decoded" => Some(Self::Decoded),
+            "inferred" => Some(Self::Inferred),
+            _ => None,
+        }
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Declared => "declared",
@@ -164,6 +175,17 @@ pub fn explain(source: &str) -> Option<&'static str> {
 /// What kind of evidence the class rests on, or `None` for an unknown source.
 pub fn evidence(source: &str) -> Option<EvidenceKind> {
     class(source).map(|entry| entry.evidence)
+}
+
+/// Every class of one kind. A filter is built from this rather than from a
+/// list kept beside it, so asking for `declared` cannot mean one set in a
+/// query and another in the fact it returns.
+pub fn sources(kind: EvidenceKind) -> Vec<&'static str> {
+    CLASSES
+        .iter()
+        .filter(|entry| entry.evidence == kind)
+        .map(|entry| entry.source)
+        .collect()
 }
 
 #[cfg(test)]

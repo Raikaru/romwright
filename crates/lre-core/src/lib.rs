@@ -451,9 +451,10 @@ impl Core {
         program: &str,
         offset: u64,
         limit: u64,
+        evidence: Option<lre_model::provenance::EvidenceKind>,
     ) -> Result<lre_model::Page<SymbolRow>> {
         let id = self.db.program_id(program)?;
-        let (rows, total, revision) = self.db.symbols_page(id, offset, limit)?;
+        let (rows, total, revision) = self.db.symbols_page(id, offset, limit, evidence)?;
         Ok(lre_model::Page { rows, offset, total, revision })
     }
 
@@ -465,9 +466,11 @@ impl Core {
         incoming: bool,
         offset: u64,
         limit: u64,
+        evidence: Option<lre_model::provenance::EvidenceKind>,
     ) -> Result<lre_model::Page<XrefRow>> {
         let id = self.db.program_id(program)?;
-        let (rows, total, revision) = self.db.xrefs_page(id, address, incoming, offset, limit)?;
+        let (rows, total, revision) =
+            self.db.xrefs_page(id, address, incoming, offset, limit, evidence)?;
         Ok(lre_model::Page { rows, offset, total, revision })
     }
 

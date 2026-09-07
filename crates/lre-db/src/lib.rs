@@ -11,6 +11,8 @@ use lre_model::{
     SearchHit, StackVariableRow, StringRow, SymbolRow, TraceEvent, TypeDefRow, TypeFieldRow,
     TypeGraphNode, TypeLinkRow, XrefRow, FactKind, FactProvenance,
 };
+use lre_model::provenance::EvidenceKind;
+use rusqlite::types::Value;
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
@@ -825,16 +827,32 @@ impl ProjectDb {
         program: ProgramId,
         offset: u64,
         limit: u64,
+        evidence: Option<EvidenceKind>,
     ) -> Result<(Vec<SymbolRow>, Option<u64>, u64)> {
-        let total: i64 = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM symbols WHERE program_id = ?1", params![program.0], |r| r.get(0))?;
-        let mut stmt = self.conn.prepare(
-            "SELECT address, name, external, source FROM symbols
-             WHERE program_id = ?1 ORDER BY address LIMIT ?2 OFFSET ?3",
+        // The filter narrows the count as well as the window: a total that
+        // counted facts the page cannot return would be a lie about the page.
+        let (filter, bound) = evidence_clause("source", evidence, 2);
+        let total: i64 = self.conn.query_row(
+            &format!("SELECT COUNT(*) FROM symbols WHERE program_id = ?1{filter}"),
+            rusqlite::params_from_iter(
+                std::iter::once(Value::Integer(program.0 as i64)).chain(bound.iter().cloned())),
+            |r| r.get(0),
         )?;
+        let (filter, bound) = evidence_clause("source", evidence, 4);
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT address, name, external, source FROM symbols
+             WHERE program_id = ?1{filter} ORDER BY address LIMIT ?2 OFFSET ?3",
+        ))?;
         let rows = stmt
-            .query_map(params![program.0, limit, offset], map_symbol)?
+            .query_map(
+                rusqlite::params_from_iter(
+                    [Value::Integer(program.0 as i64), Value::Integer(limit as i64),
+                     Value::Integer(offset as i64)]
+                        .into_iter()
+                        .chain(bound),
+                ),
+                map_symbol,
+            )?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok((rows, Some(total as u64), self.revision(program)?))
     }
@@ -847,34 +865,45 @@ impl ProjectDb {
         incoming: bool,
         offset: u64,
         limit: u64,
+        evidence: Option<EvidenceKind>,
     ) -> Result<(Vec<XrefRow>, Option<u64>, u64)> {
         let cell = addr_cell(address);
         let (src, dst) = (cell.clone(), cell);
-        let sql_total = if incoming {
-            "SELECT COUNT(*) FROM xrefs WHERE program_id = ?1 AND dst = ?2"
-        } else {
-            "SELECT COUNT(*) FROM xrefs WHERE program_id = ?1 AND src = ?2"
-        };
-        let total: i64 = self.conn
-            .query_row(sql_total, params![program.0, dst], |r| r.get(0))?;
+        let column = if incoming { "dst" } else { "src" };
+        let (filter, bound) = evidence_clause("provenance", evidence, 3);
+        let total: i64 = self.conn.query_row(
+            &format!(
+                "SELECT COUNT(*) FROM xrefs \
+                 WHERE program_id = ?1 AND {column} = ?2{filter}"
+            ),
+            rusqlite::params_from_iter(
+                [Value::Integer(program.0 as i64), Value::Text(dst.clone())]
+                    .into_iter()
+                    .chain(bound),
+            ),
+            |r| r.get(0),
+        )?;
         // The containing function resolves at query time: the function
         // whose [entry, entry+size) range holds the source address.
-        let (sql_win, key) = if incoming {
-            ("SELECT x.src, x.dst, x.kind, \
+        let (order, key) = if incoming { ("x.src", dst) } else { ("x.dst", src) };
+        let (filter, bound) = evidence_clause("x.provenance", evidence, 5);
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT x.src, x.dst, x.kind, \
               NULL, \
               x.provenance, x.provenance_kind, x.confidence \
-              FROM xrefs x WHERE x.program_id = ?1 AND x.dst = ?2
-              ORDER BY x.src LIMIT ?3 OFFSET ?4", dst)
-        } else {
-            ("SELECT x.src, x.dst, x.kind, \
-              NULL, \
-              x.provenance, x.provenance_kind, x.confidence \
-              FROM xrefs x WHERE x.program_id = ?1 AND x.src = ?2
-              ORDER BY x.dst LIMIT ?3 OFFSET ?4", src)
-        };
-        let mut stmt = self.conn.prepare(sql_win)?;
+              FROM xrefs x WHERE x.program_id = ?1 AND x.{column} = ?2{filter}
+              ORDER BY {order} LIMIT ?3 OFFSET ?4"
+        ))?;
         let mut rows = stmt
-            .query_map(params![program.0, key, limit, offset], map_xref)?
+            .query_map(
+                rusqlite::params_from_iter(
+                    [Value::Integer(program.0 as i64), Value::Text(key),
+                     Value::Integer(limit as i64), Value::Integer(offset as i64)]
+                        .into_iter()
+                        .chain(bound),
+                ),
+                map_xref,
+            )?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         self.resolve_containing(program, &mut rows)?;
         Ok((rows, Some(total as u64), self.revision(program)?))
@@ -2327,6 +2356,30 @@ fn validate_fact_provenance(provenance: &FactProvenance) -> Result<&'static str>
         FactKind::Inferred => "inferred",
         FactKind::Asserted => "asserted",
     })
+}
+
+/// `AND <column> IN (?n, ?n+1, ...)` for one evidence kind, with the sources
+/// taken from the shared table. A kind with no classes matches nothing rather
+/// than producing `IN ()`, which is not SQL.
+fn evidence_clause(
+    column: &str,
+    evidence: Option<EvidenceKind>,
+    first_index: usize,
+) -> (String, Vec<Value>) {
+    let Some(kind) = evidence else {
+        return (String::new(), Vec::new());
+    };
+    let sources = lre_model::provenance::sources(kind);
+    if sources.is_empty() {
+        return (" AND 0".to_owned(), Vec::new());
+    }
+    let placeholders: Vec<String> = (0..sources.len())
+        .map(|offset| format!("?{}", first_index + offset))
+        .collect();
+    (
+        format!(" AND {column} IN ({})", placeholders.join(", ")),
+        sources.into_iter().map(|source| Value::Text(source.to_owned())).collect(),
+    )
 }
 
 fn map_fact_provenance(r: &Row<'_>, source_index: usize) -> rusqlite::Result<FactProvenance> {

@@ -199,6 +199,7 @@ impl ApiService {
                     &program,
                     u64_param(params, "offset")?.unwrap_or(0),
                     u64_param(params, "limit")?.unwrap_or(256),
+                    evidence_param(params)?,
                 ))
             }
             "xrefs" => {
@@ -226,6 +227,7 @@ impl ApiService {
                             .unwrap_or(true),
                         u64_param(params, "offset")?.unwrap_or(0),
                         u64_param(params, "limit")?.unwrap_or(256),
+                        evidence_param(params)?,
                     ),
                 )
             }
@@ -558,6 +560,26 @@ fn value<T: Serialize, E: std::fmt::Display>(result: Result<T, E>) -> Result<Val
     let value = result.map_err(|error| DispatchError::Request(error.to_string()))?;
     serde_json::to_value(value)
         .map_err(|error| DispatchError::Request(format!("encode result: {error}")))
+}
+
+/// The evidence kind a request asks for. A kind the table does not define is
+/// refused: an empty page would look like an answer.
+fn evidence_param(
+    params: &Value,
+) -> Result<Option<lre_model::provenance::EvidenceKind>, DispatchError> {
+    match params.get("evidence") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => lre_model::provenance::EvidenceKind::parse(text)
+            .map(Some)
+            .ok_or_else(|| {
+                DispatchError::Request(format!(
+                    "params.evidence must be declared, decoded or inferred, not {text:?}"
+                ))
+            }),
+        Some(_) => Err(DispatchError::Request(
+            "params.evidence must be a string".into(),
+        )),
+    }
 }
 
 fn string_param(params: &Value, key: &str) -> Result<String, DispatchError> {
