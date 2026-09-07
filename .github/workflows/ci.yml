@@ -47,6 +47,11 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Filter paged reads by evidence kind
+        run: |
+          python3 tests/m9-003_evidence_filter.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/evidence-filter.json"
       - name: Score what each provenance class proves
         run: |
           python3 tests/m9-002_fact_confidence.py \

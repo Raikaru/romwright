@@ -1,0 +1,151 @@
+{
+ "id": "m9-003",
+ "recorded_at": "2026-09-07T13:21:58.405563+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "5 images: 20 addresses filtered by each of 3 evidence kinds, 104 references and 135 symbols returned exactly by kind with honest totals, paging preserved, and an unknown kind refused",
+ "metrics": {
+  "filter.images": 5,
+  "filter.addresses": 20,
+  "filter.facts_matched": 104,
+  "filter.symbols_matched": 135,
+  "filter.kinds": 3
+ },
+ "images": [
+  {
+   "id": "x86_64_plain_o0.bin",
+   "addresses": [
+    {
+     "address": "00201680",
+     "references": 2,
+     "matched": 2
+    },
+    {
+     "address": "002016a0",
+     "references": 2,
+     "matched": 2
+    },
+    {
+     "address": "00201590",
+     "references": 1,
+     "matched": 1
+    },
+    {
+     "address": "002015c0",
+     "references": 1,
+     "matched": 1
+    }
+   ],
+   "symbols": 4,
+   "matched": 4
+  },
+  {
+   "id": "x86_64_plain_o2.bin",
+   "addresses": [
+    {
+     "address": "00201680",
+     "references": 2,
+     "matched": 2
+    },
+    {
+     "address": "00201580",
+     "references": 1,
+     "matched": 1
+    },
+    {
+     "address": "002015b0",
+     "references": 1,
+     "matched": 1
+    },
+    {
+     "address": "002015c0",
+     "references": 1,
+     "matched": 1
+    }
+   ],
+   "symbols": 4,
+   "matched": 4
+  },
+  {
+   "id": "x86_64_plain_pie.bin",
+   "addresses": [
+    {
+     "address": "00101730",
+     "references": 2,
+     "matched": 2
+    },
+    {
+     "address": "00101630",
+     "references": 1,
+     "matched": 1
+    },
+    {
+     "address": "00101660",
+     "references": 1,
+     "matched": 1
+    },
+    {
+     "address": "00101690",
+     "references": 1,
+     "matched": 1
+    }
+   ],
+   "symbols": 9,
+   "matched": 9
+  },
+  {
+   "id": "tiny_pe32.exe",
+   "addresses": [
+    {
+     "address": "00402670",
+     "references": 28,
+     "matched": 28
+    },
+    {
+     "address": "004071e0",
+     "references": 17,
+     "matched": 17
+    },
+    {
+     "address": "00408740",
+     "references": 13,
+     "matched": 13
+    },
+    {
+     "address": "004087f8",
+     "references": 13,
+     "matched": 13
+    }
+   ],
+   "symbols": 81,
+   "matched": 81
+  },
+  {
+   "id": "exports32.dll",
+   "addresses": [
+    {
+     "address": "61b81600",
+     "references": 6,
+     "matched": 6
+    },
+    {
+     "address": "61b81650",
+     "references": 4,
+     "matched": 4
+    },
+    {
+     "address": "61b82190",
+     "references": 4,
+     "matched": 4
+    },
+    {
+     "address": "61b81000",
+     "references": 3,
+     "matched": 3
+    }
+   ],
+   "symbols": 37,
+   "matched": 37
+  }
+ ]
+}

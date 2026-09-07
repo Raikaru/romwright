@@ -108,7 +108,7 @@ fn dispatch(
             let program = required_string(request, "program")?;
             let offset = optional_u64(request, "offset")?.unwrap_or(0);
             let limit = optional_u64(request, "limit")?.unwrap_or(256);
-            to_value(core.symbols_page(&program, offset, limit))
+            to_value(core.symbols_page(&program, offset, limit, evidence(request)?))
         }
         "xrefs_page" => {
             let program = required_string(request, "program")?;
@@ -120,7 +120,7 @@ fn dispatch(
             let offset = optional_u64(request, "offset")?.unwrap_or(0);
             let limit = optional_u64(request, "limit")?.unwrap_or(256);
             to_value(core.xrefs_page(
-                &program, &address, incoming, offset, limit,
+                &program, &address, incoming, offset, limit, evidence(request)?,
             ))
         }
         "comments" => {
@@ -467,6 +467,18 @@ fn dispatch(
             serde_json::to_value(doc).map_err(|error| format!("encode result: {error}"))
         }
         _ => Err(format!("unknown Core API method: {method}")),
+    }
+}
+
+/// The evidence kind a window asks for; an unknown kind is an error, not an
+/// empty window.
+fn evidence(request: &Value) -> Result<Option<lre_model::provenance::EvidenceKind>, String> {
+    match request.get("evidence") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => lre_model::provenance::EvidenceKind::parse(text)
+            .map(Some)
+            .ok_or_else(|| format!("evidence must be declared, decoded or inferred, not {text:?}")),
+        Some(_) => Err("evidence must be a string".to_owned()),
     }
 }
 

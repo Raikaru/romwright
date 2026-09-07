@@ -3508,16 +3508,41 @@ m3-003, all three wired into continuous integration)
   `data_xrefs.sh` all pass.
 - Six additive metric names (`evidence.*`); no II.3 definition changed.
 
+### m9-003 evidence
+- `da0c44e` commits the failing acceptance
+  (`tests/m9-003_evidence_filter.py`): `evidence` was ignored, so a filtered
+  page returned the unfiltered rows.
+- `symbols_page` and `xrefs_page` now take `evidence` (`declared`, `decoded`,
+  `inferred`) through `lre-api`, `lre-core`, `lre-db` and the Qt bridge. The
+  `IN (...)` clause is built from `provenance::sources(kind)`, so the filter
+  is the same table the API reports on each fact and cannot drift from it.
+- Measured (`benchmarks/reports/m9-003.json`): over 5 images and 20
+  addresses, each of the three kinds returns **exactly** the unfiltered rows
+  of that kind -- 104 references and 135 symbols -- with the filtered `total`
+  counting filtered facts, `revision` unchanged, two half-pages reassembling
+  the set in order, and an unknown kind refused as `invalid_params`.
+- The narrowed count is the point: a total that counted facts the page cannot
+  return would be a lie about the page. The control that makes the total
+  ignore the filter fails (`total is 2 for 0 filtered facts`), and the control
+  that answers an unknown kind instead of refusing it fails.
+- Documented where paging is documented (`docs/core-api.md`), with both
+  exchanges executed by `m6-002` -- which caught my first draft claiming
+  `total: 1` where the real answer is 2.
+- Regression: `cargo test --workspace` 238 pass; `m9-001`, `m9-002`,
+  `m9-003`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m8-006`, `m5-012`,
+  `support_matrix_test.py`, `m2-015`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh` all pass.
+- Five additive metric names (`filter.*`); no II.3 definition changed.
+
 ## Next task
-- m9-003: close M9 by making a fact's evidence usable, not just visible. The
-  API now says what proved each fact, and nothing lets a consumer ask for
-  facts *by* that standard: a script auditing a binary has to fetch every
-  reference and filter client-side, and the desktop cannot show "declared
-  only". The acceptance must add an evidence filter to the paged reads
-  (`xrefs_page`, `symbols_page`), prove per corpus entry that filtering by
-  each kind returns exactly the facts whose class carries that kind, keep the
-  page total and revision honest under the filter, and document the parameter
-  where `docs/core-api.md` documents paging. Its acceptance test does not
+- m9-004: close M9 by putting the filter in front of a user. The API and the
+  Qt bridge accept `evidence`, and no consumer passes it: `XrefsDock` fetches
+  every reference and the CLI has no flag, so the audit the filter exists for
+  still cannot be run from a terminal or a window. The acceptance must add the
+  flag to `lre-cli xrefs` and a kind selector to the xrefs dock, prove through
+  the documented CLI walkthrough that filtering a real binary prints only the
+  facts of that kind, and measure the dock's filtered row count in the UI gate
+  the way `ui.xrefs.unexplained` is measured. Its acceptance test does not
   exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is

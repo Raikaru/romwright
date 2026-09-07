@@ -94,6 +94,19 @@ total and the store revision the window was read at, so a client can tell a
 stale page from a changed program: `functions_page`, `symbols_page`,
 `xrefs_page` and `jobs_page` all answer that shape.
 
+`symbols_page` and `xrefs_page` also take `evidence`, one of `declared`,
+`decoded` or `inferred` -- the kind each fact reports. The filter narrows the
+`total` as well as the window, so an audit that wants only what the image
+states does not pay for the rest, and a kind that does not exist is
+`invalid_params` rather than an empty page:
+
+```json
+{"api": 2, "id": 11, "method": "xrefs_page", "params": {"program": "$PROGRAM", "address": "00400466", "evidence": "declared", "offset": 0, "limit": 8}}
+{"api": 2, "id": 11, "result": {"offset": 0, "total": 2}}
+{"api": 2, "id": 12, "method": "xrefs_page", "params": {"program": "$PROGRAM", "address": "00400466", "evidence": "probably"}}
+{"api": 2, "id": 12, "error": {"code": "invalid_params", "message": "request: params.evidence must be declared, decoded or inferred, not \"probably\""}}
+```
+
 ## What needs the SLEIGH console
 
 `xrefs` answers from the store, and the store holds more when the SLEIGH
