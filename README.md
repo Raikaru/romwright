@@ -244,6 +244,37 @@ corpus, raw oracles and scoring views before running `benchmarks/discovery_gate.
 over all 20 inputs. Its reports and corpus manifest are retained in the
 `m1-discovery-reports` artifact even when a step fails.
 
+### DWARF ground truth (M3)
+
+Every `fn.*` number above measures parity with Ghidra: it says the two tools
+agree, not that either is right. `benchmarks/dwarf_gate.py` scores against
+the compiler instead — concrete `DW_TAG_subprogram` entries from each
+unstripped twin, restricted to executable segments and biased to the store's
+own image base for ET_DYN (DWARF records link-time addresses; the loader
+picks the base; without that bias the PIE rows score 0).
+
+DWARF is silent about CRT stubs, PLT slots and linker-generated code that
+both tools legitimately recover, so recall is the metric and the rest is
+*attributed*: a symbol in the unstripped twin, a thunk the store proved, a
+linker stub inside a `.plt*` section, or a function stock Ghidra also
+created. An entry with none of those is an invented function and fails the
+gate. Stock Ghidra is scored on the same truth, so later milestones claim
+improvement against a recorded number.
+
+| Producer | DWARF functions | Recovered | `dwarf.fn.recall` | Unattributed |
+|---|---|---|---|---|
+| native import | 1 640 | 1 640 | **1.0000** | **0** of 263 undescribed |
+| stock Ghidra 12.1.3 | 1 640 | 1 640 | **1.0000** | baseline column |
+
+```sh
+python3 tests/m3-001_dwarf_truth.py --corpus-dir CORPUS
+```
+
+Thresholds: `dwarf.fn.recall >= 0.98` per row and in aggregate for both
+producers, `dwarf.fn.unattributed == 0`. Evidence:
+`benchmarks/reports/m3-001.json` (20 rows, per-row provenance digests for the
+binary, its twin and the pinned oracle).
+
 Native ELF32/ELF64 discovery shares `.init`, `.fini` and `.plt` section-start
 seeds, alongside unwind-index entries, PLT metadata, flow-confirmed
 initializer/data pointers and the existing batched flow walker.
