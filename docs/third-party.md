@@ -20,6 +20,15 @@ LLVM is licensed under Apache-2.0 with LLVM exceptions
 ([license](https://llvm.org/LICENSE.txt)). No proprietary tool output or leaked
 source is used as an oracle.
 
+## Function signature database
+
+`.vsig` (`docs/vsig.md`, `crates/lre-sig`) is Ventris' own container. Pattern
+plus per-byte compare mask is a general, publicly described idea; no
+proprietary signature format documentation, database or tool output was
+consulted, and nothing is byte-compatible with one. Every record carries the
+exact package build it was extracted from and that package's license, so a
+shipped database can be audited and redistributed on those terms.
+
 ## GameCube DOL format
 
 The independent DOL parser follows the public section-table layout documented
