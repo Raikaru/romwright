@@ -2179,11 +2179,19 @@ M2 — Program-model parity
 - m2-012 is complete. No metric definition, corpus member, or reserved
   decision changed.
 
+## m2-013 implementation slices
+- a: commit the failing gate (`benchmarks/rtti_gate.py`) with polymorphic gate
+  fixtures (`tests/fixtures-src/rtti.cpp`) plus the locked corpus C++ entries,
+  which define no classes and must stay empty.
+- b: record named ELF data relocations in the loader and add schema-v11
+  provenance-owned class/vtable/base storage with ownership regressions.
+- c: recover Itanium typeinfo, its type name, the primary vtable and the base
+  list; expose the facts through Core/API and document the shapes. Slices stay
+  below 800 changed lines each.
+
 ## Next task
-- m2-013: recover Itanium C++ typeinfo, vtables and `__cxa_*` calls into class
-  and vtable facts, with the corpus C++ binary's class count matching the
-  oracle's vtable count. Its acceptance test does not exist yet; write it
-  first.
+- m2-013: recover Itanium C++ typeinfo, vtables and classes as facts, with the
+  recovered class set equal to the compiler's own `_ZTV` vtable set.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
