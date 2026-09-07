@@ -12,7 +12,10 @@
 #include "navigation_controller.h"
 
 #include <QApplication>
+#include <QCoreApplication>
+#include <QDir>
 #include <QJsonArray>
+#include <QProcessEnvironment>
 #include <QJsonDocument>
 #include <QTableView>
 #include <QTextStream>
@@ -21,11 +24,12 @@
 GateRunner::GateRunner(MainWindow *window, CoreBridge *bridge, QObject *parent)
     : QObject(parent), window_(window), bridge_(bridge) {}
 
-void GateRunner::run() {
+void GateRunner::run(bool store_only) {
     if (active_) {
         return;
     }
     active_ = true;
+    store_only_ = store_only;
     stage_ = Stage::Inactive;
     window_->functionsDock()->filterTimer()->setInterval(0);
     metrics_ = QJsonObject();
@@ -81,10 +85,44 @@ void GateRunner::modelRefreshed() {
             stage_ = Stage::ClearingFilter;
             window_->functionsDock()->filterTimer()->stop();
             window_->functionsDock()->setFilter(QString());
+        } else if (store_only_) {
+            // The store-facing workflow is complete: import, list, filter.
+            recordInstallFacts();
+            finish(true);
         } else {
             startLargestFunction();
         }
     });
+}
+
+/// Records what this run can see about its own installation.
+///
+/// `ui.install.prefix_ok` is false when the executable sits in a build tree,
+/// which is how a "packaged" gate can pass without a package. It looks for
+/// CMake's own build artifacts beside the executable and one directory up.
+///
+/// `ui.install.store_only_ok` says the store-facing workflow completed with no
+/// `VENTRIS_*` variable set at all, so nothing outside the installed binary
+/// configured this run. Neither fact is read from an environment variable that
+/// asserts the answer.
+void GateRunner::recordInstallFacts() {
+    const QDir directory(QCoreApplication::applicationDirPath());
+    const bool build_tree = directory.exists(QStringLiteral("CMakeCache.txt")) ||
+                            directory.exists(QStringLiteral("CMakeFiles")) ||
+                            QDir(directory.filePath(QStringLiteral(".."))) 
+                                .exists(QStringLiteral("CMakeCache.txt"));
+    metrics_.insert(QStringLiteral("ui.install.prefix_ok"), !build_tree);
+
+    bool configured = false;
+    const QStringList names = QProcessEnvironment::systemEnvironment().keys();
+    for (const QString &name : names) {
+        if (name.startsWith(QStringLiteral("VENTRIS_")) &&
+            name != QStringLiteral("VENTRIS_UI_GATE")) {
+            configured = true;
+            break;
+        }
+    }
+    metrics_.insert(QStringLiteral("ui.install.store_only_ok"), !configured);
 }
 
 void GateRunner::startLargestFunction() {

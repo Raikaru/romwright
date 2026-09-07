@@ -21,7 +21,11 @@ int main(int argc, char **argv) {
                                       QStringLiteral("00400466"));
     QCommandLineOption gate_option(QStringList() << "gate",
                                    "Run the offscreen UI gate and exit");
+    QCommandLineOption store_only_option(
+        QStringList() << "store-only",
+        "Gate the store-facing workflow only: no SLEIGH decode or decompile");
     parser.addOption(gate_option);
+    parser.addOption(store_only_option);
     parser.addOption(project_option);
     parser.addOption(program_option);
     parser.addOption(binary_option);
@@ -36,7 +40,10 @@ int main(int argc, char **argv) {
                       parser.value(address_option));
     window.show();
     if (parser.isSet(gate_option)) {
-        QTimer::singleShot(0, &window, &MainWindow::runGate);
+        const bool store_only = parser.isSet(store_only_option);
+        QTimer::singleShot(0, &window, [&window, store_only]() {
+            window.runGate(store_only);
+        });
     }
     return application.exec();
 }
