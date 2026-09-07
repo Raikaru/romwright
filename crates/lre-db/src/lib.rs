@@ -14,13 +14,14 @@ use lre_model::{
 use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
+mod class;
 mod return_behavior;
 mod signature;
 mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 10;
+pub const SCHEMA_VERSION: i64 = 11;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -454,6 +455,36 @@ impl ProjectDb {
                              CHECK(provenance_kind IN ('asserted', 'inferred')),
                          confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
                          PRIMARY KEY(program_id, function)
+                     );",
+                )?;
+            }
+            if v < 11 {
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS classes (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         typeinfo TEXT NOT NULL,
+                         vtable TEXT NOT NULL,
+                         name TEXT NOT NULL,
+                         mangled TEXT NOT NULL,
+                         kind TEXT NOT NULL
+                             CHECK(kind IN ('class', 'single_base', 'multiple_base')),
+                         vtable_slots INTEGER NOT NULL CHECK(vtable_slots >= 0),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, typeinfo)
+                     );
+                     CREATE TABLE IF NOT EXISTS class_bases (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         typeinfo TEXT NOT NULL,
+                         ordinal INTEGER NOT NULL CHECK(ordinal >= 0),
+                         base_typeinfo TEXT NOT NULL,
+                         base_mangled TEXT NOT NULL,
+                         base_offset INTEGER NOT NULL,
+                         virtual_base INTEGER NOT NULL CHECK(virtual_base IN (0, 1)),
+                         public_base INTEGER NOT NULL CHECK(public_base IN (0, 1)),
+                         PRIMARY KEY(program_id, typeinfo, ordinal)
                      );",
                 )?;
             }

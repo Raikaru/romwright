@@ -621,6 +621,70 @@ pub struct SignatureMatchRow {
     pub provenance: FactProvenance,
 }
 
+/// Which Itanium ABI type_info shape described a class, and therefore what
+/// base information the image carries.
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ClassKind {
+    /// `__class_type_info`: no bases.
+    Plain,
+    /// `__si_class_type_info`: one public, non-virtual base at offset zero.
+    SingleBase,
+    /// `__vmi_class_type_info`: any other base layout.
+    MultipleBase,
+}
+
+impl ClassKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            ClassKind::Plain => "class",
+            ClassKind::SingleBase => "single_base",
+            ClassKind::MultipleBase => "multiple_base",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "class" => Some(ClassKind::Plain),
+            "single_base" => Some(ClassKind::SingleBase),
+            "multiple_base" => Some(ClassKind::MultipleBase),
+            _ => None,
+        }
+    }
+}
+
+/// One base of a recovered class, as the ABI's base_class_type_info states it.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct ClassBase {
+    pub typeinfo: Address,
+    /// Mangled type name of the base, or the empty string when its typeinfo
+    /// lives outside this image.
+    pub mangled: String,
+    /// Byte offset of the base within the derived object, or the virtual-base
+    /// offset slot when `virtual_base` is set.
+    pub offset: i64,
+    pub virtual_base: bool,
+    pub public_base: bool,
+}
+
+/// A polymorphic class recovered from its Itanium type_info and vtable.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ClassRow {
+    pub typeinfo: Address,
+    /// Primary vtable start: the `offset_to_top` word, two pointers before the
+    /// address point objects hold.
+    pub vtable: Address,
+    /// Demangled name where the Itanium grammar this build parses covers it,
+    /// otherwise the mangled form.
+    pub name: String,
+    pub mangled: String,
+    pub kind: ClassKind,
+    /// Virtual function slots after the address point.
+    pub vtable_slots: u64,
+    pub bases: Vec<ClassBase>,
+    pub provenance: FactProvenance,
+}
+
 /// One recovered stack variable.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct StackVariableRow {
