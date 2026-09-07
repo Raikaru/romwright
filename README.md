@@ -949,6 +949,31 @@ Before the pass, recall on `tiny_pe.exe` was 0.5667: 39 of 90 functions --
 `WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
 of the CRT -- were unreachable by flow from the entry point.
 
+### The roots a PE declares itself
+
+Two more directories name code no call reaches. The TLS directory's
+`AddressOfCallBacks` is a null-terminated array of **virtual addresses**
+(Ghidra's `TLSDataDirectory` walks at most 20 slots and stops at the first
+null), and the export directory's `AddressOfFunctions` names entry points with
+the names the image publishes -- skipping gap slots holding RVA 0 and
+forwarders, whose "address" points inside the export directory at a string
+naming another library (`ExportDataDirectory.parse`).
+
+| Fixture evidence | Count |
+|---|---|
+| `pe.tls.callbacks` recovered with a `native-import:pe-tls` reference | **8** |
+| `pe.exports` recovered with a `native-import:pe-export` reference and their exported name | **3** |
+| `pe.exports.forwarded` left as data | 0 |
+
+The three exports in `tests/fixtures-src/exports32.dll` were recovered by
+nothing before this: the importer reads no COFF symbol table and no code in
+the image calls them. The TLS callbacks *were* recovered, but only because a
+base relocation happened to point at them -- a relocation says a pointer lives
+in that slot, while the directory says what the pointer is, so the reference
+is upgraded rather than duplicated. No committed fixture exports a forwarder,
+so that rule is pinned by a unit test in
+`crates/lre-core/src/native/pe_roots.rs` rather than claimed from an image.
+
 ### PE32 x86, where there is no unwind directory
 
 32-bit PE declares no exception directory, so nothing proves a function start
@@ -1207,7 +1232,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 70; `diagnostic_runs` 12; `generated_rows` 69; `published_ids` 55 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 71; `diagnostic_runs` 12; `generated_rows` 70; `published_ids` 56 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1220,6 +1245,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-001.json` | `m8-001` | M8 | pass | `pe.dwarf.fn.recall` 1.0000; `pe.dwarf.fn.unattributed` 0 | `tests/m8-001_pe_unwind.py` |
 | `m8-002.json` | `m8-002` | M8 | pass | `ghidra.dwarf.fn.recall` 0.7634; `ghidra.functions` 106; `pe32.dwarf.fn.recall` 0.8065; `pe32.dwarf.fn.unattributed` 0; `pe32.functions` 110; `pe32.undescribed` 35 | `tests/m8-002_pe32_roots.py` |
 | `m8-003.json` | `m8-003` | M8 | pass | `body.crossing` 0 | `tests/m8-003_body_extents.py` |
+| `m8-004.json` | `m8-004` | M8 | pass | `pe.exports` 3; `pe.exports.forwarded` 0; `pe.exports.forwarder_functions` 0; `pe.exports.misnamed` 0; `pe.exports.missing` 0; `pe.exports.unproven` 0; `pe.tls.callbacks` 8; `pe.tls.missing` 0; `pe.tls.unproven` 0 | `tests/m8-004_pe_roots.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

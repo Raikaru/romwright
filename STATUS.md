@@ -3318,18 +3318,69 @@ m3-003, all three wired into continuous integration)
   `m6-002`, `m3-001`, `m3-003`, `m4-001`, `m5-008`..`m5-011` all pass.
 - Eight additive metric names (`body.*`); no II.3 definition changed.
 
+### m8-004 evidence
+- `4de643e` commits the failing acceptance (`tests/m8-004_pe_roots.py`) and one
+  new fixture, `tests/fixtures-src/exports32.dll` with its source: an i686
+  MinGW DLL exporting three functions that nothing inside the image calls.
+- `crates/lre-core/src/native/pe_roots.rs` reads two directories, both
+  verified in the pinned sources:
+  - **TLS callbacks** (`TLSDirectory`, `TLSDataDirectory.markup`):
+    `AddressOfCallBacks` is the fourth pointer-sized field and holds
+    **virtual addresses**; at most 20 slots are walked and the first null ends
+    the array.
+  - **Exports** (`ExportDataDirectory.parse`, `PeLoader.processExports`): a
+    slot holding RVA 0 is a gap in the ordinal space, and an RVA *inside* the
+    export directory is a forwarder naming another library -- a string, not
+    code. Every other export becomes a function carrying the name the image
+    publishes.
+- Measured (`benchmarks/reports/m8-004.json`): **8 TLS callbacks** and
+  **3 exports** across four fixtures, each with the reference that named it
+  (`native-import:pe-tls`, `native-import:pe-export`) and each export named as
+  published.
+- **The measurement came before the claim.** The three DLL exports were
+  recovered by nothing beforehand -- stripped or unstripped -- because the
+  importer reads no COFF symbol table. The TLS callbacks *were* already
+  recovered, but only because a base relocation pointed at them: a relocation
+  says a pointer lives in that slot, the directory says what the pointer is,
+  so the reference is **upgraded** rather than duplicated.
+- This closes **no** PE32 recall gap, and the report says so. Of the 18 misses
+  `m8-002` classified, 2 (`__tmainCRTStartup`, `__do_global_ctors`) are
+  reached only by an unconditional jump from discovered code -- the tail-call
+  promotion II.1 reserves and m5-007 decided stays off -- and the other 16
+  carry no reference of any kind in the store; stock Ghidra misses them too.
+- No committed fixture exports a forwarder, so that rule is pinned by the unit
+  test `exports_carry_their_name_and_skip_gaps_and_forwarders` rather than
+  claimed from an image.
+- Controls: removing the TLS pass fails (`tls_unproven`), removing the export
+  pass fails (`exports_missing`), and dropping the exported name fails
+  (`misnamed`).
+- Regression: `cargo test --workspace` 235 pass; `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`, `m1-005`,
+  `generic_discovery_test.sh`, `m8-001`, `m8-002`, `m8-003`, `m2-015`,
+  `m3-001`, `m5-008`, `m5-011` all pass.
+- Nine additive metric names (`pe.tls.*`, `pe.exports.*`); no II.3 definition
+  changed.
+
+## Reserved decision, now with numbers
+- **Promoting tail-call targets by default** (II.1: "enabling any M4 pass by
+  default rather than behind a flag"; m5-007 recorded it off). On
+  `tiny_pe32.exe` it would recover `__tmainCRTStartup` and
+  `__do_global_ctors`, raising `pe32.dwarf.fn.recall` from 0.8065 to 0.8280,
+  still with `pe32.dwarf.fn.unattributed == 0`, because both are proven by an
+  `UNCONDITIONAL_JUMP` from code already discovered. Stock Ghidra creates
+  neither. **Not done: waiting on your decision.**
+
 ## Next task
-- m8-004: close the PE32 recall deficit with the roots a PE32 image actually
-  declares. `m8-002` classified 18 misses on `tiny_pe32.exe`: 8 reachable only
-  through a symbol the strip removed, 10 reached only through an indirect
-  transfer. The evidence not yet read is the TLS callback array
-  (`IMAGE_DIRECTORY_ENTRY_TLS`, `AddressOfCallBacks` -- present in that image,
-  24 bytes at RVA `0xa054`) and, for a DLL, the export directory; Ghidra's
-  `TLSDataDirectory` and `ExportDataDirectory` are the references to verify
-  against. The acceptance must raise the gated PE32 recall floor to the number
-  those roots prove, keep `pe32.dwarf.fn.unattributed == 0`, and keep every
-  remaining miss classified. Its acceptance test does not exist yet; write it
-  first.
+- m8-005: PE imports are named but not modelled. `native-import:pe-reloc` and
+  the linkage passes name what a slot points at, but nothing reads
+  `IMAGE_DIRECTORY_ENTRY_IMPORT`, so a call through `__imp__printf` has no
+  external target and no library name, while the ELF path has both
+  (`m5-009`). Ghidra's `ImportDataDirectory` and `ImportInfo` are the
+  references. The acceptance must prove, per PE fixture, that every import
+  thunk resolves to a named external with its library, that the count matches
+  the import descriptors in the image, and that a bound-imports table (where
+  `TimeDateStamp` is set) does not become invented code. Its acceptance test
+  does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

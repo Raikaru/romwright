@@ -21,6 +21,7 @@ mod discovery;
 mod elf_pointers;
 mod elf_unwind;
 mod elf_image;
+mod pe_roots;
 mod pe_unwind;
 mod strings;
 pub(crate) mod nonreturn;
@@ -697,7 +698,8 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
 
     // Exception directory (index 3) carries RUNTIME_FUNCTION bounds, but only
     // the AMD64 records have the layout the unwind pass reads.
-    let (entry_rva, image_base, reloc_dir_offset, unwind_dir_offset) = match (machine, magic) {
+    let (entry_rva, image_base, reloc_dir_offset, unwind_dir_offset, export_dir_offset,
+         tls_dir_offset) = match (machine, magic) {
         (0x8664, 0x20b) => {
             if opt_size < 112 {
                 return err(format!("PE32+ optional header size {opt_size} too small (>= 112 expected)"));
@@ -715,7 +717,9 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             } else {
                 None
             };
-            (entry_rva, image_base, reloc_offset, unwind_offset)
+            let export_offset = (num_rva_sizes > 0 && opt_size >= 120).then_some(opt + 112);
+            let tls_offset = (num_rva_sizes > 9 && opt_size >= 192).then_some(opt + 184);
+            (entry_rva, image_base, reloc_offset, unwind_offset, export_offset, tls_offset)
         }
         (0x014c, 0x10b) => {
             if opt_size < 96 {
@@ -729,7 +733,9 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             } else {
                 None
             };
-            (entry_rva, image_base, reloc_offset, None)
+            let export_offset = (num_rva_sizes > 0 && opt_size >= 104).then_some(opt + 96);
+            let tls_offset = (num_rva_sizes > 9 && opt_size >= 176).then_some(opt + 168);
+            (entry_rva, image_base, reloc_offset, None, export_offset, tls_offset)
         }
         (0x8664, other) => {
             return err(format!("PE AMD64 requires PE32+ optional header magic 0x20b, got {other:#x}"));
@@ -898,13 +904,30 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         language: language.into(),
         ..Default::default()
     };
-    if let Some(offset) = unwind_dir_offset {
-        let rva = u32_at(data, offset).unwrap_or(0) as u64;
-        let size = u32_at(data, offset + 4).unwrap_or(0) as usize;
-        pe_unwind::collect(data, &raw_sections, &mut import, image_base, rva, size);
-        import.functions.sort_by_key(|f| f.entry);
-        import.functions.dedup_by_key(|f| f.entry);
-    }
+    let directory = |offset: Option<usize>| {
+        offset.map_or((0, 0), |at| {
+            (
+                u32_at(data, at).unwrap_or(0) as u64,
+                u32_at(data, at + 4).unwrap_or(0) as usize,
+            )
+        })
+    };
+    let (unwind_rva, unwind_size) = directory(unwind_dir_offset);
+    pe_unwind::collect(data, &raw_sections, &mut import, image_base, unwind_rva, unwind_size);
+    let (export_rva, export_size) = directory(export_dir_offset);
+    pe_roots::collect_exports(data, &raw_sections, &mut import, image_base, export_rva, export_size);
+    let (tls_rva, tls_size) = directory(tls_dir_offset);
+    pe_roots::collect_tls(
+        data,
+        &raw_sections,
+        &mut import,
+        image_base,
+        tls_rva,
+        tls_size,
+        if is_64 { 8 } else { 4 },
+    );
+    import.functions.sort_by_key(|f| f.entry);
+    import.functions.dedup_by_key(|f| f.entry);
     Ok(import)
 }
 /// Returns the executable (code) ranges of the import, for seed filtering.
