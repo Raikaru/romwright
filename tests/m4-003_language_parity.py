@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -415,6 +416,27 @@ def main() -> int:
 
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
+        # Complete evidence, without an oversized aggregate commit: the same
+        # split `prototype_gate.write_arity_report` uses for mismatches.
+        rows = []
+        for row in measured:
+            detail = arguments.report.parent / (arguments.report.stem + "-divergences")
+            detail.mkdir(parents=True, exist_ok=True)
+            payload = "".join(json.dumps(item) + "\n"
+                              for item in row["attributed"]).encode()
+            path = detail / f"{row['language'].replace(':', '-')}.jsonl"
+            path.write_bytes(payload)
+            rows.append({
+                "language": row["language"], "program": row["program"],
+                "shared": row["shared"],
+                "identical": len(row["identical"]),
+                "identical_tokens": sum(item["tokens"] for item in row["identical"]),
+                "attributed": len(row["attributed"]),
+                "classes": sorted({name for item in row["attributed"]
+                                   for name in item["classes"]}),
+                "evidence": {"path": path.relative_to(arguments.report.parent).as_posix(),
+                             "sha256": hashlib.sha256(payload).hexdigest()},
+            })
         arguments.report.write_text(json.dumps({
             "id": "m4-003",
             "recorded_at": datetime.now(timezone.utc).isoformat(),
@@ -422,7 +444,7 @@ def main() -> int:
             "passed": True,
             "summary": summary,
             "metrics": metrics,
-            "measured": measured,
+            "measured": rows,
             "blocked": blocked,
         }, indent=1) + "\n")
     print(f"m4-003: PASS ({summary})")
