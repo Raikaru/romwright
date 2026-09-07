@@ -106,6 +106,17 @@ pub(super) fn prepare(
         243 => Some(3),      // RISC-V
         _ => None,
     };
+    // Public elf.h STT_GNU_IFUNC relocations: the addend is the in-image
+    // resolver, so the slot has a proven local destination and no import name.
+    let irelative_type = match machine {
+        3 => Some(42),
+        62 => Some(37),
+        20 | 21 => Some(248),
+        183 => Some(1032),
+        40 => Some(160),
+        243 => Some(58),
+        _ => None,
+    };
     for section in sections
         .iter()
         .filter(|s| matches!(s.typ, 4 | 9 | 19) && s.size != 0)
@@ -179,6 +190,21 @@ pub(super) fn prepare(
                             .push((address, String::from_utf8_lossy(name).into_owned()));
                     }
                 }
+                if irelative_type == Some(typ) && section.typ == 4 {
+                    let slot = rebase(place)?;
+                    let resolver = rebase(word(record, 2 * width, width, be)?)?;
+                    let slot_mapped = import.mappings.iter().any(|m| {
+                        m.size >= width as u64
+                            && slot >= m.vaddr
+                            && slot - m.vaddr <= m.size - width as u64
+                    });
+                    let resolves_code = import.mappings.iter().any(|m| {
+                        m.flags & 4 != 0 && resolver >= m.vaddr && resolver - m.vaddr < m.size
+                    });
+                    if slot_mapped && resolves_code {
+                        import.ifunc_slots.push((slot, resolver));
+                    }
+                }
                 if relative_type != Some(typ) {
                     continue;
                 }
@@ -201,6 +227,8 @@ pub(super) fn prepare(
     }
     import.externals.sort();
     import.externals.dedup();
+    import.ifunc_slots.sort_unstable();
+    import.ifunc_slots.dedup();
     collect_plt_candidates(sections, import, machine, width as u64);
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;

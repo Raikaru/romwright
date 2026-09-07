@@ -6,7 +6,7 @@ const SOURCE: &str = "native-flow nonreturn recovery";
 
 // Ghidra 12.1.3 Base/data/{Elf,PE}FunctionsThatDoNotReturn (Apache-2.0).
 // NoReturnFunctionAnalyzer strips leading underscores before exact matching.
-fn known_no_return(format: &str, name: &str) -> bool {
+pub(crate) fn known_no_return(format: &str, name: &str) -> bool {
     let name = name.trim_start_matches('_');
     match format {
         "ELF" | "elf32" => matches!(name,
