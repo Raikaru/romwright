@@ -1,0 +1,32 @@
+{
+ "id": "cost-envelope",
+ "recorded_at": "2026-09-07T10:09:06.438377+00:00",
+ "host": {
+  "system": "Linux",
+  "machine": "x86_64"
+ },
+ "headroom": 1.25,
+ "note": "native import peak RSS per locked corpus entry; recorded once, compared against afterwards",
+ "entries": {
+  "x86_64_plain_o0": 40568,
+  "x86_64_plain_o2": 40612,
+  "x86_64_plain_pie": 40648,
+  "x86_64_cpp_o2": 40752,
+  "x86_64_many_o2": 42892,
+  "i386_plain_o0": 33704,
+  "i386_plain_o2": 33576,
+  "i386_plain_pie": 33696,
+  "i386_cpp_o2": 33780,
+  "i386_many_o2": 35792,
+  "aarch64_plain_o0": 36284,
+  "aarch64_plain_o2": 36284,
+  "aarch64_plain_pie": 36428,
+  "aarch64_cpp_o2": 36388,
+  "aarch64_many_o2": 36412,
+  "powerpc_plain_o0": 18736,
+  "powerpc_plain_o2": 18736,
+  "powerpc_plain_pie": 18736,
+  "powerpc_cpp_o2": 18736,
+  "powerpc_many_o2": 18736
+ }
+}

@@ -214,6 +214,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --report "$RUNNER_TEMP/discovery/promotion.json"
+      - name: Measure the cost envelope against stock Ghidra
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m7-001_cost_envelope.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA" \
+            --report "$RUNNER_TEMP/discovery/cost-envelope.json"
       - name: Enforce the M3 DWARF ground-truth gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

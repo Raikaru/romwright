@@ -3098,15 +3098,41 @@ m3-003, all three wired into continuous integration)
 - Every gate in the repository is indexed in the README evidence table
   (`m5-012`), 61 current reports and 60 rows, regenerated and checked in CI.
 
+### m7-001 evidence
+- `cf01a48` commits the failing acceptance
+  (`tests/m7-001_cost_envelope.py`): the envelope did not exist yet.
+- Both producers import the **same 20 locked ELF entries**, measured the same
+  way with `os.wait4` -- its `ru_maxrss` covers the process and the children it
+  waited for, the accounting `baseline-stock.json` documents for the stock
+  launcher. Before this, cost was measured on one tiny fixture and never
+  compared per entry.
+- Measured (`benchmarks/reports/m7-001.json`), median over 20 entries:
+  `cost.native.peak_kb.median` **36 034 KiB** against
+  `cost.stock.peak_kb.median` 418 976 KiB, and
+  `cost.native.wall_s.median` **0.26 s** against
+  `cost.stock.wall_s.median` 8.21 s -- **12.39x less memory, 29.35x faster**.
+  Per entry the gate requires the native import to peak lower *and* finish
+  sooner than stock analysis; both hold on all 20.
+- `benchmarks/reports/cost-envelope.json` records the native peak per entry
+  once and is never edited (`--write` refuses to overwrite). The gate allows
+  25% headroom for host noise, so a regression is a failure rather than a new
+  number.
+- Stated in the README beside the table: stock analysis runs Ghidra's full
+  chain, so this compares the two **default paths**, not identical work; what
+  each produces is compared by `m3-001` and the differential gates.
+- Negative controls: shrinking one envelope entry fails
+  (`aarch64_cpp_o2: (36328, 1280)`), deleting an entry fails, and `--write`
+  over an existing envelope fails.
+- Six additive metric names (`cost.*`); no II.3 definition changed.
+
 ## Next task
-- m7-001: measure and document the memory and wall-time envelope of the
-  JVM-free workflow against the stock-Ghidra baseline on the locked corpus.
-  `benchmarks/gate.sh` measures peak RSS and wall time for the tiny fixture
-  only, and `benchmarks/reports/baseline-stock.json` records a stock number
-  that nothing currently compares against per corpus entry. The acceptance
-  must score both producers on the same inputs, publish per-entry numbers,
-  and fail when a native phase regresses past a recorded bound. Its
-  acceptance test does not exist yet; write it first.
+- m7-002: measure the same envelope for the decompile path, not just import.
+  `m7-001` covers `import`; a user's second question is what one decompiled
+  function costs, and `benchmarks/gate.sh` measures that only for the tiny
+  fixture. The acceptance must decompile the same function in both producers
+  per corpus entry, publish peak RSS and wall time per entry, and record the
+  envelope the same write-once way. Its acceptance test does not exist yet;
+  write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

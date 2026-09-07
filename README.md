@@ -924,6 +924,34 @@ external configuration). Both go false when they should -- a build-tree binary
 and a configured run each fail the gate. The report names the platform it ran
 on; the CI `qt` job runs it on Linux, macOS and Windows.
 
+## What an import costs
+
+Both producers import the same 20 locked ELF entries, measured the same way
+(`os.wait4`, whose `ru_maxrss` covers the process and the children it waited
+for). Per entry the native import must peak lower and finish sooner than stock
+analysis, and stay inside a recorded envelope
+(`tests/m7-001_cost_envelope.py`, `benchmarks/reports/m7-001.json`):
+
+| Metric | Median over 20 entries |
+|---|---|
+| `cost.native.peak_kb.median` | **36 102 KiB** |
+| `cost.stock.peak_kb.median` | 423 920 KiB |
+| `cost.native.wall_s.median` | **0.255 s** |
+| `cost.stock.wall_s.median` | 8.855 s |
+| `cost.peak_ratio.median` | **12.11x** less memory |
+| `cost.wall_ratio.median` | **32.91x** faster |
+
+`benchmarks/reports/cost-envelope.json` records the native peak per entry and
+is never edited: the gate allows 25% headroom for host noise and fails on
+anything larger, so a regression appears as a failure rather than as a new
+number. Shrinking one envelope entry, deleting one, and asking `--write` to
+overwrite the file all fail the gate.
+
+Stock analysis does more than a native import does -- it runs Ghidra's full
+analysis chain -- so this is a cost comparison of the two default paths, not of
+identical work. The parity of what each produces is measured separately by
+`m3-001` and the differential gates.
+
 ## Documentation coverage
 
 `tests/m6-006_documentation_coverage.py` states what the documentation
@@ -974,6 +1002,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 <!-- evidence-index:begin -->
 | Report | Gate | Milestone | Status | Measured | Produced by |
 |---|---|---|---|---|---|
+| `cost-envelope.json` | `cost-envelope` | - | recorded | `headroom` 1.2500 | - |
 | `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.1600; `peak_decompile_kb` 39160; `peak_disasm_kb` 0; `peak_import_kb` 5908 | - |
 | `ui-gate.json` | `ui` | M0 | pass | 1 pass, 0 fail, 0 skipped | `benchmarks/ui_gate.py` |
 | `discovery-gate.json` | `discovery` | M1 | pass | 20 pass, 0 fail, 0 skipped | `benchmarks/discovery_gate.py` |
@@ -1027,13 +1056,14 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 61; `diagnostic_runs` 12; `generated_rows` 60; `published_ids` 46 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 63; `diagnostic_runs` 12; `generated_rows` 62; `published_ids` 48 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
 | `m6-004.json` | `m6-004` | M6 | pass | `artifacts` 5; `commands` 9; `sbom_packages` 60; `skipped_blocks` 0 | `tests/m6-004_release_artifacts.py` |
 | `m6-005.json` | `m6-005` | M6 | pass | `client_helpers` 23; `commands` 1; `output_lines` 8 | `tests/m6-005_scripting.py` |
 | `m6-006.json` | `m6-006` | M6 | pass | `excused_blocks` 30; `gated_pages` 5; `metric_names` 79; `pages` 11; `surfaces` 13 | `tests/m6-006_documentation_coverage.py` |
+| `m7-001.json` | `m7-001` | M7 | pass | `cost.native.peak_kb.median` 36038.0000; `cost.native.wall_s.median` 0.2680; `cost.peak_ratio.median` 11.4800; `cost.stock.peak_kb.median` 422716.0000; `cost.stock.wall_s.median` 7.9920; `cost.wall_ratio.median` 30.1300 | `tests/m7-001_cost_envelope.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix
