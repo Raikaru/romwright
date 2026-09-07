@@ -468,6 +468,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         addr_origin.insert(s, s);
     }
     let mut visited: HashSet<u64> = HashSet::with_capacity(32768);
+    // Entries a data pointer proposed, as opposed to a seed the loader
+    // declared or a call reached: only these are retractable below.
+    let mut data_derived: HashSet<u64> = HashSet::new();
     let mut active: Vec<u64> = entries.clone();
     while !active.is_empty() {
         active.sort_unstable();
@@ -797,6 +800,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     if !entries.contains(&r) {
                         entries.push(r);
                         addr_origin.insert(r, r);
+                        // Where this entry came from, for the containment
+                        // reconciliation once every body is proven.
+                        data_derived.insert(r);
                     }
                 }
                 let reloc_set: HashSet<u64> = if pattern_round {
@@ -1145,6 +1151,37 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // Reconcile batched relocation candidates after discovering their bodies:
     // an entry plus an internal relocation target cannot both become functions.
     entries.retain(|&e| get_canonical_origin(e, &addr_origin) == e);
+
+    // Two functions cannot share code. A PE32 switch table holds absolute
+    // addresses, so every case label carries a base relocation and reaches
+    // this point looking exactly like a function address taken from data --
+    // and the container's own walk never reaches them, because the transfer
+    // is indirect. What separates them is the shape of their flow-proven
+    // spans: case labels of one switch overlap each other, because every case
+    // falls into the same shared tail, while a real function's span abuts its
+    // neighbour's without overlapping it. Retract the overlapping ones. A
+    // seed the loader declared, or an address some call reaches, is untouched.
+    if !data_derived.is_empty() {
+        let called: HashSet<u64> = calls.iter().map(|&(_, target)| target).collect();
+        let mut spans: Vec<(u64, u64)> = entries
+            .iter()
+            .filter(|entry| data_derived.contains(entry) && !called.contains(entry))
+            .map(|&entry| (entry, proven_bodies.get(&entry).copied().unwrap_or(entry + 1)))
+            .collect();
+        spans.sort_unstable();
+        let mut sharing: HashSet<u64> = HashSet::new();
+        let mut furthest = (0u64, 0u64); // (entry, span end) reaching deepest so far
+        for (entry, end) in spans {
+            if entry < furthest.1 {
+                sharing.insert(entry);
+                sharing.insert(furthest.0);
+            }
+            if end > furthest.1 {
+                furthest = (entry, end);
+            }
+        }
+        entries.retain(|entry| !sharing.contains(entry));
+    }
 
     entries.sort_unstable();
     entries.dedup();

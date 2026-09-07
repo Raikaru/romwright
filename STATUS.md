@@ -3245,18 +3245,55 @@ m3-003, all three wired into continuous integration)
   requires `expected_variants` to stop being one cross product for every
   architecture. **Not done: waiting on your decision.**
 
+### m8-002 evidence
+- `c9a1201` commits the failing acceptance (`tests/m8-002_pe32_roots.py`):
+  **31 recovered entries on `tiny_pe32.exe` had no evidence at all.**
+- They were case labels inside `___mingw_pformat`. A PE32 switch table holds
+  absolute addresses, so every case carries a base relocation, and a
+  relocation into code is what the importer treats as a candidate function.
+  The container's own walk never reaches them: the transfer is indirect.
+- **Two rules were tried and rejected by measurement before the third.**
+  Containment in a proven body retracted six real functions
+  (`_gnu_exception_handler`, `_dtoa_lock_cleanup`, ...) and every retraction
+  was attributed to one absurd container -- `00401c80` with a span of
+  `00401c80..00408796`, 27 KB across dozens of functions -- so the rule had no
+  discriminating power at all. Requiring branch-target evidence retracted
+  nothing, because the labels are reached only indirectly.
+- The rule that holds is a property of function bodies: **two functions cannot
+  share code.** The cases' chains interleave through the switch's shared tail,
+  so one case's flow-proven span runs past the next case's start, while a real
+  function's span abuts its neighbour's without overlapping it. Overlapping
+  data-derived spans are retracted unless a call reaches them; a loader-declared
+  seed is never touched. Unit test:
+  `overlapping_relocation_candidates_are_case_labels_not_functions`.
+- Measured (`benchmarks/reports/m8-002.json`): `pe32.dwarf.fn.recall`
+  **0.8065** over 93 DWARF functions with `pe32.dwarf.fn.unattributed`
+  **0** (from 31), against `ghidra.dwarf.fn.recall` **0.7634** on the same
+  stripped image. Recall is unchanged by the retraction -- no real function
+  was lost -- and the gate requires native >= stock rather than a number
+  chosen here.
+- All 18 remaining misses are classified against the image: 8 reachable only
+  through a symbol the strip removed, 10 reached only through an indirect
+  transfer. An unclassified miss fails the gate.
+- Regression: `cargo test --workspace` 232 pass, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `m1-005_pe_relocs.sh`, `generic_discovery_test.sh`, `m3-001`, `m3-003`,
+  `m5-008`..`m5-011` all pass, so the retraction changed no ELF result.
+- Four additive metric names (`pe32.*`); no II.3 definition changed.
+
 ## Next task
-- m8-002: give PE32 x86 the roots it lacks. The recorded deficit is recall
-  0.8065 with 31 unattributed entries on `tiny_pe32.exe`, where there is no
-  exception directory to prove a start. The loader-declared roots that do
-  exist in a PE32 image are the TLS callback array
-  (`IMAGE_DIRECTORY_ENTRY_TLS`, `AddressOfCallBacks`), the load-configuration
-  `SEHandlerTable`, and the export directory for a DLL; Ghidra's
-  `TLSDataDirectory`, `LoadConfigDirectory` and `ExportDataDirectory` are the
-  references to verify against. The acceptance must gate PE32 recall the way
-  `m8-001` gates PE32+, and must classify each remaining unattributed entry
-  rather than excusing it. Its acceptance test does not exist yet; write it
-  first.
+- m8-003: a function body may not swallow the next function. `m8-002` found
+  `FUN_00401c80` claiming `00401c80..00408796` -- 27 KB spanning dozens of
+  functions -- because a proven body is the maximum end over every
+  instruction attributed to an origin, and one fallthrough chain across
+  inter-function padding stretches it over everything after it. That size is
+  what the store reports, what `function_extents` resolves a containing
+  function with (the field `m6-002` had to fix), and what a listing renders.
+  The acceptance must compare recovered body extents against DWARF's own
+  `DW_AT_low_pc`/`DW_AT_high_pc` ranges per corpus entry, gate the fraction
+  whose extent is contained in the truth range, and fail when any body
+  crosses another entry it does not own. Its acceptance test does not exist
+  yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

@@ -58,11 +58,22 @@ def generate_matrix() -> str:
     elif stage4 and stage4.get("functional_pass"):
         pe_status = "supported and exercised; not scored against truth"
 
-    # PE32 x86 has no exception directory, so its recall is recorded, not gated.
+    # PE32 x86 has no exception directory: it is gated on precision and on
+    # beating stock Ghidra, which reads the same absent evidence.
     pe32_status = "structural import only; no gate"
+    pe32_gate = load_json(REPORTS_DIR / "m8-002.json")
     pe32_recorded = next((row for row in (pe_gate or {}).get("recorded", [])
                           if row["id"] == "tiny_pe32.exe"), None)
-    if pe32_recorded:
+    if pe32_gate and pe32_gate.get("passed"):
+        pe32_metrics = pe32_gate["metrics"]
+        stock = pe32_metrics.get("ghidra.dwarf.fn.recall")
+        pe32_status = (
+            f"**gated**: DWARF recall "
+            f"{pe32_metrics['pe32.dwarf.fn.recall']:.4f} over "
+            f"{pe32_gate['truth']} functions, 0 unattributed"
+            + (f", stock Ghidra {stock:.4f} on the same image" if stock else "")
+            + " (`tests/m8-002_pe32_roots.py`)")
+    elif pe32_recorded:
         pe32_status = (
             f"recorded, not gated: DWARF recall "
             f"{pe32_recorded['metrics']['pe.dwarf.fn.recall']:.4f} over "

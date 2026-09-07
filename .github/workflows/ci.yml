@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Score PE32 x86 recovery against stock Ghidra
+        run: |
+          python3 tests/m8-002_pe32_roots.py \
+            --report "$RUNNER_TEMP/pe32-roots.json"
       - name: Check the evidence index
         run: python tests/m5-012_evidence_index.py
       - name: Run the documented workflow
