@@ -70,6 +70,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:known-name",
+        explanation:         "A function whose name is on the list Ghidra ships of functions that \
+         do not return (`Base/data/ElfFunctionsThatDoNotReturn`), matched the \
+         way its own analyzer matches them.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:type-archive",
         explanation:         "A declaration the pinned C library type archive holds for a name the \
          image imports, applied only when every type in it is one the \

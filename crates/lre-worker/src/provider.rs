@@ -212,8 +212,33 @@ impl ProgramProvider {
             .ok_or_else(|| WorkerError::Setup("tspec has no ram space".into()))?;
         self.register_space_index = find_space_index(&tspec, "register")
             .ok_or_else(|| WorkerError::Setup("tspec has no register space".into()))?;
+        // A pointer is as wide as the space it addresses: `<space name="ram"
+        // size="4">` on a 32-bit language. Assuming eight made the decompiler
+        // carve four bytes out of every typed slot it was handed.
+        self.pointer_size = find_space_attribute(&tspec, "ram", "size")
+            .and_then(|size| size.parse().ok())
+            .ok_or_else(|| WorkerError::Setup("tspec ram space has no size".into()))?;
         Ok(())
     }
+}
+
+/// Extracts one attribute from the `<space name="NAME"` start tag in a tspec.
+fn find_space_attribute(tspec: &str, name: &str, attribute: &str) -> Option<String> {
+    let mut rest = tspec;
+    let needle = format!("{attribute}=\"");
+    while let Some(pos) = rest.find("<space ") {
+        let tag = &rest[pos..];
+        let end = tag.find('>')?;
+        let start_tag = &tag[..end];
+        if start_tag.contains(&format!("name=\"{name}\"")) {
+            if let Some(index) = start_tag.find(&needle) {
+                let after = &start_tag[index + needle.len()..];
+                return after.find('"').map(|j| after[..j].to_string());
+            }
+        }
+        rest = &tag[end..];
+    }
+    None
 }
 
 /// Extracts `index="N"` from the `<space name="NAME"` start tag in a tspec.
@@ -947,6 +972,20 @@ pub fn find_numeric_attribute(data: &[u8], target: u32) -> Option<i64> {
         }
     }
     None
+}
+
+/// A name the C the decompiler emits can carry.
+///
+/// The store keeps what the image declared -- Ghidra's own x86 pattern file
+/// labels a stub `__i686.get_pc_thunk.bx` -- but a `.` printed into C is a
+/// member access, not part of an identifier. Characters a symbol cannot carry
+/// become underscores, which is what Ghidra's own applied name looks like
+/// (`SymbolUtilities.replaceInvalidChars` with `USE_UNDERSCORES`,
+/// SymbolUtilities.java:401-419).
+pub fn c_identifier(name: &str) -> String {
+    name.chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .collect()
 }
 
 /// The language's core types, as `coretypes.xml` declares them: the ids the

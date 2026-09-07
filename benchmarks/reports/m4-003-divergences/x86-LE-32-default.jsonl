@@ -1,7 +1,8 @@
-{"address": "00401440", "classes": {"function-facts": {"name": ["entry", "_entry"]}, "missing-external-prototype": ["__libc_start_main"], "flow": []}, "oracle_tokens": 46, "native_tokens": 55}
-{"address": "00401469", "classes": {"flow": []}, "oracle_tokens": 10, "native_tokens": 13}
-{"address": "00401480", "classes": {"flow": []}, "oracle_tokens": 10, "native_tokens": 13}
-{"address": "004015ac", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}, "flow": []}, "oracle_tokens": 34, "native_tokens": 60}
-{"address": "004015cc", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}, "flow": []}, "oracle_tokens": 10, "native_tokens": 17}
+{"address": "00401440", "classes": {"function-facts": {"name": ["entry", "_entry"]}, "missing-external-prototype": ["__libc_start_main"], "flow": []}, "oracle_tokens": 46, "native_tokens": 51}
+{"address": "00401469", "classes": {"flow": []}, "oracle_tokens": 10, "native_tokens": 9}
+{"address": "00401480", "classes": {"flow": []}, "oracle_tokens": 10, "native_tokens": 9}
+{"address": "004015ac", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}, "flow": []}, "oracle_tokens": 34, "native_tokens": 56}
+{"address": "004015cc", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}, "flow": []}, "oracle_tokens": 10, "native_tokens": 13}
 {"address": "004015e0", "classes": {"function-facts": {"name": ["FUN_004015e0", "_plt"]}}, "oracle_tokens": 20, "native_tokens": 16}
-{"address": "00401600", "classes": {"function-facts": {"return_type": [null, "int"]}, "missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 32}
+{"address": "004015f0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "00401600", "classes": {"function-facts": {"return_type": [null, "int"]}, "missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 28}

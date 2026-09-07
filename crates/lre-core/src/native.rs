@@ -130,6 +130,8 @@ pub const THUNK_SOURCE: &str = "native-import:thunk";
 pub const PLT_HEADER_SOURCE: &str = "native-import:plt-header";
 /// The same reservation types the three words themselves: each is a pointer.
 pub const PLT_RESERVED_SOURCE: &str = "native-import:plt-reserved";
+/// A name on the pinned list of functions Ghidra ships as non-returning.
+pub const KNOWN_NAME_SOURCE: &str = "native-import:known-name";
 
 /// A loader-bound data relocation that names a symbol: `copies` marks the
 /// COPY form, where the loader duplicates the symbol's bytes at `address`.
@@ -1665,6 +1667,25 @@ pub fn store_import(
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
     apply_library_prototypes(db, pid, imp)?;
+    // A name on Ghidra's own pinned list is a declared exit: without the fact
+    // the decompiler walks past the call and takes the next function's body
+    // with it.
+    for function in &imp.functions {
+        if crate::nonreturn::known_no_return(&imp.format, &function.name) {
+            db.set_return_behavior(
+                pid,
+                &lre_model::ReturnBehaviorRow {
+                    function: lre_model::Address::ram(function.entry),
+                    no_return: true,
+                    provenance: lre_model::FactProvenance {
+                        kind: lre_model::FactKind::Inferred,
+                        source: KNOWN_NAME_SOURCE.into(),
+                        confidence: None,
+                    },
+                },
+            )?;
+        }
+    }
     // Each rule owns its rows, so one pass never deletes another's facts.
     for source in [THUNK_SOURCE] {
         let thunks: Vec<lre_model::ThunkRow> = imp

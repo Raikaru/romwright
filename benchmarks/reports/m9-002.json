@@ -1,18 +1,18 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-07T20:02:55.840619+00:00",
+ "recorded_at": "2026-09-07T22:13:23.623559+00:00",
  "status": "pass",
  "passed": true,
- "summary": "18 classes classified as declared/decoded/inferred; 7 of 11 declared classes scored here and 4 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "19 classes classified as declared/decoded/inferred; 7 of 12 declared classes scored here and 5 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 18,
-  "evidence.declared": 11,
+  "evidence.classes": 19,
+  "evidence.declared": 12,
   "evidence.declared_exercised": 7,
-  "evidence.declared_elsewhere": 4,
+  "evidence.declared_elsewhere": 5,
   "evidence.unbacked_confidence": 0,
   "evidence.references": 4665,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
@@ -81,6 +81,12 @@
    "evidence": "declared",
    "explanation": "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded unwind data for a function starting here.",
    "source": "native-import:elf-unwind"
+  },
+  "native-import:known-name": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A function whose name is on the list Ghidra ships of functions that do not return (`Base/data/ElfFunctionsThatDoNotReturn`), matched the way its own analyzer matches them.",
+   "source": "native-import:known-name"
   },
   "native-import:pe-export": {
    "derives_confidence": false,
@@ -217,6 +223,10 @@
   }
  },
  "declared_elsewhere": {
+  "native-import:known-name": [
+   "evidence-classes.json",
+   "m4-011.json"
+  ],
   "native-import:platform-map": [
    "evidence-classes.json",
    "m5-001.json",

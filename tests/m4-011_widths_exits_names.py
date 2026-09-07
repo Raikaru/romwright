@@ -48,7 +48,9 @@ CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 SPECS = ROOT / "native/specs"
 EXTRACTION = re.compile(r"\._[0-9]+_[0-9]+_")
-INVALID = re.compile(r"[^A-Za-z0-9_:]")
+# What a C identifier can carry; the worker replaces the rest, as Ghidra's
+# own applied names do.
+INVALID = re.compile(r"[^A-Za-z0-9_]")
 
 
 def environment() -> dict[str, str]:
