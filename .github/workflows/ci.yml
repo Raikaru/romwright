@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Drive the evidence filter from the terminal
+        run: |
+          python3 tests/m9-004_filter_surfaces.py \
+            --report "$RUNNER_TEMP/filter-surfaces.json"
       - name: Filter paged reads by evidence kind
         run: |
           python3 tests/m9-003_evidence_filter.py \

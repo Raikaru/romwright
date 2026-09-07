@@ -63,3 +63,12 @@ the human; `STATUS.md` records the proposal to retire it.
 The gate reports the platform it ran on, so the evidence names its own
 coverage: the CI `qt` job runs it on Linux, macOS and Windows, and a local run
 covers only that machine.
+
+## Filtering by evidence
+
+The Xrefs dock carries an evidence selector: **All evidence**, `declared`,
+`decoded` or `inferred`. The store applies the filter, so the row count is
+the service's answer rather than a client-side pass over rows already
+fetched. The UI gate records 13 declared of 19 rows on `libc`
+(`ui.xrefs.declared_rows`, `ui.xrefs.rows`), and `tests/m9-004_filter_surfaces.py`
+checks the window against the service at the address it opened.

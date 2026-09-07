@@ -23,6 +23,7 @@ private:
     void startDecompile(const QString &address);
     void startGraph();
     void startXrefs();
+    void startFilteredXrefs();
     void finish(bool ok, const QString &detail = {});
 
     MainWindow *window_;

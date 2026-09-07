@@ -24,8 +24,11 @@ NUMERIC_METRICS = (
 )
 # Counts, not durations: a fact rendered without its evidence sentence is a
 # defect at any speed.
-COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained")
-ALL_METRICS = (*NUMERIC_METRICS, *COUNT_METRICS, "ui.install.ok")
+COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained", "ui.xrefs.declared_rows")
+# Recorded as-is: the address the window navigated to, which every run of one
+# store shares. Aggregating it would be meaningless, so it is carried through.
+RECORDED_METRICS = ("ui.xrefs.address",)
+ALL_METRICS = (*NUMERIC_METRICS, *COUNT_METRICS, *RECORDED_METRICS, "ui.install.ok")
 THRESHOLDS = {
     "ui.list.load_ms": 500.0,
     "ui.list.filter_ms": 100.0,
@@ -131,7 +134,7 @@ def validate_metrics(metrics: dict[str, Any]) -> None:
         raise GateError(f"Qt gate output missing metrics: {', '.join(missing)}")
     invalid = [
         metric
-        for metric in (*NUMERIC_METRICS, *COUNT_METRICS)
+        for metric in (*NUMERIC_METRICS, *COUNT_METRICS, *RECORDED_METRICS)
         if isinstance(metrics[metric], bool) or not isinstance(metrics[metric], (int, float))
     ]
     if invalid:
@@ -205,6 +208,9 @@ def aggregate(samples: list[dict[str, Any]]) -> dict[str, Any]:
         "ui.xrefs.rows": min(int(sample["ui.xrefs.rows"]) for sample in samples),
         "ui.xrefs.unexplained": max(
             int(sample["ui.xrefs.unexplained"]) for sample in samples),
+        "ui.xrefs.declared_rows": min(
+            int(sample["ui.xrefs.declared_rows"]) for sample in samples),
+        **{metric: samples[0][metric] for metric in RECORDED_METRICS},
         "ui.install.ok": all(sample["ui.install.ok"] for sample in samples),
     }
 
@@ -297,7 +303,9 @@ def main() -> int:
         within_thresholds = all(
             metrics[metric] <= THRESHOLDS[metric] for metric in NUMERIC_METRICS
         )
-        explained = metrics["ui.xrefs.rows"] > 0 and metrics["ui.xrefs.unexplained"] == 0
+        explained = (metrics["ui.xrefs.rows"] > 0
+                     and metrics["ui.xrefs.unexplained"] == 0
+                     and 0 < metrics["ui.xrefs.declared_rows"] <= metrics["ui.xrefs.rows"])
         status = ("pass" if within_thresholds and metrics["ui.install.ok"] and explained
                   else "fail")
         document = report_document(root, binary, args.program, metrics, len(samples), status)

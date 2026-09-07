@@ -3534,16 +3534,53 @@ m3-003, all three wired into continuous integration)
   `workflow.sh`, `data_xrefs.sh` all pass.
 - Five additive metric names (`filter.*`); no II.3 definition changed.
 
+### m9-004 evidence
+- `debef96` commits the acceptance (`tests/m9-004_filter_surfaces.py`). Its
+  first meaningful failure was the desktop metric it needs
+  (`KeyError: ui.xrefs.declared_rows`); the CLI flag landed in the same
+  session slightly ahead of its test, so its rule is proved by a control
+  instead: making the CLI drop the filter fails
+  (`the terminal shows 1 rows, the API returns 0`).
+- `lre-cli xrefs --evidence declared|decoded|inferred` routes through
+  `xrefs_page`, so the terminal and the service share one filter; filtering
+  with no address is refused rather than answered, and an unknown kind exits
+  non-zero.
+- `XrefsDock` carries an evidence selector (All/declared/decoded/inferred)
+  that reloads through the store. `GateRunner` measures the filtered window --
+  `ui.xrefs.declared_rows` -- and publishes `ui.xrefs.address`, the address the
+  window actually navigated to.
+- **That address is why the first draft proved nothing.** The gate compared the
+  service's answer at an address it chose, while the window had navigated to
+  the first function it listed: 0 declared against 0 declared, which passes and
+  means nothing. The window now reports its address and the gate reads it, and
+  also checks the window's unfiltered count against the service.
+- Measured (`benchmarks/reports/m9-004.json`): 12 rows matched between the
+  terminal and the service across three kinds, **2 addresses where a kind
+  narrows the set** (so an accepted-and-ignored flag fails), an unknown kind
+  refused. On `libc` the committed UI gate records **13 declared of 19 rows**,
+  which is the window narrowing on a real binary.
+- Controls: a CLI that drops the filter fails; a UI report claiming more
+  declared rows than rows fails.
+- Documented where a user meets it: `docs/getting-started.md` runs the
+  filtered command (executed by `m6-001`, 19 commands, 23 output lines) and
+  `docs/desktop.md` describes the selector with the gate's numbers.
+- Regression: `cargo test --workspace` 238 pass; `m9-001`..`m9-004`,
+  `m6-001`, `m6-002`, `m6-003`, `m6-005`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` all pass.
+- Five additive metric names (`surface.*`, `ui.xrefs.declared_rows`,
+  `ui.xrefs.address`); no II.3 definition changed.
+
 ## Next task
-- m9-004: close M9 by putting the filter in front of a user. The API and the
-  Qt bridge accept `evidence`, and no consumer passes it: `XrefsDock` fetches
-  every reference and the CLI has no flag, so the audit the filter exists for
-  still cannot be run from a terminal or a window. The acceptance must add the
-  flag to `lre-cli xrefs` and a kind selector to the xrefs dock, prove through
-  the documented CLI walkthrough that filtering a real binary prints only the
-  facts of that kind, and measure the dock's filtered row count in the UI gate
-  the way `ui.xrefs.unexplained` is measured. Its acceptance test does not
-  exist yet; write it first.
+- m9-005: close M9 the way `m8-006` closed M8 -- publish fact explanation as
+  one milestone whose claim is derived, not written. Four gates now exist
+  (`m9-001`..`m9-004`) and each writes its own report; nothing states the
+  milestone-level claim or fails when a surface that shows a fact does not
+  show what proved it. The acceptance must enumerate the fact-bearing surfaces
+  from the repository (the API methods that return a `provenance` object, the
+  CLI verbs that print one, the desktop docks that render one), require each to
+  be measured by a committed report, and fail when a surface has no gate
+  behind it. Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

@@ -73,6 +73,15 @@ $ ./target/release/lre-cli xrefs tiny --to 00400466 --project $PROJECT
 004011a8 --DATA--> 00400466 [inferred; source=native-import:elf-unwind; confidence=unknown]
 ```
 
+The same references, restricted to what the image itself declares. `--evidence`
+takes `declared`, `decoded` or `inferred`, and the store applies it, so nothing
+is fetched to be thrown away:
+
+```console
+$ ./target/release/lre-cli xrefs tiny --to 00400466 --evidence declared --project $PROJECT
+004011a8 --DATA--> 00400466 [inferred; source=native-import:elf-unwind; confidence=unknown]
+```
+
 Search names and symbols:
 
 ```console
