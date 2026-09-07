@@ -3470,16 +3470,55 @@ m3-003, all three wired into continuous integration)
 - Seven additive metric names (`provenance.*`, `ui.xrefs.*`); no II.3
   definition changed.
 
+### m9-002 evidence
+- `02576c4` commits the failing acceptance
+  (`tests/m9-002_fact_confidence.py`): no class said what kind of evidence it
+  was, so nothing could be held to a standard.
+- **No probability was invented.** Each class declares one of the three kinds
+  the importer actually has -- `declared` (the image or platform states it),
+  `decoded` (SLEIGH decoded the instruction that performs it), `inferred` (a
+  pass concluded it) -- in the same table as its sentence, exposed as
+  `provenance.evidence` through the API, `lre-cli provenance`, and the
+  desktop's Evidence tooltip.
+- Two measured rules, over the locked corpus and the four PE fixtures:
+  a `declared` class must attribute **1.0000** of the entries it names
+  (4536 references over 7 exercised declared classes, the eighth --
+  `native-import:platform-map` -- exercised by `m5-001`, which now records its
+  region sources); and no fact may carry a numeric `confidence` its class does
+  not derive (`evidence.unbacked_confidence` **0** over 4665 promoted
+  references).
+- Attribution follows `m3-001`: DWARF truth, a twin symbol, a linker-stub
+  section, or a name the store proved. That last class was found by
+  measurement -- five i386 references pointed at `__i686.get_pc_thunk.bx`,
+  named by a pattern label `m5-011` already gates, and nothing else attributes
+  them.
+- `confidence` stays `null` for native facts because nothing derives one; the
+  only derivation in the tree is `lre-sig`'s share of compared bytes. A
+  `declared` class claiming a number fails a unit test: a header either says a
+  thing or it does not.
+- **A control caught a hole in my own gate.** Downgrading
+  `native-import:pe-unwind` to `inferred` first *passed*, because fewer
+  declared classes meant fewer to hold at 1.0000. Kinds are now recorded in
+  `benchmarks/reports/evidence-classes.json`, appended with `--write` and
+  never rewritten in place; the same downgrade now fails
+  (`recorded declared, table says inferred`).
+- Regression: `cargo test --workspace` 238 pass; `m9-001`, `m9-002`,
+  `m5-001`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m8-006`, `m5-012`,
+  `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh` all pass.
+- Six additive metric names (`evidence.*`); no II.3 definition changed.
+
 ## Next task
-- m9-002: the store labels a fact but not its confidence, and the API's
-  `confidence` field is `null` for every native fact. `docs/core-api.md`
-  documents it as "a supplied confidence in [0, 1]; None means unknown", so a
-  consumer cannot rank two facts that disagree -- a swept string against a
-  linker-proven symbol. The acceptance must define confidence per provenance
-  class from what the class proves (loader-declared, flow-proven, inferred),
-  publish it through the API beside the explanation, and fail when a class
-  carries a number nothing derives. Its acceptance test does not exist yet;
-  write it first.
+- m9-003: close M9 by making a fact's evidence usable, not just visible. The
+  API now says what proved each fact, and nothing lets a consumer ask for
+  facts *by* that standard: a script auditing a binary has to fetch every
+  reference and filter client-side, and the desktop cannot show "declared
+  only". The acceptance must add an evidence filter to the paged reads
+  (`xrefs_page`, `symbols_page`), prove per corpus entry that filtering by
+  each kind returns exactly the facts whose class carries that kind, keep the
+  page total and revision honest under the filter, and document the parameter
+  where `docs/core-api.md` documents paging. Its acceptance test does not
+  exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

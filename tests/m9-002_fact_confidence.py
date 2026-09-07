@@ -23,6 +23,11 @@ PE fixtures:
     start that nothing attributes means the header was misread. `decoded` and
     `inferred` classes are recorded without a floor -- they are inferences,
     and the corpus gates score them elsewhere.
+  * **A kind is a decision.** Each class's kind and whether it derives a number
+    are recorded in `benchmarks/reports/evidence-classes.json`. New classes are
+    appended with `--write`; a recorded one is never rewritten, so quietly
+    downgrading a class to `inferred` -- which would excuse it from the rule
+    above -- fails here.
   * **A number must be derived.** No stored fact may carry a numeric
     `confidence` unless its class declares a derivation. The one derivation
     that exists is the signature matcher's share of compared bytes
@@ -58,6 +63,20 @@ PE_FIXTURES = {"tiny_pe.exe": "llvm-strip", "dispatch.exe": "llvm-strip",
                "tiny_pe32.exe": "llvm-strip",
                "exports32.dll": "i686-w64-mingw32-strip"}
 KINDS = {"declared", "decoded", "inferred"}
+RECORD = ROOT / "benchmarks" / "reports" / "evidence-classes.json"
+
+
+def record_classification(published: dict[str, dict]) -> None:
+    """Append new classes; never change one that is already recorded."""
+    recorded = json.loads(RECORD.read_text()) if RECORD.is_file() else {}
+    for name, row in published.items():
+        if name in recorded:
+            continue
+        recorded[name] = {"evidence": row["evidence"],
+                          "derives_confidence": row["derives_confidence"]}
+    RECORD.parent.mkdir(parents=True, exist_ok=True)
+    RECORD.write_text(json.dumps(dict(sorted(recorded.items())), indent=1) + "\n")
+    print(f"recorded {len(recorded)} classes in {RECORD.relative_to(ROOT)}")
 
 
 def load(name: str, path: Path):
@@ -98,6 +117,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--write", action="store_true",
+                        help="add classes the record does not hold yet")
     arguments = parser.parse_args()
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
@@ -111,6 +132,30 @@ def main() -> int:
                           if row.get("evidence") not in KINDS)
     assert not unclassified, (
         f"these classes do not say what kind of evidence they are: {unclassified}")
+
+    # A class's kind decides how hard this gate holds it, so changing one is a
+    # decision, not a detail: the recorded file is never rewritten in place.
+    if arguments.write:
+        record_classification(published)
+    recorded = json.loads(RECORD.read_text()) if RECORD.is_file() else None
+    assert recorded is not None, (
+        f"{RECORD.relative_to(ROOT)} does not exist; record it once with --write")
+    changed = [f"{name}: recorded {recorded[name]['evidence']}, table says "
+               f"{published[name]['evidence']}"
+               for name in sorted(recorded)
+               if name in published and recorded[name]["evidence"] != published[name]["evidence"]]
+    assert not changed, f"a class was reclassified without re-recording: {changed}"
+    numbers = [f"{name}: recorded {recorded[name]['derives_confidence']}"
+               for name in sorted(recorded)
+               if name in published
+               and recorded[name]["derives_confidence"] != published[name]["derives_confidence"]]
+    assert not numbers, f"a class changed whether it derives a number: {numbers}"
+    fresh = sorted(set(published) - set(recorded))
+    assert not fresh, (
+        f"these classes are not in the record; add them with --write: {fresh}")
+    dropped = sorted(set(recorded) - set(published))
+    assert not dropped, (
+        f"these recorded classes no longer exist in the table: {dropped}")
 
     per_class: dict[str, dict] = {}
     unbacked: list[str] = []
@@ -183,21 +228,38 @@ def main() -> int:
 
     declared = sorted(name for name, row in published.items()
                       if row["evidence"] == "declared")
+    # A class this gate's images cannot produce may still be exercised: a
+    # console's declared memory map only exists once a cartridge is imported,
+    # which `m5-001` does and records.
+    elsewhere = {}
+    for report in sorted((ROOT / "benchmarks" / "reports").glob("*.json")):
+        if report.stem.startswith("m9-002"):
+            continue
+        text = report.read_text(encoding="utf-8")
+        for name in declared:
+            if name in per_class or name not in text:
+                continue
+            elsewhere.setdefault(name, []).append(report.name)
+    unexercised = sorted(name for name in declared
+                         if name not in per_class and name not in elsewhere)
+    assert not unexercised, (
+        f"these declared classes are exercised by nothing: {unexercised}")
     exercised = sorted(name for name in declared if name in per_class)
-    assert exercised, "no declared class was exercised by any image"
 
     metrics = {
         "evidence.classes": len(published),
         "evidence.declared": len(declared),
         "evidence.declared_exercised": len(exercised),
+        "evidence.declared_elsewhere": len(elsewhere),
         "evidence.unbacked_confidence": 0,
         "evidence.references": sum(row["references"] for row in per_class.values()),
         **{f"evidence.attributed.{name}": per_class[name]["rate"]
            for name in sorted(per_class)},
     }
     summary = (f"{len(published)} classes classified as declared/decoded/inferred; "
-               f"{len(exercised)} of {len(declared)} declared classes exercised, "
-               f"each attributing 1.0000 of the "
+               f"{len(exercised)} of {len(declared)} declared classes scored here "
+               f"and {len(elsewhere)} by another committed gate, each attributing "
+               f"1.0000 of the "
                f"{sum(per_class[name]['references'] for name in exercised)} entries "
                f"they named; {metrics['evidence.references']} promoted references "
                f"scored in total; no fact carries a confidence its class does not "
@@ -216,6 +278,7 @@ def main() -> int:
             "metrics": metrics,
             "classes": {name: published[name] for name in sorted(published)},
             "scored": {name: per_class[name] for name in sorted(per_class)},
+            "declared_elsewhere": elsewhere,
         }, indent=1) + "\n")
     print(f"m9-002: PASS ({summary})")
     return 0

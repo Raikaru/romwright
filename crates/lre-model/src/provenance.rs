@@ -6,91 +6,164 @@
 //! terminal. `tests/m9-001_provenance_explained.py` fails when a class the
 //! crates can emit has no entry here.
 
+/// What kind of evidence a class rests on. These are the only three the
+/// importer has, and the distinction is what a consumer needs to rank two
+/// facts that disagree: the image said so, the decoder proved it, or a pass
+/// concluded it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EvidenceKind {
+    /// The image or the platform states it: a header, a directory, a
+    /// relocation table, a declared memory map.
+    Declared,
+    /// SLEIGH decoded the instruction that performs it.
+    Decoded,
+    /// A pass concluded it from decoded code; the corpus gates score it.
+    Inferred,
+}
+
+impl EvidenceKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Declared => "declared",
+            Self::Decoded => "decoded",
+            Self::Inferred => "inferred",
+        }
+    }
+}
+
+/// One provenance class: its sentence, what kind of evidence it is, and
+/// whether anything derives a number for it. A class that derives no number
+/// carries `confidence: null` rather than a figure nobody computed.
+pub struct Class {
+    pub source: &'static str,
+    pub explanation: &'static str,
+    pub evidence: EvidenceKind,
+    pub derives_confidence: bool,
+}
+
 /// Every provenance class and the evidence behind it.
-pub const EXPLANATIONS: &[(&str, &str)] = &[
-    (
-        "native-import",
-        "Read from the image's own headers by the native loader: a section, an \
+pub const CLASSES: &[Class] = &[
+    Class {
+        source: "native-import",
+        explanation:         "Read from the image's own headers by the native loader: a section, an \
          entry point, or a symbol the file declares.",
-    ),
-    (
-        "native-import:branch",
-        "A transfer of control the SLEIGH decoder proved by decoding the \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:branch",
+        explanation:         "A transfer of control the SLEIGH decoder proved by decoding the \
          instruction that performs it.",
-    ),
-    (
-        "native-import:thunk",
-        "A stub whose whole body transfers to another address, proved by \
+        evidence: EvidenceKind::Decoded,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:thunk",
+        explanation:         "A stub whose whole body transfers to another address, proved by \
          decoding it; the reference is the transfer it performs.",
-    ),
-    (
-        "native-import:elf-pointer",
-        "A pointer to code stored in ELF data, confirmed by decoding what it \
+        evidence: EvidenceKind::Decoded,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:elf-pointer",
+        explanation:         "A pointer to code stored in ELF data, confirmed by decoding what it \
          points at rather than by its shape.",
-    ),
-    (
-        "native-import:elf-reloc",
-        "An ELF relocation: the loader will write this address into that slot, \
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:elf-reloc",
+        explanation:         "An ELF relocation: the loader will write this address into that slot, \
          so the linker named the target.",
-    ),
-    (
-        "native-import:elf-unwind",
-        "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:elf-unwind",
+        explanation:         "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded \
          unwind data for a function starting here.",
-    ),
-    (
-        "native-import:elf-relocation-map",
-        "A relocation-masked signature match: the bytes agree once the \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:elf-relocation-map",
+        explanation:         "A relocation-masked signature match: the bytes agree once the \
          relocated fields are ignored.",
-    ),
-    (
-        "native-import:elf-pointer-table",
-        "A contiguous table of code pointers in ELF data, every entry of which \
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: true,
+    },
+    Class {
+        source: "native-import:elf-pointer-table",
+        explanation:         "A contiguous table of code pointers in ELF data, every entry of which \
          decoded as code.",
-    ),
-    (
-        "native-import:pe-reloc",
-        "A PE base relocation: the loader will rebase this slot, so the value \
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:pe-reloc",
+        explanation:         "A PE base relocation: the loader will rebase this slot, so the value \
          in it is an address rather than a number.",
-    ),
-    (
-        "native-import:pe-unwind",
-        "A `RUNTIME_FUNCTION` record in the PE exception directory: the \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:pe-unwind",
+        explanation:         "A `RUNTIME_FUNCTION` record in the PE exception directory: the \
          compiler recorded unwind data for a function starting here.",
-    ),
-    (
-        "native-import:pe-tls",
-        "A slot in the PE TLS callback array: the loader calls this address \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:pe-tls",
+        explanation:         "A slot in the PE TLS callback array: the loader calls this address \
          before the entry point runs.",
-    ),
-    (
-        "native-import:pe-export",
-        "A slot in the PE export directory: the image publishes this address \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:pe-export",
+        explanation:         "A slot in the PE export directory: the image publishes this address \
          under the name recorded here.",
-    ),
-    (
-        "native-import:platform-map",
-        "Declared by the platform rather than the file: a console's memory map \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:platform-map",
+        explanation:         "Declared by the platform rather than the file: a console's memory map \
          names this region, and the cartridge carries no header for it.",
-    ),
-    (
-        "native-analysis",
-        "Derived by a native analysis pass over decoded instructions, not read \
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis",
+        explanation:         "Derived by a native analysis pass over decoded instructions, not read \
          from the image.",
-    ),
-    (
-        "native-analysis:constant-propagation",
-        "A constant the decompiler propagated to this instruction: the address \
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:constant-propagation",
+        explanation:         "A constant the decompiler propagated to this instruction: the address \
          is computed by the code, not stored in the image.",
-    ),
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
 ];
+
+/// The class, or `None` when nothing here describes that source.
+pub fn class(source: &str) -> Option<&'static Class> {
+    CLASSES.iter().find(|entry| entry.source == source)
+}
 
 /// The sentence for a provenance class, or `None` when nothing explains it.
 pub fn explain(source: &str) -> Option<&'static str> {
-    EXPLANATIONS
-        .iter()
-        .find(|(name, _)| *name == source)
-        .map(|(_, sentence)| *sentence)
+    class(source).map(|entry| entry.explanation)
+}
+
+/// What kind of evidence the class rests on, or `None` for an unknown source.
+pub fn evidence(source: &str) -> Option<EvidenceKind> {
+    class(source).map(|entry| entry.evidence)
 }
 
 #[cfg(test)]
@@ -100,18 +173,38 @@ mod tests {
     #[test]
     fn every_class_is_named_once_and_reads_as_a_sentence() {
         let mut seen = std::collections::HashSet::new();
-        for (name, sentence) in EXPLANATIONS {
-            assert!(seen.insert(*name), "{name} is explained twice");
+        for entry in CLASSES {
+            assert!(seen.insert(entry.source), "{} is explained twice", entry.source);
             assert!(
-                sentence.ends_with('.') && sentence.len() > 40,
-                "{name} needs a sentence, not a label: {sentence:?}"
+                entry.explanation.ends_with('.') && entry.explanation.len() > 40,
+                "{} needs a sentence, not a label: {:?}",
+                entry.source,
+                entry.explanation
             );
         }
-        assert_eq!(explain("native-import:pe-tls"), Some(EXPLANATIONS
-            .iter()
-            .find(|(name, _)| *name == "native-import:pe-tls")
-            .unwrap()
-            .1));
         assert_eq!(explain("native-import:invented"), None);
+        assert_eq!(evidence("native-import:invented"), None);
+    }
+
+    #[test]
+    fn a_declared_class_derives_no_number_and_a_derived_one_is_not_declared() {
+        // A header either says a thing or it does not; there is nothing to be
+        // partially confident about. A number belongs to a pass that computes
+        // one -- today only the signature matcher's share of compared bytes.
+        for entry in CLASSES {
+            if entry.evidence == EvidenceKind::Declared {
+                assert!(
+                    !entry.derives_confidence,
+                    "{} is declared, so a confidence would be invented",
+                    entry.source
+                );
+            }
+        }
+        assert_eq!(evidence("native-import:pe-tls"), Some(EvidenceKind::Declared));
+        assert_eq!(evidence("native-import:branch"), Some(EvidenceKind::Decoded));
+        assert_eq!(
+            evidence("native-analysis:constant-propagation"),
+            Some(EvidenceKind::Inferred)
+        );
     }
 }

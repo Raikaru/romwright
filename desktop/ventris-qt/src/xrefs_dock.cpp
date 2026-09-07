@@ -100,7 +100,16 @@ void XrefsDock::loadXrefs(const QString &program, const QString &address) {
                                      evidence.isEmpty()
                                          ? provenance.value("source").toString()
                                          : evidence);
-                                 item->setToolTip(provenance.value("source").toString());
+                                 // The class and what kind of evidence it is,
+                                 // both from the core's table.
+                                 const QString evidence_kind =
+                                     provenance.value("evidence").toString();
+                                 item->setToolTip(
+                                     evidence_kind.isEmpty()
+                                         ? provenance.value("source").toString()
+                                         : QStringLiteral("%1 [%2]")
+                                               .arg(provenance.value("source").toString(),
+                                                    evidence_kind));
                                  table->setItem(index, 4, item);
                                  rendered_rows_ += 1;
                                  if (evidence.isEmpty()) {

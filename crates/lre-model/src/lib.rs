@@ -192,12 +192,15 @@ impl serde::Serialize for FactProvenance {
     /// can always say what proved it, without mapping the string itself.
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeStruct;
-        let explanation = provenance::explain(&self.source);
-        let mut row = serializer.serialize_struct("FactProvenance", 4)?;
+        let class = provenance::class(&self.source);
+        let mut row = serializer.serialize_struct("FactProvenance", 5)?;
         row.serialize_field("kind", &self.kind)?;
         row.serialize_field("source", &self.source)?;
         row.serialize_field("confidence", &self.confidence)?;
-        row.serialize_field("explanation", &explanation)?;
+        row.serialize_field("explanation", &class.map(|entry| entry.explanation))?;
+        // What kind of evidence this is: the image said so, the decoder proved
+        // it, or a pass concluded it.
+        row.serialize_field("evidence", &class.map(|entry| entry.evidence))?;
         row.end()
     }
 }
