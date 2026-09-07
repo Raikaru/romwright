@@ -104,6 +104,54 @@ fn run(
     }
     // Locations a stored data reference names and nothing else describes:
     // the dynamic-label case (`SymbolUtilities.getDynamicName`).
+    // A thunk's jump transfers control the way a call does. The store proves
+    // both halves: the thunk row names entry and destination, and the xref
+    // row names the instruction that performs the transfer.
+    let thunks = db.thunks(pid)?;
+    if !thunks.is_empty() {
+        let functions: Vec<(u64, u64)> = provider
+            .functions
+            .iter()
+            .map(|entry| (*entry, provider.function_sizes.get(entry).copied().unwrap_or(0)))
+            .collect();
+        for row in db.xrefs(pid)? {
+            let (from, to) = (row.from, row.to);
+            if from.space != lre_model::AddressSpace::Ram
+                || to.space != lre_model::AddressSpace::Ram
+            {
+                continue;
+            }
+            let Some((entry, _)) = functions
+                .iter()
+                .copied()
+                .find(|(entry, size)| *entry <= from.offset && from.offset < entry + (*size).max(1))
+            else {
+                continue;
+            };
+            let Some(thunk) = thunks.iter().find(|thunk| {
+                thunk.function.offset == entry && thunk.thunked.offset == to.offset
+            }) else {
+                continue;
+            };
+            // Ghidra sets no shared-return override when the jumping
+            // instruction is itself a function entry
+            // (`SharedReturnAnalysisCmd.processFunctionJumpReferences`,
+            // SharedReturnAnalysisCmd.java:400-423). A linkage stub is the
+            // exception: the transfer goes through a slot the store names as
+            // an import, so it is a call to that import whatever its shape.
+            let entry_jump = provider.functions.binary_search(&from.offset).is_ok();
+            if entry_jump && thunk.kind != lre_model::ThunkKind::Linkage {
+                continue;
+            }
+            {
+                provider
+                    .call_return_branches
+                    .entry(entry)
+                    .or_default()
+                    .push(from.offset);
+            }
+        }
+    }
     for target in db.data_reference_targets(pid)? {
         if target.space == lre_model::AddressSpace::Ram {
             provider.data_targets.insert(target.offset);

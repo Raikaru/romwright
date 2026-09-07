@@ -209,6 +209,7 @@ impl NativeWorker {
             provider.ram_space_index as u32,
             &[],
             &provider.non_returning,
+            &provider.call_return_branches,
         );
         self.register_program_with_shell(provider, pspec, cspec, tspec, corespec, &shell)
     }
@@ -294,6 +295,7 @@ impl NativeWorker {
         space_index: u32,
         entries: &[(u64, &str, u64)],
         non_returning: &std::collections::HashSet<u64>,
+        call_return_branches: &std::collections::HashMap<u64, Vec<u64>>,
     ) -> Vec<u8> {
         let mut doc = Vec::new();
         crate::wire::encode_header(&mut doc, crate::wire::ELEMENT_START, crate::wire::elem::DOC);
@@ -303,7 +305,13 @@ impl NativeWorker {
                 crate::wire::ELEMENT_START,
                 crate::wire::elem::MAPSYM,
             );
-            if non_returning.contains(offset) {
+            let branches = call_return_branches
+                .get(offset)
+                .map(Vec::as_slice)
+                .unwrap_or(&[]);
+            // A shell carries no override, so a function whose flow the store
+            // corrects is sent whole even when it returns normally.
+            if non_returning.contains(offset) || !branches.is_empty() {
                 crate::wire::encode_function_element(
                     &mut doc,
                     space_index,
@@ -311,7 +319,8 @@ impl NativeWorker {
                     *offset,
                     name,
                     *size,
-                    true,
+                    non_returning.contains(offset),
+                    branches,
                 );
             } else {
                 crate::wire::encode_header(

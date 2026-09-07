@@ -1,7 +1,6 @@
 {"address": "00201590", "classes": {"function-facts": {"name": ["entry", "_entry"]}}, "oracle_tokens": 52, "native_tokens": 53}
-{"address": "00201670", "classes": {"flow": ["/* WARNING: Removing unreachable block (ram,0x0020161f) */", "/* WARNING: Removing unreachable block (ram,0x00201629) */"]}, "oracle_tokens": 13, "native_tokens": 11}
 {"address": "002016a0", "classes": {"missing-external-prototype": ["printf"]}, "oracle_tokens": 32, "native_tokens": 29}
 {"address": "002016dc", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}}, "oracle_tokens": 33, "native_tokens": 29}
 {"address": "002016f8", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}}, "oracle_tokens": 9, "native_tokens": 9}
 {"address": "00201710", "classes": {"function-facts": {"name": ["FUN_00201710", "_plt"]}, "data-type-unknown": [{"oracle": "PTR_002038e8", "native": ["_DAT_002038e8"]}], "flow": ["/* WARNING: Could not recover jumptable at 0x00201716. Too many branches */", "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 19}
-{"address": "00201720", "classes": {"missing-external-prototype": ["printf"], "flow": ["/* WARNING: Could not recover jumptable at 0x00201720. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 33, "native_tokens": 18}
+{"address": "00201720", "classes": {"missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 16}

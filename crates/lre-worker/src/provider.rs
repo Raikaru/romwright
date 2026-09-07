@@ -87,6 +87,9 @@ pub struct ProgramProvider {
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
     pub register_space_index: i64,
+    /// Function entry -> branch instructions the store proves transfer
+    /// control the way a call does (a thunk's jump).
+    pub call_return_branches: HashMap<u64, Vec<u64>>,
     /// Core type name -> (id, size) from the language's `coretypes.xml`.
     /// A type the language does not define is never referenced.
     pub core_types: HashMap<String, (u64, u64)>,
@@ -116,6 +119,7 @@ impl ProgramProvider {
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
+            call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
             pointer_size: 8,
             registers: HashMap::new(),
@@ -172,6 +176,7 @@ impl ProgramProvider {
             self.ram_space_index as u32,
             &entries,
             &self.non_returning,
+            &self.call_return_branches,
         ))
     }
 
@@ -562,6 +567,11 @@ impl NativeWorker {
                 wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::DOC);
                 wire::encode_attribute(&mut doc, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
                 wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::MAPSYM);
+                let branches = provider
+                    .call_return_branches
+                    .get(&vaddr)
+                    .cloned()
+                    .unwrap_or_default();
                 wire::encode_function_element(
                     &mut doc,
                     space as u32,
@@ -570,6 +580,7 @@ impl NativeWorker {
                     &name,
                     size,
                     provider.non_returning.contains(&vaddr),
+                    &branches,
                 );
                 wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);
                 wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::RANGELIST);

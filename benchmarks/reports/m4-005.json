@@ -1,0 +1,25 @@
+{
+ "id": "m4-005",
+ "recorded_at": "2026-09-07T17:38:53.381422+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "the store's transfer facts reach the decompiler: the direct thunk at 00201670 calls FUN_00201600 with no discarded blocks, the linkage stub at 00201720 needs no jumptable, and 6 functions with no stored transfer are untouched",
+ "metrics": {
+  "flow.thunks_direct": 1,
+  "flow.thunks_linkage": 1,
+  "flow.unreachable_warnings": 0,
+  "flow.jumptable_warnings": 0,
+  "flow.functions_untouched": 6
+ },
+ "thunks": {
+  "direct": {
+   "entry": "00201670",
+   "calls": "FUN_00201600"
+  },
+  "linkage": {
+   "entry": "00201720",
+   "slot": "002038f0"
+  },
+  "untouched": 6
+ }
+}
