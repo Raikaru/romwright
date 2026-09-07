@@ -446,7 +446,8 @@ fn parse_elf_sections(data: &[u8]) -> Result<(Vec<ElfSection>, Vec<u8>)> {
     Ok((sections, shstr))
 }
 
-fn elf_specs(machine: u16, big_endian: bool, flags: u32) -> Result<(&'static str, &'static str)> {
+/// The project's single ELF machine → (language id, compiler spec) table.
+pub fn elf_specs(machine: u16, big_endian: bool, flags: u32) -> Result<(&'static str, &'static str)> {
     // ARM ELF EF_ARM_BE8: big-endian data, little-endian instructions.
     // The pinned ARM.ldefs calls this variant v7LEInstruction.
     const EF_ARM_BE8: u32 = 0x0080_0000;

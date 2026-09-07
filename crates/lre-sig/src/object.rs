@@ -110,14 +110,14 @@ pub fn relocation_width(machine: u16, kind: u64) -> Option<usize> {
             263..=600 => Some(4),
             _ => None,
         },
-        // PowerPC 32-bit: elf.h R_PPC_* numbering.
+        // PowerPC 32-bit: elf.h R_PPC_* numbering. `word32` fields are 4
+        // bytes, `half16` fields 2, and the `none` markers patch nothing.
         0x14 => match kind {
-            0 => Some(0),
+            0 | 67 | 95 | 96 => Some(0),
             1 | 2 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 18 | 19 | 20 | 21 | 22 | 23 | 24 | 26
-            | 27 | 28 => Some(4),
-            3 | 4 | 5 | 6 | 14 | 15 | 16 | 17 | 25 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36 => {
-                Some(2)
-            }
+            | 27 | 28 | 68 | 73 | 78 => Some(4),
+            3 | 4 | 5 | 6 | 14 | 15 | 16 | 17 | 25 | 29 | 30 | 31 | 32 | 33 | 34 | 35 | 36
+            | 69..=72 | 74..=77 | 79..=94 | 249..=252 => Some(2),
             _ => None,
         },
         _ => None,

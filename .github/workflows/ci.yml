@@ -62,6 +62,16 @@ jobs:
         run: python3 tests/m1-006_integrity_test.py
       - name: Reject corrupt PE symbol databases
         run: python3 tests/m1-006_pdb_test.py
+      - name: Build packaged-library signature databases
+        run: |
+          python3 benchmarks/signature_gate.py \
+            --report "$RUNNER_TEMP/signatures/m2-011.json"
+      - name: Retain signature evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: m2-011-signature-reports
+          path: ${{ runner.temp }}/signatures/m2-011.json
 
   corpus-oracle:
     name: M1 Discovery and M2 References/Strings (ubuntu-latest)

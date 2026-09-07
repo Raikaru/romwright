@@ -49,6 +49,8 @@ fn usage() {
   lre-cli decompile-native <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   lre-cli decompile-native-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   lre-cli disasm-native <binary> <address> [-n N]                  (no JVM)
+  lre-cli signatures build --archive A --package P --license L --out DB [--report R] [--min-bytes N]
+  lre-cli signatures info --db DB
   lre-cli dump-specs <program> --out <dir> [--ghidra DIR]"
         );
     std::process::exit(2);
@@ -198,7 +200,97 @@ fn run(args: &[String]) -> i32 {
     }
 }
 
+/// Signature databases are plain files: no project store is opened for them.
+fn signatures(args: &[String]) -> Result<(), String> {
+    let action = args.get(2).map(String::as_str);
+    match action {
+        Some("build") => {
+            let archive = flag(args, "--archive").ok_or("signatures build needs --archive")?;
+            let package = flag(args, "--package").ok_or("signatures build needs --package")?;
+            let license = flag(args, "--license").ok_or("signatures build needs --license")?;
+            let out = flag(args, "--out").ok_or("signatures build needs --out")?;
+            let min_compared = match flag(args, "--min-bytes") {
+                Some(value) => value.parse().map_err(|_| "--min-bytes needs a number")?,
+                None => lre_sig::build::MIN_COMPARED,
+            };
+            let bytes = std::fs::read(&archive).map_err(|error| format!("{archive}: {error}"))?;
+            let (database, report) = lre_sig::from_archive(
+                &bytes,
+                &package,
+                &license,
+                min_compared,
+                // One project-wide machine table (lre-core), not a second copy.
+                &|machine, big_endian, flags| {
+                    lre_core::native::elf_specs(machine, big_endian, flags)
+                        .ok()
+                        .map(|(language, _)| language.to_string())
+                },
+            )
+            .map_err(|error| error.to_string())?;
+            let encoded = database.encode();
+            std::fs::write(&out, &encoded).map_err(|error| format!("{out}: {error}"))?;
+            let summary = serde_json::json!({
+                "archive": archive,
+                "package": package,
+                "license": license,
+                "language": report.language,
+                "members": report.members,
+                "functions": report.functions,
+                "records": report.records,
+                "skipped": report.skipped,
+                "min_compared_bytes": min_compared,
+                "database": out,
+                "database_bytes": encoded.len(),
+            });
+            if let Some(path) = flag(args, "--report") {
+                std::fs::write(&path, serde_json::to_string_pretty(&summary).unwrap() + "\n")
+                    .map_err(|error| format!("{path}: {error}"))?;
+            }
+            println!("{summary}");
+            Ok(())
+        }
+        Some("info") => {
+            let path = flag(args, "--db").ok_or("signatures info needs --db")?;
+            let bytes = std::fs::read(&path).map_err(|error| format!("{path}: {error}"))?;
+            let database = lre_sig::SignatureDb::decode(&bytes).map_err(|e| e.to_string())?;
+            let records = database.signatures();
+            let mut languages: Vec<_> =
+                records.iter().map(|record| record.language.clone()).collect();
+            languages.sort();
+            languages.dedup();
+            let mut packages: Vec<_> =
+                records.iter().map(|record| record.package.clone()).collect();
+            packages.sort();
+            packages.dedup();
+            let mut licenses: Vec<_> =
+                records.iter().map(|record| record.license.clone()).collect();
+            licenses.sort();
+            licenses.dedup();
+            println!(
+                "{}",
+                serde_json::json!({
+                    "database": path,
+                    "database_bytes": bytes.len(),
+                    "records": records.len(),
+                    "languages": languages,
+                    "packages": packages,
+                    "licenses": licenses,
+                    "compared_bytes_min": records.iter()
+                        .map(|record| record.compared_bytes()).min(),
+                    "compared_bytes_total": records.iter()
+                        .map(|record| record.compared_bytes()).sum::<usize>(),
+                })
+            );
+            Ok(())
+        }
+        _ => Err("signatures needs `build` or `info`".into()),
+    }
+}
+
 fn run_inner(args: &[String]) -> Result<(), String> {
+    if args[1] == "signatures" {
+        return signatures(args);
+    }
     let core = Core::open(&project_dir(args)).map_err(|e| e.to_string())?;
     let cmd = args[1].as_str();
     match cmd {
