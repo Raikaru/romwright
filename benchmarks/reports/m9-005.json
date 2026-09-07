@@ -1,0 +1,67 @@
+{
+ "id": "m9-005",
+ "recorded_at": "2026-09-07T13:40:23.312318+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "28 of 52 published API methods answered on a real project and every fact in them said what proved it; 5 sources printed by the terminal all explained; the window rendered 13 declared rows with 0 unexplained; four gates carry the milestone claim",
+ "metrics": {
+  "explanation.methods_published": 52,
+  "explanation.methods_answered": 28,
+  "explanation.silent_facts": 0,
+  "explanation.printed_sources": 5,
+  "explanation.window_unexplained": 0,
+  "explanation.window_declared_rows": 13
+ },
+ "printed_sources": {
+  "native-analysis:constant-propagation": 9,
+  "native-import": 3,
+  "native-import:elf-pointer": 2,
+  "native-import:elf-unwind": 5,
+  "native-import:thunk": 1
+ },
+ "methods_skipped": [
+  "append_collab_op: invalid_params",
+  "append_trace_event: invalid_params",
+  "apply_collab_op: invalid_params",
+  "apply_signatures: invalid_params",
+  "comment: invalid_params",
+  "debug_backtrace: invalid_params",
+  "debug_memory: invalid_params",
+  "debug_registers: invalid_params",
+  "decompile_doc: invalid_params",
+  "disasm_native: invalid_params",
+  "import_native: invalid_params",
+  "infer_nonreturning: invalid_params",
+  "infer_prototypes: invalid_params",
+  "listing: invalid_params",
+  "memory: invalid_params",
+  "memory_live: invalid_params",
+  "recover_classes: invalid_params",
+  "rename: invalid_params",
+  "search: invalid_params",
+  "set_bookmark: invalid_params",
+  "set_patch: invalid_params",
+  "undo: core_error",
+  "xrefs: invalid_params",
+  "xrefs_page: invalid_params"
+ ],
+ "milestone": {
+  "m9-001": {
+   "provenance.classes": 15,
+   "provenance.unexplained": 0,
+   "ui.xrefs.unexplained": 0
+  },
+  "m9-002": {
+   "evidence.classes": 15,
+   "evidence.unbacked_confidence": 0
+  },
+  "m9-003": {
+   "filter.facts_matched": 104,
+   "filter.symbols_matched": 135
+  },
+  "m9-004": {
+   "surface.cli_rows_checked": 12,
+   "surface.narrowing_addresses": 2
+  }
+ }
+}
