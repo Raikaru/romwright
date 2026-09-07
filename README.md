@@ -372,6 +372,25 @@ requires updating the record.
 python3 tests/m5-002_nds.py
 ```
 
+#### PlayStation and Nintendo 64
+
+Both are a header plus one flat image, and both are accepted only when the
+header agrees with the file it sits in.
+
+| Platform | Header fields read | Language | recall |
+|---|---|---|---|
+| PS-EXE | magic, initial PC (0x10), destination (0x18), size (0x1C) | `MIPS:LE:32:default` | **1.0000** over 5 |
+| N64 `.z64` | PI configuration word (0x00), boot address (0x08) | `MIPS:BE:64:64-32addr` | **1.0000** over 5 |
+
+A PS-EXE is refused when its declared size is not in the file, when the
+destination is not main RAM (through any of the three MIPS segment windows),
+or when the initial PC falls outside the image it describes.
+
+**Byte-swapped N64 dumps (`.v64`, `.n64`) are refused with their reason**
+rather than mapped: the JVM-free worker reads the file's own bytes, so a
+swapped dump would decompile reordered instructions. Converting to native
+order is the user's step, not a silent guess by the loader.
+
 ### The ground-truth regression gate (M3)
 
 `benchmarks/regression_gate.py` joins the two: native against DWARF from
@@ -723,6 +742,8 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 | ELF PowerPC | supported | BE32 discovery gated; e500 parity verified; other configurations not gated |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 on the built fixture, native ARM decompilation verified (`tests/m5-001_gba.py`) |
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: two programs, one per CPU; ARM9 recall 1.0000, ARM7 0.7500 with one recorded deficit (`tests/m5-002_nds.py`) |
+| PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000, native MIPS decompilation verified (`tests/m5-003_psx.py`) |
+| Nintendo 64 ROM (`.z64`) | supported | **gated**: DWARF recall 1.0000 on `MIPS:BE:64:64-32addr`; byte-swapped dumps refused by name (`tests/m5-004_n64.py`) |
 
 The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
 requires the matching compiled SLEIGH language and static specification bundle.

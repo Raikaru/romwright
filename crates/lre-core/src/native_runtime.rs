@@ -208,8 +208,11 @@ pub fn language_decompile_config(
     std::path::PathBuf,
     String,
 )> {
-    // Explicit env wins (existing behavior).
-    if let Some(sla) = &cfg.sla_path {
+    // An explicit pin wins only for the language it pins. A pinned x86-64
+    // `.sla` applied to an ARM or MIPS program decompiles that program with
+    // the wrong decoder and yields plausible-looking nonsense, so a
+    // mismatched pin is ignored in favour of the program's own language.
+    if let Some(sla) = cfg.sla_path.as_ref().filter(|_| language == cfg.language_id) {
         return Ok((
             sla.clone(),
             cfg.spec_root.clone(),

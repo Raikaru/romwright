@@ -499,7 +499,8 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M5 — Console platforms, measurable tier first (m5-001 GBA, m5-002 NDS complete)
+M5 — Console platforms, measurable tier first
+(m5-001 GBA, m5-002 NDS, m5-003 PS-EXE, m5-004 N64 complete)
 (M4 opened with m4-001; further M4 passes resume after the first console
 platforms land, per the sequencing decision recorded below)
 (M3 complete: DWARF scoring m3-001, frozen baseline m3-002, regression gate
@@ -2613,11 +2614,49 @@ m3-003, all three wired into continuous integration)
   `tests/generic_discovery_test.sh`, `tests/m2-015_native_default.py`,
   `tests/m5-001_gba.py`, `tests/m5-002_nds.py` pass.
 
+### m5-003 and m5-004 evidence
+- `9f1b42d` and `4718d75` commit the failing acceptances
+  (`tests/m5-003_psx.py`, `tests/m5-004_n64.py`); both images were first
+  mis-detected as DOLs.
+- `crates/lre-core/src/native/psx.rs` reads the documented PS-EXE fields
+  (psx-spx "Executables": magic, initial PC at 0x10, destination at 0x18,
+  size at 0x1C) and accepts an image only when the declared size is in the
+  file, the destination is main RAM through one of the three MIPS segment
+  windows, and the initial PC lands inside the image. Seven unit tests pin
+  the refusals, including the uncached mirror being *accepted* at 0xa0000000.
+- `crates/lre-core/src/native/n64.rs` reads the PI configuration word and the
+  boot address (n64brew "ROM header") and maps the game code after the
+  0x1000-byte header and boot area. IPL3 is not interpreted or reproduced --
+  that code is Nintendo's. **Byte-swapped dumps are refused with their
+  reason**: the JVM-free worker reads the file's own bytes, so mapping a
+  `.v64` would decompile reordered instructions. Seven unit tests pin that
+  and the other refusals.
+- Measured (`benchmarks/reports/m5-003.json`, `m5-004.json`): PS-EXE
+  **recall 1.0000 over 5 DWARF functions on `MIPS:LE:32:default`**; N64
+  `.z64` **recall 1.0000 over 5 on `MIPS:BE:64:64-32addr`**; zero
+  unattributed entries on both; entries seeded from the headers; a recovered
+  function decompiled natively on each.
+- Spec bundles vendored for the new languages: `MIPS-LE-32-default` and
+  `MIPS-BE-64-64-32addr`, exported verbatim by the m5-001 exporter fix.
+
+### A pinned SLA could silently decompile the wrong language
+- Found while running the platform gates in a shell that exported
+  `VENTRIS_SLA` for the x86-64 workflow -- as this repo's own tests and docs
+  do. `language_decompile_config` treated the pin as absolute, so an ARM or
+  MIPS program was decompiled with the **x86-64** decoder, producing
+  plausible-looking nonsense and a `DataUnavailError` at a garbage address
+  (`0xffffffffe71f901b`).
+- The pin now applies only to the language it pins; a program whose language
+  differs resolves from the install instead. Verified by re-running all four
+  platform gates plus `tests/differential.sh` and `tests/workflow.sh` with
+  `VENTRIS_SLA` exported: all pass, and the x86-64 parity path is unchanged.
+
 ## Next task
-- m5-003: PlayStation PS-EXE images -- a documented 2 KiB header naming the
-  load address, entry point and size, on `MIPS:LE:32:default`. Scored against
-  a DWARF twin built from source, like m5-001 and m5-002. Its acceptance test
-  does not exist yet; write it first.
+- m5-005: record the console platform matrix as measured evidence -- one gate
+  report per platform, a support table generated from those reports rather
+  than hand-written, and the tier-2 blockers (PSP VFPU, PS2 R5900, Cell SPU,
+  VMX128, encrypted containers) named in the same artifact. Its acceptance
+  test does not exist yet; write it first.
 - Recorded deficit to close later: a tail-called leaf function is invisible
   to flow analysis in both Ventris and stock Ghidra. The transfer itself is
   not even recorded -- the store keeps no jump xref for the tail call -- so
