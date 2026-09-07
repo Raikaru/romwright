@@ -43,6 +43,7 @@ public:
     FunctionsDock *functionsDock() const { return functions_dock_; }
     DecompilerDock *decompilerDock() const { return decompiler_dock_; }
     GraphDock *graphDock() const { return graph_dock_; }
+    XrefsDock *xrefsDock() const { return xrefs_dock_; }
     ListingCanvas *listingCanvas() const { return listing_canvas_; }
     NavigationController *navigation() const { return navigation_; }
     QString program() const;

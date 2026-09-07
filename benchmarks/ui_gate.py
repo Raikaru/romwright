@@ -22,7 +22,10 @@ NUMERIC_METRICS = (
     "ui.graph.layout_ms",
     "ui.graph.paint_ms",
 )
-ALL_METRICS = (*NUMERIC_METRICS, "ui.install.ok")
+# Counts, not durations: a fact rendered without its evidence sentence is a
+# defect at any speed.
+COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained")
+ALL_METRICS = (*NUMERIC_METRICS, *COUNT_METRICS, "ui.install.ok")
 THRESHOLDS = {
     "ui.list.load_ms": 500.0,
     "ui.list.filter_ms": 100.0,
@@ -128,7 +131,7 @@ def validate_metrics(metrics: dict[str, Any]) -> None:
         raise GateError(f"Qt gate output missing metrics: {', '.join(missing)}")
     invalid = [
         metric
-        for metric in NUMERIC_METRICS
+        for metric in (*NUMERIC_METRICS, *COUNT_METRICS)
         if isinstance(metrics[metric], bool) or not isinstance(metrics[metric], (int, float))
     ]
     if invalid:
@@ -197,6 +200,11 @@ def median(values: list[float]) -> float:
 def aggregate(samples: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         **{metric: median([float(sample[metric]) for sample in samples]) for metric in NUMERIC_METRICS},
+        # Counts take the worst run, not the middle one: one unexplained fact
+        # in any run is one the app can render.
+        "ui.xrefs.rows": min(int(sample["ui.xrefs.rows"]) for sample in samples),
+        "ui.xrefs.unexplained": max(
+            int(sample["ui.xrefs.unexplained"]) for sample in samples),
         "ui.install.ok": all(sample["ui.install.ok"] for sample in samples),
     }
 
@@ -289,7 +297,9 @@ def main() -> int:
         within_thresholds = all(
             metrics[metric] <= THRESHOLDS[metric] for metric in NUMERIC_METRICS
         )
-        status = "pass" if within_thresholds and metrics["ui.install.ok"] else "fail"
+        explained = metrics["ui.xrefs.rows"] > 0 and metrics["ui.xrefs.unexplained"] == 0
+        status = ("pass" if within_thresholds and metrics["ui.install.ok"] and explained
+                  else "fail")
         document = report_document(root, binary, args.program, metrics, len(samples), status)
     except (GateError, OSError, subprocess.SubprocessError) as error:
         try:

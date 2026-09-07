@@ -55,6 +55,7 @@ fn usage() {
   lre-cli signatures build --archive A --package P --license L --out DB [--report R] [--min-bytes N]
   lre-cli signatures info --db DB
   lre-cli mem <binary> <vaddr-hex> [size]
+  lre-cli provenance [<program>] [--project DIR] [--json]
 
 oracle generation only (launches the Stage-1 Java bridge):
   lre-cli import <binary> --oracle [--name NAME] [--project DIR] [--ghidra DIR]
@@ -620,6 +621,51 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     println!("edge {} --{}--> {}", edge.from, edge.kind, edge.to);
                 }
                 println!("-- {} nodes, {} edges", nodes.len(), edges.len());
+            }
+        }
+        "provenance" => {
+            // Every fact names the pass that produced it; this prints what
+            // those names mean. With a program, only the classes it holds.
+            let program = args.get(2).filter(|value| !value.starts_with("--")).cloned();
+            let held: Option<std::collections::BTreeSet<String>> = match &program {
+                Some(program) => {
+                    let mut names = std::collections::BTreeSet::new();
+                    for row in core.xrefs(program).map_err(|e| e.to_string())? {
+                        names.insert(row.provenance.source.clone());
+                    }
+                    for row in core.symbols(program).map_err(|e| e.to_string())? {
+                        names.insert(row.source.clone());
+                    }
+                    Some(names)
+                }
+                None => None,
+            };
+            let rows: Vec<_> = lre_model::provenance::EXPLANATIONS
+                .iter()
+                .filter(|(name, _)| held.as_ref().is_none_or(|held| held.contains(*name)))
+                .collect();
+            if has_flag(args, "--json") {
+                let payload: Vec<_> = rows
+                    .iter()
+                    .map(|(name, sentence)| {
+                        serde_json::json!({"source": name, "explanation": sentence})
+                    })
+                    .collect();
+                println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+            } else {
+                for (name, sentence) in &rows {
+                    println!("{name}\n    {sentence}");
+                }
+                println!("-- {} provenance classes", rows.len());
+            }
+            if let Some(held) = held {
+                let unexplained: Vec<_> = held
+                    .iter()
+                    .filter(|name| lre_model::provenance::explain(name).is_none())
+                    .collect();
+                if !unexplained.is_empty() {
+                    return Err(format!("provenance with no explanation: {unexplained:?}"));
+                }
             }
         }
         "memory-regions" => {

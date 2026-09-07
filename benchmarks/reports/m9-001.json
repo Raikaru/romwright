@@ -1,0 +1,46 @@
+{
+ "id": "m9-001",
+ "recorded_at": "2026-09-07T12:58:12.105237+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "15 classes in the shared table, 15 declared in the crates and 11 observed in stores, all explained; 10 facts carried the table's sentence through the API; the desktop rendered 19 xref rows with 0 unexplained",
+ "metrics": {
+  "provenance.classes": 15,
+  "provenance.declared": 15,
+  "provenance.observed": 11,
+  "provenance.unexplained": 0,
+  "provenance.api_facts_checked": 10,
+  "ui.xrefs.unexplained": 0,
+  "ui.xrefs.rows": 19
+ },
+ "table": {
+  "native-import": "Read from the image's own headers by the native loader: a section, an entry point, or a symbol the file declares.",
+  "native-import:branch": "A transfer of control the SLEIGH decoder proved by decoding the instruction that performs it.",
+  "native-import:thunk": "A stub whose whole body transfers to another address, proved by decoding it; the reference is the transfer it performs.",
+  "native-import:elf-pointer": "A pointer to code stored in ELF data, confirmed by decoding what it points at rather than by its shape.",
+  "native-import:elf-reloc": "An ELF relocation: the loader will write this address into that slot, so the linker named the target.",
+  "native-import:elf-unwind": "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded unwind data for a function starting here.",
+  "native-import:elf-relocation-map": "A relocation-masked signature match: the bytes agree once the relocated fields are ignored.",
+  "native-import:elf-pointer-table": "A contiguous table of code pointers in ELF data, every entry of which decoded as code.",
+  "native-import:pe-reloc": "A PE base relocation: the loader will rebase this slot, so the value in it is an address rather than a number.",
+  "native-import:pe-unwind": "A `RUNTIME_FUNCTION` record in the PE exception directory: the compiler recorded unwind data for a function starting here.",
+  "native-import:pe-tls": "A slot in the PE TLS callback array: the loader calls this address before the entry point runs.",
+  "native-import:pe-export": "A slot in the PE export directory: the image publishes this address under the name recorded here.",
+  "native-import:platform-map": "Declared by the platform rather than the file: a console's memory map names this region, and the cartridge carries no header for it.",
+  "native-analysis": "Derived by a native analysis pass over decoded instructions, not read from the image.",
+  "native-analysis:constant-propagation": "A constant the decompiler propagated to this instruction: the address is computed by the code, not stored in the image."
+ },
+ "observed": {
+  "native-analysis:constant-propagation": 8,
+  "native-import": 8,
+  "native-import:branch": 4,
+  "native-import:elf-pointer": 3,
+  "native-import:elf-reloc": 1,
+  "native-import:elf-unwind": 4,
+  "native-import:pe-export": 1,
+  "native-import:pe-reloc": 4,
+  "native-import:pe-tls": 4,
+  "native-import:pe-unwind": 2,
+  "native-import:thunk": 8
+ }
+}

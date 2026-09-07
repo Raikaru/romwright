@@ -924,6 +924,30 @@ external configuration). Both go false when they should -- a build-tree binary
 and a configured run each fail the gate. The report names the platform it ran
 on; the CI `qt` job runs it on Linux, macOS and Windows.
 
+## Every fact says what proved it
+
+A fact's `source` names the pass that produced it, and every surface used to
+show that string raw or not at all -- the desktop's xrefs dock had no
+provenance column whatsoever. One table in
+`crates/lre-model/src/provenance.rs` gives each class a sentence, and every
+surface reads it: the API serialises `explanation` inside each `provenance`
+object, `lre-cli provenance` prints the table or just the classes one program
+holds, and the desktop renders the sentence in an Evidence column with the raw
+class as its tooltip.
+
+| Metric | Measured |
+|---|---|
+| `provenance.classes` | **15** in the table |
+| `provenance.declared` / `provenance.observed` | 15 declared in the crates, 11 observed in stores |
+| `provenance.unexplained` | **0** |
+| `provenance.api_facts_checked` | 10 facts carried the table's sentence through a real `lre-api` |
+| `ui.xrefs.rows` / `ui.xrefs.unexplained` | 19 rows rendered, **0** unexplained |
+
+The desktop number is measured, not asserted: the xrefs dock counts what it
+put in the table and the UI gate publishes it, so a class the core stops
+explaining shows up as a rendered row with no sentence
+(`tests/m9-001_provenance_explained.py`, `benchmarks/reports/m9-001.json`).
+
 ## PE parity, as one measured claim
 
 Every PE evidence class is read from the importer's own vocabulary -- the
@@ -1285,7 +1309,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 73; `diagnostic_runs` 12; `generated_rows` 72; `published_ids` 58 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 74; `diagnostic_runs` 12; `generated_rows` 73; `published_ids` 59 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1301,6 +1325,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-004.json` | `m8-004` | M8 | pass | `pe.exports` 3; `pe.exports.forwarded` 0; `pe.exports.forwarder_functions` 0; `pe.exports.misnamed` 0; `pe.exports.missing` 0; `pe.exports.unproven` 0; `pe.tls.callbacks` 8; `pe.tls.missing` 0; `pe.tls.unproven` 0 | `tests/m8-004_pe_roots.py` |
 | `m8-005.json` | `m8-005` | M8 | pass | `pe.imports.bound_descriptors` 0; `pe.imports.declared` 166; `pe.imports.libraries` 8; `pe.imports.misnamed` 0; `pe.imports.missing` 0; `pe.imports.not_external` 0; `pe.imports.unnamed_stubs` 0 | `tests/m8-005_pe_imports.py` |
 | `m8-006.json` | `m8-006` | M8 | pass | `pe.classes.declared` 4; `pe.classes.unexercised` 0; `pe.classes.unmeasured` 0; `pe.externals` 260; `pe.references` 865 | `tests/m8-006_pe_parity.py` |
+| `m9-001.json` | `m9-001` | M9 | pass | `provenance.api_facts_checked` 10; `provenance.classes` 15; `provenance.declared` 15; `provenance.observed` 11; `provenance.unexplained` 0; `ui.xrefs.rows` 19; `ui.xrefs.unexplained` 0 | `tests/m9-001_provenance_explained.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

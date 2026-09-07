@@ -10,6 +10,7 @@
 #include "listing_canvas.h"
 #include "main_window.h"
 #include "navigation_controller.h"
+#include "xrefs_dock.h"
 
 #include <QApplication>
 #include <QCoreApplication>
@@ -235,10 +236,22 @@ void GateRunner::startGraph() {
             window_->graphDock()->canvas()->repaint();
             metrics_.insert(QStringLiteral("ui.graph.paint_ms"),
                             static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
-            const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
-            metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
-            finish(true);
+            startXrefs();
         });
+}
+
+void GateRunner::startXrefs() {
+    // The dock fills asynchronously, so the metrics are read once both
+    // requests have answered -- what the table holds, not what was sent.
+    auto *dock = window_->xrefsDock();
+    connect(dock, &XrefsDock::loadFinished, this, [this, dock]() {
+        metrics_.insert(QStringLiteral("ui.xrefs.rows"), dock->renderedRows());
+        metrics_.insert(QStringLiteral("ui.xrefs.unexplained"), dock->unexplainedRows());
+        const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
+        metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
+        finish(true);
+    }, Qt::SingleShotConnection);
+    dock->loadXrefs(window_->program(), address_);
 }
 
 void GateRunner::finish(bool ok, const QString &detail) {
