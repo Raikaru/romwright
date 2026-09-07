@@ -1941,6 +1941,60 @@ impl ProjectDb {
     }
 
 
+    /// Every program the project holds, in import order.
+    pub fn programs(&self) -> Result<Vec<lre_model::ProgramRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT p.name, p.language, p.revision, \
+             (SELECT COUNT(*) FROM functions f WHERE f.program_id = p.id) \
+             FROM programs p ORDER BY p.id",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                let revision: i64 = row.get(2)?;
+                let functions: i64 = row.get(3)?;
+                Ok(lre_model::ProgramRow {
+                    program: row.get(0)?,
+                    language: row.get(1)?,
+                    functions: functions.max(0) as u64,
+                    revision: revision.max(0) as u64,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Every program mapping `address`, with the region that maps it and the
+    /// function containing it. A project holds more than one image -- a DS
+    /// pair, an executable and its overlays -- and those images overlap, so
+    /// the answer is a list rather than one program.
+    pub fn locate(&self, address: &lre_model::Address) -> Result<Vec<lre_model::LocationRow>> {
+        let mut found = Vec::new();
+        for program in self.programs()? {
+            let id = self.program_id(&program.program)?;
+            let Some(region) = self.memory_regions(id)?.into_iter().find(|region| {
+                region.start.space == address.space
+                    && region.start.offset <= address.offset
+                    && address.offset - region.start.offset < region.size
+            }) else {
+                continue;
+            };
+            let extents = self.function_extents(id)?;
+            let index = extents.partition_point(|(entry, _, _)| *entry <= address.offset);
+            let function = index
+                .checked_sub(1)
+                .and_then(|index| extents.get(index))
+                .filter(|(_, end, _)| address.offset < *end)
+                .map(|(_, _, name)| name.clone());
+            found.push(lre_model::LocationRow {
+                program: program.program,
+                language: program.language,
+                region,
+                function,
+            });
+        }
+        Ok(found)
+    }
+
     /// Looks up a program ID by name.
     pub fn program_id(&self, name: &str) -> Result<ProgramId> {
         let id = self

@@ -474,6 +474,17 @@ impl Core {
         Ok(lre_model::Page { rows, offset, total, revision })
     }
 
+    /// Every program this project holds (no JVM).
+    pub fn programs(&self) -> Result<Vec<lre_model::ProgramRow>> {
+        Ok(self.db.programs()?)
+    }
+
+    /// Every program mapping `address`, with the region and the containing
+    /// function. Images overlap, so this answers with a list.
+    pub fn locate(&self, address: &lre_model::Address) -> Result<Vec<lre_model::LocationRow>> {
+        Ok(self.db.locate(address)?)
+    }
+
     /// Lists comments from the project store (no JVM).
     pub fn comments(&self, program: &str) -> Result<Vec<CommentRow>> {
         let id = self.db.program_id(program)?;

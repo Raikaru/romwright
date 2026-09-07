@@ -228,14 +228,14 @@ def main() -> int:
                 single_api.close()
 
     metrics = {
-        "project.programs": 2,
-        "project.reads_compared": len(PER_PROGRAM) * 2 + 2,
-        "project.rows_compared": sum(checks.values()),
-        "project.overlapping_address": shared_address,
+        "images.programs": 2,
+        "images.reads_compared": len(PER_PROGRAM) * 2 + 2,
+        "images.rows_compared": sum(checks.values()),
+        "images.overlapping_address": shared_address,
     }
-    summary = (f"two images in one project: {metrics['project.reads_compared']} reads "
+    summary = (f"two images in one project: {metrics['images.reads_compared']} reads "
                f"per-program identical to single-image projects over "
-               f"{metrics['project.rows_compared']} rows, both listed by `programs`, "
+               f"{metrics['images.rows_compared']} rows, both listed by `programs`, "
                f"and `locate` naming both at the overlapping address "
                f"{shared_address:08x}, one at an address only the ELF maps, none "
                f"outside either")

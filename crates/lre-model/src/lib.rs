@@ -205,6 +205,30 @@ impl serde::Serialize for FactProvenance {
     }
 }
 
+/// One program a project holds, for an inventory rather than a single answer.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct ProgramRow {
+    pub program: String,
+    pub language: String,
+    /// Functions the store holds for it.
+    pub functions: u64,
+    /// Store revision, which moves when a fact changes.
+    pub revision: u64,
+}
+
+/// Where one address lands in one program: the region that maps it, and the
+/// function containing it when a function does. Images overlap -- a PE and an
+/// ELF can both start at `0x400000` -- so an address alone names no program.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct LocationRow {
+    pub program: String,
+    pub language: String,
+    pub region: MemoryRegion,
+    /// The function whose body holds the address, or `None` when none does.
+    #[serde(default)]
+    pub function: Option<String>,
+}
+
 /// One symbol row.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct SymbolRow {
