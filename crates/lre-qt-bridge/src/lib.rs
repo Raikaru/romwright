@@ -104,6 +104,11 @@ fn dispatch(
             let sort = request.get("sort").and_then(Value::as_str);
             to_value(core.functions_page(&program, offset, limit, filter, sort))
         }
+        "programs" => to_value(core.programs()),
+        "locate" => {
+            let address = required_address(request, "address")?;
+            to_value(core.locate(&address))
+        }
         "symbols_page" => {
             let program = required_string(request, "program")?;
             let offset = optional_u64(request, "offset")?.unwrap_or(0);

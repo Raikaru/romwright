@@ -3637,16 +3637,54 @@ m3-003, all three wired into continuous integration)
   exchanges and `m6-001` checks 27 verbs.
 - Four additive metric names (`images.*`); no II.3 definition changed.
 
+### m10-002 evidence
+- `1ff00c9` commits the failing acceptance
+  (`tests/m10-002_image_navigation.py`): `--follow` printed nothing and the
+  window listed no images.
+- `lre-cli locate <hex> --follow` prints, under each program mapping the
+  address, that program's containing function, the symbols at the address and
+  the references in each direction. The desktop has an **Images** selector
+  filled from `programs`; choosing one points every dock at it.
+- `programs` and `locate` were added to the Qt bridge as well as the API --
+  the desktop speaks the in-process bridge, so an API-only method is invisible
+  to it, which is why the window first reported 0 images.
+- **A crash in the shipped app came out of this.**
+  `MainWindow::search_edit_` was declared and never constructed, so
+  `loadProgramPanels()` dereferenced null: opening a program, importing one,
+  or switching images killed the window (`SIGSEGV` in `QLineEdit::text`). The
+  Facts dock owns its own search box, so the field is deleted and the term is
+  empty. An audit of the other 22 widget members found no second case.
+- Switching no longer makes a bridge round trip: the name came from
+  `programs`, so `switchProgram` points the docks at it directly. The gate's
+  wait for the refreshed list is bounded at two seconds, because a selector
+  that never switches must report what the list holds rather than hang the
+  gate -- the first control run timed out at 240 s instead of failing.
+- Measured (`benchmarks/reports/m10-002.json`): **8 facts** compared across
+  two images at `00401000`, every number matching the service; the window
+  listed **2** programs and held **112** functions after switching, against
+  12 before.
+- Controls: a `--follow` reading references from the first program for every
+  row fails (`printed (..., '0', ...) where the service says (..., 1, ...)`),
+  and a selector that lists images without switching fails
+  (`the list held 12 functions where win has 112`). The first draft of the
+  first control mutated the symbol lookup, where both images answer 0 -- it
+  passed, and was replaced.
+- Regression: `cargo test --workspace` 238 pass; `m10-001`, `m10-002`,
+  `m9-001`..`m9-005`, `m6-001`, `m6-002`, `m6-003`, `m6-005`, `m6-006`,
+  `m5-012`, `support_matrix_test.py`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh` all pass.
+- Four additive metric names (`images.ui_*`, `ui.programs`,
+  `ui.programs_switch_functions`); no II.3 definition changed.
+
 ## Next task
-- m10-002: a project that holds several images should let a user move between
-  them. `programs` and `locate` answer, and no surface uses them: the desktop
-  opens one program named on the command line with no way to switch, and
-  `lre-cli` has no way to follow an address into the image that maps it. The
-  acceptance must add a program selector to the desktop that reloads the docks
-  for the chosen program, prove through the UI gate that switching changes the
-  function list to the other image's, and add `--follow` to `lre-cli locate`
-  so a terminal can print the listing at that address in the program that maps
-  it. Its acceptance test does not exist yet; write it first.
+- m10-003: close M10 by proving a project survives what a user does to it.
+  `m10-001` and `m10-002` read and navigate; nothing checks that a second
+  import into the same project leaves the first image's facts and analyst
+  edits alone. The acceptance must rename a function and add a comment in the
+  first image, import a second image into the same project, and prove the
+  edits survive with their journal intact, that the second import's revision
+  moves only its own program, and that undo still reverses the right edit in
+  the right image. Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

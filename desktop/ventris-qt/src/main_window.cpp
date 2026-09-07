@@ -29,6 +29,8 @@
 #include <QInputDialog>
 #include <QJsonArray>
 #include <QLabel>
+#include <QComboBox>
+#include <QPointer>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
@@ -56,6 +58,10 @@ MainWindow::MainWindow(const QString &project, const QString &program,
     controls->addWidget(project_edit_ = new QLineEdit(project, central), 0, 1);
     controls->addWidget(new QLabel(QStringLiteral("Program"), central), 0, 2);
     controls->addWidget(program_edit_ = new QLineEdit(program, central), 0, 3);
+    controls->addWidget(new QLabel(QStringLiteral("Images"), central), 0, 4);
+    controls->addWidget(program_box_ = new QComboBox(central), 0, 5);
+    program_box_->setObjectName(QStringLiteral("programSelector"));
+    connect(program_box_, &QComboBox::activated, this, &MainWindow::selectProgramAt);
     controls->addWidget(new QLabel(QStringLiteral("Binary"), central), 1, 0);
     controls->addWidget(binary_edit_ = new QLineEdit(binary, central), 1, 1, 1, 3);
     controls->addWidget(new QLabel(QStringLiteral("Address"), central), 2, 0);
@@ -179,6 +185,60 @@ MainWindow::~MainWindow() {
 }
 
 QString MainWindow::program() const { return program_edit_->text(); }
+
+void MainWindow::refreshPrograms() {
+    bridge_->request(QJsonObject{{"method", "programs"}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+        if (guard.isNull()) { return; }
+        QString error;
+        if (!successful(res, &error)) {
+            setStatus(error, true);
+            emit programsListed(0);
+            return;
+        }
+        const QJsonArray rows = res.value("result").toArray();
+        const QString current = program_edit_->text();
+        program_box_->blockSignals(true);
+        program_box_->clear();
+        for (const QJsonValue &value : rows) {
+            const QJsonObject row = value.toObject();
+            program_box_->addItem(QStringLiteral("%1 (%2)")
+                                      .arg(row.value("program").toString(),
+                                           row.value("language").toString()),
+                                  row.value("program").toString());
+        }
+        const int index = program_box_->findData(current);
+        if (index >= 0) {
+            program_box_->setCurrentIndex(index);
+        }
+        program_box_->blockSignals(false);
+        emit programsListed(rows.size());
+    });
+}
+
+int MainWindow::programCount() const {
+    return program_box_ == nullptr ? 0 : program_box_->count();
+}
+
+void MainWindow::selectProgramAt(int index) {
+    if (program_box_ == nullptr || index < 0 || index >= program_box_->count()) {
+        return;
+    }
+    const QString chosen = program_box_->itemData(index).toString();
+    if (chosen.isEmpty()) {
+        return;
+    }
+    program_box_->setCurrentIndex(index);
+    switchProgram(chosen);
+}
+
+void MainWindow::switchProgram(const QString &program) {
+    program_edit_->setText(program);
+    functions_dock_->setProgram(program);
+    navigation_->setProgram(program);
+    loadProgramPanels();
+    setStatus(QStringLiteral("showing %1").arg(program));
+}
 QString MainWindow::binary() const { return binary_edit_->text(); }
 void MainWindow::runGate(bool store_only) { gate_runner_->run(store_only); }
 
@@ -191,7 +251,10 @@ void MainWindow::setStatus(const QString &message, bool error) {
 
 void MainWindow::loadProgramPanels() {
     const QString p = program_edit_->text(), b = binary_edit_->text(), a = address_edit_->text();
-    facts_dock_->loadFacts(p, search_edit_->text());
+    // No search term from here: the Facts dock owns its own search box, and
+    // the window's `search_edit_` was never constructed -- every call to this
+    // function dereferenced null, so opening a program crashed the app.
+    facts_dock_->loadFacts(p, QString());
     memory_dock_->loadMemory(p, b, a);
     graph_dock_->loadGraph(b, a);
     analyst_dock_->loadAnalystData(p);
@@ -202,7 +265,9 @@ void MainWindow::importNative() {
     const QString binary = binary_edit_->text(), p = program_edit_->text();
     const int job = jobs_dock_->beginJob(QStringLiteral("native import"));
     bridge_->request(QJsonObject{{"method", "import_native"}, {"binary", binary}, {"name", p}},
-                     [this, job, p](const QJsonObject &res) {
+                     [this, guard = QPointer<MainWindow>(this), job, p](
+                         const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
                          QString err;
                          if (!successful(res, &err)) { jobs_dock_->finishJob(job, false, err); return; }
                          jobs_dock_->finishJob(job, true, QStringLiteral("imported %1").arg(p));
@@ -215,8 +280,12 @@ void MainWindow::importNative() {
 void MainWindow::openProgram() {
     const QString p = program_edit_->text();
     const int job = jobs_dock_->beginJob(QStringLiteral("open program"));
+    // The answer arrives on the event loop, which may outlive this window when
+    // the gate exits: a raw `this` here read a destroyed QLineEdit.
     bridge_->request(QJsonObject{{"method", "open"}, {"program", p}},
-                     [this, job, p](const QJsonObject &res) {
+                     [this, guard = QPointer<MainWindow>(this), job, p](
+                         const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
                          QString err;
                          if (!successful(res, &err)) { jobs_dock_->finishJob(job, false, err); return; }
                          jobs_dock_->finishJob(job, true, QStringLiteral("opened %1").arg(p));

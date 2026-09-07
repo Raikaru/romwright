@@ -23,6 +23,7 @@ class VtablesDock;
 class XrefsDock;
 
 class QLabel;
+class QComboBox;
 class QLineEdit;
 class QMenu;
 
@@ -47,6 +48,22 @@ public:
     ListingCanvas *listingCanvas() const { return listing_canvas_; }
     NavigationController *navigation() const { return navigation_; }
     QString program() const;
+
+    /// A project holds several images -- a DS pair, an executable with
+    /// overlays -- so the window lists them and switches between them.
+    void refreshPrograms();
+    int programCount() const;
+    /// Selects a listed program by index and reloads every dock for it.
+    void selectProgramAt(int index);
+    /// Points every dock at `program`. The name came from `programs`, so no
+    /// round trip is needed to learn the project holds it.
+    void switchProgram(const QString &program);
+
+signals:
+    /// The project's images have been listed; the argument is how many.
+    void programsListed(int count);
+
+public:
     QString binary() const;
 
 private slots:
@@ -83,12 +100,12 @@ private:
     // Controls
     QLineEdit *project_edit_ = nullptr;
     QLineEdit *program_edit_ = nullptr;
+    QComboBox *program_box_ = nullptr;
     QLineEdit *binary_edit_ = nullptr;
     QLineEdit *address_edit_ = nullptr;
     QLineEdit *name_edit_ = nullptr;
     QLineEdit *comment_edit_ = nullptr;
     QLineEdit *comment_kind_edit_ = nullptr;
-    QLineEdit *search_edit_ = nullptr;
     QLabel *status_ = nullptr;
     QMenu *recent_menu_ = nullptr;
 

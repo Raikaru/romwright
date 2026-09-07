@@ -82,6 +82,16 @@ $ ./target/release/lre-cli xrefs tiny --to 00400466 --evidence declared --projec
 004011a8 --DATA--> 00400466 [inferred; source=native-import:elf-unwind; confidence=unknown]
 ```
 
+A project can hold several images, and they overlap: `locate` names each
+program mapping an address, and `--follow` prints what that image holds there.
+
+<!-- not gated: the walkthrough imports one image, and the interesting answer
+     needs two; `tests/m10-002_image_navigation.py` drives this command. -->
+
+```sh
+lre-cli locate 00401000 --follow --project $PROJECT
+```
+
 Search names and symbols:
 
 ```console
