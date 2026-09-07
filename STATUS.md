@@ -3900,17 +3900,43 @@ m3-003, all three wired into continuous integration)
   `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` pass. 89 reports
   indexed, both generators in sync.
 
+### m4-007 evidence
+- The store gained a place for typed data -- schema 13 adds
+  `data_definitions(address, type, size, provenance)` -- because "this
+  location holds typed data" is a program-model fact and `strings` was the
+  only shape that could hold one.
+- Its first producer is the ABI: the three words `DT_PLTGOT` reserves are
+  8-byte pointers on this image (`002038d8`, `002038e0`, `002038e8`),
+  provenance `native-import:plt-reserved`. Measured: `flow` **16 -> 14** and
+  `data-type-unknown` **2 -> 1**; the PLT header no longer makes the
+  decompiler overlay `_DAT_002038e0` over a one-byte label, and its
+  "Globals starting with '_' overlap smaller symbols" warning is gone.
+- A heuristic died with it: the worker used to infer pointer slots from thunk
+  destinations and from what a corrected instruction reads. It now reads the
+  store's definitions, so the rendering follows a fact with provenance instead
+  of a chain of guesses.
+- Both new provenance classes carry their sentence and evidence kind, which
+  `m9-001` and `m9-002` require: `native-import:plt-header` (declared) and
+  `native-import:plt-reserved` (declared), 16 classes recorded.
+- Regression: `cargo test --workspace` 240 pass; `m4-002`..`m4-007`,
+  `m3-003`, `m8-002`, `m8-003`, `m8-005`, `m5-008`..`m5-010`, `m9-001`,
+  `m9-002`, `m9-003`, `m9-005`, `m6-002`, `m6-006`, `m5-012`, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh` pass. 90 reports indexed,
+  both generators in sync.
+
 ## Next task
-- m4-007: `flow` is the last large class (16) and its remaining x86-64 case is
-  a *type* gap wearing a flow costume: `_plt` still reports "Globals starting
-  with '_' overlap smaller symbols at the same address" because the store
-  names `002038e0` (the link-map word, `DT_PLTGOT + 1 word`) with a one-byte
-  label while the code reads eight. The same ABI reservation that proved the
-  resolver slot proves this one holds a pointer. Acceptance: the reserved
-  `DT_PLTGOT` words carry a pointer-width fact with provenance naming the tag,
-  the overlap warning disappears, `flow` falls with the parity baseline
-  re-recorded, no class grows, and an image without `DT_PLTGOT` gains no
-  facts. Its acceptance test does not exist yet; write it first.
+- m4-008: `missing-external-prototype` (18) is now the largest class and the
+  only one with a single cause: the store names imports and holds no signature
+  for them, so `printf(s_sum___d__002004d0, uVar1)` stands where the oracle
+  prints `printf("sum: %d\n", (ulong)uVar1)` -- with a `char *` first
+  parameter the same string renders as a literal. There is no GDT reader in
+  this tree, so the declaration source has to be decided from what the clean-
+  room policy allows: the pinned install's own archives, or public SDK
+  headers. Acceptance: an import named by relocation evidence gets its
+  declared prototype with provenance naming the source and the symbol, the
+  class falls with the parity baseline re-recorded, no class grows, and no
+  prototype is applied to a name the source does not declare. Its acceptance
+  test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

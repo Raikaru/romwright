@@ -70,6 +70,13 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:plt-reserved",
+        explanation:         "A word the System V ABI reserves at DT_PLTGOT -- the .dynamic \
+         address, the link-map, the resolver -- each of which holds a pointer.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:plt-header",
         explanation:         "An indirect transfer that reads the word the System V ABI reserves \
          for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it \

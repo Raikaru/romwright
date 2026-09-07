@@ -23,7 +23,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 12;
+pub const SCHEMA_VERSION: i64 = 13;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -497,6 +497,21 @@ impl ProjectDb {
                          address TEXT NOT NULL,
                          kind TEXT NOT NULL
                              CHECK(kind IN ('branch', 'call', 'callreturn', 'return')),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, address)
+                     );",
+                )?;
+            }
+            if v < 13 {
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS data_definitions (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         address TEXT NOT NULL,
+                         type TEXT NOT NULL,
+                         size INTEGER NOT NULL CHECK(size > 0),
                          provenance TEXT NOT NULL,
                          provenance_kind TEXT NOT NULL
                              CHECK(provenance_kind IN ('asserted', 'inferred')),
@@ -1028,6 +1043,111 @@ impl ProjectDb {
         // Hex cells can have different widths; SQL text order is not numeric.
         edges.sort_unstable_by_key(|(from, to)| (from.offset, to.offset));
         Ok(edges)
+    }
+
+    /// Locations whose contents a fact types.
+    pub fn data_definitions(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<lre_model::DataDefinitionRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT address, type, size, provenance, provenance_kind, confidence
+             FROM data_definitions WHERE program_id = ?1 ORDER BY address",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                Ok(lre_model::DataDefinitionRow {
+                    address: addr_from_cell(row.get(0)?, 0)?,
+                    data_type: row.get(1)?,
+                    size: row.get::<_, i64>(2)?.max(0) as u64,
+                    provenance: lre_model::FactProvenance {
+                        kind: if row.get::<_, String>(4)? == "asserted" {
+                            lre_model::FactKind::Asserted
+                        } else {
+                            lre_model::FactKind::Inferred
+                        },
+                        source: row.get(3)?,
+                        confidence: row.get(5)?,
+                    },
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Replaces exactly this producer's inferred data definitions.
+    pub fn replace_inferred_data_definitions(
+        &self,
+        program: ProgramId,
+        source: &str,
+        rows: &[lre_model::DataDefinitionRow],
+    ) -> Result<()> {
+        if source.trim().is_empty() {
+            return Err(DbError::InvalidFactProvenance(
+                "inference source is empty".into(),
+            ));
+        }
+        for row in rows {
+            validate_fact_provenance(&row.provenance)?;
+            if row.provenance.kind != FactKind::Inferred || row.provenance.source != source {
+                return Err(DbError::InvalidFactProvenance(format!(
+                    "data definition does not belong to inference source {source}"
+                )));
+            }
+            if row.size == 0 {
+                return Err(DbError::InvalidFactProvenance(
+                    "a data definition needs a width".into(),
+                ));
+            }
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        let before = self.definition_cells(&tx, program, source)?;
+        tx.execute(
+            "DELETE FROM data_definitions WHERE program_id = ?1 AND provenance = ?2
+                 AND provenance_kind = 'inferred'",
+            params![program.0, source],
+        )?;
+        {
+            let mut insert = tx.prepare(
+                "INSERT INTO data_definitions(program_id, address, type, size,
+                     provenance, provenance_kind, confidence)
+                 VALUES (?1, ?2, ?3, ?4, ?5, 'inferred', ?6)
+                 ON CONFLICT(program_id, address) DO NOTHING",
+            )?;
+            for row in rows {
+                insert.execute(params![
+                    program.0,
+                    addr_cell(&row.address),
+                    row.data_type,
+                    row.size as i64,
+                    row.provenance.source,
+                    row.provenance.confidence,
+                ])?;
+            }
+        }
+        if self.definition_cells(&tx, program, source)? != before {
+            self.bump_and_record(&tx, program, "replace-inferred-data-definitions", source)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    fn definition_cells(
+        &self,
+        tx: &rusqlite::Transaction<'_>,
+        program: ProgramId,
+        source: &str,
+    ) -> Result<Vec<(String, String, i64)>> {
+        let mut stmt = tx.prepare(
+            "SELECT address, type, size FROM data_definitions
+             WHERE program_id = ?1 AND provenance = ?2 ORDER BY address",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0, source], |row| {
+                Ok((row.get(0)?, row.get(1)?, row.get(2)?))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     /// Instruction flow the image's own structure corrects.

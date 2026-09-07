@@ -1,0 +1,19 @@
+{
+ "id": "m4-007",
+ "recorded_at": "2026-09-07T19:22:34.030450+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "the 3 words DT_PLTGOT reserves are defined as 8-byte pointers (002038d8, 002038e0, 002038e8) with the tag as their evidence, the PLT header decompiles with no overlapping global of the decompiler's own, and a PE image with no DT_PLTGOT gains none",
+ "metrics": {
+  "got.reserved_definitions": 3,
+  "got.pointer_width": 8,
+  "got.overlap_warnings": 0,
+  "got.pe_definitions": 0
+ },
+ "reserved": [
+  "002038d8",
+  "002038e0",
+  "002038e8"
+ ],
+ "header": "void _plt(void){(*PTR_002038e8)();return;}"
+}

@@ -2,5 +2,5 @@
 {"address": "002016a0", "classes": {"missing-external-prototype": ["printf"]}, "oracle_tokens": 32, "native_tokens": 29}
 {"address": "002016dc", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}}, "oracle_tokens": 33, "native_tokens": 29}
 {"address": "002016f8", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}}, "oracle_tokens": 9, "native_tokens": 9}
-{"address": "00201710", "classes": {"function-facts": {"name": ["FUN_00201710", "_plt"]}, "flow": ["/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"]}, "oracle_tokens": 20, "native_tokens": 17}
+{"address": "00201710", "classes": {"function-facts": {"name": ["FUN_00201710", "_plt"]}}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00201720", "classes": {"missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 16}

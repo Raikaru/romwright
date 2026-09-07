@@ -1,18 +1,18 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-07T19:04:00.742497+00:00",
+ "recorded_at": "2026-09-07T19:07:40.941945+00:00",
  "status": "pass",
  "passed": true,
- "summary": "16 classes classified as declared/decoded/inferred; 7 of 9 declared classes scored here and 2 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "17 classes classified as declared/decoded/inferred; 7 of 10 declared classes scored here and 3 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 16,
-  "evidence.declared": 9,
+  "evidence.classes": 17,
+  "evidence.declared": 10,
   "evidence.declared_exercised": 7,
-  "evidence.declared_elsewhere": 2,
+  "evidence.declared_elsewhere": 3,
   "evidence.unbacked_confidence": 0,
   "evidence.references": 4665,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
@@ -118,6 +118,12 @@
    "explanation": "An indirect transfer that reads the word the System V ABI reserves for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it behaves like a call.",
    "source": "native-import:plt-header"
   },
+  "native-import:plt-reserved": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A word the System V ABI reserves at DT_PLTGOT -- the .dynamic address, the link-map, the resolver -- each of which holds a pointer.",
+   "source": "native-import:plt-reserved"
+  },
   "native-import:thunk": {
    "derives_confidence": false,
    "evidence": "decoded",
@@ -212,7 +218,12 @@
   ],
   "native-import:plt-header": [
    "evidence-classes.json",
-   "m4-006.json"
+   "m4-006.json",
+   "m9-001.json"
+  ],
+  "native-import:plt-reserved": [
+   "evidence-classes.json",
+   "m9-001.json"
   ]
  }
 }
