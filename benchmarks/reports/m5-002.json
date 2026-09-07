@@ -1,0 +1,40 @@
+{
+  "id": "m5-002",
+  "recorded_at": "2026-09-07T05:17:51.134828+00:00",
+  "thresholds": {
+    "dwarf.fn.recall": 0.98
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)\nimported nds.arm7 natively (3 functions, ARM:LE:32:v4t)",
+  "rows": {
+    "nds.arm9": {
+      "language": "ARM:LE:32:v5t",
+      "dwarf.fn.recall": 1.0,
+      "recorded_deficits": [],
+      "dwarf.functions": 5,
+      "functions": 5,
+      "unattributed": 0,
+      "entry": "02000060",
+      "decompiled": {
+        "address": "02000000",
+        "text": "int FUN_02000000(int param_1,int param_2){return param_2 + param_1 >> 1;}"
+      }
+    },
+    "nds.arm7": {
+      "language": "ARM:LE:32:v4t",
+      "dwarf.fn.recall": 0.75,
+      "recorded_deficits": [
+        "037f8000"
+      ],
+      "dwarf.functions": 4,
+      "functions": 3,
+      "unattributed": 0,
+      "entry": "037f8030",
+      "decompiled": {
+        "address": "037f8008",
+        "text": "uint FUN_037f8008(uint param_1,uint param_2){return param_1 >> (param_2 & 0x1f) | param_1 << 0x20 - (param_2 & 0x1f);}"
+      }
+    }
+  }
+}

@@ -27,6 +27,23 @@ pub struct SignatureReport {
     pub revision: u64,
 }
 
+impl SignatureReport {
+    /// Sums two per-program passes over the same databases. The database
+    /// and record counts describe the same inputs, so they are not doubled.
+    pub fn merged(self, other: Self) -> Self {
+        Self {
+            databases: self.databases.max(other.databases),
+            records: self.records.max(other.records),
+            functions: self.functions + other.functions,
+            matched: self.matched + other.matched,
+            renamed: self.renamed + other.renamed,
+            conflicts: self.conflicts + other.conflicts,
+            unmapped: self.unmapped + other.unmapped,
+            revision: self.revision.max(other.revision),
+        }
+    }
+}
+
 fn load(paths: &[std::path::PathBuf]) -> crate::Result<Vec<SignatureDb>> {
     let mut databases = Vec::with_capacity(paths.len());
     for path in paths {
@@ -136,12 +153,21 @@ impl crate::Core {
         binary: &Path,
         name: &str,
         databases: &[std::path::PathBuf],
-    ) -> crate::Result<(lre_model::ProgramSummary, Option<SignatureReport>)> {
-        let summary = self.import_native(binary, name)?;
+    ) -> crate::Result<(Vec<lre_model::ProgramSummary>, Option<SignatureReport>)> {
+        let stored = self.import_container(binary, name)?;
         if databases.is_empty() {
-            return Ok((summary, None));
+            return Ok((stored, None));
         }
-        let report = self.apply_signatures(binary, name, databases)?;
-        Ok((summary, Some(report)))
+        // Signature matching is per program; a container's images each get
+        // their own pass so no processor is left unnamed.
+        let mut merged: Option<SignatureReport> = None;
+        for summary in &stored {
+            let report = self.apply_signatures(binary, &summary.program, databases)?;
+            merged = Some(match merged.take() {
+                None => report,
+                Some(previous) => previous.merged(report),
+            });
+        }
+        Ok((stored, merged))
     }
 }

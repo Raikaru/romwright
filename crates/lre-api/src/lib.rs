@@ -133,14 +133,21 @@ impl ApiService {
                     .into_iter()
                     .map(std::path::PathBuf::from)
                     .collect::<Vec<_>>();
-                let (summary, signatures) = self
+                let (stored, signatures) = self
                     .core
                     .import_native_with_signatures(&binary, name, &databases)
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
+                // The primary program stays at the top level so existing
+                // consumers keep working; a container's other processors
+                // are listed beside it rather than hidden.
+                let primary = stored.first().ok_or_else(|| {
+                    DispatchError::Request("import produced no program".into())
+                })?;
                 Ok(json!({
-                    "program": summary.program,
-                    "functions": summary.functions,
-                    "language": summary.language,
+                    "program": primary.program,
+                    "functions": primary.functions,
+                    "language": primary.language,
+                    "programs": stored,
                     "signatures": signatures,
                 }))
             }

@@ -245,13 +245,30 @@ impl ProgramImage {
         })?;
         // Region derivation reuses the native parser (sections -> ranges;
         // flags preserved so discovery classification still sees them).
-        let (regions, relocations) = match crate::native::parse_native(&map) {
-            Ok(import) => {
+        let (regions, relocations) = match crate::native::parse_container(&map) {
+            Ok(images) => {
+                // A container holds one image per processor at different
+                // addresses. `raw_base` names which program is being read,
+                // so the view is that program's image rather than the one
+                // the console boots.
+                let selected = raw_base
+                    .and_then(|base| {
+                        images.iter().find(|(_, import)| {
+                            import.mappings.iter().any(|mapping| {
+                                base >= mapping.vaddr
+                                    && base - mapping.vaddr < mapping.size.max(1)
+                            })
+                        })
+                    })
+                    .or_else(|| images.first());
+                let Some((_, import)) = selected else {
+                    return Err(crate::native::ImportError::Bad("empty container".into()).into());
+                };
                 let regions = import.mappings.iter().map(|m| MemoryRegion {
                     vaddr: m.vaddr, size: m.size, file_off: m.file_off,
                     file_size: m.bytes.len() as u64, flags: m.flags,
                 }).collect();
-                (regions, import.relocations)
+                (regions, import.relocations.clone())
             }
             Err(_) if raw_base.is_some() && !map.starts_with(b"\x7fELF") && !map.starts_with(b"MZ") => {
                 let vaddr = raw_base.unwrap();

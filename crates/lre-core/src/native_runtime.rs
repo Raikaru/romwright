@@ -299,9 +299,11 @@ fn run_decompiler(
             let data = std::fs::read(binary)
                 .map_err(|e| NativeRuntimeError(format!("{}: {e}", binary.display())))?;
             // A container header names the base; a raw platform image does
-            // not, so the loader that mapped it is asked instead of falling
-            // back to a base that would leave the address unmapped.
-            pe_image_base(&data)
+            // not, so the program's own stored regions are asked first --
+            // a cartridge with two processors has two bases, and only the
+            // store knows which program this request is for.
+            program_image_base(program, project_dir)
+                .or_else(|| pe_image_base(&data))
                 .or_else(|| elf_image_base(&data))
                 .or_else(|| {
                     crate::native::parse_native(&data)
@@ -373,6 +375,21 @@ pub fn decompile_native_doc(
         .map_err(|e| NativeRuntimeError(format!("worker document is not UTF-8: {e}")))?;
     serde_json::from_str(text.trim())
         .map_err(|e| NativeRuntimeError(format!("invalid structured worker document: {e}")))
+}
+
+/// The lowest address the store records for `program`, when the program is
+/// already imported. A platform image has no header to read a base from.
+fn program_image_base(program: &str, project_dir: &Path) -> Option<u64> {
+    let db = crate::ProjectDb::open(&project_dir.join("project.sqlite")).ok()?;
+    let id = db.program_id(program).ok()?;
+    db.memory_regions(id)
+        .ok()?
+        .iter()
+        // Only regions the image actually backs: a platform's declared RAM
+        // and IO windows carry no bytes and would name the wrong base.
+        .filter(|region| region.source == "native-import")
+        .map(|region| region.start.offset)
+        .min()
 }
 
 /// Reads console output until the interactive prompt "[decomp]> " is seen.
