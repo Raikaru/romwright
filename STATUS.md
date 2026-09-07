@@ -3030,14 +3030,43 @@ m3-003, all three wired into continuous integration)
   asserted byte-identical) and no signing (digests, not signatures). Tagging
   stays reserved to the human per II.1.
 
+### m6-005 evidence
+- `0367538` commits the failing acceptance (`tests/m6-005_scripting.py`).
+- `docs/scripting.md` shows `examples/facts_report.py` driving a project
+  through `python/ventris_sdk.py`: import, read the functions, write a rename,
+  undo it. The gate runs the documented command **in two environments** --
+  with the SLEIGH console and with every `VENTRIS_*` variable stripped --
+  because the page claims the script runs either way, and matches all four
+  output lines in both.
+- The gate also compares the page against the client. **Twelve helpers were
+  undocumented**: `comment`, `types`, `type_fields`, `type_graph`,
+  `trace_events`, `append_trace_event`, `collaboration_ops`,
+  `append_collaboration_op`, `apply_collaboration_op`, `debug_backtrace`,
+  `debug_registers`, `debug_memory`. All 23 are now in a table on the page,
+  and a helper the client grows without the page fails the gate.
+- The example script demonstrates three things worth copying, each verified by
+  the gate's output match: addresses arrive typed and are unpacked rather than
+  assumed; the containing function is **computed from the extents by the
+  script**, because the store answers with what it proved; edits are
+  journalled, so a script can undo its own work.
+- Measured (`benchmarks/reports/m6-005.json`): 1 documented command run twice,
+  8 output lines checked, 23 client helpers all documented.
+- Negative controls: a wrong documented output line, an undocumented helper
+  added to the client, and the script dropping one printed line all fail.
+- Found while writing the loader: a module executed through
+  `importlib.util.spec_from_file_location` must be registered in
+  `sys.modules` before `exec_module`, or a `@dataclass` inside it cannot
+  resolve its own annotations.
+
 ## Next task
-- m6-005: close the M6 documentation set with a page for scripts and agents.
-  `python/` ships a client and `docs/core-api.md` documents the wire
-  protocol, but there is no page showing a script driving a project end to
-  end, and no gate runs one. The acceptance must execute a documented script
-  against the fixture and check its printed facts, failing if the documented
-  script or its output drifts. Its acceptance test does not exist yet; write
-  it first.
+- m6-006: re-record the M6 documentation gates as one milestone report and
+  close M6. Five pages are gated (`getting-started`, `core-api`, `desktop`,
+  `releasing`, `scripting`), each with its own report; what is missing is the
+  milestone-level statement of what documentation coverage means -- every
+  user-facing surface has a page, every page is executed, and no page claims
+  a number no gate measured. The acceptance must enumerate the surfaces from
+  the repository rather than from a list in the test, and fail when a surface
+  has no gated page. Its acceptance test does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

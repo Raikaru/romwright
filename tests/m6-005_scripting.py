@@ -38,6 +38,9 @@ BLOCK = re.compile(r"```console\n(.*?)```", re.DOTALL)
 def load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
+    # `dataclasses` resolves annotations through `sys.modules[cls.__module__]`,
+    # so a module executed outside it cannot define one.
+    sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
 
