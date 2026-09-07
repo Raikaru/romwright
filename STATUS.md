@@ -499,7 +499,9 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M4 — Measured improvements over the frozen ground-truth baseline
+M5 — Console platforms, measurable tier first
+(M4 opened with m4-001; further M4 passes resume after the first console
+platforms land, per the sequencing decision recorded below)
 (M3 complete: DWARF scoring m3-001, frozen baseline m3-002, regression gate
 m3-003, all three wired into continuous integration)
 
@@ -2463,11 +2465,79 @@ m3-003, all three wired into continuous integration)
 - Verification: `tests/m3-003_regression.py` PASS; all three M3 gates wired
   into the `corpus-linux` CI job.
 
+## M4 implementation slices
+- m4-001: recover parameters passed in registers that no shipped prototype
+  model claims, behind `VENTRIS_REGISTER_PARAMS`.
+
+### m4-001 evidence
+- `98fc02f` commits the failing acceptance
+  (`tests/m4-001_register_params.py`).
+- What the deficit actually was: clang compiles `static int fn_n(int x)` for
+  i386 into `lea 0x3(%ecx),%eax; ret` -- the argument arrives in **ECX**
+  under the compiler's internal convention. `__cdecl` has no register
+  parameter slot, so `DecompilerParameterIdCmd` commits none. Ghidra's own
+  dataflow does see the input: it names the varnode `in_ECX`
+  ("Irregular input", `Scope::buildDefaultName`, database.cc:2470-2478 of the
+  pinned tree, verified there).
+- The document now carries that evidence structurally:
+  `lre_model::StorageSymbol` rows come from `<mapsym>` (symbol plus its
+  storage entries, database.cc:2643-2654), so the pass reads mapped storage
+  rather than scraping C text.
+- `crates/lre-core/src/register_params.rs` commits exactly the registers the
+  evidence names, with three guards, each measured:
+  1. **Volatility.** A register must be one the compiler spec says a call
+     destroys. A callee-saved live-in is something else -- on i386 PIC it is
+     the GOT pointer in EBX, not an argument.
+  2. **Storage agreement.** A captured offset must match the register file in
+     `registers.txt`, so a name alone never decides which register was read.
+  3. **No invented convention.** x86-32 gcc ships no model that passes ECX
+     first (`__regparm1/2/3` start at EAX; its `__thiscall` passes `this` on
+     the stack), so the row records **no** calling convention rather than a
+     false `__cdecl`. A model name is claimed only when the evidence is
+     exactly that model's leading registers. Ordering follows a model that
+     covers every observed register, else the register file's offsets.
+- Both spec encodings are handled: an installed spec names registers
+  (`<register name="ECX"/>`), a dumped bundle gives storage (`<addr>` for
+  parameter entries, `<varnode>` for register sets). The dumped form was the
+  reason the first implementation recovered nothing.
+- Measured (`benchmarks/reports/m4-001.json`): `i386_many_o2` prototype arity
+  **0.0000 -> 1.0000** against DWARF, one row improved, **no row lost
+  arity**, and with the flag off every row still equals the frozen baseline.
+  Provenance on the recovered facts reads
+  `native-prototype:register-input(ECX)`.
+- Off by default: II.1 reserves enabling an M4 pass, so default output is
+  byte-identical and `benchmarks/reports/m3-003.json` still records the
+  deficit.
+- Verification: `cargo test --workspace` 193 pass; `tests/corpus.sh` 5/5;
+  `tests/differential.sh`, `tests/m3-001_dwarf_truth.py`,
+  `tests/m3-002_baseline.py`, `tests/m3-003_regression.py`,
+  `tests/m4-001_register_params.py` pass.
+
 ## Next task
-- m4-001: close the `i386_many_o2:proto.arity` deficit -- recover x86-32
-  stack parameters that `DecompilerParameterIdCmd` leaves at zero, behind a
-  flag, with oracle mode preserved (II.1 reserves enabling any M4 pass by
-  default). Its acceptance test does not exist yet; write it first.
+- m5-001: GBA raw-ROM loader with its documented memory map, scored against a
+  DWARF twin built from source, as the first console platform. Its acceptance
+  test does not exist yet; write it first.
+
+## Console sequencing decision (agent judgement, 2026-09-07)
+The ten platforms recorded in "Reserved decisions" split by what can be
+*proved* with the machinery that exists, not by appeal:
+- **Tier 1, now** -- language present in the pinned install, container
+  documented, and a DWARF twin buildable from source, so an M3-style gate row
+  is possible on day one: GBA (`ARM:LE:32:v4t`, raw ROM), NDS
+  (`ARM:LE:32:v5t` + `v4t`, two CPU images per container), PS1
+  (`MIPS:LE:32:default`, PS-EXE), N64 (`MIPS:BE:64:64-32addr`, Z64/V64/N64).
+- **Tier 2, prerequisite-gated** -- named blockers, each recorded rather than
+  worked around: PSP (`MIPS:LE:32:default` decodes, VFPU unmodelled); PS2
+  (no R5900 model in the pinned install, so MMI and VU0 macro ops do not
+  decode); PS3 (no Cell SPU processor at all); Xbox 360 (VMX128 unmodelled);
+  Vita and 3DS (encrypted containers accepted only already decrypted, and no
+  keys are ever bundled -- II.1 forbids the runtime network call that would
+  fetch them).
+- Rule for every platform: it is "supported" only with a loader, a language
+  mapping proven by decoding, and a gate row scoring it. No platform is
+  claimed from a successful import alone.
+- Corpus membership stays reserved (II.1): each platform's gate input needs
+  human approval before it becomes a corpus member.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

@@ -24,6 +24,7 @@ pub struct DecodedDocument {
     pub tokens: Vec<DecompToken>,
     pub prototype: Option<FuncProto>,
     pub jump_tables: Option<Vec<JumpTable>>,
+    pub storage: Vec<lre_model::StorageSymbol>,
 }
 
 // funcdata.cc and jumptable.cc packed element tables.
@@ -495,18 +496,20 @@ fn decode_packed(
         }
     }
     let complete = valid && stack.is_empty();
+    let recovered = if complete {
+        prototype.map(crate::prototype::Collector::finish).unwrap_or_default()
+    } else {
+        crate::prototype::Recovered::default()
+    };
     DecodedDocument {
         tokens,
-        prototype: if complete {
-            prototype.and_then(crate::prototype::Collector::finish)
-        } else {
-            None
-        },
+        prototype: recovered.prototype,
         jump_tables: if complete {
             switches.and_then(SwitchCollector::finish)
         } else {
             None
         },
+        storage: recovered.storage,
     }
 }
 

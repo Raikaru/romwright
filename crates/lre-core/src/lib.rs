@@ -14,6 +14,7 @@ pub mod native;
 pub mod native_runtime;
 pub mod session;
 mod prototypes;
+pub mod register_params;
 mod nonreturn;
 mod signatures;
 pub mod rtti;
@@ -946,6 +947,13 @@ impl Core {
         doc.address = address.clone();
         let id = self.db.program_id(program)?;
         doc.revision = self.db.revision(id)?;
+        // Register-passed parameters are part of prototype recovery, so
+        // every consumer of the document sees the same answer the
+        // inference rounds persist. The pass is off unless asked.
+        if let Some(prototype) = doc.prototype.as_mut() {
+            let language = self.db.program_language(id)?;
+            register_params::augment(&self.config, &language, prototype, &doc.storage);
+        }
         Ok(doc)
     }
 

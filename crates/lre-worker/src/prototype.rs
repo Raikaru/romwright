@@ -4,8 +4,9 @@
 //! Datatype::encodeRef, TypePointer/TypeArray/TypeCode::encode (pinned tree).
 
 use crate::doc::Value;
-use crate::wire::elem::{DOC, FUNCTION, PROTOTYPE, RETURNSYM, SYMBOL, TYPE, TYPEREF, VOID};
-use lre_model::{DecompType, FuncParam, FuncProto};
+use crate::wire::attr::{NAME, OFFSET, SIZE, SPACE};
+use crate::wire::elem::{ADDR, DOC, FUNCTION, MAPSYM, PROTOTYPE, RETURNSYM, SYMBOL, TYPE, TYPEREF, VOID};
+use lre_model::{DecompType, FuncParam, FuncProto, StorageSymbol};
 
 const DEF: u32 = 43;
 const INTERNALLIST: u32 = 161;
@@ -136,16 +137,34 @@ fn decode_prototype(mut node: Node, mut parameters: Vec<FuncParam>) -> Option<Fu
         parameters,
         variadic,
         no_return: node.boolean(crate::wire::attr::NORETURN)?,
+        parameter_source: None,
     })
 }
 
 /// Capture only prototype/type subtrees and local symbols, never the AST.
 /// A closed native function is required; C markup also uses FUNCTION but has
 /// no direct PROTOTYPE. Nested function-pointer prototypes remain type data.
+/// What one document yields besides its tokens.
+#[derive(Default)]
+pub(crate) struct Recovered {
+    pub prototype: Option<FuncProto>,
+    pub storage: Vec<StorageSymbol>,
+}
+
 #[derive(Default)]
 pub(crate) struct Collector {
     function_depth: Option<usize>,
     localdb_depth: Option<usize>,
+    /// `<mapsym>` pairs one `<symbol>` with the `<addr>` entries that store
+    /// it (database.cc:2643-2654 of the pinned tree), so storage arrives as
+    /// the symbol's sibling rather than its child.
+    mapsym_depth: Option<usize>,
+    pending_input: Option<String>,
+    addr_depth: Option<usize>,
+    addr_space: Option<String>,
+    addr_offset: Option<u64>,
+    addr_size: Option<u32>,
+    storage: Vec<StorageSymbol>,
     capture: Vec<Node>,
     parameters: Vec<FuncParam>,
     prototype: Option<Node>,
@@ -164,6 +183,19 @@ impl Collector {
         }
         if id == LOCALDB && self.function_depth == depth.checked_sub(1) {
             self.localdb_depth = Some(depth);
+        }
+        if id == MAPSYM && self.localdb_depth.is_some() {
+            self.mapsym_depth = Some(depth);
+            self.pending_input = None;
+        }
+        if id == ADDR
+            && self.pending_input.is_some()
+            && self.mapsym_depth == depth.checked_sub(1)
+        {
+            self.addr_depth = Some(depth);
+            self.addr_space = None;
+            self.addr_offset = None;
+            self.addr_size = None;
         }
         let root = (id == PROTOTYPE && self.function_depth == depth.checked_sub(1))
             || (id == SYMBOL && self.localdb_depth.is_some());
@@ -189,6 +221,14 @@ impl Collector {
     }
 
     pub(crate) fn attribute(&mut self, id: u32, value: Value, depth: usize) -> Option<Value> {
+        if self.addr_depth == Some(depth) {
+            match (id, &value) {
+                (SPACE, Value::String(space)) => self.addr_space = Some(space.clone()),
+                (OFFSET, _) => self.addr_offset = value.unsigned(),
+                (SIZE, _) => self.addr_size = value.unsigned().and_then(|s| u32::try_from(s).ok()),
+                _ => {}
+            }
+        }
         let Some(node) = self.capture.last_mut() else {
             return Some(value);
         };
@@ -205,7 +245,7 @@ impl Collector {
             return;
         }
         if self.capture.last().is_some_and(|node| node.depth == depth) {
-            let Some(node) = self.capture.pop() else {
+            let Some(mut node) = self.capture.pop() else {
                 return;
             };
             if node.id != id {
@@ -228,6 +268,32 @@ impl Collector {
                 } else {
                     self.failed = true;
                 }
+            } else if id == SYMBOL && self.mapsym_depth.is_some() {
+                // An irregular input carries its evidence in its name; the
+                // storage arrives in the sibling `<addr>`.
+                self.pending_input = node
+                    .string(NAME)
+                    .filter(|name| name.starts_with("in_"));
+            }
+        }
+        if id == ADDR && self.addr_depth == Some(depth) {
+            self.addr_depth = None;
+        }
+        if id == MAPSYM && self.mapsym_depth == Some(depth) {
+            self.mapsym_depth = None;
+            // A live-in register symbol is dynamic: `SymbolEntry::encode`
+            // writes `<hash>` rather than `<addr>` for storage the decompiler
+            // did not address-tie (database.cc:187-198). The register is then
+            // carried by the name alone, which is the documented encoding.
+            if let Some(name) = self.pending_input.take() {
+                if self.storage.len() < 64 {
+                    self.storage.push(StorageSymbol {
+                        name,
+                        space: self.addr_space.take().unwrap_or_default(),
+                        offset: self.addr_offset.take().unwrap_or_default(),
+                        size: self.addr_size.take().unwrap_or_default(),
+                    });
+                }
             }
         }
         if id == LOCALDB && self.localdb_depth == Some(depth) {
@@ -246,11 +312,11 @@ impl Collector {
         }
     }
 
-    pub(crate) fn finish(self) -> Option<FuncProto> {
+    pub(crate) fn finish(self) -> Recovered {
         if self.failed || self.function_depth.is_some() || !self.capture.is_empty() {
-            None
+            Recovered::default()
         } else {
-            self.result
+            Recovered { prototype: self.result, storage: self.storage }
         }
     }
 }

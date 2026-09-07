@@ -44,6 +44,10 @@ pub struct RuntimeConfig {
     /// rounds). Requests inside one batch or round are independent, so
     /// sharding them changes wall time, never facts.
     pub console_shards: usize,
+    /// Recover parameters passed in registers that no shipped prototype
+    /// model claims (m4-001). Off by default: II.1 reserves enabling an M4
+    /// pass, so it changes user-visible output only when asked.
+    pub register_params: bool,
 }
 
 /// One console per physical core, capped at eight. Each shard is a separate
@@ -168,6 +172,7 @@ impl RuntimeConfig {
             ghidra_install: install,
             worker_memory_cap: 256 * 1024 * 1024,
             console_shards,
+            register_params: std::env::var_os("VENTRIS_REGISTER_PARAMS").is_some(),
         }
     }
 

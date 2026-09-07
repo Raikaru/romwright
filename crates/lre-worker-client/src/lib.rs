@@ -152,6 +152,7 @@ impl WorkerSession {
             jump_tables: decoded.jump_tables,
             address: Address::ram(address),
             revision: 0,
+            storage: decoded.storage,
         })
     }
 
@@ -681,6 +682,8 @@ impl WorkerPoolManager {
         let store = core.store_handle()?;
         let id = store.program_id(program)?;
         let graph_revision = store.revision(id)?;
+        // The register-parameter pass reads the program's own compiler spec.
+        let language = store.program_language(id)?;
         // A linkage stub has no callee body to recover. Treating its empty
         // prototype as void(void) would erase live arguments in its callers.
         let externals: HashSet<_> = store
@@ -736,10 +739,16 @@ impl WorkerPoolManager {
                 }
                 report.analyzed += 1;
                 if !externals.contains(&function.entry) {
-                    recovered.push((
-                        function.entry.clone(),
-                        doc.prototype.expect("recovery requires a prototype"),
-                    ));
+                    let mut prototype = doc.prototype.expect("recovery requires a prototype");
+                    // The decompiler's irregular inputs are evidence its own
+                    // model had no slot for; the pass is off unless asked.
+                    lre_core::register_params::augment(
+                        core.runtime_config(),
+                        &language,
+                        &mut prototype,
+                        &doc.storage,
+                    );
+                    recovered.push((function.entry.clone(), prototype));
                 }
             }
             if Instant::now() >= deadline {

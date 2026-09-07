@@ -294,6 +294,10 @@ pub struct FuncProto {
     pub variadic: bool,
     /// A positive native no-return hint; false does not prove a return path.
     pub no_return: bool,
+    /// Set when the parameter list did not come from the decompiler's own
+    /// model recovery, naming the pass that supplied it instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub parameter_source: Option<String>,
 }
 
 /// Recovered indirect branch targets, in native table order. Several case
@@ -302,6 +306,19 @@ pub struct FuncProto {
 pub struct JumpTable {
     pub branch: Address,
     pub targets: Vec<Address>,
+}
+
+/// A local symbol the decompiler mapped to fixed storage. A name of the form
+/// `in_<REGISTER>` marks an "irregular input": dataflow found the function
+/// reads that register before writing it while the prototype model has no
+/// slot for it (`Scope::buildDefaultName`, database.cc:2470-2478 of the
+/// pinned tree).
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct StorageSymbol {
+    pub name: String,
+    pub space: String,
+    pub offset: u64,
+    pub size: u32,
 }
 
 /// The structured decompiler document for one function (WORKER-004): a
@@ -317,6 +334,10 @@ pub struct DecompDoc {
     pub jump_tables: Option<Vec<JumpTable>>,
     pub address: Address,
     pub revision: u64,
+    /// Local symbols with fixed storage; empty when the document predates
+    /// storage capture or the function has none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub storage: Vec<StorageSymbol>,
 }
 
 /// Structural row kinds emitted by the core listing source.
