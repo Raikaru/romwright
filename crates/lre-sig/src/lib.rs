@@ -11,6 +11,12 @@
 //! outer artifact manifest's job; the container carries no checksum.
 #![forbid(unsafe_code)]
 
+pub mod archive;
+pub mod object;
+
+pub use archive::{ArchiveError, Member};
+pub use object::{Extracted, Object, ObjectError, SkipReason, Skipped};
+
 pub const MAGIC: &[u8; 4] = b"VSIG";
 pub const VERSION: u16 = 1;
 /// Header: magic, version, flags, record count, payload length.
