@@ -1,6 +1,6 @@
 {
   "id": "m5-009",
-  "recorded_at": "2026-09-07T07:46:54.042114+00:00",
+  "recorded_at": "2026-09-07T08:20:17.586577+00:00",
   "thresholds": {
     "linkage.name.missing_import": 0,
     "linkage.name.unexplained": 0,
@@ -8,19 +8,19 @@
   },
   "status": "pass",
   "passed": true,
-  "summary": "20 corpus entries: 71/91 stock thunk names matched, 20 synthetic init-array labels not copied but proven by reference, 0 missing import names, 0 unsupported names",
+  "summary": "20 corpus entries: 91/91 stock thunk names matched, 0 synthetic init-array labels not copied but proven by reference, 0 missing import names, 0 unsupported names",
   "metrics": {
-    "linkage.name.agreement": 0.7802197802197802,
+    "linkage.name.agreement": 1.0,
     "linkage.name.missing_import": 0,
     "linkage.name.unexplained": 0,
     "linkage.name.unsupported": 0,
-    "linkage.name.presentation": 20
+    "linkage.name.presentation": 0
   },
   "totals": {
     "rows": 196,
     "comparable": 91,
-    "equal": 71,
-    "presentation": 20,
+    "equal": 91,
+    "presentation": 0,
     "missing_import": 0,
     "unexplained": 0,
     "unsupported": 0
@@ -30,17 +30,8 @@
       "id": "x86_64_plain_o0",
       "rows": 5,
       "comparable": 2,
-      "equal": 1,
-      "presentation": [
-        {
-          "entry": "00201670",
-          "ours": "FUN_00201670",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 2,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -49,17 +40,8 @@
       "id": "x86_64_plain_o2",
       "rows": 5,
       "comparable": 2,
-      "equal": 1,
-      "presentation": [
-        {
-          "entry": "00201660",
-          "ours": "FUN_00201660",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 2,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -68,17 +50,8 @@
       "id": "x86_64_plain_pie",
       "rows": 9,
       "comparable": 3,
-      "equal": 2,
-      "presentation": [
-        {
-          "entry": "00101710",
-          "ours": "FUN_00101710",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-reloc"
-          ]
-        }
-      ],
+      "equal": 3,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -87,17 +60,8 @@
       "id": "x86_64_cpp_o2",
       "rows": 17,
       "comparable": 8,
-      "equal": 7,
-      "presentation": [
-        {
-          "entry": "00201970",
-          "ours": "FUN_00201970",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 8,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -106,17 +70,8 @@
       "id": "x86_64_many_o2",
       "rows": 3,
       "comparable": 1,
-      "equal": 0,
-      "presentation": [
-        {
-          "entry": "002041c0",
-          "ours": "FUN_002041c0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 1,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -125,17 +80,8 @@
       "id": "i386_plain_o0",
       "rows": 6,
       "comparable": 3,
-      "equal": 2,
-      "presentation": [
-        {
-          "entry": "00401540",
-          "ours": "FUN_00401540",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 3,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -144,17 +90,8 @@
       "id": "i386_plain_o2",
       "rows": 6,
       "comparable": 3,
-      "equal": 2,
-      "presentation": [
-        {
-          "entry": "00401540",
-          "ours": "FUN_00401540",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 3,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -163,17 +100,8 @@
       "id": "i386_plain_pie",
       "rows": 10,
       "comparable": 4,
-      "equal": 3,
-      "presentation": [
-        {
-          "entry": "000115c0",
-          "ours": "FUN_000115c0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-reloc"
-          ]
-        }
-      ],
+      "equal": 4,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -182,17 +110,8 @@
       "id": "i386_cpp_o2",
       "rows": 18,
       "comparable": 9,
-      "equal": 8,
-      "presentation": [
-        {
-          "entry": "004017f0",
-          "ours": "FUN_004017f0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 9,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -201,17 +120,8 @@
       "id": "i386_many_o2",
       "rows": 4,
       "comparable": 2,
-      "equal": 1,
-      "presentation": [
-        {
-          "entry": "004040a0",
-          "ours": "FUN_004040a0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 2,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -220,18 +130,8 @@
       "id": "aarch64_plain_o0",
       "rows": 11,
       "comparable": 5,
-      "equal": 4,
-      "presentation": [
-        {
-          "entry": "002107c0",
-          "ours": "FUN_002107c0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer",
-            "native-import:elf-unwind"
-          ]
-        }
-      ],
+      "equal": 5,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -240,18 +140,8 @@
       "id": "aarch64_plain_o2",
       "rows": 11,
       "comparable": 5,
-      "equal": 4,
-      "presentation": [
-        {
-          "entry": "002107c0",
-          "ours": "FUN_002107c0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer",
-            "native-import:elf-unwind"
-          ]
-        }
-      ],
+      "equal": 5,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -260,18 +150,8 @@
       "id": "aarch64_plain_pie",
       "rows": 13,
       "comparable": 6,
-      "equal": 5,
-      "presentation": [
-        {
-          "entry": "00110850",
-          "ours": "FUN_00110850",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-reloc",
-            "native-import:elf-unwind"
-          ]
-        }
-      ],
+      "equal": 6,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -280,18 +160,8 @@
       "id": "aarch64_cpp_o2",
       "rows": 22,
       "comparable": 10,
-      "equal": 9,
-      "presentation": [
-        {
-          "entry": "00210ac0",
-          "ours": "FUN_00210ac0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer",
-            "native-import:elf-unwind"
-          ]
-        }
-      ],
+      "equal": 10,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -300,18 +170,8 @@
       "id": "aarch64_many_o2",
       "rows": 9,
       "comparable": 4,
-      "equal": 3,
-      "presentation": [
-        {
-          "entry": "00213300",
-          "ours": "FUN_00213300",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer",
-            "native-import:elf-unwind"
-          ]
-        }
-      ],
+      "equal": 4,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -320,17 +180,8 @@
       "id": "powerpc_plain_o0",
       "rows": 7,
       "comparable": 4,
-      "equal": 3,
-      "presentation": [
-        {
-          "entry": "100104e0",
-          "ours": "FUN_100104e0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 4,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -339,17 +190,8 @@
       "id": "powerpc_plain_o2",
       "rows": 7,
       "comparable": 4,
-      "equal": 3,
-      "presentation": [
-        {
-          "entry": "100104e0",
-          "ours": "FUN_100104e0",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 4,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -358,17 +200,8 @@
       "id": "powerpc_plain_pie",
       "rows": 10,
       "comparable": 4,
-      "equal": 3,
-      "presentation": [
-        {
-          "entry": "00020640",
-          "ours": "FUN_00020640",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-reloc"
-          ]
-        }
-      ],
+      "equal": 4,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -377,17 +210,8 @@
       "id": "powerpc_cpp_o2",
       "rows": 18,
       "comparable": 9,
-      "equal": 8,
-      "presentation": [
-        {
-          "entry": "10010730",
-          "ours": "FUN_10010730",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 9,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []
@@ -396,17 +220,8 @@
       "id": "powerpc_many_o2",
       "rows": 5,
       "comparable": 3,
-      "equal": 2,
-      "presentation": [
-        {
-          "entry": "10013030",
-          "ours": "FUN_10013030",
-          "stock": "_INIT_0",
-          "evidence": [
-            "native-import:elf-pointer"
-          ]
-        }
-      ],
+      "equal": 3,
+      "presentation": [],
       "missing_import": [],
       "unexplained": [],
       "unsupported": []

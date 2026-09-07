@@ -1,0 +1,966 @@
+{
+  "id": "m5-010",
+  "recorded_at": "2026-09-07T08:17:02.071035+00:00",
+  "thresholds": {
+    "initializer.name.missing": 0,
+    "initializer.name.unbacked": 0,
+    "initializer.name.unexplained": 0
+  },
+  "status": "pass",
+  "passed": true,
+  "summary": "20 corpus entries: 40 initializer slots named from their arrays, 1818/1903 names equal to stock with 74 proven-equivalent labels, 11 pinned pattern labels, 0 missing, 0 unbacked, 0 unexplained",
+  "metrics": {
+    "initializer.name.agreement": 0.955333683657383,
+    "initializer.name.missing": 0,
+    "initializer.name.unbacked": 0,
+    "initializer.name.unexplained": 0,
+    "initializer.slots": 40,
+    "initializer.name.equivalent": 74,
+    "initializer.name.pattern_labels": 11
+  },
+  "totals": {
+    "slots": 40,
+    "missing": 0,
+    "unbacked": 0,
+    "equal": 1818,
+    "equivalent": 74,
+    "unexplained": 0,
+    "compared": 1903,
+    "pattern_labels": 11
+  },
+  "corpus": [
+    {
+      "id": "x86_64_plain_o0",
+      "slots": [
+        {
+          "slot": "00202738",
+          "target": "00201670",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00202730",
+          "target": "00201640",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 8,
+      "equivalent": [
+        {
+          "address": "00201590",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "002016dc",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "002016f8",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00201710",
+          "ours": "_plt",
+          "stock": "FUN_00201710",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 12
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "slots": [
+        {
+          "slot": "002026f8",
+          "target": "00201660",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "002026f0",
+          "target": "00201630",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 8,
+      "equivalent": [
+        {
+          "address": "00201580",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00201698",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "002016b4",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "002016d0",
+          "ours": "_plt",
+          "stock": "FUN_002016d0",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 12
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "slots": [
+        {
+          "slot": "001027c0",
+          "target": "00101710",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "001027b8",
+          "target": "001016d0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 8,
+      "equivalent": [
+        {
+          "address": "00101630",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00101748",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00101764",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00101780",
+          "ours": "_plt",
+          "stock": "FUN_00101780",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 12
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "slots": [
+        {
+          "slot": "00202b40",
+          "target": "00201970",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00202b38",
+          "target": "00201940",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 16,
+      "equivalent": [
+        {
+          "address": "00201890",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00201a84",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00201aa0",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00201ab0",
+          "ours": "_plt",
+          "stock": "FUN_00201ab0",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 20
+    },
+    {
+      "id": "x86_64_many_o2",
+      "slots": [
+        {
+          "slot": "00207c40",
+          "target": "002041c0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00207c38",
+          "target": "00204190",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 406,
+      "equivalent": [
+        {
+          "address": "002040e0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00206c08",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00206c24",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 409
+    },
+    {
+      "id": "i386_plain_o0",
+      "slots": [
+        {
+          "slot": "00402614",
+          "target": "00401540",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00402610",
+          "target": "00401510",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 9,
+      "equivalent": [
+        {
+          "address": "00401440",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "004015ac",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "004015cc",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "004015e0",
+          "ours": "_plt",
+          "stock": "FUN_004015e0",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [
+        {
+          "address": "00401469",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401480",
+          "stock": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "compared": 15
+    },
+    {
+      "id": "i386_plain_o2",
+      "slots": [
+        {
+          "slot": "004025e4",
+          "target": "00401540",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "004025e0",
+          "target": "00401510",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 9,
+      "equivalent": [
+        {
+          "address": "00401440",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00401578",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00401598",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "004015b0",
+          "ours": "_plt",
+          "stock": "FUN_004015b0",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [
+        {
+          "address": "00401469",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401480",
+          "stock": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "compared": 15
+    },
+    {
+      "id": "i386_plain_pie",
+      "slots": [
+        {
+          "slot": "00012684",
+          "target": "000115c0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00012680",
+          "target": "00011570",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 9,
+      "equivalent": [
+        {
+          "address": "000114a0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "0001160c",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "0001162c",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00011640",
+          "ours": "_plt",
+          "stock": "FUN_00011640",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [
+        {
+          "address": "000114c8",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "000114d0",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "000115c5",
+          "stock": "__i686.get_pc_thunk.dx"
+        }
+      ],
+      "compared": 16
+    },
+    {
+      "id": "i386_cpp_o2",
+      "slots": [
+        {
+          "slot": "00402a08",
+          "target": "004017f0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00402a04",
+          "target": "004017c0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 17,
+      "equivalent": [
+        {
+          "address": "004016f0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00401930",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00401950",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00401970",
+          "ours": "_plt",
+          "stock": "FUN_00401970",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [
+        {
+          "address": "00401719",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00401730",
+          "stock": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "compared": 23
+    },
+    {
+      "id": "i386_many_o2",
+      "slots": [
+        {
+          "slot": "00407b44",
+          "target": "004040a0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00407b40",
+          "target": "00404070",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 407,
+      "equivalent": [
+        {
+          "address": "00403fa0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00406ae8",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00406b08",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00406b20",
+          "ours": "_plt",
+          "stock": "FUN_00406b20",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [
+        {
+          "address": "00403fc9",
+          "stock": "__i686.get_pc_thunk.bx"
+        },
+        {
+          "address": "00403fe0",
+          "stock": "__i686.get_pc_thunk.bx"
+        }
+      ],
+      "compared": 413
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "slots": [
+        {
+          "slot": "002208c8",
+          "target": "002107c0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "002208c0",
+          "target": "00210790",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 13,
+      "equivalent": [
+        {
+          "address": "002106c0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00210828",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00210840",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00210860",
+          "ours": "_plt",
+          "stock": "FUN_00210860",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 17
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "slots": [
+        {
+          "slot": "00220888",
+          "target": "002107c0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00220880",
+          "target": "00210790",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 13,
+      "equivalent": [
+        {
+          "address": "002106c0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "002107f0",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00210808",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00210820",
+          "ours": "_plt",
+          "stock": "FUN_00210820",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 17
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "slots": [
+        {
+          "slot": "00120928",
+          "target": "00110850",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00120920",
+          "target": "00110800",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 13,
+      "equivalent": [
+        {
+          "address": "00110740",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00110880",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00110898",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "001108b0",
+          "ours": "_plt",
+          "stock": "FUN_001108b0",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 17
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "slots": [
+        {
+          "slot": "00220cf0",
+          "target": "00210ac0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00220ce8",
+          "target": "00210a90",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 20,
+      "equivalent": [
+        {
+          "address": "002109c0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "00210bf8",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00210c10",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00210c30",
+          "ours": "_plt",
+          "stock": "FUN_00210c30",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 24
+    },
+    {
+      "id": "aarch64_many_o2",
+      "slots": [
+        {
+          "slot": "002252e8",
+          "target": "00213300",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "002252e0",
+          "target": "002132d0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 411,
+      "equivalent": [
+        {
+          "address": "00213200",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "0021525c",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "00215274",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        },
+        {
+          "address": "00215290",
+          "ours": "_plt",
+          "stock": "FUN_00215290",
+          "section": ".plt"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 415
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "slots": [
+        {
+          "slot": "10020658",
+          "target": "100104e0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "10020654",
+          "target": "100104a0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 9,
+      "equivalent": [
+        {
+          "address": "100103f0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "10010588",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "100105dc",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 12
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "slots": [
+        {
+          "slot": "10020610",
+          "target": "100104e0",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "1002060c",
+          "target": "100104a0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 9,
+      "equivalent": [
+        {
+          "address": "100103f0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "10010540",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "10010594",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 12
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "slots": [
+        {
+          "slot": "0003079c",
+          "target": "00020640",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "00030798",
+          "target": "000205d0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 10,
+      "equivalent": [
+        {
+          "address": "000204c0",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "000206c8",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "0002071c",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 13
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "slots": [
+        {
+          "slot": "100209fc",
+          "target": "10010730",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "100209f8",
+          "target": "100106f0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 16,
+      "equivalent": [
+        {
+          "address": "10010640",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "10010900",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "10010954",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 19
+    },
+    {
+      "id": "powerpc_many_o2",
+      "slots": [
+        {
+          "slot": "10025074",
+          "target": "10013030",
+          "expected": "_INIT_0",
+          "ours": "_INIT_0"
+        },
+        {
+          "slot": "10025070",
+          "target": "10012ff0",
+          "expected": "_FINI_0",
+          "ours": "_FINI_0"
+        }
+      ],
+      "missing": [],
+      "unbacked": [],
+      "equal": 407,
+      "equivalent": [
+        {
+          "address": "10012f40",
+          "ours": "_entry",
+          "stock": "entry"
+        },
+        {
+          "address": "10014fa8",
+          "ours": "_init",
+          "stock": "_DT_INIT"
+        },
+        {
+          "address": "10014ffc",
+          "ours": "_fini",
+          "stock": "_DT_FINI"
+        }
+      ],
+      "unexplained": [],
+      "pattern_labels": [],
+      "compared": 410
+    }
+  ]
+}

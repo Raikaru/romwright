@@ -1,6 +1,7 @@
 //! ELF load bias and relative relocations, before discovery or memory reads.
 //! REL/RELA/RELR layouts and R_*_RELATIVE numbers follow the public elf.h ABI.
 use super::{ElfSection, ImportError, MemoryRelocation, NativeImport, NativeXref, Result};
+use std::collections::HashMap;
 
 fn bad(message: &str) -> ImportError {
     ImportError::Bad(message.into())
@@ -279,6 +280,7 @@ pub(super) fn prepare(
     import.ifunc_slots.sort_unstable();
     import.ifunc_slots.dedup();
     collect_plt_candidates(sections, import, machine, width as u64);
+    collect_initializer_labels(data, import, width, be, bias)?;
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;
     }
@@ -388,6 +390,89 @@ fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Opt
         }
     }
     Ok(None)
+}
+
+/// Names the targets of the dynamic initializer arrays.
+///
+/// Ghidra `ElfProgramBuilder.createDynamicEntryPoints` (lines 690-750) names
+/// the target of `DT_INIT_ARRAY[i]` `_INIT_<i>`, and the other two arrays
+/// `_PREINIT_<i>` and `_FINI_<i>`. Both parts are read, never guessed: the
+/// array's base and size come from the dynamic table, the target from the
+/// slot's own word or from the relocation applied to that slot, and the index
+/// from the slot's position in the array. A zero slot names nothing.
+fn collect_initializer_labels(
+    data: &[u8],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+    bias: u64,
+) -> Result<()> {
+    // Public elf.h tag numbers.
+    const ARRAYS: [(u64, u64, &str); 3] = [
+        (25, 27, "_INIT_"),
+        (32, 33, "_PREINIT_"),
+        (26, 28, "_FINI_"),
+    ];
+    let relocated: HashMap<u64, u64> = import
+        .xrefs
+        .iter()
+        .filter(|xref| xref.provenance == "native-import:elf-reloc")
+        .map(|xref| (xref.from, xref.to))
+        .collect();
+    let word_at = |import: &NativeImport, address: u64| -> Option<u64> {
+        let mapping = import.mappings.iter().find(|mapping| {
+            address >= mapping.vaddr && address - mapping.vaddr < mapping.size
+        })?;
+        let offset = usize::try_from(address - mapping.vaddr).ok()?;
+        let bytes = mapping.bytes.get(offset..offset.checked_add(width)?)?;
+        Some(match (width, be) {
+            (4, false) => u32::from_le_bytes(bytes.try_into().ok()?) as u64,
+            (4, true) => u32::from_be_bytes(bytes.try_into().ok()?) as u64,
+            (8, false) => u64::from_le_bytes(bytes.try_into().ok()?),
+            (8, true) => u64::from_be_bytes(bytes.try_into().ok()?),
+            _ => return None,
+        })
+    };
+    let mut labels = Vec::new();
+    for (array_tag, size_tag, prefix) in ARRAYS {
+        let Some(base) = dynamic_value(data, width, be, array_tag)? else {
+            continue;
+        };
+        let Some(size) = dynamic_value(data, width, be, size_tag)?
+            .filter(|size| *size != 0)
+        else {
+            continue;
+        };
+        let base = base
+            .checked_add(bias)
+            .ok_or_else(|| bad("ELF initializer array address overflow"))?;
+        for index in 0..size / width as u64 {
+            let slot = base
+                .checked_add(index * width as u64)
+                .ok_or_else(|| bad("ELF initializer slot address overflow"))?;
+            // A relocated slot holds its target already rebased; a plain word
+            // holds a link-time address.
+            let target = match relocated.get(&slot) {
+                Some(target) => *target,
+                None => match word_at(import, slot).filter(|word| *word != 0) {
+                    Some(word) => word
+                        .checked_add(bias)
+                        .ok_or_else(|| bad("ELF initializer target overflow"))?,
+                    None => continue,
+                },
+            };
+            let executable = import.mappings.iter().any(|mapping| {
+                mapping.flags & 4 != 0
+                    && target >= mapping.vaddr
+                    && target - mapping.vaddr < mapping.size
+            });
+            if executable {
+                labels.push((target, format!("{prefix}{index}")));
+            }
+        }
+    }
+    import.initializer_labels.extend(labels);
+    Ok(())
 }
 
 fn collect_x86_plt_context(

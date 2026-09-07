@@ -2813,14 +2813,49 @@ m3-003, all three wired into continuous integration)
   a name needs a symbol at its own address.
 - One additive metric family (`linkage.name.*`); no II.3 definition changed.
 
+### m5-010 evidence
+- `ee2f3e1` commits the failing acceptance
+  (`tests/m5-010_initializer_names.py`).
+- `collect_initializer_labels` reads `DT_INIT_ARRAY`, `DT_PREINIT_ARRAY` and
+  `DT_FINI_ARRAY` with their sizes from the dynamic table, takes each target
+  from the slot's own word or from the relocation applied to that slot, and
+  takes the index from the slot's position -- the construction Ghidra uses in
+  `ElfProgramBuilder.createDynamicEntryPoints:690-750`. `_INIT_<i>`,
+  `_PREINIT_<i>`, `_FINI_<i>`, applied only over a generated name.
+- **The gate grew past its own charter, on purpose**: comparing every
+  function name (not just initializer targets) against stock Ghidra is the
+  same work, and it turns "the last name class" into a measurable claim.
+  Measured (`benchmarks/reports/m5-010.json`) over 20 locked ELF inputs:
+  **1818 of 1903 names equal**, 74 proven-equivalent labels, 11 pinned
+  pattern labels, **0 unexplained**. Every function name in the store is now
+  accounted for against stock.
+- Proven-equivalent means the same address named from a different source, and
+  each is proven by reading the header, the dynamic table or the section
+  table: `_entry` for `e_entry`, `_init`/`_fini` for `DT_INIT`/`DT_FINI`
+  (Ghidra says `_DT_INIT`), `_plt` for the `.plt` section start where Ghidra
+  leaves `FUN_`.
+- The 11 pinned rows are `__i686.get_pc_thunk.*`, which stock takes from a
+  `<funcstart label=...>` entry in `x86gcc_patterns.xml`. Ventris already
+  reads those pattern files for function starts; applying their labels is
+  m5-011.
+- Forced cutover: `tests/m5-009_linkage_names.py` accepted `_INIT_n` as a
+  label Ghidra applies and we do not. That class is now closed, so its
+  support rule accepts a derived initializer name **only** when the store
+  holds the reference from that array slot, and its "presentation class is
+  untested" assertion is gone -- the class is empty by construction.
+- Unit tests: `initializer_arrays_name_their_targets_by_index` builds a
+  synthetic ELF32 with two init entries and one fini entry and asserts the
+  indices; `initializer_labels_replace_only_generated_names` pins that a
+  symbol name stands and a label for no function is dropped.
+
 ## Next task
-- m5-010: name the initializer-array entries from the array, closing the last
-  name-difference class on the corpus (20 rows). The index in `.init_array`
-  or `.fini_array` is a fact the store already references, so the name is
-  derivable rather than copied: entry *n* of the array is the *n*th
-  initializer. The acceptance must score names against stock Ghidra as
-  m5-009 does, keep the "no name without evidence at its address" rule, and
-  fail if an array index is guessed rather than read. Its acceptance test
+- m5-011: apply the `<funcstart label=...>` name from the pattern that proved
+  a function start. `crates/lre-core/src/native/discovery/patterns.rs`
+  already parses the pinned pattern files for starts and drops the label, so
+  the name is data we hold and ignore -- 11 rows on the corpus, all
+  `__i686.get_pc_thunk.*`. The acceptance must delete those rows from
+  `PATTERN_LABELS` in `tests/m5-010_initializer_names.py` and fail if a label
+  is applied to a function the pattern did not match. Its acceptance test
   does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

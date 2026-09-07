@@ -167,6 +167,9 @@ pub struct NativeImport {
     pub pointer_candidates: Vec<u64>,
     /// Loader-declared initializer entry points, also requiring valid flow.
     pub initializer_candidates: Vec<u64>,
+    /// Names an initializer array gives its targets: the array names the
+    /// prefix, the slot's position names the index.
+    pub initializer_labels: Vec<(u64, String)>,
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
@@ -1088,7 +1091,27 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // pass that creates one has run.
     discovery::record_branch_transfers(imp);
     name_linkage_stubs(imp);
+    apply_initializer_labels(imp);
     Ok(())
+}
+
+/// Gives an initializer-array target the name its array gives it.
+///
+/// Only a generated name is replaced. Ghidra does the same: a function that a
+/// symbol already named keeps that name and merely becomes an entry point
+/// (`ElfProgramBuilder.createEntryFunction:779-802`).
+fn apply_initializer_labels(imp: &mut NativeImport) {
+    let labels = std::mem::take(&mut imp.initializer_labels);
+    for (target, label) in &labels {
+        if let Some(function) = imp
+            .functions
+            .iter_mut()
+            .find(|function| function.entry == *target && function.name.starts_with("FUN_"))
+        {
+            function.name = label.clone();
+        }
+    }
+    imp.initializer_labels = labels;
 }
 
 /// Gives a stub the import name its own resolved slot proved.
@@ -2591,6 +2614,34 @@ mod tests {
 
     #[test]
     #[test]
+    fn initializer_labels_replace_only_generated_names() {
+        let mut imp = NativeImport {
+            functions: vec![
+                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
+                NativeFunction { entry: 0x1004, size: 4, name: "frame_dummy".into() },
+            ],
+            initializer_labels: vec![
+                (0x1000, "_INIT_0".into()),
+                (0x1004, "_INIT_1".into()),
+                // No function there: a label for nothing is dropped.
+                (0x1008, "_FINI_0".into()),
+            ],
+            ..Default::default()
+        };
+        apply_initializer_labels(&mut imp);
+        assert_eq!(
+            imp.functions
+                .iter()
+                .map(|function| (function.entry, function.name.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                (0x1000, "_INIT_0".to_string()),
+                (0x1004, "frame_dummy".to_string()),
+            ]
+        );
+    }
+
+    #[test]
     fn linkage_naming_replaces_only_generated_names() {
         let mut imp = NativeImport {
             functions: vec![
@@ -2624,6 +2675,69 @@ mod tests {
                 // A section-derived name stands: it is evidence of its own.
                 (0x1100, "_init".to_string()),
                 (0x1200, "FUN_00001200".to_string()),
+            ]
+        );
+    }
+
+    /// The index comes from the slot's position and the prefix from the array
+    /// the slot belongs to; nothing here is guessed.
+    #[test]
+    fn initializer_arrays_name_their_targets_by_index() {
+        let mut bytes = vec![0u8; 0x300];
+        bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
+        for (offset, value) in [(16, 2u16), (18, 3), (40, 52), (42, 32), (44, 3),
+            (46, 40), (48, 5), (50, 4)] {
+            bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
+        }
+        for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
+            bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        for (index, header) in [
+            // code, data holding the arrays, and the dynamic table
+            [1u32, 0x100, 0x1000, 0x1000, 0x20, 0x20, 5, 1],
+            [1, 0x120, 0x3000, 0x3000, 0x10, 0x10, 6, 1],
+            [2, 0x140, 0x3100, 0x3100, 0x28, 0x28, 6, 4],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 52 + index * 32 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        // Two init entries and one fini entry, pointing into the code segment.
+        for (index, target) in [0x1000u32, 0x1004, 0x1008].iter().enumerate() {
+            let offset = 0x120 + index * 4;
+            bytes[offset..offset + 4].copy_from_slice(&target.to_le_bytes());
+        }
+        for (index, (tag, value)) in [(25u32, 0x3000u32), (27, 8), (26, 0x3008), (28, 4)]
+            .iter()
+            .enumerate()
+        {
+            let offset = 0x140 + index * 8;
+            bytes[offset..offset + 4].copy_from_slice(&tag.to_le_bytes());
+            bytes[offset + 4..offset + 8].copy_from_slice(&value.to_le_bytes());
+        }
+        let names = b"\0.text\0.init_array\0.fini_array\0.shstrtab\0";
+        bytes[0x180..0x180 + names.len()].copy_from_slice(names);
+        for (index, header) in [
+            [1u32, 1, 6, 0x1000, 0x100, 0x20, 0, 0, 1, 0],
+            [7, 14, 3, 0x3000, 0x120, 8, 0, 0, 4, 0],
+            [19, 15, 3, 0x3008, 0x128, 4, 0, 0, 4, 0],
+            [31, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
+        ].iter().enumerate() {
+            for (field, value) in header.iter().enumerate() {
+                let offset = 0x200 + (index + 1) * 40 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        let import = import_elf(&bytes).expect("elf");
+        let base = import.mappings.iter().map(|mapping| mapping.vaddr).min().unwrap();
+        let bias = base - 0x1000;
+        assert_eq!(
+            import.initializer_labels,
+            vec![
+                (0x1000 + bias, "_INIT_0".to_string()),
+                (0x1004 + bias, "_INIT_1".to_string()),
+                (0x1008 + bias, "_FINI_0".to_string()),
             ]
         );
     }

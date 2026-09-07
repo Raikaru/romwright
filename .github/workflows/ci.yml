@@ -180,6 +180,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$VENTRIS_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/linkage-names.json"
+      - name: Enforce initializer-array naming
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m5-010_initializer_names.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA" \
+            --report "$RUNNER_TEMP/discovery/initializer-names.json"
       - name: Enforce the tail-call promotion gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

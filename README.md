@@ -335,6 +335,38 @@ Two model differences are named and asserted rather than averaged away:
 A thunk with neither explanation fails the gate, as does a stock thunk whose
 entry is in the image and which Ventris does not record.
 
+### Function names against stock Ghidra
+
+Every function name in the store is compared with stock Ghidra's name for the
+same address over the 20 locked ELF inputs
+(`tests/m5-010_initializer_names.py`, `benchmarks/reports/m5-010.json`):
+
+| Class | Rows |
+|---|---|
+| names equal | 1818 |
+| proven-equivalent label (same address, different source) | 74 |
+| pinned pattern label not applied yet | 11 |
+| unexplained | **0** |
+
+Initializer-array targets take the name their array gives them: the base and
+size come from `DT_INIT_ARRAY` / `DT_PREINIT_ARRAY` / `DT_FINI_ARRAY`, the
+target from the slot's own word or the relocation applied to it, and the index
+from the slot's position -- the same construction as
+`ElfProgramBuilder.createDynamicEntryPoints`. Only a generated `FUN_` name is
+replaced; a symbol keeps its name, as it does in Ghidra.
+
+A *proven-equivalent* label is the same address named from a different source:
+Ventris says `_entry`, `_init`, `_fini` and `_plt` from the ELF header and the
+section table where Ghidra says `entry`, `_DT_INIT`, `_DT_FINI` and nothing.
+The gate proves each one by reading the header, the dynamic table or the
+section table, so "equivalent" is never a shrug.
+
+The 11 pinned rows are `__i686.get_pc_thunk.*`, which stock takes from a
+`<funcstart label=...>` entry in
+`Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`. Ventris reads those
+pattern files for function starts and does not yet apply their labels; the
+rows are pinned by address, so a new one fails the gate.
+
 ### Names at linkage stubs
 
 A stub whose slot the store resolves takes that slot's import name, from the
