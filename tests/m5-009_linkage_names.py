@@ -52,8 +52,12 @@ THRESHOLDS = {
     "linkage.name.unsupported": 0,
 }
 
-# Ghidra's synthetic labels for entries of `.init_array` / `.fini_array`.
+# Ghidra's labels for entries of `.init_array` / `.fini_array`. Ventris derives
+# the same names from the dynamic arrays as of m5-010, so the presentation
+# class below is normally empty; it stays because a platform without a dynamic
+# table would fall back to it, and it demands the reference either way.
 SYNTHETIC = re.compile(r"^_(INIT|FINI)_\d+$")
+DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
 # Names `collect_elf_section_starts` gives from the section table itself.
 SECTION_NAMES = {"_init", "_fini", "_plt", "_entry"}
 # Provenance of a reference that proves an address is an initializer target.
@@ -104,13 +108,21 @@ def classify(identifier: str, stock: dict, native: dict) -> dict:
                 continue
         unexplained.append({"entry": entry, "ours": ours, "stock": theirs})
 
-    # Every name must be supported by evidence at its own address.
+    # Every name must be supported by evidence at its own address: a symbol,
+    # the section table, or - since m5-010 - an initializer array that
+    # references the address and gives the index in the name.
     unsupported = []
     for entry, name in sorted(native["functions"].items()):
         if name.startswith("FUN_") or name in SECTION_NAMES:
             continue
-        if name not in native["symbols"].get(entry, set()):
-            unsupported.append({"entry": entry, "name": name})
+        if name in native["symbols"].get(entry, set()):
+            continue
+        if DERIVED.match(name):
+            sources = native["referenced"].get(entry, set())
+            if any(source.startswith(known) for source in sources
+                   for known in INITIALIZER_SOURCES):
+                continue
+        unsupported.append({"entry": entry, "name": name})
 
     comparable = (equal + len(presentation) + len(missing_import)
                   + len(unexplained))
@@ -178,8 +190,6 @@ def main() -> int:
 
     assert len(rows) >= 20, f"only {len(rows)} corpus entries were scored"
     assert totals["equal"], "no name agreed with stock, so nothing was compared"
-    assert totals["presentation"], (
-        "no init-array label was classified; the presentation class is untested")
     metrics = {
         # Stock thunks that are not functions of ours belong to m5-008's
         # entry classes; naming is scored only where both have a function.

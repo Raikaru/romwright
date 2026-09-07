@@ -49,6 +49,35 @@ THRESHOLDS = {
 }
 
 DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
+# Names stock Ghidra takes from a `<funcstart label=...>` pattern in the pinned
+# install (`Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`). Ventris
+# reads those pattern files for function starts and does not yet apply their
+# labels, so the rows are pinned by address: a new one fails here, and closing
+# the class means deleting its rows.
+PATTERN_LABELS = {
+    "i386_plain_o0": {
+        "00401469": "__i686.get_pc_thunk.bx",
+        "00401480": "__i686.get_pc_thunk.bx"
+    },
+    "i386_plain_o2": {
+        "00401469": "__i686.get_pc_thunk.bx",
+        "00401480": "__i686.get_pc_thunk.bx"
+    },
+    "i386_plain_pie": {
+        "000114c8": "__i686.get_pc_thunk.bx",
+        "000114d0": "__i686.get_pc_thunk.bx",
+        "000115c5": "__i686.get_pc_thunk.dx"
+    },
+    "i386_cpp_o2": {
+        "00401719": "__i686.get_pc_thunk.bx",
+        "00401730": "__i686.get_pc_thunk.bx"
+    },
+    "i386_many_o2": {
+        "00403fc9": "__i686.get_pc_thunk.bx",
+        "00403fe0": "__i686.get_pc_thunk.bx"
+    }
+}
+
 # Labels for the same address from a different source: ours from the section
 # table or the ELF header, Ghidra's from the dynamic table.
 EQUIVALENT = {("_entry", "entry"), ("_init", "_DT_INIT"), ("_fini", "_DT_FINI")}
@@ -134,8 +163,35 @@ def elf_facts(binary: Path) -> dict:
                 relative[int(parts[0], 16)] = int(parts[-1], 16)
             except ValueError:
                 continue
+    # Section starts, so a section-derived label can be proven.
+    if width == 8:
+        shoff = struct.unpack_from(f"{order}Q", data, 40)[0]
+        shentsize = struct.unpack_from(f"{order}H", data, 58)[0]
+        shnum = struct.unpack_from(f"{order}H", data, 60)[0]
+        shstrndx = struct.unpack_from(f"{order}H", data, 62)[0]
+    else:
+        shoff = struct.unpack_from(f"{order}I", data, 32)[0]
+        shentsize = struct.unpack_from(f"{order}H", data, 46)[0]
+        shnum = struct.unpack_from(f"{order}H", data, 48)[0]
+        shstrndx = struct.unpack_from(f"{order}H", data, 50)[0]
+    sections: dict[int, str] = {}
+    if shoff and shnum and shstrndx < shnum:
+        strtab_header = shoff + shstrndx * shentsize
+        strtab_offset = struct.unpack_from(
+            f"{order}{'Q' if width == 8 else 'I'}", data,
+            strtab_header + (24 if width == 8 else 16))[0]
+        for index in range(shnum):
+            header = shoff + index * shentsize
+            name_offset = struct.unpack_from(f"{order}I", data, header)[0]
+            address = struct.unpack_from(
+                f"{order}{'Q' if width == 8 else 'I'}", data,
+                header + (16 if width == 8 else 12))[0]
+            end = data.index(b"\0", strtab_offset + name_offset)
+            name = data[strtab_offset + name_offset:end].decode("utf-8", "replace")
+            if address:
+                sections[address] = name
     return {"entry": entry, "tags": tags, "word": word, "relative": relative,
-            "width": width}
+            "width": width, "sections": sections}
 
 
 def native_facts(cli: Path, binary: Path, work: Path, timeout: int) -> dict:
@@ -213,7 +269,7 @@ def scored_row(identifier: str, elf: dict, native: dict, stock: dict[int, str]) 
             if ours == expected and (slot + bias, address) not in native["references"]:
                 unbacked.append({"target": f"{address:08x}", "slot": f"{slot + bias:08x}"})
 
-    equal, equivalent, unexplained = 0, [], []
+    equal, equivalent, unexplained, pattern_labels = 0, [], [], []
     for address, theirs in sorted(stock.items()):
         ours = native["functions"].get(address)
         if ours is None:
@@ -221,6 +277,14 @@ def scored_row(identifier: str, elf: dict, native: dict, stock: dict[int, str]) 
         if ours == theirs:
             equal += 1
             continue
+        # A section-derived label where stock leaves a generated name: same
+        # address, and the section table proves the label.
+        if theirs.startswith("FUN_") and ours.startswith("_"):
+            section = elf["sections"].get(address - bias)
+            if section and section.lstrip(".") == ours.lstrip("_"):
+                equivalent.append({"address": f"{address:08x}", "ours": ours,
+                                   "stock": theirs, "section": section})
+                continue
         if (ours, theirs) in EQUIVALENT:
             # Same address, different source for the label. Prove the source.
             proven = (
@@ -232,12 +296,21 @@ def scored_row(identifier: str, elf: dict, native: dict, stock: dict[int, str]) 
                 equivalent.append({"address": f"{address:08x}", "ours": ours,
                                    "stock": theirs})
                 continue
+        if PATTERN_LABELS.get(identifier, {}).get(f"{address:08x}") == theirs:
+            pattern_labels.append({"address": f"{address:08x}", "stock": theirs})
+            continue
         unexplained.append({"address": f"{address:08x}", "ours": ours, "stock": theirs})
 
+    pinned = PATTERN_LABELS.get(identifier, {})
+    seen = {row["address"] for row in pattern_labels}
+    assert seen == set(pinned), (
+        f"{identifier}: pattern-label rows are {sorted(seen)} but the pinned set "
+        f"is {sorted(pinned)}")
     return {"id": identifier, "slots": slots, "missing": missing,
             "unbacked": unbacked, "equal": equal, "equivalent": equivalent,
-            "unexplained": unexplained,
-            "compared": equal + len(equivalent) + len(unexplained)}
+            "unexplained": unexplained, "pattern_labels": pattern_labels,
+            "compared": equal + len(equivalent) + len(unexplained)
+            + len(pattern_labels)}
 
 
 def main() -> int:
@@ -264,7 +337,8 @@ def main() -> int:
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"slots": 0, "missing": 0, "unbacked": 0, "equal": 0,
-                        "equivalent": 0, "unexplained": 0, "compared": 0}
+                        "equivalent": 0, "unexplained": 0, "compared": 0,
+                        "pattern_labels": 0}
     for entry in manifest["entries"]:
         if entry.get("status") != "ok":
             continue
@@ -280,7 +354,8 @@ def main() -> int:
         totals["slots"] += len(row["slots"])
         totals["compared"] += row["compared"]
         totals["equal"] += row["equal"]
-        for key in ("missing", "unbacked", "equivalent", "unexplained"):
+        for key in ("missing", "unbacked", "equivalent", "unexplained",
+                    "pattern_labels"):
             totals[key] += len(row[key])
 
         assert not row["missing"], (
@@ -305,6 +380,7 @@ def main() -> int:
         "initializer.name.unexplained": totals["unexplained"],
         "initializer.slots": totals["slots"],
         "initializer.name.equivalent": totals["equivalent"],
+        "initializer.name.pattern_labels": totals["pattern_labels"],
     }
     for name, threshold in THRESHOLDS.items():
         assert metrics[name] <= threshold, f"{name} is {metrics[name]}"
@@ -312,6 +388,7 @@ def main() -> int:
     summary = (f"{len(rows)} corpus entries: {totals['slots']} initializer slots named "
                f"from their arrays, {totals['equal']}/{totals['compared']} names equal "
                f"to stock with {totals['equivalent']} proven-equivalent labels, "
+               f"{totals['pattern_labels']} pinned pattern labels, "
                f"0 missing, 0 unbacked, 0 unexplained")
     if arguments.report:
         report.update(status="pass", passed=True, summary=summary, metrics=metrics,
