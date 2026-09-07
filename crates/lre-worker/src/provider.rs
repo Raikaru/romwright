@@ -87,6 +87,9 @@ pub struct ProgramProvider {
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
     pub register_space_index: i64,
+    /// Slots a stored thunk transfers through: by construction they hold a
+    /// code pointer, whether or not a relocation names its target.
+    pub pointer_slots: HashSet<u64>,
     /// Function entry -> branch instructions the store proves transfer
     /// control the way a call does (a thunk's jump).
     pub call_return_branches: HashMap<u64, Vec<u64>>,
@@ -119,6 +122,7 @@ impl ProgramProvider {
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
+            pointer_slots: HashSet::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
             pointer_size: 8,
@@ -607,13 +611,20 @@ impl NativeWorker {
                         wire::encode_array_type(out, ("char", char_id), count);
                     });
                     close_document(&mut doc);
-                } else if let (Some(target), Some((code_id, _))) =
-                    (provider.external_names.get(&vaddr), core("code"))
-                {
-                    // An import slot: a pointer whose target the store names,
-                    // so the label is `PTR_<name>_<address>`
-                    // (`PointerDataType.getLabelString`, :212-238).
-                    let name = format!("PTR_{target}_{vaddr:08x}");
+                } else if let (true, Some((code_id, _))) = (
+                    provider.external_names.contains_key(&vaddr)
+                        || provider.pointer_slots.contains(&vaddr),
+                    core("code"),
+                ) {
+                    // A slot holding a code pointer. Ghidra's label is
+                    // `PTR_<target name>_<address>` when the target has a
+                    // name and `PTR_<address>` when it does not
+                    // (`PointerDataType.getLabelString`, :212-238, and
+                    // `getDynamicDataName`, SymbolUtilities.java:541-544).
+                    let name = match provider.external_names.get(&vaddr) {
+                        Some(target) => format!("PTR_{target}_{vaddr:08x}"),
+                        None => format!("PTR_{vaddr:08x}"),
+                    };
                     let size = provider.pointer_size;
                     open_document(&mut doc);
                     wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {

@@ -653,6 +653,18 @@ pub struct PrototypeRow {
 
 /// A function's return behavior is unknown unless a producer supplies a fact.
 /// `no_return = false` can explicitly override an inferred non-returning flag.
+/// One instruction whose flow a fact corrects: the raw decode says "branch",
+/// the image's own structure says the transfer behaves like a call. Ghidra
+/// holds the same fact per instruction (`Instruction.getFlowOverride`).
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct FlowOverrideRow {
+    /// The branch instruction.
+    pub address: Address,
+    /// Ghidra's override name, e.g. `callreturn`.
+    pub kind: String,
+    pub provenance: FactProvenance,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ReturnBehaviorRow {
     pub function: Address,

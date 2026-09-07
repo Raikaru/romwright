@@ -125,6 +125,9 @@ pub struct NativeStringTable {
 
 /// Single owner name for flow-proven thunk facts and their jump xrefs.
 pub const THUNK_SOURCE: &str = "native-import:thunk";
+/// The PLT header's jump reads `DT_PLTGOT + 2 * pointer size`, which the
+/// System V ABI reserves for the dynamic linker's resolver.
+pub const PLT_HEADER_SOURCE: &str = "native-import:plt-header";
 
 /// A loader-bound data relocation that names a symbol: `copies` marks the
 /// COPY form, where the loader duplicates the symbol's bytes at `address`.
@@ -143,6 +146,9 @@ pub struct NativeThunk {
     /// Thunked function entry, or the imported slot for linkage stubs.
     pub destination: u64,
     pub kind: lre_model::ThunkKind,
+    /// The rule that proved this transfer; each becomes its own provenance so
+    /// a consumer can tell flow evidence from an ABI-declared slot.
+    pub source: &'static str,
 }
 
 /// Parsed image and transient loader/discovery evidence.
@@ -163,6 +169,12 @@ pub struct NativeImport {
     pub named_relocations: Vec<NamedRelocation>,
     /// Flow-proven thunk entries and their destinations.
     pub thunks: Vec<NativeThunk>,
+    /// `DT_PLTGOT + 2 * pointer size`: the slot the System V ABI reserves for
+    /// the dynamic linker's resolver, which the PLT header jumps through.
+    pub plt_resolver_slot: Option<u64>,
+    /// Instructions whose transfer the image's own structure proves behaves
+    /// like a call, with the rule that proved each.
+    pub flow_overrides: Vec<(u64, &'static str)>,
     /// Relocation code targets to be verified as candidate function entries.
     pub reloc_candidates: Vec<u64>,
     /// Untrusted data pointers; never functions until flow confirms them.
@@ -1142,6 +1154,9 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
     discovery::record_branch_transfers(imp);
+    // The instruction that reads the resolver slot only exists once reference
+    // inference has run, so this rule reads its facts, not discovery's seeds.
+    discovery::record_plt_header_flow(imp);
     name_linkage_stubs(imp);
     apply_initializer_labels(imp);
     apply_pattern_labels(imp);
@@ -1462,6 +1477,7 @@ fn infer_data_references(
                         entry: *start,
                         destination: slot,
                         kind: lre_model::ThunkKind::Linkage,
+                        source: crate::native::THUNK_SOURCE,
                     });
                 }
             }
@@ -1606,21 +1622,39 @@ pub fn store_import(
         })
         .collect();
     db.replace_xrefs(pid, &xrows)?;
-    let thunks: Vec<lre_model::ThunkRow> = imp
-        .thunks
+    let overrides: Vec<lre_model::FlowOverrideRow> = imp
+        .flow_overrides
         .iter()
-        .map(|thunk| lre_model::ThunkRow {
-            function: lre_model::Address::ram(thunk.entry),
-            thunked: lre_model::Address::ram(thunk.destination),
-            kind: thunk.kind,
+        .map(|(address, source)| lre_model::FlowOverrideRow {
+            address: lre_model::Address::ram(*address),
+            kind: "callreturn".into(),
             provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,
-                source: THUNK_SOURCE.into(),
+                source: (*source).into(),
                 confidence: None,
             },
         })
         .collect();
-    db.replace_inferred_thunks(pid, THUNK_SOURCE, &thunks)?;
+    db.replace_inferred_flow_overrides(pid, PLT_HEADER_SOURCE, &overrides)?;
+    // Each rule owns its rows, so one pass never deletes another's facts.
+    for source in [THUNK_SOURCE] {
+        let thunks: Vec<lre_model::ThunkRow> = imp
+            .thunks
+            .iter()
+            .filter(|thunk| thunk.source == source)
+            .map(|thunk| lre_model::ThunkRow {
+                function: lre_model::Address::ram(thunk.entry),
+                thunked: lre_model::Address::ram(thunk.destination),
+                kind: thunk.kind,
+                provenance: lre_model::FactProvenance {
+                    kind: lre_model::FactKind::Inferred,
+                    source: source.into(),
+                    confidence: None,
+                },
+            })
+            .collect();
+        db.replace_inferred_thunks(pid, source, &thunks)?;
+    }
     // Itanium class facts come from the image's own relocations and data, so
     // the loader can publish them without a console or a worker.
     let recovery = crate::rtti::recover(imp);
@@ -2760,12 +2794,12 @@ mod tests {
             ],
             thunks: vec![
                 NativeThunk { entry: 0x1000, destination: 0x2000,
-                              kind: lre_model::ThunkKind::Linkage },
+                              kind: lre_model::ThunkKind::Linkage, source: THUNK_SOURCE },
                 NativeThunk { entry: 0x1100, destination: 0x2008,
-                              kind: lre_model::ThunkKind::Linkage },
+                              kind: lre_model::ThunkKind::Linkage, source: THUNK_SOURCE },
                 // A direct thunk carries no import evidence, so no name.
                 NativeThunk { entry: 0x1200, destination: 0x1000,
-                              kind: lre_model::ThunkKind::Direct },
+                              kind: lre_model::ThunkKind::Direct, source: THUNK_SOURCE },
             ],
             ..Default::default()
         };

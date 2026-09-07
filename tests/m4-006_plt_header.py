@@ -9,19 +9,24 @@ nothing.
 
 That slot is not a guess. The System V x86-64 psABI reserves the first three
 `DT_PLTGOT` entries: `[0]` is the address of `.dynamic`, `[1]` the link-map
-and `[2]` the resolver the header jumps to. So an indirect transfer inside
-`.plt` that reads `DT_PLTGOT + 2 * pointer size` is a call to the dynamic
-linker's resolver, and the store can record it as a linkage thunk with the
-tag as its evidence.
+and `[2]` the resolver the header jumps to. So an indirect transfer that reads
+`DT_PLTGOT + 2 * pointer size` behaves like a call.
+
+The fact is *not* a thunk: stock Ghidra's own thunk table is empty for this
+image, and recording one broke set-level thunk parity (`m5-008`). What stock
+holds is a per-instruction flow override (`Instruction.getFlowOverride`), so
+that is what the store now holds too, in `flow_overrides`.
 
 Assertions
-  1. The store records a linkage thunk for the PLT header whose destination is
-     exactly `DT_PLTGOT + 2 * pointer size`, recomputed here from the ELF.
+  1. The store records a `callreturn` flow override at an instruction inside
+     the PLT that reads exactly `DT_PLTGOT + 2 * pointer size`, recomputed
+     here from the ELF.
   2. Its provenance names the rule, not a generic import.
-  3. The header decompiles with no jumptable warning.
+  3. The header decompiles with no jumptable warning, and the slot is named
+     the way Ghidra names a code pointer with no named target.
   4. An image with no `DT_PLTGOT` gets no such row: a PE fixture is imported
      and must hold none.
-  5. Nothing else moves: every other thunk row the store held is still there.
+  5. Thunk facts are untouched, so thunk parity with stock is unaffected.
 
 Usage:
     python3 tests/m4-006_plt_header.py --corpus-dir DIR [--report OUT.json]
@@ -72,6 +77,39 @@ def ram(cell: str) -> int | None:
     except json.JSONDecodeError:
         return None
     return decoded.get("offset") if decoded.get("space") == "Ram" else None
+
+
+def overrides(project: Path, program: str) -> list[dict]:
+    connection = sqlite3.connect(project / "project.sqlite")
+    try:
+        (identifier,) = connection.execute(
+            "SELECT id FROM programs WHERE name = ?", (program,)).fetchone()
+        rows = []
+        for address, kind, provenance in connection.execute(
+                "SELECT address, kind, provenance FROM flow_overrides "
+                "WHERE program_id = ?", (identifier,)):
+            offset = ram(address)
+            if offset is not None:
+                rows.append({"address": offset, "kind": kind,
+                             "provenance": provenance})
+        return rows
+    finally:
+        connection.close()
+
+
+def data_targets(project: Path, program: str, source: int) -> list[int]:
+    connection = sqlite3.connect(project / "project.sqlite")
+    try:
+        (identifier,) = connection.execute(
+            "SELECT id FROM programs WHERE name = ?", (program,)).fetchone()
+        found = []
+        for src, dst, kind in connection.execute(
+                "SELECT src, dst, kind FROM xrefs WHERE program_id = ?", (identifier,)):
+            if kind == "DATA" and ram(src) == source and ram(dst) is not None:
+                found.append(ram(dst))
+        return found
+    finally:
+        connection.close()
 
 
 def thunks(project: Path, program: str) -> list[dict]:
@@ -137,31 +175,46 @@ def main() -> int:
                        timeout=arguments.timeout)
         assert imported.returncode == 0, f"import failed: {imported.stderr.strip()}"
         rows = thunks(project, binary.name)
+        corrections = overrides(project, binary.name)
 
-        # 1 and 2. The header's thunk, named by the ABI-reserved slot.
-        header = [row for row in rows if row["destination"] == resolver]
-        assert header, (
-            f"the store records no thunk reaching the resolver slot "
-            f"{resolver:08x} (DT_PLTGOT {elf['pltgot']:08x} + 2 * {elf['width']}); "
-            f"it holds {[(f'{r['entry']:08x}', f'{r['destination']:08x}') for r in rows]}")
-        assert len(header) == 1, f"more than one row claims the resolver: {header}"
-        row = header[0]
-        assert row["kind"] == "linkage", (
-            f"the resolver transfer is recorded as {row['kind']}, not linkage")
+        # 1 and 2. The override, at an instruction reading the reserved slot.
+        reading = [row for row in corrections
+                   if resolver in data_targets(project, binary.name, row["address"])]
+        assert reading, (
+            f"the store records no flow override at an instruction reading the "
+            f"resolver slot {resolver:08x} (DT_PLTGOT {elf['pltgot']:08x} + 2 * "
+            f"{elf['width']}); it holds {corrections}")
+        assert len(reading) == 1, f"more than one override claims the slot: {reading}"
+        # Nothing else is corrected: every override the store holds must read
+        # the reserved slot, or the rule is firing on ordinary data reads.
+        stray = [item for item in corrections if item not in reading]
+        assert not stray, (
+            f"these instructions were corrected without reading the reserved "
+            f"slot: {[(f'{i["address"]:08x}', i['provenance']) for i in stray]}")
+        row = reading[0]
+        assert row["kind"] == "callreturn", (
+            f"the resolver transfer is recorded as {row['kind']}, not callreturn")
         assert "plt-header" in row["provenance"], (
             f"the row's provenance does not name the rule: {row['provenance']!r}")
-        assert elf["plt"] <= row["entry"] < elf["plt"] + elf["plt_size"], (
-            f"the row's function {row['entry']:08x} is outside .plt "
+        assert elf["plt"] <= row["address"] < elf["plt"] + elf["plt_size"], (
+            f"the corrected instruction {row['address']:08x} is outside .plt "
             f"({elf['plt']:08x}+{elf['plt_size']:x})")
 
-        # 3. The header decompiles as a call.
-        text = cli("decompile", str(binary), f"{row['entry']:08x}",
+        # 3. The header decompiles as a call, with the slot named as a pointer.
+        owner = max(entry for entry in
+                    [item["entry"] for item in rows] + [elf["plt"]]
+                    if entry <= row["address"])
+        text = cli("decompile", str(binary), f"{owner:08x}",
                    "--project", str(project), timeout=arguments.timeout)
         assert text.returncode == 0, f"decompile failed: {text.stderr.strip()}"
         assert not JUMPTABLE.search(text.stdout), (
             f"the PLT header still asks for a jumptable: "
             f"{text.stdout.strip()[:300]}")
-        findings["header"] = {"entry": f"{row['entry']:08x}",
+        assert f"PTR_{resolver:08x}" in text.stdout, (
+            f"the resolver slot is not rendered as a pointer: "
+            f"{text.stdout.strip()[:300]}")
+        findings["header"] = {"instruction": f"{row['address']:08x}",
+                              "function": f"{owner:08x}",
                               "resolver": f"{resolver:08x}",
                               "provenance": row["provenance"]}
 
@@ -173,26 +226,28 @@ def main() -> int:
                         timeout=arguments.timeout)
         assert pe_import.returncode == 0, (
             f"PE import failed: {pe_import.stderr.strip()}")
-        invented = [item for item in thunks(pe_project, pe.name)
-                    if "plt-header" in item["provenance"]]
+        invented = overrides(pe_project, pe.name)
         assert not invented, (
             f"a PE image with no DT_PLTGOT got PLT-header rows: {invented}")
-        findings["pe_rows"] = len(thunks(pe_project, pe.name))
+        findings["pe_rows"] = len(overrides(pe_project, pe.name))
 
-        # 5. The rest of the thunk facts are untouched.
-        others = [item for item in rows if item["destination"] != resolver]
-        assert others, "the row's other thunk facts disappeared"
-        findings["other_thunks"] = len(others)
+        # 5. Thunk facts are untouched, so thunk parity is unaffected.
+        assert rows, "the row's thunk facts disappeared"
+        assert all("plt-header" not in item["provenance"] for item in rows), (
+            f"the PLT header was recorded as a thunk after all: {rows}")
+        findings["other_thunks"] = len(rows)
 
-    metrics = {"plt.header_rows": 1, "plt.resolver_slot": resolver,
-               "plt.other_thunks": findings["other_thunks"],
-               "plt.pe_header_rows": 0}
-    summary = (f"the PLT header at {findings['header']['entry']} is a linkage thunk to "
-               f"the ABI-reserved resolver slot {findings['header']['resolver']} "
-               f"(DT_PLTGOT + 2 words), recorded as "
-               f"{findings['header']['provenance']}, and it decompiles with no "
-               f"jumptable warning; {findings['other_thunks']} other thunk facts are "
-               f"unchanged and a PE image gets none")
+    metrics = {"plt.overrides": 1, "plt.resolver_slot": resolver,
+               "plt.thunks_unchanged": findings["other_thunks"],
+               "plt.pe_overrides": 0}
+    summary = (f"the PLT header's jump at {findings['header']['instruction']} is a "
+               f"`callreturn` override reading the ABI-reserved resolver slot "
+               f"{findings['header']['resolver']} (DT_PLTGOT + 2 words), recorded as "
+               f"{findings['header']['provenance']}; the function decompiles with no "
+               f"jumptable warning and names the slot PTR_"
+               f"{findings['header']['resolver']}, "
+               f"{findings['other_thunks']} thunk facts are unchanged, and a PE image "
+               f"gets none")
 
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
