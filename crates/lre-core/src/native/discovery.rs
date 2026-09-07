@@ -1250,10 +1250,23 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     merged.sort_by_key(|f| f.entry);
     merged.dedup_by_key(|f| f.entry);
 
-    for f in merged.iter_mut() {
-        if let Some(span_end) = proven_bodies.get(&f.entry) {
-            f.size = span_end.saturating_sub(f.entry).max(1);
-        }
+    // A body ends where the next function begins. A proven span is the
+    // furthest instruction attributed to an origin, so a single fallthrough
+    // across inter-function padding stretches it over everything that
+    // follows -- 27 KB across dozens of functions on the MinGW CRT. Two
+    // functions cannot overlap, so the next entry is the hard boundary.
+    // A size of zero says "no body was proven" and lets the store fill it from
+    // the next entry; a proven size of one is a one-byte function, which the
+    // MinGW CRT really has, and must survive that fill.
+    for index in 0..merged.len() {
+        let entry = merged[index].entry;
+        merged[index].size = match proven_bodies.get(&entry) {
+            Some(&span_end) => {
+                let boundary = merged.get(index + 1).map_or(u64::MAX, |next| next.entry);
+                span_end.min(boundary).saturating_sub(entry).max(1)
+            }
+            None => 0,
+        };
     }
     imp.functions = merged;
     let no_return: HashSet<u64> = imp

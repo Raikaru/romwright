@@ -3281,19 +3281,55 @@ m3-003, all three wired into continuous integration)
   `m5-008`..`m5-011` all pass, so the retraction changed no ELF result.
 - Four additive metric names (`pe32.*`); no II.3 definition changed.
 
+### m8-003 evidence
+- `d3182b6` commits the failing acceptance (`tests/m8-003_body_extents.py`):
+  three PE images had a body swallowing 78, 78 and 69 other entries --
+  `FUN_00401c80` claimed **27 KB** of `tiny_pe32.exe`.
+- Two defects, both fixed:
+  1. A proven span is the furthest instruction attributed to an origin, so one
+     fallthrough across inter-function padding stretched it over everything
+     after it. A body now ends where the next entry begins: two functions
+     cannot overlap.
+  2. `store_import` filled any size `<= 1` from the distance to the next
+     entry, which **overwrote a proven one-byte body** -- the MinGW CRT's
+     one-instruction `__mingw_invalidParameterHandler` was given 1023 bytes
+     and swallowed `__tmainCRTStartup` and `WinMainCRTStartup` whole. Size
+     zero now means "no body proven" and is the only thing the store fills.
+- Measured (`benchmarks/reports/m8-003.json`) over 23 images and 1895 bodies
+  matched to a DWARF range: `body.crossing` **0**, `body.exact`
+  **0.9873**, 19 within one 16-byte alignment slot, 1 running into an
+  undiscovered function, `body.undershoot` 4, `body.unexplained_overshoot`
+  **0**.
+- Every deviation is classified against the image, not tolerated. An
+  overshoot may run into **one** undiscovered DWARF function and stop inside
+  it -- that is the `m8-002` recall deficit in bytes -- while crossing a
+  second start or running past the end of the one it entered fails. A body
+  may stop short only when no entry starts and no reference lands in the bytes
+  it left behind; the four that do are C++ landing pads, reached by the
+  personality routine rather than by a branch.
+- **Both fixes are gated, and I checked that.** Removing the next-entry clamp
+  fails with the 27 KB bodies; restoring the `size <= 1` fill fails with
+  `00401000 to 00401400 (+1023)`. The first draft of the overshoot rule passed
+  with the sentinel bug restored, which is why the rule now bounds the
+  overshoot to a single function.
+- Regression: `cargo test --workspace` 232 pass; `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`, `m1-005`, `m1-006`,
+  `generic_discovery_test.sh`, `m8-001`, `m8-002`, `m2-015`, `m6-001`,
+  `m6-002`, `m3-001`, `m3-003`, `m4-001`, `m5-008`..`m5-011` all pass.
+- Eight additive metric names (`body.*`); no II.3 definition changed.
+
 ## Next task
-- m8-003: a function body may not swallow the next function. `m8-002` found
-  `FUN_00401c80` claiming `00401c80..00408796` -- 27 KB spanning dozens of
-  functions -- because a proven body is the maximum end over every
-  instruction attributed to an origin, and one fallthrough chain across
-  inter-function padding stretches it over everything after it. That size is
-  what the store reports, what `function_extents` resolves a containing
-  function with (the field `m6-002` had to fix), and what a listing renders.
-  The acceptance must compare recovered body extents against DWARF's own
-  `DW_AT_low_pc`/`DW_AT_high_pc` ranges per corpus entry, gate the fraction
-  whose extent is contained in the truth range, and fail when any body
-  crosses another entry it does not own. Its acceptance test does not exist
-  yet; write it first.
+- m8-004: close the PE32 recall deficit with the roots a PE32 image actually
+  declares. `m8-002` classified 18 misses on `tiny_pe32.exe`: 8 reachable only
+  through a symbol the strip removed, 10 reached only through an indirect
+  transfer. The evidence not yet read is the TLS callback array
+  (`IMAGE_DIRECTORY_ENTRY_TLS`, `AddressOfCallBacks` -- present in that image,
+  24 bytes at RVA `0xa054`) and, for a DLL, the export directory; Ghidra's
+  `TLSDataDirectory` and `ExportDataDirectory` are the references to verify
+  against. The acceptance must raise the gated PE32 recall floor to the number
+  those roots prove, keep `pe32.dwarf.fn.unattributed == 0`, and keep every
+  remaining miss classified. Its acceptance test does not exist yet; write it
+  first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
