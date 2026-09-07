@@ -107,6 +107,16 @@ fn run(
     // A thunk's jump transfers control the way a call does. The store proves
     // both halves: the thunk row names entry and destination, and the xref
     // row names the instruction that performs the transfer.
+    for region in db.memory_regions(pid)? {
+        if region.start.space == lre_model::AddressSpace::Ram
+            && !region.permissions.contains('w')
+            && region.size > 0
+        {
+            provider
+                .read_only
+                .push((region.start.offset, region.start.offset + region.size));
+        }
+    }
     for row in db.data_definitions(pid)? {
         if row.address.space == lre_model::AddressSpace::Ram && row.size > 0 {
             provider

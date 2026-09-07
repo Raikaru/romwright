@@ -1,12 +1,12 @@
 {
  "id": "m9-001",
- "recorded_at": "2026-09-07T19:07:32.568279+00:00",
+ "recorded_at": "2026-09-07T20:02:44.734709+00:00",
  "status": "pass",
  "passed": true,
- "summary": "17 classes in the shared table, 17 declared in the crates and 11 observed in stores, all explained; 10 facts carried the table's sentence through the API; the desktop rendered 19 xref rows with 0 unexplained",
+ "summary": "18 classes in the shared table, 18 declared in the crates and 11 observed in stores, all explained; 10 facts carried the table's sentence through the API; the desktop rendered 19 xref rows with 0 unexplained",
  "metrics": {
-  "provenance.classes": 17,
-  "provenance.declared": 17,
+  "provenance.classes": 18,
+  "provenance.declared": 18,
   "provenance.observed": 11,
   "provenance.unexplained": 0,
   "provenance.api_facts_checked": 10,
@@ -16,6 +16,7 @@
  "table": {
   "native-import": "Read from the image's own headers by the native loader: a section, an entry point, or a symbol the file declares.",
   "native-import:branch": "A transfer of control the SLEIGH decoder proved by decoding the instruction that performs it.",
+  "native-import:type-archive": "A declaration the pinned C library type archive holds for a name the image imports, applied only when every type in it is one the decompiler already has.",
   "native-import:plt-reserved": "A word the System V ABI reserves at DT_PLTGOT -- the .dynamic address, the link-map, the resolver -- each of which holds a pointer.",
   "native-import:plt-header": "An indirect transfer that reads the word the System V ABI reserves for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it behaves like a call.",
   "native-import:thunk": "A stub whose whole body transfers to another address, proved by decoding it; the reference is the transfer it performs.",

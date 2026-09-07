@@ -4,6 +4,7 @@
 //! imported fact is exported into the project database with provenance, so
 //! reopening and browsing never needs the JVM (spec 14.4, Phase 3 exit).
 
+pub mod library_types;
 pub mod bridge;
 pub mod architecture;
 pub mod disasm;

@@ -3947,18 +3947,51 @@ m3-003, all three wired into continuous integration)
 - Regression: `m4-003` re-recorded and passing; evidence index, support matrix
   and documentation-coverage gates in sync.
 
+### m4-009 evidence
+- Imports now carry the prototypes the pinned C library archive declares.
+  Measured: token identity **25 -> 29** of 56 (every one of the four measured
+  languages gained one), `missing-external-prototype` **18 -> 14**. The x86-64
+  call site is now the oracle's text exactly:
+  `printf("sum: %d\n",(ulong)uVar1)`.
+- **Where the declarations come from, and why.** The archive
+  (`generic_clib_64.gdt`) is a Ghidra packed database; a parser for it in the
+  JVM-free path would be a lot of format for one table of names. Instead
+  `scripts/ExportLibraryPrototypes.java` reads it once through the pinned
+  install (oracle-only, `FileDataTypeManager.openFileArchive`), and
+  `scripts/gen_library_prototypes.py` commits the table with the archive's
+  SHA-256: **6627 declarations**, 1.1 MB, checked in CI so a changed archive
+  is a failure and not a drift. The runtime reads JSON; no JVM.
+- **Two facts had to arrive for the string to render.** The prototype gives
+  `printf`'s first parameter type `char *`; the printer then needs the
+  location to be read-only, which `PrintC::printCharacterConstant` requires
+  (printc.cc:1772). The store already knew: the mapped region is `r--`, so
+  string symbols in unwritable memory now carry `readonly`.
+- **A parse error taught the applicability rule.** `long strtol(char * *
+  __endptr, ...)` made the decompiler answer `Syntax error at line 0`, which
+  fails the whole function, and `powerpc_cpp_o2` with it. A declaration is
+  applied only when every type is a core type *and* has at most one pointer;
+  the arity gate went back to 20/20. A unit test pins the refusal.
+- Two tests had to change with the behaviour, both narrowed rather than
+  re-pinned: `m4-004`'s string rule accepts the label or the literal (never
+  the bare address), and `m2-006_inference` compares the retained prototype
+  *fact* instead of the provenance rendering, which m9-001 extended with the
+  explanation and evidence kind. That failure predated this task.
+- Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-009`,
+  `m3-001`, `m3-003`, `m2-005`, `m2-006`, `m5-008`, `m5-009`, `m9-001`..
+  `m9-005`, `m6-001`, `m6-002`, `m6-006`, `m5-012`, `support_matrix_test.py`,
+  `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 91 reports indexed, both generators in
+  sync.
+
 ## Next task
-- m4-009: `missing-external-prototype` (18) is the largest gap and it has one
-  cause: the store names imports and holds no signature for them, so
-  `printf(s_sum___d__002004d0, uVar1)` stands where the oracle prints
-  `printf("sum: %d\n", (ulong)uVar1)`. There is no GDT reader in this tree.
-  Decide the declaration source under the clean-room policy -- the pinned
-  install's own archives (a `.gdt` reader) or public SDK headers -- and record
-  the decision with its reason. Acceptance: an import named by relocation
-  evidence gets its declared prototype with provenance naming the source and
-  the symbol, `missing-external-prototype` falls with the parity baseline
-  re-recorded, no class grows, and no prototype is applied to a name the
-  source does not declare. Its acceptance test does not exist yet; write it
+- m4-010: `flow` (14) is now the largest gap and the remaining cases are not
+  x86-64: AArch64 and PowerPC each hold several functions where the two sides
+  warn differently on the same bytes. Diagnose one, name the fact behind it
+  (a transfer the store can prove, or a fact stock has and we do not), and
+  either carry it or record it as a named non-goal with numbers. Acceptance:
+  either `flow` falls with the parity baseline re-recorded and a positive
+  regression for the new fact, or the case is recorded with the evidence that
+  justifies leaving it. Its acceptance test does not exist yet; write it
   first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is

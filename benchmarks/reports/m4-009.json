@@ -1,0 +1,19 @@
+{
+ "id": "m4-009",
+ "recorded_at": "2026-09-07T20:02:22.992061+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "the pinned C library archive declares 6627 functions; the import at 00201720 carries its declared prototype (int printf(char * __format, ...)) with provenance native-import:type-archive, the call site renders \"sum: %d\\n\" as a literal, and no prototype names a symbol the archive does not declare",
+ "metrics": {
+  "library.declared_functions": 6627,
+  "library.typed_imports": 1,
+  "library.invented_prototypes": 0
+ },
+ "prototype": {
+  "stub": "00201720",
+  "return_type": "int",
+  "signature": "int printf(char * __format, ...)",
+  "provenance": "native-import:type-archive"
+ },
+ "call": "undefined8 FUN_002016a0(void){uint uVar1;uVar1 = FUN_00201680(2,3);printf(\"sum: %d\\n\",(ulong)uVar1);return 0;}"
+}

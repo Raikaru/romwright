@@ -23,6 +23,8 @@ pub struct RuntimeConfig {
     pub worker_path: PathBuf,
     /// Path to the patched `ghidra_opt` (raw-SLEIGH mode).
     pub decompiler_path: PathBuf,
+    /// Declarations exported from the pinned C library type archive.
+    pub library_prototypes: PathBuf,
     /// Spec root directory (pspec/cspec/tspec/coretypes + registers.txt).
     pub spec_root: PathBuf,
     /// SLEIGH console binary (disasm / console discovery), if built.
@@ -133,6 +135,11 @@ impl RuntimeConfig {
         let decompiler_path = std::env::var("VENTRIS_GHIDRA_OPT")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("native/build/ghidra_opt"));
+        let library_prototypes = std::env::var("VENTRIS_LIBRARY_PROTOTYPES")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                PathBuf::from("oracle/library-prototypes-v1/generic_clib_64.json")
+            });
         let spec_root = std::env::var("VENTRIS_SPECS")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("native/specs"));
@@ -165,6 +172,7 @@ impl RuntimeConfig {
             .filter(|shards| *shards >= 1)
             .unwrap_or_else(default_console_shards);
         Self {
+            library_prototypes,
             worker_path,
             decompiler_path,
             spec_root,

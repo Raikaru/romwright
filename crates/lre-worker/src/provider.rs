@@ -87,6 +87,8 @@ pub struct ProgramProvider {
     pub ram_space_index: i64,
     /// Register space index from the tspec (x86-64: 4).
     pub register_space_index: i64,
+    /// Mapped ranges the image marks unwritable, from the store's own map.
+    pub read_only: Vec<(u64, u64)>,
     /// Locations the store types, address -> (type name, width).
     pub data_definitions: HashMap<u64, (String, u64)>,
     /// Function entry -> branch instructions the store proves transfer
@@ -121,6 +123,7 @@ impl ProgramProvider {
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
+            read_only: Vec::new(),
             data_definitions: HashMap::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
@@ -598,6 +601,10 @@ impl NativeWorker {
                 // rather than storing one.
                 let mut doc = Vec::new();
                 let core = |name: &str| provider.core_types.get(name).copied();
+                let read_only = provider
+                    .read_only
+                    .iter()
+                    .any(|(start, end)| *start <= vaddr && vaddr < *end);
                 if let (Some(text), Some((char_id, _))) =
                     (provider.strings.get(&vaddr), core("char"))
                 {
@@ -606,9 +613,10 @@ impl NativeWorker {
                     let count = text.len() as u64 + 1;
                     let name = string_label(text, vaddr);
                     open_document(&mut doc);
-                    wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {
-                        wire::encode_array_type(out, ("char", char_id), count);
-                    });
+                    wire::encode_data_symbol(
+                        &mut doc, space as u32, vaddr, &name, read_only,
+                        |out| wire::encode_array_type(out, ("char", char_id), count),
+                    );
                     close_document(&mut doc);
                 } else if let (true, Some((code_id, _))) = (
                     provider.external_names.contains_key(&vaddr)
@@ -633,9 +641,10 @@ impl NativeWorker {
                         .map(|(_, width)| *width)
                         .unwrap_or(provider.pointer_size);
                     open_document(&mut doc);
-                    wire::encode_data_symbol(&mut doc, space as u32, vaddr, &name, |out| {
-                        wire::encode_pointer_type(out, ("code", code_id), size);
-                    });
+                    wire::encode_data_symbol(
+                        &mut doc, space as u32, vaddr, &name, read_only,
+                        |out| wire::encode_pointer_type(out, ("code", code_id), size),
+                    );
                     close_document(&mut doc);
                 } else if provider.data_targets.contains(&vaddr) {
                     // Only a reference: a name, with no claim about width or
