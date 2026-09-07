@@ -901,6 +901,16 @@ external configuration). Both go false when they should -- a build-tree binary
 and a configured run each fail the gate. The report names the platform it ran
 on; the CI `qt` job runs it on Linux, macOS and Windows.
 
+## Scripting
+
+`docs/scripting.md` shows `examples/facts_report.py` driving a project through
+`python/ventris_sdk.py`: read the functions, write a rename, undo it. The page
+is executed by `tests/m6-005_scripting.py` in two environments -- with the
+SLEIGH console and with every `VENTRIS_*` variable stripped -- because it
+claims the script runs either way. The gate also compares the page against the
+client: a helper the client grows and the page omits fails it, which is how
+twelve undocumented helpers were found.
+
 ## The Core API
 
 `docs/core-api.md` documents the stdio interface every consumer speaks --
@@ -981,11 +991,12 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 59; `diagnostic_runs` 12; `generated_rows` 58; `published_ids` 44 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 60; `diagnostic_runs` 12; `generated_rows` 59; `published_ids` 45 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
 | `m6-004.json` | `m6-004` | M6 | pass | `artifacts` 5; `commands` 9; `sbom_packages` 60; `skipped_blocks` 0 | `tests/m6-004_release_artifacts.py` |
+| `m6-005.json` | `m6-005` | M6 | pass | `client_helpers` 23; `commands` 1; `output_lines` 8 | `tests/m6-005_scripting.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

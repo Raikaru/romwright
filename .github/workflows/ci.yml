@@ -52,6 +52,8 @@ jobs:
           cargo build --release -p lre-api
           python3 tests/m6-002_documented_api.py \
             --report "$RUNNER_TEMP/documented-api.json"
+          python3 tests/m6-005_scripting.py \
+            --report "$RUNNER_TEMP/scripting.json"
   corpus-linux:
     name: Multi-Arch Corpus (ubuntu-latest)
     runs-on: ubuntu-latest
