@@ -93,7 +93,7 @@ def recovered_prototype(corpus: Path, timeout: int) -> dict:
         run_api(ROOT, project, [
             ("infer_prototypes", dict(binary=str(binary), program=DEFICIT_ROW,
                                       budget_ms=60000))], timeout, environment)
-        prototypes = run_api(ROOT, project, [
+        (prototypes,) = run_api(ROOT, project, [
             ("prototypes", dict(program=DEFICIT_ROW))], timeout, environment)
     match = next((row for row in prototypes
                   if row["function"]["offset"] == int(target, 16)), None)
@@ -132,12 +132,20 @@ def main() -> int:
 
     prototype = recovered_prototype(arguments.corpus_dir, arguments.timeout)
     provenance = prototype.get("provenance", {})
-    if PROVENANCE not in provenance.get("source", ""):
+    source = provenance.get("source", "")
+    if not source.startswith(f"{PROVENANCE}("):
         raise AssertionError(
-            f"recovered prototype does not record the pass: {provenance}")
-    if not prototype.get("calling_convention"):
-        raise AssertionError("recovered prototype names no calling convention")
-    if "(" not in prototype.get("signature", "") or "void" in prototype["signature"]:
+            f"recovered prototype does not record the pass and its registers: {provenance}")
+    if "ECX" not in source:
+        raise AssertionError(f"provenance names no register evidence: {source}")
+    # x86-32 gcc ships no model that passes ECX first: `__regparm*` start at
+    # EAX and its `__thiscall` passes `this` on the stack. Claiming one would
+    # be a false convention, so the row must record none.
+    if prototype.get("calling_convention") is not None:
+        raise AssertionError(
+            f"pass claimed a convention no spec model supports: "
+            f"{prototype['calling_convention']}")
+    if "param_1" not in prototype.get("signature", ""):
         raise AssertionError(
             f"recovered signature has no parameter: {prototype.get('signature')!r}")
 
@@ -155,7 +163,7 @@ def main() -> int:
     improved = sum(1 for row in disabled if enabled[row] > disabled[row] + 1e-9)
     print(f"m4-001: PASS ({DEFICIT_ROW} arity {disabled[DEFICIT_ROW]:.4f} -> "
           f"{enabled[DEFICIT_ROW]:.4f}, {improved} row(s) improved, none lost; "
-          f"{prototype['calling_convention']} recovered from register inputs)")
+          f"{source} at {prototype['function']['offset']:#x})")
     return 0
 
 

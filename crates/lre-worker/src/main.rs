@@ -134,6 +134,7 @@ fn run(
             jump_tables: decoded.jump_tables,
             address: lre_model::Address::ram(offset),
             revision: 0,
+            storage: decoded.storage,
         };
         println!(
             "{}",

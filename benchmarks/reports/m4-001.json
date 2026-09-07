@@ -1,0 +1,124 @@
+{
+  "id": "m4-001",
+  "recorded_at": "2026-09-07T04:13:37.312522+00:00",
+  "thresholds": {
+    "proto.arity": 0.98
+  },
+  "rows": {
+    "aarch64_cpp_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "aarch64_many_o2": {
+      "off": 0.9975062344139651,
+      "on": 0.9975062344139651,
+      "baseline": 0.9975062344139651
+    },
+    "aarch64_plain_o0": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "aarch64_plain_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "aarch64_plain_pie": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "i386_cpp_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "i386_many_o2": {
+      "off": 0.0,
+      "on": 1.0,
+      "baseline": 0.0
+    },
+    "i386_plain_o0": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "i386_plain_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "i386_plain_pie": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "powerpc_cpp_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "powerpc_many_o2": {
+      "off": 0.9975062344139651,
+      "on": 0.9975062344139651,
+      "baseline": 0.9975062344139651
+    },
+    "powerpc_plain_o0": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "powerpc_plain_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "powerpc_plain_pie": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "x86_64_cpp_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "x86_64_many_o2": {
+      "off": 0.9975062344139651,
+      "on": 0.9975062344139651,
+      "baseline": 0.9975062344139651
+    },
+    "x86_64_plain_o0": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "x86_64_plain_o2": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    },
+    "x86_64_plain_pie": {
+      "off": 1.0,
+      "on": 1.0,
+      "baseline": 1.0
+    }
+  },
+  "recovered": {
+    "function": {
+      "offset": 4215280,
+      "space": "Ram"
+    },
+    "calling_convention": null,
+    "signature": "int __ventris_inferred(int param_1)",
+    "provenance": {
+      "confidence": null,
+      "kind": "inferred",
+      "source": "native-prototype:register-input(ECX)"
+    }
+  },
+  "status": "pass",
+  "passed": true
+}

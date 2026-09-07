@@ -36,7 +36,12 @@ impl Core {
                 return_type: Some(return_type),
                 provenance: FactProvenance {
                     kind: FactKind::Inferred,
-                    source: "native-decompiler prototype recovery".into(),
+                    // A pass that supplied the parameters owns the fact; the
+                    // default recovery keeps its own name.
+                    source: prototype
+                        .parameter_source
+                        .clone()
+                        .unwrap_or_else(|| "native-decompiler prototype recovery".into()),
                     confidence: None,
                 },
             });
