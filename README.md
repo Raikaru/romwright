@@ -958,6 +958,34 @@ and PIE image bases cannot make the two disagree about what was decompiled
 | `decompile.peak_ratio.median` | **8.32x** less memory |
 | `decompile.wall_ratio.median` | **74.03x** faster |
 
+A session is a third question: the desktop and every script hold a project
+open through one `lre-api` process and ask it many things. Per entry one
+session answers the same seven requests for four warm-up rounds and eight
+measured rounds, with the *process tree*'s resident size -- the service plus
+the SLEIGH console child -- sampled every 25 ms
+(`tests/m7-003_session_envelope.py`, `benchmarks/reports/m7-003.json`):
+
+| Metric | Median over 20 entries |
+|---|---|
+| `session.peak_kb.median` | 42 940 KiB |
+| `session.growth_kb.max` | **28 KiB** over eight measured rounds |
+| `session.latency_ms.functions.median` | 0.265 ms |
+| `session.latency_ms.decompile_doc.median` | 6.002 ms |
+| `session.drift_ratio.max` | 1.68x |
+| `session.drift_excess_ms.max` | -0.863 ms, i.e. inside the bound |
+
+Warm-up is excluded because a warm cache is not a leak: on the PowerPC entries
+`decompile_doc` settles from 33 ms to 7 ms to 3.3 ms over the first four
+rounds. What the gate refuses is a cache that never stops filling -- growth
+across the measured rounds beyond `max(4 MiB, 5%)`, or growth in every single
+round totalling more than 512 KiB -- and a session that gets slower, each
+method's late-round median having to stay within twice its early-round median
+plus 2 ms. Absolute latency is recorded rather than gated: it tracks the
+host's CPU, while drift does not. `session.drift_ratio.max` counts only
+methods slow enough for a ratio to mean anything (2 ms or more), and
+`session.drift_excess_ms.max` says how far the worst method is from failing,
+so a passing run cannot report an alarming ratio.
+
 Both producers must emit a real function body, asserted rather than assumed:
 the native run has to print a body for the resolved address and the stock
 script has to report a non-empty `getC()`.
@@ -967,8 +995,9 @@ script has to report a non-empty `getC()`.
 are never edited: the gates allow 25% headroom for host noise and fail on
 anything larger, so a regression appears as a failure rather than as a new
 number. Shrinking one envelope entry, deleting one, and asking `--write` to
-overwrite the file all fail both gates, as does asking for a function the
-store does not have. `benchmarks/cost.py` holds the single definition of what
+overwrite the file all fail every one of the three gates, as does asking for
+a function the store does not have; a synthetic 1 MiB-per-round leak and an
+eightfold slowdown in the late rounds each fail the session gate. `benchmarks/cost.py` holds the single definition of what
 "it cost" means, so the two gates cannot drift apart.
 
 Stock analysis does more than a native import does -- it runs Ghidra's full
@@ -1028,6 +1057,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 |---|---|---|---|---|---|
 | `cost-envelope.json` | `cost-envelope` | - | recorded | `headroom` 1.2500 | - |
 | `decompile-envelope.json` | `decompile-envelope` | - | recorded | `headroom` 1.2500 | - |
+| `session-envelope.json` | `session-envelope` | - | recorded | `headroom` 1.2500; `rounds` 8; `warmup_rounds` 4 | - |
 | `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.1600; `peak_decompile_kb` 39160; `peak_disasm_kb` 0; `peak_import_kb` 5908 | - |
 | `ui-gate.json` | `ui` | M0 | pass | 1 pass, 0 fail, 0 skipped | `benchmarks/ui_gate.py` |
 | `discovery-gate.json` | `discovery` | M1 | pass | 20 pass, 0 fail, 0 skipped | `benchmarks/discovery_gate.py` |
@@ -1081,7 +1111,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 65; `diagnostic_runs` 12; `generated_rows` 64; `published_ids` 50 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 67; `diagnostic_runs` 12; `generated_rows` 66; `published_ids` 52 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1090,6 +1120,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m6-006.json` | `m6-006` | M6 | pass | `excused_blocks` 30; `gated_pages` 5; `metric_names` 79; `pages` 11; `surfaces` 13 | `tests/m6-006_documentation_coverage.py` |
 | `m7-001.json` | `m7-001` | M7 | pass | `cost.native.peak_kb.median` 36090.0000; `cost.native.wall_s.median` 0.2670; `cost.peak_ratio.median` 12.0900; `cost.stock.peak_kb.median` 423274.0000; `cost.stock.wall_s.median` 8.4260; `cost.wall_ratio.median` 29.7000 | `tests/m7-001_cost_envelope.py` |
 | `m7-002.json` | `m7-002` | M7 | pass | `decompile.native.peak_kb.median` 34594.0000; `decompile.native.wall_s.median` 0.0910; `decompile.peak_ratio.median` 8.3200; `decompile.stock.peak_kb.median` 286368.0000; `decompile.stock.wall_s.median` 5.9330; `decompile.wall_ratio.median` 74.0300 | `tests/m7-002_decompile_envelope.py` |
+| `m7-003.json` | `m7-003` | M7 | pass | `session.drift_excess_ms.max` -0.8630; `session.drift_ratio.max` 1.6800; `session.growth_kb.max` 28; `session.growth_kb.median` 14.0000; `session.latency_ms.decompile_doc.median` 6.0020; `session.latency_ms.functions.median` 0.2650; `session.latency_ms.memory_regions.median` 0.2600; `session.latency_ms.search.median` 0.3890; `session.latency_ms.strings.median` 0.4670; `session.latency_ms.symbols.median` 0.1590; `session.latency_ms.xrefs.median` 0.1880; `session.peak_kb.median` 42940.0000 | `tests/m7-003_session_envelope.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix

@@ -1,0 +1,217 @@
+{
+ "id": "session-envelope",
+ "recorded_at": "2026-09-07T10:39:29.685890+00:00",
+ "host": {
+  "system": "Linux",
+  "machine": "x86_64"
+ },
+ "headroom": 1.25,
+ "note": "peak process-tree RSS of one lre-api session answering 7 requests for 4 warm-up and 8 measured rounds per locked corpus entry; recorded once, compared against afterwards",
+ "entries": {
+  "x86_64_plain_o0": 47568,
+  "x86_64_plain_o2": 47540,
+  "x86_64_plain_pie": 47452,
+  "x86_64_cpp_o2": 47816,
+  "x86_64_many_o2": 79828,
+  "i386_plain_o0": 40184,
+  "i386_plain_o2": 40496,
+  "i386_plain_pie": 40496,
+  "i386_cpp_o2": 40632,
+  "i386_many_o2": 65308,
+  "aarch64_plain_o0": 43192,
+  "aarch64_plain_o2": 43004,
+  "aarch64_plain_pie": 43068,
+  "aarch64_cpp_o2": 43248,
+  "aarch64_many_o2": 65220,
+  "powerpc_plain_o0": 23756,
+  "powerpc_plain_o2": 23508,
+  "powerpc_plain_pie": 23700,
+  "powerpc_cpp_o2": 23828,
+  "powerpc_many_o2": 44220
+ },
+ "rounds": 8,
+ "warmup_rounds": 4,
+ "latency_ms": {
+  "x86_64_plain_o0": {
+   "functions": 0.207,
+   "symbols": 0.142,
+   "strings": 0.363,
+   "memory_regions": 0.25,
+   "search": 0.388,
+   "xrefs": 0.152,
+   "decompile_doc": 1.747
+  },
+  "x86_64_plain_o2": {
+   "functions": 0.091,
+   "symbols": 0.05,
+   "strings": 0.178,
+   "memory_regions": 0.111,
+   "search": 0.177,
+   "xrefs": 0.074,
+   "decompile_doc": 0.836
+  },
+  "x86_64_plain_pie": {
+   "functions": 0.185,
+   "symbols": 0.169,
+   "strings": 0.411,
+   "memory_regions": 0.298,
+   "search": 0.452,
+   "xrefs": 0.232,
+   "decompile_doc": 1.859
+  },
+  "x86_64_cpp_o2": {
+   "functions": 0.338,
+   "symbols": 0.301,
+   "strings": 0.732,
+   "memory_regions": 0.461,
+   "search": 0.602,
+   "xrefs": 0.351,
+   "decompile_doc": 4.273
+  },
+  "x86_64_many_o2": {
+   "functions": 1.299,
+   "symbols": 0.531,
+   "strings": 1.634,
+   "memory_regions": 0.265,
+   "search": 0.604,
+   "xrefs": 0.501,
+   "decompile_doc": 29.476
+  },
+  "i386_plain_o0": {
+   "functions": 0.207,
+   "symbols": 0.148,
+   "strings": 0.334,
+   "memory_regions": 0.196,
+   "search": 0.29,
+   "xrefs": 0.221,
+   "decompile_doc": 3.692
+  },
+  "i386_plain_o2": {
+   "functions": 0.131,
+   "symbols": 0.073,
+   "strings": 0.241,
+   "memory_regions": 0.137,
+   "search": 0.196,
+   "xrefs": 0.095,
+   "decompile_doc": 3.069
+  },
+  "i386_plain_pie": {
+   "functions": 0.138,
+   "symbols": 0.082,
+   "strings": 0.231,
+   "memory_regions": 0.132,
+   "search": 0.188,
+   "xrefs": 0.105,
+   "decompile_doc": 3.015
+  },
+  "i386_cpp_o2": {
+   "functions": 0.221,
+   "symbols": 0.169,
+   "strings": 0.399,
+   "memory_regions": 0.398,
+   "search": 0.373,
+   "xrefs": 0.172,
+   "decompile_doc": 4.177
+  },
+  "i386_many_o2": {
+   "functions": 1.139,
+   "symbols": 0.306,
+   "strings": 1.39,
+   "memory_regions": 0.433,
+   "search": 0.747,
+   "xrefs": 0.536,
+   "decompile_doc": 36.303
+  },
+  "aarch64_plain_o0": {
+   "functions": 0.201,
+   "symbols": 0.143,
+   "strings": 0.352,
+   "memory_regions": 0.225,
+   "search": 0.327,
+   "xrefs": 0.17,
+   "decompile_doc": 4.356
+  },
+  "aarch64_plain_o2": {
+   "functions": 0.227,
+   "symbols": 0.131,
+   "strings": 0.275,
+   "memory_regions": 0.19,
+   "search": 0.244,
+   "xrefs": 0.142,
+   "decompile_doc": 3.297
+  },
+  "aarch64_plain_pie": {
+   "functions": 0.265,
+   "symbols": 0.154,
+   "strings": 0.396,
+   "memory_regions": 0.244,
+   "search": 0.359,
+   "xrefs": 0.184,
+   "decompile_doc": 6.108
+  },
+  "aarch64_cpp_o2": {
+   "functions": 0.312,
+   "symbols": 0.184,
+   "strings": 0.52,
+   "memory_regions": 0.335,
+   "search": 0.417,
+   "xrefs": 0.183,
+   "decompile_doc": 6.75
+  },
+  "aarch64_many_o2": {
+   "functions": 1.421,
+   "symbols": 0.834,
+   "strings": 2.1,
+   "memory_regions": 0.404,
+   "search": 0.809,
+   "xrefs": 0.619,
+   "decompile_doc": 54.034
+  },
+  "powerpc_plain_o0": {
+   "functions": 0.285,
+   "symbols": 0.135,
+   "strings": 0.516,
+   "memory_regions": 0.281,
+   "search": 0.406,
+   "xrefs": 0.167,
+   "decompile_doc": 5.763
+  },
+  "powerpc_plain_o2": {
+   "functions": 0.195,
+   "symbols": 0.095,
+   "strings": 0.349,
+   "memory_regions": 0.205,
+   "search": 0.287,
+   "xrefs": 0.131,
+   "decompile_doc": 5.029
+  },
+  "powerpc_plain_pie": {
+   "functions": 0.241,
+   "symbols": 0.113,
+   "strings": 0.343,
+   "memory_regions": 0.222,
+   "search": 0.311,
+   "xrefs": 0.147,
+   "decompile_doc": 5.074
+  },
+  "powerpc_cpp_o2": {
+   "functions": 0.184,
+   "symbols": 0.107,
+   "strings": 0.319,
+   "memory_regions": 0.151,
+   "search": 0.224,
+   "xrefs": 0.128,
+   "decompile_doc": 4.122
+  },
+  "powerpc_many_o2": {
+   "functions": 1.491,
+   "symbols": 0.781,
+   "strings": 2.422,
+   "memory_regions": 0.429,
+   "search": 0.938,
+   "xrefs": 0.669,
+   "decompile_doc": 56.155
+  }
+ },
+ "latency_note": "recorded for reference, not gated: absolute latency tracks the host's CPU, while the drift between early and late rounds does not"
+}

@@ -3156,16 +3156,54 @@ m3-003, all three wired into continuous integration)
   have fails.
 - Six additive metric names (`decompile.*`); no II.3 definition changed.
 
+### m7-003 evidence
+- `602ff06` commits the failing acceptance
+  (`tests/m7-003_session_envelope.py`): the envelope did not exist yet.
+- One long-lived `lre-api` process per locked entry answers the same seven
+  requests (`functions`, `symbols`, `strings`, `memory_regions`, `search`,
+  `xrefs`, `decompile_doc`) for 4 warm-up and 8 measured rounds, with the
+  **process tree**'s resident size -- the service plus the SLEIGH console
+  child -- sampled every 25 ms through `/proc`.
+- Measured (`benchmarks/reports/m7-003.json`): `session.peak_kb.median`
+  42 940 KiB, `session.growth_kb.max` **28 KiB** across eight measured
+  rounds, `session.latency_ms.functions.median` 0.265 ms,
+  `session.latency_ms.decompile_doc.median` 6.002 ms.
+- **The first draft's drift rule was measuring the warm-up, not a
+  regression.** `decompile_doc` on the PowerPC entries settles 33 ms -> 7 ms
+  -> 3.3 ms over four rounds, so a two-versus-three-round median comparison
+  failed in both directions depending on where the descent landed. Fixed by
+  measuring four warm-up rounds separately and excluding them from both the
+  plateau baseline and the drift comparison; four consecutive runs then pass.
+- **The reported drift number was also self-contradictory**: a passing run
+  printed `9.06x`, because a 0.15 ms read moving to 0.37 ms is a large ratio
+  and no regression. `session.drift_ratio.max` now counts only methods whose
+  early median is at least the 2 ms floor, and
+  `session.drift_excess_ms.max` (-0.863 ms) says how far the worst method is
+  from failing, so the number a passing run prints cannot look alarming.
+- Rules per entry: peak inside the recorded envelope; growth across measured
+  rounds within `max(4 MiB, 5%)`; not strictly increasing every round unless
+  total growth is under 512 KiB; each method's late-round median within twice
+  its early-round median plus 2 ms.
+- Negative controls: a synthetic 1 MiB-per-round leak fails
+  (`grew 7168 KiB across 8 measured rounds`), an eightfold late-round
+  slowdown fails (`strings slowed from 0.38ms to 3.08ms`), shrinking an
+  envelope entry fails, deleting one fails, `--write` over an existing
+  envelope fails.
+- Eleven additive metric names (`session.*`); no II.3 definition changed.
+
 ## Next task
-- m7-003: bound the cost of the whole session, not one command. `m7-001` and
-  `m7-002` each measure a single process; the desktop and the API service
-  hold a project open and answer many requests, and nothing measures what
-  that costs after N requests. The acceptance must drive a fixed request
-  sequence through one long-lived `lre-api` process per corpus entry, record
-  peak RSS and per-request latency, and fail when either grows past a
-  recorded envelope or when memory grows monotonically across repeats of the
-  same request (a leak, as distinct from a warm cache). Its acceptance test
-  does not exist yet; write it first.
+- m8-001: score PE32+ function recovery against real truth, on a locked PE
+  corpus. The support matrix row for PE32+ still reads "in progress" and is
+  driven by `stage4-gate.json`, which runs on the tiny ELF fixture;
+  `tests/m1-005_pe_relocs.sh` prints precision and recall for one hand-built
+  `tiny_pe.exe` twin and gates neither. `scripts/gen_corpus.py` can build a
+  PE corpus only through MSVC (`architecture: msvc`, requires Windows and
+  `cl`), while this host has MinGW-w64 16.1.1 for both `x86_64-w64-mingw32`
+  and `i686-w64-mingw32`, which emits PE carrying DWARF. The acceptance must
+  build locked PE entries, extract truth from the PE container rather than
+  from Ghidra, gate recall per entry the way `m3-001` does for ELF, and make
+  the matrix row derive from that report. Its acceptance test does not exist
+  yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,
