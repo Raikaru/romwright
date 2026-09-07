@@ -699,7 +699,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     // Exception directory (index 3) carries RUNTIME_FUNCTION bounds, but only
     // the AMD64 records have the layout the unwind pass reads.
     let (entry_rva, image_base, reloc_dir_offset, unwind_dir_offset, export_dir_offset,
-         tls_dir_offset) = match (machine, magic) {
+         import_dir_offset, tls_dir_offset) = match (machine, magic) {
         (0x8664, 0x20b) => {
             if opt_size < 112 {
                 return err(format!("PE32+ optional header size {opt_size} too small (>= 112 expected)"));
@@ -718,8 +718,10 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
                 None
             };
             let export_offset = (num_rva_sizes > 0 && opt_size >= 120).then_some(opt + 112);
+            let import_offset = (num_rva_sizes > 1 && opt_size >= 128).then_some(opt + 120);
             let tls_offset = (num_rva_sizes > 9 && opt_size >= 192).then_some(opt + 184);
-            (entry_rva, image_base, reloc_offset, unwind_offset, export_offset, tls_offset)
+            (entry_rva, image_base, reloc_offset, unwind_offset, export_offset,
+             import_offset, tls_offset)
         }
         (0x014c, 0x10b) => {
             if opt_size < 96 {
@@ -734,8 +736,10 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
                 None
             };
             let export_offset = (num_rva_sizes > 0 && opt_size >= 104).then_some(opt + 96);
+            let import_offset = (num_rva_sizes > 1 && opt_size >= 112).then_some(opt + 104);
             let tls_offset = (num_rva_sizes > 9 && opt_size >= 176).then_some(opt + 168);
-            (entry_rva, image_base, reloc_offset, None, export_offset, tls_offset)
+            (entry_rva, image_base, reloc_offset, None, export_offset, import_offset,
+             tls_offset)
         }
         (0x8664, other) => {
             return err(format!("PE AMD64 requires PE32+ optional header magic 0x20b, got {other:#x}"));
@@ -916,6 +920,16 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     pe_unwind::collect(data, &raw_sections, &mut import, image_base, unwind_rva, unwind_size);
     let (export_rva, export_size) = directory(export_dir_offset);
     pe_roots::collect_exports(data, &raw_sections, &mut import, image_base, export_rva, export_size);
+    let (import_rva, import_size) = directory(import_dir_offset);
+    pe_roots::collect_imports(
+        data,
+        &raw_sections,
+        &mut import,
+        image_base,
+        import_rva,
+        import_size,
+        if is_64 { 8 } else { 4 },
+    );
     let (tls_rva, tls_size) = directory(tls_dir_offset);
     pe_roots::collect_tls(
         data,

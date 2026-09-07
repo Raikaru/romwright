@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Name PE imports from the import directory
+        run: |
+          python3 tests/m8-005_pe_imports.py \
+            --report "$RUNNER_TEMP/pe-imports.json"
       - name: Recover the roots a PE declares
         run: |
           python3 tests/m8-004_pe_roots.py \

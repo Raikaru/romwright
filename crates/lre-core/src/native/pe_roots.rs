@@ -1,5 +1,5 @@
-//! PE directories that declare code no call reaches: TLS callbacks and
-//! exports.
+//! PE directories that name what the loader will fill in: TLS callbacks,
+//! exports, and imports.
 //!
 //! Rules and layouts from the pinned Ghidra sources (Apache-2.0):
 //!
@@ -169,6 +169,79 @@ pub(super) fn collect_exports(
     }
 }
 
+/// Imports: one external symbol per IAT slot, named as the image imports it.
+///
+/// From `ImportDataDirectory.parse`, `ImportDescriptor` and `ThunkData`:
+/// descriptors are 20 bytes and end when `OriginalFirstThunk` and `FirstThunk`
+/// are both zero; the name table is `OriginalFirstThunk` when it maps and
+/// `FirstThunk` otherwise; the walk ends at the first zero entry; a thunk with
+/// the ordinal flag set imports by ordinal (`Ordinal_<n>`), and otherwise its
+/// value is an RVA to `IMAGE_IMPORT_BY_NAME`, whose name follows a two-byte
+/// hint. The address an import occupies is its IAT slot, and that slot holds a
+/// pointer -- never code.
+pub(super) fn collect_imports(
+    data: &[u8],
+    spans: &[Span],
+    import: &mut NativeImport,
+    image_base: u64,
+    dir_rva: u64,
+    dir_size: usize,
+    width: usize,
+) {
+    const DESCRIPTOR: usize = 20;
+    // Ghidra's MAX_SANE_COUNT: a table larger than this is corruption.
+    const MAX_SANE: usize = 0x2000;
+    if dir_rva == 0 || dir_size < DESCRIPTOR {
+        return;
+    }
+    let ordinal_flag = 1u64 << (width * 8 - 1);
+    for index in 0..dir_size / DESCRIPTOR {
+        let Some(descriptor) = file_offset(spans, dir_rva + (index * DESCRIPTOR) as u64)
+        else { break };
+        let (Some(original), Some(name_rva), Some(first)) = (
+            word(data, descriptor, 4),
+            word(data, descriptor + 12, 4),
+            word(data, descriptor + 16, 4),
+        ) else { break };
+        if original == 0 && first == 0 {
+            break;
+        }
+        let names_rva = if original != 0 && file_offset(spans, original).is_some() {
+            original
+        } else {
+            first
+        };
+        let _ = name_rva; // the library name is not part of the store's model
+        for slot in 0..MAX_SANE {
+            let Some(entry) = file_offset(spans, names_rva + (slot * width) as u64)
+            else { break };
+            let Some(value) = word(data, entry, width) else { break };
+            if value == 0 {
+                break;
+            }
+            let name = if value & ordinal_flag != 0 {
+                format!("Ordinal_{}", value & 0xffff)
+            } else {
+                // IMAGE_IMPORT_BY_NAME: a two-byte hint, then the name.
+                let Some(offset) = file_offset(spans, value + 2) else { continue };
+                let bytes = &data[offset..];
+                let end = bytes.iter().position(|&byte| byte == 0).unwrap_or(0);
+                if end == 0 || end > 256 {
+                    continue;
+                }
+                match std::str::from_utf8(&bytes[..end]) {
+                    Ok(text) => text.to_owned(),
+                    Err(_) => continue,
+                }
+            };
+            let address = image_base + first + (slot * width) as u64;
+            if !import.externals.iter().any(|(at, _)| *at == address) {
+                import.externals.push((address, name));
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,6 +332,33 @@ mod tests {
             .all(|x| x.provenance == "native-import:pe-export"));
         assert_eq!(import.xrefs[0].from, 0x402100);
         assert_eq!(import.xrefs[1].from, 0x40210c);
+    }
+
+    #[test]
+    fn imports_name_their_iat_slots_by_name_and_by_ordinal() {
+        let (mut data, spans, mut import) = image();
+        // One descriptor at RVA 0x2000: INT at 0x2100, IAT at 0x2120.
+        put32(&mut data, 0x2000, &spans, 0x2100); // OriginalFirstThunk
+        put32(&mut data, 0x2004, &spans, 0); // TimeDateStamp: not bound
+        put32(&mut data, 0x200c, &spans, 0x2180); // Name
+        put32(&mut data, 0x2010, &spans, 0x2120); // FirstThunk
+        put32(&mut data, 0x2100, &spans, 0x21a0); // by name
+        put32(&mut data, 0x2104, &spans, 0x8000_0007); // by ordinal 7
+        put32(&mut data, 0x2108, &spans, 0); // terminator
+        let name = file_offset(&spans, 0x21a0).unwrap();
+        data[name..name + 2].copy_from_slice(&9u16.to_le_bytes()); // hint
+        data[name + 2..name + 8].copy_from_slice(b"Sleep\0");
+        collect_imports(&data, &spans, &mut import, 0x400000, 0x2000, 40, 4);
+
+        assert_eq!(
+            import.externals,
+            vec![
+                (0x402120, "Sleep".to_owned()),
+                (0x402124, "Ordinal_7".to_owned())
+            ]
+        );
+        // A slot holds a pointer, so nothing is promoted to code.
+        assert!(import.functions.is_empty());
     }
 
     #[test]
