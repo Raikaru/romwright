@@ -66,6 +66,28 @@ def blocks(text: str) -> list[tuple[str | None, list[tuple[str, list[str]]]]]:
     return parsed
 
 
+def usage_text() -> str:
+    result = subprocess.run([str(ROOT / "target/release/lre-cli")],
+                            cwd=ROOT, capture_output=True, text=True)
+    text = result.stdout + result.stderr
+    assert "usage:" in text, f"the CLI prints no usage: {text[:200]!r}"
+    return text
+
+
+def implemented_verbs() -> set[str]:
+    """Verbs the CLI dispatches.
+
+    Read from the dispatch arms in `crates/lre-cli/src/main.rs`, which couples
+    this check to our own source on purpose: the invariant is that the tool
+    lists everything it does, and `xrefs`, `undo`, `open`, `comment`,
+    `comments` and `types` were all missing from the usage text when this gate
+    was written.
+    """
+    source = (ROOT / "crates/lre-cli/src/main.rs").read_text(encoding="utf-8")
+    return set(re.findall(r'^\s{8}"([a-z][a-z-]*)"(?:\s+if [^=]*)?\s*=>',
+                          source, re.MULTILINE))
+
+
 def sleigh_available() -> bool:
     install = Path(os.environ.get("VENTRIS_GHIDRA",
                                   str(Path.home() / "ghidra_12.1.3_PUBLIC")))
@@ -89,6 +111,20 @@ def main() -> int:
     # follows one thread and the gate can redirect it.
     projects = set(re.findall(r"\$PROJECT", text))
     assert projects, "no $PROJECT placeholder: the walkthrough must name its project"
+
+    usage = usage_text()
+    verbs = implemented_verbs()
+    undocumented = sorted(verb for verb in verbs if f"lre-cli {verb} " not in usage
+                          and f"lre-cli {verb}\n" not in usage)
+    assert not undocumented, (
+        f"the CLI dispatches these verbs and does not list them in its usage: "
+        f"{undocumented}")
+    documented_here = {shlex.split(command)[1] for _, commands in parsed
+                       for command, _ in commands
+                       if shlex.split(command)[0].endswith("lre-cli")}
+    unknown = sorted(documented_here - verbs)
+    assert not unknown, (
+        f"the walkthrough uses commands the CLI does not dispatch: {unknown}")
 
     executed, skipped, checked = 0, [], 0
     with tempfile.TemporaryDirectory(prefix="m6-001-") as temporary:
@@ -122,7 +158,8 @@ def main() -> int:
     assert checked >= 10, f"only {checked} documented output lines were checked"
 
     summary = (f"{executed} documented commands run, {checked} documented output "
-               f"lines checked, {len(skipped)} block(s) skipped")
+               f"lines checked, {len(verbs)} verbs all listed in usage, "
+               f"{len(skipped)} block(s) skipped")
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
         arguments.report.write_text(json.dumps({
@@ -132,7 +169,7 @@ def main() -> int:
             "passed": True,
             "summary": summary,
             "metrics": {"commands": executed, "output_lines": checked,
-                        "skipped_blocks": len(skipped)},
+                        "verbs": len(verbs), "skipped_blocks": len(skipped)},
             "skipped": skipped,
         }, indent=1) + "\n")
     print(f"m6-001: PASS ({summary})")

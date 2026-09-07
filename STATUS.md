@@ -2905,14 +2905,41 @@ m3-003, all three wired into continuous integration)
 - Measured (`benchmarks/reports/m5-012.json`): 55 current reports indexed, 40
   published ids, 12 diagnostic runs separated, 54 generated rows.
 
+### m6-001 evidence
+- `b9d7054` commits the failing acceptance
+  (`tests/m6-001_documented_workflow.py`).
+- `docs/getting-started.md` walks from `cargo build` to a decompiled
+  function on the committed fixture. **The page is executed, not described**:
+  every `$ ` line in a ```console block runs exactly as written and every
+  output line under it must appear in what the command prints.
+- Measured (`benchmarks/reports/m6-001.json`): 18 documented commands run,
+  22 documented output lines checked, 24 CLI verbs all listed in usage.
+- **The gate is run in both environments.** With the SLEIGH console: 18
+  commands, 0 skipped. Without the pinned install
+  (`VENTRIS_GHIDRA=/nonexistent VENTRIS_CONSOLE=/nonexistent`): 13 commands,
+  2 SLEIGH-marked blocks skipped. That forced the walkthrough to stop
+  claiming environment-dependent numbers: the console proves `printf`'s
+  linkage stub, flow-proven extents and the call reference into `add`, so
+  the same import reports 12 functions and 2 references with it and 11 and 1
+  without. The page states that difference and gates the larger numbers
+  behind the marker instead of averaging them.
+- **The CLI's own usage text was incomplete**: `xrefs`, `undo`, `open`,
+  `comment`, `comments` and `types` were dispatched and unlisted. They are
+  documented now, and the gate fails whenever a dispatched verb is missing
+  from usage or the walkthrough uses a verb the CLI does not dispatch.
+- Negative controls, each failing the gate: a wrong documented output line, a
+  walkthrough command the CLI does not dispatch, and a verb removed from the
+  usage text.
+
 ## Next task
-- m6-001: user-facing documentation for the JVM-free workflow. README is now
-  an accurate engineering record but not a way in: there is no page that
-  takes a user from `cargo build` to imported binary, function list, xrefs,
-  rename and decompile, naming which steps need the pinned Ghidra install
-  and which are JVM-free. The acceptance must run the documented commands
-  exactly as written and fail if any of them does not work as documented.
-  Its acceptance test does not exist yet; write it first.
+- m6-002: document the Core API surface the same way. `crates/lre-api` is the
+  stdio interface every consumer (Qt desktop, scripts, agents) speaks, and it
+  has no page: a reader cannot see the request shapes, the fact provenance in
+  responses, or which requests need the SLEIGH console. The acceptance must
+  drive the documented requests through the real API process and check the
+  documented response fields, failing if a documented field is absent or a
+  request shape is rejected. Its acceptance test does not exist yet; write it
+  first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

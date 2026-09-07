@@ -1,0 +1,14 @@
+{
+ "id": "m6-001",
+ "recorded_at": "2026-09-07T09:13:49.641255+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "18 documented commands run, 22 documented output lines checked, 24 verbs all listed in usage, 0 block(s) skipped",
+ "metrics": {
+  "commands": 18,
+  "output_lines": 22,
+  "verbs": 24,
+  "skipped_blocks": 0
+ },
+ "skipped": []
+}
