@@ -924,6 +924,42 @@ external configuration). Both go false when they should -- a build-tree binary
 and a configured run each fail the gate. The report names the platform it ran
 on; the CI `qt` job runs it on Linux, macOS and Windows.
 
+## PE32+ recovery
+
+A stripped PE32+ image names its functions through the exception directory:
+`IMAGE_DIRECTORY_ENTRY_EXCEPTION` holds a `RUNTIME_FUNCTION` record for every
+function the compiler gave unwind data, which is how a function no call
+reaches is still found. The promotion rule is Ghidra's, read from the pinned
+`ImageRuntimeFunctionEntries_X86` and `PEx64UnwindInfo`: mark
+`ImageBase + BeginAddress` unless the unwind info sets `UNW_FLAG_CHAININFO`,
+because a chained record describes a fragment of another function.
+
+Recovery is scored against the compiler's own truth -- concrete
+`DW_TAG_subprogram` entries with a low PC, inside executable sections, read
+from the PE container, the same definition `m3-001` uses for ELF
+(`tests/m8-001_pe_unwind.py`, `benchmarks/reports/m8-001.json`):
+
+| Fixture | `pe.dwarf.fn.recall` | `pe.dwarf.fn.unattributed` | `RUNTIME_FUNCTION` records |
+|---|---|---|---|
+| `tiny_pe.exe` | **1.0000** over 90 functions | 0 | 95 |
+| `dispatch.exe` | **1.0000** over 90 functions | 0 | 97 |
+| `tiny_pe32.exe` | 0.8065 (recorded, not gated) | 31 | 0 |
+
+Before the pass, recall on `tiny_pe.exe` was 0.5667: 39 of 90 functions --
+`WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
+of the CRT -- were unreachable by flow from the entry point.
+
+PE32 x86 is the recorded deficit: 32-bit PE carries no exception directory, so
+those 31 recovered entries have no unwind record to confirm them and its
+recall has nothing behind it yet.
+
+Every recovered entry must be described by DWARF or named by a COFF symbol in
+the unstripped fixture; nothing else excuses one. Two further excuses were
+tried and dropped as measured-inert (bounded by a `RUNTIME_FUNCTION`, or a
+thunk the store proved), while removing the symbol class fails 29 entries.
+Neither gated fixture carries a chained record, so that rule is pinned by a
+unit test rather than claimed from these images.
+
 ## What an import costs
 
 Both producers import the same 20 locked ELF entries, measured the same way
@@ -1111,7 +1147,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 67; `diagnostic_runs` 12; `generated_rows` 66; `published_ids` 52 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 68; `diagnostic_runs` 12; `generated_rows` 67; `published_ids` 53 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1121,6 +1157,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m7-001.json` | `m7-001` | M7 | pass | `cost.native.peak_kb.median` 36090.0000; `cost.native.wall_s.median` 0.2670; `cost.peak_ratio.median` 12.0900; `cost.stock.peak_kb.median` 423274.0000; `cost.stock.wall_s.median` 8.4260; `cost.wall_ratio.median` 29.7000 | `tests/m7-001_cost_envelope.py` |
 | `m7-002.json` | `m7-002` | M7 | pass | `decompile.native.peak_kb.median` 34594.0000; `decompile.native.wall_s.median` 0.0910; `decompile.peak_ratio.median` 8.3200; `decompile.stock.peak_kb.median` 286368.0000; `decompile.stock.wall_s.median` 5.9330; `decompile.wall_ratio.median` 74.0300 | `tests/m7-002_decompile_envelope.py` |
 | `m7-003.json` | `m7-003` | M7 | pass | `session.drift_excess_ms.max` -0.8630; `session.drift_ratio.max` 1.6800; `session.growth_kb.max` 28; `session.growth_kb.median` 14.0000; `session.latency_ms.decompile_doc.median` 6.0020; `session.latency_ms.functions.median` 0.2650; `session.latency_ms.memory_regions.median` 0.2600; `session.latency_ms.search.median` 0.3890; `session.latency_ms.strings.median` 0.4670; `session.latency_ms.symbols.median` 0.1590; `session.latency_ms.xrefs.median` 0.1880; `session.peak_kb.median` 42940.0000 | `tests/m7-003_session_envelope.py` |
+| `m8-001.json` | `m8-001` | M8 | pass | `pe.dwarf.fn.recall` 1.0000; `pe.dwarf.fn.unattributed` 0 | `tests/m8-001_pe_unwind.py` |
 <!-- evidence-index:end -->
 
 ## Support matrix
@@ -1129,7 +1166,8 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | Input | Structural native import | Native flow/decode/decompile |
 |---|---|---|
 | ELF x86-64 | supported | **supported and gated** |
-| PE32+ x86-64 | supported | in progress |
+| PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
+| PE32 x86 | supported | recorded, not gated: DWARF recall 0.8065 over 93 functions with no exception directory to prove starts (`benchmarks/reports/m8-001.json`) |
 | ELF AARCH64 LE64 | supported | discovery gated; decompile parity pending |
 | ELF ARM LE32 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF MIPS LE32 | supported | selected SLEIGH bundle required; not parity-gated |

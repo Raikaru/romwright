@@ -3191,19 +3191,73 @@ m3-003, all three wired into continuous integration)
   envelope fails.
 - Eleven additive metric names (`session.*`); no II.3 definition changed.
 
+### m8-001 evidence
+- `38e2469` commits the failing acceptance (`tests/m8-001_pe_unwind.py`):
+  recall on `tiny_pe.exe` was **0.5667**, 39 of 90 DWARF functions missing --
+  `WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
+  of the CRT, none of them reachable by flow from the entry point.
+- `crates/lre-core/src/native/pe_unwind.rs` reads
+  `IMAGE_DIRECTORY_ENTRY_EXCEPTION` (data directory 3, AMD64 only -- ARM
+  records have a different layout, as Ghidra's own dispatch shows) and
+  promotes `ImageBase + BeginAddress` for every non-chained
+  `RUNTIME_FUNCTION`, emitting a `native-import:pe-unwind` reference from the
+  record that proved it. Rule and layout verified in
+  `.ghidra-java/ghidra/app/util/bin/format/pe/ImageRuntimeFunctionEntries_X86.java`
+  (`beginAddress != 0 && (unwindInfo == null || !hasChainedUnwindInfo())`) and
+  `PEx64UnwindInfo.java` (`version = b & 0x7`, `flags = (b >> 3) & 0x1f`,
+  `UNW_FLAG_CHAININFO = 0x4`).
+- Measured (`benchmarks/reports/m8-001.json`): `pe.dwarf.fn.recall`
+  **1.0000** over 180 DWARF functions across `tiny_pe.exe` and
+  `dispatch.exe`, `pe.dwarf.fn.unattributed` **0**, 192 `RUNTIME_FUNCTION`
+  records. The support-matrix row for PE32+ now derives from this report
+  instead of from `stage4-gate.json`, which runs on the tiny ELF fixture.
+- **Truth had to be read differently, not redefined.** `m3-001` projects DWARF
+  through `readelf`, which refuses a PE outright; this gate reads the same
+  concrete `DW_TAG_subprogram` low PCs through `llvm-dwarfdump` and restricts
+  them to executable sections the same way.
+- **Two of my own controls were vacuous and one attribution class was wrong.**
+  Nulling the whole unattributed predicate "passed", which proved nothing;
+  when the class was actually removed, `dispatch.exe`'s three static
+  dispatch-table targets appeared, because `llvm-nm` lists only external
+  symbols for a PE. Symbols now come from the COFF symbol table via
+  `llvm-objdump -t`, storage class included -- the PE equivalent of
+  `readelf -sW`.
+- Attribution is two classes, both measured: DWARF-described, or COFF-named.
+  Dropping the symbol class fails 29 entries. Being bounded by a
+  `RUNTIME_FUNCTION` and being a store-proven thunk were both measured inert
+  and deleted rather than kept as decoration.
+- Neither gated fixture carries a chained record (95 and 97 records, all
+  plain), so `UNW_FLAG_CHAININFO` is pinned by a unit test in `pe_unwind.rs`
+  and not claimed from these images.
+- PE32 x86 recorded, not gated: recall 0.8065 with 31 unattributed entries and
+  no exception directory to confirm any of them.
+- Six additive metric names (`pe.*`); no II.3 definition changed.
+
+## Reserved decisions
+- **Extending the corpus with MinGW PE entries is reserved (II.1, "adding or
+  removing a corpus binary, target game, or platform").** `scripts/gen_corpus.py`
+  can build PE only through MSVC, which needs Windows and `cl`; this host has
+  MinGW-w64 16.1.1 for `x86_64-w64-mingw32` and `i686-w64-mingw32`, which
+  emits PE carrying DWARF, so ten locked PE entries (5 variants x 2
+  architectures, with a DLL standing in for the ELF `plain_pie` slot) are
+  buildable. That would score PE the way `m3-001` scores ELF, across
+  optimisation levels and C++, instead of on two committed fixtures. It also
+  requires `expected_variants` to stop being one cross product for every
+  architecture. **Not done: waiting on your decision.**
+
 ## Next task
-- m8-001: score PE32+ function recovery against real truth, on a locked PE
-  corpus. The support matrix row for PE32+ still reads "in progress" and is
-  driven by `stage4-gate.json`, which runs on the tiny ELF fixture;
-  `tests/m1-005_pe_relocs.sh` prints precision and recall for one hand-built
-  `tiny_pe.exe` twin and gates neither. `scripts/gen_corpus.py` can build a
-  PE corpus only through MSVC (`architecture: msvc`, requires Windows and
-  `cl`), while this host has MinGW-w64 16.1.1 for both `x86_64-w64-mingw32`
-  and `i686-w64-mingw32`, which emits PE carrying DWARF. The acceptance must
-  build locked PE entries, extract truth from the PE container rather than
-  from Ghidra, gate recall per entry the way `m3-001` does for ELF, and make
-  the matrix row derive from that report. Its acceptance test does not exist
-  yet; write it first.
+- m8-002: give PE32 x86 the roots it lacks. The recorded deficit is recall
+  0.8065 with 31 unattributed entries on `tiny_pe32.exe`, where there is no
+  exception directory to prove a start. The loader-declared roots that do
+  exist in a PE32 image are the TLS callback array
+  (`IMAGE_DIRECTORY_ENTRY_TLS`, `AddressOfCallBacks`), the load-configuration
+  `SEHandlerTable`, and the export directory for a DLL; Ghidra's
+  `TLSDataDirectory`, `LoadConfigDirectory` and `ExportDataDirectory` are the
+  references to verify against. The acceptance must gate PE32 recall the way
+  `m8-001` gates PE32+, and must classify each remaining unattributed entry
+  rather than excusing it. Its acceptance test does not exist yet; write it
+  first.
+
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

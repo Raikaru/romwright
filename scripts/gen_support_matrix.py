@@ -38,6 +38,7 @@ def generate_matrix() -> str:
     stage4 = load_json(REPORTS_DIR / "stage4-gate.json")
     ui_gate = load_json(REPORTS_DIR / "ui-gate.json")
     discovery_gate = load_json(REPORTS_DIR / "discovery-gate.json")
+    pe_gate = load_json(REPORTS_DIR / "m8-001.json")
     parity_gate = load_json(REPORTS_DIR / "parity-gate.json")
 
     # x86-64 ELF is verified if stage4 or ui_gate passed
@@ -46,8 +47,27 @@ def generate_matrix() -> str:
         or (ui_gate and ui_gate.get("passed"))
     )
 
-    # PE32+ x86-64 is verified by native test suite / stage4
-    pe_x86_gated = bool(stage4 and stage4.get("functional_pass"))
+    # PE32+ x86-64 is scored against DWARF truth read from the PE container.
+    pe_status = "in progress"
+    if pe_gate and pe_gate.get("passed"):
+        recall = pe_gate["totals"]["pe.dwarf.fn.recall"]
+        functions = sum(row["truth"] for row in pe_gate["gated"])
+        pe_status = (f"**gated**: DWARF recall {recall:.4f} over {functions} "
+                     f"functions, {pe_gate['totals']['pe.runtime_functions']} "
+                     f"`RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`)")
+    elif stage4 and stage4.get("functional_pass"):
+        pe_status = "supported and exercised; not scored against truth"
+
+    # PE32 x86 has no exception directory, so its recall is recorded, not gated.
+    pe32_status = "structural import only; no gate"
+    pe32_recorded = next((row for row in (pe_gate or {}).get("recorded", [])
+                          if row["id"] == "tiny_pe32.exe"), None)
+    if pe32_recorded:
+        pe32_status = (
+            f"recorded, not gated: DWARF recall "
+            f"{pe32_recorded['metrics']['pe.dwarf.fn.recall']:.4f} over "
+            f"{pe32_recorded['truth']} functions with no exception directory "
+            f"to prove starts (`benchmarks/reports/m8-001.json`)")
 
     # Generic architectures (M1/M2 gates)
     aarch64_status = "selected SLEIGH bundle required; not parity-gated"
@@ -74,11 +94,8 @@ def generate_matrix() -> str:
             "supported",
             "**supported and gated**" if elf_x86_gated else "in progress",
         ),
-        (
-            "PE32+ x86-64",
-            "supported",
-            "**supported and gated**" if pe_x86_gated else "in progress",
-        ),
+        ("PE32+ x86-64", "supported", pe_status),
+        ("PE32 x86", "supported", pe32_status),
         ("ELF AARCH64 LE64", "supported", aarch64_status),
         ("ELF ARM LE32", "supported", arm_status),
         ("ELF MIPS LE32", "supported", mips_status),

@@ -1,0 +1,90 @@
+{
+ "id": "m8-001",
+ "recorded_at": "2026-09-07T11:00:01.920872+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "2 gated PE32+ fixtures: recall 1.0000 over 180 DWARF functions, 0 unattributed, 192 runtime-function records; recorded without a gate: tiny_pe32.exe recall 0.8065",
+ "thresholds": {
+  "pe.dwarf.fn.recall": 0.98,
+  "pe.dwarf.fn.unattributed": 0
+ },
+ "totals": {
+  "pe.dwarf.fn.recall": 1.0,
+  "pe.dwarf.fn.unattributed": 0,
+  "pe.runtime_functions": 192
+ },
+ "gated": [
+  {
+   "id": "tiny_pe.exe",
+   "truth": 90,
+   "truth_outside_code": 0,
+   "observed": 120,
+   "runtime_functions": 95,
+   "metrics": {
+    "pe.dwarf.fn.recall": 1.0,
+    "pe.dwarf.fn.unattributed": 0,
+    "pe.functions": 120,
+    "pe.undescribed": 30
+   },
+   "unwind_provenance": true
+  },
+  {
+   "id": "dispatch.exe",
+   "truth": 90,
+   "truth_outside_code": 0,
+   "observed": 122,
+   "runtime_functions": 97,
+   "metrics": {
+    "pe.dwarf.fn.recall": 1.0,
+    "pe.dwarf.fn.unattributed": 0,
+    "pe.functions": 122,
+    "pe.undescribed": 32
+   },
+   "unwind_provenance": true
+  }
+ ],
+ "recorded": [
+  {
+   "id": "tiny_pe32.exe",
+   "truth": 93,
+   "truth_outside_code": 0,
+   "observed": 141,
+   "runtime_functions": 0,
+   "metrics": {
+    "pe.dwarf.fn.recall": 0.8064516129032258,
+    "pe.dwarf.fn.unattributed": 31,
+    "pe.functions": 141,
+    "pe.undescribed": 66
+   },
+   "unwind_provenance": false,
+   "missing": [
+    "00401010 __tmainCRTStartup",
+    "004013f0 WinMainCRTStartup",
+    "00401560 __do_global_ctors",
+    "004016d0 __tlregdtor",
+    "00401c20 __mingw_raise_matherr",
+    "00401eb0 ___w64_mingwthr_add_key_dtor",
+    "00401f30 ___w64_mingwthr_remove_key_dtor",
+    "004020f0 ?",
+    "00402120 ?",
+    "00402160 _FindPESectionByName",
+    "004022c0 _FindPESectionExec",
+    "00402380 _IsNonwritableInCurrentImage"
+   ],
+   "unattributed": [
+    "00404698",
+    "004046fd",
+    "00404753",
+    "0040476b",
+    "004047bf",
+    "004047f4",
+    "00404829",
+    "0040485e",
+    "0040487e",
+    "00404896",
+    "004048b6",
+    "004048d5"
+   ]
+  }
+ ]
+}

@@ -15,16 +15,23 @@ here rather than committed.
 The gate requires, per x86-64 fixture:
 
   * `pe.dwarf.fn.recall >= 0.98`, the bar `m3-001` sets for ELF;
-  * `pe.dwarf.fn.unattributed == 0`: every recovered entry is described by
-    DWARF, named by a symbol in the unstripped fixture, proved a thunk by the
-    store, or bounded by a `RUNTIME_FUNCTION` in the exception directory. An
-    entry with none of those is invented;
+  * `pe.dwarf.fn.unattributed == 0`: every recovered entry is either described
+    by DWARF or named by a COFF symbol in the unstripped fixture. An entry
+    with neither is invented. Two further excuses were tried and dropped as
+    measured-inert: being bounded by a `RUNTIME_FUNCTION`, and being a thunk
+    the store proved. Removing the symbol class fails 29 entries, so that one
+    is load-bearing;
   * at least one `native-import:pe-unwind` reference, so recall is credited to
     the exception directory rather than to luck.
 
 `tiny_pe32.exe` is measured and recorded, not gated: PE32 x86 carries no
 exception directory (`IMAGE_DIRECTORY_ENTRY_EXCEPTION` is empty), so its
 recall has no unwind evidence behind it yet.
+
+Neither gated fixture carries a chained `UNW_FLAG_CHAININFO` record -- 95 and
+97 records, all plain -- so the rule that a chained record describes a
+fragment rather than a function is pinned by a unit test in
+`crates/lre-core/src/native/pe_unwind.rs`, not by these images.
 
 Usage:
     python3 tests/m8-001_pe_unwind.py [--report OUT.json]
@@ -53,6 +60,8 @@ RECORDED = ["tiny_pe32.exe"]
 TAG = re.compile(r"DW_TAG_\w+")
 NAME = re.compile(r'DW_AT_name\s*\("(.*?)"\)')
 LOW_PC = re.compile(r"DW_AT_low_pc\s*\((0x[0-9a-f]+)\)")
+# "[113](sec  1)(fl 0x00)(ty  20)(scl   3) (nx 1) 0x00000450 f_double"
+COFF_SYMBOL = re.compile(r"\(sec\s+(-?\d+)\).*?\s(0x[0-9a-f]+)\s+\S")
 
 
 def image_base(data: bytes) -> int:
@@ -97,10 +106,16 @@ def runtime_functions(data: bytes) -> list[tuple[int, int]]:
     return bounds
 
 
+def dwarf_names(binary: Path) -> int:
+    """How many DWARF subprograms a file still declares."""
+    return subprocess.run(["llvm-dwarfdump", "--debug-info", str(binary)],
+                          capture_output=True, text=True, errors="replace").stdout.count("DW_TAG_subprogram")
+
+
 def dwarf_truth(binary: Path) -> tuple[dict[int, str | None], int]:
     """Concrete subprograms inside executable sections, and how many were not."""
     text = subprocess.run(["llvm-dwarfdump", "--debug-info", str(binary)],
-                          capture_output=True, text=True, check=True).stdout
+                          capture_output=True, text=True, errors="replace", check=True).stdout
     found: dict[int, str | None] = {}
     tag = name = low = None
     for line in text.splitlines():
@@ -127,20 +142,32 @@ def dwarf_truth(binary: Path) -> tuple[dict[int, str | None], int]:
 
 
 def symbol_addresses(binary: Path) -> set[int]:
-    output = subprocess.run(["llvm-nm", "--defined-only", str(binary)],
-                            capture_output=True, text=True).stdout
+    """Every COFF symbol address, static ones included.
+
+    `llvm-nm` lists only external symbols for a PE, so a `static` function is
+    invisible to it -- `dispatch.exe`'s three dispatch-table targets are
+    exactly that. The COFF symbol table carries them with a section-relative
+    value and a section index, which is what `m3-001` gets from `readelf -sW`
+    for ELF: every defined symbol, any storage class.
+    """
+    output = subprocess.run(["llvm-objdump", "-t", str(binary)],
+                            capture_output=True, text=True, errors="replace").stdout
+    data = binary.read_bytes()
+    base = image_base(data)
+    sections = parse_pe_info(data)["sections"]
     addresses = set()
     for line in output.splitlines():
-        fields = line.split()
-        if len(fields) >= 3:
-            try:
-                addresses.add(int(fields[0], 16))
-            except ValueError:
-                continue
+        match = COFF_SYMBOL.search(line)
+        if not match:
+            continue
+        index, value = int(match.group(1)), int(match.group(2), 16)
+        if not 1 <= index <= len(sections):
+            continue  # absolute and debug symbols name no image address
+        addresses.add(base + sections[index - 1]["vaddr"] + value)
     return addresses
 
 
-def native_import(binary: Path, work: Path) -> tuple[set[int], set[int], set[str]]:
+def native_import(binary: Path, work: Path) -> tuple[set[int], set[str]]:
     project = work / f"{binary.stem}-project"
     result = subprocess.run(
         [str(ROOT / "target/release/lre-cli"), "import", str(binary),
@@ -149,9 +176,8 @@ def native_import(binary: Path, work: Path) -> tuple[set[int], set[int], set[str
     assert result.returncode == 0, f"native import failed: {result.stderr.strip()}"
     store = sqlite3.connect(project / "project.sqlite")
     entries = {int(row[0], 16) for row in store.execute("SELECT entry FROM functions")}
-    thunks = {int(row[0], 16) for row in store.execute("SELECT function FROM thunks")}
     provenance = {row[0] for row in store.execute("SELECT DISTINCT provenance FROM xrefs")}
-    return entries, thunks, provenance
+    return entries, provenance
 
 
 def score(fixture: Path, work: Path) -> dict:
@@ -159,20 +185,19 @@ def score(fixture: Path, work: Path) -> dict:
     shutil.copy2(fixture, stripped)
     subprocess.run(["llvm-strip", "--strip-all", str(stripped)], check=True)
     assert not symbol_addresses(stripped), f"{fixture.name}: the scored copy kept symbols"
+    assert not dwarf_names(stripped), f"{fixture.name}: the scored copy kept DWARF"
 
     truth, unmapped = dwarf_truth(fixture)
     assert truth, f"{fixture.name}: no DWARF subprograms in an executable section"
-    observed, thunks, provenance = native_import(stripped, work)
+    observed, provenance = native_import(stripped, work)
     symbols = symbol_addresses(fixture)
-    bounds = runtime_functions(fixture.read_bytes())
+    bounds = runtime_functions(fixture.read_bytes())  # reported, never an excuse
 
     matched = set(truth) & observed
     missing = sorted(set(truth) - observed)
     undescribed = observed - set(truth)
-    unattributed = sorted(
-        address for address in undescribed
-        if address not in symbols and address not in thunks
-        and not any(begin <= address < end for begin, end in bounds))
+    unattributed = sorted(address for address in undescribed
+                          if address not in symbols)
     row = {
         "id": fixture.name,
         "truth": len(truth),

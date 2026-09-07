@@ -21,6 +21,7 @@ mod discovery;
 mod elf_pointers;
 mod elf_unwind;
 mod elf_image;
+mod pe_unwind;
 mod strings;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -694,7 +695,9 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     }
     let magic = u16_at(data, opt)?;
 
-    let (entry_rva, image_base, reloc_dir_offset) = match (machine, magic) {
+    // Exception directory (index 3) carries RUNTIME_FUNCTION bounds, but only
+    // the AMD64 records have the layout the unwind pass reads.
+    let (entry_rva, image_base, reloc_dir_offset, unwind_dir_offset) = match (machine, magic) {
         (0x8664, 0x20b) => {
             if opt_size < 112 {
                 return err(format!("PE32+ optional header size {opt_size} too small (>= 112 expected)"));
@@ -707,7 +710,12 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             } else {
                 None
             };
-            (entry_rva, image_base, reloc_offset)
+            let unwind_offset = if num_rva_sizes > 3 && opt_size >= 144 {
+                Some(opt + 136)
+            } else {
+                None
+            };
+            (entry_rva, image_base, reloc_offset, unwind_offset)
         }
         (0x014c, 0x10b) => {
             if opt_size < 96 {
@@ -721,7 +729,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             } else {
                 None
             };
-            (entry_rva, image_base, reloc_offset)
+            (entry_rva, image_base, reloc_offset, None)
         }
         (0x8664, other) => {
             return err(format!("PE AMD64 requires PE32+ optional header magic 0x20b, got {other:#x}"));
@@ -738,11 +746,8 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         return err("PE section table truncated");
     }
     let mut mappings = Vec::new();
-    struct PeSectionInfo {
-        vaddr: u64,
-        vsize: usize,
-        raw_off: usize,
-    }
+    // The unwind pass needs the same section spans, so they share one shape.
+    use pe_unwind::Span;
     let mut raw_sections = Vec::new();
     for i in 0..num_sections {
         let o = sec_table + i * 40;
@@ -753,7 +758,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         if size == 0 {
             continue;
         }
-        raw_sections.push(PeSectionInfo {
+        raw_sections.push(Span {
             vaddr,
             vsize: size,
             raw_off: raw,
@@ -883,7 +888,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
 
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
-    Ok(NativeImport {
+    let mut import = NativeImport {
         mappings,
         functions,
         xrefs,
@@ -892,7 +897,15 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         format: "PE".into(),
         language: language.into(),
         ..Default::default()
-    })
+    };
+    if let Some(offset) = unwind_dir_offset {
+        let rva = u32_at(data, offset).unwrap_or(0) as u64;
+        let size = u32_at(data, offset + 4).unwrap_or(0) as usize;
+        pe_unwind::collect(data, &raw_sections, &mut import, image_base, rva, size);
+        import.functions.sort_by_key(|f| f.entry);
+        import.functions.dedup_by_key(|f| f.entry);
+    }
+    Ok(import)
 }
 /// Returns the executable (code) ranges of the import, for seed filtering.
 pub fn code_ranges(imp: &NativeImport) -> Vec<(u64, u64)> {
