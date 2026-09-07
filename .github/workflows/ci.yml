@@ -70,6 +70,14 @@ jobs:
         run: |
           python3 benchmarks/match_gate.py \
             --report "$RUNNER_TEMP/signatures/m2-012.json"
+      - name: Recover Itanium C++ classes
+        run: |
+          python3 scripts/gen_corpus.py \
+            --architectures x86_64,i386,aarch64,powerpc \
+            --out-dir "$RUNNER_TEMP/rtti/corpus"
+          python3 benchmarks/rtti_gate.py \
+            --corpus-dir "$RUNNER_TEMP/rtti/corpus" \
+            --report "$RUNNER_TEMP/signatures/m2-013.json"
       - name: Retain signature evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,6 +86,7 @@ jobs:
           path: |
             ${{ runner.temp }}/signatures/m2-011.json
             ${{ runner.temp }}/signatures/m2-012.json
+            ${{ runner.temp }}/signatures/m2-013.json
 
   corpus-oracle:
     name: M1 Discovery and M2 References/Strings (ubuntu-latest)

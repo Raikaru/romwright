@@ -144,6 +144,15 @@ impl ApiService {
                     "signatures": signatures,
                 }))
             }
+            "classes" => {
+                let program = string_param(params, "program")?;
+                value(self.core.classes(&program))
+            }
+            "recover_classes" => {
+                let binary = path_param(params, "binary")?;
+                let program = string_param(params, "program")?;
+                value(self.core.recover_classes(&binary, &program))
+            }
             "signature_matches" => {
                 let program = string_param(params, "program")?;
                 value(self.core.signature_matches(&program))

@@ -16,6 +16,7 @@ pub mod session;
 mod prototypes;
 mod nonreturn;
 mod signatures;
+pub mod rtti;
 pub use nonreturn::NonReturnInferenceReport;
 
 use lre_db::ProjectDb;

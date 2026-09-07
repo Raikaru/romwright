@@ -120,6 +120,16 @@ pub struct NativeStringTable {
 /// Single owner name for flow-proven thunk facts and their jump xrefs.
 pub const THUNK_SOURCE: &str = "native-import:thunk";
 
+/// A loader-bound data relocation that names a symbol: `copies` marks the
+/// COPY form, where the loader duplicates the symbol's bytes at `address`.
+#[derive(Clone, Debug)]
+pub struct NamedRelocation {
+    pub address: u64,
+    pub symbol: String,
+    pub addend: u64,
+    pub copies: bool,
+}
+
 /// A function whose whole body transfers to one proven destination.
 #[derive(Clone, Copy, Debug)]
 pub struct NativeThunk {
@@ -139,6 +149,8 @@ pub struct NativeImport {
     pub externals: Vec<(u64, String)>,
     /// Proven ifunc pointer slots and their in-image resolvers.
     pub ifunc_slots: Vec<(u64, u64)>,
+    /// Loader-bound data relocations that name a symbol.
+    pub named_relocations: Vec<NamedRelocation>,
     /// Flow-proven thunk entries and their destinations.
     pub thunks: Vec<NativeThunk>,
     /// Relocation code targets to be verified as candidate function entries.
@@ -1236,6 +1248,10 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_thunks(pid, THUNK_SOURCE, &thunks)?;
+    // Itanium class facts come from the image's own relocations and data, so
+    // the loader can publish them without a console or a worker.
+    let (classes, _) = crate::rtti::recover(imp);
+    db.replace_inferred_classes(pid, crate::rtti::SOURCE, &classes)?;
     Ok(ProgramSummary {
         program: program.to_string(),
         functions: functions.len() as u64,

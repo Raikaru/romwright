@@ -468,6 +468,25 @@ The match gate statically links a corpus source against a pinned `libc.a`,
 strips it, and scores every match against the unstripped twin: `docs/vsig.md`
 records the measured false-positive rate.
 
+Native import also recovers Itanium C++ classes from the image itself:
+`classes` reads the facts, `recover_classes` repeats the pass. A loader-bound
+relocation naming one of the ABI's `__cxxabiv1` type_info vtables anchors the
+chain, the word after a `type_info`'s vptr must be a mangled type name, and a
+data word holding that `type_info`'s address is a vtable's `type_info` slot.
+Each fact carries the primary vtable, its function-pointer slot count, the ABI
+shape (`class`, `single_base`, `multiple_base`) and the base list with offsets
+and virtual/public flags. Names are demangled only for the grammar the parser
+covers; anything else keeps its mangled form. Schema v11 owns the facts.
+
+```sh
+python3 benchmarks/rtti_gate.py --corpus-dir /path/to/corpus \
+  --report benchmarks/reports/m2-013.json
+```
+
+The gate compares recovered classes with the compiler's own `_ZTV` symbols in
+unstripped twins, across PIE and non-PIE links, and requires the locked corpus
+C++ entries — whose source declares no classes — to stay empty.
+
 ```sh
 python3 scripts/gen_prototype_oracle.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-006-reference.json
