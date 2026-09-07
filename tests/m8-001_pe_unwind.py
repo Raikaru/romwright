@@ -180,6 +180,13 @@ def native_import(binary: Path, work: Path) -> tuple[set[int], set[str]]:
     return entries, provenance
 
 
+def call_targets(binary: Path, work: Path) -> set[int]:
+    """Addresses some call reaches, from the store the import wrote."""
+    store = sqlite3.connect(work / f"{binary.stem}-project" / "project.sqlite")
+    return {int(row[0], 16) for row in
+            store.execute("SELECT dst FROM xrefs WHERE kind LIKE '%CALL%'")}
+
+
 def score(fixture: Path, work: Path) -> dict:
     stripped = work / f"{fixture.stem}.stripped{fixture.suffix}"
     shutil.copy2(fixture, stripped)
