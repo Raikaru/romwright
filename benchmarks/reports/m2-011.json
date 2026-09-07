@@ -2,8 +2,8 @@
   "gate": "signatures",
   "milestone": "M2",
   "task": "m2-011",
-  "commit": "19b24bfb19c3c2bd106a6c594d37a929e4bb35cc",
-  "date": "2026-09-07T00:20:27.017846+00:00",
+  "commit": "47727952d10b2075ec85360aadfc2618c714633e",
+  "date": "2026-09-07T00:41:19.955494+00:00",
   "gate_sha256": "8209e420b129c216ec1f474064259748b40824ab02246ba27064d9c54332bae3",
   "comparison": "record count and byte size of databases built from pinned static archives, with byte-identical rebuilds; not an II.3 metric",
   "sources": [
@@ -16,13 +16,14 @@
       "language": "AARCH64:LE:64:v8A",
       "members": 1894,
       "functions": 3876,
-      "records": 3440,
+      "records": 1028,
       "skipped": {
+        "ambiguous": 2412,
         "too-weak": 436
       },
       "compared_bytes_min": 16,
-      "database_bytes": 2505301,
-      "database_sha256": "556446fca9d20d399a06dbb9aad71cd097d9301fe82cc64a05fcd9667662ca05",
+      "database_bytes": 1120263,
+      "database_sha256": "e612c638e01ba61d8cb6e0659fee2c9e8eb3146fa6f85a60fe7d98b1bade903b",
       "rebuild_identical": true,
       "report_records_match": true
     },
@@ -35,13 +36,15 @@
       "language": "x86:LE:32:default",
       "members": 1997,
       "functions": 4077,
-      "records": 3853,
+      "records": 1416,
       "skipped": {
+        "ambiguous": 2437,
+        "conflicting": 6,
         "too-weak": 224
       },
       "compared_bytes_min": 16,
-      "database_bytes": 3113013,
-      "database_sha256": "f600323eca9e54a15ce93903982b31e8e21e567cbebdb574cacd7383ffe8b252",
+      "database_bytes": 1691796,
+      "database_sha256": "2d21923551ff2a22b108b4115cd375ee6af95a6a0e57d50726ccac0d28668d14",
       "rebuild_identical": true,
       "report_records_match": true
     },
@@ -54,14 +57,15 @@
       "language": "PowerPC:BE:32:default",
       "members": 1885,
       "functions": 4086,
-      "records": 3742,
+      "records": 1292,
       "skipped": {
+        "ambiguous": 2450,
         "conflicting": 2,
         "too-weak": 342
       },
       "compared_bytes_min": 16,
-      "database_bytes": 3393840,
-      "database_sha256": "7bfcf3a48a5aba3e2808268a7e04497363fd531b2a207d5b2a5cde72b709522c",
+      "database_bytes": 1557295,
+      "database_sha256": "e5c0aaf70e46ee3a82d7dab00fcaa15ba9ba407c548f648a6d8f896e6e72dc2c",
       "rebuild_identical": true,
       "report_records_match": true
     },
@@ -74,13 +78,14 @@
       "language": "AARCH64:LE:64:v8A",
       "members": 578,
       "functions": 1476,
-      "records": 1257,
+      "records": 122,
       "skipped": {
+        "ambiguous": 1135,
         "too-weak": 219
       },
       "compared_bytes_min": 16,
-      "database_bytes": 1280232,
-      "database_sha256": "170860ef55a455e5f5e6b8d703a4daca6c3998f2ae03720db490f8f83f007861",
+      "database_bytes": 216007,
+      "database_sha256": "ad8ec9a131fedb3b4685a439ce1033d490f828dfd1eafe90e4dba85cd6262f6d",
       "rebuild_identical": true,
       "report_records_match": true
     }
@@ -91,8 +96,8 @@
     "skipped": 0
   },
   "totals": {
-    "records": 12292,
-    "database_bytes": 10292386
+    "records": 3858,
+    "database_bytes": 4585361
   },
   "passed": true
 }

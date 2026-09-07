@@ -2115,14 +2115,17 @@ M2 — Program-model parity
 - `a7c96f8` commits the failing gate (`error: unknown command: signatures`).
   `101e136` adds the `ar` reader and ELF extraction; `19b24bf` adds the CLI
   surface, the CI step and the documentation.
-- `benchmarks/reports/m2-011.json`: **4 sources pass, 0 fail, 0 skipped;
-  12 292 records across 10 292 386 database bytes**, every rebuild
-  byte-identical. Per source: aarch64 `libc.a` 3 440 records / 2 505 301 bytes,
-  i386 `libc.a` 3 853 / 3 113 013, powerpc `libc.a` 3 742 / 3 393 840,
-  aarch64 `libm.a` 1 257 / 1 280 232. Minimum compared bytes per record is 16.
-- Skips are reported, never silent: 1 221 functions were dropped as too weak,
-  2 as conflicting definitions, and 0 for unknown relocations after the
-  PowerPC TLS/REL16 widths were added from public `elf.h` numbering.
+- `benchmarks/reports/m2-011.json` (current, commit `4772795`): **4 sources
+  pass, 0 fail, 0 skipped; 3 858 records across 4 585 361 database bytes**,
+  every rebuild byte-identical. Per source: aarch64 `libc.a` 1 028 records /
+  1 120 263 bytes, i386 `libc.a` 1 416 / 1 691 796, powerpc `libc.a` 1 292 /
+  1 557 295, aarch64 `libm.a` 122 / 216 007. Minimum compared bytes is 16.
+- Skips are reported, never silent: 1 221 bodies below the evidence threshold,
+  8 conflicting definitions, 8 434 dropped as ambiguous once m2-012 proved
+  that indistinguishable bodies produce wrong names, and 0 for unknown
+  relocations after the PowerPC TLS/REL16 widths were added from public
+  `elf.h` numbering. The first run, before the ambiguity policy, held 12 292
+  records; that recall bought a 0.77% false-positive rate, so it was dropped.
 - Independent verification (throwaway script, this session): decoding the
   generated databases with a separate Python implementation of the documented
   layout reproduced every record; `strlen` in the aarch64 database matches
@@ -2151,9 +2154,36 @@ M2 — Program-model parity
   confidence), its Core/API/CLI surface, and the documented false-positive
   rate. Slices stay below 800 changed lines each.
 
+### m2-012 evidence
+- `3a7b359` commits the failing gate (`unknown_method: signature_matches`);
+  `bfa6b8b` adds schema-v10 storage with two ownership regressions; `4772795`
+  adds the matcher, its Core/API/CLI surface, the CI step and the docs.
+- `benchmarks/reports/m2-012.json` at commit `4772795`: **3 architectures pass,
+  870 matches, 870 correct, 0 false positives, rate 0.000**. Per architecture:
+  AArch64 303/303, i386 297/297, PowerPC 270/270. CRT helpers named include
+  `abort`, `memcpy`, `memset`, `strcmp` and `strlen`; the rate table is
+  recorded in `docs/vsig.md`.
+- The first measured run had 7 false positives in 915 matches (0.77%), every
+  one an exported wrapper naming its byte-identical `static` twin. Local
+  bodies now compete with records even though their names are never published,
+  which removed the whole population. Exact-body-length matching and treating
+  every weak body as a competitor were both tried and rejected: the first lost
+  `abort` and kept the false positives, the second emptied a database.
+- Matching semantics: window at the entry satisfies every compared byte, the
+  record is at least as long as the proven body, disagreeing databases leave
+  the function unnamed, `confidence = compared_bytes / pattern_len`, and only
+  generated `FUN_*` names are replaced.
+- Verification: `cargo test --workspace` 183 pass/2 ignored; the CLI path
+  reports `1418 records, 300 matched, 300 renamed, 0 conflicts` on a stripped
+  static i386 twin; both signature gates pass in `corpus-linux`.
+- m2-012 is complete. No metric definition, corpus member, or reserved
+  decision changed.
+
 ## Next task
-- m2-012: match inferred library names during import, writing matches as
-  inferred names with confidence and logging conflicts.
+- m2-013: recover Itanium C++ typeinfo, vtables and `__cxa_*` calls into class
+  and vtable facts, with the corpus C++ binary's class count matching the
+  oracle's vtable count. Its acceptance test does not exist yet; write it
+  first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
