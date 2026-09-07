@@ -2140,11 +2140,20 @@ M2 — Program-model parity
   reserved decision (II.1: adding a corpus binary or platform); the generator
   refuses unknown formats instead of guessing.
 
+## m2-012 implementation slices
+- a: commit the failing gate (`benchmarks/match_gate.py`): build a database
+  from a pinned `libc.a`, statically link and strip a corpus source with the
+  matching cross toolchain, import it with the database, and score named CRT
+  helpers and the false-positive rate against the unstripped twin.
+- b: schema-v10 provenance-owned `signature_matches` storage with ownership
+  regressions.
+- c: the matcher itself (windowed mask comparison, conflict rejection,
+  confidence), its Core/API/CLI surface, and the documented false-positive
+  rate. Slices stay below 800 changed lines each.
+
 ## Next task
 - m2-012: match inferred library names during import, writing matches as
-  inferred names with confidence and logging conflicts, with the false-positive
-  rate on the corpus recorded in `docs/vsig.md`. Its acceptance test does not
-  exist yet; write it first.
+  inferred names with confidence and logging conflicts.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
