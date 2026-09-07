@@ -499,7 +499,7 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M5 — Console platforms, measurable tier first (m5-001 GBA complete)
+M5 — Console platforms, measurable tier first (m5-001 GBA, m5-002 NDS complete)
 (M4 opened with m4-001; further M4 passes resume after the first console
 platforms land, per the sequencing decision recorded below)
 (M3 complete: DWARF scoring m3-001, frozen baseline m3-002, regression gate
@@ -2571,11 +2571,57 @@ m3-003, all three wired into continuous integration)
   (e500), `tests/m3-001_dwarf_truth.py`, `tests/m3-002_baseline.py`,
   `tests/m3-003_regression.py`, `tests/m5-001_gba.py` pass.
 
+### m5-002 evidence
+- `d70e5fd` commits the failing acceptance (`tests/m5-002_nds.py`); the
+  container was first mis-detected as a DOL.
+- `crates/lre-core/src/native/nds.rs` reads the documented CPU descriptors
+  (gbatek "DS Cartridge Header", 0x20 for ARM9 and 0x30 for ARM7) and
+  accepts a cartridge only when every declared region fits the file, the two
+  images do not overlap, each entry lands inside its own image, and each load
+  address is where gbatek says that CPU's code runs. Seven unit tests pin the
+  refusals: size past the file end, entry outside its image, an address in
+  the GBA cartridge window, overlapping images, an image inside the header.
+- **One container now yields two programs.** A program holds one language and
+  the two processors do not share one, so `native::load_container` runs
+  discovery per image and `Core::import_container` stores `<name>.arm9`
+  (`ARM:LE:32:v5t`) and `<name>.arm7` (`ARM:LE:32:v4t`). The CLI prints a
+  line per program; the API keeps the booted program at the top level and
+  lists every program under `programs`, so no existing consumer breaks.
+  Signature passes run per program and the reports are summed.
+- Two address-basis defects surfaced and were fixed at the root:
+  1. The worker's default load base came from the *file*, so a second
+     processor's addresses were unmapped. It now comes from the program's own
+     image-backed store regions -- a cartridge has two bases, and only the
+     store knows which program a request is for.
+  2. `ProgramImage` mapped the container's first image regardless of which
+     program was being read; it now selects the image whose mappings contain
+     the requested base. A platform's *declared* windows are excluded from
+     base selection, since they carry no bytes.
+- Measured (`benchmarks/reports/m5-002.json`): **`nds.arm9` recall 1.0000
+  over 5 DWARF functions, `nds.arm7` 0.7500 over 4, zero unattributed
+  entries on both**, entries seeded from the header, and a recovered function
+  from each CPU decompiled natively.
+- The ARM7 miss is recorded, not smoothed: `mix` is entered only by a tail
+  call, so nothing references its entry. **Stock Ghidra misses it on the same
+  stripped bytes too** (measured this session: it recovers 037f8008,
+  037f8010, 037f8030 and absorbs 037f8000 into the caller's extent). The gate
+  pins that address and verifies it is unreached code inside the image, so a
+  new miss fails while the known one stays named.
+- Verification: `cargo test --workspace` 206 pass; `tests/corpus.sh` 5/5;
+  `tests/differential.sh`, `tests/workflow.sh`, `tests/data_xrefs.sh`,
+  `tests/m1-004_pie.sh`, `tests/m1-005_pe_relocs.sh`,
+  `tests/generic_discovery_test.sh`, `tests/m2-015_native_default.py`,
+  `tests/m5-001_gba.py`, `tests/m5-002_nds.py` pass.
+
 ## Next task
-- m5-002: Nintendo DS containers -- two CPU images in one file, so the store
-  must hold ARM9 and ARM7 as separate programs with their own languages.
-  Scored against DWARF twins built from source, like m5-001. Its acceptance
-  test does not exist yet; write it first.
+- m5-003: PlayStation PS-EXE images -- a documented 2 KiB header naming the
+  load address, entry point and size, on `MIPS:LE:32:default`. Scored against
+  a DWARF twin built from source, like m5-001 and m5-002. Its acceptance test
+  does not exist yet; write it first.
+- Recorded deficit to close later: a tail-called leaf function is invisible
+  to flow analysis in both Ventris and stock Ghidra. The transfer itself is
+  not even recorded -- the store keeps no jump xref for the tail call -- so
+  the first honest step is recording the fact, not inventing the function.
 
 ## Console sequencing decision (agent judgement, 2026-09-07)
 The ten platforms recorded in "Reserved decisions" split by what can be

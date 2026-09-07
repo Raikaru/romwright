@@ -342,6 +342,36 @@ non-x86 language:
   now copies the language's compiler spec file verbatim, and the platform
   gate fails if a bundle still carries a placeholder body.
 
+#### Nintendo DS: one container, two programs
+
+A DS cartridge carries an ARM9 image and an ARM7 image with different
+architectures, load addresses and entry points (gbatek "DS Cartridge
+Header", fields at 0x20 and 0x30). A program in the store holds one
+language, so `import` stores **two** programs -- `<name>.arm9` and
+`<name>.arm7` -- and prints a line for each. `import_container` returns them
+all; the API keeps the booted program at the top level and lists the rest
+under `programs`.
+
+Detection is arithmetic, not a magic number: every declared region must fit
+the file, the two images must not overlap, each entry must land inside its
+own image, and each load address must be where gbatek says that CPU's code
+runs. Seven unit tests pin the refusals.
+
+| Program | Language | DWARF functions | recall | Unattributed |
+|---|---|---|---|---|
+| `nds.arm9` | `ARM:LE:32:v5t` | 5 | **1.0000** | 0 |
+| `nds.arm7` | `ARM:LE:32:v4t` | 4 | 0.7500 | 0 |
+
+The ARM7 miss is recorded, not rounded away: `mix` is entered only by a tail
+call (`b`), so nothing references its entry, and **stock Ghidra misses it on
+the same stripped bytes too** -- it absorbs the range into the caller's
+extent. The gate pins that one address; a new miss fails, and recovering it
+requires updating the record.
+
+```sh
+python3 tests/m5-002_nds.py
+```
+
 ### The ground-truth regression gate (M3)
 
 `benchmarks/regression_gate.py` joins the two: native against DWARF from
@@ -692,6 +722,7 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 | ELF RISC-V LE64 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF PowerPC | supported | BE32 discovery gated; e500 parity verified; other configurations not gated |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 on the built fixture, native ARM decompilation verified (`tests/m5-001_gba.py`) |
+| NDS cartridge (ARM9 + ARM7) | supported | **gated**: two programs, one per CPU; ARM9 recall 1.0000, ARM7 0.7500 with one recorded deficit (`tests/m5-002_nds.py`) |
 
 The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
 requires the matching compiled SLEIGH language and static specification bundle.

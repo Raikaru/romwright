@@ -327,14 +327,21 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 })
                 .collect();
             let started = std::time::Instant::now();
-            let (summary, signatures) = core
+            let (stored, signatures) = core
                 .import_native_with_signatures(Path::new(&binary), &program, &databases)
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();
-            println!(
-                "imported {} natively ({} functions, {})",
-                summary.program, summary.functions, summary.language
-            );
+            // A container stores one program per processor; print each, so
+            // nothing about what was imported is left implicit.
+            for summary in &stored {
+                println!(
+                    "imported {} natively ({} functions, {})",
+                    summary.program, summary.functions, summary.language
+                );
+            }
+            let summary = stored
+                .first()
+                .ok_or_else(|| "import produced no program".to_string())?;
             if let Some(report) = signatures {
                 println!(
                     "signatures: {} records, {} matched, {} renamed, {} conflicts",

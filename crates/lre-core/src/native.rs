@@ -13,6 +13,7 @@ use lre_db::ProjectDb;
 use std::collections::HashSet;
 use std::path::Path;
 mod gba;
+mod nds;
 pub(crate) mod dol;
 mod discovery;
 mod elf_pointers;
@@ -997,9 +998,27 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
         import_pe(data)
     } else if gba::is_cartridge(data) {
         gba::import(data)
+    } else if nds::is_cartridge(data) {
+        // A container holds one image per processor; a single-image caller
+        // gets the one the console boots.
+        nds::import(data)?
+            .into_iter()
+            .next()
+            .map(|(_, import)| import)
+            .ok_or_else(|| ImportError::Bad("empty Nintendo DS container".into()))
     } else {
         dol::import(data)
     }
+}
+
+/// Every image a container carries, each with the suffix that names it.
+/// A single-image file yields one entry with an empty suffix, so callers do
+/// not special-case formats.
+pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    if nds::is_cartridge(data) {
+        return nds::import(data);
+    }
+    Ok(vec![(String::new(), parse_native(data)?)])
 }
 
 /// Loads `<binary>` mappings without running discovery or sweep passes.
@@ -1018,6 +1037,45 @@ fn phase(imp: &mut NativeImport, name: &str, started: std::time::Instant) {
     });
 }
 
+/// Loads every image `<binary>` carries, closing each one's seeds through
+/// SLEIGH flow with that image's own language.
+pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
+    let parse_started = std::time::Instant::now();
+    let data = std::fs::read(binary)
+        .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
+    let images = parse_container(&data)?;
+    let canonical = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
+    let mut loaded = Vec::with_capacity(images.len());
+    for (suffix, mut imp) in images {
+        imp.binary = canonical.clone();
+        imp.cfg = crate::session::RuntimeConfig::from_env();
+        imp.cfg.adopt_language(&imp.language);
+        phase(&mut imp, "parse", parse_started);
+        discover(&mut imp)?;
+        loaded.push((suffix, imp));
+    }
+    Ok(loaded)
+}
+
+/// Runs discovery and reference inference for one loaded image.
+fn discover(imp: &mut NativeImport) -> Result<()> {
+    let discovery_started = std::time::Instant::now();
+    let lanes = if imp.format == "dol" {
+        Some(discovery::discover_mapped(imp)?)
+    } else {
+        elf_pointers::confirm_initializers(imp);
+        discovery::discover_seeded(imp)
+    };
+    phase(imp, "discovery", discovery_started);
+    if let Some(lanes) = lanes {
+        let references_started = std::time::Instant::now();
+        let mut session = lanes.session;
+        infer_data_references(imp, &mut session, lanes.shards)?;
+        phase(imp, "references", references_started);
+    }
+    Ok(())
+}
+
 /// Loads `<binary>` natively and closes its seeds through SLEIGH flow.
 pub fn load_native(binary: &Path) -> Result<NativeImport> {
     let parse_started = std::time::Instant::now();
@@ -1028,20 +1086,7 @@ pub fn load_native(binary: &Path) -> Result<NativeImport> {
     imp.cfg = crate::session::RuntimeConfig::from_env();
     imp.cfg.adopt_language(&imp.language);
     phase(&mut imp, "parse", parse_started);
-    let discovery_started = std::time::Instant::now();
-    let lanes = if imp.format == "dol" {
-        Some(discovery::discover_mapped(&mut imp)?)
-    } else {
-        elf_pointers::confirm_initializers(&mut imp);
-        discovery::discover_seeded(&mut imp)
-    };
-    phase(&mut imp, "discovery", discovery_started);
-    if let Some(lanes) = lanes {
-        let references_started = std::time::Instant::now();
-        let mut session = lanes.session;
-        infer_data_references(&mut imp, &mut session, lanes.shards)?;
-        phase(&mut imp, "references", references_started);
-    }
+    discover(&mut imp)?;
     Ok(imp)
 }
 

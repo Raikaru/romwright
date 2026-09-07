@@ -884,14 +884,37 @@ impl Core {
     /// (in-Rust walk + SLEIGH console closure when the binary looks
     /// stripped), and store writes with native provenance.
     pub fn import_native(&self, binary: &Path, name: &str) -> Result<ProgramSummary> {
-        let imp = native::load_native(binary)?;
-        let started = std::time::Instant::now();
-        let mut summary = native::store_import(&self.db, name, &imp)?;
-        summary.phases.push(lre_model::PhaseTiming {
-            phase: "store".into(),
-            seconds: started.elapsed().as_secs_f64(),
-        });
-        Ok(summary)
+        let mut stored = self.import_container(binary, name)?;
+        // A container's first image is the one its console boots; every
+        // image is stored, and `import_container` returns them all.
+        stored
+            .drain(..)
+            .next()
+            .ok_or_else(|| CoreError::InvalidPrototype("import produced no program".into()))
+    }
+
+    /// Imports every image a container carries. A single-image file stores
+    /// one program under `name`; a container stores one per processor,
+    /// named `<name>.<image>`, because a program holds one language and its
+    /// processors do not share one.
+    pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
+        let images = native::load_container(binary)?;
+        let mut stored = Vec::with_capacity(images.len());
+        for (suffix, imp) in &images {
+            let program = if suffix.is_empty() {
+                name.to_string()
+            } else {
+                format!("{name}.{suffix}")
+            };
+            let started = std::time::Instant::now();
+            let mut summary = native::store_import(&self.db, &program, imp)?;
+            summary.phases.push(lre_model::PhaseTiming {
+                phase: "store".into(),
+                seconds: started.elapsed().as_secs_f64(),
+            });
+            stored.push(summary);
+        }
+        Ok(stored)
     }
 
     /// Native disassembly of `count` instructions at `address`.

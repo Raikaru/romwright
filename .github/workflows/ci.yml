@@ -168,6 +168,12 @@ jobs:
         run: |
           python3 tests/m5-001_gba.py \
             --report "$RUNNER_TEMP/discovery/gba-platform.json"
+      - name: Enforce the Nintendo DS platform gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m5-002_nds.py \
+            --report "$RUNNER_TEMP/discovery/nds-platform.json"
       - name: Verify the frozen stock-Ghidra ground-truth baseline
         run: |
           python3 tests/m3-002_baseline.py \
