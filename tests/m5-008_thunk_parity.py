@@ -43,21 +43,17 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 THRESHOLDS = {
     "thunk.entry.precision": 1.0,
-    "thunk.entry.recall": 0.96,
+    "thunk.entry.recall": 1.0,
+    "thunk.entry.unexplained": 0,
     "thunk.destination.unexplained": 0,
 }
 
-# Stock thunks Ventris does not record, pinned with the symbol each one binds.
-# i386 PIE PLT stubs jump through `%ebx`, which holds the GOT base the caller
-# established: the slot is not derivable from the stub's own instructions, and
-# Ventris records a linkage thunk only from a resolved slot.
-DEFICITS = {
-    "i386_plain_pie": {
-        "00011650": "__libc_start_main",
-        "00011660": "__cxa_finalize",
-        "00011670": "printf",
-    },
-}
+# Stock thunks Ventris does not record, keyed by corpus entry and pinned with
+# the symbol each one binds. Empty: every stock thunk whose entry is in the
+# image is recorded, including the register-relative PIE stubs whose slot is
+# only known from propagated evidence. A new miss fails here rather than
+# lowering a threshold, and closing one demands deleting its row.
+DEFICITS: dict[str, dict[str, str]] = {}
 
 
 def native_facts(cli: Path, binary: Path, work: Path, timeout: int) -> dict:
@@ -102,8 +98,22 @@ def compare(identifier: str, stock: dict, native: dict) -> dict:
 
     recorded = set(native["thunks"])
     agree = set(comparable) & recorded
-    invented = recorded - set(stock)
     missing = {entry: comparable[entry]["name"] for entry in set(comparable) - recorded}
+
+    # A thunk of ours that stock does not record at the same entry is only
+    # acceptable when stock records the same *symbol* as a thunk in its
+    # EXTERNAL block: Ghidra puts the fact on the slot, Ventris puts it on the
+    # stub that reads the slot. The correspondence is by name, not by count.
+    outside_names = {fact["name"] for fact in excluded.values()}
+    explained_entries, invented = [], []
+    for entry in sorted(recorded - set(stock)):
+        destination = native["thunks"][entry]["thunked"]
+        names = native["symbols"].get(destination or "", set())
+        if names & outside_names:
+            explained_entries.append({"entry": entry, "destination": destination,
+                                      "name": sorted(names & outside_names)[0]})
+        else:
+            invented.append(entry)
 
     equal, explained, unexplained = 0, [], []
     for entry in sorted(agree):
@@ -127,8 +137,8 @@ def compare(identifier: str, stock: dict, native: dict) -> dict:
     return {"id": identifier, "stock": len(stock), "excluded": len(excluded),
             "comparable": len(comparable), "native": len(recorded),
             "agree": len(agree), "equal": equal, "explained": len(explained),
-            "unexplained": unexplained, "invented": sorted(invented),
-            "missing": missing}
+            "unexplained": unexplained, "explained_entries": explained_entries,
+            "invented": invented, "missing": missing}
 
 
 def main() -> int:
@@ -137,6 +147,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
         "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+    parser.add_argument("--libc", type=Path, default=Path("/usr/lib64/libc.so.6"))
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
@@ -150,6 +161,7 @@ def main() -> int:
         return 0
 
     from thunk_gate import stock_thunks
+    from gen_oracle import digest
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
                    cwd=ROOT, check=True)
@@ -157,15 +169,25 @@ def main() -> int:
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"comparable": 0, "native": 0, "agree": 0, "equal": 0,
-                        "explained": 0, "unexplained": 0, "invented": 0}
-    for entry in manifest["entries"]:
-        if entry.get("status") != "ok":
-            continue
-        identifier = f"{entry['architecture']}_{entry['variant']}"
-        binary = arguments.corpus_dir / entry["binary"]
+                        "explained": 0, "unexplained": 0, "invented": 0,
+                        "explained_entries": 0}
+    scored = [(f"{entry['architecture']}_{entry['variant']}",
+               arguments.corpus_dir / entry["binary"], None)
+              for entry in manifest["entries"] if entry.get("status") == "ok"]
+    # The host libc is scored from the committed baseline, and only when the
+    # host's own library is the one that baseline was recorded from: that is
+    # the image whose count comparison read 107 against 107 while the sets
+    # differed.
+    for baseline in sorted((ROOT / "oracle/thunks-v1").rglob("baseline-*.json")):
+        recorded_stock = json.loads(baseline.read_text())
+        if arguments.libc.is_file() and digest(arguments.libc) == recorded_stock["sha256"]:
+            scored.append(("host_libc", arguments.libc, recorded_stock))
+
+    for identifier, binary, recorded_stock in scored:
         with tempfile.TemporaryDirectory(prefix="m5-008-") as temporary:
             work = Path(temporary)
-            exported = stock_thunks(arguments.ghidra, binary, work, arguments.timeout)
+            exported = recorded_stock or stock_thunks(
+                arguments.ghidra, binary, work, arguments.timeout)
             stock = {key.lower(): {"thunked": value["thunked"],
                                    "external": value["external"],
                                    "name": value["name"]}
@@ -177,9 +199,12 @@ def main() -> int:
             totals[key] += row[key]
         totals["unexplained"] += len(row["unexplained"])
         totals["invented"] += len(row["invented"])
+        totals["explained_entries"] += len(row["explained_entries"])
 
         assert not row["invented"], (
-            f"{identifier}: recorded thunks stock Ghidra does not: {row['invented']}")
+            f"{identifier}: recorded thunks stock Ghidra records nowhere, at this "
+            f"entry or as an EXTERNAL-block row for the same symbol: "
+            f"{row['invented']}")
         assert not row["unexplained"], (
             f"{identifier}: destinations disagree with no explanation: "
             f"{row['unexplained']}")
@@ -190,7 +215,10 @@ def main() -> int:
 
     assert len(rows) >= 20, f"only {len(rows)} corpus entries were scored"
     metrics = {
-        "thunk.entry.precision": totals["agree"] / max(totals["native"], 1),
+        "thunk.entry.precision":
+            (totals["agree"] + totals["explained_entries"]) / max(totals["native"], 1),
+        "thunk.entry.exact": totals["agree"] / max(totals["native"], 1),
+        "thunk.entry.unexplained": totals["invented"],
         "thunk.entry.recall": totals["agree"] / max(totals["comparable"], 1),
         "thunk.destination.unexplained": totals["unexplained"],
         "thunk.destination.equal": totals["equal"],
@@ -203,12 +231,13 @@ def main() -> int:
             assert metrics[name] >= threshold, (
                 f"{name} is {metrics[name]:.4f}, below {threshold}")
 
-    summary = (f"{len(rows)} corpus entries: {totals['agree']}/{totals['comparable']} "
+    summary = (f"{len(rows)} images: {totals['agree']}/{totals['comparable']} "
                f"stock thunks recorded, precision "
                f"{metrics['thunk.entry.precision']:.4f}, recall "
                f"{metrics['thunk.entry.recall']:.4f}, "
                f"{totals['equal']} destinations equal, {totals['explained']} explained "
-               f"by the EXTERNAL-block model, 0 unexplained")
+               f"by the EXTERNAL-block model, {totals['explained_entries']} stub-for-slot "
+               f"entries explained by symbol, 0 unexplained")
     if arguments.report:
         report.update(status="pass", passed=True, summary=summary, metrics=metrics,
                       totals=totals, deficits=DEFICITS, corpus=rows)

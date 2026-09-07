@@ -1292,6 +1292,7 @@ fn infer_data_references(
         .map(|(index, _)| index)
         .collect();
     let mut linked = Vec::new();
+    let mut thunked: Vec<NativeThunk> = Vec::new();
     let mut addresses = Vec::with_capacity(candidates.len().min(1024));
     for chunk in candidates.chunks(1024) {
         addresses.clear();
@@ -1318,12 +1319,24 @@ fn infer_data_references(
                 }
                 slot = Some(fact.to);
             }
-            if consistent && let Some(name) = slot.and_then(|slot| imported.get(&slot)) {
+            if consistent && let Some((slot, name)) = slot.zip(slot.and_then(|slot| imported.get(&slot))) {
                 linked.push((*start, (*name).to_owned()));
+                // The slot that names this stub is the destination it reaches,
+                // so the stub is a linkage thunk. Stock Ghidra converts the
+                // function it already created (CreateThunkFunctionCmd); the
+                // slot is the address the stub's own instructions read.
+                if !import.thunks.iter().any(|thunk| thunk.entry == *start) {
+                    thunked.push(NativeThunk {
+                        entry: *start,
+                        destination: slot,
+                        kind: lre_model::ThunkKind::Linkage,
+                    });
+                }
             }
         }
     }
     import.externals.extend(linked);
+    import.thunks.extend(thunked);
     // Context adds precise accesses; existing speculative DATA remains evidence.
     // Publish no partial pass if any query fails.
     for (_, _, facts, _) in work {

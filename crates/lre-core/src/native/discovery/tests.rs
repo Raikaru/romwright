@@ -1053,3 +1053,41 @@ fn promotion_refuses_targets_without_their_own_evidence() {
         );
     }
 }
+
+/// m5-008: a function that computes and then leaves through an unconditional
+/// branch is a tail call, not a thunk.
+///
+/// Ghidra's rule, read in the pinned sources: `getThunkedAddr` walks from the
+/// entry and `getFlowingAddrFromFinalState`
+/// (`CreateThunkFunctionCmd.java:763-828`) returns a thunked address only when
+/// every register the body set is later used or hidden -- a body that leaves
+/// its result in a register for the callee fails that test. The ARM7 fixture
+/// in `tests/m5-002_nds.py` is exactly that shape, and stock Ghidra records no
+/// thunk for it.
+#[test]
+fn a_computing_tail_call_is_not_a_thunk() {
+    for promote in [false, true] {
+        let mut imp = tailcall_image(promote);
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&a| match a {
+                    // Two instructions of work, then the transfer out.
+                    0x1100 | 0x1102 => result(a, FlowKind::Fallthrough, None, false),
+                    0x1104 => result(a, FlowKind::Branch, Some(0x1000), true),
+                    0x1000 => result(a, FlowKind::Fallthrough, None, false),
+                    _ => result(a, FlowKind::Return, None, false),
+                })
+                .collect()
+        });
+        assert!(
+            imp.thunks.is_empty(),
+            "promote={promote}: recorded {:?} as a thunk; only an entry that does \
+             nothing but transfer is one",
+            imp.thunks
+                .iter()
+                .map(|thunk| (thunk.entry, thunk.destination))
+                .collect::<Vec<_>>()
+        );
+    }
+}

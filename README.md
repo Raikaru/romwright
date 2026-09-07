@@ -303,6 +303,38 @@ counts against both precision and recall. Recording the transfer does not
 create the function: `close_call_targets` acts on call references only, and
 the gate asserts the discovered function set is unchanged.
 
+### Thunk parity, compared as sets
+
+`benchmarks/thunk_gate.py` compares thunk *counts* on one host libc. On this
+machine that reads **107 against 107 while the two sets differ by thirteen
+entries in each direction**, so `tests/m5-008_thunk_parity.py` compares the
+facts instead, over the 20 locked ELF inputs plus the host libc when it is the
+image the committed baseline was recorded from
+(`benchmarks/reports/m5-008.json`):
+
+| Metric | Value |
+|---|---|
+| `thunk.entry.recall` | **1.0000** (185 / 185) |
+| `thunk.entry.precision` | **1.0000** |
+| `thunk.entry.unexplained` | **0** |
+| `thunk.destination.unexplained` | **0** |
+
+Two model differences are named and asserted rather than averaged away:
+
+* **Destination.** Ghidra hops PLT stub → EXTERNAL-block stub → external
+  symbol; Ventris hops PLT stub → the GOT slot the stub's own instructions
+  read. A row counts as explained only when the stock destination lies outside
+  every image mapping *and* the Ventris destination is an in-image address
+  carrying the same import name. 71 rows are explained this way; 114 match
+  exactly.
+* **Entry.** For thirteen libc stubs Ghidra records the thunk on the slot
+  inside its EXTERNAL block instead of on the stub. Those are accepted only
+  because the slot symbol names match one-for-one -- the same thirteen symbols
+  on both sides, which is what the count comparison was accidentally counting.
+
+A thunk with neither explanation fails the gate, as does a stock thunk whose
+entry is in the image and which Ventris does not record.
+
 ### Promoting a tail-call target (off by default)
 
 `VENTRIS_PROMOTE_TAILCALLS=1` lets a recorded transfer create the function it
