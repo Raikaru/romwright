@@ -3867,19 +3867,50 @@ m3-003, all three wired into continuous integration)
   `support_matrix_test.py`, `corpus.sh`, `differential.sh`, `workflow.sh`,
   `data_xrefs.sh` pass. 88 reports indexed, both generators in sync.
 
+### m4-006 evidence
+- The PLT header's indirect jump is now a call the image's own ABI names. The
+  System V psABI reserves the first three `DT_PLTGOT` words -- `.dynamic`,
+  the link-map, the resolver -- so the instruction reading
+  `DT_PLTGOT + 2 words` (here `002038e8`) transfers like a call. Measured: the
+  header's decompilation went from two warnings ("Could not recover jumptable
+  at 0x00201716", "Treating indirect jump as call") to
+  `void _plt(void){(*PTR_002038e8)();return;}`, and `data-type-unknown`
+  fell **4 -> 2**.
+- **The first shape was wrong and a parity gate caught it.** Recording the
+  transfer as a linkage *thunk* broke `m5-008`: stock Ghidra's thunk table is
+  empty for this image, so the row was a fact stock records nowhere. What
+  stock holds is a per-instruction flow override
+  (`Instruction.getFlowOverride`), so the store now holds the same: schema 12
+  adds `flow_overrides(address, kind, provenance)`, written by the importer as
+  `native-import:plt-header` and read by the worker, which turns it into
+  Ghidra's `<flow type="callreturn">`. `m5-008` passes again.
+- Two controls fire: not reading `DT_PLTGOT` leaves the store with no override
+  (`it holds []`), and firing on any data reference instead of the reserved
+  slot corrects instructions that read nothing of the kind
+  (`002015a8`, `002015d0`, ...) -- the gate now requires every override to
+  read the slot, so a loose rule fails rather than passing wider.
+- `m4-004` had to narrow with it: a slot the store knows holds a code pointer
+  renders `PTR_002038e8`, not `DAT_002038e8`, so its selection excludes
+  pointer slots and accepts `READ`/`WRITE` references, which is what Ghidra
+  counts as a data reference anyway.
+- Regression: `cargo test --workspace` **240 pass** (one new store test);
+  `m4-002`..`m4-006`, `m3-001`, `m3-003`, `m2-009`, `m2-016`, `m5-008`..
+  `m5-011`, `m6-001`, `m6-002`, `m6-006`, `m5-012`, `support_matrix_test.py`,
+  `m10-003`, `m10-004`, `m9-005`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` pass. 89 reports
+  indexed, both generators in sync.
+
 ## Next task
-- m4-006: `flow` is down to 16 and the next shape is visible in the same
-  fixture. `_plt` at `00201710` still reports "Could not recover jumptable at
-  0x00201716" because the PLT header's indirect jump reaches a slot the store
-  records only as a data reference -- there is no thunk row for it, so nothing
-  says the transfer is a call. Decide from evidence whether the importer
-  should record a linkage thunk for a PLT-header stub (the slot is in a
-  relocation-named table) or whether the decompiler's warning is correct and
-  the oracle's silence comes from a fact we should not invent. Acceptance:
-  either `flow` falls with the parity baseline re-recorded and a positive
-  regression showing the new thunk row is backed by relocation evidence, or
-  the case is recorded as a named non-goal with the numbers that justify it.
-  Its acceptance test does not exist yet; write it first.
+- m4-007: `flow` is the last large class (16) and its remaining x86-64 case is
+  a *type* gap wearing a flow costume: `_plt` still reports "Globals starting
+  with '_' overlap smaller symbols at the same address" because the store
+  names `002038e0` (the link-map word, `DT_PLTGOT + 1 word`) with a one-byte
+  label while the code reads eight. The same ABI reservation that proved the
+  resolver slot proves this one holds a pointer. Acceptance: the reserved
+  `DT_PLTGOT` words carry a pointer-width fact with provenance naming the tag,
+  the overlap warning disappears, `flow` falls with the parity baseline
+  re-recorded, no class grows, and an image without `DT_PLTGOT` gains no
+  facts. Its acceptance test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

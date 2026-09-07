@@ -108,6 +108,13 @@ fn run(
     // both halves: the thunk row names entry and destination, and the xref
     // row names the instruction that performs the transfer.
     let thunks = db.thunks(pid)?;
+    for thunk in &thunks {
+        if thunk.kind == lre_model::ThunkKind::Linkage
+            && thunk.thunked.space == lre_model::AddressSpace::Ram
+        {
+            provider.pointer_slots.insert(thunk.thunked.offset);
+        }
+    }
     if !thunks.is_empty() {
         let functions: Vec<(u64, u64)> = provider
             .functions
@@ -150,6 +157,60 @@ fn run(
                     .or_default()
                     .push(from.offset);
             }
+        }
+    }
+    // Instruction flow the store corrects: each override belongs to the
+    // function that contains it, which is how the decompiler keys them.
+    let overrides = db.flow_overrides(pid)?;
+    if !overrides.is_empty() {
+        // The slot such an instruction reads holds a code pointer: that is
+        // what makes its transfer a call.
+        let corrected: Vec<u64> = overrides
+            .iter()
+            .filter(|row| row.address.space == lre_model::AddressSpace::Ram)
+            .map(|row| row.address.offset)
+            .collect();
+        for xref in db.xrefs(pid)? {
+            if xref.kind == "DATA"
+                && xref.to.space == lre_model::AddressSpace::Ram
+                && xref.from.space == lre_model::AddressSpace::Ram
+                && corrected.contains(&xref.from.offset)
+            {
+                provider.pointer_slots.insert(xref.to.offset);
+            }
+        }
+    }
+    for row in overrides {
+        if row.address.space != lre_model::AddressSpace::Ram || row.kind != "callreturn" {
+            continue;
+        }
+        let address = row.address.offset;
+        let Some(index) = provider
+            .functions
+            .iter()
+            .rposition(|entry| *entry <= address)
+        else {
+            continue;
+        };
+        let entry = provider.functions[index];
+        let span = provider
+            .function_sizes
+            .get(&entry)
+            .copied()
+            .filter(|size| *size > 0)
+            .unwrap_or_else(|| {
+                provider
+                    .functions
+                    .get(index + 1)
+                    .map_or(u64::MAX, |next| *next)
+                    .saturating_sub(entry)
+            });
+        if address < entry.saturating_add(span) {
+            provider
+                .call_return_branches
+                .entry(entry)
+                .or_default()
+                .push(address);
         }
     }
     for target in db.data_reference_targets(pid)? {

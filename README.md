@@ -971,21 +971,25 @@ The classes are the remaining work, in the open: `flow`
 but holds no signature for), `function-facts`
 15 (the two stores name or type the
 function differently) and `data-type-unknown`
-4 (both sides name the location; only
-the oracle knows what is there). Three are closed or shrinking because the
-store's own facts now reach the decompiler:
+2 (both sides name the location; only
+the oracle knows what is there). Three tasks have closed or shrunk them by
+carrying facts the store already held:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
   `DAT_002038f8` and `s_sum___d__002004d0` where it printed
   `cRam00000000002038f8` and `0x2004d0`;
 * transfers (`tests/m4-005_thunk_flow.py`): a thunk's jump is delivered as
   Ghidra's own `<flow type="callreturn">` override, so `_INIT_0` calls
-  `FUN_00201600` instead of decompiling to `return;` with its call discarded,
-  and a linkage stub no longer asks for a jumptable.
+  `FUN_00201600` instead of decompiling to `return;` with its call discarded;
+* the PLT header (`tests/m4-006_plt_header.py`): the System V ABI reserves
+  `DT_PLTGOT + 2 words` for the dynamic linker's resolver, so the jump that
+  reads it is recorded as a `callreturn` override -- a per-instruction fact,
+  like Ghidra's own, because stock records no thunk there and one broke
+  set-level thunk parity.
 
 Token identity has gone **18 -> 25**
-of 56 across those two tasks, with no
-class growing and every count pinned.
+of 56 across those tasks, with no class
+growing and every count pinned.
 
 Blocked languages are blocked for one reason: no ELF row exists for them in
 the corpus lock, and adding one is reserved to the human (II.1). The
@@ -1550,9 +1554,10 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-type-unknown` 4; `parity.class.flow` 16; `parity.class.function-facts` 15; `parity.class.missing-external-prototype` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 31; `parity.functions_token_identical` 25; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-type-unknown` 2; `parity.class.flow` 16; `parity.class.function-facts` 15; `parity.class.missing-external-prototype` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 31; `parity.functions_token_identical` 25; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
+| `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1565,7 +1570,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 88; `diagnostic_runs` 12; `generated_rows` 87; `published_ids` 72 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 89; `diagnostic_runs` 12; `generated_rows` 88; `published_ids` 73 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

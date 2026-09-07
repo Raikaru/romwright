@@ -414,6 +414,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             entry: address,
                             destination,
                             kind: lre_model::ThunkKind::Direct,
+                            source: crate::native::THUNK_SOURCE,
                         });
                     }
                     continue;
@@ -430,6 +431,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     entry: address,
                     destination: slot,
                     kind: lre_model::ThunkKind::Linkage,
+                    source: crate::native::THUNK_SOURCE,
                 });
             }
         }
@@ -640,6 +642,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                         entry,
                                         destination: t,
                                         kind: lre_model::ThunkKind::Direct,
+                                        source: crate::native::THUNK_SOURCE,
                                     });
                                 }
                                 addr_origin.insert(t, t);
@@ -1283,6 +1286,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 entry,
                 destination,
                 kind: lre_model::ThunkKind::Direct,
+                source: crate::native::THUNK_SOURCE,
             });
         }
     }
@@ -1501,6 +1505,7 @@ fn promote_linkage(
         entry: target,
         destination: slot,
         kind: lre_model::ThunkKind::Linkage,
+        source: crate::native::THUNK_SOURCE,
     });
     imp.externals.push((target, name.clone()));
     entries.push(target);
@@ -1597,4 +1602,54 @@ fn confirmed_thunks<P: FlowProvider>(
         .collect();
     candidates.retain(|_, target| valid.binary_search(target).is_ok());
     candidates
+}
+
+/// Records the PLT header's transfer as call-like flow, from the image's ABI.
+///
+/// The System V ABI reserves the first three `DT_PLTGOT` words: the
+/// `.dynamic` address, the link-map, and the resolver the PLT header jumps
+/// through. A data reference to that third word from inside a function is
+/// therefore a call to the dynamic linker, which is why stock Ghidra reports
+/// no jumptable there. Nothing is inferred when the image declares no
+/// `DT_PLTGOT` or nothing reads the slot.
+pub(crate) fn record_plt_header_flow(imp: &mut NativeImport) {
+    let Some(slot) = imp.plt_resolver_slot else {
+        return;
+    };
+    let readers: Vec<u64> = imp
+        .xrefs
+        .iter()
+        .filter(|xref| xref.to == slot && xref.kind == "DATA")
+        .map(|xref| xref.from)
+        .collect();
+    // Stock Ghidra records no thunk here -- its own thunk table is empty for
+    // this image -- so the fact is what it is: one instruction whose transfer
+    // behaves like a call. A thunk row would break set-level thunk parity.
+    for from in readers {
+        let Some(index) = imp
+            .functions
+            .iter()
+            .rposition(|function| function.entry <= from)
+        else {
+            continue;
+        };
+        let entry = imp.functions[index].entry;
+        // A size of zero means the store fills the body from the next entry,
+        // so use that boundary rather than treating it as one byte.
+        let span = match imp.functions[index].size {
+            0 => imp
+                .functions
+                .get(index + 1)
+                .map_or(u64::MAX, |next| next.entry)
+                .saturating_sub(entry),
+            size => size,
+        };
+        if from < entry.saturating_add(span)
+            && !imp.flow_overrides.iter().any(|(address, _)| *address == from)
+        {
+            imp.flow_overrides
+                .push((from, crate::native::PLT_HEADER_SOURCE));
+        }
+    }
+
 }

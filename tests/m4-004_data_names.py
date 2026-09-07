@@ -108,8 +108,26 @@ def store(project: Path, program: str) -> dict:
             from_offset, to_offset = ram(source), ram(destination)
             if from_offset is not None and to_offset is not None:
                 references.append((from_offset, to_offset, kind))
+        # Slots the store knows hold a code pointer render as `PTR_...`, not
+        # `DAT_...`: a thunk's destination, or what a corrected transfer reads.
+        pointer_slots = set()
+        for (thunked,) in connection.execute(
+                "SELECT thunked FROM thunks WHERE program_id = ? AND kind = 'linkage'",
+                (identifier,)):
+            offset = ram(thunked)
+            if offset is not None:
+                pointer_slots.add(offset)
+        corrected = set()
+        for (address,) in connection.execute(
+                "SELECT address FROM flow_overrides WHERE program_id = ?", (identifier,)):
+            offset = ram(address)
+            if offset is not None:
+                corrected.add(offset)
+        pointer_slots |= {to_offset for from_offset, to_offset, kind in references
+                          if kind in ("DATA", "READ", "WRITE")
+                          and from_offset in corrected}
         return {"functions": functions, "strings": strings, "symbols": symbols,
-                "references": references}
+                "references": references, "pointer_slots": pointer_slots}
     finally:
         connection.close()
 
@@ -178,10 +196,14 @@ def main() -> int:
                         return owner, address
             return None
 
+        # Ghidra's data references are reads, writes and plain data alike
+        # (`ReferenceManager.getReferenceLevel` puts them all at DAT_LEVEL).
         plain = sorted({destination for _, destination, kind in facts["references"]
-                        if kind == "DATA" and destination not in facts["symbols"]
+                        if kind in ("DATA", "READ", "WRITE")
+                        and destination not in facts["symbols"]
                         and destination not in facts["functions"]
-                        and destination not in facts["strings"]})
+                        and destination not in facts["strings"]
+                        and destination not in facts["pointer_slots"]})
         found = pick(plain)
         assert found, "no decompilation mentions an unnamed data reference target"
         owner, target = found

@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-07T17:38:51.813554+00:00",
+ "recorded_at": "2026-09-07T18:31:08.410981+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 4, flow 16, function-facts 15, missing-external-prototype 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 25 of 56 functions token-identical, 31 differing only where a named fact differs (data-type-unknown 2, flow 16, function-facts 15, missing-external-prototype 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -12,7 +12,7 @@
   "parity.functions_token_identical": 25,
   "parity.functions_fact_attributed": 31,
   "parity.functions_unattributed": 0,
-  "parity.class.data-type-unknown": 4,
+  "parity.class.data-type-unknown": 2,
   "parity.class.flow": 16,
   "parity.class.function-facts": 15,
   "parity.class.missing-external-prototype": 18
@@ -26,14 +26,13 @@
    "identical_tokens": 88,
    "attributed": 6,
    "classes": [
-    "data-type-unknown",
     "flow",
     "function-facts",
     "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default.jsonl",
-    "sha256": "75cfa98c5aa6c256f0ff5539128c0b2d97d7b8c008cb47ed225012776c3328a1"
+    "sha256": "b27d9161350266646e1abc67659cc971207348efc1913e2f19b89bd23c73526e"
    }
   },
   {
@@ -79,14 +78,13 @@
    "identical_tokens": 106,
    "attributed": 8,
    "classes": [
-    "data-type-unknown",
     "flow",
     "function-facts",
     "missing-external-prototype"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "a1bb7629f6d39d5d0bd2581578c741fb7488cd943a7050248a3e7ad08e644c8d"
+    "sha256": "1247605414ccdf61b40696c5ffcf0f2ea11d6e6d35fdbceac393c821caffcae0"
    }
   }
  ],

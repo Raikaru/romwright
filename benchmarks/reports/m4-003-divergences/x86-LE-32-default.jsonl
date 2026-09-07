@@ -4,5 +4,5 @@
 {"address": "00401570", "classes": {"missing-external-prototype": ["printf"]}, "oracle_tokens": 29, "native_tokens": 29}
 {"address": "004015ac", "classes": {"function-facts": {"name": ["_DT_INIT", "_init"]}, "flow": []}, "oracle_tokens": 34, "native_tokens": 60}
 {"address": "004015cc", "classes": {"function-facts": {"name": ["_DT_FINI", "_fini"]}, "flow": []}, "oracle_tokens": 10, "native_tokens": 17}
-{"address": "004015e0", "classes": {"function-facts": {"name": ["FUN_004015e0", "_plt"]}, "data-type-unknown": [{"oracle": "PTR_004036f0", "native": ["_DAT_004036f0"]}], "flow": ["/* WARNING: Could not recover jumptable at 0x004015e6. Too many branches */", "/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 20, "native_tokens": 19}
+{"address": "004015e0", "classes": {"function-facts": {"name": ["FUN_004015e0", "_plt"]}, "flow": ["/* WARNING: Globals starting with '_' overlap smaller symbols at the same address */"]}, "oracle_tokens": 20, "native_tokens": 21}
 {"address": "00401600", "classes": {"missing-external-prototype": ["printf"], "flow": []}, "oracle_tokens": 33, "native_tokens": 20}

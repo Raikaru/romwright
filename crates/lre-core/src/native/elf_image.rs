@@ -284,6 +284,15 @@ pub(super) fn prepare(
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;
     }
+    // The System V ABI reserves the first three `DT_PLTGOT` words: the
+    // `.dynamic` address, the link-map, and the resolver the PLT header jumps
+    // through. The third is therefore a call destination the image declares,
+    // not a value discovery has to guess.
+    if let Some(pltgot) = dynamic_value(data, width, be, 3)? {
+        import.plt_resolver_slot = pltgot
+            .checked_add(bias)
+            .and_then(|base| base.checked_add(2 * width as u64));
+    }
     // ElfProgramBuilder.markupSectionHeaders references each loaded sh_addr.
     // An executable section start is a code root, not a function or a sweep.
     for section in sections.iter().filter(|section| {

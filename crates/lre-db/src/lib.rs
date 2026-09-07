@@ -23,7 +23,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 11;
+pub const SCHEMA_VERSION: i64 = 12;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -487,6 +487,21 @@ impl ProjectDb {
                          virtual_base INTEGER NOT NULL CHECK(virtual_base IN (0, 1)),
                          public_base INTEGER NOT NULL CHECK(public_base IN (0, 1)),
                          PRIMARY KEY(program_id, typeinfo, ordinal)
+                     );",
+                )?;
+            }
+            if v < 12 {
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS flow_overrides (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         address TEXT NOT NULL,
+                         kind TEXT NOT NULL
+                             CHECK(kind IN ('branch', 'call', 'callreturn', 'return')),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, address)
                      );",
                 )?;
             }
@@ -1013,6 +1028,104 @@ impl ProjectDb {
         // Hex cells can have different widths; SQL text order is not numeric.
         edges.sort_unstable_by_key(|(from, to)| (from.offset, to.offset));
         Ok(edges)
+    }
+
+    /// Instruction flow the image's own structure corrects.
+    pub fn flow_overrides(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<lre_model::FlowOverrideRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT address, kind, provenance, provenance_kind, confidence
+             FROM flow_overrides WHERE program_id = ?1 ORDER BY address",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                Ok(lre_model::FlowOverrideRow {
+                    address: addr_from_cell(row.get(0)?, 0)?,
+                    kind: row.get(1)?,
+                    provenance: lre_model::FactProvenance {
+                        kind: if row.get::<_, String>(3)? == "asserted" {
+                            lre_model::FactKind::Asserted
+                        } else {
+                            lre_model::FactKind::Inferred
+                        },
+                        source: row.get(2)?,
+                        confidence: row.get(4)?,
+                    },
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Replaces exactly this producer's inferred flow overrides.
+    pub fn replace_inferred_flow_overrides(
+        &self,
+        program: ProgramId,
+        source: &str,
+        rows: &[lre_model::FlowOverrideRow],
+    ) -> Result<()> {
+        if source.trim().is_empty() {
+            return Err(DbError::InvalidFactProvenance(
+                "inference source is empty".into(),
+            ));
+        }
+        for row in rows {
+            validate_fact_provenance(&row.provenance)?;
+            if row.provenance.kind != FactKind::Inferred || row.provenance.source != source {
+                return Err(DbError::InvalidFactProvenance(format!(
+                    "flow override does not belong to inference source {source}"
+                )));
+            }
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        let before = self.flow_override_cells(&tx, program, source)?;
+        tx.execute(
+            "DELETE FROM flow_overrides WHERE program_id = ?1 AND provenance = ?2
+                 AND provenance_kind = 'inferred'",
+            params![program.0, source],
+        )?;
+        {
+            let mut insert = tx.prepare(
+                "INSERT INTO flow_overrides(program_id, address, kind, provenance,
+                     provenance_kind, confidence)
+                 VALUES (?1, ?2, ?3, ?4, 'inferred', ?5)
+                 ON CONFLICT(program_id, address) DO NOTHING",
+            )?;
+            for row in rows {
+                insert.execute(params![
+                    program.0,
+                    addr_cell(&row.address),
+                    row.kind,
+                    row.provenance.source,
+                    row.provenance.confidence,
+                ])?;
+            }
+        }
+        if self.flow_override_cells(&tx, program, source)? != before {
+            self.bump_and_record(&tx, program, "replace-inferred-flow-overrides", source)?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    fn flow_override_cells(
+        &self,
+        tx: &rusqlite::Transaction<'_>,
+        program: ProgramId,
+        source: &str,
+    ) -> Result<Vec<(String, String)>> {
+        let mut stmt = tx.prepare(
+            "SELECT address, kind FROM flow_overrides
+             WHERE program_id = ?1 AND provenance = ?2 ORDER BY address",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0, source], |row| {
+                Ok((row.get(0)?, row.get(1)?))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     /// Distinct destinations of data references, address spaces preserved.
@@ -2858,6 +2971,32 @@ mod tests {
         assert_eq!(db.xrefs_to(id, &lre_model::Address::ram(0x400466)).unwrap().len(), 1);
         assert_eq!(db.xrefs_from(id, &lre_model::Address::ram(0x400488)).unwrap().len(), 1);
         assert!(db.xrefs_to(id, &lre_model::Address::ram(0x400488)).unwrap().is_empty());
+    }
+
+    #[test]
+    fn flow_overrides_belong_to_their_producer_and_survive_another_pass() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db
+            .upsert_program("plt", "x86:LE:64:default", &prov())
+            .unwrap();
+        let row = lre_model::FlowOverrideRow {
+            address: lre_model::Address::ram(0x201716),
+            kind: "callreturn".into(),
+            provenance: lre_model::FactProvenance {
+                kind: FactKind::Inferred,
+                source: "native-import:plt-header".into(),
+                confidence: None,
+            },
+        };
+        db.replace_inferred_flow_overrides(id, "native-import:plt-header", &[row.clone()])
+            .unwrap();
+        assert_eq!(db.flow_overrides(id).unwrap(), vec![row.clone()]);
+        // A different producer may not write another's rows...
+        let foreign = db.replace_inferred_flow_overrides(id, "other-pass", &[row.clone()]);
+        assert!(matches!(foreign, Err(DbError::InvalidFactProvenance(_))));
+        // ...and replacing its own leaves the other producer's rows alone.
+        db.replace_inferred_flow_overrides(id, "other-pass", &[]).unwrap();
+        assert_eq!(db.flow_overrides(id).unwrap(), vec![row]);
     }
 
     #[test]
