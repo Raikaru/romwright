@@ -3,7 +3,7 @@
   "producer": "dump_specs",
   "upstream_version": "12.1.3",
   "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
-  "bridge_sources_sha256": "98070e6b5d7dc352bfac29edf21c98154b4ea41bd4709f81129070c254c96056",
+  "bridge_sources_sha256": "19e07748760b320be92f0c05bdf9546f96f34d29db91d1e13018d172bf86e2f7",
   "language": "x86:LE:32:default",
   "compiler": "gcc",
   "representative_sha256": "cea7cb1a23dbe84ab789761e612422415ee857945668ed2d28f06b5b1e3237ba",
@@ -13,8 +13,8 @@
       "bytes": 9904
     },
     "cspec.xml": {
-      "sha256": "d9350bac1ff206601a0aa104e83fc3eec167f04c748aa5bd1bdd5536a0f7de4b",
-      "bytes": 12385
+      "sha256": "37ac2ec43156602443b4e5625625ae5e71c61d151a8b06ece6068648046f80cd",
+      "bytes": 12938
     },
     "tspec.xml": {
       "sha256": "8460bf668b9d8acdf610633a3fc3ddecc9e42ae2814146bff2ce677505da8157",

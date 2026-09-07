@@ -3,7 +3,7 @@
   "producer": "dump_specs",
   "upstream_version": "12.1.3",
   "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
-  "bridge_sources_sha256": "98070e6b5d7dc352bfac29edf21c98154b4ea41bd4709f81129070c254c96056",
+  "bridge_sources_sha256": "19e07748760b320be92f0c05bdf9546f96f34d29db91d1e13018d172bf86e2f7",
   "language": "PowerPC:BE:32:default",
   "compiler": "default",
   "representative_sha256": "ff47f82cc0219badd8969cdab5ff4a257905e26d62a0da9607567a5e5cb7c557",
@@ -13,8 +13,8 @@
       "bytes": 58094
     },
     "cspec.xml": {
-      "sha256": "cf7d72720096313a56245b00023151805fd94852a6edb68465f3aaca05e1895a",
-      "bytes": 5812
+      "sha256": "58513b105fb3cfd3d8b9a9b4abdd78016ac2f11fdb14e04af3c19a085efdc9b3",
+      "bytes": 4937
     },
     "tspec.xml": {
       "sha256": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",

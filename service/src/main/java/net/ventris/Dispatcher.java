@@ -514,11 +514,33 @@ final class Dispatcher {
                 java.nio.file.Path.of(outDir, "pspec.xml"),
                 java.nio.file.Files.readString(java.nio.file.Path.of(desc.getSpecFile().getAbsolutePath())));
 
-            ghidra.program.model.pcode.XmlEncode xe =
-                new ghidra.program.model.pcode.XmlEncode(false);
-            cspec.encode(xe);
+            // Copy the compiler spec verbatim. `CompilerSpec.encode` cannot
+            // reproduce injection bodies -- a compiled InjectPayload has no
+            // source -- so it writes placeholders, and a raw-SLEIGH worker
+            // that compiles injections from this file would silently get a
+            // no-op where the language defines semantics (ARM `bx` emits
+            // CALLOTHER setISAMode). SleighCompilerSpecDescription.getFile()
+            // is the spec file the language declared (verified in
+            // .ghidra-java/ghidra/app/plugin/processors/sleigh/
+            // SleighCompilerSpecDescription.java).
+            ghidra.program.model.lang.CompilerSpecDescription cspecDesc = null;
+            for (ghidra.program.model.lang.CompilerSpecDescription candidate :
+                    lang.getCompatibleCompilerSpecDescriptions()) {
+                if (candidate.getCompilerSpecID().equals(cspec.getCompilerSpecID())) {
+                    cspecDesc = candidate;
+                    break;
+                }
+            }
+            if (!(cspecDesc instanceof
+                    ghidra.app.plugin.processors.sleigh.SleighCompilerSpecDescription)) {
+                throw new IllegalStateException(
+                    "compiler spec has no source file: " + cspec.getCompilerSpecID());
+            }
             java.nio.file.Files.writeString(
-                java.nio.file.Path.of(outDir, "cspec.xml"), xe.toString());
+                java.nio.file.Path.of(outDir, "cspec.xml"),
+                java.nio.file.Files.readString(java.nio.file.Path.of(
+                    ((ghidra.app.plugin.processors.sleigh.SleighCompilerSpecDescription)
+                        cspecDesc).getFile().getAbsolutePath())));
 
             ghidra.program.model.pcode.XmlEncode te =
                 new ghidra.program.model.pcode.XmlEncode(false);

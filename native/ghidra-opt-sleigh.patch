@@ -87,18 +87,37 @@ index db85597..1e9529c 100644
    const Address &getAddress(void) const { return baseaddr; }		///< Get the entry point address
    int4 getSize(void) const { return size; }				///< Get the function body size in bytes
 diff --git a/decompiler/ghidra_arch.cc b/decompiler/ghidra_arch.cc
-index 813d955..6296c29 100644
+index 813d955..ac52fa6 100644
 --- a/decompiler/ghidra_arch.cc
 +++ b/decompiler/ghidra_arch.cc
-@@ -21,6 +21,7 @@
+@@ -21,6 +21,8 @@
  #include "comment_ghidra.hh"
  #include "string_ghidra.hh"
  #include "cpool_ghidra.hh"
 +#include "sleigh.hh"
++#include "inject_sleigh.hh"
  #include "inject_ghidra.hh"
  
  namespace ghidra {
-@@ -295,6 +296,21 @@ PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
+@@ -289,12 +291,39 @@ void ArchitectureGhidra::buildLoader(DocumentStorage &store)
+ PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
+ 
+ {
++  const char *rawsla = getenv("VENTRIS_SLA");
++  if ((rawsla != (const char *)0) && (rawsla[0] != '\0')) {
++    // Raw-SLEIGH mode: injections must be compiled from the loaded compiler
++    // spec, not fetched from a client. PcodeInjectLibraryGhidra asks the
++    // client for every payload (inject_ghidra.cc:56), which a JVM-free
++    // worker cannot answer, so any language whose semantics use an injection
++    // fails to decompile at all -- ARM `bx` emits CALLOTHER setISAMode.
++    // PcodeInjectLibrarySleigh parses <callfixup>/<callotherfixup> bodies
++    // with the SLEIGH translator this mode already builds (inject_sleigh.cc;
++    // SleighArchitecture::buildPcodeInjectLibrary, sleigh_arch.cc).
++    return new PcodeInjectLibrarySleigh(this);
++  }
+   return new PcodeInjectLibraryGhidra(this);
+ }
+ 
  Translate *ArchitectureGhidra::buildTranslator(DocumentStorage &store)
  
  {
@@ -120,7 +139,7 @@ index 813d955..6296c29 100644
    return new GhidraTranslate(this);
  }
  
-@@ -369,7 +385,15 @@ void ArchitectureGhidra::buildConstantPool(DocumentStorage &store)
+@@ -369,7 +398,15 @@ void ArchitectureGhidra::buildConstantPool(DocumentStorage &store)
  void ArchitectureGhidra::buildContext(DocumentStorage &store)
  
  {

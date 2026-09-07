@@ -74,9 +74,47 @@ def export_bundle(command, binary, context, work, timeout):
     return output
 
 
+def platform_bundle(args, producer, command):
+    """Provisions one bundle for a platform language from an explicit image.
+
+    A console language has no corpus row -- corpus membership is a reserved
+    decision -- so the representative is named on the command line and
+    recorded by digest. The bundle is Ghidra's spec data for that language;
+    the image only proves which language was loaded.
+    """
+    context = {'language': args.language, 'compiler': args.compiler}
+    expected = dict(schema_version=1, producer='dump_specs', **producer, **context)
+    if not args.check:
+        binary = args.input.resolve()
+        with tempfile.TemporaryDirectory(prefix='native-spec-export-') as temporary:
+            output = export_bundle(command, binary, context, Path(temporary), args.timeout)
+            result = dict(**expected, representative_sha256=digest(binary),
+                files={name: dict(sha256=digest(output / name),
+                    bytes=(output / name).stat().st_size) for name in FILES})
+            directory, destination = bundle_paths(args.out_dir, context['language'])
+            if destination.exists():
+                recorded = json.loads(destination.read_text())
+                required = dict(**expected, files=result['files'])
+                if any(recorded.get(key) != value for key, value in required.items()):
+                    raise ValueError(f'Fresh export differs from recorded manifest: {destination}')
+            directory.mkdir(parents=True, exist_ok=True)
+            for name in FILES:
+                shutil.copyfile(output / name, directory / name)
+            if not destination.exists():
+                write_reference(destination, result)
+    checked = validate_bundle(args.out_dir, expected)
+    print(json.dumps(dict(language=context['language'], compiler=context['compiler'],
+        files=len(checked['files']), checked=args.check)))
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--corpus-dir', type=Path, required=True)
+    parser.add_argument('--corpus-dir', type=Path)
+    parser.add_argument('--input', type=Path,
+        help='representative image for a platform language (no corpus row)')
+    parser.add_argument('--language', help='explicit language id for --input')
+    parser.add_argument('--compiler', default='default', help='compiler spec for --input')
     parser.add_argument('--out-dir', type=Path, default=ROOT / 'native/specs')
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
         'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
@@ -85,8 +123,21 @@ def main():
     parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     args.out_dir = args.out_dir.resolve()
-    args.corpus_dir = args.corpus_dir.resolve()
     args.ghidra = args.ghidra.resolve()
+    if args.language:
+        producer = provenance(args.ghidra)
+        producer = {key: producer[key]
+            for key in ('upstream_version', 'upstream_revision', 'bridge_sources_sha256')}
+        if not args.check:
+            if args.input is None or not args.input.is_file():
+                raise ValueError('A platform bundle needs --input <image>')
+            if not args.out_dir.exists():
+                args.out_dir.mkdir(parents=True, exist_ok=True)
+        return platform_bundle(args, producer, None if args.check else
+            bridge_command(args.ghidra, args.java))
+    if args.corpus_dir is None:
+        raise ValueError('--corpus-dir is required without --language')
+    args.corpus_dir = args.corpus_dir.resolve()
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     manifest = json.loads((args.corpus_dir / 'manifest.json').read_text())
     if manifest['sources'] != lock['sources']:
