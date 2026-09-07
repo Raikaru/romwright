@@ -302,6 +302,46 @@ record.
 python3 tests/m3-002_baseline.py --corpus-dir CORPUS
 ```
 
+### Console platforms (M5)
+
+The first console target is the Game Boy Advance, chosen because it can be
+*proved* with the machinery that already exists: `ARM:LE:32:v4t` ships in the
+pinned install, the container is publicly documented (gbatek "Cartridge
+Header" and "Memory Map"), and the fixture is built from committed source, so
+DWARF scoring applies unchanged.
+
+A raw ROM has no sections, no symbols and no entry field. The loader
+recognises it only when the fixed 0x96 at 0xB2 is in place **and** offset 0
+is an unconditional ARM branch whose target lands inside the image; then it
+maps ROM at 0x08000000, resolves that branch as the entry seed, and declares
+the console's RAM and IO windows without giving them invented bytes.
+Discovery finds the rest from flow.
+
+| GBA fixture | Value |
+|---|---|
+| DWARF functions | 6 |
+| `dwarf.fn.recall` | **1.0000** |
+| entries with no attribution | **0** |
+| native decompilation | verified on a recovered function |
+
+```sh
+python3 tests/m5-001_gba.py
+```
+
+Two defects had to be fixed to get there, both of which affected every
+non-x86 language:
+
+- **Injections were unreachable without a JVM.** In raw-SLEIGH mode the
+  decompiler asked the *client* for every p-code injection
+  (`inject_ghidra.cc:56`), which a JVM-free worker cannot answer, so any
+  language whose semantics use one could not be decompiled at all -- ARM `bx`
+  emits `CALLOTHER setISAMode`. The patched worker now compiles injections
+  from the loaded compiler spec (`PcodeInjectLibrarySleigh`).
+- **Exported compiler specs lost those bodies.** `CompilerSpec.encode` cannot
+  reproduce a compiled `InjectPayload`, so it wrote placeholders. The bridge
+  now copies the language's compiler spec file verbatim, and the platform
+  gate fails if a bundle still carries a placeholder body.
+
 ### The ground-truth regression gate (M3)
 
 `benchmarks/regression_gate.py` joins the two: native against DWARF from
@@ -651,6 +691,7 @@ python3 benchmarks/prototype_gate.py --corpus-dir "$CORPUS" \
 | ELF MIPS LE32 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF RISC-V LE64 | supported | selected SLEIGH bundle required; not parity-gated |
 | ELF PowerPC | supported | BE32 discovery gated; e500 parity verified; other configurations not gated |
+| GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 on the built fixture, native ARM decompilation verified (`tests/m5-001_gba.py`) |
 
 The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
 requires the matching compiled SLEIGH language and static specification bundle.

@@ -499,7 +499,7 @@ green (82 tests across 20 suites); the CPack TGZ builds.
   staleness check and acceptance test `tests/support_matrix_test.py`.
 
 ## Current milestone
-M5 — Console platforms, measurable tier first
+M5 — Console platforms, measurable tier first (m5-001 GBA complete)
 (M4 opened with m4-001; further M4 passes resume after the first console
 platforms land, per the sequencing decision recorded below)
 (M3 complete: DWARF scoring m3-001, frozen baseline m3-002, regression gate
@@ -2513,9 +2513,68 @@ m3-003, all three wired into continuous integration)
   `tests/m3-002_baseline.py`, `tests/m3-003_regression.py`,
   `tests/m4-001_register_params.py` pass.
 
+## M5 implementation slices
+- m5-001: Game Boy Advance cartridge ROMs, scored against DWARF.
+
+### m5-001 evidence
+- `0a2131c` commits the failing acceptance (`tests/m5-001_gba.py`), which the
+  loader then had to satisfy: the ROM was first mis-detected as a DOL.
+- `crates/lre-core/src/native/gba.rs` loads a cartridge only on positive
+  evidence -- the fixed 0x96 at 0xB2 (gbatek "Cartridge Header") **and** an
+  unconditional ARM branch at offset 0 whose target lands inside the image.
+  It maps ROM at 0x08000000, seeds the branch target as the entry, and
+  declares EWRAM/IWRAM/IO/palette/VRAM/OAM (gbatek "Memory Map") as
+  byte-less regions, so discovery cannot walk into RAM that the image does
+  not contain. Six unit tests pin the refusals: missing fixed byte,
+  conditional branch, branch past the image end, backward branch below ROM.
+- Fixture built from committed source (`tests/fixtures-src/gba_rom.c`,
+  `gba_header.S`, `gba_rom.ld`) with clang/lld: an ELF twin carrying DWARF
+  and a 420-byte raw ROM. The Nintendo logo bytes are deliberately **not**
+  reproduced -- they are the BIOS's check, not the loader's.
+- Measured (`benchmarks/reports/m5-001.json`): 7 functions recovered from
+  flow alone, **`dwarf.fn.recall` 1.0000 over 6 DWARF functions, 0
+  unattributed entries**, entry resolved to 0x08000158 from the header
+  branch, and native decompilation verified on a recovered function
+  (`int FUN_080000c0(int param_1){return param_1 * 3 + 1;}` against the
+  source's `x * 3 + 1`).
+
+### Two defects this platform exposed, both affecting every non-x86 language
+- **Injections were unreachable without a JVM.** In raw-SLEIGH mode
+  `ArchitectureGhidra::buildPcodeInjectLibrary` returned the client-served
+  library, which asks the caller for every payload
+  (`inject_ghidra.cc:56` of the pinned tree). A JVM-free worker cannot
+  answer, so **any** language whose semantics use an injection failed to
+  decompile at all: ARM `bx` emits `CALLOTHER setISAMode`, and every
+  function that returned that way produced an empty document with exit 0.
+  `native/ghidra-opt-sleigh.patch` now installs `PcodeInjectLibrarySleigh`
+  in raw mode, which compiles `<callfixup>`/`<callotherfixup>` bodies from
+  the loaded compiler spec. Diagnosed by reading the payload the decompiler
+  returned: `Low-level Error: Could not retrieve injection: setISAMode`.
+- **Exported compiler specs lost those bodies.** `CompilerSpec.encode`
+  cannot reproduce a compiled `InjectPayload`, so `dump_specs` wrote
+  `<body> local tmp:1 = 0; </body>` placeholders. With injections now
+  compiled locally, a placeholder would silently make ARM `bx` a no-op, so
+  the bridge copies the language's compiler spec file verbatim
+  (`SleighCompilerSpecDescription.getFile()`, verified in
+  `.ghidra-java/ghidra/app/plugin/processors/sleigh/`), and the platform
+  gate fails if a bundle still carries a placeholder. All five committed and
+  generated bundles were re-exported.
+- Consequence handled, not hidden: editing the bridge moved
+  `bridge_sources_sha256`, so all 21 committed oracles and their scoring
+  views were regenerated. **Entry sets are identical in all 21**, and the
+  frozen ground-truth baseline was re-recorded with **no metric row
+  changed** (1 640 functions, arity 0.753659).
+- Verification: `cargo test --workspace` 199 pass; `tests/differential.sh`
+  PASS (x86-64 token parity with the bridge survives the spec change);
+  `tests/corpus.sh` 5/5; `tests/workflow.sh`, `tests/data_xrefs.sh`,
+  `benchmarks/prototype_gate.py` (all four languages), `tests/m1-009_dol.py`
+  (e500), `tests/m3-001_dwarf_truth.py`, `tests/m3-002_baseline.py`,
+  `tests/m3-003_regression.py`, `tests/m5-001_gba.py` pass.
+
 ## Next task
-- m5-001: GBA raw-ROM loader with its documented memory map, scored against a
-  DWARF twin built from source, as the first console platform. Its acceptance
+- m5-002: Nintendo DS containers -- two CPU images in one file, so the store
+  must hold ARM9 and ARM7 as separate programs with their own languages.
+  Scored against DWARF twins built from source, like m5-001. Its acceptance
   test does not exist yet; write it first.
 
 ## Console sequencing decision (agent judgement, 2026-09-07)

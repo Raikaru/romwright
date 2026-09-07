@@ -12,6 +12,7 @@
 use lre_db::ProjectDb;
 use std::collections::HashSet;
 use std::path::Path;
+mod gba;
 pub(crate) mod dol;
 mod discovery;
 mod elf_pointers;
@@ -178,9 +179,26 @@ pub struct NativeImport {
     pub binary: std::path::PathBuf,
     /// Measured wall time of each completed import phase.
     pub phases: Vec<lre_model::PhaseTiming>,
+    /// Regions the platform defines but the image does not contain, such as
+    /// a console's RAM and IO windows. Declared for the store; never given
+    /// invented bytes, so discovery cannot walk into them.
+    pub declared_regions: Vec<DeclaredRegion>,
+    /// Names for the leading mappings, when the platform names them. A
+    /// cartridge has one window called ROM, not one called `0`.
+    pub mapping_names: Vec<String>,
     /// Console request accounting for the flow phase, when it ran.
     pub flow: Option<lre_model::FlowStats>,
 }
+/// One platform-defined region with no bytes in the image.
+#[derive(Debug, Clone)]
+pub struct DeclaredRegion {
+    pub name: String,
+    pub vaddr: u64,
+    pub size: u64,
+    /// ELF SHF-style bits, as `Mapping::flags`.
+    pub flags: u64,
+}
+
 fn err<T>(msg: impl Into<String>) -> Result<T> {
     Err(ImportError::Bad(msg.into()))
 }
@@ -977,6 +995,8 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
         import_elf(data)
     } else if data.starts_with(b"MZ") {
         import_pe(data)
+    } else if gba::is_cartridge(data) {
+        gba::import(data)
     } else {
         dol::import(data)
     }
@@ -1307,18 +1327,29 @@ pub fn store_import(
         }
     }
     let pid = db.upsert_program(program, &imp.language, &native_provenance())?;
-    let regions = imp
+    let mut regions = imp
         .mappings
         .iter()
         .enumerate()
         .map(|(index, mapping)| MemoryRegion {
-            name: format!("{}:{index}", imp.format.to_ascii_lowercase()),
+            name: match imp.mapping_names.get(index) {
+                Some(name) => format!("{}:{name}", imp.format.to_ascii_lowercase()),
+                None => format!("{}:{index}", imp.format.to_ascii_lowercase()),
+            },
             start: lre_model::Address::ram(mapping.vaddr),
             size: mapping.size,
             permissions: mapping_permissions(mapping.flags),
             source: "native-import".into(),
         })
         .collect::<Vec<_>>();
+    // A platform's own map: declared, byte-less, and named by the platform.
+    regions.extend(imp.declared_regions.iter().map(|region| MemoryRegion {
+        name: format!("{}:{}", imp.format.to_ascii_lowercase(), region.name),
+        start: lre_model::Address::ram(region.vaddr),
+        size: region.size,
+        permissions: mapping_permissions(region.flags),
+        source: "native-import:platform-map".into(),
+    }));
     db.replace_memory_regions(pid, &regions)?;
     let swept_strings = strings::discover(imp);
     db.replace_strings(pid, imp.string_tables.iter().flat_map(|table| &table.strings)
