@@ -28,9 +28,23 @@ def main() -> int:
     args = parser.parse_args()
 
     root = args.root.resolve()
-    rows = []
+    output = args.output.resolve()
+    # A directory names every file below it, so a release set is manifested by
+    # its own directory rather than by a hand-kept list that platform-specific
+    # names (`.exe`, the CPack archive) break. The manifest never lists itself.
+    paths = []
     for artifact in args.artifacts:
-        path = artifact.resolve()
+        resolved = artifact.resolve()
+        if resolved.is_dir():
+            paths.extend(sorted(child for child in resolved.rglob("*")
+                                if child.is_file()))
+        else:
+            paths.append(resolved)
+    rows = []
+    for path in paths:
+        artifact = path
+        if path == output:
+            continue
         if not path.is_file():
             parser.error(f"artifact is not a file: {artifact}")
         try:
