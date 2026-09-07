@@ -2931,14 +2931,43 @@ m3-003, all three wired into continuous integration)
   walkthrough command the CLI does not dispatch, and a verb removed from the
   usage text.
 
+### m6-002 evidence
+- `3d6d764` commits the failing acceptance
+  (`tests/m6-002_documented_api.py`).
+- `docs/core-api.md` documents the envelope (`api`, `id`, `method`,
+  `params`), the four error codes, typed addresses, fact provenance, the
+  paged-read shape, and which requests need the SLEIGH console. Every
+  documented exchange is sent to a real `lre-api` process and the documented
+  response must be a **subset** of the real one, so a documented field that
+  does not exist fails.
+- Measured (`benchmarks/reports/m6-002.json`): 10 exchanges with the console,
+  8 with 1 SLEIGH block skipped when the pinned install is absent.
+- Negative controls: a wrong field value and an invented field both fail.
+
+### A live defect the page found
+- The `function` field of a reference -- the function containing the source
+  address -- named **`_init` for a call inside `main`**, and named `_init`
+  for a reference from data that has no containing function at all.
+- Cause: the SQL predicate `f.entry <= x.src AND x.src < f.entry + f.size`
+  compared a hex text column with an integer expression. SQLite coerced
+  `'0040033c'` to the decimal 40033, so the containment test compared
+  unrelated numbers and the `LIMIT 1` returned whichever row the scan reached
+  first. The same subquery was in all five xref accessors, including
+  `xrefs_page`, which the desktop uses.
+- Fixed by parsing the addresses: `function_extents` reads the extents once
+  and `resolve_containing` finds the function whose `[entry, entry+size)`
+  holds the source, leaving `None` when none does. Pinned by
+  `xref_names_the_function_that_contains_its_source`, which asserts a source
+  inside `main`, a source in data, and a source one byte past `main`'s end.
+
 ## Next task
-- m6-002: document the Core API surface the same way. `crates/lre-api` is the
-  stdio interface every consumer (Qt desktop, scripts, agents) speaks, and it
-  has no page: a reader cannot see the request shapes, the fact provenance in
-  responses, or which requests need the SLEIGH console. The acceptance must
-  drive the documented requests through the real API process and check the
-  documented response fields, failing if a documented field is absent or a
-  request shape is rejected. Its acceptance test does not exist yet; write it
+- m6-003: the desktop package. `desktop/ventris-qt` builds a Qt 6 workstation
+  and `packaging/` produces a CPack TGZ, but nothing documented or gated says
+  how a user gets from a checkout to a running window, and the recorded
+  `ui.install.ok` came from a local offscreen run rather than the three-OS CI
+  matrix. The acceptance must build and launch the packaged desktop
+  offscreen, drive one real workflow through it, and record which platforms
+  the evidence covers. Its acceptance test does not exist yet; write it
   first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
