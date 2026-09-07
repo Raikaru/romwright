@@ -44,6 +44,17 @@ output or proprietary database is consulted. Ghidra's equivalent analyzers
 were not ported: the evidence chain here is relocation-anchored, and unmatched
 candidates produce no class.
 
+## MSVC RTTI
+
+`crates/lre-core/src/rtti/msvc.rs` follows LLVM's Microsoft C++ ABI code
+generation (`clang/lib/CodeGen/MicrosoftCXXABI.cpp`, Apache-2.0 WITH
+LLVM-exception), which documents `RTTICompleteObjectLocator`,
+`RTTIClassHierarchyDescriptor`, `RTTIBaseClassDescriptor`, `TypeDescriptor`
+and the `PMD` displacement triple, plus the `.?A` decorated-name prefix. No
+Microsoft header, RTTI database or tool output is consulted, and no Ghidra
+analyzer was ported: each structure is confirmed from the image's own fields,
+including the 64-bit locator's self reference.
+
 ## GameCube DOL format
 
 The independent DOL parser follows the public section-table layout documented

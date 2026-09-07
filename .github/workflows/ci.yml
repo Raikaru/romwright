@@ -78,6 +78,11 @@ jobs:
           python3 benchmarks/rtti_gate.py \
             --corpus-dir "$RUNNER_TEMP/rtti/corpus" \
             --report "$RUNNER_TEMP/signatures/m2-013.json"
+      - name: Recover MSVC RTTI classes
+        run: |
+          python3 benchmarks/msvc_rtti_gate.py \
+            --corpus-dir "$RUNNER_TEMP/rtti/corpus" \
+            --report "$RUNNER_TEMP/signatures/m2-014.json"
       - name: Retain signature evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -87,6 +92,7 @@ jobs:
             ${{ runner.temp }}/signatures/m2-011.json
             ${{ runner.temp }}/signatures/m2-012.json
             ${{ runner.temp }}/signatures/m2-013.json
+            ${{ runner.temp }}/signatures/m2-014.json
 
   corpus-oracle:
     name: M1 Discovery and M2 References/Strings (ubuntu-latest)
