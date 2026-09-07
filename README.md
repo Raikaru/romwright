@@ -275,6 +275,33 @@ producers, `dwarf.fn.unattributed == 0`. Evidence:
 `benchmarks/reports/m3-001.json` (20 rows, per-row provenance digests for the
 binary, its twin and the pinned oracle).
 
+### The frozen stock-Ghidra baseline (M3)
+
+M4 exists to improve on stock Ghidra, and that claim is worthless against a
+remembered number. `benchmarks/ground_truth_baseline.py` records one:
+`benchmarks/reports/baseline-ghidra-truth.json`, what stock Ghidra 12.1.3
+scores against DWARF on the locked corpus. Without `--write` the script
+recomputes and compares; a moved metric fails the gate instead of being
+re-baselined, and the recorded `readelf` version travels with the numbers so
+a different DWARF reader is reported rather than mistaken for a regression.
+
+| Stock Ghidra 12.1.3 vs DWARF | Value |
+|---|---|
+| `ghidra.dwarf.fn.recall` (1 640 functions) | **1.0000** |
+| `ghidra.dwarf.proto.arity` (1 640 matched) | **0.7537** (1 236 correct) |
+| functions created | 2 008 |
+
+The arity number is uneven, not uniformly good: 0.9975–1.0000 on x86-64,
+AArch64 and PowerPC, and **0.0000 on i386 `many_o2`** — Ghidra's
+`DecompilerParameterIdCmd` commits zero parameters for 413 of that image's
+415 functions. Reproduced from a fresh `analyzeHeadless` run, so it is a
+stock result, not an export artifact, and it is the clearest M4 target on
+record.
+
+```sh
+python3 tests/m3-002_baseline.py --corpus-dir CORPUS
+```
+
 Native ELF32/ELF64 discovery shares `.init`, `.fini` and `.plt` section-start
 seeds, alongside unwind-index entries, PLT metadata, flow-confirmed
 initializer/data pointers and the existing batched flow walker.

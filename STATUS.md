@@ -2397,11 +2397,40 @@ M3 — Ground truth (DWARF scoring, stock-Ghidra baseline, regression gates)
 - Verification: `tests/m3-001_dwarf_truth.py` PASS (20/20 rows); the gate is
   wired into the `corpus-linux` CI job after the import-budget step.
 
+### m3-002 evidence
+- `ca480cd` commits the failing acceptance (`tests/m3-002_baseline.py`; no
+  baseline existed).
+- `benchmarks/reports/baseline-ghidra-truth.json` freezes what stock Ghidra
+  12.1.3 scores against DWARF on the locked corpus: **`ghidra.dwarf.fn.recall`
+  1.000000 over 1 640 functions, `ghidra.dwarf.proto.arity` 0.753659
+  (1 236/1 640), 2 008 functions created**. Per-row provenance carries the
+  binary, twin, entry-oracle and arity-reference digests, the bridge sources
+  hash, the analysis context and the image base.
+- The baseline is immutable by construction: without `--write` the recorder
+  recomputes and compares. Negative control run this session -- editing one
+  row's `ghidra.dwarf.proto.arity` to 0.99 makes both the recorder and the
+  acceptance fail naming `x86_64_many_o2`; restoring the file passes again.
+- Byte equality is claimed only under the recorded DWARF reader: the baseline
+  records `truth_toolchain.readelf`, and a differing reader is reported
+  (`verified_bytes: false`) while the metrics must still match exactly. Numbers
+  are the guarantee; bytes are the stronger convenience.
+- **Finding, and the clearest M4 target on record**: stock arity is
+  0.9975-1.0000 on x86-64, AArch64 and PowerPC but **0.0000 on i386
+  `many_o2`** -- `DecompilerParameterIdCmd` commits zero parameters for 413 of
+  that image's 415 functions while DWARF gives 400 of them one parameter and
+  `main` two. Reproduced independently from a fresh `analyzeHeadless` run with
+  the same processor/cspec, so it is a stock result, not an export artifact.
+  The M2 prototype gate could not surface this: it scores native against
+  `ghidra - 0.02`, so a stock 0.0 row makes any native value pass.
+- Verification: `tests/m3-002_baseline.py` PASS (20 recorded rows, byte
+  identical, cross-checked against every `ghidra.dwarf.fn.recall` in
+  `benchmarks/reports/m3-001.json`); wired into the `corpus-linux` CI job.
+
 ## Next task
-- m3-002: record the immutable stock-Ghidra ground-truth baseline (function
-  entries, arity, data references and strings on the locked corpus) that M4
-  improvements are measured against. Its acceptance test does not exist yet;
-  write it first.
+- m3-003: wire the DWARF regression gates so native cannot silently fall below
+  the frozen baseline -- score native arity against DWARF truth in the same
+  artifact family, require native >= baseline per row, and publish the
+  comparison. Its acceptance test does not exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
