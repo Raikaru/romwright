@@ -1,0 +1,53 @@
+{
+  "gate": "thunk",
+  "milestone": "M2",
+  "task": "m2-009",
+  "commit": "46b9619439ff880c88780b53247b083240b481be",
+  "date": "2026-09-06T23:56:32.689894+00:00",
+  "gate_sha256": "dcad83f54e34d9361062148e4fadaf51ff1136fe1b3dd91c938acb294ddf9c58",
+  "exporter_sha256": "e881a45451a28ffc7ee8f0bf798324acdcd1ddb9c146336da50220dfb4734a8f",
+  "comparison": "thunk function counts on one host libc within +/-1%; not an II.3 metric or the full M2 gate",
+  "corpus": [
+    {
+      "status": "pass",
+      "binary": "/usr/lib64/libc.so.6",
+      "sha256": "01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db",
+      "reference": "x86-LE-64-default/gcc/791a7785cb11ff62/baseline-01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db.json",
+      "reference_sha256": "b19399a1f9aed2d1e286694e76e39750053d4b6d5ff02a1376275664c94e555b",
+      "language": "x86:LE:64:default",
+      "compiler": "gcc",
+      "stock_functions": 3987,
+      "native_functions": 3961,
+      "stock_thunks": 107,
+      "native_thunks": 107,
+      "count_ratio": 0.0,
+      "tolerance": 0.01,
+      "native_kinds": {
+        "direct": 94,
+        "linkage": 13
+      },
+      "stock_external_thunks": 13,
+      "matched": {
+        "count": 94,
+        "path": "m2-009-thunks/matched-ede6d2e8490097fa.jsonl",
+        "sha256": "ede6d2e8490097fab535a3b40058b142029917e88d5ed4908795e7a1fb0db935"
+      },
+      "native_only": {
+        "count": 13,
+        "path": "m2-009-thunks/native-only-29038688cbe51471.jsonl",
+        "sha256": "29038688cbe5147130208dba45ea76c46cac76eb67ac75c328f5997cf5c98040"
+      },
+      "stock_only": {
+        "count": 13,
+        "path": "m2-009-thunks/stock-only-0463e1885bbc9835.jsonl",
+        "sha256": "0463e1885bbc983574bac1bdcafd82ad8777d6726edd07ab0e4e5d6090f96999"
+      }
+    }
+  ],
+  "summary": {
+    "pass": 1,
+    "fail": 0,
+    "skipped": 0
+  },
+  "passed": true
+}

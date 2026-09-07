@@ -1,0 +1,13 @@
+{"entry": "002f9010", "thunked": null, "external": true, "name": "_dl_find_dso_for_object"}
+{"entry": "002f9020", "thunked": null, "external": true, "name": "_dl_deallocate_tls"}
+{"entry": "002f9028", "thunked": null, "external": true, "name": "__tls_get_addr"}
+{"entry": "002f9040", "thunked": null, "external": true, "name": "_dl_signal_error"}
+{"entry": "002f9048", "thunked": null, "external": true, "name": "_dl_signal_exception"}
+{"entry": "002f9050", "thunked": null, "external": true, "name": "_dl_audit_symbind_alt"}
+{"entry": "002f9060", "thunked": null, "external": true, "name": "__tunable_is_initialized"}
+{"entry": "002f9068", "thunked": null, "external": true, "name": "_dl_rtld_di_serinfo"}
+{"entry": "002f9070", "thunked": null, "external": true, "name": "_dl_allocate_tls"}
+{"entry": "002f9078", "thunked": null, "external": true, "name": "__tunable_get_val"}
+{"entry": "002f9080", "thunked": null, "external": true, "name": "_dl_catch_exception"}
+{"entry": "002f9088", "thunked": null, "external": true, "name": "_dl_allocate_tls_init"}
+{"entry": "002f9098", "thunked": null, "external": true, "name": "_dl_audit_preinit"}

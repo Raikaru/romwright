@@ -110,6 +110,21 @@ and conflicting callers reject promotion. Already-decoded flow filters probes to
 contiguous indirect-branch-ending sequences; successful promotion splits actual
 instruction ownership rather than retaining the stub in its caller's body.
 
+Thunk recognition follows `CreateThunkFunctionCmd.getSimpleFlow` and
+`computeThunkBody` in the extracted Ghidra 12.1.3 sources (Apache-2.0): one
+unconditional, single-target transfer that is a jump, or a call that terminates
+flow. A call terminates only when its destination is proven non-returning, so
+native reuses the pinned `NoReturnFunctionAnalyzer` name list, which matches the
+primary symbol after stripping leading underscores. ELF symbol selection
+therefore prefers exported over local bindings and unversioned over
+`name@@VERSION` aliases, so an internal alias cannot hide the matched name.
+STT_GNU_IFUNC stubs use the public elf.h `*_IRELATIVE` relocation types
+(x86-64 37, i386 42, AArch64 1032, ARM 160, PowerPC 248, RISC-V 58): the addend
+is the in-image resolver, which supplies a destination where no import name
+exists. The benchmark-only `scripts/ExportThunks.java` reads `Function.isThunk`,
+`Function.getThunkedFunction(false)`, `Function.isExternal` and
+`AddressFactory.getDefaultAddressSpace`, all verified in those sources.
+
 PLT boundaries use ELF `sh_entsize`, executable mapped sections, and the
 canonical layouts documented by LLVM lld 19.1
 ([AArch64](https://github.com/llvm/llvm-project/blob/llvmorg-19.1.0/lld/ELF/Arch/AArch64.cpp),

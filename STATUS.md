@@ -2033,11 +2033,47 @@ M2 — Program-model parity
 ## Blocked on
 - None.
 
+## m2-009 implementation slices
+- a: commit the failing fixture acceptance (`tests/m2-009_thunks.py`), the
+  stock exporter (`scripts/ExportThunks.java`) and the libc gate
+  (`benchmarks/thunk_gate.py`) before implementation.
+- b: provenance-owned thunk storage at schema v9; assertions and other
+  producers survive a re-import, and an unchanged pass bumps no revision.
+- c: publish flow-proven thunk facts through import, Core and the API.
+- d: recognize the remaining proven shapes — ifunc PLT stubs through
+  `*_IRELATIVE` relocations, terminal transfers into pinned non-returning
+  functions, and the primary (exported) symbol name at an address.
+- e: run the libc gate, publish evidence and record the next task.
+
+### m2-009 evidence
+- `7fd3fc4` commits the failing acceptance (`unknown_method: thunks`).
+  `c1bf5dc` adds schema-v9 storage with three ownership regressions.
+  `46b9619` publishes facts and stops one undecodable range from aborting a
+  whole import; `1400539` adds the ifunc, terminal-transfer and naming rules.
+- `benchmarks/reports/m2-009.json`: **native 107 vs stock 107 thunks, ratio
+  0.000 within the ratified ±1% on `/usr/lib64/libc.so.6`** (sha256
+  `01cccbe2…`, `x86:LE:64:default` / `gcc`; stock 3987 functions, native 3961).
+  94 entries match exactly; the 13 native-only rows are `.plt.sec` import
+  stubs; the 13 stock-only rows are Ghidra's synthetic external-linkage thunks
+  at unmapped addresses outside every image section, which native represents as
+  those executable stubs. Hash-linked JSONL lists carry the complete sets.
+  This comparison is not an II.3 metric. Native kinds: 94 direct, 13 linkage.
+- Verification: `cargo test --workspace` 168 pass/2 ignored (schema-v9
+  ownership, symbol precedence and undecodable-root regressions included);
+  `tests/corpus.sh` 5/5; `tests/m2-009_thunks.py` 2 direct, 1 linkage, 1 tail
+  call excluded, 1 assertion preserved; `tests/differential.sh` PASS (import
+  parity, stripped subsets, `add`/`main` semantic parity).
+- `tests/differential.sh` console paths pointed at the removed `/tmp/spike`
+  layout and aborted with status 127; they now use the same defaults as
+  `RuntimeConfig::from_env`.
+- m2-009 is complete. No metric definition, corpus member, or reserved
+  decision changed.
+
 ## Next task
-- m2-009: validate thunk and tail-call parity (PLT thunks and jumps to another
-  function's entry), with thunk count matching the oracle within ±1% on libc.
-  Its acceptance test does not exist yet; write it first. The authorized
-  prerequisite taken during m2-008 covered only import-name linkage proof.
+- m2-010: define the relocation-masked signature database format (`.vsig`) —
+  function byte pattern with relocation masks, name, source package and
+  license — documented in `docs/vsig.md`, with a round-trip test. Its
+  acceptance test does not exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a

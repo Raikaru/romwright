@@ -403,6 +403,27 @@ native inferences separately. Compressed, hash-linked reference evidence keeps
 the raw oracle, scoring view, and exact body/flag export; architecture reports
 and JSONL mismatch sidecars retain the complete comparison.
 
+`thunks` reads persisted thunk facts for a `program`; native import publishes
+them. A `direct` fact names the thunked function entry, a `linkage` fact the
+proven import slot the stub leaves through. Recognition follows one
+unconditional transfer from a function entry: a jump to another entry, a jump
+or call to a pinned non-returning function, or a proven PLT/ifunc stub. A tail
+call from inside a larger body is not a thunk. Facts are owned per producer, so
+re-import refreshes them while assertions and other owners survive. Schema v9
+stores them; an unchanged pass bumps no revision.
+
+```sh
+python3 tests/m2-009_thunks.py
+python3 benchmarks/thunk_gate.py --report benchmarks/reports/m2-009.json
+```
+
+The libc comparison scores thunk-function counts against fresh stock analysis
+within ±1% on one host libc; it is not an II.3 metric or the full M2 gate.
+Report evidence links hash-verified JSONL lists of matched, native-only and
+stock-only entries. Ghidra also creates thunks at synthetic external-linkage
+addresses outside every image section; native records the executable stub that
+reaches the same import instead.
+
 The benchmark-only arity reference runs stock parameter ID on the 20 stripped
 ELF corpus entries, then scores against their unstripped DWARF twins. It never
 loads DWARF into either analyzer. References are immutable; `--check` verifies
