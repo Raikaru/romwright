@@ -32,6 +32,18 @@ The matcher fills Ghidra's FunctionID role only: it names a function when
 library bytes match, and never re-derives analysis from a proprietary database.
 No FunctionID database, signature file or tool output was read.
 
+## Itanium C++ RTTI
+
+`crates/lre-core/src/rtti.rs` follows the public Itanium C++ ABI: §2.9.5 for
+the `__class_type_info`, `__si_class_type_info` and `__vmi_class_type_info`
+layouts and their `base_class_type_info` offset/flag encoding, §2.5.2 for
+vtable layout (`offset_to_top`, the `type_info` slot and the address point),
+and §5.1 for the `_ZTV`/`_ZTI`/`_ZTS` names, which are matched literally. The
+ABI vtable symbols are read from the image's own relocations; no analyzer
+output or proprietary database is consulted. Ghidra's equivalent analyzers
+were not ported: the evidence chain here is relocation-anchored, and unmatched
+candidates produce no class.
+
 ## GameCube DOL format
 
 The independent DOL parser follows the public section-table layout documented

@@ -117,6 +117,23 @@ pub(super) fn prepare(
         243 => Some(58),
         _ => None,
     };
+    // Public elf.h: a loader-copied object (COPY) and a word-sized absolute
+    // binding. Both name a symbol at a data address, which is how the Itanium
+    // ABI ties a type_info to its `__cxxabiv1` vtable.
+    let copy_type = match machine {
+        3 | 62 => Some(5),
+        20 | 21 => Some(19),
+        183 => Some(1024),
+        40 => Some(20),
+        _ => None,
+    };
+    let absolute_type = match machine {
+        3 | 20 | 21 | 40 => Some(1),
+        62 => Some(1),
+        183 => Some(257),
+        243 => Some(2),
+        _ => None,
+    };
     for section in sections
         .iter()
         .filter(|s| matches!(s.typ, 4 | 9 | 19) && s.size != 0)
@@ -188,6 +205,38 @@ pub(super) fn prepare(
                         import
                             .externals
                             .push((address, String::from_utf8_lossy(name).into_owned()));
+                    }
+                }
+                if copy_type == Some(typ)
+                    || absolute_type == Some(typ)
+                    || linkage_types.contains(&typ)
+                {
+                    let index = info >> if width == 8 { 32 } else { 8 };
+                    if let Some(name) =
+                        relocation_symbol(data, sections, section.link, index, width, be)?
+                    {
+                        let address = rebase(place)?;
+                        let addend = if section.typ == 4 {
+                            word(record, 2 * width, width, be)?
+                        } else {
+                            // REL keeps the addend in place; read the loaded word.
+                            import
+                                .mappings
+                                .iter()
+                                .find_map(|mapping| {
+                                    let offset = address.checked_sub(mapping.vaddr)? as usize;
+                                    let bytes = mapping.bytes.get(offset..offset + width)?;
+                                    Some(word(bytes, 0, width, be))
+                                })
+                                .transpose()?
+                                .unwrap_or(0)
+                        };
+                        import.named_relocations.push(crate::native::NamedRelocation {
+                            address,
+                            symbol: String::from_utf8_lossy(name).into_owned(),
+                            addend,
+                            copies: copy_type == Some(typ),
+                        });
                     }
                 }
                 if irelative_type == Some(typ) && section.typ == 4 {
@@ -432,6 +481,25 @@ fn collect_plt_candidates(
     }
 }
 
+/// Name of the symbol a relocation binds, whatever its type or definition:
+/// data relocations name defined objects, which import naming rejects.
+fn relocation_symbol<'a>(
+    data: &'a [u8],
+    sections: &[ElfSection],
+    link: u32,
+    index: u64,
+    width: usize,
+    be: bool,
+) -> Result<Option<&'a [u8]>> {
+    // A data relocation may sit in a file with no symbol table we can read;
+    // then it simply carries no name. Import naming keeps its strict check.
+    let Some((symbols, _)) = symbol_record(data, sections, link, index, width, false)? else {
+        return Ok(None);
+    };
+    symbol_name(data, sections, symbols, index, width, be)
+}
+
+/// Import names only: an undefined NOTYPE or FUNC symbol.
 fn external_name<'a>(
     data: &'a [u8],
     sections: &[ElfSection],
@@ -440,13 +508,36 @@ fn external_name<'a>(
     width: usize,
     be: bool,
 ) -> Result<Option<&'a [u8]>> {
+    let Some((symbols, symbol)) = symbol_record(data, sections, link, index, width, true)? else {
+        return Ok(None);
+    };
+    let info = symbol[if width == 8 { 4 } else { 12 }];
+    if word(symbol, if width == 8 { 6 } else { 14 }, 2, be)? != 0 || !matches!(info & 15, 0 | 2) {
+        return Ok(None);
+    }
+    symbol_name(data, sections, symbols, index, width, be)
+}
+
+/// Locates one dynamic symbol table entry, bounds-checked.
+fn symbol_record<'a>(
+    data: &'a [u8],
+    sections: &'a [ElfSection],
+    link: u32,
+    index: u64,
+    width: usize,
+    required: bool,
+) -> Result<Option<(&'a ElfSection, &'a [u8])>> {
     if index == 0 {
         return Ok(None);
     }
-    let symbols = sections
-        .get(link as usize)
-        .filter(|s| s.typ == 11)
-        .ok_or_else(|| bad("ELF external relocation has no dynamic symbol table"))?;
+    // SHT_SYMTAB and SHT_DYNSYM share the entry layout.
+    let symbols = match sections.get(link as usize).filter(|s| matches!(s.typ, 2 | 11)) {
+        Some(symbols) => symbols,
+        None if required => {
+            return Err(bad("ELF external relocation has no dynamic symbol table"));
+        }
+        None => return Ok(None),
+    };
     let stride = if width == 8 { 24 } else { 16 };
     let relative = index
         .checked_mul(stride)
@@ -472,10 +563,23 @@ fn external_name<'a>(
                     .ok_or_else(|| bad("ELF symbol overflow"))?,
         )
         .ok_or_else(|| bad("truncated ELF dynamic symbol"))?;
-    let info = symbol[if width == 8 { 4 } else { 12 }];
-    if word(symbol, if width == 8 { 6 } else { 14 }, 2, be)? != 0 || !matches!(info & 15, 0 | 2) {
-        return Ok(None);
-    }
+    Ok(Some((symbols, symbol)))
+}
+
+fn symbol_name<'a>(
+    data: &'a [u8],
+    sections: &[ElfSection],
+    symbols: &ElfSection,
+    index: u64,
+    width: usize,
+    be: bool,
+) -> Result<Option<&'a [u8]>> {
+    let stride = if width == 8 { 24 } else { 16 };
+    let start = usize::try_from(symbols.off + index * stride)
+        .map_err(|_| bad("ELF symbol offset overflow"))?;
+    let symbol = data
+        .get(start..start + stride as usize)
+        .ok_or_else(|| bad("truncated ELF dynamic symbol"))?;
     let strings = sections
         .get(symbols.link as usize)
         .filter(|s| s.typ == 3)
