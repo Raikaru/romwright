@@ -10,6 +10,7 @@ members = [
     "crates/lre-qt-bridge",
     "crates/lre-api",
     "crates/lre-debug",
+    "crates/lre-sig",
 ]
 
 [workspace.package]

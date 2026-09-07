@@ -320,6 +320,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "lre-sig"
+version = "0.5.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
 name = "lre-worker"
 version = "0.5.0"
 dependencies = [
