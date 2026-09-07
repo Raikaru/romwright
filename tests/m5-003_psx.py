@@ -176,6 +176,12 @@ def main() -> int:
                 f"a header claiming more than its file was accepted: {refused.stdout.strip()}")
 
     report.update(status="pass", passed=True, summary=summary,
+                  platform={"input": "PlayStation PS-EXE", "family": "console",
+                            "test": "tests/m5-003_psx.py",
+                            "programs": [{"name": "psx", "language": language[0],
+                                          "dwarf.fn.recall": recall,
+                                          "dwarf.functions": len(truth),
+                                          "recorded_deficits": []}]},
                   metrics={"dwarf.fn.recall": recall, "dwarf.functions": len(truth),
                            "functions": len(observed), "unattributed": len(unattributed)},
                   entry=f"{entry:08x}",

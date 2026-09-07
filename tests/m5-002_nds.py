@@ -245,7 +245,14 @@ def main() -> int:
             raise AssertionError(
                 f"a container claiming more than its file was accepted: {refused.stdout.strip()}")
 
-    report.update(status="pass", passed=True, summary=summary, rows=rows)
+    report.update(status="pass", passed=True, summary=summary, rows=rows,
+                  platform={"input": "NDS cartridge (ARM9 + ARM7)", "family": "console",
+                            "test": "tests/m5-002_nds.py",
+                            "programs": [{"name": name, "language": row["language"],
+                                          "dwarf.fn.recall": row["dwarf.fn.recall"],
+                                          "dwarf.functions": row["dwarf.functions"],
+                                          "recorded_deficits": row["recorded_deficits"]}
+                                         for name, row in rows.items()]})
     if arguments.report:
         arguments.report.write_text(json.dumps(report, indent=2) + "\n")
     print("m5-002: PASS (" + "; ".join(

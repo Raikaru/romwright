@@ -1,12 +1,26 @@
 {
   "id": "m5-003",
-  "recorded_at": "2026-09-07T05:28:45.207456+00:00",
+  "recorded_at": "2026-09-07T05:42:39.770987+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98
   },
   "status": "pass",
   "passed": true,
   "summary": "imported psx natively (5 functions, MIPS:LE:32:default)",
+  "platform": {
+    "input": "PlayStation PS-EXE",
+    "family": "console",
+    "test": "tests/m5-003_psx.py",
+    "programs": [
+      {
+        "name": "psx",
+        "language": "MIPS:LE:32:default",
+        "dwarf.fn.recall": 1.0,
+        "dwarf.functions": 5,
+        "recorded_deficits": []
+      }
+    ]
+  },
   "metrics": {
     "dwarf.fn.recall": 1.0,
     "dwarf.functions": 5,

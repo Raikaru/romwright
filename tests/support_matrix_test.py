@@ -19,8 +19,15 @@ def verify_discovery_scope() -> None:
         shutil.copyfile(SCRIPT, script)
         reports = root / "benchmarks" / "reports"
         reports.mkdir(parents=True)
+        # The generator reads the platform tier catalog and rewrites the
+        # block between its markers, so the fixture needs both.
+        (root / "docs").mkdir()
+        shutil.copyfile(ROOT / "docs" / "platform-tiers.json",
+                        root / "docs" / "platform-tiers.json")
         readme = root / "README.md"
-        readme.write_text("## Support matrix\n\n| stale |\n")
+        readme.write_text("## Support matrix\n\n"
+                          "<!-- support-matrix:begin -->\n| stale |\n"
+                          "<!-- support-matrix:end -->\n")
 
         def generate():
             subprocess.run([sys.executable, str(script)], cwd=root,

@@ -37,11 +37,20 @@ END = "<!-- support-matrix:end -->"
 
 
 def console_reports() -> dict[str, dict]:
-    """The committed console gate reports, keyed by report id."""
+    """The committed console gate reports, keyed by report id.
+
+    A platform report is one carrying a `platform` block. This gate's own
+    report does not describe a platform, so it is not one of them.
+    """
     found = {}
     for path in sorted(REPORTS.glob("m5-*.json")):
-        found[path.stem] = json.loads(path.read_text(encoding="utf-8"))
-    assert found, "no console gate reports are committed under benchmarks/reports"
+        report = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(report.get("platform"), dict):
+            found[path.stem] = report
+    assert len(found) >= 4, (
+        f"expected every gated console platform to commit a report with a "
+        f"platform block; found {sorted(found)}"
+    )
     return found
 
 
@@ -118,6 +127,8 @@ def generated_rows(root: Path) -> dict[str, str]:
     rows = {}
     body = (root / "README.md").read_text(encoding="utf-8")
     for line in body.splitlines():
+        if line.startswith("| Platform |"):
+            break  # the blocked table starts here; those are not claims
         if line.startswith("|") and line.count("|") >= 3 and "---" not in line:
             cells = [cell.strip() for cell in line.strip("|").split("|")]
             rows[cells[0]] = " | ".join(cells[1:])

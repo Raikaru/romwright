@@ -177,6 +177,12 @@ def main() -> int:
                 f"the refusal does not name the reason: {refused.stderr.strip()}")
 
     report.update(status="pass", passed=True, summary=summary,
+                  platform={"input": "Nintendo 64 ROM (`.z64`)", "family": "console",
+                            "test": "tests/m5-004_n64.py",
+                            "programs": [{"name": "n64", "language": language[0],
+                                          "dwarf.fn.recall": recall,
+                                          "dwarf.functions": len(truth),
+                                          "recorded_deficits": []}]},
                   metrics={"dwarf.fn.recall": recall, "dwarf.functions": len(truth),
                            "functions": len(observed), "unattributed": len(unattributed)},
                   entry=f"{entry:08x}", boot=f"{BOOT_ADDRESS:08x}",

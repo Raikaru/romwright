@@ -185,6 +185,12 @@ def main() -> int:
                 f"{decompiled.stderr.strip() or decompiled.stdout.strip()}")
 
     report.update(status="pass", passed=True, summary=summary,
+                  platform={"input": "GBA cartridge ROM", "family": "console",
+                            "test": "tests/m5-001_gba.py",
+                            "programs": [{"name": "gba", "language": language[0],
+                                          "dwarf.fn.recall": recall,
+                                          "dwarf.functions": len(truth),
+                                          "recorded_deficits": []}]},
                   metrics={"dwarf.fn.recall": recall, "dwarf.functions": len(truth),
                            "functions": len(observed), "unattributed": len(unattributed)},
                   entry=f"{seed:08x}", regions={name: f"{start:08x}"
