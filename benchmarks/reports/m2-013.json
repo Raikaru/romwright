@@ -1,0 +1,176 @@
+{
+  "gate": "itanium-rtti",
+  "milestone": "M2",
+  "task": "m2-013",
+  "commit": "5349c82ae17141253c58453838797604faf2d563",
+  "date": "2026-09-07T00:57:07.499330+00:00",
+  "gate_sha256": "bc41d31f8bab026d2543caea8d688ae1eba0a6b8cc45544c32ff2f4ab4d00cef",
+  "source_sha256": "0d3a2501d973c1dd445b93187248b2bce165809fcb3da4d04d0499714dff4222",
+  "comparison": "recovered classes against the unstripped twins' `_ZTV` vtable symbols; fixtures are gate inputs, not corpus members; not an II.3 metric",
+  "targets": [
+    {
+      "id": "x86_64_nopie",
+      "status": "pass",
+      "architecture": "x86_64",
+      "link": "-fno-pie -no-pie",
+      "language": "x86:LE:64:default",
+      "sha256": "b75ec04dc4b0e6553066c832c0e662b9aaa7be4053c404f2746653483278ba42",
+      "vtables": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 4
+    },
+    {
+      "id": "x86_64_pie",
+      "status": "pass",
+      "architecture": "x86_64",
+      "link": "-fPIE -pie",
+      "language": "x86:LE:64:default",
+      "sha256": "ff9454fa06948bf61bf7934a98caa25c117064da16718a8f63c2ce5fe9aff774",
+      "vtables": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 4
+    },
+    {
+      "id": "aarch64_pie",
+      "status": "pass",
+      "architecture": "aarch64",
+      "link": "-fPIE -pie",
+      "language": "AARCH64:LE:64:v8A",
+      "sha256": "d9198a353e5a91920587f7e9c1d33a7135f37cea70e628d0a727245290b03562",
+      "vtables": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 4
+    },
+    {
+      "id": "powerpc_nopie",
+      "status": "pass",
+      "architecture": "powerpc",
+      "link": "-fno-pie -no-pie",
+      "language": "PowerPC:BE:32:default",
+      "sha256": "dc0db81f6fce2d8b0f991074340a25ad3e4abcd98f30a109396f939f3be56f5f",
+      "vtables": 5,
+      "classes": 5,
+      "missing": [],
+      "invented": [],
+      "names": [
+        "Base",
+        "Middle",
+        "Multi",
+        "Other",
+        "Virt"
+      ],
+      "kinds": {
+        "multiple_base": 2,
+        "plain": 2,
+        "single_base": 1
+      },
+      "bases": 4
+    },
+    {
+      "id": "corpus_x86_64_cpp_o2",
+      "status": "pass",
+      "architecture": "x86_64",
+      "link": "locked corpus entry",
+      "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+      "vtables": 0,
+      "classes": 0,
+      "missing": [],
+      "invented": []
+    },
+    {
+      "id": "corpus_i386_cpp_o2",
+      "status": "pass",
+      "architecture": "i386",
+      "link": "locked corpus entry",
+      "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
+      "vtables": 0,
+      "classes": 0,
+      "missing": [],
+      "invented": []
+    },
+    {
+      "id": "corpus_aarch64_cpp_o2",
+      "status": "pass",
+      "architecture": "aarch64",
+      "link": "locked corpus entry",
+      "sha256": "670f060e6cbd6b34146d9fb190de2ea7d1cb922af16898e8030ccdc07c9f9ab9",
+      "vtables": 0,
+      "classes": 0,
+      "missing": [],
+      "invented": []
+    },
+    {
+      "id": "corpus_powerpc_cpp_o2",
+      "status": "pass",
+      "architecture": "powerpc",
+      "link": "locked corpus entry",
+      "sha256": "682b9affeee7e9e281398e5bcf0126799eb08c647640718a35dc25a651f4abbf",
+      "vtables": 0,
+      "classes": 0,
+      "missing": [],
+      "invented": []
+    },
+    {
+      "id": "corpus_msvc_cpp_o2",
+      "status": "skipped",
+      "architecture": "msvc",
+      "link": "locked corpus entry",
+      "reason": "missing corpus binary msvc_cpp_o2.exe"
+    }
+  ],
+  "summary": {
+    "pass": 8,
+    "fail": 0,
+    "skipped": 1
+  },
+  "totals": {
+    "vtables": 20,
+    "classes": 20,
+    "bases": 16,
+    "missing": 0,
+    "invented": 0
+  },
+  "passed": true
+}

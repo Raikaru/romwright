@@ -2189,9 +2189,41 @@ M2 — Program-model parity
   list; expose the facts through Core/API and document the shapes. Slices stay
   below 800 changed lines each.
 
+### m2-013 evidence
+- `db63dbc` commits the failing gate (`unknown_method: classes`); `2bc46ae`
+  adds schema-v11 class/base storage with two ownership regressions;
+  `5349c82` adds the loader's named data relocations and the recovery pass.
+- `benchmarks/reports/m2-013.json` at commit `5349c82`: **8 targets pass, 0
+  fail, 1 skipped (no MSVC corpus binary on this host); 20 classes recovered
+  for 20 compiler vtables, 16 base relations, 0 missing and 0 invented.**
+  Every fixture target recovers `Base`, `Middle`, `Multi`, `Other` and `Virt`
+  with the shapes the ABI encodes: 2 `class`, 1 `single_base`,
+  2 `multiple_base`.
+- The four locked corpus C++ entries recover zero classes, which is correct:
+  `tests/corpus-src/src.cpp` declares none, so they prove only that recovery
+  invents nothing. Polymorphic shapes therefore live in a gate input,
+  `tests/fixtures-src/rtti.cpp`, because adding a corpus source is reserved
+  (II.1). Both link modes are covered: a non-PIE link COPY-relocates the ABI
+  type_info vtables into the image, a PIE link binds the vptr slot instead.
+- Slot counts were checked by hand against the twins' `_ZTV` sizes: `_ZTV4Base`
+  40 bytes → 3 slots, `_ZTV5Multi` 72 → 4 primary slots plus its secondary
+  vtable, `_ZTV5Other` 24 → 1, `_ZTV4Virt` 64 → 3 after the virtual-base
+  offset word. `Multi` reports `Middle` at 0 and `Other` at 8; `Virt` reports
+  its virtual base with the ABI's negative offset slot.
+- Loader change: named ELF data relocations (COPY, word-sized absolute and
+  linkage forms) are recorded with their symbol and addend. Import naming keeps
+  its strict undefined-NOTYPE/FUNC filter; the new reader accepts any symbol
+  table and yields no name when a file has none.
+- Verification: `cargo test --workspace` 186 pass/2 ignored; `tests/corpus.sh`
+  5/5; `tests/differential.sh` PASS; the m2-011 and m2-012 signature gates
+  still pass unchanged (3 858 records; 870 matches, 0 false positives).
+- m2-013 is complete. No metric definition, corpus member, or reserved
+  decision changed.
+
 ## Next task
-- m2-013: recover Itanium C++ typeinfo, vtables and classes as facts, with the
-  recovered class set equal to the compiler's own `_ZTV` vtable set.
+- m2-014: recover MSVC RTTI (`RTTICompleteObjectLocator`, `TypeDescriptor`)
+  into class facts, with the PE C++ corpus entry's class count matching. Its
+  acceptance test does not exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
