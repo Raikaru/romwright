@@ -42,6 +42,11 @@ jobs:
         run: |
           python tests/support_matrix_test.py
           python tests/m5-005_platform_matrix.py
+      - name: Score PE32+ recovery against DWARF truth
+        run: |
+          cargo build --release -p lre-cli
+          python3 tests/m8-001_pe_unwind.py \
+            --report "$RUNNER_TEMP/pe-unwind.json"
       - name: Check the evidence index
         run: python tests/m5-012_evidence_index.py
       - name: Run the documented workflow
