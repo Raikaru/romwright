@@ -217,6 +217,10 @@ def score(fixture: Path, work: Path) -> dict:
             "pe.functions": len(observed),
             "pe.undescribed": len(undescribed),
         },
+        # The class this row proves, named rather than implied: the milestone
+        # gate reads these strings back to check every class has a gate.
+        "provenance_proven": sorted(
+            kind for kind in provenance if kind.startswith("native-import:pe-")),
         "unwind_provenance": "native-import:pe-unwind" in provenance,
     }
     if missing:

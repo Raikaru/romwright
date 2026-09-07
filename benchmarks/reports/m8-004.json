@@ -1,6 +1,6 @@
 {
  "id": "m8-004",
- "recorded_at": "2026-09-07T12:16:46.424616+00:00",
+ "recorded_at": "2026-09-07T12:43:18.537818+00:00",
  "status": "pass",
  "passed": true,
  "summary": "4 PE fixtures: 8 TLS callbacks and 3 exports recovered, each with the reference that named it, exported names applied, 0 forwarders left alone",
@@ -18,7 +18,7 @@
  "fixtures": [
   {
    "id": "tiny_pe.exe",
-   "functions": 120,
+   "functions": 122,
    "metrics": {
     "pe.tls.callbacks": 2,
     "pe.tls.missing": 0,
@@ -30,6 +30,11 @@
     "pe.exports.misnamed": 0,
     "pe.exports.forwarder_functions": 0
    },
+   "provenance_proven": [
+    "native-import:pe-reloc",
+    "native-import:pe-tls",
+    "native-import:pe-unwind"
+   ],
    "callbacks": [
     "1400015c0",
     "1400015a0"
@@ -46,7 +51,7 @@
   },
   {
    "id": "dispatch.exe",
-   "functions": 122,
+   "functions": 124,
    "metrics": {
     "pe.tls.callbacks": 2,
     "pe.tls.missing": 0,
@@ -58,6 +63,11 @@
     "pe.exports.misnamed": 0,
     "pe.exports.forwarder_functions": 0
    },
+   "provenance_proven": [
+    "native-import:pe-reloc",
+    "native-import:pe-tls",
+    "native-import:pe-unwind"
+   ],
    "callbacks": [
     "1400015a0",
     "140001580"
@@ -74,7 +84,7 @@
   },
   {
    "id": "tiny_pe32.exe",
-   "functions": 110,
+   "functions": 112,
    "metrics": {
     "pe.tls.callbacks": 2,
     "pe.tls.missing": 0,
@@ -86,6 +96,10 @@
     "pe.exports.misnamed": 0,
     "pe.exports.forwarder_functions": 0
    },
+   "provenance_proven": [
+    "native-import:pe-reloc",
+    "native-import:pe-tls"
+   ],
    "callbacks": [
     "00401640",
     "00401600"
@@ -114,6 +128,11 @@
     "pe.exports.misnamed": 0,
     "pe.exports.forwarder_functions": 0
    },
+   "provenance_proven": [
+    "native-import:pe-export",
+    "native-import:pe-reloc",
+    "native-import:pe-tls"
+   ],
    "callbacks": [
     "61b81560",
     "61b81520"

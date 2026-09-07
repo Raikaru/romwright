@@ -1,0 +1,67 @@
+{
+ "id": "m8-006",
+ "recorded_at": "2026-09-07T12:43:21.173492+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "4 PE evidence classes, all exercised by committed fixtures and all measured by a committed report; 865 references and 260 external symbols across 4 fixtures; five gates carry the milestone claim",
+ "metrics": {
+  "pe.classes.declared": 4,
+  "pe.classes.unexercised": 0,
+  "pe.classes.unmeasured": 0,
+  "pe.references": 865,
+  "pe.externals": 260
+ },
+ "classes": {
+  "native-import:pe-export": {
+   "references": 3,
+   "measured_by": [
+    "m8-004.json"
+   ]
+  },
+  "native-import:pe-reloc": {
+   "references": 662,
+   "measured_by": [
+    "m8-001.json",
+    "m8-002.json",
+    "m8-004.json"
+   ]
+  },
+  "native-import:pe-tls": {
+   "references": 8,
+   "measured_by": [
+    "m8-001.json",
+    "m8-004.json"
+   ]
+  },
+  "native-import:pe-unwind": {
+   "references": 192,
+   "measured_by": [
+    "m8-001.json",
+    "m8-004.json"
+   ]
+  }
+ },
+ "milestone": {
+  "m8-001": {
+   "pe.dwarf.fn.recall": 1.0,
+   "pe.dwarf.fn.unattributed": 0
+  },
+  "m8-002": {
+   "pe32.dwarf.fn.recall": 0.8064516129032258,
+   "pe32.dwarf.fn.unattributed": 0,
+   "ghidra.dwarf.fn.recall": 0.7634408602150538
+  },
+  "m8-003": {
+   "body.crossing": 0,
+   "body.exact": 0.987335092348285
+  },
+  "m8-004": {
+   "pe.tls.callbacks": 8,
+   "pe.exports": 3
+  },
+  "m8-005": {
+   "pe.imports.declared": 166,
+   "pe.imports.unnamed_stubs": 0
+  }
+ }
+}

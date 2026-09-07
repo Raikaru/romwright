@@ -197,6 +197,10 @@ def score(fixture: Path, work: Path) -> dict:
             "pe.exports.misnamed": len(misnamed),
             "pe.exports.forwarder_functions": len(forwarder_functions),
         },
+        "provenance_proven": sorted(
+            {provenance for targets in references.values()
+             for _, provenance in targets
+             if provenance.startswith("native-import:pe-")}),
         "callbacks": [f"{callback:08x}" for _, callback in callbacks],
         "exported": [f"{row['address']:08x} {row['name']}" for row in exported
                      if not row["forwarded"]],
