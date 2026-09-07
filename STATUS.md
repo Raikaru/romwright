@@ -3000,14 +3000,44 @@ m3-003, all three wired into continuous integration)
   read in `desktop/ventris-qt/src/gate_runner.cpp`, and the `VENTRIS_UI_INSTALL_OK`
   export in the smoke test, then re-recording the UI gate report.
 
+### m6-004 evidence
+- **The recorded premise was wrong again, and checking came first.** The
+  previous "next task" said `RELEASING.md` describes the steps: no such file
+  exists. What existed was three CI steps -- an SBOM, an update manifest over
+  `LICENSE` alone, and a verification of that one-file manifest. No release
+  artifact set was ever produced or checked.
+- `c7a75d0` commits the failing acceptance
+  (`tests/m6-004_release_artifacts.py`).
+- `docs/releasing.md` documents build, stage, SBOM, manifest and verify; the
+  gate runs those nine commands and then checks the results, so a documented
+  step that stops working fails here.
+- `packaging/stage_release.py` copies whatever the build produced (`.exe`
+  suffixes, the CPack archive named after system and processor) and fails on a
+  missing binary rather than staging a partial set.
+  `packaging/update_manifest.py` now accepts a directory, manifesting every
+  file below it and excluding its own output, so the artifact list cannot
+  drift from what was staged.
+- Measured (`benchmarks/reports/m6-004.json`): 9 documented commands on
+  Linux/x86_64, **5 artifacts manifested and verified**, tampering and
+  truncation both rejected, SBOM covering 60 packages including every
+  workspace crate with a declared licence.
+- Negative controls: dropping one workspace crate from the SBOM fails
+  (`the SBOM omits workspace crates: ['lre-worker']`), and neutering
+  `verify_update.py` fails (`a flipped byte in lre-api passed verification`).
+- CI cutover: the three placeholder packaging steps are replaced by this
+  gate, so the SBOM and manifest are now checked against real artifacts.
+- The page states what is not claimed: no reproducibility (two builds are not
+  asserted byte-identical) and no signing (digests, not signatures). Tagging
+  stays reserved to the human per II.1.
+
 ## Next task
-- m6-004: publish the release. `RELEASING.md` describes the steps and
-  `packaging/` builds the update manifest and SBOM, but no gate proves a
-  release artifact is reproducible from a clean checkout, carries the SBOM it
-  claims, and verifies against the manifest. The acceptance must produce the
-  artifacts, verify the manifest and SBOM against them, and fail if a
-  documented release step does not run. Its acceptance test does not exist
-  yet; write it first.
+- m6-005: close the M6 documentation set with a page for scripts and agents.
+  `python/` ships a client and `docs/core-api.md` documents the wire
+  protocol, but there is no page showing a script driving a project end to
+  end, and no gate runs one. The acceptance must execute a documented script
+  against the fixture and check its printed facts, failing if the documented
+  script or its output drifts. Its acceptance test does not exist yet; write
+  it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

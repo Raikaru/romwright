@@ -34,14 +34,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m py_compile python/*.py packaging/*.py scripts/*.py
-      - run: python packaging/sbom.py --output "$RUNNER_TEMP/ventris.spdx.json"
-      - name: Validate SPDX document
-        env:
-          SBOM_PATH: ${{ runner.temp }}/ventris.spdx.json
+      - name: Produce and verify the release artifacts
         run: |
-          python -c "import json, os; document = json.load(open(os.environ['SBOM_PATH'])); assert document['spdxVersion'] == 'SPDX-2.3'; assert document['packages']"
-      - run: python packaging/update_manifest.py --version ci --root . --output "$RUNNER_TEMP/update.json" LICENSE
-      - run: python packaging/verify_update.py "$RUNNER_TEMP/update.json" --root .
+          python3 tests/m6-004_release_artifacts.py \
+            --report "$RUNNER_TEMP/release-artifacts.json"
       - name: Check support matrix evidence and staleness
         run: |
           python tests/support_matrix_test.py
