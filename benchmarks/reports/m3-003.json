@@ -1,0 +1,508 @@
+{
+  "id": "m3-003",
+  "recorded_at": "2026-09-07T03:34:52.503517+00:00",
+  "thresholds": {
+    "native.vs.baseline": "native >= baseline per row",
+    "truth_threshold": 0.98
+  },
+  "freshness": {
+    "native_entries": {
+      "artifact": "native_entries",
+      "fresh": true,
+      "pin": null,
+      "recorded": null,
+      "current": null,
+      "stale": []
+    },
+    "native_arity": {
+      "artifact": "native_arity",
+      "fresh": true,
+      "pin": null,
+      "recorded": null,
+      "current": null,
+      "stale": []
+    }
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 3,
+        "arity_matched": 3,
+        "native_arity_correct": 3,
+        "baseline_arity_matched": 3,
+        "baseline_arity_correct": 3
+      },
+      "status": "pass"
+    },
+    {
+      "id": "x86_64_many_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 401,
+        "arity_matched": 401,
+        "native_arity_correct": 400,
+        "baseline_arity_matched": 401,
+        "baseline_arity_correct": 400
+      },
+      "status": "pass"
+    },
+    {
+      "id": "i386_plain_o0",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "i386_plain_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "i386_plain_pie",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "i386_cpp_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 3,
+        "arity_matched": 3,
+        "native_arity_correct": 3,
+        "baseline_arity_matched": 3,
+        "baseline_arity_correct": 3
+      },
+      "status": "pass"
+    },
+    {
+      "id": "i386_many_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 401,
+        "arity_matched": 401,
+        "native_arity_correct": 0,
+        "baseline_arity_matched": 401,
+        "baseline_arity_correct": 0
+      },
+      "status": "pass"
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 3,
+        "arity_matched": 3,
+        "native_arity_correct": 3,
+        "baseline_arity_matched": 3,
+        "baseline_arity_correct": 3
+      },
+      "status": "pass"
+    },
+    {
+      "id": "aarch64_many_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 401,
+        "arity_matched": 401,
+        "native_arity_correct": 400,
+        "baseline_arity_matched": 401,
+        "baseline_arity_correct": 400
+      },
+      "status": "pass"
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 2,
+        "arity_matched": 2,
+        "native_arity_correct": 2,
+        "baseline_arity_matched": 2,
+        "baseline_arity_correct": 2
+      },
+      "status": "pass"
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 1.0
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 3,
+        "arity_matched": 3,
+        "native_arity_correct": 3,
+        "baseline_arity_matched": 3,
+        "baseline_arity_correct": 3
+      },
+      "status": "pass"
+    },
+    {
+      "id": "powerpc_many_o2",
+      "native": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "baseline": {
+        "dwarf.fn.recall": 1.0,
+        "proto.arity": 0.9975062344139651
+      },
+      "delta": {
+        "dwarf.fn.recall": 0.0,
+        "proto.arity": 0.0
+      },
+      "counts": {
+        "dwarf_functions": 401,
+        "arity_matched": 401,
+        "native_arity_correct": 400,
+        "baseline_arity_matched": 401,
+        "baseline_arity_correct": 400
+      },
+      "status": "pass"
+    }
+  ],
+  "deficits": [
+    "i386_many_o2:proto.arity"
+  ],
+  "totals": {
+    "truth_functions": 1640,
+    "native_entries_matched": 1640,
+    "baseline_entries_matched": 1640,
+    "arity_matched": 1640,
+    "native_arity_correct": 1236,
+    "baseline_arity_correct": 1236,
+    "native.dwarf.fn.recall": 1.0,
+    "baseline.dwarf.fn.recall": 1.0,
+    "native.proto.arity": 0.7536585365853659,
+    "baseline.proto.arity": 0.7536585365853659
+  },
+  "summary": {
+    "pass": 20,
+    "fail": 0
+  },
+  "passed": true
+}

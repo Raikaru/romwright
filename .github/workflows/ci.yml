@@ -167,6 +167,13 @@ jobs:
           python3 tests/m3-002_baseline.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/ground-truth-baseline.json"
+      - name: Enforce the M3 ground-truth regression gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m3-003_regression.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/ground-truth-regression.json"
       - name: Verify reference analysis contracts
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

@@ -1,9 +1,13 @@
 {
   "id": "m3-001",
-  "recorded_at": "2026-09-07T03:13:55.184384+00:00",
+  "recorded_at": "2026-09-07T03:27:19.183671+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98,
     "dwarf.fn.unattributed": 0
+  },
+  "sources": {
+    "dwarf_gate_sha256": "cb79d9006162df7be8498bc00917c4101bf64241e95542ead62513bb0b12bb81",
+    "dwarf_reader_sha256": "7a23fc698dd40b936620303916162dec462b3e2a8637dfa37083efacfb366785"
   },
   "rows": [
     {
