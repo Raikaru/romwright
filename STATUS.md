@@ -2111,9 +2111,40 @@ M2 — Program-model parity
 - c: `lre-cli signatures build|info`, the CI job, and the docs. Slices stay
   below 800 changed lines each.
 
+### m2-011 evidence
+- `a7c96f8` commits the failing gate (`error: unknown command: signatures`).
+  `101e136` adds the `ar` reader and ELF extraction; `19b24bf` adds the CLI
+  surface, the CI step and the documentation.
+- `benchmarks/reports/m2-011.json`: **4 sources pass, 0 fail, 0 skipped;
+  12 292 records across 10 292 386 database bytes**, every rebuild
+  byte-identical. Per source: aarch64 `libc.a` 3 440 records / 2 505 301 bytes,
+  i386 `libc.a` 3 853 / 3 113 013, powerpc `libc.a` 3 742 / 3 393 840,
+  aarch64 `libm.a` 1 257 / 1 280 232. Minimum compared bytes per record is 16.
+- Skips are reported, never silent: 1 221 functions were dropped as too weak,
+  2 as conflicting definitions, and 0 for unknown relocations after the
+  PowerPC TLS/REL16 widths were added from public `elf.h` numbering.
+- Independent verification (throwaway script, this session): decoding the
+  generated databases with a separate Python implementation of the documented
+  layout reproduced every record; `strlen` in the aarch64 database matches
+  `strlen_mte.o`'s `.text` bytes exactly and not the other `strlen` definition;
+  PowerPC `_Exit`, `_Fork` and `_IO_cleanup` match their objects at every
+  compared byte, and 20 of `_IO_cleanup`'s 54 masked bytes are non-zero in the
+  object — the mask removes real linker-rewritable content.
+- `.github/workflows/ci.yml` builds the databases in the `corpus-linux` job,
+  which already fetches the pinned sysroots, and retains the report as an
+  artifact.
+- Verification: `cargo test --workspace` 179 pass/2 ignored (archive, object,
+  generator and container tests included); the gate passes as above.
+- m2-011 is complete for the pinned ELF sources. MinGW CRT (`.lib`/COFF) and
+  devkitPPC signature sources need new pinned package inputs, which is a
+  reserved decision (II.1: adding a corpus binary or platform); the generator
+  refuses unknown formats instead of guessing.
+
 ## Next task
-- m2-011: generate packaged-library signatures in continuous integration from
-  the pinned static archives, reporting database size and record count.
+- m2-012: match inferred library names during import, writing matches as
+  inferred names with confidence and logging conflicts, with the false-positive
+  rate on the corpus recorded in `docs/vsig.md`. Its acceptance test does not
+  exist yet; write it first.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
