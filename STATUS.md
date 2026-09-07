@@ -2848,15 +2848,41 @@ m3-003, all three wired into continuous integration)
   indices; `initializer_labels_replace_only_generated_names` pins that a
   symbol name stands and a label for no function is dropped.
 
+### m5-011 evidence
+- `215b910` commits the failing acceptance
+  (`tests/m5-011_pattern_labels.py`).
+- The label was already in hand: `ConsoleSession::function_patterns` collects
+  `<funcstart label=... validcode="function">` names, and
+  `send_reference_fixups` installs a call fixup at each one. The name was
+  never written to the store. `pattern_labels()` exposes the same list,
+  discovery records it on the import, and `apply_pattern_labels` applies it
+  to a function with a proven body and a generated name.
+- Measured (`benchmarks/reports/m5-011.json`), 20 locked ELF inputs: **11
+  labels applied, all agreeing with stock Ghidra's name at the same
+  address**, 0 missing, 0 spurious. The gate checks both directions against
+  the bytes -- bytes matching a labelled pattern must carry its name, and a
+  function carrying a pattern label must have those bytes at its entry.
+- Negative control: making the pass label the first generated function
+  instead of the matched address fails the gate on the row whose bytes no
+  longer line up.
+- `tests/m5-010_initializer_names.py` now pins **no** pattern-label rows, so
+  every function name on the corpus is either equal to stock or a
+  proven-equivalent label: **1829 of 1903 equal, 74 equivalent, 0
+  unexplained.**
+- Forced cutover: `tests/m5-009_linkage_names.py` treats a pattern label as
+  supported only when the caller proves the pattern matched at that address,
+  rather than accepting the shape of the name.
+- Unit test `pattern_labels_need_a_body_and_a_generated_name` pins that a
+  one-byte stub and a symbol-named function are both left alone.
+
 ## Next task
-- m5-011: apply the `<funcstart label=...>` name from the pattern that proved
-  a function start. `crates/lre-core/src/native/discovery/patterns.rs`
-  already parses the pinned pattern files for starts and drops the label, so
-  the name is data we hold and ignore -- 11 rows on the corpus, all
-  `__i686.get_pc_thunk.*`. The acceptance must delete those rows from
-  `PATTERN_LABELS` in `tests/m5-010_initializer_names.py` and fail if a label
-  is applied to a function the pattern did not match. Its acceptance test
-  does not exist yet; write it first.
+- m5-012: publish the name and thunk parity numbers in the milestone gate
+  scripts rather than only in per-task reports. `benchmarks/thunk_gate.py`
+  still compares counts on one host libc and its report is what `gate.sh`
+  reads, so a reader of the M2 gate cannot see the set-level result m5-008
+  measures. The acceptance must show the milestone report carrying the
+  set-level metrics, and must fail if the count comparison is the only
+  evidence present. Its acceptance test does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

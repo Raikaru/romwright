@@ -170,6 +170,8 @@ pub struct NativeImport {
     /// Names an initializer array gives its targets: the array names the
     /// prefix, the slot's position names the index.
     pub initializer_labels: Vec<(u64, String)>,
+    /// Names the pinned patterns give the starts they proved.
+    pub pattern_labels: Vec<(u64, String)>,
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
@@ -1092,7 +1094,26 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     discovery::record_branch_transfers(imp);
     name_linkage_stubs(imp);
     apply_initializer_labels(imp);
+    apply_pattern_labels(imp);
     Ok(())
+}
+
+/// Gives a pattern-proven start the name its pattern carries.
+///
+/// The label comes from the `<funcstart label=...>` attribute of the pattern
+/// that matched at that address in the pinned install, which the console
+/// already uses to install a call fixup there. A body is required, so a label
+/// never names bytes nothing proved, and only a generated name is replaced.
+fn apply_pattern_labels(imp: &mut NativeImport) {
+    let labels = std::mem::take(&mut imp.pattern_labels);
+    for (address, label) in &labels {
+        if let Some(function) = imp.functions.iter_mut().find(|function| {
+            function.entry == *address && function.size > 1 && function.name.starts_with("FUN_")
+        }) {
+            function.name = label.clone();
+        }
+    }
+    imp.pattern_labels = labels;
 }
 
 /// Gives an initializer-array target the name its array gives it.
@@ -2613,6 +2634,37 @@ mod tests {
     }
 
     #[test]
+    #[test]
+    fn pattern_labels_need_a_body_and_a_generated_name() {
+        let mut imp = NativeImport {
+            functions: vec![
+                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
+                NativeFunction { entry: 0x1004, size: 4, name: "frame_dummy".into() },
+                // A one-byte stub is an address, not a proven body.
+                NativeFunction { entry: 0x1008, size: 1, name: "FUN_00001008".into() },
+            ],
+            pattern_labels: vec![
+                (0x1000, "__i686.get_pc_thunk.bx".into()),
+                (0x1004, "__i686.get_pc_thunk.ax".into()),
+                (0x1008, "__i686.get_pc_thunk.cx".into()),
+                (0x100c, "__i686.get_pc_thunk.dx".into()),
+            ],
+            ..Default::default()
+        };
+        apply_pattern_labels(&mut imp);
+        assert_eq!(
+            imp.functions
+                .iter()
+                .map(|function| (function.entry, function.name.clone()))
+                .collect::<Vec<_>>(),
+            vec![
+                (0x1000, "__i686.get_pc_thunk.bx".to_string()),
+                (0x1004, "frame_dummy".to_string()),
+                (0x1008, "FUN_00001008".to_string()),
+            ]
+        );
+    }
+
     #[test]
     fn initializer_labels_replace_only_generated_names() {
         let mut imp = NativeImport {

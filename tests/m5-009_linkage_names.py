@@ -32,6 +32,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import re
@@ -45,6 +46,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
 sys.path.insert(0, str(ROOT / "scripts"))
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 THRESHOLDS = {
     "linkage.name.missing_import": 0,
@@ -85,7 +93,9 @@ def native_facts(cli: Path, binary: Path, work: Path, timeout: int) -> dict:
     return {"functions": functions, "symbols": symbols, "referenced": referenced}
 
 
-def classify(identifier: str, stock: dict, native: dict) -> dict:
+def classify(identifier: str, stock: dict, native: dict,
+             pattern_named: dict[str, str] | None = None) -> dict:
+    pattern_named = pattern_named or {}
     equal, presentation = 0, []
     missing_import, unexplained = [], []
     for entry, fact in sorted(stock.items()):
@@ -116,6 +126,11 @@ def classify(identifier: str, stock: dict, native: dict) -> dict:
         if name.startswith("FUN_") or name in SECTION_NAMES:
             continue
         if name in native["symbols"].get(entry, set()):
+            continue
+        # A pinned pattern names the bytes it matched at this very address
+        # (m5-011); the caller proves the match rather than trusting the shape
+        # of the name.
+        if pattern_named.get(entry) == name:
             continue
         if DERIVED.match(name):
             sources = native["referenced"].get(entry, set())
@@ -152,6 +167,8 @@ def main() -> int:
 
     from thunk_gate import stock_thunks
 
+    patterns_module = load_module("m5_011", ROOT / "tests" / "m5-011_pattern_labels.py")
+
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
                    cwd=ROOT, check=True)
     cli = ROOT / "target/release/lre-cli"
@@ -170,7 +187,22 @@ def main() -> int:
             stock = {key.lower(): {"name": value["name"]}
                      for key, value in exported["thunks"].items()}
             native = native_facts(cli, binary, work, arguments.timeout)
-        row = classify(identifier, stock, native)
+        processor = patterns_module.PROCESSORS.get(entry["architecture"])
+        pattern_named = {}
+        if processor:
+            labels = patterns_module.labelled_patterns(arguments.ghidra, processor)
+            file_entry, read = patterns_module.image_reader(binary)
+            anchor = next((int(address, 16) for address, name
+                           in native["functions"].items() if name == "_entry"), None)
+            if anchor is not None:
+                bias = anchor - file_entry
+                for address, name in native["functions"].items():
+                    for shape, label in labels:
+                        if label == name and read(int(address, 16) - bias,
+                                                  len(shape)) == shape:
+                            pattern_named[address] = label
+                            break
+        row = classify(identifier, stock, native, pattern_named)
         rows.append(row)
         totals["rows"] += row["rows"]
         totals["comparable"] += row["comparable"]

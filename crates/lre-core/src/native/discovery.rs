@@ -177,6 +177,7 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     let Ok(patterns) = session.function_patterns(&ranges) else {
         return None;
     };
+    import.pattern_labels = session.pattern_labels().to_vec();
     super::phase(import, "patterns", patterns_started);
     let flow_started = std::time::Instant::now();
     let mut provider = ConsoleProvider {
@@ -259,6 +260,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
     let patterns = session
         .function_patterns(&ranges)
         .map_err(|error| ImportError::Bad(error.to_string()))?;
+    import.pattern_labels = session.pattern_labels().to_vec();
     let mut provider = ConsoleProvider {
         session,
         shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),

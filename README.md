@@ -345,7 +345,7 @@ same address over the 20 locked ELF inputs
 |---|---|
 | names equal | 1818 |
 | proven-equivalent label (same address, different source) | 74 |
-| pinned pattern label not applied yet | 11 |
+| pattern label applied from the pattern that matched | 11 |
 | unexplained | **0** |
 
 Initializer-array targets take the name their array gives them: the base and
@@ -361,11 +361,14 @@ section table where Ghidra says `entry`, `_DT_INIT`, `_DT_FINI` and nothing.
 The gate proves each one by reading the header, the dynamic table or the
 section table, so "equivalent" is never a shrug.
 
-The 11 pinned rows are `__i686.get_pc_thunk.*`, which stock takes from a
-`<funcstart label=...>` entry in
-`Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`. Ventris reads those
-pattern files for function starts and does not yet apply their labels; the
-rows are pinned by address, so a new one fails the gate.
+The 11 pattern-label rows are `__i686.get_pc_thunk.*`, named from the
+`<funcstart label=...>` attribute of the pattern that matched at that address
+in `Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml` -- the same label
+the console already uses to install a call fixup there.
+`tests/m5-011_pattern_labels.py` checks both directions against the bytes:
+bytes matching a labelled pattern must carry its name, and a function carrying
+a pattern label must have the matching bytes at its entry. A label applied to
+the wrong function fails the gate (verified by mutation).
 
 ### Names at linkage stubs
 

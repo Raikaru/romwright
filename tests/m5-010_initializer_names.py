@@ -50,33 +50,9 @@ THRESHOLDS = {
 
 DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
 # Names stock Ghidra takes from a `<funcstart label=...>` pattern in the pinned
-# install (`Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`). Ventris
-# reads those pattern files for function starts and does not yet apply their
-# labels, so the rows are pinned by address: a new one fails here, and closing
-# the class means deleting its rows.
-PATTERN_LABELS = {
-    "i386_plain_o0": {
-        "00401469": "__i686.get_pc_thunk.bx",
-        "00401480": "__i686.get_pc_thunk.bx"
-    },
-    "i386_plain_o2": {
-        "00401469": "__i686.get_pc_thunk.bx",
-        "00401480": "__i686.get_pc_thunk.bx"
-    },
-    "i386_plain_pie": {
-        "000114c8": "__i686.get_pc_thunk.bx",
-        "000114d0": "__i686.get_pc_thunk.bx",
-        "000115c5": "__i686.get_pc_thunk.dx"
-    },
-    "i386_cpp_o2": {
-        "00401719": "__i686.get_pc_thunk.bx",
-        "00401730": "__i686.get_pc_thunk.bx"
-    },
-    "i386_many_o2": {
-        "00403fc9": "__i686.get_pc_thunk.bx",
-        "00403fe0": "__i686.get_pc_thunk.bx"
-    }
-}
+# install. Empty since m5-011: Ventris applies those labels itself, so such a
+# row would now be a real disagreement. A new row fails here.
+PATTERN_LABELS: dict[str, dict[str, str]] = {}
 
 # Labels for the same address from a different source: ours from the section
 # table or the ELF header, Ghidra's from the dynamic table.
