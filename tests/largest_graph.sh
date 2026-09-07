@@ -10,7 +10,7 @@ PROGRAM="${PROGRAM:-largest-target}"
 PROJECT="$(mktemp -d /tmp/ventris-largest-graph.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
-"$CLI" import-native "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null
+"$CLI" import "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null
 result="$("$CLI" graph "$PROGRAM" --largest --binary "$BINARY" --project "$PROJECT")"
 
 printf '%s' "$result" | python3 -c '

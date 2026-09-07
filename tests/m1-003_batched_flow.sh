@@ -18,7 +18,7 @@ cargo build -q --release -p lre-cli --no-default-features
 CONSOLE=target/release/lre-cli
 
 START=$(python3 -c 'import time; print(time.time())')
-$CONSOLE import-native "$BIN" --name libc --project "$CONSOLE_PROJECT" 2>/dev/null
+$CONSOLE import "$BIN" --name libc --project "$CONSOLE_PROJECT" 2>/dev/null
 END=$(python3 -c 'import time; print(time.time())')
 
 ELAPSED=$(python3 -c "print($END - $START)")

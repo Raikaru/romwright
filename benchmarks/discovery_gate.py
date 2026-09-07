@@ -103,7 +103,7 @@ def main():
                 row.update(oracle_sha256=digest(reference_path), scoring_view_sha256=digest(view_path),
                            raw_oracle_functions=len(raw["entries"]), excluded_functions=len(view["excluded"]))
                 project = Path(temporary) / row["id"]
-                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import-native", str(binary),
+                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import", str(binary),
                     "--name", row["id"], "--project", str(project)], capture_output=True, text=True, timeout=180)
                 if result.returncode:
                     raise ValueError(result.stdout + result.stderr)

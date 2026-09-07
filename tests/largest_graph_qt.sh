@@ -23,7 +23,7 @@ fi
 PROJECT="$(mktemp -d /tmp/ventris-largest-bb-qt.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
-"$CLI" import-native "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null
+"$CLI" import "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null
 largest_json="$("$CLI" graph "$PROGRAM" --largest --binary "$BINARY" --project "$PROJECT")"
 
 largest_info="$(printf '%s' "$largest_json" | python3 -c '

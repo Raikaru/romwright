@@ -154,14 +154,19 @@ impl Core {
     }
 
     /// Imports a binary through the bridge, exports facts into the project
-    /// store, and returns the normalized summary.
+    /// store, and returns the normalized summary. `name` stores the program
+    /// under a caller-chosen name; without one the loader's name is kept.
     pub fn import_program(
         &self,
         bridge: &mut bridge::Bridge,
         session: &str,
         binary: &Path,
+        name: Option<&str>,
     ) -> Result<ProgramSummary> {
-        let summary = bridge.import(session, binary)?;
+        let mut summary = bridge.import(session, binary)?;
+        if let Some(name) = name {
+            summary.program = name.to_string();
+        }
         let id = self.db.upsert_program(
             &summary.program,
             &summary.language,

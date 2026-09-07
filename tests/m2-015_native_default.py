@@ -69,11 +69,14 @@ def main():
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
     subprocess.run(['cargo', 'build', '-q', '-p', 'lre-cli'], cwd=ROOT, check=True)
-    # A JVM must not be reachable: the default path may not need one.
-    env = dict(os.environ, VENTRIS_SERVICE_JAR=str(ROOT / 'does/not/exist.jar'),
-        VENTRIS_GHIDRA=str(ROOT / 'does/not/exist'), DEBUGINFOD_URLS='')
+    # No JVM may be reachable on any default path. The native decompiler still
+    # reads SLEIGH language data from the Ghidra install, so `store` keeps that
+    # install while `bare` removes it too: an import needs neither.
+    store = dict(os.environ, VENTRIS_SERVICE_JAR=str(ROOT / 'does/not/exist.jar'),
+        DEBUGINFOD_URLS='')
     for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
-        env.pop(name, None)
+        store.pop(name, None)
+    env = dict(store, VENTRIS_GHIDRA=str(ROOT / 'does/not/exist'))
     evidence = {}
     with tempfile.TemporaryDirectory(prefix='m2-015-') as temporary:
         work = Path(temporary)
@@ -84,27 +87,33 @@ def main():
         evidence['import'] = result.stdout.strip()
         functions = run(['functions', 'tiny', '--project', str(project)], env)
         assert functions.returncode == 0 and functions.stdout.strip(), functions.stderr
-        entry = functions.stdout.split()[0]
-        evidence['functions'] = len(functions.stdout.strip().splitlines())
+        rows = [line.split() for line in functions.stdout.strip().splitlines()]
+        # A named body, not a stub: the native decompiler needs real code.
+        entry = next(row[0] for row in rows if row[-1] in ('add', 'main'))
+        evidence['functions'] = len(rows)
         for command in (['disasm', str(args.binary), entry, '-n', '4'],
                 ['decompile', str(args.binary), entry, '--name', 'tiny',
                     '--project', str(project)],
                 ['decompile-doc', str(args.binary), entry, '--name', 'tiny',
                     '--project', str(project)]):
-            result = run(command, env)
+            result = run(command, store)
             assert result.returncode == 0 and result.stdout.strip(), \
                 f'{command[0]} must run natively: {result.stderr[-400:]}'
             evidence[command[0]] = len(result.stdout.strip().splitlines())
         for verb in REMOVED:
-            result = run([verb, str(args.binary)], env)
+            result = run([verb, str(args.binary)], store)
             assert result.returncode != 0 and 'unknown command' in result.stderr, \
                 f'{verb} must be gone: {result.stdout} {result.stderr}'
         # `--oracle` must reach for the bridge, and only then.
         oracle = run(['import', str(args.binary), '--oracle', '--project', str(work / 'oracle')],
             env)
-        assert oracle.returncode != 0 and 'exist.jar' in (oracle.stderr + oracle.stdout), \
+        # Only the bridge reports these prerequisites; no native path can.
+        reached = oracle.stderr + oracle.stdout
+        assert oracle.returncode != 0 and ('no Ghidra jars' in reached
+            or 'exist.jar' in reached), \
             f'--oracle must launch the bridge: {oracle.stdout} {oracle.stderr}'
         evidence['oracle_routing'] = oracle.stderr.strip()[:160]
+        evidence['sleigh_data'] = 'native decompile reads SLEIGH languages, never a JVM'
         jar = ROOT / 'service/build/ventris-service.jar'
         installed = Path(os.environ.get('VENTRIS_GHIDRA', Path.home() / 'ghidra_12.1.3_PUBLIC'))
         if jar.is_file() and installed.is_dir():

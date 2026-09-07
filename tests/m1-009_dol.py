@@ -73,7 +73,7 @@ def main():
             if not console.is_file():
                 raise FileNotFoundError(f"Required SLEIGH console missing: {console}")
             # Import only the stripped DOL. Oracle addresses/names never reach the importer.
-            imported = subprocess.run([str(CLI), "import-native", str(args.dol), "--name", "dol",
+            imported = subprocess.run([str(CLI), "import", str(args.dol), "--name", "dol",
                                        "--project", str(work / "project")], capture_output=True, text=True, timeout=600)
             assert imported.returncode == 0, imported.stdout + imported.stderr
             with sqlite3.connect(work / "project/project.sqlite") as db:

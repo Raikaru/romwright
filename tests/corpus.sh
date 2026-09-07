@@ -7,7 +7,7 @@
 # large C (many functions), stripped variants of each.
 #
 # Env: CC (default cc), CXX (default c++), VENTRIS_SLA (unused here;
-# import-native is JVM-free).
+# import is JVM-free).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -105,7 +105,7 @@ for bin in $BINS; do
     proj="$CFG/$name"
     mkdir -p "$proj"
     start=$(date +%s.%N)
-    out=$("$CLI" import-native "$bin" --name "$name" --project "$proj" 2>&1)
+    out=$("$CLI" import "$bin" --name "$name" --project "$proj" 2>&1)
     rc=$?
     end=$(date +%s.%N)
     elapsed=$(echo "$end - $start" | bc)

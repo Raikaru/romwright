@@ -27,10 +27,10 @@ export VENTRIS_SPECS="${VENTRIS_SPECS:-$ROOT/native/specs}"
 rm -rf "$PROJECT"
 mkdir -p "$PROJECT"
 
-"$CLI" import-native "$BIN" --name workflow --project "$PROJECT" > "$PROJECT/import.out"
+"$CLI" import "$BIN" --name workflow --project "$PROJECT" > "$PROJECT/import.out"
 "$CLI" functions workflow --project "$PROJECT" > "$PROJECT/functions.out"
 "$CLI" xrefs workflow --to "$ADDR" --project "$PROJECT" > "$PROJECT/xrefs.out"
-"$CLI" decompile-native-doc "$BIN" "$ADDR" --name workflow --project "$PROJECT" \
+"$CLI" decompile-doc "$BIN" "$ADDR" --name workflow --project "$PROJECT" \
     > "$PROJECT/decompile.json"
 
 python3 - "$PROJECT/decompile.json" "$PROJECT/functions.out" <<'PY'

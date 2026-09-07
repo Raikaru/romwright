@@ -95,18 +95,18 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   the patch, `make ghidra_opt`), binary at native/build/ghidra_opt.
 
 ## Stage 4 closed (this phase)
-- CLI `decompile-native <binary> <addr> [--name P] [--project DIR] [--base HEX]`:
+- CLI `decompile <binary> <addr> [--name P] [--project DIR] [--base HEX]`:
   the supported no-JVM decompile route. Spawns `lre-worker` against the
   patched ghidra_opt (env VENTRIS_GHIDRA_OPT, default native/build/ghidra_opt)
   with vendored specs (native/specs) and the store project. Verified
   token-identical to the bridge oracle (`int add(int param_1,int param_2){
-  return param_2 + param_1;}`) — differential step "CLI decompile-native".
+  return param_2 + param_1;}`) — differential step "CLI decompile".
 - `native/build_console.sh`: reproducible SLEIGH console build (needs
   binutils-devel/bfd.h, Ghidra's own native-build prerequisite; the bfd-less
   spike binary predates the pinned tree). Console env defaults now derive
   from the Ghidra install (VENTRIS_GHIDRA) instead of /tmp/spike.
-- `benchmarks/gate.sh`: full JVM-free workflow gate (import-native ->
-  functions/xrefs/rename/open -> disasm-native -> decompile-native),
+- `benchmarks/gate.sh`: full JVM-free workflow gate (import ->
+  functions/xrefs/rename/open -> disasm -> decompile),
   per-phase peak RSS + total wall; asserts < 100 MB and < 120 s.
   Result on the tiny ELF fixture: peak 39 920 KB, median wall 0.32 s (3 runs) —
   9.5x under the 375 MiB stock baseline (benchmarks/reports/stage4-gate.json).
@@ -127,10 +127,10 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
     release throws; the process exit releases the project lock anyway.
 - Differential fixes: dump_specs now runs after the import (ordering bug
   on fresh runs), stale project locks are removed at the start, and the
-  CLI decompile-native check compares token-identical content (the
+  CLI decompile check compares token-identical content (the
   worker's C text carries no layout whitespace).
 - Final differential (2026-09-02): PASS — protocol worker and CLI
-  decompile-native token-identical to the oracle; native import parity
+  decompile token-identical to the oracle; native import parity
   11/11; stripped CLI discovery 7/7 subsets of the oracle; add/main
   semantic parity.
 
@@ -223,7 +223,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   differential on PIE binaries is part of the matrix work.
 - Differential policy (QA-004): comparisons are categorized —
   exact (byte/whitespace-normalized token identity: worker + CLI
-  decompile-native), semantic (add/main A+B and call targets), subset
+  decompile), semantic (add/main A+B and call targets), subset
   (native entries ⊆ oracle), skipped (console-dependent, explicit note).
   No claim mixes categories.
 
@@ -252,7 +252,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   native decompile/disasm without copying lre-cli's spawn logic"): new
   `lre-core::native_runtime` + `Core::{import_native, disasm_native,
   decompile_native, mem_native}`; lre-cli is now a thin delegate (same
-  methods a GUI consumes). `decompile-native` validates VENTRIS_SLA
+  methods a GUI consumes). `decompile` validates VENTRIS_SLA
   existence — a missing .sla used to surface as a silent "no architecture
   registered" decompiler exception.
 - Typed address accessors on the model rows (FunctionRow::entry_addr,
@@ -320,7 +320,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   naming the `ff 25` PLT stubs), direct-call sweep (call/jcc/jmp rel32),
   and the call-target closure (FUN_<hex> naming). Facts land in the same
   store tables with provenance `native-import / 12.1.3`.
-- CLI: `lre-cli import-native <binary> [--name N] [--project DIR]` — the
+- CLI: `lre-cli import <binary> [--name N] [--project DIR]` — the
   whole import with zero JVM.
 - Verified: tiny_bin native import = 12 code functions whose entry set
   is a subset of the bridge oracle's (differential "import parity" step);
@@ -336,9 +336,9 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   order of magnitude (no JVM in any no-JVM path).
 
 ## JVM-free workflow CLI (added this phase)
-- `lre-cli import-native <binary> [--name N]` — ELF/PE -> store, no JVM.
+- `lre-cli import <binary> [--name N]` — ELF/PE -> store, no JVM.
 - `lre-cli mem <binary> <vaddr> <size>` — mapping-backed memory dump.
-- `lre-cli disasm-native <binary> <addr>` — SLEIGH disassembly via the
+- `lre-cli disasm <binary> <addr>` — SLEIGH disassembly via the
   pinned console (no JVM).
 - `lre-cli comments <program>` / `types <program>` — store-owned facts.
 
@@ -2268,12 +2268,88 @@ M2 — Program-model parity
 - c: update the docs and the CI guard, then publish the evidence. Slices stay
   below 800 changed lines each.
 
+### m2-015 evidence
+- `1ed4788` commits the failing cutover acceptance; the verbs are now native
+  (`import`, `decompile`, `decompile-doc`, `disasm`) with `--oracle` routing
+  to the bridge, and `import --oracle --name NAME` stores under the requested
+  name (`Core::import_program` takes it).
+- `RuntimeConfig::adopt_language`: the console language directory follows the
+  image's own language id. Before this, a non-x86 image kept the x86 language
+  directory, so the SLEIGH console could not resolve its language and native
+  import silently degraded to symtab seeds. PowerPC now runs console flow:
+  644 native vs 653 bridge functions on the PPC ELF (fn.recall 0.9862,
+  fn.precision 1.0000, 1 773 flow call xrefs).
+- Three legacy acceptance scripts were repaired to their own stated criteria:
+  `tests/generic_discovery_test.sh` scores libc in the store's RVA space (the
+  m1-002 oracle is image-relative; since m1-004 the loader maps ELF PIE at
+  Ghidra's default base) -> fn.precision 0.9997, fn.recall 0.9932, and its PPC
+  step scores native against the bridge instead of demanding growth over
+  symtab seeds; `tests/data_xrefs.sh` reads the current xref provenance
+  rendering; `tests/m1-005_pe_relocs.sh` counts every `.text` symbol as an
+  oracle function (`ty 20` alone dropped `___chkstk_ms`) -> tiny_pe p=1.0000
+  r=0.5290, dispatch p=1.0000 r=0.4000.
+- Verification: `cargo test --workspace` 188 pass/2 ignored; `tests/corpus.sh`
+  5/5; `tests/differential.sh`, `tests/workflow.sh`, `tests/m1-004_pie.sh`,
+  `tests/m1-005_pe_relocs.sh`, `tests/data_xrefs.sh`,
+  `tests/generic_discovery_test.sh`, `tests/m2-015_native_default.py`,
+  `tests/m1-008_languages.py`, `tests/m2-005_prototype.py`,
+  `tests/m2-006_revision.py`, `tests/m2-007_switches.py`,
+  `tests/m2-008_nonreturn.py`, `tests/m2-008_ppc_linkage.py`,
+  `tests/m2-009_thunks.py` all pass.
+
+## Measured regressions found this session (not fixed)
+- `tests/m1-003_batched_flow.sh` is red. Release build, this host,
+  `/usr/lib64/libc.so.6`: full native import 24.52 s; with the m2-002
+  data-reference pass skipped 5.70 s. The reference pass therefore costs
+  ~18.8 s (77%), while flow discovery plus every other pass costs 5.70 s
+  against the 4.27 s recorded at m1-003 and its 5.0 s threshold. The gate now
+  measures m2-002's per-function console propagation, not batched flow. The
+  threshold stays as committed; the fix is to batch the reference pass's
+  console requests the way m1-003 batched flow.
+- `tests/m1-008b_pointer_seeds.py` is red for provenance, not recall: the
+  `x86_64_plain_o0` and `x86_64_cpp_o2` oracles carry bridge source hashes
+  from before the m2-002c/m2-003-b service edits, so the test refuses them
+  ("Oracle bridge_sources_sha256 mismatch"). They need regeneration with the
+  current bridge, committed with a fresh report.
+
 ## Next task
-- m2-015: make native import the default user path and keep the bridge behind
-  an `--oracle` flag, with the docs updated and continuous integration using
-  the bridge only for oracle generation.
+- m2-016: restore the m1-003 import budget by batching the m2-002
+  data-reference pass's console requests, then publish the measured
+  program-model parity gate evidence. Its acceptance test does not exist yet;
+  write it first (it must fail: release libc import is 24.52 s today against
+  the committed 5.0 s threshold, of which 18.8 s is the reference pass).
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
   clearly separated accelerator module with an equivalence test, never in the
   discovery core. (Recorded per user direction; do not re-argue.)
+- Console platform targets (recorded per user direction, 2026-09-06; not
+  scheduled yet): PS1, PS2, N64, Game Boy Advance, NDS, 3DS, PS3, Xbox 360,
+  PSP, PS Vita. What the pinned Ghidra 12.1.3 install already supplies, from
+  `lre-cli architectures`:
+  - PS1 R3000A -> `MIPS:LE:32:default`; N64 VR4300 -> `MIPS:BE:64:64-32addr`;
+    PSP Allegrex -> `MIPS:LE:32:default` (VFPU unmodelled); GBA ARM7TDMI ->
+    `ARM:LE:32:v4t`; NDS ARM946E-S/ARM7TDMI -> `ARM:LE:32:v5t` + `v4t`;
+    3DS ARM11/Cortex-A9 -> `ARM:LE:32:v6` + `v7`; Vita Cortex-A9 ->
+    `ARM:LE:32:v7`; PS3 PPE and Xbox 360 Xenon -> `PowerPC:BE:64:default`.
+  - Missing from the pinned install: no R5900 language id (the `r5900l/r5900r`
+    strings in `mips.ldefs` are IDA aliases on generic MIPS, so PS2 MMI and
+    VU0 macro ops are unmodelled), no Cell SPU processor at all, and no
+    VMX128 for Xenon. These need SLEIGH data we do not yet have.
+  - No console loader ships with Ghidra; OSI-licensed third-party loaders and
+    processor extensions exist and are citable under the clean-room policy
+    once each licence is recorded in `docs/third-party.md`: NDS
+    `pedro-javierf/NTRGhidra` (Apache-2.0), Vita `CreepNT/VitaLoaderRedux`
+    (BSD-3-Clause-Clear), PS2 `chaoticgd/ghidra-emotionengine-reloaded`
+    (Apache-2.0, also supplies R5900 MMI/VU0 SLEIGH), GBA
+    `pudii/gba-ghidra-loader` (Apache-2.0), PSP `kotcrab/ghidra-allegrex`,
+    N64 `zeroKilo/N64LoaderWV`, Xbox 360 `zeroKilo/XEXLoaderWV`, 3DS
+    `StartForKiller/ghidra-ctr-loader`, PS1 `lab313ru/ghidra_psx_ldr`.
+    They are Java Ghidra extensions; the JVM is temporary here, so the reuse
+    path is to port the documented format facts into the native loader and
+    record provenance and licence, never to link their code.
+  - Encrypted containers (3DS NCCH/CIA, PS3 SELF, PSP EBOOT, Vita SELF,
+    Xbox 360 XEX) are accepted only already decrypted: no keys are bundled and
+    no runtime network call is permitted (II.1).
+  - Adding any of these as a corpus member still requires a human decision per
+    II.1, one platform at a time.

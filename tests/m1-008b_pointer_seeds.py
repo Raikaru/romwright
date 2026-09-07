@@ -71,7 +71,7 @@ def main():
                 row["oracle_entries_outside_executable_sections"] = [f"{a:08x}" for a in sorted(oracle)
                     if not any(start <= a < end for start, end in executable)]
                 project = work / variant
-                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import-native", str(binary),
+                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import", str(binary),
                     "--name", variant, "--project", str(project)], capture_output=True, text=True, timeout=180)
                 assert result.returncode == 0, result.stdout + result.stderr
                 with sqlite3.connect(project / "project.sqlite") as db:

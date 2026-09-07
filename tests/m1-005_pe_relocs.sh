@@ -24,7 +24,7 @@ TINY_PE_STRIPPED="$WORK/tiny_pe.bin"
 strip "$TINY_PE_UNSTRIPPED" -o "$TINY_PE_STRIPPED"
 
 PROJ1="$WORK/tiny_pe_proj"
-"$CLI" import-native "$TINY_PE_STRIPPED" --name tiny_pe --project "$PROJ1" > /dev/null 2>&1
+"$CLI" import "$TINY_PE_STRIPPED" --name tiny_pe --project "$PROJ1" > /dev/null 2>&1
 
 # 1. Entry point check: entry must be 0x140001400
 ENTRY_COUNT=$("$CLI" functions tiny_pe --project "$PROJ1" | grep -cE '^140001400' || true)
@@ -35,7 +35,7 @@ if [ "$ENTRY_COUNT" -ne 1 ]; then
 fi
 
 # 2. Relocated pointers stored as data xrefs with provenance (not symbols rows)
-RELOC_XREF_COUNT=$("$CLI" xrefs tiny_pe --project "$PROJ1" | grep -c "\[native-import:pe-reloc\]" || true)
+RELOC_XREF_COUNT=$("$CLI" xrefs tiny_pe --project "$PROJ1" | grep -c "source=native-import:pe-reloc" || true)
 if [ "$RELOC_XREF_COUNT" -lt 10 ]; then
     echo "FAIL: expected at least 10 relocated pointer xrefs in store, got $RELOC_XREF_COUNT" >&2
     exit 1
@@ -57,7 +57,9 @@ proj = sys.argv[2]
 out_syms = subprocess.check_output(["objdump", "-t", unstripped]).decode()
 oracle = set()
 for line in out_syms.splitlines():
-    m = re.search(r"\(sec\s+1\).*\(ty\s+20\).*0x([0-9a-fA-F]+)\s+(\S+)$", line)
+    # A `.text` symbol is a function whether or not COFF tagged it `ty 20`:
+    # libgcc helpers such as `___chkstk_ms` carry `ty 0` with external class.
+    m = re.search(r"\(sec\s+1\)(?=.*\((?:ty\s+20|scl\s+2)\)).*0x([0-9a-fA-F]+)\s+(\S+)$", line)
     if m:
         rva = int(m.group(1), 16)
         oracle.add(0x140001000 + rva)
@@ -89,9 +91,9 @@ if [ -f "$DISPATCH_UNSTRIPPED" ]; then
     strip "$DISPATCH_UNSTRIPPED" -o "$DISPATCH_STRIPPED"
 
     PROJ2="$WORK/dispatch_proj"
-    "$CLI" import-native "$DISPATCH_STRIPPED" --name dispatch --project "$PROJ2" > /dev/null 2>&1
+    "$CLI" import "$DISPATCH_STRIPPED" --name dispatch --project "$PROJ2" > /dev/null 2>&1
 
-    DISP_RELOC_XREFS=$("$CLI" xrefs dispatch --project "$PROJ2" | grep -c "\[native-import:pe-reloc\]" || true)
+    DISP_RELOC_XREFS=$("$CLI" xrefs dispatch --project "$PROJ2" | grep -c "source=native-import:pe-reloc" || true)
     if [ "$DISP_RELOC_XREFS" -lt 3 ]; then
         echo "FAIL: dispatch expected at least 3 relocated pointer xrefs, got $DISP_RELOC_XREFS" >&2
         exit 1
@@ -112,7 +114,9 @@ proj = sys.argv[2]
 out_syms = subprocess.check_output(["objdump", "-t", unstripped]).decode()
 oracle = set()
 for line in out_syms.splitlines():
-    m = re.search(r"\(sec\s+1\).*\(ty\s+20\).*0x([0-9a-fA-F]+)\s+(\S+)$", line)
+    # A `.text` symbol is a function whether or not COFF tagged it `ty 20`:
+    # libgcc helpers such as `___chkstk_ms` carry `ty 0` with external class.
+    m = re.search(r"\(sec\s+1\)(?=.*\((?:ty\s+20|scl\s+2)\)).*0x([0-9a-fA-F]+)\s+(\S+)$", line)
     if m:
         rva = int(m.group(1), 16)
         oracle.add(0x140001000 + rva)

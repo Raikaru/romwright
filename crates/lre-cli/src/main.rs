@@ -11,8 +11,8 @@
 //!   lre-cli disasm <program> <address> [-n N]
 //!   lre-cli open <program>                  (store-only reopen: no JVM)
 //!
-//! The native commands (`import-native`, `mem`, `disasm-native`,
-//! `decompile-native`) are thin delegates to Core — the same methods a GUI
+//! The native commands (`import`, `mem`, `disasm`,
+//! `decompile`) are thin delegates to Core — the same methods a GUI
 //! consumes — so no consumer has to re-implement the spawn logic.
 
 use lre_core::{bridge::Bridge, Core};
@@ -30,8 +30,10 @@ fn main() {
 fn usage() {
     eprintln!(
         "usage:
-  lre-cli import <binary> [--project DIR] [--ghidra DIR]
-  lre-cli import-native <binary> [--name NAME] [--signatures DB[,DB]] [--project DIR]   (no JVM)
+  lre-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--project DIR]
+  lre-cli decompile <binary> <address> [--name NAME] [--project DIR] [--base HEX]
+  lre-cli decompile-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
+  lre-cli disasm <binary> <address> [-n N]
   lre-cli architectures [--project DIR]   (uses VENTRIS_GHIDRA)
   lre-cli functions <program> [--project DIR]
   lre-cli symbols <program> [--project DIR]
@@ -44,14 +46,15 @@ fn usage() {
   lre-cli patches <program> [--project DIR]
   lre-cli patch <program> <address> <original-hex> <patched-hex> [--disabled] [--project DIR]
   lre-cli rename <program> <address> <new-name> [--project DIR]
-  lre-cli decompile <program> <address> [--ghidra DIR]
-  lre-cli disasm <program> <address> [-n N] [--ghidra DIR]
-  lre-cli decompile-native <binary> <address> [--name NAME] [--project DIR] [--base HEX]
-  lre-cli decompile-native-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
-  lre-cli disasm-native <binary> <address> [-n N]                  (no JVM)
   lre-cli signatures build --archive A --package P --license L --out DB [--report R] [--min-bytes N]
   lre-cli signatures info --db DB
-  lre-cli dump-specs <program> --out <dir> [--ghidra DIR]"
+  lre-cli mem <binary> <vaddr-hex> [size]
+
+oracle generation only (launches the Stage-1 Java bridge):
+  lre-cli import <binary> --oracle [--name NAME] [--project DIR] [--ghidra DIR]
+  lre-cli decompile <program> <address> --oracle [--ghidra DIR]
+  lre-cli disasm <program> <address> --oracle [-n N] [--ghidra DIR]
+  lre-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]"
         );
     std::process::exit(2);
 }
@@ -89,6 +92,11 @@ fn project_dir(args: &[String]) -> PathBuf {
 }
 
 /// Launch the bridge JVM against the pinned install.
+/// True when a bare flag is present.
+fn has_flag(args: &[String], flag: &str) -> bool {
+    args.iter().any(|argument| argument == flag)
+}
+
 fn launch_bridge(args: &[String]) -> Result<Bridge, String> {
     let install = ghidra_dir(args);
     let classpath = find_ghidra_classpath(&install)?;
@@ -294,10 +302,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
     let core = Core::open(&project_dir(args)).map_err(|e| e.to_string())?;
     let cmd = args[1].as_str();
     match cmd {
-        "import-native" => {
+        // The user path is native. `--oracle` is the only way to the Stage-1
+        // Java bridge, which exists to produce oracles, not to serve users.
+        "import" if !has_flag(args, "--oracle") => {
             let binary = args
                 .get(2)
-                .ok_or("import-native needs a binary path")?
+                .ok_or("import needs a binary path")?
                 .clone();
             let program = flag(args, "--name")
                 .unwrap_or_else(|| {
@@ -349,23 +359,23 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             println!();
         }
-        "disasm-native" => {
-            let binary = args.get(2).ok_or("disasm-native needs a binary path")?.clone();
-            let addr = args.get(3).ok_or("disasm-native needs a vaddr (hex)")?.clone();
+        "disasm" if !has_flag(args, "--oracle") => {
+            let binary = args.get(2).ok_or("disasm needs a binary path")?.clone();
+            let addr = args.get(3).ok_or("disasm needs a vaddr (hex)")?.clone();
             let n: u32 = flag(args, "-n").and_then(|v| v.parse().ok()).unwrap_or(8);
             let text = core
                 .disasm_native(Path::new(&binary), &addr, n)
                 .map_err(|e| e.to_string())?;
             println!("{text}");
         }
-        "decompile-native" => {
+        "decompile" if !has_flag(args, "--oracle") => {
             let binary = args
                 .get(2)
-                .ok_or("decompile-native needs a binary path")?
+                .ok_or("decompile needs a binary path")?
                 .clone();
             let address = args
                 .get(3)
-                .ok_or("decompile-native needs a vaddr (hex)")?
+                .ok_or("decompile needs a vaddr (hex)")?
                 .clone();
             let program = flag(args, "--name").unwrap_or_else(|| {
                 Path::new(&binary)
@@ -385,14 +395,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
             print!("{code}");
         }
-        "decompile-native-doc" => {
+        "decompile-doc" => {
             let binary = args
                 .get(2)
-                .ok_or("decompile-native-doc needs a binary path")?
+                .ok_or("decompile-doc needs a binary path")?
                 .clone();
             let address_arg = args
                 .get(3)
-                .ok_or("decompile-native-doc needs a vaddr (hex)")?
+                .ok_or("decompile-doc needs a vaddr (hex)")?
                 .clone();
             let address = lre_model::Address::parse_ram_hex(&address_arg)
                 .ok_or_else(|| format!("bad address: {address_arg}"))?;
@@ -427,11 +437,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "import" => {
             let binary = args
                 .get(2)
-                .ok_or("import needs a binary path")?
+                .ok_or("import --oracle needs a binary path")?
                 .clone();
+            let name = flag(args, "--name");
             let mut bridge = launch_bridge(args)?;
             let summary = core
-                .import_program(&mut bridge, "main", Path::new(&binary))
+                .import_program(&mut bridge, "main", Path::new(&binary), name.as_deref())
                 .map_err(|e| e.to_string())?;
             println!(
                 "imported {} ({} functions, {})",
@@ -718,7 +729,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let what = core.undo_last(&program).map_err(|e| e.to_string())?;
             println!("{what}");
         }
-        "dump-specs" => {
+        "dump-specs" if has_flag(args, "--oracle") => {
             let program = args.get(2).ok_or("dump-specs needs a program name")?.clone();
             let out = flag(args, "--out").ok_or("dump-specs needs --out DIR")?;
             let mut bridge = launch_bridge(args)?;
@@ -733,8 +744,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             bridge.shutdown().map_err(|e| e.to_string())?;
         }
         "decompile" | "disasm" => {
-            let program = args.get(2).ok_or("command needs a program name")?.clone();
-            let address = args.get(3).ok_or("command needs an address")?.clone();
+            let program = args
+                .get(2)
+                .ok_or("--oracle needs a program name")?
+                .clone();
+            let address = args.get(3).ok_or("--oracle needs an address")?.clone();
             let mut bridge = launch_bridge(args)?;
             let session = format!("cli-{program}");
             bridge

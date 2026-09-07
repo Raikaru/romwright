@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the pinned SLEIGH console (`decomp_opt` in the decompiler Makefile;
-# EXECS line): the interactive console behind `disasm-native` and
-# `import-native --discover`.
+# EXECS line): the interactive console behind `disasm` and
+# `import --discover`.
 #
 # The pinned third_party/ghidra tree is NEVER modified in place; this script
 # copies the decompiler sources aside and applies ghidra-opt-sleigh.patch.

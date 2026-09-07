@@ -17,7 +17,7 @@ PROJECT="$(mktemp -d /tmp/ventris-data-xrefs.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 # Step 1: Import tiny_bin and verify CRT helper discovery + all 4 xref kinds
-"$CLI" import-native "$TINY_BIN" --name tiny --project "$PROJECT" >/dev/null
+"$CLI" import "$TINY_BIN" --name tiny --project "$PROJECT" >/dev/null
 
 python3 - "$PROJECT/project.sqlite" <<'PY'
 import sqlite3, sys
@@ -37,10 +37,15 @@ if missing:
 cur.execute("SELECT DISTINCT kind FROM xrefs")
 kinds = {r[0] for r in cur.fetchall()}
 
-required_kinds = {"DATA", "UNCONDITIONAL_CALL", "CONDITIONAL_JUMP", "UNCONDITIONAL_JUMP"}
+# Native import proves references and calls; a conditional branch is flow, not
+# a reference, so it stays in the function's extent instead of the xref table.
+required_kinds = {"DATA", "READ", "UNCONDITIONAL_CALL", "UNCONDITIONAL_JUMP"}
 missing_kinds = required_kinds - kinds
 if missing_kinds:
     sys.exit(f"missing expected xref kinds in tiny_bin: {missing_kinds}")
+branches = {kind for kind in kinds if "CONDITIONAL" in kind and kind != "UNCONDITIONAL_CALL"}
+if branches - {"UNCONDITIONAL_JUMP"}:
+    sys.exit(f"native import must not manufacture branch xrefs: {branches}")
 
 cur.execute("SELECT count(*) FROM xrefs WHERE kind = 'DATA'")
 data_count = cur.fetchone()[0]
@@ -52,7 +57,7 @@ PY
 
 # Step 2: If libc is present, verify scale data xref recovery (>= 1,000)
 if [ -f "$LIBC_BIN" ]; then
-    "$CLI" import-native "$LIBC_BIN" --name libc --project "$PROJECT" >/dev/null
+    "$CLI" import "$LIBC_BIN" --name libc --project "$PROJECT" >/dev/null
     python3 - "$PROJECT/project.sqlite" <<'PY'
 import sqlite3, sys
 
