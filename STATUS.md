@@ -3058,15 +3058,55 @@ m3-003, all three wired into continuous integration)
   `sys.modules` before `exec_module`, or a `@dataclass` inside it cannot
   resolve its own annotations.
 
+### m6-006 evidence
+- `483311d` commits the failing acceptance
+  (`tests/m6-006_documentation_coverage.py`).
+- Three rules, all derived from the repository rather than from a list in the
+  test:
+  1. **Surfaces are enumerated, not listed.** The workspace's `bin` targets
+     (`cargo metadata`), the desktop `add_executable` target, the modules
+     under `python/` and the scripts under `packaging/` -- 13 surfaces -- must
+     each be named by `README.md` or a page under `docs/`.
+  2. **Command blocks are covered block by block.** A `console`/`json` block
+     must sit on a page a gate executes; an `sh`/`bash` block must carry
+     `<!-- not gated: reason -->` **even on a gated page**, because a page
+     that a gate names would otherwise hide new blocks. 5 pages gated, 30
+     blocks excused with a recorded reason.
+  3. **No page cites a metric no report carries.** 79 metric names are
+     collected recursively from the committed reports (they nest under
+     `metrics`, `totals`, `checks`, and pass-specific blocks such as
+     `optimized_bounds.before`), and a citation counts as a metric only when
+     its parent path is one a report uses -- so `ghidra.dwarf.fn.recall` is
+     checked and the Java package `ghidra.program.model.listing` is not.
+- Found and fixed: `docs/desktop.md` showed its build in a bare fence, so the
+  coverage rule read it as a record while `tests/m6-003` was in fact running
+  those commands; it is now a `console` block and m6-003 reads the `$ `
+  prefix. 29 command blocks in `README.md` and `docs/toolchains.md` had no
+  statement of why nothing runs them; each now carries its reason.
+- A loophole I had to close in my own gate: naming a page inside this test
+  marked it covered, so the gate excludes its own source when checking.
+- Negative controls, each failing: a stale metric citation
+  (`ui.install.retired_metric`), a new `sh` block on an already-gated page, a
+  removed reason, and a surface renamed out of every page.
+
+## M6 state
+- Documentation is complete and gated: `docs/getting-started.md` (workflow),
+  `docs/core-api.md` (wire protocol), `docs/desktop.md` (packaged desktop),
+  `docs/releasing.md` (artifacts, SBOM, manifest), `docs/scripting.md` (SDK),
+  each executed by its own acceptance, plus `m6-006` stating what coverage
+  means. Reports: `m6-001` .. `m6-006`.
+- Every gate in the repository is indexed in the README evidence table
+  (`m5-012`), 61 current reports and 60 rows, regenerated and checked in CI.
+
 ## Next task
-- m6-006: re-record the M6 documentation gates as one milestone report and
-  close M6. Five pages are gated (`getting-started`, `core-api`, `desktop`,
-  `releasing`, `scripting`), each with its own report; what is missing is the
-  milestone-level statement of what documentation coverage means -- every
-  user-facing surface has a page, every page is executed, and no page claims
-  a number no gate measured. The acceptance must enumerate the surfaces from
-  the repository rather than from a list in the test, and fail when a surface
-  has no gated page. Its acceptance test does not exist yet; write it first.
+- m7-001: measure and document the memory and wall-time envelope of the
+  JVM-free workflow against the stock-Ghidra baseline on the locked corpus.
+  `benchmarks/gate.sh` measures peak RSS and wall time for the tiny fixture
+  only, and `benchmarks/reports/baseline-stock.json` records a stock number
+  that nothing currently compares against per corpus entry. The acceptance
+  must score both producers on the same inputs, publish per-entry numbers,
+  and fail when a native phase regresses past a recorded bound. Its
+  acceptance test does not exist yet; write it first.
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,

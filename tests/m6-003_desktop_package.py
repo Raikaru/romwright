@@ -68,8 +68,12 @@ def qt_available() -> str | None:
 def documented_commands() -> list[str]:
     """The build commands `docs/desktop.md` tells a reader to run."""
     assert DOC.is_file(), f"{DOC.relative_to(ROOT)} does not exist"
-    return [line.strip() for line in DOC.read_text(encoding="utf-8").splitlines()
-            if line.startswith("cmake ")]
+    commands = []
+    for line in DOC.read_text(encoding="utf-8").splitlines():
+        stripped = line[2:].strip() if line.startswith("$ ") else line.strip()
+        if stripped.startswith("cmake "):
+            commands.append(stripped)
+    return commands
 
 
 def build_package(build: Path, timeout: int) -> Path:

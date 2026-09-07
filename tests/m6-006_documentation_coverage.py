@@ -33,7 +33,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DOCS = ROOT / "docs"
 REPORTS = ROOT / "benchmarks" / "reports"
-RUNNABLE = re.compile(r"```(console|json)\n", re.MULTILINE)
+COMMANDS = re.compile(r"^```(console|json|sh|bash)$", re.MULTILINE)
+NOT_GATED = re.compile(r"<!--\s*not gated:\s*(.+?)\s*-->", re.DOTALL)
 BACKTICKED = re.compile(r"`([A-Za-z][A-Za-z0-9_.]*)`")
 METRIC_SHAPE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$")
 
@@ -63,28 +64,35 @@ def surfaces() -> dict[str, list[str]]:
 
 
 def reported_metrics() -> tuple[set[str], set[str]]:
-    """Metric names, and their families, from the committed reports."""
+    """Metric names, and the parent paths they use, from the reports.
+
+    Collected recursively: reports nest their numbers differently -- some under
+    `metrics`, some under `totals`, `checks` or a pass-specific block such as
+    `optimized_bounds.before` -- and a metric is a metric wherever it is
+    recorded.
+    """
     names: set[str] = set()
-    for path in sorted(REPORTS.glob("*.json")):
+
+    def walk(value: object) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if METRIC_SHAPE.match(key):
+                    names.add(key)
+                walk(child)
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    for path in sorted(REPORTS.rglob("*.json")):
         try:
-            report = json.loads(path.read_text(encoding="utf-8"))
+            walk(json.loads(path.read_text(encoding="utf-8")))
         except json.JSONDecodeError:
             continue
-        if not isinstance(report, dict):
-            continue
-        for key in ("metrics", "thresholds", "checks"):
-            block = report.get(key)
-            if isinstance(block, dict):
-                names.update(name for name in block if METRIC_SHAPE.match(name))
-        for row in report.get("corpus", []) or []:
-            if isinstance(row, dict):
-                for key in ("metrics", "thresholds"):
-                    block = row.get(key)
-                    if isinstance(block, dict):
-                        names.update(name for name in block
-                                     if METRIC_SHAPE.match(name))
-    families = {name.split(".", 1)[0] for name in names}
-    return names, families
+    # A citation counts as a metric only when its parent path is one a report
+    # uses: `ghidra.dwarf.fn.recall` is a metric, `ghidra.program.model.listing`
+    # is a Java package that happens to start with the same word.
+    parents = {name.rsplit(".", 1)[0] for name in names}
+    return names, parents
 
 
 def main() -> int:
@@ -105,24 +113,54 @@ def main() -> int:
     assert not undocumented, (
         f"these surfaces are named nowhere in README.md or docs/: {undocumented}")
 
-    # 2. Every page that shows commands is executed by a gate.
-    gates = {path.name: path.read_text(encoding="utf-8")
-             for path in sorted((ROOT / "tests").glob("m6-*.py"))}
-    gate_text = "\n".join(gates.values())
-    runnable = sorted(name for name, text in pages.items() if RUNNABLE.search(text))
-    ungated = [name for name in runnable
-               if name not in gate_text and Path(name).name not in gate_text]
+    # 2. Every block that shows commands is executed by a gate, or carries the
+    #    reason it is not. A page named by a gate is covered as a whole; a
+    #    block on any other page needs `<!-- not gated: reason -->` above it.
+    # This gate's own source is excluded: naming a page here would otherwise
+    # mark it covered, which is the loophole a coverage rule must not have.
+    gate_text = "\n".join(path.read_text(encoding="utf-8")
+                          for path in sorted((ROOT / "tests").glob("m6-*.py"))
+                          if path.name != Path(__file__).name)
+    runnable, ungated, excused = [], [], 0
+    for name, text in pages.items():
+        blocks = list(COMMANDS.finditer(text))
+        if not blocks:
+            continue
+        gated = name in gate_text or Path(name).name in gate_text
+        if gated:
+            runnable.append(name)
+            # A gate runs every `console`/`json` block on the page it names.
+            # An `sh`/`bash` block is illustrative even there, so it still owes
+            # a reason -- otherwise a new block hides behind a gated page.
+            blocks = [block for block in blocks
+                      if block.group(1) in ("sh", "bash")]
+        for block in blocks:
+            # The window is characters, not lines: a reason worth reading is
+            # often two lines long.
+            window = text[:block.start()].rstrip()[-320:]
+            marker = None
+            for marker in NOT_GATED.finditer(window):
+                pass
+            reason = None
+            if marker is not None and window.endswith(marker.group(0)):
+                reason = " ".join(marker.group(1).split())
+            line_number = text[:block.start()].count("\n") + 1
+            if reason is None or len(reason) < 20:
+                ungated.append(f"{name}:{line_number}")
+            else:
+                excused += 1
     assert not ungated, (
-        f"these pages show commands and no tests/m6-* gate runs them: {ungated}")
+        f"these command blocks are neither gated nor marked with a reason: "
+        f"{ungated}")
 
     # 3. No page cites a metric no report measured.
-    names, families = reported_metrics()
+    names, parents = reported_metrics()
     assert names, "no metrics were found in the committed reports"
     stale = {}
     for page, text in pages.items():
         cited = {token for token in BACKTICKED.findall(text)
                  if METRIC_SHAPE.match(token)
-                 and token.split(".", 1)[0] in families}
+                 and token.rsplit(".", 1)[0] in parents}
         missing = sorted(token for token in cited if token not in names)
         if missing:
             stale[page] = missing
@@ -130,8 +168,9 @@ def main() -> int:
         f"these pages cite metrics no committed report carries: {stale}")
 
     surface_count = sum(len(names) for names in found.values())
-    summary = (f"{surface_count} surfaces named in prose, {len(runnable)} runnable "
-               f"pages all gated, {len(names)} measured metric names, no stale "
+    summary = (f"{surface_count} surfaces named in prose, {len(runnable)} pages "
+               f"gated command-by-command, {excused} blocks excused with a "
+               f"recorded reason, {len(names)} measured metric names, no stale "
                f"citation")
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
@@ -142,11 +181,12 @@ def main() -> int:
             "passed": True,
             "summary": summary,
             "metrics": {"surfaces": surface_count,
-                        "runnable_pages": len(runnable),
+                        "gated_pages": len(runnable),
+                        "excused_blocks": excused,
                         "metric_names": len(names),
                         "pages": len(pages)},
             "surfaces": found,
-            "runnable_pages": runnable,
+            "gated_pages": sorted(runnable),
         }, indent=1) + "\n")
     print(f"m6-006: PASS ({summary})")
     return 0

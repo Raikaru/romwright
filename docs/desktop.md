@@ -9,10 +9,10 @@ window needs no helper process and no JVM.
 Qt 6.4 or newer with the Widgets and Concurrent modules, CMake 3.21, a C++17
 compiler, and `cargo` for the bridge library.
 
-```
-cmake -S desktop/ventris-qt -B build/ventris-qt -DCMAKE_BUILD_TYPE=Release
-cmake --build build/ventris-qt --config Release --target ventris-qt
-cmake --build build/ventris-qt --config Release --target package
+```console
+$ cmake -S desktop/ventris-qt -B build/ventris-qt -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build/ventris-qt --config Release --target ventris-qt
+$ cmake --build build/ventris-qt --config Release --target package
 ```
 
 The `package` target writes a CPack `TGZ` named
@@ -22,7 +22,10 @@ core.
 
 ## Launch
 
-```
+<!-- not gated: opens a window against a user's own project; the packaged
+     launch is gated offscreen by tests/m6-003_desktop_package.py -->
+
+```sh
 ventris-qt --project DIR --name PROGRAM --binary PATH
 ```
 
