@@ -3571,16 +3571,47 @@ m3-003, all three wired into continuous integration)
 - Five additive metric names (`surface.*`, `ui.xrefs.declared_rows`,
   `ui.xrefs.address`); no II.3 definition changed.
 
+### m9-005 evidence
+- `840f002` commits the failing acceptance
+  (`tests/m9-005_explanation_milestone.py`).
+- The surfaces are enumerated from the repository and then driven: the API
+  methods `docs/core-api.md` publishes, the verbs `lre-cli` prints in its own
+  usage (bare, not `--help`, which it does not accept), and the window the UI
+  gate measures.
+- Measured (`benchmarks/reports/m9-005.json`): **28 of 52** published methods
+  answered on a real project with **0 silent facts**; **5** distinct sources
+  printed by the terminal, all explained; the window rendered **13 declared
+  rows with 0 unexplained**; the four M9 reports each exist, pass, and carry
+  their metric.
+- The single exemption is stated rather than implied: a fact a person asserted
+  (`kind: asserted`) needs no sentence, because the person is the evidence.
+- The 24 unanswered methods are those needing more than a program name; each
+  is driven by the gate that owns it, and the report lists them with the error
+  code they returned rather than dropping them.
+- Controls: removing one class's sentence fails through the terminal
+  (`native-analysis:constant-propagation` printed but unexplained), a window
+  report claiming 2 unexplained rows fails, and flipping any of the four
+  reports' `passed` fails the claim.
+- **M9 is closed.** 15 provenance classes, each with a sentence and an
+  evidence kind; no fact carries a number nothing derives; paged reads filter
+  by kind with an honest total; the terminal and the window both filter, the
+  window measured at the address it opened.
+- Regression: `cargo test --workspace` 238 pass; `m9-001`..`m9-005`,
+  `m8-006`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m5-012`,
+  `support_matrix_test.py`, `m2-015`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` all pass.
+- Six additive metric names (`explanation.*`); no II.3 definition changed.
+
 ## Next task
-- m9-005: close M9 the way `m8-006` closed M8 -- publish fact explanation as
-  one milestone whose claim is derived, not written. Four gates now exist
-  (`m9-001`..`m9-004`) and each writes its own report; nothing states the
-  milestone-level claim or fails when a surface that shows a fact does not
-  show what proved it. The acceptance must enumerate the fact-bearing surfaces
-  from the repository (the API methods that return a `provenance` object, the
-  CLI verbs that print one, the desktop docks that render one), require each to
-  be measured by a committed report, and fail when a surface has no gate
-  behind it. Its acceptance test does not exist yet; write it first.
+- m10-001: the store answers about one program at a time, and a user working
+  on a game has several -- a main executable plus overlays, or a DS pair of
+  CPU images. `lre-cli` takes `--name` per import and every read takes one
+  `program`, so a cross-image question ("which image declares this address?")
+  has no answer. The acceptance must import two images into one project,
+  prove each program's facts stay separate under every paged read, and answer
+  one cross-program question -- which programs map a given address, with the
+  region that maps it -- through the Core API. Its acceptance test does not
+  exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

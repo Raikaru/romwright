@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Publish fact explanation as one milestone
+        run: |
+          python3 tests/m9-005_explanation_milestone.py \
+            --report "$RUNNER_TEMP/explanation.json"
       - name: Drive the evidence filter from the terminal
         run: |
           python3 tests/m9-004_filter_surfaces.py \

@@ -48,11 +48,12 @@ CLAIMS = {
     "m9-003": ["filter.facts_matched", "filter.symbols_matched"],
     "m9-004": ["surface.cli_rows_checked", "surface.narrowing_addresses"],
 }
-# Verbs that need more than a program name; each is driven by another gate.
+# Verbs that need more than a program name, or that write: a milestone gate
+# reads, and each of these is driven by the gate that owns it.
 NEEDS_MORE = {
-    "import", "decompile", "decompile-doc", "disasm", "mem", "memory-regions",
-    "bookmark", "patch", "rename", "comment", "signatures", "dump-specs",
-    "open", "graph", "search", "xrefs", "architectures", "provenance",
+    "import", "decompile", "decompile-doc", "disasm", "mem", "bookmark",
+    "patch", "rename", "comment", "signatures", "dump-specs", "open", "graph",
+    "search", "architectures", "provenance", "undo",
 }
 
 
@@ -109,9 +110,11 @@ def provenance_objects(payload) -> list[dict]:
 
 
 def usage_verbs() -> list[str]:
-    result = subprocess.run([str(ROOT / "target/release/lre-cli"), "--help"],
+    """The verbs the CLI prints in its own usage, which it emits bare."""
+    result = subprocess.run([str(ROOT / "target/release/lre-cli")],
                             cwd=ROOT, capture_output=True, text=True)
     text = result.stdout + result.stderr
+    assert "usage:" in text, f"the CLI prints no usage: {text[:200]!r}"
     verbs = []
     for line in text.splitlines():
         match = USAGE_VERB.match(line)
