@@ -82,3 +82,41 @@ someone else's compiled code. A record without an exact package build cannot be
 audited, and a record without its license cannot be redistributed. Ventris'
 generator records both from the package it opened, never from a guess, and
 `docs/third-party.md` lists the packages a shipped database was built from.
+
+
+## Matching
+
+A record names a function when the byte window at the function's entry
+satisfies every compared position of the pattern, in the program's own
+language, and the record is at least as long as the function's proven body —
+a shorter record would name a function after a fragment of itself. When two
+records claim different names for one window the function keeps its own name:
+a wrong name costs more than a missing one. `confidence` is the share of the
+record that was compared, `compared_bytes / pattern_len`, and a match only
+replaces a generated `FUN_*` name; symbol-table and analyst names stay.
+
+Two library functions can have byte-identical bodies once relocated operands
+are masked. A record is therefore dropped when another body in the same
+package is indistinguishable from it, and every extracted body competes:
+exported functions, bodies below the evidence threshold when they are the same
+length, and `static` functions, whose names identify nothing but whose bodies
+still occupy the image. Omitting that last class was the entire false-positive
+population measured on the first run of `benchmarks/match_gate.py` — 7 of 915
+matches, 0.77% — every one an exported wrapper naming its `static` twin.
+
+### Measured false-positive rate
+
+`benchmarks/match_gate.py` statically links a corpus source against a pinned
+`libc.a`, strips it, imports it with the database built from that same archive,
+and checks every match against the unstripped twin's symbols. A match is
+correct when its name is one of the symbol names at that address.
+
+|Architecture|Matches|Correct|False positives|Rate|
+|---|---|---|---|---|
+|AArch64|303|303|0|0.000|
+|i386|297|297|0|0.000|
+|PowerPC|270|270|0|0.000|
+|Total|870|870|0|0.000|
+
+Recorded in `benchmarks/reports/m2-012.json`; the databases are the ones
+`benchmarks/reports/m2-011.json` describes. This rate is not an II.3 metric.

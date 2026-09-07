@@ -13,10 +13,12 @@
 
 pub mod archive;
 pub mod build;
+pub mod matcher;
 pub mod object;
 
 pub use archive::{ArchiveError, Member};
 pub use build::{BuildError, BuildReport, from_archive};
+pub use matcher::{MatchIndex, Outcome};
 pub use object::{Extracted, Object, ObjectError, SkipReason, Skipped};
 
 pub const MAGIC: &[u8; 4] = b"VSIG";

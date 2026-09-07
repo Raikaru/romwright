@@ -67,14 +67,19 @@ pub struct Skipped {
     pub reason: SkipReason,
 }
 
-/// Exported functions of one relocatable object, plus its identity.
+/// Extracted functions of one relocatable object, plus its identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Object {
     pub machine: u16,
     pub big_endian: bool,
     pub class64: bool,
     pub flags: u32,
+    /// Exported (global or weak) functions: the records' names.
     pub functions: Vec<Extracted>,
+    /// Local functions. Their names identify nothing outside their own
+    /// translation unit, but their bodies still occupy the image and compete
+    /// with exported records.
+    pub locals: Vec<Extracted>,
     pub skipped: Vec<Skipped>,
 }
 
@@ -231,6 +236,7 @@ pub fn relocatable(bytes: &[u8], max_pattern: usize) -> Result<Object> {
         });
     }
     let mut functions = Vec::new();
+    let mut locals = Vec::new();
     let mut skipped = Vec::new();
     let symbol_size = if class64 { 24 } else { 16 };
     for symbols in sections.iter().filter(|section| section.typ == 2) {
@@ -261,10 +267,11 @@ pub fn relocatable(bytes: &[u8], max_pattern: usize) -> Result<Object> {
                     elf.addr(at + 8)? & 0xffff_ffff,
                 )
             };
-            // STT_FUNC with STB_GLOBAL or STB_WEAK binding.
-            if info & 0xf != 2 || !matches!(info >> 4, 1 | 2) {
+            // STT_FUNC of any binding; the binding decides its role below.
+            if info & 0xf != 2 || !matches!(info >> 4, 0 | 1 | 2) {
                 continue;
             }
+            let exported = info >> 4 != 0;
             let name = table
                 .get(name_offset..)
                 .and_then(|tail| tail.split(|&byte| byte == 0).next())
@@ -339,8 +346,9 @@ pub fn relocatable(bytes: &[u8], max_pattern: usize) -> Result<Object> {
             }
 
             match reason {
-                Some(reason) => skipped.push(Skipped { name, reason }),
-                None => functions.push(Extracted {
+                Some(reason) if exported => skipped.push(Skipped { name, reason }),
+                Some(_) => {}
+                None => (if exported { &mut functions } else { &mut locals }).push(Extracted {
                     name,
                     pattern: pattern
                         .iter()
@@ -358,6 +366,7 @@ pub fn relocatable(bytes: &[u8], max_pattern: usize) -> Result<Object> {
         class64,
         flags,
         functions,
+        locals,
         skipped,
     })
 }

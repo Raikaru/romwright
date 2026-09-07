@@ -274,6 +274,7 @@ dependencies = [
  "lre-db",
  "lre-debug",
  "lre-model",
+ "lre-sig",
  "memmap2",
  "serde",
  "serde_json",

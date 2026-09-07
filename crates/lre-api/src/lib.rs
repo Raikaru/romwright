@@ -129,7 +129,33 @@ impl ApiService {
                     .get("name")
                     .and_then(Value::as_str)
                     .unwrap_or("program");
-                value(self.core.import_native(&binary, name))
+                let databases = string_list_param(params, "signatures")?
+                    .into_iter()
+                    .map(std::path::PathBuf::from)
+                    .collect::<Vec<_>>();
+                let (summary, signatures) = self
+                    .core
+                    .import_native_with_signatures(&binary, name, &databases)
+                    .map_err(|error| DispatchError::Request(error.to_string()))?;
+                Ok(json!({
+                    "program": summary.program,
+                    "functions": summary.functions,
+                    "language": summary.language,
+                    "signatures": signatures,
+                }))
+            }
+            "signature_matches" => {
+                let program = string_param(params, "program")?;
+                value(self.core.signature_matches(&program))
+            }
+            "apply_signatures" => {
+                let binary = path_param(params, "binary")?;
+                let program = string_param(params, "program")?;
+                let databases = string_list_param(params, "signatures")?
+                    .into_iter()
+                    .map(std::path::PathBuf::from)
+                    .collect::<Vec<_>>();
+                value(self.core.apply_signatures(&binary, &program, &databases))
             }
             "functions" => {
                 let program = string_param(params, "program")?;
@@ -528,6 +554,19 @@ fn string_param(params: &Value, key: &str) -> Result<String, DispatchError> {
 
 fn path_param(params: &Value, key: &str) -> Result<PathBuf, DispatchError> {
     Ok(PathBuf::from(string_param(params, key)?))
+}
+
+/// Absent means an empty list; a present value must be an array of strings.
+fn string_list_param(params: &Value, key: &str) -> Result<Vec<String>, DispatchError> {
+    let Some(value) = params.get(key) else {
+        return Ok(Vec::new());
+    };
+    value
+        .as_array()
+        .map(|items| items.iter().map(Value::as_str).collect::<Option<Vec<_>>>())
+        .flatten()
+        .map(|items| items.into_iter().map(str::to_owned).collect())
+        .ok_or_else(|| DispatchError::Request(format!("params.{key} must be a string array")))
 }
 
 fn u64_param(params: &Value, key: &str) -> Result<Option<u64>, DispatchError> {

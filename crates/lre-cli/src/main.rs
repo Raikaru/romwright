@@ -31,7 +31,7 @@ fn usage() {
     eprintln!(
         "usage:
   lre-cli import <binary> [--project DIR] [--ghidra DIR]
-  lre-cli import-native <binary> [--name NAME] [--project DIR]   (no JVM)
+  lre-cli import-native <binary> [--name NAME] [--signatures DB[,DB]] [--project DIR]   (no JVM)
   lre-cli architectures [--project DIR]   (uses VENTRIS_GHIDRA)
   lre-cli functions <program> [--project DIR]
   lre-cli symbols <program> [--project DIR]
@@ -306,13 +306,29 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         .map(|s| s.to_string_lossy().into_owned())
                         .unwrap_or_else(|| "program".into())
                 });
-            let summary = core
-                .import_native(Path::new(&binary), &program)
+            let databases: Vec<PathBuf> = flag(args, "--signatures")
+                .into_iter()
+                .flat_map(|value| {
+                    value
+                        .split(',')
+                        .filter(|part| !part.is_empty())
+                        .map(PathBuf::from)
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+            let (summary, signatures) = core
+                .import_native_with_signatures(Path::new(&binary), &program, &databases)
                 .map_err(|e| e.to_string())?;
             println!(
                 "imported {} natively ({} functions, {})",
                 summary.program, summary.functions, summary.language
             );
+            if let Some(report) = signatures {
+                println!(
+                    "signatures: {} records, {} matched, {} renamed, {} conflicts",
+                    report.records, report.matched, report.renamed, report.conflicts
+                );
+            }
         }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
