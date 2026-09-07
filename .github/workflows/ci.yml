@@ -47,6 +47,10 @@ jobs:
           cargo build --release -p lre-cli
           python3 tests/m8-001_pe_unwind.py \
             --report "$RUNNER_TEMP/pe-unwind.json"
+      - name: Publish PE parity as one milestone
+        run: |
+          python3 tests/m8-006_pe_parity.py \
+            --report "$RUNNER_TEMP/pe-parity.json"
       - name: Name PE imports from the import directory
         run: |
           python3 tests/m8-005_pe_imports.py \

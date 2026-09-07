@@ -3405,16 +3405,43 @@ m3-003, all three wired into continuous integration)
   pass.
 - Seven additive metric names (`pe.imports.*`); no II.3 definition changed.
 
+### m8-006 evidence
+- `707b9d9` commits the failing acceptance (`tests/m8-006_pe_parity.py`):
+  three of the four PE evidence classes had **no committed report naming
+  them** -- `pe-unwind`, `pe-tls` and `pe-export` were asserted by gates that
+  never recorded which class they proved.
+- The classes are read from the importer's own vocabulary (the
+  `native-import:pe-*` provenance strings in `crates/lre-core/src`), then
+  checked three ways: every class must be **exercised** by a committed
+  fixture, **measured** by a committed report other than this one, and the
+  five milestone claims must each exist, pass, and carry their metric.
+- Fixed by having `m8-001` and `m8-004` record `provenance_proven` -- the
+  classes their own stores prove -- instead of a boolean.
+- Measured (`benchmarks/reports/m8-006.json`): 4 declared classes, 0
+  unexercised, 0 unmeasured, **865 references** and **260 external symbols**
+  across the four PE fixtures.
+- Controls: a declared-but-unproduced class fails
+  (`native-import:pe-fake`), stripping a class from *every* report fails, and
+  a report whose `passed` turns false fails. Removing one of several holders
+  passes, which is correct: redundant coverage is still coverage.
+- **M8 is closed.** PE32+ recall 1.0000 with 0 unattributed; PE32 recall
+  0.8065 against stock 0.7634 with 0 unattributed and every miss classified;
+  body extents 0 crossing and 0.9873 exact; 8 TLS callbacks and 3 exports from
+  the directories that declare them; 166 imports named through the same
+  linkage path ELF uses.
+- Five additive metric names (`pe.classes.*`, `pe.references`,
+  `pe.externals`); no II.3 definition changed.
+
 ## Next task
-- m8-006: close M8 by publishing PE parity as one measured milestone, the way
-  `m5-012` closed linkage parity. Five PE gates now exist (`m8-001`..`m8-005`)
-  and each writes its own report; nothing states the milestone-level claim or
-  fails when a PE surface has no gate. The acceptance must enumerate the PE
-  evidence classes **from the importer's own provenance strings**
-  (`pe-unwind`, `pe-reloc`, `pe-tls`, `pe-export`, plus the import externals),
-  require each to be measured by a committed report, and fail when a class
-  appears in the code with no gate behind it. Its acceptance test does not
-  exist yet; write it first.
+- m9-001: the desktop shows PE facts it has no way to explain. `m8-004` and
+  `m8-005` added `native-import:pe-tls`, `native-import:pe-export` and import
+  externals, and `desktop/ventris-qt` renders a provenance string verbatim in
+  its facts dock, so a user sees `native-import:pe-export` with no statement
+  of what proved it. The acceptance must drive the packaged desktop through a
+  PE fixture with `ui_gate`-style measured metrics, assert every provenance
+  class the store holds renders with a human sentence taken from one table
+  shared with the CLI, and fail when a class has no sentence. Its acceptance
+  test does not exist yet; write it first.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
