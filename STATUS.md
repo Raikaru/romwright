@@ -2100,11 +2100,20 @@ M2 — Program-model parity
 - m2-010 is complete. No metric definition, corpus member, or reserved
   decision changed.
 
+## m2-011 implementation slices
+- a: commit the failing gate (`benchmarks/signature_gate.py`) that builds
+  databases from the pinned cross sysroot archives and reports record count and
+  byte size per source, with a byte-identical rebuild check.
+- b: `lre-sig` gains the `ar` archive reader and ELF `ET_REL` extraction:
+  per-function patterns with relocation-covered bytes masked from public
+  relocation width tables, rejecting unknown relocation types instead of
+  guessing a width. Unit tests cover both.
+- c: `lre-cli signatures build|info`, the CI job, and the docs. Slices stay
+  below 800 changed lines each.
+
 ## Next task
 - m2-011: generate packaged-library signatures in continuous integration from
-  static archives (glibc, musl, MinGW CRT, libstdc++, devkitPPC), reporting
-  database size and record count. Its acceptance test does not exist yet;
-  write it first.
+  the pinned static archives, reporting database size and record count.
 
 ## Reserved decisions
 - m1-010 gate amendment: architecture-specific code is permitted only in a
