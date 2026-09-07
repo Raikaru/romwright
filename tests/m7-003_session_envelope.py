@@ -203,12 +203,18 @@ def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict
 
     early = slice(0, ROUNDS // 2)
     late = slice(ROUNDS // 2, ROUNDS)
-    drift = {}
+    # Two numbers, because a ratio on a 0.15 ms read says nothing: the ratio
+    # for methods slow enough for it to bind, and how many milliseconds the
+    # worst method is from failing (negative while it passes).
+    ratios, excess = {}, {}
     for method, samples in latencies.items():
         before = statistics.median(samples[early])
         after = statistics.median(samples[late])
-        drift[method] = round(after / before, 2) if before else 0.0
-        assert after <= before * DRIFT_FACTOR + DRIFT_FLOOR_MS, (
+        bound = before * DRIFT_FACTOR + DRIFT_FLOOR_MS
+        excess[method] = round(after - bound, 3)
+        if before >= DRIFT_FLOOR_MS:
+            ratios[method] = round(after / before, 2)
+        assert after <= bound, (
             f"{identifier}: {method} slowed from {before:.2f}ms to "
             f"{after:.2f}ms over the session")
 
@@ -222,7 +228,8 @@ def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict
         "peak_kb": sampler.peak,
         "growth_kb": growth,
         "growth_tolerance_kb": tolerance,
-        "drift_ratio_max": max(drift.values()),
+        "drift_ratio_max": max(ratios.values(), default=None),
+        "drift_excess_ms_max": max(excess.values()),
         "latency_ms": {method: round(statistics.median(samples), 3)
                        for method, samples in latencies.items()},
     }
@@ -276,7 +283,11 @@ def main() -> int:
         "session.growth_kb.max": max(row["growth_kb"] for row in rows),
         "session.growth_kb.median":
             statistics.median(row["growth_kb"] for row in rows),
-        "session.drift_ratio.max": max(row["drift_ratio_max"] for row in rows),
+        "session.drift_excess_ms.max":
+            max(row["drift_excess_ms_max"] for row in rows),
+        "session.drift_ratio.max":
+            max((row["drift_ratio_max"] for row in rows
+                 if row["drift_ratio_max"] is not None), default=None),
     }
     for method in methods:
         metrics[f"session.latency_ms.{method}.median"] = round(
@@ -286,9 +297,11 @@ def main() -> int:
                f"{rows[0]['requests_per_round']} requests x {WARMUP} warm-up + "
                f"{ROUNDS} measured rounds: "
                f"peak {metrics['session.peak_kb.median']} KiB median, resident "
-               f"growth {metrics['session.growth_kb.max']} KiB worst case after "
-               f"round 2, latency drift {metrics['session.drift_ratio.max']}x "
-               f"worst case, every entry inside the recorded envelope")
+               f"growth {metrics['session.growth_kb.max']} KiB worst case "
+               f"across the measured rounds, the worst method "
+               f"{abs(metrics['session.drift_excess_ms.max']):.2f}ms "
+               f"{'past' if metrics['session.drift_excess_ms.max'] > 0 else 'inside'}"
+               f" its drift bound, every entry inside the recorded envelope")
     if not console:
         summary += "; decompile_doc skipped without a console"
 

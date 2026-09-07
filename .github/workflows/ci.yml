@@ -230,6 +230,13 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$VENTRIS_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/decompile-envelope.json"
+      - name: Bound the long-lived session envelope
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m7-003_session_envelope.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/session-envelope.json"
       - name: Enforce the M3 DWARF ground-truth gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
