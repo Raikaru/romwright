@@ -4286,19 +4286,50 @@ m3-003, all three wired into continuous integration)
   `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` pass. 97 reports
   indexed, both generators in sync.
 
+### m4-016 evidence
+- Two accounting defects, both of which counted something that is not ours
+  against us:
+  - **direction.** The `flow` class licensed any `/* WARNING: */` comment in
+    either direction, so `Unknown calling convention -- yet parameter storage
+    is locked` -- which *stock* prints about its own locked-storage prototype,
+    on `printf`/`abort` stubs whose text is otherwise ours exactly -- was
+    filed as flow we disagree about. A warning we emit and stock does not is
+    ours; the reverse is now `oracle-warning`, licensing its own tokens and
+    nothing else.
+  - **the prototype class.** Its second condition matched the callee name
+    anywhere in the oracle's text, including the decompiled function's *own
+    signature*, and looked for a prototype at the import **slot**, which
+    carries none by construction. It now requires a call in the oracle's body
+    and looks for the signature on the stub the name resolves to.
+- The cast class became a contributing class as well as an early return: a row
+  can differ by a typed slot *and* by a warning stock emits, and both have to
+  be named for the token accounting to close.
+- Measured, on the same 56 functions: `flow` 8 -> **3**,
+  `missing-external-prototype` 10 -> **5**, `oracle-warning` **8** (new),
+  `type-stronger` 9 -> **18**; token identity **30** unchanged, 0 unaccounted
+  tokens. Baseline re-recorded. What remains a gap of ours is now
+  `function-facts` 10, `missing-external-prototype` 5, `flow` 3 and
+  `data-type-unknown` 2.
+- Controls: a warning only we emit still counts as `flow` (without which the
+  split would be an excuse); warnings in both directions are named in both;
+  and the recorded `printf` stub pair -- the real texts from both decompilers,
+  byte for byte in the test -- is accounted for with no residue and no missing
+  prototype.
+- Regression: `cargo test --workspace` **245 pass**; `m4-002`, `m4-004`,
+  `m4-010`..`m4-016`, `m3-001`, `m3-003`, `m9-001`, `m9-002`, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh` pass. 98 reports indexed,
+  both generators in sync.
+
 ## Next task
-- m4-016: the largest remaining class is `missing-external-prototype` **10**,
-  and the pair dump says five of those rows are *the oracle's* defect, not
-  ours: on `printf`/`abort` stubs across four languages our text is the
-  oracle's minus `/* WARNING: Unknown calling convention -- yet parameter
-  storage is locked */`, which stock emits about its own locked-storage
-  prototype. The class also over-fires: its second condition matches a name in
-  the function's *own* signature, and checks a prototype at the import slot
-  rather than at the stub. Split the warning classes (a warning we emit and
-  stock does not is a gap; the reverse is not), narrow the prototype condition
-  to a call the oracle makes by name, and re-measure. Acceptance: a failing
-  test first, per-class counts before and after, and a control proving a row
-  where *we* warn and stock does not still counts against us.
+- m4-017: `function-facts` **10** is now the largest gap, and it is a bag: the
+  class records any difference in name, signature or return type without
+  saying which, so it hides three unrelated causes (a return type stock
+  recovers and we do not, a signature the archive supplied to one side only,
+  and a name difference that also drags parameters). Split it by field, count
+  each, and take the largest. Diagnosis first, on the committed divergence
+  files (`benchmarks/reports/m4-003-divergences/*.jsonl`), then a failing test
+  for whichever cause the count names. Acceptance: per-field counts recorded,
+  the chosen cause fixed with its own control, and identity re-measured.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

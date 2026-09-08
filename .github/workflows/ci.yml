@@ -264,6 +264,10 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Count each divergence in the direction it points
+        run: |
+          python3 tests/m4-016_class_direction.py \
+            --report "$RUNNER_TEMP/discovery/class-direction.json"
       - name: Record how wide each data access is
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

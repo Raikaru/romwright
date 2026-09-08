@@ -1,0 +1,28 @@
+{
+  "task": "m4-016",
+  "recorded_at": "2026-09-08T04:27:02.929357+00:00",
+  "scope": "classifier acceptance on recorded texts, not a corpus gate",
+  "metrics": {
+    "oracle_only": [
+      "oracle-warning"
+    ],
+    "ours_only": [
+      "flow"
+    ],
+    "both": [
+      "flow",
+      "oracle-warning"
+    ],
+    "own_signature": [
+      "type-stronger"
+    ],
+    "real_gap": [
+      "missing-external-prototype"
+    ],
+    "recorded_stub": [
+      "oracle-warning",
+      "type-stronger"
+    ]
+  },
+  "passed": true
+}
