@@ -961,6 +961,27 @@ impl Core {
     /// Native structured decompilation for a typed RAM address. The document
     /// is stamped with the durable store revision observed after the worker
     /// returns, so a view can reject stale metadata.
+    /// Native decompilation of several addresses from one worker launch. The
+    /// decompiler loads its language once per launch, so a batch is what makes
+    /// comparing a hundreds-of-functions image affordable. Keys are
+    /// eight-digit addresses.
+    pub fn decompile_native_batch(
+        &self,
+        binary: &Path,
+        addresses: &[String],
+        program: &str,
+        base: Option<u64>,
+    ) -> Result<std::collections::BTreeMap<String, String>> {
+        Ok(native_runtime::decompile_native_batch(
+            &self.config,
+            binary,
+            addresses,
+            program,
+            &self.db_path,
+            base,
+        )?)
+    }
+
     pub fn decompile_native_doc(
         &self,
         binary: &Path,

@@ -49,8 +49,12 @@ GHIDRA = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_
 CLI = ROOT / "target/release/lre-cli"
 # Pinned once, compared against afterwards, like the memory envelopes.
 BASELINE = ROOT / "benchmarks/reports/parity-baseline.json"
-# The variant to compare: the smallest rows, and every function in them.
-VARIANT = "plain_o0"
+# The variants to compare: every ELF variant the corpus lock already holds
+# for a measured language, and every function in each of them. `plain_pie`
+# is excluded because its load bias makes the two stores name different
+# addresses for the same function, which is a comparison of loaders rather
+# than of decompilers.
+VARIANTS = ("plain_o0", "plain_o2", "cpp_o2", "many_o2")
 # A language with no corpus row cannot be measured; each needs a reason, and
 # `container` reasons are checked by asking the oracle to load the image.
 BLOCKED = {
@@ -529,7 +533,22 @@ def residue(native_text: str, oracle_text: str, native_row: dict, oracle_row: di
     return sorted(set(left))
 
 
-def compare_language(language: str, binary: Path, work: Path, timeout: int) -> dict:
+def batch(*arguments: str, timeout: int) -> dict[str, str]:
+    """One decompiler launch for a whole list of addresses.
+
+    Both backends load their language (and, for the oracle, a JVM and a
+    project) once per launch, so a per-function launch is what used to make a
+    corpus-wide comparison unaffordable: 400 functions cost minutes instead
+    of an hour.
+    """
+    result = cli(*arguments, timeout=timeout)
+    assert result.returncode == 0, (
+        f"decompile-batch failed: {result.stderr.strip()[-400:]}")
+    return json.loads(result.stdout)
+
+
+def compare_row(language: str, variant: str, binary: Path, work: Path,
+                timeout: int) -> dict:
     """Import both ways, then compare every function both stores hold."""
     program = binary.name
     native_project, oracle_project = work / "native", work / "oracle"
@@ -551,27 +570,32 @@ def compare_language(language: str, binary: Path, work: Path, timeout: int) -> d
     shared = sorted(set(native_facts) & set(oracle_facts))
     assert shared, f"{language}: the two stores share no function"
 
+    addresses = [f"{entry:08x}" for entry in shared]
+    joined = ",".join(addresses)
+    native_texts = batch("decompile-batch", str(binary), joined,
+                         "--project", str(native_project), timeout=timeout)
+    oracle_texts = batch("decompile-batch", program, joined, "--oracle",
+                         "--project", str(oracle_project), "--ghidra", str(GHIDRA),
+                         timeout=timeout)
+
     identical, attributed, unattributed, skipped = [], [], [], []
     for entry in shared:
         address = f"{entry:08x}"
-        native_text = cli("decompile", str(binary), address,
-                          "--project", str(native_project), timeout=timeout)
-        oracle_text = cli("decompile", program, address, "--oracle",
-                          "--project", str(oracle_project), "--ghidra", str(GHIDRA),
-                          timeout=timeout)
-        if native_text.returncode or oracle_text.returncode:
+        native_text = native_texts.get(address)
+        oracle_text = oracle_texts.get(address)
+        if native_text is None or oracle_text is None:
             skipped.append({"address": address,
-                            "native_error": native_text.stderr.strip()[-200:],
-                            "oracle_error": oracle_text.stderr.strip()[-200:]})
+                            "native_answered": native_text is not None,
+                            "oracle_answered": oracle_text is not None})
             continue
-        native_stream, oracle_stream = tokens(native_text.stdout), tokens(oracle_text.stdout)
+        native_stream, oracle_stream = tokens(native_text), tokens(oracle_text)
         if native_stream == oracle_stream:
             identical.append({"address": address, "tokens": len(native_stream)})
             continue
-        classes = classify(native_text.stdout, oracle_text.stdout,
+        classes = classify(native_text, oracle_text,
                            native_facts[entry], oracle_facts[entry], entry, store,
                            oracle_store)
-        left = residue(native_text.stdout, oracle_text.stdout, native_facts[entry],
+        left = residue(native_text, oracle_text, native_facts[entry],
                        oracle_facts[entry], classes, store) if classes else []
         if classes and not left:
             attributed.append({"address": address, "classes": classes,
@@ -582,8 +606,8 @@ def compare_language(language: str, binary: Path, work: Path, timeout: int) -> d
                 "address": address, "classes": sorted(classes), "residue": left[:12],
                 "oracle": " ".join(oracle_stream)[:400],
                 "native": " ".join(native_stream)[:400]})
-    return {"language": language, "program": program, "shared": len(shared),
-            "identical": identical, "attributed": attributed,
+    return {"language": language, "variant": variant, "program": program,
+            "shared": len(shared), "identical": identical, "attributed": attributed,
             "unattributed": unattributed, "skipped": skipped}
 
 
@@ -622,14 +646,16 @@ def main() -> int:
         "the oracle bridge jar is missing; build service/ before this gate")
 
     lock = json.loads(LOCK.read_text())
-    rows = {row["expected_language"]: row for row in lock["entries"]
-            if row["format"] == "elf" and row["variant"] == VARIANT}
+    rows = {(row["expected_language"], row["variant"]): row
+            for row in lock["entries"]
+            if row["format"] == "elf" and row["variant"] in VARIANTS}
+    measurable = {language for language, _ in rows}
     languages = bundled_languages()
     unclassified = [language for language in languages
-                    if language not in rows and language not in BLOCKED]
+                    if language not in measurable and language not in BLOCKED]
     assert not unclassified, (
         f"these bundled languages are neither measured nor blocked: {unclassified}")
-    stale = [language for language in BLOCKED if language in rows]
+    stale = [language for language in BLOCKED if language in measurable]
     assert not stale, (
         f"these languages are blocked for want of a corpus row that now exists: "
         f"{stale}")
@@ -645,23 +671,34 @@ def main() -> int:
                         note.pop("container"), work / "container", arguments.timeout)
                 blocked[language] = note
                 continue
-            binary = (arguments.corpus_dir / rows[language]["binary"]).resolve()
-            assert binary.is_file(), f"{language}: {binary} is missing"
-            row_work = work / language.replace(":", "-")
-            row_work.mkdir(parents=True)
-            measured.append(compare_language(language, binary, row_work,
-                                             arguments.timeout))
+            # Every variant the lock holds for this language, so an
+            # optimized or C++ row cannot hide behind the smallest one.
+            present = [variant for variant in VARIANTS if (language, variant) in rows]
+            assert present == list(VARIANTS), (
+                f"{language}: the lock holds {present} of {list(VARIANTS)}; a "
+                f"measured language is measured on every variant it has")
+            for variant in present:
+                binary = (arguments.corpus_dir
+                          / rows[(language, variant)]["binary"]).resolve()
+                assert binary.is_file(), f"{language}/{variant}: {binary} is missing"
+                row_work = work / f"{language.replace(':', '-')}-{variant}"
+                row_work.mkdir(parents=True)
+                measured.append(compare_row(language, variant, binary, row_work,
+                                            arguments.timeout))
 
     for row in measured:
         assert not row["unattributed"], (
-            f"{row['language']}: {len(row['unattributed'])} function(s) differ from "
+            f"{row['language']}/{row['variant']}: {len(row['unattributed'])} "
+            f"function(s) differ from "
             f"the oracle by tokens no fact explains: "
             f"{[(item['address'], item['classes'], item['residue']) for item in row['unattributed']][:4]}")
         assert not row["skipped"], (
-            f"{row['language']}: {len(row['skipped'])} function(s) could not be "
+            f"{row['language']}/{row['variant']}: {len(row['skipped'])} "
+            f"function(s) could not be "
             f"compared: {row['skipped'][:2]}")
         assert row["identical"], (
-            f"{row['language']}: no function was token-identical, so nothing is "
+            f"{row['language']}/{row['variant']}: no function was token-identical, "
+            f"so nothing is "
             f"proven for it")
 
     identical = sum(len(row["identical"]) for row in measured)
@@ -673,8 +710,9 @@ def main() -> int:
                 per_class[name] = per_class.get(name, 0) + 1
     metrics = {
         "parity.languages_bundled": len(languages),
-        "parity.languages_measured": len(measured),
+        "parity.languages_measured": len({row["language"] for row in measured}),
         "parity.languages_blocked": len(blocked),
+        "parity.rows_measured": len(measured),
         "parity.functions_compared": identical + attributed,
         "parity.functions_token_identical": identical,
         "parity.functions_fact_attributed": attributed,
@@ -683,8 +721,9 @@ def main() -> int:
     metrics.update({f"parity.class.{name}": count
                     for name, count in sorted(per_class.items())})
     summary = (
-        f"{len(measured)} of {len(languages)} bundled languages measured against the "
-        f"JVM oracle on committed corpus rows: {identical} of "
+        f"{len({row['language'] for row in measured})} of {len(languages)} bundled "
+        f"languages measured against the JVM oracle on {len(measured)} committed "
+        f"corpus rows ({', '.join(VARIANTS)}): {identical} of "
         f"{identical + attributed} functions token-identical, {attributed} differing "
         f"only where a named fact differs "
         f"({', '.join(f'{name} {count}' for name, count in sorted(per_class.items()))}"
@@ -694,9 +733,10 @@ def main() -> int:
     # Every count is pinned: an improvement and a regression both have to be
     # re-recorded deliberately, which is what keeps a divergence class from
     # being quietly widened into an excuse.
-    counts = {"languages": {row["language"]: {"identical": len(row["identical"]),
-                                              "attributed": len(row["attributed"])}
-                            for row in measured},
+    counts = {"rows": {f"{row['language']}/{row['variant']}":
+                       {"identical": len(row["identical"]),
+                        "attributed": len(row["attributed"])}
+                       for row in measured},
               "classes": dict(sorted(per_class.items()))}
     if arguments.record:
         BASELINE.write_text(json.dumps({
@@ -711,9 +751,11 @@ def main() -> int:
     assert BASELINE.is_file(), (
         f"{BASELINE.relative_to(ROOT)} is missing; record it with --record first")
     recorded = json.loads(BASELINE.read_text())["counts"]
-    assert counts["languages"] == recorded["languages"], (
-        f"per-language parity moved: recorded {recorded['languages']}, measured "
-        f"{counts['languages']}")
+    assert counts["rows"] == recorded["rows"], (
+        f"per-row parity moved: recorded "
+        f"{ {k: v for k, v in recorded['rows'].items() if counts['rows'].get(k) != v} }, "
+        f"measured "
+        f"{ {k: v for k, v in counts['rows'].items() if recorded['rows'].get(k) != v} }")
     assert counts["classes"] == recorded["classes"], (
         f"the divergence classes moved: recorded {recorded['classes']}, measured "
         f"{counts['classes']}")
@@ -728,10 +770,12 @@ def main() -> int:
             detail.mkdir(parents=True, exist_ok=True)
             payload = "".join(json.dumps(item) + "\n"
                               for item in row["attributed"]).encode()
-            path = detail / f"{row['language'].replace(':', '-')}.jsonl"
+            path = detail / (f"{row['language'].replace(':', '-')}"
+                             f"-{row['variant']}.jsonl")
             path.write_bytes(payload)
             rows.append({
-                "language": row["language"], "program": row["program"],
+                "language": row["language"], "variant": row["variant"],
+                "program": row["program"],
                 "shared": row["shared"],
                 "identical": len(row["identical"]),
                 "identical_tokens": sum(item["tokens"] for item in row["identical"]),

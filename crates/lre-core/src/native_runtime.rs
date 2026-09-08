@@ -263,7 +263,7 @@ pub fn language_decompile_config(
 fn run_decompiler(
     cfg: &RuntimeConfig,
     binary: &Path,
-    address: &str,
+    addresses: &[String],
     program: &str,
     project_dir: &Path,
     base: Option<u64>,
@@ -324,7 +324,7 @@ fn run_decompiler(
         .arg(specs)
         .arg(binary)
         .arg(program)
-        .arg(address)
+        .args(addresses)
         .arg("--project")
         .arg(project_dir)
         .arg("--base")
@@ -358,8 +358,39 @@ pub fn decompile_native(
     project_dir: &Path,
     base: Option<u64>,
 ) -> Result<String> {
-    let stdout = run_decompiler(cfg, binary, address, program, project_dir, base, false)?;
+    let stdout = run_decompiler(
+        cfg, binary, std::slice::from_ref(&address.to_string()), program, project_dir,
+        base, false,
+    )?;
     Ok(String::from_utf8_lossy(&stdout).into_owned())
+}
+
+/// Decompiles several addresses from one worker launch. The decompiler loads
+/// its language once per launch, so a batch is what makes comparing a
+/// hundreds-of-functions image affordable (m4-022). Answers are keyed by the
+/// eight-digit address the caller asked for.
+pub fn decompile_native_batch(
+    cfg: &RuntimeConfig,
+    binary: &Path,
+    addresses: &[String],
+    program: &str,
+    project_dir: &Path,
+    base: Option<u64>,
+) -> Result<std::collections::BTreeMap<String, String>> {
+    if addresses.is_empty() {
+        return Ok(std::collections::BTreeMap::new());
+    }
+    if addresses.len() == 1 {
+        let text = decompile_native(cfg, binary, &addresses[0], program, project_dir, base)?;
+        let key = u64::from_str_radix(addresses[0].trim_start_matches("0x"), 16)
+            .map_err(|e| NativeRuntimeError(format!("address {}: {e}", addresses[0])))?;
+        return Ok([(format!("{key:08x}"), text)].into_iter().collect());
+    }
+    let stdout = run_decompiler(cfg, binary, addresses, program, project_dir, base, false)?;
+    let text = String::from_utf8(stdout)
+        .map_err(|e| NativeRuntimeError(format!("worker batch is not UTF-8: {e}")))?;
+    serde_json::from_str(text.trim())
+        .map_err(|e| NativeRuntimeError(format!("invalid worker batch: {e}")))
 }
 
 /// Performs the same native decompile but returns the packed document as
@@ -373,7 +404,10 @@ pub fn decompile_native_doc(
     project_dir: &Path,
     base: Option<u64>,
 ) -> Result<lre_model::DecompDoc> {
-    let stdout = run_decompiler(cfg, binary, address, program, project_dir, base, true)?;
+    let stdout = run_decompiler(
+        cfg, binary, std::slice::from_ref(&address.to_string()), program, project_dir,
+        base, true,
+    )?;
     let text = String::from_utf8(stdout)
         .map_err(|e| NativeRuntimeError(format!("worker document is not UTF-8: {e}")))?;
     serde_json::from_str(text.trim())
