@@ -131,6 +131,21 @@ fn worker_candidate() -> PathBuf {
         .unwrap_or_else(|| PathBuf::from("target/debug/lre-worker"))
 }
 
+/// The worker memory cap in bytes: `VENTRIS_WORKER_MEMORY_CAP` when it names
+/// one, 256 MiB otherwise.
+///
+/// A host with less memory than the one this default was measured on has to
+/// bound its workers lower, and a cap below a fresh worker's own footprint
+/// would fail every request instead of bounding a long session -- so a value
+/// under 16 MiB, or one that is not a number, keeps the default.
+fn worker_memory_cap(value: Option<&str>) -> u64 {
+    const DEFAULT: u64 = 256 * 1024 * 1024;
+    value
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .filter(|cap| *cap >= 16 * 1024 * 1024)
+        .unwrap_or(DEFAULT)
+}
+
 impl RuntimeConfig {
     /// Builds a config from the environment (the CLI's documented surface),
     /// with repo/install-relative defaults.
@@ -205,7 +220,9 @@ impl RuntimeConfig {
             console_path,
             sla_path,
             ghidra_install: install,
-            worker_memory_cap: 256 * 1024 * 1024,
+            worker_memory_cap: worker_memory_cap(
+                std::env::var("VENTRIS_WORKER_MEMORY_CAP").ok().as_deref(),
+            ),
             console_shards,
             register_params: std::env::var_os("VENTRIS_REGISTER_PARAMS").is_some(),
             promote_tailcalls: std::env::var_os("VENTRIS_PROMOTE_TAILCALLS").is_some(),
@@ -542,5 +559,23 @@ mod tests {
         let cfg = RuntimeConfig::from_env();
         assert_eq!(cfg.worker_memory_cap, 256 * 1024 * 1024);
         assert!(cfg.spec_root.ends_with("native/specs"));
+    }
+
+    /// The cap is a knob because a host with less memory than this one has to
+    /// bound its workers lower, and a session gate has to be able to reach the
+    /// recycle path on purpose. A value under a fresh worker's own footprint
+    /// would fail every request instead of bounding a long one, so it is
+    /// refused in favour of the default.
+    #[test]
+    fn worker_memory_cap_reads_a_value_and_refuses_one_under_the_floor() {
+        for (value, expected) in [
+            (Some("134217728"), 128 * 1024 * 1024),
+            (Some(" 67108864 "), 64 * 1024 * 1024),
+            (Some("1024"), 256 * 1024 * 1024),
+            (Some("not-a-number"), 256 * 1024 * 1024),
+            (None, 256 * 1024 * 1024),
+        ] {
+            assert_eq!(worker_memory_cap(value), expected, "value={value:?}");
+        }
     }
 }

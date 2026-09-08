@@ -23,10 +23,15 @@ image, with no JVM anywhere in it, and records the numbers:
      asserted: a CodeWarrior image carries no Itanium type_info.
   5. **An analyst edit that survives.** A rename, then a second import of the
      same image, then the name read back.
+  5a. **A bounded worker.** The same inference again in a second service whose
+     worker cap is set low enough that a module this size grows past it, so the
+     pass has to recycle its worker and carry on: the report records the
+     recycles, and a pass that failed at the cap instead would fail here.
   6. **The live target.** `memory_live` against a GDB stub when
      `VENTRIS_LIVE_ENDPOINT` names one, recorded as skipped with its reason
      when it does not, so the session never claims a running console it did
-     not talk to.
+     not talk to. Dolphin's stub accepts one client per boot and stops
+     listening when it disconnects, so the run needs a freshly booted target.
 
 The image is private (a retail disc): with the target absent the gate records
 `skipped` with the reason and passes, which is why it is not wired into CI.
@@ -70,17 +75,20 @@ THRESHOLDS = {
     "session.page_ms": 500.0,
     "session.decompile_ms": 2000.0,
     "session.inference_analyzed": 1,
+    "session.bounded_analyzed": 1,
+    "session.worker_recycles": 1,
 }
 
 
 class Api:
     """One `lre-api` process bound to the session project."""
 
-    def __init__(self, project: Path) -> None:
+    def __init__(self, project: Path, environment: dict[str, str] | None = None) -> None:
         self.process = subprocess.Popen(
             [str(API), "--project", str(project)], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL, text=True, bufsize=1)
+            stderr=subprocess.DEVNULL, text=True, bufsize=1,
+            env=dict(os.environ, **(environment or {})))
         self.identity = 0
 
     def call(self, method: str, **params) -> tuple[dict, float]:
@@ -291,10 +299,16 @@ def main() -> int:
             endpoint = os.environ.get("VENTRIS_LIVE_ENDPOINT")
             if endpoint:
                 live, live_ms = api.result("memory_live", program=PROGRAM,
-                                           endpoint=endpoint, address="80000000", size=8)
+                                           endpoint=endpoint, address="80000000", size=16)
+                assert live["source"] == "live" and live["size"] == 16, (
+                    f"the live read did not answer from the target: {live}")
+                # The console's own disc header, read out of the running
+                # machine rather than out of the file.
                 report["steps"]["memory_live"] = {
                     "endpoint": endpoint, "bytes": live["bytes"],
+                    "disc_id": bytes(live["bytes"][:6]).decode("ascii", "replace"),
                     "ms": round(live_ms, 1)}
+                report["metrics"]["session.live_bytes"] = live["size"]
             else:
                 report["steps"]["memory_live"] = {
                     "status": "skipped",
@@ -315,6 +329,26 @@ def main() -> int:
             f"the rename did not survive the second import: "
             f"{surviving.get(sample[2])!r} != {renamed!r}")
         report["metrics"]["session.edit_survived_reimport"] = 1.0
+
+        # The cap bounds a long session's memory rather than failing the
+        # request that discovers the growth: with the cap set below what this
+        # module's inference reaches, the pass recycles workers and completes.
+        bounded = Api(project, {"VENTRIS_WORKER_MEMORY_CAP": str(120 * 1024 * 1024)})
+        try:
+            recycled, recycled_ms = bounded.result(
+                "infer_prototypes", program=PROGRAM, binary=str(stripped),
+                budget_ms=arguments.budget_ms)
+        finally:
+            bounded.close()
+        report["steps"]["infer_prototypes_bounded"] = dict(
+            recycled, ms=round(recycled_ms, 1), cap_bytes=120 * 1024 * 1024)
+        assert recycled["analyzed"] >= 1, (
+            f"a bounded worker analysed nothing: {recycled}")
+        assert recycled["worker_recycles"] >= 1, (
+            f"the bounded cap never recycled a worker, so the path a large "
+            f"module needs is untested here: {recycled}")
+        report["metrics"]["session.worker_recycles"] = recycled["worker_recycles"]
+        report["metrics"]["session.bounded_analyzed"] = recycled["analyzed"]
 
         failures = []
         for key, limit in THRESHOLDS.items():

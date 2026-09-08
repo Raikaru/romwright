@@ -410,6 +410,32 @@ impl WorkerPool {
         self.with_worker_named("worker", None, deadline, op)
     }
 
+    /// Runs an operation, recycling the worker once if the one the pool hands
+    /// out has grown past the memory cap.
+    ///
+    /// The cap bounds a long session's memory; it is not a reason to fail the
+    /// request that happens to discover the growth. `enforce_memory_cap` has
+    /// already killed the offending worker and it is never returned to idle,
+    /// so the second attempt spawns fresh -- the retry path the cap's own
+    /// comment describes. A fresh worker over the cap still fails, because
+    /// then the cap is below this language's floor rather than exceeded by
+    /// one session's history.
+    fn with_worker_retrying<T>(
+        &mut self,
+        operation: &str,
+        address: Option<u64>,
+        deadline: Instant,
+        mut op: impl FnMut(&mut WorkerSession) -> lre_worker::Result<T>,
+    ) -> PoolResult<T> {
+        match self.with_worker_named(operation, address, deadline, &mut op) {
+            Err(PoolError::MemCap(..)) => {
+                self.restarts = self.restarts.saturating_add(1);
+                self.with_worker_named(operation, address, deadline, &mut op)
+            }
+            other => other,
+        }
+    }
+
     fn with_worker_named<T>(
         &mut self,
         operation: &str,
@@ -498,7 +524,7 @@ impl WorkerPool {
     /// Convenience: decompile one address with the pool's deadline.
     pub fn decompile(&mut self, address: u64) -> PoolResult<Vec<u8>> {
         let deadline = Instant::now() + self.config.deadline;
-        self.with_worker_named("decompile", Some(address), deadline, |session| {
+        self.with_worker_retrying("decompile", Some(address), deadline, |session| {
             session.decompile(address)
         })
     }
@@ -507,13 +533,13 @@ impl WorkerPool {
     /// pool's deadline/restart semantics.
     pub fn decompile_doc(&mut self, address: u64) -> PoolResult<DecompDoc> {
         let deadline = Instant::now() + self.config.deadline;
-        self.with_worker_named("decompile", Some(address), deadline, |session| {
+        self.with_worker_retrying("decompile", Some(address), deadline, |session| {
             session.decompile_doc(address)
         })
     }
 
     fn recover_doc(&mut self, address: u64, deadline: Instant) -> PoolResult<DecompDoc> {
-        self.with_worker_named("infer_prototype", Some(address), deadline, |session| {
+        self.with_worker_retrying("infer_prototype", Some(address), deadline, |session| {
             session.decompile_doc_mode(address, true)
         })
     }
@@ -539,6 +565,10 @@ pub struct InferenceReport {
     pub analyzed: u64,
     /// Number of changed facts across completed rounds, not unique functions.
     pub changed: u64,
+    /// Workers the memory cap recycled while this pass ran. A module large
+    /// enough to grow the decompiler's caches past the cap is the normal
+    /// reason, and the count is the cost of bounding it.
+    pub worker_recycles: u64,
 }
 
 /// Owns the pool selected for the current API program and binary.
@@ -676,6 +706,7 @@ impl WorkerPoolManager {
             stop_reason: InferenceStopReason::Budget,
             analyzed: 0,
             changed: 0,
+            worker_recycles: 0,
         };
         if Instant::now() >= deadline {
             return Ok(report);
@@ -728,6 +759,11 @@ impl WorkerPoolManager {
             let pool = self.ensure_pool(core, binary, program, base.unwrap_or(0), revision)?;
             for &index in &pending {
                 let function = &functions[index];
+                // Recycles are counted as they happen: a pass that stops on
+                // its budget returns from inside this loop, and the cost of
+                // bounding the worker's memory has to be in the report it
+                // returns.
+                let restarts_before = pool.restarts;
                 let doc = match pool.recover_doc(function.entry.offset, deadline) {
                     Ok(doc) => doc,
                     Err(PoolError::Deadline(_)) => return Ok(report),
@@ -738,6 +774,7 @@ impl WorkerPoolManager {
                     pool.invalidate_facts();
                     return Err(PoolError::StaleRevision(revision, current));
                 }
+                report.worker_recycles += u64::from(pool.restarts.saturating_sub(restarts_before));
                 report.analyzed += 1;
                 if !externals.contains(&function.entry) {
                     let mut prototype = doc.prototype.expect("recovery requires a prototype");
