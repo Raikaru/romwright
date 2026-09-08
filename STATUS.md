@@ -5074,6 +5074,45 @@ evidence:
   address, its undecodable delay slot, and an unmapped address in one batch).
   It fails against a console built without the arm and passes with it.
 
+### m4-033 evidence (the install's own languages, and pattern starts kept)
+- A PlayStation 2 executable arrived in the corpus (`SLUS_209.50`, Capcom
+  Fighting Evolution, 8794 `STT_FUNC` symbols in its own symbol table; the
+  scored copy is stripped). Stock Ghidra on this install answers it with
+  `r5900:LE:32:default` -- a language an installed *extension* supplies
+  (`Ghidra/Extensions/ghidra-emotionengine-reloaded`). Ventris read opinions
+  and language definitions from `Ghidra/Processors` only, so that language was
+  invisible and the image was typed as plain MIPS32. Both readers now walk
+  every module of the install's `Ghidra` tree, which is what
+  `QueryOpinionService.initialize` does, and the selection matches stock.
+- Three defects the image found, each one measured:
+  - **Code ranges outran the image.** The one `PT_LOAD` declares 0x308e80 of
+    memory over 0x22a400 of file, and the pattern search was asked to read all
+    of it. `loadFill` raised `DataUnavailError`, the whole search failed, and
+    the import kept **1** function. `code_ranges` now stops at the bytes the
+    image carries, as Ghidra searches loaded *and initialized* memory.
+  - **A pattern match on decoded bytes was refused.** Ghidra creates a
+    function at a match that already holds an instruction, provided no
+    function body contains it and nothing above flows into it
+    (`FunctionStartAnalyzer.applyActionToSet`, 289-324;
+    `checkAlreadyInFunctionAbove`, 491-530). Ventris refused every match the
+    walk had already decoded.
+  - **Prologue matches were treated as addresses read from data.** The
+    overlap rule that retracts PE32 switch case labels was applied to pattern
+    entries too, deleting **618 of 4835** real function starts.
+- Measured against the module's own 8794 symbols, JVM-free:
+  **6540 functions, recall 0.7422, precision 0.9980, 3.6 s, 37 MB peak**.
+  Stock Ghidra on the same stripped copy: 6662 functions, recall 0.7560,
+  precision 0.9979, **181.7 s, 1.19 GB peak**. Ventris is 1.4 points of recall
+  behind at 50x the speed and 3% of the memory.
+- The same fixes on the MIPS-III corpus image (`dungeon_game.elf`, 781
+  symbols): recall **0.3065 -> 0.7695**, precision **0.7083 -> 0.8394**.
+- `lre-cli import --timings` now reports `patterns` as
+  `{hits, accepted, refused}`, keyed by prerequisite name. Every number above
+  was read off that field rather than guessed.
+- Regression: `cargo test --workspace` **268 pass**; `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh` and
+  `generic_discovery_test.sh` all pass.
+
 ## Next task
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,

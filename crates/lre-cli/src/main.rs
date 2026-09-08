@@ -390,13 +390,23 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 // Why console-driven discovery did not run, when it did not:
                 // a silent fallback to pointer-only seeds is what hid a whole
                 // architecture's flow (m11-002).
+                let patterns = summary
+                    .patterns
+                    .as_ref()
+                    .map(|stats| {
+                        format!(
+                            ",\"patterns\":{}",
+                            serde_json::to_string(stats).unwrap_or_default()
+                        )
+                    })
+                    .unwrap_or_default();
                 let note = summary
                     .discovery_note
                     .as_deref()
                     .map(|note| format!(",\"discovery_note\":{}", serde_json::json!(note)))
                     .unwrap_or_default();
                 println!(
-                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{note}}}",
+                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{note}}}",
                     summary.functions,
                     core.runtime_config().console_shards
                 );

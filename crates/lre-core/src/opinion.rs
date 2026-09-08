@@ -391,29 +391,44 @@ fn declared_languages(install: &Path) -> Result<Vec<Language>> {
     Ok(rows)
 }
 
-/// Files of one extension below `install/Ghidra/Processors/*/data/languages`,
-/// in a stable order so declaration order is reproducible.
+/// Files of one extension below any module of the install's `Ghidra` tree, in
+/// a stable order so declaration order is reproducible.
+///
+/// Ghidra loads opinions and language definitions from every module it finds,
+/// not only `Processors`: an installed extension is a module too, and the
+/// install used here answers a PlayStation 2 executable with
+/// `r5900:LE:32:default` from `Ghidra/Extensions/ghidra-emotionengine-reloaded`.
+/// Reading only `Processors` made that language invisible and typed the image
+/// as plain MIPS32 (`QueryOpinionService.initialize` walks
+/// `Application.findFilesByExtensionInApplication`).
 fn language_files(install: &Path, extension: &str) -> Result<Vec<std::path::PathBuf>> {
-    let root = install.join("Ghidra/Processors");
+    let root = install.join("Ghidra");
     if !root.is_dir() {
         return Ok(Vec::new());
     }
-    let mut files = Vec::new();
-    let mut processors: Vec<std::path::PathBuf> = std::fs::read_dir(&root)?
+    let mut groups: Vec<std::path::PathBuf> = std::fs::read_dir(&root)?
         .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.is_dir())
         .collect();
-    processors.sort();
-    for processor in processors {
-        let languages = processor.join("data/languages");
-        if !languages.is_dir() {
-            continue;
-        }
-        let mut here: Vec<std::path::PathBuf> = std::fs::read_dir(&languages)?
+    groups.sort();
+    let mut files = Vec::new();
+    for group in groups {
+        let mut modules: Vec<std::path::PathBuf> = std::fs::read_dir(&group)?
             .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-            .filter(|path| path.extension().is_some_and(|ext| ext == extension))
             .collect();
-        here.sort();
-        files.extend(here);
+        modules.sort();
+        for module in modules {
+            let languages = module.join("data/languages");
+            if !languages.is_dir() {
+                continue;
+            }
+            let mut here: Vec<std::path::PathBuf> = std::fs::read_dir(&languages)?
+                .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+                .filter(|path| path.extension().is_some_and(|ext| ext == extension))
+                .collect();
+            here.sort();
+            files.extend(here);
+        }
     }
     Ok(files)
 }

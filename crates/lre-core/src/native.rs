@@ -271,6 +271,8 @@ pub struct NativeImport {
     pub mapping_names: Vec<String>,
     /// Console request accounting for the flow phase, when it ran.
     pub flow: Option<lre_model::FlowStats>,
+    /// Pattern accounting for the pattern phase, when it ran.
+    pub patterns_seen: Option<lre_model::PatternStats>,
     /// Why console-driven discovery was not used, when it was not. A silent
     /// fallback to pointer-only seeds is how a MIPS image came back with a
     /// third of its functions and no complaint (m11-002).
@@ -1031,11 +1033,20 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     Ok(import)
 }
 /// Returns the executable (code) ranges of the import, for seed filtering.
+///
+/// Only the bytes the image actually carries are code: a section's virtual
+/// extent can outrun its file contents, and Ghidra searches loaded *and
+/// initialized* memory (`Memory::getLoadedAndInitializedAddressSet`). The
+/// console agrees by construction -- its load image raises `DataUnavailError`
+/// for an address it was never given bytes for.
 pub fn code_ranges(imp: &NativeImport) -> Vec<(u64, u64)> {
     imp.mappings
         .iter()
-        .filter(|m| m.flags & 0x4 != 0 && m.size > 0)
-        .map(|m| (m.vaddr, m.vaddr + m.size))
+        .filter(|m| m.flags & 0x4 != 0)
+        .filter_map(|m| {
+            let length = (m.bytes.len() as u64).min(m.size);
+            (length > 0).then_some((m.vaddr, m.vaddr + length))
+        })
         .collect()
 }
 
@@ -2139,6 +2150,7 @@ pub fn store_import(
         language: imp.language.clone(),
         phases: imp.phases.clone(),
         flow: imp.flow,
+        patterns: imp.patterns_seen.clone(),
         discovery_note: imp.discovery_note.clone(),
     })
 }
@@ -3088,6 +3100,45 @@ mod tests {
         // Directory 5 is absent, so .reloc section MUST BE IGNORED
         assert!(imp.xrefs.is_empty(), "xrefs must be empty when directory 5 is absent");
         assert!(imp.reloc_candidates.is_empty(), "reloc_candidates must be empty when directory 5 is absent");
+    }
+
+    #[test]
+    fn pattern_search_reads_only_the_bytes_the_image_carries() {
+        // A PS2 executable's last code section declares more virtual size than
+        // it carries bytes for. The old range asked the console to search
+        // addresses the load image never received, `loadFill` raised
+        // DataUnavailError, the whole pattern search failed, and the import
+        // kept one function out of 8794.
+        use crate::native_runtime::{ConsoleSession, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "MIPS:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            compiler: Some("default".into()),
+            format: "elf".into(),
+            cfg: cfg.clone(),
+            mappings: vec![Mapping {
+                vaddr: 0x1000,
+                // Sixteen bytes of virtual extent, eight bytes of content.
+                size: 16,
+                file_off: 0,
+                flags: 6,
+                bytes: vec![0, 0, 0, 0, 0x08, 0x00, 0xe0, 0x03],
+            }],
+            ..Default::default()
+        };
+        let ranges = code_ranges(&import);
+        assert_eq!(ranges, vec![(0x1000, 0x1008)], "ranges stop at the bytes");
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        session
+            .function_patterns(&ranges)
+            .expect("a byte-backed range is searchable");
     }
 
     #[test]

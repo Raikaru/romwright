@@ -15,47 +15,64 @@ pub enum ArchitectureError {
 
 pub type Result<T> = std::result::Result<T, ArchitectureError>;
 
-/// Enumerates processor language definitions below `install/Ghidra/Processors`.
+/// Enumerates language definitions below every module of `install/Ghidra`.
+///
+/// Ghidra finds languages in every module, not only `Processors`: an
+/// installed extension is a module too, and this install answers a
+/// PlayStation 2 executable with `r5900:LE:32:default` from
+/// `Ghidra/Extensions/ghidra-emotionengine-reloaded`. A consumer needs that
+/// directory, because that is where the language's `.sla` lives.
 pub fn discover(install: &Path) -> Result<Vec<ArchitectureSpec>> {
-    let root = install.join("Ghidra/Processors");
+    let root = install.join("Ghidra");
     if !root.is_dir() {
         return Ok(Vec::new());
     }
+    let mut groups: Vec<PathBuf> = std::fs::read_dir(&root)?
+        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+        .filter(|path| path.is_dir())
+        .collect();
+    groups.sort();
     let mut specs = Vec::new();
-    for processor in std::fs::read_dir(root)? {
-        let processor = processor?;
-        let processor_path = processor.path();
-        if !processor_path.is_dir() {
-            continue;
-        }
-        let language_dir = processor_path.join("data/languages");
-        if !language_dir.is_dir() {
-            continue;
-        }
-        let mut sla_count = 0;
-        for entry in std::fs::read_dir(&language_dir)? {
-            if entry?.path().extension().is_some_and(|ext| ext == "sla") {
-                sla_count += 1;
+    for group in groups {
+        let mut modules: Vec<PathBuf> = std::fs::read_dir(&group)?
+            .filter_map(|entry| entry.ok().map(|entry| entry.path()))
+            .filter(|path| path.is_dir())
+            .collect();
+        modules.sort();
+        for module in modules {
+            let language_dir = module.join("data/languages");
+            if !language_dir.is_dir() {
+                continue;
             }
-        }
-        for ldefs in language_dir_files(&language_dir)? {
-            let xml = std::fs::read_to_string(&ldefs)?;
-            for language in tags(&xml, "language") {
-                let Some(id) = attribute(language, "id") else {
-                    continue;
-                };
-                let processor_name = attribute(language, "processor")
-                    .unwrap_or_else(|| processor.file_name().to_string_lossy().into_owned());
-                let endian = attribute(language, "endian").unwrap_or_default();
-                let bits = attribute(language, "size").and_then(|size| size.parse().ok());
-                specs.push(ArchitectureSpec {
-                    id,
-                    processor: processor_name,
-                    endian,
-                    bits,
-                    language_dir: language_dir.to_string_lossy().into_owned(),
-                    sla_count,
-                });
+            let mut sla_count = 0;
+            for entry in std::fs::read_dir(&language_dir)? {
+                if entry?.path().extension().is_some_and(|ext| ext == "sla") {
+                    sla_count += 1;
+                }
+            }
+            for ldefs in language_dir_files(&language_dir)? {
+                let xml = std::fs::read_to_string(&ldefs)?;
+                for language in tags(&xml, "language") {
+                    let Some(id) = attribute(language, "id") else {
+                        continue;
+                    };
+                    let processor_name = attribute(language, "processor").unwrap_or_else(|| {
+                        module
+                            .file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_default()
+                    });
+                    let endian = attribute(language, "endian").unwrap_or_default();
+                    let bits = attribute(language, "size").and_then(|size| size.parse().ok());
+                    specs.push(ArchitectureSpec {
+                        id,
+                        processor: processor_name,
+                        endian,
+                        bits,
+                        language_dir: language_dir.to_string_lossy().into_owned(),
+                        sla_count,
+                    });
+                }
             }
         }
     }

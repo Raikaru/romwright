@@ -486,6 +486,18 @@ pub struct FlowStats {
     pub instructions: u64,
 }
 
+/// What a byte-pattern search proposed and what survived the prerequisites.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PatternStats {
+    /// Matches the pattern search reported.
+    pub hits: u64,
+    /// Matches that became function candidates.
+    pub accepted: u64,
+    /// Why the rest were refused, by prerequisite name.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub refused: std::collections::BTreeMap<String, u64>,
+}
+
 /// Program summary returned by import/open.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ProgramSummary {
@@ -501,6 +513,9 @@ pub struct ProgramSummary {
     /// Console request accounting for the flow phase, when it ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flow: Option<FlowStats>,
+    /// Byte-pattern accounting for the pattern phase, when it ran.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub patterns: Option<PatternStats>,
     /// Why console-driven discovery did not run, when it did not: a silent
     /// fallback to pointer-only seeds hides a whole architecture's flow.
     #[serde(default, skip_serializing_if = "Option::is_none")]
