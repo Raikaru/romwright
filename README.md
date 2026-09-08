@@ -996,7 +996,9 @@ is locked`, on stubs whose text is otherwise ours exactly). Choices:
 difference is a name we picked on purpose, decided mechanically by
 substituting the oracle's name into its own text and finding the token streams
 equal (`_plt` names the section that proved the start; stock calls it
-`FUN_00201710`) --
+`FUN_00201710`). The decision is kept and bounded: `m4-031` holds every coined
+name to its section's loaded start, on a function stock also holds, where
+stock's name is its own default and the image's symbol tables name nothing --
 and no `data-name-convention` row either: `m4-029` gives the addresses the
 dynamic table declares the names it declares (`__DT_PLTGOT`, `__DT_PPC_GOT`,
 `__DT_INIT`), beside whatever else names them, and prefers the tag's name over
@@ -1767,6 +1769,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-028.json` | `m4-028` | M4 | pass | `demangle.mangled_names_kept` 4; `demangle.names_held` 4; `demangle.names_invented` 0; `demangle.names_missing` 0; `demangle.names_stock_derives` 4; `demangle.rows_measured` 20 | `tests/m4-028_demangled_names.py` |
 | `m4-029.json` | `m4-029` | M4 | pass | `tags.names_held` 243; `tags.names_invented` 0; `tags.names_missing` 0; `tags.names_stock_holds` 243; `tags.rows_measured` 20 | `tests/m4-029_dynamic_tags.py` |
 | `m4-030.json` | `m4-030` | M4 | pass | `pointee.code_pointers` 116; `pointee.plain_pointers` 74; `pointee.rows_measured` 20; `pointee.under_typed` 0; `pointee.unproven` 0 | `tests/m4-030_pointer_targets.py` |
+| `m4-031.json` | `m4-031` | M4 | pass | `coined.invented` 0; `coined.misplaced` 0; `coined.names` 14; `coined.rows_measured` 20; `coined.shadowed` 0 | `tests/m4-031_section_names.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |

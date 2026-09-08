@@ -1,0 +1,266 @@
+{
+ "id": "m4-031",
+ "recorded_at": "2026-09-08T20:51:48.016602+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "14 coined names across 20 ELF rows, every one at its section's loaded start, on a function stock also holds, where stock's name is its own default and the image names nothing",
+ "metrics": {
+  "coined.rows_measured": 20,
+  "coined.names": 14,
+  "coined.misplaced": 0,
+  "coined.invented": 0,
+  "coined.shadowed": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "coined": [
+    {
+     "address": "00210c30",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "variant": "many_o2",
+   "coined": [
+    {
+     "address": "00215290",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "coined": [
+    {
+     "address": "00210860",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "variant": "plain_o2",
+   "coined": [
+    {
+     "address": "00210820",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "variant": "plain_pie",
+   "coined": [
+    {
+     "address": "001108b0",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "coined": [
+    {
+     "address": "00401970",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "i386_many_o2",
+   "variant": "many_o2",
+   "coined": [
+    {
+     "address": "00406b20",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "coined": [
+    {
+     "address": "004015e0",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "variant": "plain_o2",
+   "coined": [
+    {
+     "address": "004015b0",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "variant": "plain_pie",
+   "coined": [
+    {
+     "address": "00011640",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "powerpc_many_o2",
+   "variant": "many_o2",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "variant": "plain_o2",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "variant": "plain_pie",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "coined": [
+    {
+     "address": "00201ab0",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "variant": "many_o2",
+   "coined": [],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "coined": [
+    {
+     "address": "00201710",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "variant": "plain_o2",
+   "coined": [
+    {
+     "address": "002016d0",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "variant": "plain_pie",
+   "coined": [
+    {
+     "address": "00101780",
+     "name": "_plt"
+    }
+   ],
+   "misplaced": [],
+   "invented": [],
+   "shadowed": [],
+   "stock_named": []
+  }
+ ]
+}
