@@ -208,9 +208,14 @@ def store_context(store: Path, program: str) -> dict:
         names = {offset: name for address, name in connection.execute(
             "SELECT address, name FROM symbols WHERE program_id = ?", (identifier,))
             if (offset := ram_offset(address)) is not None}
+        # Function name -> entry: which function a called name resolves to, so
+        # a missing prototype is looked for where a prototype can live.
+        entries = {name: offset for address, name in connection.execute(
+            "SELECT entry, name FROM functions WHERE program_id = ?", (identifier,))
+            if (offset := ram_offset(address)) is not None}
         return {"symbols": symbols, "prototypes": prototypes,
                 "externals": externals, "strings": strings,
-                "definitions": definitions, "names": names}
+                "definitions": definitions, "names": names, "functions": entries}
     finally:
         connection.close()
 
@@ -263,6 +268,12 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if differing:
         classes["function-facts"] = differing
 
+    # The cast difference can be one contribution among several -- a row may
+    # differ by a typed slot *and* by a warning stock emits. The claim is the
+    # same one the early return makes, and needs the same evidence.
+    if oracle_casts != native_casts and typed_slot:
+        classes["type-stronger"] = sorted(oracle_casts ^ native_casts)
+
     # A memory location the native store holds no symbol for: the decompiler
     # falls back to its own name while the oracle prints a dynamic label.
     unnamed = sorted({f"{int(match, 16):08x}" for match in FALLBACK.findall(native_text)
@@ -279,15 +290,26 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if unrendered:
         classes["string-not-rendered"] = unrendered
 
-    # An import with no prototype: this function, or one the oracle calls by a
-    # name the store holds as an import.
+    # An import with no prototype: this function, or one the oracle *calls* by
+    # a name the store holds as an import. A name in the decompiled function's
+    # own signature is not a call, and the prototype that would answer it
+    # belongs to the stub the name resolves to -- never to the import slot,
+    # which carries no signature by construction.
     without = []
     if entry in store["externals"] and entry not in store["prototypes"]:
         without.append(native_row.get("name"))
-    for address, name in store["externals"].items():
-        if (re.search(rf"\b{re.escape(name)}\s*\(", oracle_text)
-                and address not in store["prototypes"]):
-            without.append(name)
+    body = oracle_text[oracle_text.index("{"):] if "{" in oracle_text else ""
+    for name in set(store["externals"].values()):
+        if not re.search(rf"\b{re.escape(name)}\s*\(", body):
+            continue
+        stub = store["functions"].get(name)
+        if stub is not None and stub in store["prototypes"]:
+            continue
+        if stub is None and all(
+                address in store["prototypes"]
+                for address, held in store["externals"].items() if held == name):
+            continue
+        without.append(name)
     if without:
         classes["missing-external-prototype"] = sorted(set(without))
 
@@ -310,11 +332,16 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if labels:
         classes["data-name-convention"] = labels
 
-    # Flow the two sides disagree about, on the same bytes.
+    # Flow the two sides disagree about, on the same bytes -- and which side
+    # says so. A warning we emit and stock does not is a gap of ours; the
+    # reverse is stock warning about its own recovery (its locked-storage
+    # prototype, say), which is not ours to close.
     native_warnings = {re.sub(r"\s+", " ", item) for item in WARNING.findall(native_text)}
     oracle_warnings = {re.sub(r"\s+", " ", item) for item in WARNING.findall(oracle_text)}
-    if native_warnings != oracle_warnings:
+    if native_warnings - oracle_warnings:
         classes["flow"] = sorted(native_warnings - oracle_warnings)[:3]
+    if oracle_warnings - native_warnings:
+        classes["oracle-warning"] = sorted(oracle_warnings - native_warnings)[:3]
     return classes
 
 
@@ -391,6 +418,11 @@ def licensed(classes: dict, native_text: str, oracle_text: str,
                 words.update(tokens(json.dumps(item["value"])))
                 words.add(f"0x{int(item['address'], 16):x}")
                 words.update(DYNAMIC.findall(oracle_text))
+        elif name == "oracle-warning":
+            # Stock warned about its own recovery: the tokens of that comment,
+            # and nothing else. A warning does not license code.
+            words.update(evidence)
+            words.update(tokens(" ".join(evidence)))
         elif name == "flow":
             # Where the two sides disagree about flow they disagree about the
             # structure that follows from it: its warnings, its keywords, its

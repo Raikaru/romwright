@@ -962,7 +962,7 @@ difference (`tests/m4-003_language_parity.py`,
 | bundled languages, each measured or blocked with a verified reason | 9 = 4 measured + 5 blocked |
 | functions compared, both ways, on the same stripped image | 56 |
 | token-identical to the oracle | **30** |
-| differing only because our type is the stronger one | 9 |
+| differing only because our type is the stronger one | 18 |
 | differing, every one attributed to a named fact | 26 |
 | differing tokens no named class accounts for | **0** |
 
@@ -976,11 +976,16 @@ derived variable, a warning comment, a type keyword a missing prototype would
 supply. Notation is never a difference (`0x0` and `0` are the same number); a
 differing *value* still is.
 
-The classes separate the gaps from the choices. Gaps:
-`missing-external-prototype` 11
-(an import the store names but holds no signature for), `function-facts`
-10, `flow` 8
-and `data-type-unknown` 2. Choices:
+The classes separate the gaps from the choices, and the *direction* of a
+difference decides which it is. Gaps:
+`missing-external-prototype` 5
+(an import the oracle calls by name and the store holds no signature for),
+`function-facts` 10,
+`flow` 3 -- a warning we emit and stock
+does not -- and `data-type-unknown` 2. Not
+ours: `oracle-warning` 8, stock warning
+about its own recovery (`Unknown calling convention -- yet parameter storage
+is locked`, on stubs whose text is otherwise ours exactly). Choices:
 `name-convention` 10 -- the whole
 difference is a name we picked on purpose, decided mechanically by
 substituting the oracle's name into its own text and finding the token streams
@@ -988,13 +993,13 @@ equal (`_plt` names the section that proved the start; stock calls it
 `FUN_00201710`) -- `data-name-convention` 3,
 the same decision on a data label (the slot `DT_PLTGOT` reserves is named
 after the import it holds, where stock names it after the tag), and
-`type-stronger` 9,
+`type-stronger` 18,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Ten tasks have shrunk the gaps by carrying facts the image, its ABI or the
+Eleven tasks have shrunk the gaps by carrying facts the image, its ABI or the
 pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1027,6 +1032,13 @@ pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* which side a difference belongs to (`tests/m4-016_class_direction.py`): the
+  `flow` class licensed any warning in either direction, and the prototype
+  class matched a callee name in the decompiled function's *own signature*
+  while looking for a prototype at the import slot, which never carries one --
+  so stock's defects and our own signature counted against us. Measured in the
+  direction each points: `flow` 8 -> 3,
+  `missing-external-prototype` 10 -> 5.
 * how wide each access is (`tests/m4-015_reference_widths.py`): the console
   already decodes the load or store that reaches a location and dropped its
   size, so a referenced word arrived as a one-byte symbol and a four-byte read
@@ -1613,7 +1625,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 8; `parity.class.function-facts` 10; `parity.class.missing-external-prototype` 10; `parity.class.name-convention` 10; `parity.class.type-stronger` 9; `parity.functions_compared` 56; `parity.functions_fact_attributed` 26; `parity.functions_token_identical` 30; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 3; `parity.class.function-facts` 10; `parity.class.missing-external-prototype` 5; `parity.class.name-convention` 10; `parity.class.oracle-warning` 8; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 26; `parity.functions_token_identical` 30; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1625,6 +1637,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-013.json` | `m4-013` | M4 | pass |  | `tests/m4-013_shared_returns.py` |
 | `m4-014.json` | `m4-014` | M4 | pass | `broken_sibling` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `explicit_override` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `sibling` /* WARNING: Removing unreachable block (ram,0x0040040f) *//* WARNING: Removing u; `workspace_agreement` 14 | `tests/m4-014_worker_resolution.py` |
 | `m4-015.json` | `m4-015` | M4 | pass | `named_in_text` 13; `overlap_warnings` 0; `rows` 4; `widths_recorded` 19 | `tests/m4-015_reference_widths.py` |
+| `m4-016.json` | `m4-016` | M4 | pass |  | `tests/m4-016_class_direction.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1637,7 +1650,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 97; `diagnostic_runs` 12; `generated_rows` 96; `published_ids` 81 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 98; `diagnostic_runs` 12; `generated_rows` 97; `published_ids` 82 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
