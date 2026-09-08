@@ -387,6 +387,13 @@ jobs:
           python3 tests/m4-029_dynamic_tags.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/dynamic-tags.json"
+      - name: Type a slot from what the image declares its target is
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-030_pointer_targets.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/pointer-targets.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

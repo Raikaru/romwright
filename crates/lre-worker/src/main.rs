@@ -273,7 +273,7 @@ fn run(
     for xref in db.xrefs(pid)? {
         let pointer = matches!(
             provider.data_definitions.get(&xref.from.offset),
-            Some((kind, _)) if kind == "pointer"
+            Some((kind, _)) if kind == "pointer" || kind == "code-pointer"
         );
         if pointer
             && xref.kind == "DATA"

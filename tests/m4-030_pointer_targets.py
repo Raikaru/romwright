@@ -45,6 +45,9 @@ import gate_cache  # noqa: E402
 CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 CODE_POINTER = "code-pointer"
+# The rules that carry a declaration about the target rather than an
+# observation of one word's current value.
+DECLARING = ("native-import:elf-linkage", "native-import:elf-pointer")
 PLAIN_POINTER = "pointer"
 DATA_KINDS = ("DATA", "READ", "WRITE")
 
@@ -136,16 +139,26 @@ def main() -> int:
         functions = entries(native)
         targets = data_targets(native)
         stock_functions = entries(oracle)
+        tag_named = {address for address, name, _ in rows(
+            native, "SELECT address, name, source FROM symbols WHERE program_id = ?")
+            if ram(address) and name.startswith("__DT_")}
 
-        def proven(address: str) -> bool:
+        def evidence(address: str) -> bool:
+            """Something in this store says the slot's target is code."""
             if address in named:
                 return True
             return any(target in functions for target in targets.get(address, ()))
 
         code = [address for address, (kind, _) in held.items() if kind == CODE_POINTER]
         plain = [address for address, (kind, _) in held.items() if kind == PLAIN_POINTER]
-        unproven = sorted(address for address in code if not proven(address))
-        under = sorted(address for address in plain if proven(address))
+        unproven = sorted(address for address in code if not evidence(address))
+        # A declaring rule's row must carry the declaration: the linkage
+        # relocation and the initializer array both say "function pointer", and
+        # only a name the dynamic table gives the address overrides that
+        # (m4-029).
+        under = sorted(address for address, (kind, provenance) in held.items()
+                       if kind == PLAIN_POINTER and provenance in DECLARING
+                       and address not in tag_named)
         code_in_stock = sorted(address for address in code if address in stock_functions)
         return {"id": Path(entry["binary"]).stem, "variant": entry["variant"],
                 "code_pointers": len(code), "plain_pointers": len(plain),

@@ -1,23 +1,23 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T19:17:20.554314+00:00",
+ "recorded_at": "2026-09-08T20:10:43.700209+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1749 of 1845 functions token-identical, 96 differing only where a named fact differs (language-variant 3, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 85), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1761 of 1845 functions token-identical, 84 differing only where a named fact differs (language-variant 3, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 58), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
   "parity.languages_blocked": 5,
   "parity.rows_measured": 16,
   "parity.functions_compared": 1845,
-  "parity.functions_token_identical": 1749,
-  "parity.functions_fact_attributed": 96,
+  "parity.functions_token_identical": 1761,
+  "parity.functions_fact_attributed": 84,
   "parity.functions_unattributed": 0,
   "parity.class.language-variant": 3,
   "parity.class.name-convention": 11,
   "parity.class.name-rendering": 12,
   "parity.class.oracle-warning": 19,
-  "parity.class.type-stronger": 85
+  "parity.class.type-stronger": 58
  },
  "measured": [
   {
@@ -25,9 +25,9 @@
    "variant": "plain_o0",
    "program": "x86_64_plain_o0.bin",
    "shared": 12,
-   "identical": 8,
-   "identical_tokens": 129,
-   "attributed": 4,
+   "identical": 9,
+   "identical_tokens": 162,
+   "attributed": 3,
    "classes": [
     "name-convention",
     "oracle-warning",
@@ -35,7 +35,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default-plain_o0.jsonl",
-    "sha256": "25e1cb6acdf78c5dc8af6a3dbf0977f96c4131228f1e49b36d793c2b42d3f957"
+    "sha256": "914a66e0636fa25cb464dfd92ec6f2f0a8633814fd3f198092c537f7c41c4c30"
    }
   },
   {
@@ -43,9 +43,9 @@
    "variant": "plain_o2",
    "program": "x86_64_plain_o2.bin",
    "shared": 12,
-   "identical": 8,
-   "identical_tokens": 114,
-   "attributed": 4,
+   "identical": 9,
+   "identical_tokens": 147,
+   "attributed": 3,
    "classes": [
     "name-convention",
     "oracle-warning",
@@ -53,7 +53,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default-plain_o2.jsonl",
-    "sha256": "c7f83f05a1493d3763b6bb6fee54c57c0aef6a9f917b544a3f2e2a00cd37df6c"
+    "sha256": "d2c1edaecf5988b8039ac6d39911f7df888999c9676478974864ae35cf8fb624"
    }
   },
   {
@@ -61,9 +61,9 @@
    "variant": "cpp_o2",
    "program": "x86_64_cpp_o2.bin",
    "shared": 20,
-   "identical": 10,
-   "identical_tokens": 374,
-   "attributed": 10,
+   "identical": 11,
+   "identical_tokens": 407,
+   "attributed": 9,
    "classes": [
     "name-convention",
     "oracle-warning",
@@ -71,7 +71,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default-cpp_o2.jsonl",
-    "sha256": "b60fe192cdaa81cffd56cc8da17e0e833c086579d56bb9087816ce95e810c4c1"
+    "sha256": "d3d45396fb5067a46a430c5c2190340649b79cbc33efa48a55c9d37f8021b5ac"
    }
   },
   {
@@ -79,15 +79,15 @@
    "variant": "many_o2",
    "program": "x86_64_many_o2.bin",
    "shared": 409,
-   "identical": 407,
-   "identical_tokens": 10491,
-   "attributed": 2,
+   "identical": 408,
+   "identical_tokens": 10524,
+   "attributed": 1,
    "classes": [
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default-many_o2.jsonl",
-    "sha256": "43e483ad93f9058c4f2bcb4fb9f95ddfbc692aeedd12936e4f604a383d37aa19"
+    "sha256": "cca3553d520e35ab5073de828749a0064c9a263f2efa66656184240c82842553"
    }
   },
   {
@@ -95,62 +95,8 @@
    "variant": "plain_o0",
    "program": "aarch64_plain_o0.bin",
    "shared": 17,
-   "identical": 11,
-   "identical_tokens": 196,
-   "attributed": 6,
-   "classes": [
-    "name-convention",
-    "oracle-warning",
-    "type-stronger"
-   ],
-   "evidence": {
-    "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o0.jsonl",
-    "sha256": "a606bfe288caf278e88508a1ac37b24a61c8ca8b24f957bd735bc793277db55b"
-   }
-  },
-  {
-   "language": "AARCH64:LE:64:v8A",
-   "variant": "plain_o2",
-   "program": "aarch64_plain_o2.bin",
-   "shared": 17,
-   "identical": 11,
-   "identical_tokens": 182,
-   "attributed": 6,
-   "classes": [
-    "name-convention",
-    "oracle-warning",
-    "type-stronger"
-   ],
-   "evidence": {
-    "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o2.jsonl",
-    "sha256": "d153c81a9ea36fac9077e40e31e2d09e437e57ab0f81ed2b4cbecce74bead854"
-   }
-  },
-  {
-   "language": "AARCH64:LE:64:v8A",
-   "variant": "cpp_o2",
-   "program": "aarch64_cpp_o2.bin",
-   "shared": 24,
-   "identical": 13,
-   "identical_tokens": 465,
-   "attributed": 11,
-   "classes": [
-    "name-convention",
-    "oracle-warning",
-    "type-stronger"
-   ],
-   "evidence": {
-    "path": "m4-003-divergences/AARCH64-LE-64-v8A-cpp_o2.jsonl",
-    "sha256": "5342bb176317be200d0987e5e63079716210141360957987aecf71fe7f32d522"
-   }
-  },
-  {
-   "language": "AARCH64:LE:64:v8A",
-   "variant": "many_o2",
-   "program": "aarch64_many_o2.bin",
-   "shared": 415,
-   "identical": 410,
-   "identical_tokens": 10559,
+   "identical": 12,
+   "identical_tokens": 224,
    "attributed": 5,
    "classes": [
     "name-convention",
@@ -158,8 +104,62 @@
     "type-stronger"
    ],
    "evidence": {
+    "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o0.jsonl",
+    "sha256": "3f8ae1ad1fe4cd3d20a97df122e6ea8886df555ad09a367464abafd3e1f0eea8"
+   }
+  },
+  {
+   "language": "AARCH64:LE:64:v8A",
+   "variant": "plain_o2",
+   "program": "aarch64_plain_o2.bin",
+   "shared": 17,
+   "identical": 12,
+   "identical_tokens": 210,
+   "attributed": 5,
+   "classes": [
+    "name-convention",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o2.jsonl",
+    "sha256": "0ec2c5c8945ac031a016a81fb83d6d0ebbe7c5559c1531d4562d11d4c6e4c58f"
+   }
+  },
+  {
+   "language": "AARCH64:LE:64:v8A",
+   "variant": "cpp_o2",
+   "program": "aarch64_cpp_o2.bin",
+   "shared": 24,
+   "identical": 14,
+   "identical_tokens": 493,
+   "attributed": 10,
+   "classes": [
+    "name-convention",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/AARCH64-LE-64-v8A-cpp_o2.jsonl",
+    "sha256": "2e47da4434bf75b30d1bdc0ca7626ca21912705fac4622fe3fadf4760b645494"
+   }
+  },
+  {
+   "language": "AARCH64:LE:64:v8A",
+   "variant": "many_o2",
+   "program": "aarch64_many_o2.bin",
+   "shared": 415,
+   "identical": 411,
+   "identical_tokens": 10587,
+   "attributed": 4,
+   "classes": [
+    "name-convention",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-many_o2.jsonl",
-    "sha256": "1c1f3b4ce5dbf1622d705b3d95dd48108cfc382dc55cdc65ee5cfbcd5327e541"
+    "sha256": "cd4ef957d41facd0cba6b9c17c0e57bb487ffbf29b4fedea97f768cf59999034"
    }
   },
   {
@@ -167,16 +167,16 @@
    "variant": "plain_o0",
    "program": "powerpc_plain_o0.bin",
    "shared": 12,
-   "identical": 9,
-   "identical_tokens": 149,
-   "attributed": 3,
+   "identical": 10,
+   "identical_tokens": 175,
+   "attributed": 2,
    "classes": [
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-plain_o0.jsonl",
-    "sha256": "87a70f9aced86b77a2b8519cffc3014d5c9fad6617644397f3ae781ba2d47b6d"
+    "sha256": "fef7bf2c26d8a28ab65b55e4984d9334bb57ee2933f5eac177a55013ba80aca6"
    }
   },
   {
@@ -184,16 +184,16 @@
    "variant": "plain_o2",
    "program": "powerpc_plain_o2.bin",
    "shared": 12,
-   "identical": 9,
-   "identical_tokens": 137,
-   "attributed": 3,
+   "identical": 10,
+   "identical_tokens": 163,
+   "attributed": 2,
    "classes": [
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-plain_o2.jsonl",
-    "sha256": "a76e2111562b5228686ebece3ba4112d31d278bebb05effd2858c887b6629619"
+    "sha256": "e0bfb78f3b60ffbca317a45488f0b56fed1c2771a1ab421bbbca0c105a4b055c"
    }
   },
   {
@@ -201,9 +201,9 @@
    "variant": "cpp_o2",
    "program": "powerpc_cpp_o2.bin",
    "shared": 19,
-   "identical": 8,
-   "identical_tokens": 132,
-   "attributed": 11,
+   "identical": 9,
+   "identical_tokens": 158,
+   "attributed": 10,
    "classes": [
     "language-variant",
     "oracle-warning",
@@ -211,7 +211,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-cpp_o2.jsonl",
-    "sha256": "b6a4b21e584c5f491d8c8f8eeb2bad58ce6631cce301ebdc62037ac90ab93520"
+    "sha256": "dc139553163b4dfd70cc57a7206c0abff63aab3b8a9a01d3b05d1687e0724ab1"
    }
   },
   {
@@ -219,15 +219,15 @@
    "variant": "many_o2",
    "program": "powerpc_many_o2.bin",
    "shared": 410,
-   "identical": 408,
-   "identical_tokens": 10514,
-   "attributed": 2,
+   "identical": 409,
+   "identical_tokens": 10540,
+   "attributed": 1,
    "classes": [
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-many_o2.jsonl",
-    "sha256": "0c6d8917039b0dea8b24d5635c17b1966696b4e5f37b1f4225007b59788626ea"
+    "sha256": "d97517817068c68405f6cd464a416902dddada660c4c927ae731be7370f6d885"
    }
   },
   {
@@ -246,7 +246,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-plain_o0.jsonl",
-    "sha256": "7d9f607d2fae00e1076b7863908cfbc82f2da9d558b60cff5c029367ff9f6170"
+    "sha256": "cf1243cc859f3f4f2e75075821961e50b2618a58f6438dc879203ef5c1364e51"
    }
   },
   {
@@ -265,7 +265,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-plain_o2.jsonl",
-    "sha256": "da58d0c15255d2401aa30a8d4b844c6f572ac2d0e79a327b29c8b6fd1579c969"
+    "sha256": "3331b5e551c9e886440df7e19f9edd1321408657d7dd9bf482e7b817348a7861"
    }
   },
   {
@@ -284,7 +284,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-cpp_o2.jsonl",
-    "sha256": "705f698642ef5e295b11e6ccd4a9535181fd9086322f9c932a883bc2b5334274"
+    "sha256": "4c1252eab2e7cbada1a3a610a5b244a1669e3a8563ba187af4017d15c78ee767"
    }
   },
   {
@@ -302,7 +302,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-many_o2.jsonl",
-    "sha256": "9a5da8c4222e9eab82fc0c6f15d5988598c1f6f565d01bcb8cbedbfcfb62aa58"
+    "sha256": "849d4b1154db243dae56b6698997591c9089743151b8ea6ff5a5e18b62137d49"
    }
   }
  ],

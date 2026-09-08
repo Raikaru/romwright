@@ -209,6 +209,18 @@ pub(super) fn prepare(
                         import
                             .externals
                             .push((address, String::from_utf8_lossy(name).into_owned()));
+                        // A jump slot holds a code address by definition --
+                        // that is what the linker reserves it for -- and a
+                        // GLOB_DAT slot holds one when its symbol declares a
+                        // function. A symbol that declares an object
+                        // (`STT_OBJECT`) declares data, so the slot keeps the
+                        // weaker type (public elf.h relocation and symbol
+                        // types).
+                        let kind = symbol_kind(data, sections, section.link, index, width)?;
+                        let jump_slot = linkage_types.get(1) == Some(&typ);
+                        if !matches!(kind, Some(1) | Some(6)) && (jump_slot || matches!(kind, Some(2) | Some(10))) {
+                            import.function_slots.push((address, width as u64));
+                        }
                     }
                 }
                 if copy_type == Some(typ)
@@ -772,6 +784,21 @@ fn external_name<'a>(
         return Ok(None);
     }
     symbol_name(data, sections, symbols, index, width, be)
+}
+
+/// The `st_info` type of one relocation's symbol, or None when the entry is
+/// not there.
+fn symbol_kind(
+    data: &[u8],
+    sections: &[ElfSection],
+    link: u32,
+    index: u64,
+    width: usize,
+) -> Result<Option<u8>> {
+    let Some((_, symbol)) = symbol_record(data, sections, link, index, width, true)? else {
+        return Ok(None);
+    };
+    Ok(Some(symbol[if width == 8 { 4 } else { 12 }] & 15))
 }
 
 /// Locates one dynamic symbol table entry, bounds-checked.

@@ -1,0 +1,196 @@
+{
+ "id": "m4-030",
+ "recorded_at": "2026-09-08T20:44:39.983621+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "116 slots typed as code pointers and 74 left plain across 20 ELF rows: every code pointer has a fact in the same store proving its target is code, every plain pointer has none, and no such address is a function on stock's side",
+ "metrics": {
+  "pointee.rows_measured": 20,
+  "pointee.code_pointers": 116,
+  "pointee.plain_pointers": 74,
+  "pointee.unproven": 0,
+  "pointee.under_typed": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "code_pointers": 11,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "variant": "many_o2",
+   "code_pointers": 5,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "code_pointers": 6,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "variant": "plain_o2",
+   "code_pointers": 6,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "variant": "plain_pie",
+   "code_pointers": 8,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "code_pointers": 10,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "i386_many_o2",
+   "variant": "many_o2",
+   "code_pointers": 3,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "code_pointers": 4,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "variant": "plain_o2",
+   "code_pointers": 4,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "variant": "plain_pie",
+   "code_pointers": 6,
+   "plain_pointers": 4,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "code_pointers": 10,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "powerpc_many_o2",
+   "variant": "many_o2",
+   "code_pointers": 3,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "code_pointers": 4,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "variant": "plain_o2",
+   "code_pointers": 4,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "variant": "plain_pie",
+   "code_pointers": 5,
+   "plain_pointers": 11,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "code_pointers": 10,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "variant": "many_o2",
+   "code_pointers": 3,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "code_pointers": 4,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "variant": "plain_o2",
+   "code_pointers": 4,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "variant": "plain_pie",
+   "code_pointers": 6,
+   "plain_pointers": 3,
+   "unproven": [],
+   "under_typed": [],
+   "code_is_function_in_stock": []
+  }
+ ]
+}

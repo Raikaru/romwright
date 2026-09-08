@@ -208,6 +208,13 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:elf-linkage",
+        explanation: "A linkage slot whose relocation names a function: the loader writes \
+         a code address into it, which is what a jump slot is reserved for.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:elf-object",
         explanation: "The size an ELF symbol declares for the object it names: the image \
          says this many bytes belong to that object, so that much of the \

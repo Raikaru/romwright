@@ -67,12 +67,19 @@ def stock_pointers(store: Path) -> dict[str, str]:
         if ram(address) and PLAIN_POINTER.match(name)}
 
 
+# The store records what a slot points at where it knows: `code-pointer` where
+# the image declares the target is a function, `pointer` where it declares only
+# that an address lives there (m4-030). Both are pointers, which is what this
+# gate measures.
+POINTER_TYPES = ("pointer", "code-pointer")
+
+
 def our_pointers(store: Path) -> dict[str, str]:
     """Addresses our store types as a pointer, with the provenance."""
     return {address: provenance for address, kind, provenance in rows(
         store, "SELECT address, type, provenance FROM data_definitions "
                "WHERE program_id = ?")
-        if ram(address) and kind == "pointer"}
+        if ram(address) and kind in POINTER_TYPES}
 
 
 def externals(store: Path) -> set[str]:

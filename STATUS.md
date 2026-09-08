@@ -4902,16 +4902,64 @@ evidence:
 - Regression: `cargo test --workspace` **263 pass**; every gate in `tests/`
   passes, plus the five shell suites.
 
+### m4-030 evidence
+- The question the class posed: stock types every word its loader marks up a
+  plain pointer (`ElfDefaultGotPltMarkup.createPointer`, :562-585) and we
+  typed every pointer row `code *`, so its text carried a `(code *)` cast that
+  ours did not. Some of ours was evidence and some was invention, and the
+  audit separated them: of the slots we typed as code pointers, 90 were import
+  slots, 46 held a function's entry, and **68 held neither** -- the ABI's
+  reserved `.got.plt` head, `.got` words holding zero or a data address.
+- The rule now: a slot is a code pointer only where the *image declares* the
+  target is code -- a linkage relocation for a function (a jump slot by
+  definition, a GLOB_DAT slot when its symbol declares `STT_FUNC`; a symbol
+  declaring `STT_OBJECT` declares data) or an initializer array, which the ABI
+  defines as function pointers and whose entries the loader has already
+  confirmed decode as code. A word that merely *happens* to hold a function's
+  entry is a coincidence, not a declaration, and keeps the plain pointer both
+  stores give it. The store records the split as the type itself
+  (`code-pointer` beside `pointer`), so it is auditable rather than a decision
+  buried in the worker.
+- Two details the pinned tree settled:
+  - The plain pointer points at `undefined`, size 1 -- the core type the
+    decompiler registers for itself (`ArchitectureGhidra::buildTypegrp`,
+    ghidra_arch.cc:341), which no language's `coretypes.xml` declares. Sending
+    `undefined1` instead printed `undefined1 *` where stock prints
+    `undefined *`; the type is sent by description with no id, which
+    `Datatype::decodeBasic` (type.cc:698-700) hashes itself.
+  - A word the dynamic table names keeps the weaker type only where the claim
+    came from a relocation, since `DT_PLTGOT` on PowerPC is the ABI's reserved
+    table head *and* the first jump slot. An initializer array's first entry
+    is also named by `DT_INIT_ARRAY` and is still a function pointer.
+- Measured (`tests/m4-030_pointer_targets.py`,
+  `benchmarks/reports/m4-030.json`): **116 slots typed as code pointers and 74
+  left plain across 20 ELF rows**; every code pointer has a fact in the same
+  store proving its target is code, every declaring rule's row carries the
+  declaration, and no such address is a function on stock's side. The gate was
+  committed failing first and fails again if the split is removed (measured by
+  stashing the crates: "no slot is typed a code pointer").
+- `m4-003`: `type-stronger` **89 -> 58**, **1761 of 1845** token-identical (up
+  from 1749), 0 unexplained, five classes left, baseline re-recorded. The
+  residual 58 rows are the justified half: stock casts in front of a slot our
+  store types from the image's own declaration.
+- Regression: `cargo test --workspace` **263 pass**; every gate in `tests/`
+  passes, plus the five shell suites. `m4-021` and `m4-027` were taught that
+  `code-pointer` is a pointer with its target named -- the same claim, not a
+  weaker one.
+- Local note, not a code change: the gate cache moved off `/tmp`
+  (`VENTRIS_GATE_CACHE=/home/raikaru/ventris-cache/gate`) after tmpfs filled;
+  Ghidra refuses a project path with a dot component
+  (`NamingUtilities.checkName`), so `~/.cache` will not do.
+
 ## Next task
-- m4-030: `type-stronger` 85, now the largest class and the one with a
-  measured direction: where our store holds a slot's type and stock types it
-  `undefined *`, each side puts its cast in a different place. Read what stock
-  actually holds at those slots (the `analyzeHeadless` probe in
-  `/tmp/probe/ProbeSlot.java` shape is the tool: `getDataAt` plus the primary
-  symbol), decide per class of slot whether our stronger type is evidence or
-  invention, and either send what stock sends or record the divergence with
-  the fact that justifies it. The acceptance test compares the stored type at
-  each such address against stock's own answer at the same address.
+- m4-031: `name-convention` 11. Every one is a name we picked on purpose --
+  `_plt` for a linkage stub where stock keeps `FUN_<addr>` -- and the gate
+  already proves the texts are otherwise token-identical by substituting the
+  oracle's name. Decide whether the store should keep our name, stock's, or
+  both (a second symbol with its own provenance, the way m4-028 keeps a
+  mangled name beside its demangled form), and record the decision with the
+  fact that justifies it. The acceptance test compares the stored names at
+  those addresses against stock's and pins whichever the worker sends.
 - Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
   approved targets) needs a target game, which II.1 reserves for the human.
 

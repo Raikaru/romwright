@@ -182,7 +182,11 @@ def main() -> int:
             assert slots, f"{name}: the image declares no initializer array"
             for slot in slots:
                 definition = held["definitions"].get(slot)
-                assert definition is not None and definition["type"] == "pointer", (
+                # `code-pointer` is the same claim with the target named: the
+                # ABI defines an initializer array as function pointers, and
+                # m4-030 records that declaration in the type.
+                assert definition is not None and definition["type"] in (
+                    "pointer", "code-pointer"), (
                     f"{name}: the initializer slot at {slot:08x} holds a code "
                     f"address and the store types it {definition}")
                 assert definition["provenance"] == SOURCE, definition
