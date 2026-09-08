@@ -145,6 +145,8 @@ pub const ATTRIBUTE: u8 = 0xc0;
 pub mod elem {
     /// ELEM_VOID (marshal.cc:1273).
     pub const VOID: u32 = 10;
+    /// ELEM_INJECT (pcodeinject.cc:34).
+    pub const INJECT: u32 = 96;
     /// ELEM_PROTOTYPE and ELEM_RETURNSYM (fspec.cc:47,50).
     pub const PROTOTYPE: u32 = 169;
     pub const RETURNSYM: u32 = 172;
@@ -219,6 +221,10 @@ pub mod attr {
     pub const LAST: u32 = 28;
     /// ATTRIB_MAXSIZE (fspec.cc:27).
     pub const MAXSIZE: u32 = 120;
+    /// ATTRIB_MODEL (marshal.cc:1244).
+    pub const MODEL: u32 = 13;
+    /// ATTRIB_MODELLOCK (fspec.cc:29).
+    pub const MODELLOCK: u32 = 122;
     /// ATTRIB_NORETURN (fspec.cc:30).
     pub const NORETURN: u32 = 123;
 }
@@ -347,6 +353,8 @@ pub(crate) fn encode_function_element(
     name: &str,
     size: u64,
     no_return: bool,
+    convention: Option<&str>,
+    fixup: Option<&str>,
     call_return_branches: &[u64],
 ) {
     encode_header(out, ELEMENT_START, elem::FUNCTION);
@@ -355,17 +363,36 @@ pub(crate) fn encode_function_element(
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_addr_element(out, space, address);
     encode_flow_override(out, space, call_return_branches);
-    if no_return {
+    if no_return || convention.is_some() || fixup.is_some() {
         encode_header(out, ELEMENT_START, elem::PROTOTYPE);
+        // A named model, locked: Ghidra's own encoder locks the model whenever
+        // the name is known and not "unknown"
+        // (`FunctionPrototype.grabFromFunction`, :135-136). Without the lock
+        // the decompiler is free to reconsider the convention it was told.
+        if let Some(model) = convention {
+            encode_string_attribute(out, attr::MODEL, model.as_bytes());
+            encode_header(out, ATTRIBUTE, attr::MODELLOCK);
+            out.push((attr_type::BOOLEAN << 4) | 1);
+        }
         // PackedEncode::writeBool (marshal.cc:1147): value is in the type byte.
-        encode_header(out, ATTRIBUTE, attr::NORETURN);
-        out.push((attr_type::BOOLEAN << 4) | 1);
+        if no_return {
+            encode_header(out, ATTRIBUTE, attr::NORETURN);
+            out.push((attr_type::BOOLEAN << 4) | 1);
+        }
         encode_header(out, ELEMENT_START, elem::RETURNSYM);
         encode_header(out, ELEMENT_START, elem::ADDR);
         encode_header(out, ELEMENT_END, elem::ADDR);
         encode_header(out, ELEMENT_START, elem::VOID);
         encode_header(out, ELEMENT_END, elem::VOID);
         encode_header(out, ELEMENT_END, elem::RETURNSYM);
+        // A call fixup names p-code the compiler spec carries; the decompiler
+        // resolves the name against its own inject library and inlines it
+        // (`FuncProto::decode`, fspec.cc:4814-4819).
+        if let Some(name) = fixup {
+            encode_header(out, ELEMENT_START, elem::INJECT);
+            encode_string_attribute(out, attr::CONTENT, name.as_bytes());
+            encode_header(out, ELEMENT_END, elem::INJECT);
+        }
         encode_header(out, ELEMENT_END, elem::PROTOTYPE);
     }
     encode_header(out, ELEMENT_END, elem::FUNCTION);

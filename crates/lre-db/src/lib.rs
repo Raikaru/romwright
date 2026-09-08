@@ -17,13 +17,14 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 mod class;
+mod convention;
 mod return_behavior;
 mod signature;
 mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 13;
+pub const SCHEMA_VERSION: i64 = 14;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -180,7 +181,6 @@ impl ProjectDb {
                  name TEXT NOT NULL,
                  size INTEGER NOT NULL,
                  signature TEXT,
-                 calling_convention TEXT,
                  PRIMARY KEY (program_id, entry)
              );
 
@@ -520,6 +520,31 @@ impl ProjectDb {
                      );",
                 )?;
             }
+            if v < 14 {
+                // The convention is its own fact with its own provenance. The
+                // `functions` column that used to hold it was never written:
+                // one value, one owner.
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS calling_conventions (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         function TEXT NOT NULL,
+                         convention TEXT NOT NULL,
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL
+                             CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, function)
+                     );",
+                )?;
+                let carried: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('functions')
+                                   WHERE name = 'calling_convention')",
+                    [], |row| row.get(0),
+                )?;
+                if carried {
+                    tx.execute("ALTER TABLE functions DROP COLUMN calling_convention", [])?;
+                }
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -562,8 +587,8 @@ impl ProjectDb {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute("DELETE FROM functions WHERE program_id = ?1", params![program.0])?;
         let mut stmt = tx.prepare(
-            "INSERT INTO functions(program_id, entry, name, size, signature, calling_convention)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            "INSERT INTO functions(program_id, entry, name, size, signature)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
         )?;
         let mut seen = std::collections::HashSet::new();
         for r in rows {
@@ -575,8 +600,7 @@ impl ProjectDb {
                 addr_cell(&r.entry),
                 r.name,
                 r.size,
-                r.signature,
-                r.calling_convention
+                r.signature
             ])?;
         }
         drop(stmt);
@@ -785,8 +809,7 @@ impl ProjectDb {
     /// Lists functions of a program ordered by entry address.
     pub fn functions(&self, program: ProgramId) -> Result<Vec<FunctionRow>> {
         let mut stmt = self.conn.prepare(
-            "SELECT entry, name, size, signature, calling_convention
-             FROM functions WHERE program_id = ?1 ORDER BY entry",
+            &format!("{FUNCTION_SELECT} WHERE f.program_id = ?1 ORDER BY f.entry"),
         )?;
         let rows = stmt
             .query_map(params![program.0], map_function)?
@@ -815,8 +838,8 @@ impl ProjectDb {
                     |r| r.get(0),
                 )?;
                 let sql = format!(
-                    "SELECT entry, name, size, signature, calling_convention
-                     FROM functions WHERE program_id = ?1 ORDER BY {} {} LIMIT ?2 OFFSET ?3",
+                    "{FUNCTION_SELECT} WHERE f.program_id = ?1
+                     ORDER BY f.{} {} LIMIT ?2 OFFSET ?3",
                     sort_key.sql_column(),
                     if ascending { "ASC" } else { "DESC" }
                 );
@@ -832,8 +855,7 @@ impl ProjectDb {
                 // small (thousands of rows), so one code path keeps the
                 // total count consistent with the returned window.
                 let mut stmt = self.conn.prepare(
-                    "SELECT entry, name, size, signature, calling_convention
-                     FROM functions WHERE program_id = ?1",
+                    &format!("{FUNCTION_SELECT} WHERE f.program_id = ?1"),
                 )?;
                 let mut rows = stmt
                     .query_map(params![program.0], map_function)?
@@ -2636,6 +2658,12 @@ fn addr_from_cell(s: String, column: usize) -> rusqlite::Result<lre_model::Addre
         Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid hexadecimal address")),
     ))
 }
+
+/// A function row with its convention fact joined in: `calling_conventions`
+/// owns the value and its provenance, and every reader of a function sees it.
+const FUNCTION_SELECT: &str = "SELECT f.entry, f.name, f.size, f.signature, c.convention
+     FROM functions f LEFT JOIN calling_conventions c
+       ON c.program_id = f.program_id AND c.function = f.entry";
 
 fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
     Ok(FunctionRow {

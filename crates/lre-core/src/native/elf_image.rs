@@ -281,6 +281,7 @@ pub(super) fn prepare(
     import.ifunc_slots.dedup();
     collect_plt_candidates(sections, import, machine, width as u64);
     collect_initializer_labels(data, import, width, be, bias)?;
+    collect_dynamic_labels(data, import, width, be, bias)?;
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;
     }
@@ -418,6 +419,63 @@ fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Opt
 /// array's base and size come from the dynamic table, the target from the
 /// slot's own word or from the relocation applied to that slot, and the index
 /// from the slot's position in the array. A zero slot names nothing.
+/// Every dynamic tag whose value is an address, in Ghidra's own table
+/// (`ElfDynamicType`, the entries declared `ElfDynamicValueType.ADDRESS`).
+const ADDRESS_TAGS: &[(u64, &str)] = &[
+    (0x3, "DT_PLTGOT"), (0x4, "DT_HASH"), (0x5, "DT_STRTAB"), (0x6, "DT_SYMTAB"),
+    (0x7, "DT_RELA"), (0xc, "DT_INIT"), (0xd, "DT_FINI"), (0x11, "DT_REL"),
+    (0x17, "DT_JMPREL"), (0x19, "DT_INIT_ARRAY"), (0x1a, "DT_FINI_ARRAY"),
+    (0x20, "DT_PREINIT_ARRAY"), (0x24, "DT_RELR"),
+    (0x6000000f, "DT_ANDROID_REL"), (0x60000011, "DT_ANDROID_RELA"),
+    (0x6fffe000, "DT_ANDROID_RELR"), (0x6ffffef4, "DT_GNU_XHASH"),
+    (0x6ffffef5, "DT_GNU_HASH"), (0x6ffffef8, "DT_GNU_CONFLICT"),
+    (0x6ffffefe, "DT_MOVETAB"), (0x6ffffeff, "DT_SYMINFO"),
+    (0x6ffffff0, "DT_VERSYM"), (0x6ffffffc, "DT_VERDEF"), (0x6ffffffe, "DT_VERNEED"),
+];
+
+/// Names the addresses the dynamic table itself declares.
+///
+/// Ghidra labels the table `_DYNAMIC` and every nonzero ADDRESS-valued tag's
+/// target `__DT_<TAG>` -- the label passed to `addDynamicMemoryReference` is
+/// `_DT_<TAG>` and it prepends one more underscore
+/// (`ElfProgramBuilder.markupDynamicTable`, :2691-2723, and
+/// `addDynamicMemoryReference`, :2753-2773). The store decides later whether
+/// anything else already names the address; Ghidra applies the same guard.
+fn collect_dynamic_labels(
+    data: &[u8],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+    bias: u64,
+) -> Result<()> {
+    for header in program_headers(data, width, be)? {
+        if word(header, 0, 4, be)? != 2 {
+            continue;
+        }
+        // p_vaddr, not p_offset: the label names the address the table is
+        // loaded at. (`dynamic_value` reads file bytes and wants the offset.)
+        let start = word(header, if width == 4 { 8 } else { 16 }, width, be)?;
+        let table = start
+            .checked_add(bias)
+            .ok_or_else(|| bad("ELF dynamic table address overflow"))?;
+        import.dynamic_labels.push((table, "_DYNAMIC".into()));
+        break;
+    }
+    for (tag, name) in ADDRESS_TAGS {
+        let Some(value) = dynamic_value(data, width, be, *tag)? else { continue };
+        if value == 0 {
+            continue;
+        }
+        let address = value
+            .checked_add(bias)
+            .ok_or_else(|| bad("ELF dynamic tag address overflow"))?;
+        import.dynamic_labels.push((address, format!("__{name}")));
+    }
+    import.dynamic_labels.sort_by(|a, b| a.0.cmp(&b.0).then_with(|| a.1.cmp(&b.1)));
+    import.dynamic_labels.dedup();
+    Ok(())
+}
+
 fn collect_initializer_labels(
     data: &[u8],
     import: &mut NativeImport,

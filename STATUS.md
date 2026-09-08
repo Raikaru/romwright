@@ -4095,20 +4095,81 @@ m3-003, all three wired into continuous integration)
   `data_xrefs.sh`, `generic_discovery_test.sh` pass. 93 reports indexed, both
   generators in sync.
 
+### m4-012 evidence
+- **The gate's contract changed first.** Naming *a* divergence class used to
+  make a function "explained". `residue()` now subtracts what each named class
+  licenses -- token by token, over a `difflib` alignment -- and fails on what
+  is left. Numeric notation is normalised (`0x0` == `0`); a differing *value*
+  still differs. Two normalisations now compose (a name we chose *and* a cast
+  a typed slot moved), where before either one alone short-circuited.
+- **What the residue found, measured, then fixed.** Across 56 functions the
+  unaccounted tokens were: `processEntry` (x86-64/x86-32 entry rows),
+  `+ 0x1288`/`__i686_get_pc_thunk_bx` (three x86-32 rows), `__DT_PLTGOT` (one
+  PowerPC row) and `0` vs `0x0` (two rows, notation). Three facts, one
+  notation rule:
+  - **the process-entry model.** `e_entry` of an ELF executable or shared
+    object under OS ABI Linux/unspecified carries `processEntry`
+    (`ElfProgramBuilder.processEntryPoints:655-673`). Recorded in a new
+    `calling_conventions` table (schema **13 -> 14**) with provenance
+    `native-import:entry-convention`, applied only where the language's cspec
+    declares the model -- Ghidra's own silent skip, and necessary: an
+    unrecognized name makes the decompiler build a *placeholder* model with no
+    storage (`fspec.cc:4695-4698`). Reaches the worker as
+    `<prototype model=... modellock="true">`, the shape Ghidra's Java writes
+    whenever the name is known (`FunctionPrototype.grabFromFunction:135-136`).
+    The dead `functions.calling_convention` column is gone; readers get the
+    fact through a join, so one value has one owner.
+  - **the compiler spec's call fixups.** Ghidra maps every `<callfixup>`'s
+    `<target>` to its fixup and sets it on a function of that name, trying one
+    and two leading underscores (`CallFixupAnalyzer:436-459`, `:200-222`). The
+    worker does the same from the cspec it already loads and sends
+    `<inject content=...>`; the body never travels, because this build compiles
+    it (`PcodeInjectLibrarySleigh`, via `native/ghidra-opt-sleigh.patch`).
+    Two x86-32 callers stop calling `__i686.get_pc_thunk.bx`.
+  - **the dynamic table's labels.** `_DYNAMIC` at the table and `__DT_<TAG>`
+    at every nonzero ADDRESS-valued tag's target, only where nothing else
+    names the address (`markupDynamicTable:2691-2723`,
+    `addDynamicMemoryReference:2753-2773`). 10 labels on the PowerPC row;
+    the `DT_PLTGOT` slot keeps the import name it holds, which is Ghidra's own
+    guard. One defect caught by its own control: the first version labelled
+    the table at its *file offset* -- `dynamic_value` wants `p_offset`, a
+    label wants `p_vaddr`.
+- Measured: token identity **28 -> 30** of 56, `flow` 12 -> 10,
+  `function-facts` 16 -> 11, `missing-external-prototype` 11, and
+  **0 differing tokens unaccounted for** (previously unmeasured). New class
+  `data-name-convention` **3**: both stores name the same address on purpose,
+  matched by the address our label embeds. `type-stronger` 4 -> 9 because the
+  cast rule is now two-sided and bound to a slot the store types.
+- Controls (all fire): OS ABI byte 9, `e_type` = ET_REL, a PE image, and a
+  language declaring no such model each record no convention; a spec copy with
+  its `<callfixup>` elements removed brings the thunk call back; AArch64,
+  whose only fixup targets `___NotARealFunctionName___`, fixes up nothing; and
+  `residue()` reports `processEntry` when handed a text no class licenses.
+- Commit size: 1010 insertions across 29 files, above the 800-line rule. The
+  split boundary AGENTS asks for does not exist here in a green state -- the
+  accounting fails without the facts, and committing the facts first would
+  have re-recorded the pinned baseline twice for no review value. Recorded
+  rather than hidden.
+- Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-012`,
+  `m3-001`, `m3-003`, `m2-006`, `m2-008`, `m2-009`, `m5-001`, `m5-002`,
+  `m5-008`..`m5-012`, `m6-001`, `m6-002`, `m6-006`, `m8-003`, `m9-001`,
+  `m9-002`, `m9-003`, `m9-005`, `m10-003`, `m10-004`, `support_matrix_test.py`,
+  `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 94 reports indexed, both README
+  generators in sync.
+
 ## Next task
-- m4-012: the parity gate still lets a divergence through on one named class
-  even when that class does not account for the whole difference -- 16
-  `function-facts` rows name a differing signature while the residual tokens
-  are unexamined. Make the gate account for every differing token: allow only
-  tokens a named class explains (a name it substitutes, a dynamic label, a
-  derived variable, a warning comment, a type keyword a missing prototype
-  would supply), and fail on anything left. Diagnosis already done: the whole
-  residue across 56 functions is `processEntry` on the x86 entry rows -- the
-  calling convention `ElfProgramBuilder.processEntryPoints:667` applies to the
-  ELF entry point, which our cspec defines and the loader does not apply.
-  Acceptance: the accounting is exact, the entry convention is applied with
-  provenance, and the baseline is re-recorded. Its acceptance test does not
-  exist yet; write it first.
+- m4-013: close the largest remaining gap the accounting now measures --
+  `missing-external-prototype` **11** and `function-facts` **11**. Diagnosis
+  from the residue run: every one is an import the store names but holds no
+  signature for, on a name the pinned C library archive does *not* declare
+  (`__libc_start_main`, `abort`, `__gmon_start__`, `_ITM_*`), so m4-009's
+  archive pass cannot supply it. Decide by measurement which of the two
+  sources closes it: the pinned `.gdt` archives beyond `generic_clib_64`
+  (`Ghidra/Features/Base/data/typeinfo`), or the declarations the image's own
+  `.dynsym` version records name. Acceptance: a failing test first, naming
+  the imports whose signatures appear, the class counts before and after, and
+  a control showing a name neither source declares still counts as a gap.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

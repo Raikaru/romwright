@@ -145,7 +145,9 @@ pub struct FunctionRow {
     /// Recovered prototype string, when analysis produced one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
-    /// Calling convention name, when known.
+    /// The convention fact held for this function, when there is one. A
+    /// reader's projection of `CallingConventionRow`: the fact table owns the
+    /// value and its provenance, so writing a function row never sets it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub calling_convention: Option<String>,
 }
@@ -675,6 +677,17 @@ pub struct FlowOverrideRow {
     pub address: Address,
     /// Ghidra's override name, e.g. `callreturn`.
     pub kind: String,
+    pub provenance: FactProvenance,
+}
+
+/// How the platform enters a function: a named model the language's own
+/// compiler spec declares, not an invented signature. The operating system
+/// enters a process outside the C convention, and the ABI says where.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct CallingConventionRow {
+    pub function: Address,
+    /// A model name the compiler spec declares (`processEntry`, `__stdcall`).
+    pub convention: String,
     pub provenance: FactProvenance,
 }
 

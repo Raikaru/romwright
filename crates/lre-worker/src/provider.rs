@@ -101,6 +101,17 @@ pub struct ProgramProvider {
     pub pointer_size: u64,
     /// Register name -> (offset, size) from registers.txt (register space).
     pub registers: HashMap<String, (u64, u64)>,
+    /// Function entry -> the model the store holds for it. Only models the
+    /// loaded compiler spec declares reach the decompiler: an unrecognized
+    /// name becomes a placeholder with no parameter storage at all
+    /// (`Architecture::createUnknownModel`, fspec.cc:4695-4698).
+    pub conventions: HashMap<u64, String>,
+    /// Prototype model names the loaded cspec declares.
+    pub declared_models: HashSet<String>,
+    /// Call-fixup target name -> fixup name, from the loaded cspec. Ghidra's
+    /// own installer builds the same map and sets the fixup on any function
+    /// whose name is a target (`CallFixupAnalyzer.getTargetFixupMap`, :436-459).
+    pub call_fixups: HashMap<String, String>,
 }
 
 impl ProgramProvider {
@@ -129,6 +140,9 @@ impl ProgramProvider {
             core_types: HashMap::new(),
             pointer_size: 8,
             registers: HashMap::new(),
+            conventions: HashMap::new(),
+            declared_models: HashSet::new(),
+            call_fixups: HashMap::new(),
         }
     }
 
@@ -162,6 +176,42 @@ impl ProgramProvider {
         Ok(())
     }
 
+    /// Loads the convention facts, keeping only models the language declares
+    /// -- the same silent skip Ghidra performs when a compiler spec has no
+    /// such prototype (`ElfProgramBuilder.processEntryPoints`, :666-672).
+    pub fn load_calling_conventions(
+        &mut self,
+        db: &lre_db::ProjectDb,
+        program: lre_model::ProgramId,
+    ) -> Result<()> {
+        self.conventions = db
+            .calling_conventions(program)?
+            .into_iter()
+            .filter(|row| row.function.space == lre_model::AddressSpace::Ram)
+            .filter(|row| self.declared_models.contains(&row.convention))
+            .map(|row| (row.function.offset, row.convention))
+            .collect();
+        Ok(())
+    }
+
+    /// The model to send for a function, if the store holds one.
+    pub fn convention(&self, vaddr: u64) -> Option<&str> {
+        self.conventions.get(&vaddr).map(String::as_str)
+    }
+
+    /// The compiler spec's call fixup for a function, by name. Ghidra tries
+    /// the name, then one and two leading underscores
+    /// (`CallFixupAnalyzer.getCallFixupNameForFunction`, :200-222). Names are
+    /// compared as C identifiers on both sides, since that is the form the
+    /// store's names reach the decompiler in.
+    pub fn call_fixup(&self, vaddr: u64) -> Option<&str> {
+        let name = self.function_names.get(&vaddr)?;
+        ["", "_", "__"]
+            .iter()
+            .find_map(|prefix| self.call_fixups.get(&format!("{prefix}{name}")))
+            .map(String::as_str)
+    }
+
     /// Preloads all known functions so stored callee signatures can be applied
     /// before the first caller is analyzed.
     pub fn function_shell(&self) -> Result<Vec<u8>> {
@@ -178,10 +228,19 @@ impl ProgramProvider {
                 Ok((*offset, name.as_str(), *size))
             })
             .collect::<Result<Vec<_>>>()?;
+        let fixups: HashMap<u64, String> = self
+            .functions
+            .iter()
+            .filter_map(|offset| {
+                self.call_fixup(*offset).map(|name| (*offset, name.to_string()))
+            })
+            .collect();
         Ok(NativeWorker::encode_function_shell_doc(
             self.ram_space_index as u32,
             &entries,
             &self.non_returning,
+            &self.conventions,
+            &fixups,
             &self.call_return_branches,
         ))
     }
@@ -191,8 +250,9 @@ impl ProgramProvider {
         self.function_names.get(&vaddr).cloned()
     }
 
-    /// Loads registers.txt (name<TAB>offset<TAB>size) and the ram/register
-    /// space indices from the tspec — the two files `dump_specs` writes.
+    /// Loads registers.txt (name<TAB>offset<TAB>size), the ram/register space
+    /// indices from the tspec, and the prototype models the cspec declares —
+    /// the files `dump_specs` writes.
     pub fn load_language_info(&mut self, lang_dir: &Path) -> Result<()> {
         let regs = std::fs::read_to_string(lang_dir.join("registers.txt"))
             .map_err(|e| WorkerError::Setup(format!("registers.txt: {e}")))?;
@@ -218,8 +278,71 @@ impl ProgramProvider {
         self.pointer_size = find_space_attribute(&tspec, "ram", "size")
             .and_then(|size| size.parse().ok())
             .ok_or_else(|| WorkerError::Setup("tspec ram space has no size".into()))?;
+        // Which models exist at all. A convention the store holds but this
+        // language never declared must not be sent: the decompiler answers an
+        // unrecognized name with a placeholder model
+        // (`createUnknownModel`, fspec.cc:4695-4698), which is worse than the
+        // default it would otherwise use.
+        let cspec = std::fs::read_to_string(lang_dir.join("cspec.xml"))
+            .map_err(|e| WorkerError::Setup(format!("cspec.xml: {e}")))?;
+        self.declared_models = prototype_models(&cspec);
+        self.call_fixups = call_fixup_targets(&cspec);
         Ok(())
     }
+}
+
+/// Call-fixup targets a compiler spec declares, as a map from the target
+/// name to the fixup's own name. A fixup carries one or more
+/// `<target name="..."/>` children, and the decompiler compiles the `<pcode>`
+/// body itself in this build (`PcodeInjectLibrarySleigh`), so only the name
+/// has to travel. Target names are stored as C identifiers, the form a name
+/// reaches the decompiler in (`__i686.get_pc_thunk.bx` cannot be printed).
+fn call_fixup_targets(cspec: &str) -> HashMap<String, String> {
+    let mut found = HashMap::new();
+    let mut rest = cspec;
+    while let Some(pos) = rest.find("<callfixup ") {
+        let body = &rest[pos..];
+        rest = &body[1..];
+        let end = body.find("</callfixup>").unwrap_or(body.len());
+        let element = &body[..end];
+        let Some(header_end) = element.find('>') else { continue };
+        let Some(name) = tag_name(&element[..header_end]) else { continue };
+        let mut targets = &element[header_end..];
+        while let Some(at) = targets.find("<target ") {
+            let tag = &targets[at..];
+            targets = &tag[1..];
+            let Some(tag_end) = tag.find('>') else { break };
+            if let Some(target) = tag_name(&tag[..tag_end]) {
+                found.insert(crate::c_identifier(&target), name.clone());
+            }
+        }
+    }
+    found
+}
+
+/// The `name="..."` of one start tag.
+fn tag_name(header: &str) -> Option<String> {
+    let start = header.find("name=\"")? + 6;
+    let value = &header[start..];
+    value.find('"').map(|close| value[..close].to_string())
+}
+
+/// The names of `<prototype name="...">` elements a compiler spec declares.
+/// A `<prototype>` inside `<callfixup>` or a comment does not exist here:
+/// only start tags carrying a name, which is what `CompilerSpec` registers.
+fn prototype_models(cspec: &str) -> HashSet<String> {
+    let mut found = HashSet::new();
+    let mut rest = cspec;
+    while let Some(pos) = rest.find("<prototype ") {
+        let tag = &rest[pos..];
+        rest = &tag[1..];
+        let Some(end) = tag.find('>') else { break };
+        let header = &tag[..end];
+        if let Some(name) = tag_name(header) {
+            found.insert(name);
+        }
+    }
+    found
 }
 
 /// Extracts one attribute from the `<space name="NAME"` start tag in a tspec.
@@ -611,6 +734,8 @@ impl NativeWorker {
                     &name,
                     size,
                     provider.non_returning.contains(&vaddr),
+                    provider.convention(vaddr),
+                    provider.call_fixup(vaddr),
                     &branches,
                 );
                 wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);

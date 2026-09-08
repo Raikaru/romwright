@@ -1,0 +1,59 @@
+{
+  "task": "m4-012",
+  "recorded_at": "2026-09-08T00:54:26.760168+00:00",
+  "scope": "positive acceptance plus controls, not a locked corpus gate",
+  "metrics": {
+    "entry": "00201590",
+    "fact": {
+      "convention": "processEntry",
+      "provenance": "native-import:entry-convention",
+      "kind": "inferred"
+    },
+    "rendered": "void processEntry _entry(undefined8 param_1,undefined8 param_2)",
+    "controls": {
+      "osabi": "void _entry(undefined8 param_1,undefined8 param_2,undefined8 param_3)",
+      "type": "void _entry(undefined8 param_1,undefined8 param_2,undefined8 param_3)",
+      "pe": "no convention rows",
+      "undeclared_model": "AARCH64:LE:64:v8A: void _entry(undefined8 param_1)",
+      "no_callfixup_in_spec": "void _init(void){int unaff_EBX;__i686_get_pc_thunk_bx();if (*(code **)(unaff_EBX + 0x1127) != (code *)0x0) {(**(code **)",
+      "placeholder_target_only": "AARCH64:LE:64:v8A: no injection"
+    },
+    "fixup": {
+      "stub": "__i686.get_pc_thunk.bx",
+      "printed": "__i686_get_pc_thunk_bx",
+      "entry": "00401480",
+      "callers_replaced": [
+        "004015ac",
+        "004015cc"
+      ]
+    },
+    "dynamic_labels": {
+      "table": "1002065c",
+      "labelled": {
+        "_DYNAMIC": "1002065c",
+        "__DT_FINI_ARRAY": "10020654",
+        "__DT_GNU_HASH": "10000298",
+        "__DT_INIT_ARRAY": "10020658",
+        "__DT_JMPREL": "10000350",
+        "__DT_RELA": "10000344",
+        "__DT_STRTAB": "100002b4",
+        "__DT_SYMTAB": "100001e8",
+        "__DT_VERNEED": "10000268",
+        "__DT_VERSYM": "10000258"
+      },
+      "kept": {
+        "1003074c": "__libc_start_main"
+      }
+    },
+    "accounting": {
+      "licensed": [],
+      "unexplained": [
+        "(",
+        ")",
+        ";",
+        "processEntry"
+      ]
+    }
+  },
+  "passed": true
+}

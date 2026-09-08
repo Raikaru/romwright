@@ -83,6 +83,7 @@ impl WorkerSession {
         }
         provider.load_call_edges(&db, pid)?;
         provider.load_return_behaviors(&db, pid, asserted_returns_only)?;
+        provider.load_calling_conventions(&db, pid)?;
         let function_shell = provider.function_shell()?;
         let spec_docs = load_specs(spec_root)?;
         let mut command = std::process::Command::new(decompiler);

@@ -93,6 +93,23 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:dynamic-tag",
+        explanation:         "An address the image's own dynamic table names: the table itself, \
+         or the target of a tag whose value is an address, labelled where \
+         nothing else names it.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-import:entry-convention",
+        explanation:         "The address the operating system enters the process at, carrying \
+         the platform's process-entry model: an ELF executable or shared \
+         object's e_entry under a Linux or unspecified OS ABI, where the \
+         language declares such a model.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:plt-header",
         explanation:         "An indirect transfer that reads the word the System V ABI reserves \
          for the dynamic linker's resolver (DT_PLTGOT plus two pointers), so it \
