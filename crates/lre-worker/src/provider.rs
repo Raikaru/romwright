@@ -905,7 +905,7 @@ impl NativeWorker {
                     provider.external_names.contains_key(&vaddr)
                         || matches!(
                             provider.data_definitions.get(&vaddr),
-                            Some((kind, _)) if kind == "pointer"
+                            Some((kind, _)) if kind == "pointer" || kind == "code-pointer"
                         ),
                     core("code"),
                 ) {
@@ -940,14 +940,31 @@ impl NativeWorker {
                     // types it a plain pointer (`dataAt=pointer` at
                     // `1003074c` on `powerpc_plain_o0`), which is why its call
                     // through it carries a `(code *)` cast.
-                    let pointee = match (provider.tag_names.contains_key(&vaddr), core("undefined1")) {
-                        (true, Some((byte_id, _))) => ("undefined1", byte_id),
-                        _ => ("code", code_id),
-                    };
+                    // What the slot points at, as the store proves it: only a
+                    // slot the image declares holds a function address is
+                    // typed `code *`. Everything else is a plain pointer,
+                    // which is the type stock gives every word it marks up
+                    // (`ElfDefaultGotPltMarkup.createPointer`, :562-585).
+                    let proven_code = matches!(
+                        provider.data_definitions.get(&vaddr),
+                        Some((kind, _)) if kind == "code-pointer"
+                    );
+
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
                         &mut doc, space as u32, vaddr, &name, read_only,
-                        |out| wire::encode_pointer_type(out, pointee, size),
+                        |out| {
+                            if proven_code {
+                                wire::encode_pointer_type(out, ("code", code_id), size)
+                            } else {
+                                // Stock's plain pointer points at the type the
+                                // decompiler registers for itself, which is
+                                // what makes its text read `undefined *`.
+                                wire::encode_pointer_to(out, size, |out| {
+                                    wire::encode_basic_type(out, "undefined", "unknown", 1)
+                                })
+                            }
+                        },
                     );
                     close_document(&mut doc);
                 } else if let (Some(count), Some((byte_id, _))) = (

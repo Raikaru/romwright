@@ -523,11 +523,29 @@ pub(crate) fn encode_array_type(out: &mut Vec<u8>, element: (&str, u64), count: 
 
 /// A pointer to a core type (`TypePointer::decode`, type.cc).
 pub(crate) fn encode_pointer_type(out: &mut Vec<u8>, target: (&str, u64), size: u64) {
+    encode_pointer_to(out, size, |out| encode_typeref(out, target.0, target.1));
+}
+
+/// A pointer whose target is described rather than referenced by id.
+pub(crate) fn encode_pointer_to(out: &mut Vec<u8>, size: u64, target: impl FnOnce(&mut Vec<u8>)) {
     encode_header(out, ELEMENT_START, elem::TYPE);
     encode_string_attribute(out, attr::NAME, b"");
     encode_string_attribute(out, attr::METATYPE, b"ptr");
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
-    encode_typeref(out, target.0, target.1);
+    target(out);
+    encode_header(out, ELEMENT_END, elem::TYPE);
+}
+
+/// A core type sent by description, with no id: `Datatype::decodeBasic`
+/// derives `hashName(name)` itself when the id is omitted (type.cc:698-700).
+/// That is how `undefined` can be named -- the decompiler registers it, size
+/// 1, metatype unknown (`ArchitectureGhidra::buildTypegrp`,
+/// ghidra_arch.cc:341), and no language's `coretypes.xml` declares it.
+pub(crate) fn encode_basic_type(out: &mut Vec<u8>, name: &str, metatype: &str, size: u64) {
+    encode_header(out, ELEMENT_START, elem::TYPE);
+    encode_string_attribute(out, attr::NAME, name.as_bytes());
+    encode_string_attribute(out, attr::METATYPE, metatype.as_bytes());
+    encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_header(out, ELEMENT_END, elem::TYPE);
 }
 

@@ -195,6 +195,8 @@ pub struct NativeImport {
     pub got_slots: Vec<(u64, u64)>,
     /// Addresses an ELF `OBJECT` symbol declares, with the size it declares.
     pub object_sizes: Vec<(u64, u64)>,
+    /// Linkage slots whose relocation names a function, with their width.
+    pub function_slots: Vec<(u64, u64)>,
     /// Entries whose name came from the image's own symbol table. Ghidra's
     /// loader leaves such a function's name alone and only marks it an entry
     /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
@@ -1668,6 +1670,10 @@ pub const DEMANGLE_SOURCE: &str = "native-analysis:demangle";
 
 /// The size an ELF `OBJECT` symbol declares for the object it names.
 pub const ELF_OBJECT_SOURCE: &str = "native-import:elf-object";
+
+/// A linkage slot whose relocation names a function: the loader will write a
+/// code address into it.
+pub const ELF_LINKAGE_SOURCE: &str = "native-import:elf-linkage";
 /// An object the dynamic linker copies into the image, named by the
 /// relocation that copies it.
 pub const ELF_COPY_SOURCE: &str = "native-import:elf-copy";
@@ -1861,12 +1867,48 @@ pub fn store_import(
             .collect();
         db.replace_inferred_flow_overrides(pid, source, &overrides)?;
     }
+    let tagged: std::collections::HashSet<u64> =
+        imp.dynamic_labels.iter().map(|(address, _)| *address).collect();
+    // What the *image* declares a slot points at, which is the only thing that
+    // justifies typing one more strongly than stock -- whose loader types
+    // every word it marks up a plain pointer
+    // (`ElfDefaultGotPltMarkup.createPointer`, :562-585). Two declarations
+    // qualify: a linkage relocation for a function, and an initializer array,
+    // which the ABI defines as an array of function pointers and whose entries
+    // this loader has already confirmed decode as code. A word that merely
+    // *happens* to hold a function's entry -- a `.got` word, a referenced word
+    // (m4-027) -- is a coincidence, not a declaration, and keeps the plain
+    // pointer both stores give it.
+    let linkage_declared: std::collections::HashSet<u64> =
+        imp.function_slots.iter().map(|(address, _)| *address).collect();
+    let array_declared: std::collections::HashSet<u64> =
+        imp.initializer_slots.iter().map(|(address, _)| *address).collect();
+    let pointee = |address: u64| -> String {
+        // An initializer array's entries are function pointers by definition,
+        // including the first one, which `DT_INIT_ARRAY` also names. A linkage
+        // slot the dynamic table names is different: `DT_PLTGOT` on PowerPC is
+        // the ABI's reserved table head as well as the first jump slot, and
+        // stock types that word a plain pointer (m4-029).
+        let declared = array_declared.contains(&address)
+            || (linkage_declared.contains(&address) && !tagged.contains(&address));
+        if declared {
+            "code-pointer".into()
+        } else {
+            "pointer".into()
+        }
+    };
     let definitions: Vec<lre_model::DataDefinitionRow> = imp
         .plt_reserved_slots
         .iter()
+        .filter(|(address, _)| {
+            // A word the ABI reserves holds no code address -- unless a
+            // relocation names a function for it, which makes it a linkage
+            // slot whatever its position in the table.
+            !imp.function_slots.iter().any(|(slot, _)| slot == address)
+        })
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
-            data_type: "pointer".into(),
+            data_type: pointee(*address),
             size: *width,
             provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,
@@ -1876,6 +1918,30 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
+    // A linkage slot whose relocation names a function: the loader writes a
+    // code address there, which is the only fact that justifies typing a slot
+    // more strongly than stock, whose loader types every marked-up word a
+    // plain pointer (`ElfDefaultGotPltMarkup.createPointer`, :562-585). A word
+    // the dynamic table names is that table's own datum even when a linkage
+    // relocation lands on it (m4-029), so it keeps the weaker type.
+    let mut linkage: Vec<lre_model::DataDefinitionRow> = imp
+        .function_slots
+        .iter()
+        .filter(|(address, _)| !tagged.contains(address))
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: pointee(*address),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: ELF_LINKAGE_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    linkage.sort_by_key(|row| row.address.offset);
+    linkage.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, ELF_LINKAGE_SOURCE, &linkage)?;
     // The size an ELF symbol declares for an object, applied as the undefined
     // data Ghidra applies: one `undefinedN` up to eight bytes, an array of
     // `undefined1` beyond that (`Undefined.getUndefinedDataType`, :47-55,
@@ -1910,6 +1976,7 @@ pub fn store_import(
                 && !imp.pointer_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.got_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.object_sizes.iter().any(|(slot, _)| slot == address)
+                && !imp.function_slots.iter().any(|(slot, _)| slot == address)
         })
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
@@ -1930,7 +1997,7 @@ pub fn store_import(
         .iter()
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
-            data_type: "pointer".into(),
+            data_type: pointee(*address),
             size: *width,
             provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,
@@ -1947,7 +2014,7 @@ pub fn store_import(
         .iter()
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
-            data_type: "pointer".into(),
+            data_type: pointee(*address),
             size: *width,
             provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,
@@ -1962,9 +2029,16 @@ pub fn store_import(
     let mut got: Vec<lre_model::DataDefinitionRow> = imp
         .got_slots
         .iter()
+        .filter(|(address, _)| {
+            // `.got` is walked at load time, before the pass that reads a
+            // word and finds a function's entry in it (m4-027); that pass's
+            // fact is the stronger one.
+            !imp.pointer_slots.iter().any(|(slot, _)| slot == address)
+                && !imp.function_slots.iter().any(|(slot, _)| slot == address)
+        })
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
-            data_type: "pointer".into(),
+            data_type: pointee(*address),
             size: *width,
             provenance: lre_model::FactProvenance {
                 kind: lre_model::FactKind::Inferred,

@@ -1,18 +1,18 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-08T19:04:33.197390+00:00",
+ "recorded_at": "2026-09-08T20:45:05.577369+00:00",
  "status": "pass",
  "passed": true,
- "summary": "30 classes classified as declared/decoded/inferred; 8 of 18 declared classes scored here and 10 by another committed gate, each attributing 1.0000 of the 4540 entries they named; 4669 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "31 classes classified as declared/decoded/inferred; 8 of 19 declared classes scored here and 11 by another committed gate, each attributing 1.0000 of the 4540 entries they named; 4669 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 30,
-  "evidence.declared": 18,
+  "evidence.classes": 31,
+  "evidence.declared": 19,
   "evidence.declared_exercised": 8,
-  "evidence.declared_elsewhere": 10,
+  "evidence.declared_elsewhere": 11,
   "evidence.unbacked_confidence": 0,
   "evidence.references": 4669,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
@@ -106,6 +106,12 @@
    "evidence": "declared",
    "explanation": "A word inside a `.got` section: the ELF's own global offset table holds addresses, so every entry of it is a pointer whatever value it currently carries.",
    "source": "native-import:elf-got"
+  },
+  "native-import:elf-linkage": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A linkage slot whose relocation names a function: the loader writes a code address into it, which is what a jump slot is reserved for.",
+   "source": "native-import:elf-linkage"
   },
   "native-import:elf-object": {
    "derives_confidence": false,
@@ -304,6 +310,9 @@
    "evidence-classes.json"
   ],
   "native-import:elf-exception": [
+   "evidence-classes.json"
+  ],
+  "native-import:elf-linkage": [
    "evidence-classes.json"
   ],
   "native-import:elf-object": [

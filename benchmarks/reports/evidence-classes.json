@@ -51,6 +51,10 @@
   "evidence": "declared",
   "derives_confidence": false
  },
+ "native-import:elf-linkage": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
  "native-import:elf-object": {
   "evidence": "declared",
   "derives_confidence": false
