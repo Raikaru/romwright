@@ -4589,12 +4589,37 @@ m3-003, all three wired into continuous integration)
   `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
   `generic_discovery_test.sh` pass. `m4-003` is unchanged at **1739 of 1845**
   with the same eleven classes: no corpus row's language moved.
-- Still failing, still not this task's: `m2-006_thunks` (a
-  decompiler-recovered prototype on the import stub at `00201710` with the
-  `processEntry` convention) fails identically at `05b8b4e`, as do
-  `m1-008b_pointer_seeds` and `m2-006_specs`/`m2-006_specs_rebuild`
-  (`gen_native_specs.py --check` refuses the committed bundles on this host),
-  and `main_window_split_test` (`main_window.cpp` 446 lines, cap 400).
+### The four failing gates, closed
+Every gate the tree carried into this session now passes. Each cause, and its
+evidence:
+- **`m2-006_specs`, `m2-006_specs_rebuild`.** `gen_native_specs.py --check`
+  pins `bridge_sources_sha256` over the bridge sources, which m4-018 changed;
+  m4-021 regenerated the oracle references for the same reason and missed the
+  three spec bundles. Regenerated through the JVM bridge with the script that
+  owns them: the **15 spec files are byte-identical** (git reports only the
+  three manifests modified) and the only key that moved in each manifest is
+  `bridge_sources_sha256`.
+- **`m1-008b_pointer_seeds`, and `m1-008b_scoring_test`'s input.** The same
+  hash, one level up: each scoring view pins `raw_reference_sha256` over the
+  raw oracle reference m4-021 regenerated. Regenerated with
+  `gen_function_scoring.py`: **all 20 views moved in exactly that one key**,
+  20 of 20 rows pass, and the scored/excluded counts are unchanged.
+- **`m2-006_thunks`.** A real disagreement between two committed tasks, and
+  the test was the wrong side of it. Its assertion said *no* prototype may sit
+  at an imported address; m4-009 deliberately applies the pinned archive's
+  declaration to the stub an import names, which is what makes
+  `printf("sum: %d\n",(ulong)uVar1)` the oracle's text exactly. What the gate
+  protects is the caller: an **inferred** prototype recovered from an unknown
+  thunk's body would erase the caller's parameters. The assertion now names
+  that -- no prototype at an imported address may carry inferred evidence, and
+  any that sits there must come from `native-import:type-archive` -- and the
+  caller's two parameters are still asserted before and after inference, on
+  both x86-64 and PowerPC.
+- **`main_window_split_test`.** `main_window.cpp` had grown to 446 lines
+  against a 400-line cap. The analyst's mutating commands (rename, comment,
+  undo) and the two search dialogs moved to `main_window_commands.cpp`:
+  **378 lines**, all ten docks present, and the Qt gates (`m6-003`,
+  `m9-004`, `m10-002`) pass against a rebuilt binary.
 
 ## Next task
 - m4-024: `.gcc_except_table` try/catch annotations (`exception-annotation`

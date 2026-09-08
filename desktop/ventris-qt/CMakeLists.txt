@@ -64,6 +64,7 @@ add_executable(ventris-qt
     src/hex_canvas.cpp
     src/main_window.h
     src/main_window.cpp
+    src/main_window_commands.cpp
     src/functions_dock.h
     src/functions_dock.cpp
     src/decompiler_dock.h

@@ -2,7 +2,7 @@
   "schema_version": 1,
   "policy": "code-functions-v1",
   "sha256": "55f81a565a9ded9c74e61e09546532e1ef8dbc3003cfc4f9c0b93fa317adb6dc",
-  "raw_reference_sha256": "9ca0f3cffbd7ba67b28d07837c9419032ecf0baa3794c7383bf36e5f01f0fcd5",
+  "raw_reference_sha256": "5a61fdc8688ec832e202deaac9b4ba32dde9407179bb361460403795aac2580a",
   "exporter_sha256": "740e880d89b8e660a5997d1485e3fe447724951d50734c4c4e0a60e324184fd4",
   "upstream_version": "12.1.3",
   "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
