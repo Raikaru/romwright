@@ -3566,9 +3566,13 @@ fn apply_library_prototypes(
     else {
         return Ok(());
     };
-    let Some(known_types) = crate::library_types::core_type_names(&specs) else {
+    let Some(mut known_types) = crate::library_types::core_type_names(&specs) else {
         return Ok(());
     };
+    // Plus the base types the compiler spec declares a width for: the
+    // decompiler asks the worker for a name it does not hold, and the worker
+    // answers from the same document (m4-025).
+    known_types.extend(crate::library_types::language_base_types(&specs).into_keys());
     let applied = crate::library_types::declared_for(&table, named, &known_types);
     if applied.is_empty() {
         return Ok(());

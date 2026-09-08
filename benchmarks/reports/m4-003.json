@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T13:11:19.687019+00:00",
+ "recorded_at": "2026-09-08T14:49:18.501112+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1739 of 1845 functions token-identical, 106 differing only where a named fact differs (data-name-convention 8, data-type-unknown 4, function-facts 2, language-variant 3, mangled-name 8, missing-external-prototype 4, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1739 of 1845 functions token-identical, 106 differing only where a named fact differs (data-name-convention 8, data-type-unknown 4, language-variant 3, mangled-name 8, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -15,10 +15,8 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 8,
   "parity.class.data-type-unknown": 4,
-  "parity.class.function-facts": 2,
   "parity.class.language-variant": 3,
   "parity.class.mangled-name": 8,
-  "parity.class.missing-external-prototype": 4,
   "parity.class.name-convention": 11,
   "parity.class.name-rendering": 12,
   "parity.class.oracle-warning": 19,
@@ -215,16 +213,14 @@
    "attributed": 12,
    "classes": [
     "data-name-convention",
-    "function-facts",
     "language-variant",
     "mangled-name",
-    "missing-external-prototype",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-cpp_o2.jsonl",
-    "sha256": "1b916603a3581743680cf653eb8c6d1de42360f1e371e2d7bf474d29751b527e"
+    "sha256": "d1a9a46d7dbe0df1fb189ffcf3178cbade52a3cfa8ce08e6265ed57ade9ddbeb"
    }
   },
   {
@@ -297,9 +293,7 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "function-facts",
     "mangled-name",
-    "missing-external-prototype",
     "name-convention",
     "name-rendering",
     "oracle-warning",
@@ -307,7 +301,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-cpp_o2.jsonl",
-    "sha256": "cef3c0c1c2ae5cb1beb59fbe92e4478ff05a21a9f6700edcf3f8060ac8a4240b"
+    "sha256": "a1c32bc7c13de5142a81eb0ff8292cb38ac73a6e8cd54517cb0015d8fbfa9026"
    }
   },
   {

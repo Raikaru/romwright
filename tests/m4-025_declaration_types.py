@@ -17,8 +17,10 @@ Three claims, per corpus row:
 
 * every prototype stock recorded for a function we know is recorded by us,
   with the same declared types -- the archive's spelling, not a substitution;
-* the stub's decompiled text is token-identical to stock's, which is the only
-  proof the applied type reached the decompiler;
+* the signature the decompiler *prints* for that stub is stock's, which is the
+  only proof the applied type reached it (the bodies still differ where
+  `m4-003` names a class: stock warns about its own locked storage, and our
+  store types the slot it calls through);
 * a declaration whose types the language cannot express (`FILE *`) is still
   refused rather than guessed.
 
@@ -66,6 +68,13 @@ def rows(store: Path, query: str) -> list[tuple]:
         return list(connection.execute(query, (identifier,)))
     finally:
         connection.close()
+
+
+def no_return(store: Path) -> set[str]:
+    """Functions a store records as not returning."""
+    return {function for function, flag in rows(
+        store, "SELECT function, no_return FROM return_behaviors WHERE program_id = ?")
+        if flag}
 
 
 def prototypes(store: Path) -> dict[str, str]:
@@ -126,8 +135,25 @@ def texts(binary: Path, project: Path, addresses: list[str], oracle: bool,
     return gate_cache.document(key, build)
 
 
+def printed_signature(parity, text: str) -> tuple[str, ...]:
+    """The tokens of the signature the decompiler printed, comments aside.
+
+    A comment either side emits belongs to `m4-003`'s classes, not here: this
+    asks only whether the declaration reached the decompiler.
+    """
+    body = text[:text.index("{")] if "{" in text else text
+    return tuple(token for token in parity.tokens(body)
+                 if not token.startswith("/*"))
+
+
 def declared(signature: str) -> tuple[str, tuple[str, ...]]:
-    """A signature as content: the return type and the parameter types."""
+    """A signature as content: the return type and the parameter types.
+
+    Stock's exported string carries `noreturn` as a prefix; we hold that as a
+    fact of its own (`return_behaviors`, m2-008), and the gate compares it
+    there rather than pretending the declaration's text is its carrier.
+    """
+    signature = signature.removeprefix("noreturn ")
     head, _, rest = signature.partition("(")
     return_type = head.rsplit(" ", 1)[0].strip()
     inner = rest.rsplit(")", 1)[0].strip()
@@ -180,40 +206,49 @@ def main() -> int:
         # over the functions both stores know.
         expected = {address: signature for address, signature in theirs.items()
                     if address in known}
-        differing, missing = [], []
+        ours_noreturn = no_return(native / "project.sqlite")
+        differing, missing, unflagged = [], [], []
         for address, signature in sorted(expected.items()):
             held = ours.get(address)
             if held is None:
                 missing.append({"address": address, "stock": signature})
             elif declared(held) != declared(signature):
                 differing.append({"address": address, "stock": signature, "ours": held})
+            # A declaration stock marks `noreturn` has to be recorded as a
+            # non-returning function here, or the fact is lost with the
+            # spelling.
+            if signature.startswith("noreturn ") and address not in ours_noreturn:
+                unflagged.append({"address": address, "stock": signature})
         guessed = sorted(address for address, signature in ours.items()
                          if UNEXPRESSIBLE in signature)
         # Every declared prototype has to reach the decompiler, or the type
-        # was recorded and never used.
+        # was recorded and never used. The printed signature is the evidence:
+        # without the declaration the same stub prints `void strtol(void)`.
         divergent = []
         if expected:
             addresses = sorted(expected)
             mine = texts(binary, native, addresses, False, arguments.ghidra)
             stock = texts(binary, oracle, addresses, True, arguments.ghidra)
             for address in addresses:
-                if parity.tokens(mine.get(address, "")) != parity.tokens(
-                        stock.get(address, "")):
-                    divergent.append({
-                        "address": address,
-                        "ours": " ".join(parity.tokens(mine.get(address, "")))[:200],
-                        "stock": " ".join(parity.tokens(stock.get(address, "")))[:200]})
+                ours_head = printed_signature(parity, mine.get(address, ""))
+                stock_head = printed_signature(parity, stock.get(address, ""))
+                if ours_head != stock_head:
+                    divergent.append({"address": address, "ours": " ".join(ours_head),
+                                      "stock": " ".join(stock_head)})
         return {"id": Path(entry["binary"]).stem, "variant": entry["variant"],
                 "declared_by_stock": len(expected), "held": len(expected) - len(missing),
                 "missing": missing, "differing": differing, "guessed": guessed,
-                "divergent": divergent}
+                "divergent": divergent, "unflagged": unflagged,
+                "noreturn_declared": sum(
+                    1 for signature in expected.values()
+                    if signature.startswith("noreturn "))}
 
     measured = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.jobs) as pool:
         for row in pool.map(measure, wanted):
             measured.append(row)
             print(f"{row['id']:24} declared {row['declared_by_stock']:2} held "
-                  f"{row['held']:2} identical "
+                  f"{row['held']:2} printed as stock "
                   f"{row['declared_by_stock'] - len(row['divergent']):2}", flush=True)
 
     measured.sort(key=lambda row: row["id"])
@@ -221,25 +256,31 @@ def main() -> int:
     differing = [item for row in measured for item in row["differing"]]
     guessed = [item for row in measured for item in row["guessed"]]
     divergent = [item for row in measured for item in row["divergent"]]
+    unflagged = [item for row in measured for item in row["unflagged"]]
     assert not missing, f"declarations stock applied and we did not: {missing[:4]}"
     assert not differing, f"declarations we applied with other types: {differing[:4]}"
     assert not guessed, (
         f"a declaration whose types the language cannot express was applied: {guessed[:4]}")
     assert not divergent, (
         f"a declared prototype did not reach the decompiler: {divergent[:2]}")
+    assert not unflagged, (
+        f"stock declares these non-returning and our store does not: {unflagged[:4]}")
+
     declarations = sum(row["declared_by_stock"] for row in measured)
     assert declarations, "no row carries a declared prototype, so nothing is measured"
     metrics = {
         "declaration.rows_measured": len(measured),
         "declaration.declared_by_stock": declarations,
         "declaration.held": declarations,
-        "declaration.token_identical_stubs": declarations,
+        "declaration.signatures_printed_as_stock": declarations,
         "declaration.applied_with_other_types": 0,
         "declaration.unexpressible_declarations_refused": len(unexpressible),
+        "declaration.noreturn_recorded_as_facts": sum(
+            row["noreturn_declared"] for row in measured),
     }
     summary = (f"{declarations} declared prototypes across {len(measured)} ELF rows, "
-               f"each recorded with the archive's own types and each stub "
-               f"token-identical to stock's; {len(unexpressible)} declarations the "
+               f"each recorded with the archive's own types and each printed with "
+               f"stock's own signature; {len(unexpressible)} declarations the "
                f"language cannot express stay refused")
     print(f"m4-025: PASS ({summary})")
     if arguments.report:

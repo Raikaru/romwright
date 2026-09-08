@@ -5,6 +5,7 @@
 //! is exported once by `scripts/gen_library_prototypes.py` and committed with
 //! the archive's hash. This module reads that table and types the imports the
 //! image names, and nothing else.
+use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -68,6 +69,68 @@ pub fn core_type_names(specs: &Path) -> Option<std::collections::HashSet<String>
         }
     }
     (!names.is_empty()).then_some(names)
+}
+
+/// One C base type the language declares a width for, and the metatype the
+/// decompiler needs to build it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BaseType {
+    pub size: u32,
+    /// `int`, `uint` or `float`, as `TypeFactory::decodeType` reads it.
+    pub metatype: &'static str,
+}
+
+/// The C base types one language's *compiler spec* declares a width for.
+///
+/// A 32-bit language's `coretypes.xml` names `longlong` and no `long`, but its
+/// `cspec.xml` says `<long_size value="4"/>` -- which is exactly how stock
+/// applies `long strtol(...)` on a 32-bit target: its Java side resolves the
+/// declaration against the program's data organization and hands the
+/// decompiler a type. The decompiler asks the client for any type name it does
+/// not hold (`TypeFactoryGhidra::findById`, `typegrp_ghidra.cc`:20-36), so
+/// this table is both the filter for what may be applied and the answer to
+/// that question (m4-025).
+pub fn language_base_types(specs: &Path) -> BTreeMap<String, BaseType> {
+    let Ok(cspec) = std::fs::read_to_string(specs.join("cspec.xml")) else {
+        return BTreeMap::new();
+    };
+    // A compiler spec may omit the whole block -- PowerPC's does -- and then
+    // Ghidra's own defaults apply: `char` 1, `short` 2, `int` 4, `long` 4,
+    // `long long` 8, `float` 4, `double` 8, `long double` 8
+    // (`DataOrganizationImpl`:43-53, and `getDefaultOrganization` adjusts only
+    // the pointer size from the language). Guessing anything else would make
+    // `long` a different width from the one stock applies.
+    let size = |tag: &str, default: u32| -> u32 {
+        let marker = format!("<{tag} value=\"");
+        let Some(position) = cspec.find(&marker) else {
+            return default;
+        };
+        let start = position + marker.len();
+        cspec[start..]
+            .find('"')
+            .and_then(|end| cspec[start..start + end].parse().ok())
+            .unwrap_or(default)
+    };
+    let mut types = BTreeMap::new();
+    let mut integer = |signed: &str, unsigned: &str, size: u32| {
+        types.insert(signed.to_string(), BaseType { size, metatype: "int" });
+        types.insert(unsigned.to_string(), BaseType { size, metatype: "uint" });
+    };
+    integer("short", "ushort", size("short_size", 2));
+    integer("int", "uint", size("integer_size", 4));
+    integer("long", "ulong", size("long_size", 4));
+    integer("longlong", "ulonglong", size("long_long_size", 8));
+    for (name, tag, default) in [
+        ("float", "float_size", 4),
+        ("double", "double_size", 8),
+        ("longdouble", "long_double_size", 8),
+    ] {
+        types.insert(
+            name.to_string(),
+            BaseType { size: size(tag, default), metatype: "float" },
+        );
+    }
+    types
 }
 
 /// Whether every type in a declaration is one the decompiler already has, in
@@ -178,6 +241,44 @@ mod tests {
 
     fn types(names: &[&str]) -> std::collections::HashSet<String> {
         names.iter().map(|name| (*name).to_string()).collect()
+    }
+
+    #[test]
+    fn base_type_widths_come_from_the_spec_and_fall_back_to_ghidra_defaults() {
+        let directory = std::env::temp_dir().join(format!(
+            "lre-cspec-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        std::fs::write(
+            directory.join("cspec.xml"),
+            "<compiler_spec><data_organization><long_size value=\"8\"/>\
+             <long_double_size value=\"16\"/></data_organization></compiler_spec>",
+        )
+        .unwrap();
+        let declared = language_base_types(&directory);
+        assert_eq!(declared["long"], BaseType { size: 8, metatype: "int" });
+        assert_eq!(declared["ulong"], BaseType { size: 8, metatype: "uint" });
+        assert_eq!(declared["longdouble"], BaseType { size: 16, metatype: "float" });
+        // Tags the spec omits take Ghidra's defaults, not a guess.
+        assert_eq!(declared["int"], BaseType { size: 4, metatype: "int" });
+        assert_eq!(declared["longlong"], BaseType { size: 8, metatype: "int" });
+
+        // A spec with no data organization at all -- PowerPC's shape.
+        std::fs::write(directory.join("cspec.xml"), "<compiler_spec/>").unwrap();
+        let defaults = language_base_types(&directory);
+        assert_eq!(defaults["long"], BaseType { size: 4, metatype: "int" });
+        assert_eq!(defaults["short"], BaseType { size: 2, metatype: "int" });
+        assert_eq!(defaults["double"], BaseType { size: 8, metatype: "float" });
+
+        // No spec is no answer, and no panic.
+        std::fs::remove_file(directory.join("cspec.xml")).unwrap();
+        assert!(language_base_types(&directory).is_empty());
+        std::fs::remove_dir_all(&directory).unwrap();
     }
 
     #[test]
