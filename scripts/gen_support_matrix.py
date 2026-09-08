@@ -105,14 +105,18 @@ def generate_matrix() -> str:
     x86_32_status = "supported; parity unmeasured"
     if language_parity and language_parity.get("passed"):
         def parity(language: str) -> str | None:
-            row = next((item for item in language_parity["measured"]
-                        if item["language"] == language), None)
-            if row is None:
+            # Every build variant the gate measured for this language, not the
+            # first row: the corpus holds four per language (m4-022).
+            rows = [item for item in language_parity["measured"]
+                    if item["language"] == language]
+            if not rows:
                 note = language_parity["blocked"].get(language)
                 return f"no oracle comparison: {note['reason']}" if note else None
-            compared = row["identical"] + row["attributed"]
-            return (f"**parity measured**: {row['identical']} of {compared} "
-                    f"functions token-identical to the JVM oracle, the rest "
+            identical = sum(row["identical"] for row in rows)
+            compared = identical + sum(row["attributed"] for row in rows)
+            return (f"**parity measured**: {identical} of {compared} "
+                    f"functions token-identical to the JVM oracle across "
+                    f"{len(rows)} build variants, the rest "
                     f"attributed to named facts "
                     f"(`tests/m4-003_language_parity.py`)")
         x86_status = f"{x86_status}; {parity('x86:LE:64:default')}"

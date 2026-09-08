@@ -1,0 +1,4 @@
+{"address": "00201590", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 52, "native_tokens": 48}
+{"address": "002016dc", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 33, "native_tokens": 29}
+{"address": "00201710", "classes": {"name-convention": ["FUN_00201710", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "00201720", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}

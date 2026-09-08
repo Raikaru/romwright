@@ -1124,3 +1124,35 @@ fn overlapping_relocation_candidates_are_case_labels_not_functions() {
         "candidates whose proven spans overlap must not become functions"
     );
 }
+
+#[test]
+fn the_plt_header_override_needs_a_branch_that_transfers() {
+    // A function that merely *reads* the resolver slot is not a PLT header:
+    // `powerpc_many_o2`'s `.plt` is two words long, so the address the third
+    // reserved word would occupy is a `.bss` guard byte that `_FINI_0` loads
+    // and stores. An override on that load truncated the whole function to
+    // `halt_baddata()` (m4-022).
+    let mut imp = image();
+    imp.plt_resolver_slot = Some(0x5170);
+    imp.functions = vec![NativeFunction { entry: 0x1000, size: 0x40, name: "_FINI_0".into() }];
+    imp.xrefs = vec![
+        crate::native::NativeXref::new(0x100c, 0x5170, "READ"),
+        crate::native::NativeXref::new(0x102c, 0x5170, "WRITE"),
+    ];
+    record_plt_header_flow(&mut imp);
+    assert!(
+        imp.flow_overrides.is_empty(),
+        "a load is not a transfer: {:?}",
+        imp.flow_overrides
+    );
+
+    // The same read inside a function that does branch indirectly is the PLT
+    // header, and the override belongs on that branch.
+    imp.indirect_transfers = vec![0x1018];
+    record_plt_header_flow(&mut imp);
+    assert_eq!(
+        imp.flow_overrides,
+        vec![(0x1018, crate::native::PLT_HEADER_SOURCE)],
+        "the override belongs on the branch the flow walk proved"
+    );
+}

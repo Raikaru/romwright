@@ -1,0 +1,5 @@
+{"address": "00403fa0", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "data-type-unknown": [{"oracle": "PTR_FUN_00407c08", "native": ["DAT_00407c08"]}], "data-name-convention": [{"address": "00407c08", "oracle": "PTR_FUN_00407c08", "native": "DAT_00407c08"}]}, "oracle_tokens": 46, "native_tokens": 46}
+{"address": "00406ae8", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "type-stronger": ["(undefined *)"]}, "oracle_tokens": 34, "native_tokens": 30}
+{"address": "00406b08", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]]}, "oracle_tokens": 10, "native_tokens": 10}
+{"address": "00406b20", "classes": {"name-convention": ["FUN_00406b20", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "00406b30", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

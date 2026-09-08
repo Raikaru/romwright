@@ -149,6 +149,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:elf-copy",
+        explanation:         "An object the dynamic linker copies into the image at load time: the \
+         relocation names the library definition it copies, so the slot is \
+         that object.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:elf-pointer",
         explanation:         "A pointer to code stored in ELF data, confirmed by decoding what it \
          points at rather than by its shape.",

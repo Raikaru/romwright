@@ -952,18 +952,20 @@ explaining shows up as a rendered row with no sentence
 
 `tests/differential.sh` proved the native decompiler emits the oracle's token
 stream for one x86-64 fixture. This measures it for every language
-`native/specs` bundles, on committed corpus rows, and names the cause of every
-difference (`tests/m4-003_language_parity.py`,
-`benchmarks/reports/m4-003.json`, pinned by
+`native/specs` bundles, on every committed corpus row of every build variant
+the lock holds -- unoptimised, optimised, C++ with exceptions and RTTI, and a
+400-function image -- and names the cause of every difference
+(`tests/m4-003_language_parity.py`, `benchmarks/reports/m4-003.json`, pinned by
 `benchmarks/reports/parity-baseline.json`):
 
 | Checked | Measured |
 |---|---|
 | bundled languages, each measured or blocked with a verified reason | 9 = 4 measured + 5 blocked |
-| functions compared, both ways, on the same stripped image | 56 |
-| token-identical to the oracle | **36** |
-| differing only because our type is the stronger one | 18 |
-| differing, every one attributed to a named fact | 20 |
+| corpus rows compared (`plain_o0`, `plain_o2`, `cpp_o2`, `many_o2` per language) | 16 |
+| functions compared, both ways, on the same stripped image | 1845 |
+| token-identical to the oracle | **1739** |
+| differing only because our type is the stronger one | 89 |
+| differing, every one attributed to a named fact | 106 |
 | differing tokens no named class accounts for | **0** |
 
 The last row is the load-bearing one. Naming *a* class used to be enough for
@@ -977,31 +979,45 @@ supply. Notation is never a difference (`0x0` and `0` are the same number); a
 differing *value* still is.
 
 The classes separate the gaps from the choices, and the *direction* of a
-difference decides which it is. Gaps:
-`data-type-unknown` 1 -- and no `flow` row
-at all: every warning either side emits is now accounted for. Not
-ours: `oracle-warning` 5, stock warning
+difference decides which it is. Gaps -- and no `flow` row at all, so every
+warning either side emits is accounted for:
+`data-type-unknown` 4;
+`exception-annotation` 4, the try/catch
+comments Ghidra's exception analyzer writes from `.gcc_except_table` and we do
+not read; `missing-external-prototype` 4
+with the `function-facts` 2 that follow
+from it -- `long strtol(char **, ...)` is applied on the 64-bit rows and
+refused on the 32-bit ones, because a 32-bit language's `coretypes` names
+`longlong` and no `long`, and one name the decompiler's C parser cannot
+resolve fails the whole decompile rather than one prototype; and
+`language-variant` 3, where stock's
+opinion files pick `PowerPC:BE:32:e500` and our loader picks
+`PowerPC:BE:32:default`, whose four-byte view of `r2` is spelled `r2` rather
+than `_r2`. Not ours:
+`oracle-warning` 19, stock warning
 about its own recovery (`Unknown calling convention -- yet parameter storage
 is locked`, on stubs whose text is otherwise ours exactly). Choices:
-`name-convention` 3 -- the whole
+`name-convention` 11 -- the whole
 difference is a name we picked on purpose, decided mechanically by
 substituting the oracle's name into its own text and finding the token streams
 equal (`_plt` names the section that proved the start; stock calls it
-`FUN_00201710`, and that is the only name-convention row left) --
-`data-name-convention` 3,
+`FUN_00201710`) -- `data-name-convention` 8,
 the same decision on a data label (the slot `DT_PLTGOT` reserves is named
-after the import it holds, where stock names it after the tag), and
-`type-stronger` 18,
+after the import it holds, where stock names it after the tag),
+`mangled-name` 8, where both stores hold
+the name a COPY relocation carries (`_ZTIi`) and stock prints what its
+demangler made of it (`int::typeinfo`),
+`type-stronger` 89,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`, and
-`name-rendering` 3, where stock prints a
+`name-rendering` 12, where stock prints a
 name C cannot spell (`__i686.get_pc_thunk.bx`) and we render it as an
 identifier.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Sixteen tasks have shrunk the gaps by carrying facts the image, its ABI or the
-pinned install already declares:
+Seventeen tasks have shrunk the gaps by carrying facts the image, its ABI or
+the pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
   `DAT_002038f8` and `s_sum___d__002004d0` where it printed
@@ -1033,6 +1049,18 @@ pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* four variants, two bugs (`tests/m4-003_language_parity.py`): widening the
+  gate from one build per language to four -- unoptimised, optimised, C++ with
+  exceptions, and a 400-function image, 56 functions -> **1845** -- found two
+  defects no single-variant row could reach. A declaration whose base type the
+  language does not name (`long` on a 32-bit `coretypes`) failed the decompile
+  of every function that called it, so the filter now reads the language's own
+  type document instead of a constant list. And `DT_PLTGOT + 2 words` is only
+  a reserved slot where the PLT object has room for it: this image's `.plt` is
+  two words long, so the third address is a `.bss` guard byte, and the
+  `callreturn` override the rule installed on the ordinary load that reads it
+  truncated `_FINI_0` to `halt_baddata()`. An override belongs on a branch
+  that transfers, and on nothing else.
 * a slot that holds code (`tests/m4-021_initializer_slots.py`): an
   `.init_array` word holds a code address -- the same evidence that names its
   target `_INIT_0` -- so the slot is typed as a pointer and rendered `PTR_`
@@ -1660,7 +1688,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 2; `parity.class.data-type-unknown` 1; `parity.class.name-convention` 3; `parity.class.name-rendering` 3; `parity.class.oracle-warning` 5; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 20; `parity.functions_token_identical` 36; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 8; `parity.class.data-type-unknown` 4; `parity.class.exception-annotation` 4; `parity.class.function-facts` 2; `parity.class.language-variant` 3; `parity.class.mangled-name` 8; `parity.class.missing-external-prototype` 4; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 106; `parity.functions_token_identical` 1739; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1690,7 +1718,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 102; `diagnostic_runs` 12; `generated_rows` 101; `published_ids` 86 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 104; `diagnostic_runs` 12; `generated_rows` 103; `published_ids` 87 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1718,15 +1746,15 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 <!-- support-matrix:begin -->
 | Input | Structural native import | Native flow/decode/decompile |
 |---|---|---|
-| ELF x86-64 | supported | **supported and gated**; **parity measured**: 8 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
-| ELF x86-32 | supported | **parity measured**: 9 of 15 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF x86-64 | supported | **supported and gated**; **parity measured**: 431 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF x86-32 | supported | **parity measured**: 435 of 466 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
 | PE32 x86 | supported | **gated**: DWARF recall 0.8065 over 93 functions, 0 unattributed, stock Ghidra 0.7634 on the same image (`tests/m8-002_pe32_roots.py`) |
-| ELF AARCH64 LE64 | supported | **parity measured**: 11 of 17 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF AARCH64 LE64 | supported | **parity measured**: 443 of 473 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF ARM LE32 | supported | no oracle comparison: no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for |
 | ELF MIPS LE32 | supported | no oracle comparison: no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader |
 | ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |
-| ELF PowerPC | supported | **parity measured**: 8 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
+| ELF PowerPC | supported | **parity measured**: 430 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
 | PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:LE:32:default` (`tests/m5-003_psx.py`) |

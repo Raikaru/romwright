@@ -4477,16 +4477,92 @@ m3-003, all three wired into continuous integration)
   `m6-006`, `m8-002`..`m8-006`, `m9-001`..`m9-003` pass; 104 reports indexed,
   both generators in sync.
 
+### m4-022 evidence
+- The widening is the measurement: the gate compared one build per language
+  (`plain_o0`, 56 functions). It now compares every variant the lock holds --
+  `plain_o0`, `plain_o2`, `cpp_o2`, `many_o2` -- for the same four languages:
+  **16 rows, 1845 functions, 1739 token-identical, 106 attributed, 0
+  unaccounted tokens.** Per-row identical/attributed counts are pinned in
+  `benchmarks/reports/parity-baseline.json`, so a variant regressing is a
+  gate failure rather than an aggregate that still adds up.
+- **Two defects only a new variant could reach**, both fixed at the source:
+  - **a declaration whose base type the language has no name for.** m4-009
+    filtered library declarations against a hand-written list of core types,
+    which was the 64-bit set. A 32-bit language's own `coretypes.xml` names
+    `longlong` and **no `long`**, so `long strtol(char **, ...)` reached the
+    decompiler's C parser as `Syntax error at line 0 in stream / long`, and
+    one unresolvable name fails the *whole* decompile, not one prototype. The
+    filter now reads the language's own type document
+    (`library_types::core_type_names`), so the declaration is applied on the
+    64-bit rows (AArch64 `00210ca0` is now token-identical) and refused on
+    the 32-bit ones. Pointer depth is no longer a limit: the parser's
+    `pointer` rule is recursive and stock applies `char **__endptr`.
+  - **a reserved slot that is someone else's byte.** m4-006 reserves
+    `DT_PLTGOT + 2 words` for the resolver. In `powerpc_many_o2` the `.plt`
+    object is **two words long**, so the third address is `.bss` -- the
+    `completed.0` guard byte `_FINI_0` reads -- and the rule installed a
+    `callreturn` override on the ordinary `lbz`/`stb` that touch it. The
+    decompiler truncated the function to `halt_baddata()`. Reserved words are
+    now bounded by the section that holds `PLTGOT`, and the override is
+    installed only on a branch the flow walk proved: `_FINI_0` is
+    token-identical to stock.
+- **A pin pins one language.** `RuntimeConfig::adopt_language` kept
+  `VENTRIS_SLA` while rewriting `language_id` to the image's language, so an
+  exported x86-64 `.sla` made a 32-bit import resolve the *64-bit* spec
+  bundle -- which is how the `long` filter above passed at import time and
+  failed at decompile time, where `language_decompile_config` refuses a
+  mismatched pin. Adopting another language now drops the pin, and
+  `m7-002`/`m7-003` pass with a foreign `VENTRIS_SLA` exported.
+- Three new classes, each with the evidence for it, none of them an excuse:
+  `mangled-name` 8 (both stores hold `_ZTIi` from the COPY relocation that
+  names it -- newly recorded as `native-import:elf-copy` -- and stock prints
+  what its demangler made of it, `int::typeinfo`), `exception-annotation` 4
+  (the try/catch comments Ghidra's exception analyzer writes from
+  `.gcc_except_table`, which we do not read), and `language-variant` 3
+  (**stock and we disagree about the language**: its opinion files select
+  `PowerPC:BE:32:e500` for `powerpc_cpp_o2`, we select
+  `PowerPC:BE:32:default`, whose four-byte view of `r2` is spelled `r2` and
+  not `_r2`).
+- `missing-external-prototype` now licenses the declaration stock prints when
+  the missing prototype is the decompiled function's **own** -- its parameter
+  names and the assignment a non-void return introduces -- and nothing when
+  the prototype belongs to a function it merely calls (m4-019's direction).
+- Regression: `cargo test --workspace` **248 pass**; `m2-002`, `m2-006`,
+  `m2-008`, `m3-001`..`m3-003`, `m4-001`..`m4-021`, `m5-006`..`m5-011`,
+  `m7-001`, `m8-003`, `m9-001`..`m9-003` pass, plus `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh`.
+- Recorded deficit, pre-existing and **not** m4-022's: `m2-006_thunks`
+  (a decompiler-recovered prototype on an import stub, `00201710`,
+  `processEntry`), `m1-008b_pointer_seeds` (2 of 2 rows fail),
+  `m2-006_specs`/`m2-006_specs_rebuild` (`gen_native_specs.py --check`
+  refuses the committed bundles on this host) and `main_window_split_test`
+  (`main_window.cpp` 446 lines, cap 400). All four fail identically at
+  `05b8b4e` with the source changes stashed, so they are earlier tasks' debts,
+  recorded here rather than folded into this commit.
+
 ## Next task
-- m4-022: the parity account now has **no gap class left except one naming
-  choice**, so the next measurement is not a fix but a widening: the gate
-  measures one variant (`plain_o0`) of four languages. Extend it to the
-  optimized rows the corpus already holds (`plain_o2`, `cpp_o2`, `many_o2`)
-  for the same four languages, which the lock file lists and no gate compares
-  token-for-token. Expect new classes; the acceptance is that every differing
-  token is still accounted for, with the per-variant counts recorded and the
-  new baseline committed. Do not add a corpus row (II.1 reserves that) -- only
-  variants already committed.
+- m4-023: **the two sides disagree about the language, not about a name.**
+  `language-variant` 3 is the only remaining class where stock analyses a
+  different machine than we do: Ghidra's ELF opinion files select
+  `PowerPC:BE:32:e500` for the corpus's PowerPC rows (whose GPRs are 8 bytes,
+  with `_r2` naming the four-byte view) while our loader selects
+  `PowerPC:BE:32:default` from machine + class + endianness alone. Read the
+  rule from the pinned tree first -- `Ghidra/Processors/PowerPC/data/languages
+  /PowerPC.opinion` and `ElfLoader`/`ElfProgramBuilder`'s use of `e_flags` --
+  and record which constraint selects e500 for `powerpc_*.bin` before
+  changing anything. The acceptance test asserts the selected language per
+  corpus row against the oracle store's, not against a hand-written list.
+  Note before starting: a change here moves `tests/corpus.lock.json`'s
+  `expected_language`, needs a `PowerPC-BE-32-e500` spec bundle dumped through
+  the JVM bridge, and re-records every PowerPC baseline. Regenerate each with
+  the script that owns it; if the rule turns out to require a language the
+  install does not bundle, stop and ask (II.1 reserves platforms).
+- After it, in order: `.gcc_except_table` try/catch annotations
+  (`exception-annotation` 4), and the 32-bit `long` prototype path
+  (`missing-external-prototype` 4 + `function-facts` 2), which needs the
+  worker to receive a *type* rather than a C declaration string, since a
+  32-bit language's `coretypes` has no name for the archive's `long`.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

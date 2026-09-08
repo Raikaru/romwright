@@ -1,0 +1,6 @@
+{"address": "00210704", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 28, "native_tokens": 24}
+{"address": "00210860", "classes": {"name-convention": ["FUN_00210860", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "00210880", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 21, "native_tokens": 16}
+{"address": "00210890", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "002108a0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "002108b0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 37, "native_tokens": 32}
