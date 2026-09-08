@@ -255,8 +255,13 @@ pub(super) fn collect<P: FlowProvider>(
     functions: &[u64],
     instructions: &[(u64, u64)],
     conditional_targets: &HashSet<u64>,
+    fell_into: &HashSet<u64>,
+    refused: &mut std::collections::BTreeMap<String, u64>,
     provider: &mut P,
 ) -> super::Result<Vec<Candidate>> {
+    let mut refuse = |reason: &str, refused: &mut std::collections::BTreeMap<String, u64>| {
+        *refused.entry(reason.to_string()).or_default() += 1;
+    };
     let data_references: HashSet<_> = import
         .xrefs
         .iter()
@@ -278,17 +283,52 @@ pub(super) fn collect<P: FlowProvider>(
     for hit in &patterns.matches {
         let address = hit.address;
         if contains(&data, address) {
+            refuse("data-slot", refused);
             continue;
         }
-        if address % patterns.alignment != 0
-            || functions.contains(&address)
-            || nearby_instructions(instructions, address, address.saturating_add(1))
-                .any(|&(start, length)| start <= address && address - start < length)
-            || import.functions.iter().any(|function| {
-                function.entry < address && address - function.entry < function.size
-            })
-        {
+        if address % patterns.alignment != 0 {
+            refuse("alignment", refused);
             continue;
+        }
+        if functions.contains(&address) {
+            refuse("known-entry", refused);
+            continue;
+        }
+        if import.functions.iter().any(|function| {
+            function.entry < address && address - function.entry < function.size
+        }) {
+            refuse("in-known-body", refused);
+            continue;
+        }
+        // A match on an address that already holds an instruction is still a
+        // function start unless the code above owns it: Ghidra creates the
+        // function whenever the instruction is in no function body and
+        // nothing above flows into it (FunctionStartAnalyzer.applyActionToSet,
+        // 289-324). Offcut inside an instruction is never a start.
+        if nearby_instructions(instructions, address, address.saturating_add(1))
+            .any(|&(start, length)| start < address && address - start < length)
+        {
+            refuse("offcut", refused);
+            continue;
+        }
+        let decoded_here = nearby_instructions(instructions, address, address.saturating_add(1))
+            .any(|&(start, _)| start == address);
+        if decoded_here {
+            if fell_into.contains(&address) {
+                refuse("flows-in-above", refused);
+                continue;
+            }
+            // Any reference other than a plain data reference means some other
+            // flow already created this location (checkAlreadyInFunctionAbove,
+            // 514-527).
+            if import
+                .xrefs
+                .iter()
+                .any(|xref| xref.to == address && xref.kind != "DATA")
+            {
+                refuse("owned-by-reference", refused);
+                continue;
+            }
         }
         let rule = &patterns.rules[hit.rule];
         for action in &rule.actions {
@@ -308,6 +348,7 @@ pub(super) fn collect<P: FlowProvider>(
                 }
             }
             if action.kind == "possiblefuncstart" && conditional_targets.contains(&address) {
+                refuse("possible-conditional-target", refused);
                 continue;
             }
             let attribute = |name| action.attributes.get(name).map(String::as_str);
@@ -324,6 +365,7 @@ pub(super) fn collect<P: FlowProvider>(
             });
             if valid.eq_ignore_ascii_case("function") {
                 // This action annotates an existing function, never creates one.
+                refuse("annotation-only", refused);
                 continue;
             }
             if let Some(after) = attribute("after") {
@@ -364,6 +406,7 @@ pub(super) fn collect<P: FlowProvider>(
                     )));
                 };
                 if !block_start && !satisfied {
+                    refuse("after-prerequisite", refused);
                     continue;
                 }
             }
@@ -401,6 +444,7 @@ pub(super) fn collect<P: FlowProvider>(
                     &data,
                     provider,
                 ) {
+                    refuse("valid-code", refused);
                     continue;
                 }
             } else {
@@ -410,6 +454,7 @@ pub(super) fn collect<P: FlowProvider>(
                     || flows[0].length == 0
                     || matches!(flows[0].kind, FlowKind::Bad | FlowKind::Unimpl)
                 {
+                    refuse("undecodable", refused);
                     continue;
                 }
             }

@@ -379,6 +379,10 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     let has_linkage_slots = imp.externals.iter().any(|(address, _)| *address != 0);
     let mut linkage_candidates = HashSet::new();
     let mut conditional_targets = HashSet::new();
+    // Addresses the instruction above falls into. Ghidra refuses a pattern
+    // match there: the flow above already owns it
+    // (FunctionStartAnalyzer.checkAlreadyInFunctionAbove, 491-530).
+    let mut fell_into: HashSet<u64> = HashSet::new();
     let mut flow_endings = Vec::new();
     let mut context_edges = Vec::new();
     let mut branch_targets = Vec::new();
@@ -710,6 +714,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     .fallthrough
                     .filter(|_| !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl))
                 {
+                    fell_into.insert(fall);
                     merge_reached_candidate(
                         fall,
                         origin,
@@ -743,14 +748,25 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         let pattern_candidates = if pattern_round {
             if let Some(patterns) = patterns {
                 extents[instruction_start..].sort_unstable();
-                patterns::collect(
-                    imp,
-                    patterns,
-                    &entries,
-                    &extents[instruction_start..],
-                    &conditional_targets,
-                    flow_provider,
-                )?
+                {
+                    let mut refused = std::collections::BTreeMap::new();
+                    let collected = patterns::collect(
+                        imp,
+                        patterns,
+                        &entries,
+                        &extents[instruction_start..],
+                        &conditional_targets,
+                        &fell_into,
+                        &mut refused,
+                        flow_provider,
+                    )?;
+                    imp.patterns_seen = Some(lre_model::PatternStats {
+                        hits: patterns.matches.len() as u64,
+                        accepted: collected.len() as u64,
+                        refused,
+                    });
+                    collected
+                }
             } else {
                 break;
             }
@@ -790,10 +806,18 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 .collect()
         };
         unvisited_relocs.retain(|&cand| {
+            // A pattern match on already-decoded bytes is still a function
+            // start: Ghidra creates one whenever the instruction there is in no
+            // function body and nothing above flows into it, which
+            // `patterns::collect` has already established
+            // (FunctionStartAnalyzer.applyActionToSet, 289-324). Requiring an
+            // unvisited address hid every start the walk had passed through --
+            // 798 of 5633 matches on a PlayStation 2 executable.
             in_code(cand)
-                && !visited.contains(&cand)
                 && !filter_ctx.initial_seeds.contains(&cand)
-                && (pattern_round || candidate_address_is_valid(cand, &filter_ctx))
+                && (pattern_round
+                    || (!visited.contains(&cand)
+                        && candidate_address_is_valid(cand, &filter_ctx)))
         });
         unvisited_relocs.sort_unstable();
         unvisited_relocs.dedup();
@@ -821,8 +845,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         entries.push(r);
                         addr_origin.insert(r, r);
                         // Where this entry came from, for the containment
-                        // reconciliation once every body is proven.
-                        data_derived.insert(r);
+                        // reconciliation once every body is proven. A byte
+                        // pattern is not an address taken from data: the
+                        // overlap rule below exists for switch case labels
+                        // read out of a relocation table, and applying it to
+                        // prologue matches deleted 618 of 4835 real function
+                        // starts on a PlayStation 2 executable.
+                        if !pattern_round {
+                            data_derived.insert(r);
+                        }
                     }
                 }
                 let reloc_set: HashSet<u64> = if pattern_round {
