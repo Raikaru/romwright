@@ -1,33 +1,86 @@
 {
  "id": "parity-baseline",
- "recorded_at": "2026-09-08T06:31:42.640917+00:00",
+ "recorded_at": "2026-09-08T08:38:51.390206+00:00",
  "note": "token identity against the JVM oracle per language, and the fact class each divergence comes from; recorded once and compared against afterwards",
  "counts": {
-  "languages": {
-   "x86:LE:64:default": {
+  "rows": {
+   "x86:LE:64:default/plain_o0": {
     "identical": 8,
     "attributed": 4
    },
-   "AARCH64:LE:64:v8A": {
+   "x86:LE:64:default/plain_o2": {
+    "identical": 8,
+    "attributed": 4
+   },
+   "x86:LE:64:default/cpp_o2": {
+    "identical": 8,
+    "attributed": 12
+   },
+   "x86:LE:64:default/many_o2": {
+    "identical": 407,
+    "attributed": 2
+   },
+   "AARCH64:LE:64:v8A/plain_o0": {
     "identical": 11,
     "attributed": 6
    },
-   "PowerPC:BE:32:default": {
+   "AARCH64:LE:64:v8A/plain_o2": {
+    "identical": 11,
+    "attributed": 6
+   },
+   "AARCH64:LE:64:v8A/cpp_o2": {
+    "identical": 11,
+    "attributed": 13
+   },
+   "AARCH64:LE:64:v8A/many_o2": {
+    "identical": 410,
+    "attributed": 5
+   },
+   "PowerPC:BE:32:default/plain_o0": {
     "identical": 8,
     "attributed": 4
    },
-   "x86:LE:32:default": {
+   "PowerPC:BE:32:default/plain_o2": {
+    "identical": 8,
+    "attributed": 4
+   },
+   "PowerPC:BE:32:default/cpp_o2": {
+    "identical": 7,
+    "attributed": 12
+   },
+   "PowerPC:BE:32:default/many_o2": {
+    "identical": 407,
+    "attributed": 3
+   },
+   "x86:LE:32:default/plain_o0": {
     "identical": 9,
     "attributed": 6
+   },
+   "x86:LE:32:default/plain_o2": {
+    "identical": 9,
+    "attributed": 6
+   },
+   "x86:LE:32:default/cpp_o2": {
+    "identical": 9,
+    "attributed": 14
+   },
+   "x86:LE:32:default/many_o2": {
+    "identical": 408,
+    "attributed": 5
    }
   },
   "classes": {
-   "data-name-convention": 2,
-   "data-type-unknown": 1,
-   "name-convention": 3,
-   "name-rendering": 3,
-   "oracle-warning": 5,
-   "type-stronger": 18
+   "data-name-convention": 8,
+   "data-type-unknown": 4,
+   "exception-annotation": 4,
+   "function-facts": 2,
+   "language-variant": 3,
+   "mangled-name": 8,
+   "missing-external-prototype": 4,
+   "name-convention": 11,
+   "name-rendering": 12,
+   "oracle-warning": 19,
+   "type-stronger": 89
   }
  }
 }

@@ -15,12 +15,6 @@ pub const SOURCE: &str = "native-import:type-archive";
 /// (`native/specs/coretypes.xml`). A declaration naming anything else is left
 /// alone: the C parser the worker feeds would reject it, and a rejected
 /// signature fails the decompile rather than improving it.
-const CORE: &[&str] = &[
-    "void", "bool", "char", "uchar", "sbyte", "byte", "short", "ushort", "int", "uint",
-    "long", "ulong", "longlong", "ulonglong", "float", "double", "longdouble",
-    "wchar_t", "wchar16", "wchar32", "undefined", "undefined1", "undefined2",
-    "undefined4", "undefined8", "code",
-];
 
 /// One declaration: what it returns, what it takes, whether it is variadic.
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -53,14 +47,41 @@ pub fn load(path: &Path) -> Option<Table> {
     serde_json::from_str(&text).ok()
 }
 
+/// The type names one language's own core-type document declares: exactly
+/// what the decompiler's C parser can resolve. This is not a constant: a
+/// 32-bit language's `coretypes.xml` names `longlong` and no `long`, so
+/// applying `long strtol(...)` there fails the parse -- and one failed parse
+/// fails the whole decompile, not just that prototype.
+pub fn core_type_names(specs: &Path) -> Option<std::collections::HashSet<String>> {
+    let text = std::fs::read_to_string(specs.join("coretypes.xml")).ok()?;
+    let mut names = std::collections::HashSet::new();
+    let mut rest = text.as_str();
+    while let Some(position) = rest.find("<type ") {
+        let tag = &rest[position..];
+        rest = &tag[1..];
+        let Some(end) = tag.find('>') else { break };
+        let header = &tag[..end];
+        let Some(start) = header.find("name=\"") else { continue };
+        let value = &header[start + 6..];
+        if let Some(close) = value.find('"') {
+            names.insert(value[..close].to_string());
+        }
+    }
+    (!names.is_empty()).then_some(names)
+}
+
 /// Whether every type in a declaration is one the decompiler already has, in
-/// a shape its C parser accepts: a core base type with at most one pointer.
-/// A deeper declarator (`char * *`) is refused rather than risking a parse
-/// error, which fails the whole decompile instead of merely leaving it untyped.
-fn representable(declaration: &Declaration) -> bool {
+/// a shape its C parser accepts. Pointer depth is not a limit -- the parser's
+/// `pointer` rule is recursive and stock applies `char **__endptr` -- but the
+/// base type has to be one this language declares.
+fn representable(declaration: &Declaration, known_types: &std::collections::HashSet<String>) -> bool {
+    // Pointer depth is not a limit the decompiler has: its own C parser takes
+    // `char * *` (`grammar.y`'s `pointer` rule is recursive), and stock applies
+    // exactly that declaration to `strtol`. What has to be known is the base
+    // type the pointers end at.
     let known = |text: &str| {
         let base = text.trim_end_matches(['*', ' ']).trim();
-        CORE.contains(&base) && text.matches('*').count() <= 1
+        known_types.contains(base)
     };
     known(&declaration.return_type)
         && declaration
@@ -107,13 +128,14 @@ pub fn signature(name: &str, declaration: &Declaration) -> String {
 pub fn declared_for<'a>(
     table: &'a Table,
     names: impl IntoIterator<Item = (u64, &'a str)>,
+    known_types: &std::collections::HashSet<String>,
 ) -> Vec<(u64, String, &'a Declaration)> {
     let mut applied = Vec::new();
     for (address, name) in names {
         let Some(declaration) = table.functions.get(name) else {
             continue;
         };
-        if !representable(declaration) {
+        if !representable(declaration, known_types) {
             continue;
         }
         applied.push((address, signature(name, declaration), declaration));
@@ -154,10 +176,16 @@ mod tests {
         assert_eq!(signature("getpid", &declaration), "int getpid(void)");
     }
 
+    fn types(names: &[&str]) -> std::collections::HashSet<String> {
+        names.iter().map(|name| (*name).to_string()).collect()
+    }
+
     #[test]
-    fn a_deeper_declarator_is_refused() {
-        // `char * *` reaches the parser as a syntax error, which fails the
-        // decompile of every function that calls it.
+    fn a_declaration_is_applied_only_where_the_language_has_its_types() {
+        // Pointer depth is not the question -- the parser's `pointer` rule is
+        // recursive -- but the base type is: a 32-bit language's coretypes
+        // name `longlong` and no `long`, and `long strtol(...)` there reaches
+        // the parser as a syntax error that fails the whole decompile.
         let declaration = Declaration {
             return_type: "long".into(),
             varargs: false,
@@ -171,7 +199,43 @@ mod tests {
             archive_sha256: "b".into(),
             functions: HashMap::from([("strtol".into(), declaration)]),
         };
-        assert!(declared_for(&table, [(0x30u64, "strtol")]).is_empty());
+        let wide = types(&["long", "char", "int"]);
+        let narrow = types(&["longlong", "char", "int"]);
+        assert_eq!(
+            declared_for(&table, [(0x30u64, "strtol")], &wide)
+                .iter()
+                .map(|(address, signature, _)| (*address, signature.clone()))
+                .collect::<Vec<_>>(),
+            vec![(0x30, "long strtol(char * * endptr)".to_string())]
+        );
+        assert!(declared_for(&table, [(0x30u64, "strtol")], &narrow).is_empty());
+    }
+
+    #[test]
+    fn the_type_names_come_from_the_language_document() {
+        let directory = std::env::temp_dir().join(format!(
+            "lre-coretypes-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&directory).unwrap();
+        std::fs::write(
+            directory.join("coretypes.xml"),
+            "<coretypes><type name=\"int\" size=\"4\" metatype=\"int\"/>\
+             <type name=\"longlong\" size=\"8\" metatype=\"int\"/></coretypes>",
+        )
+        .unwrap();
+        let names = core_type_names(&directory).unwrap();
+        assert!(names.contains("longlong") && names.contains("int"));
+        assert!(!names.contains("long"));
+        // A document with no types names nothing, and the caller applies
+        // nothing rather than guessing.
+        std::fs::write(directory.join("coretypes.xml"), "<coretypes/>").unwrap();
+        assert!(core_type_names(&directory).is_none());
+        std::fs::remove_dir_all(&directory).unwrap();
     }
 
     #[test]
@@ -194,7 +258,8 @@ mod tests {
                 ("printf".into(), printf()),
             ]),
         };
-        let applied = declared_for(&table, [(0x10u64, "fclose"), (0x20u64, "printf")]);
+        let applied = declared_for(&table, [(0x10u64, "fclose"), (0x20u64, "printf")],
+                                   &types(&["int", "char"]));
         assert_eq!(
             applied
                 .iter()

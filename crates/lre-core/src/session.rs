@@ -217,6 +217,13 @@ impl RuntimeConfig {
     /// directory follows the id unless the caller pinned one.
     pub fn adopt_language(&mut self, id: &str) {
         if self.language_id != id {
+            // A pinned `.sla` pins the language it was pinned for. Adopting
+            // another language has to drop it, or the import believes a pin
+            // `language_decompile_config` will refuse at decompile time --
+            // which is how a 32-bit image was typed from the 64-bit spec
+            // bundle and handed the decompiler a `long` its language has no
+            // name for (m4-022).
+            self.sla_path = None;
             self.language_id = id.to_string();
         }
         if self.language_dir_pinned {

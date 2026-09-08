@@ -1,0 +1,6 @@
+{"address": "00401440", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "data-type-unknown": [{"oracle": "PTR_FUN_004026a8", "native": ["DAT_004026a8"]}], "data-name-convention": [{"address": "004026a8", "oracle": "PTR_FUN_004026a8", "native": "DAT_004026a8"}]}, "oracle_tokens": 46, "native_tokens": 46}
+{"address": "00401578", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "type-stronger": ["(undefined *)"]}, "oracle_tokens": 34, "native_tokens": 30}
+{"address": "00401598", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]]}, "oracle_tokens": 10, "native_tokens": 10}
+{"address": "004015b0", "classes": {"name-convention": ["FUN_004015b0", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "004015c0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
+{"address": "004015d0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}

@@ -1682,13 +1682,19 @@ pub(crate) fn record_plt_header_flow(imp: &mut NativeImport) {
             continue;
         }
         // The load proves which function it is; the branch is what transfers.
-        let branch = imp
+        // A function that reads the slot and never branches through it is not
+        // a PLT header -- an ordinary guard byte can share the address of a
+        // word the PLT object does not reach -- and an override on a load
+        // truncates the flow it was meant to describe (m4-022).
+        let Some(branch) = imp
             .indirect_transfers
             .iter()
             .copied()
             .filter(|address| *address >= entry && *address < entry + span)
             .next_back()
-            .unwrap_or(from);
+        else {
+            continue;
+        };
         if !imp
             .flow_overrides
             .iter()

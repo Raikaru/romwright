@@ -81,6 +81,16 @@ DYNAMIC = re.compile(r"\b_?(?:UNK|DAT|LAB|SUB|EXT|OFF|PTR|s)_[0-9A-Za-z_]+")
 # `cRam00000000002038f8` (`Scope::buildDefaultName`, decompiler database.cc).
 FALLBACK = re.compile(r"\b[a-z]{1,4}Ram([0-9a-f]{8,16})\b")
 WARNING = re.compile(r"/\* WARNING:.*?\*/", re.S)
+# The comments Ghidra's exception analyzer writes into the listing from
+# `.gcc_except_table`, which its decompiler then prints. Nothing else in a
+# comment is matched: only try/catch bracketing.
+EH_COMMENT = re.compile(r"/\*\s*(?:try \{|\} // end try|catch\(|\} // end catch)"
+                        r".*?\*/", re.S)
+# An Itanium-mangled name, as the image spells it (`_ZTIi`).
+MANGLED = re.compile(r"^_Z[A-Za-z0-9_]+$")
+# A name the decompiler derives from a register: stock's language variant may
+# spell the same register `_r2` where ours spells it `r2`.
+REGISTER_DERIVED = re.compile(r"\b((?:unaff|in|extraout)_)_+")
 # A C cast to a pointer of a core type, e.g. `(code *)`.
 CAST = re.compile(r"\(\s*(?:code|undefined[0-9]?|byte|char|u?int|u?long|u?short)"
                   r"\s*\*+\s*\)")
@@ -217,11 +227,57 @@ def store_context(store: Path, program: str) -> dict:
         entries = {name: offset for address, name in connection.execute(
             "SELECT entry, name FROM functions WHERE program_id = ?", (identifier,))
             if (offset := ram_offset(address)) is not None}
+        # Every name a store holds at an address, not just the last row read:
+        # stock keeps the mangled import name *and* the demangled one its
+        # analyzer derived, and which of the two a query returns last is not a
+        # fact about either image.
+        aliases: dict[int, list[str]] = {}
+        for address, name in connection.execute(
+                "SELECT address, name FROM symbols WHERE program_id = ?", (identifier,)):
+            if (offset := ram_offset(address)) is not None:
+                aliases.setdefault(offset, []).append(name)
+        (language,) = connection.execute(
+            "SELECT language FROM programs WHERE id = ?", (identifier,)).fetchone()
         return {"symbols": symbols, "prototypes": prototypes,
                 "externals": externals, "strings": strings,
-                "definitions": definitions, "names": names, "functions": entries}
+                "definitions": definitions, "names": names, "functions": entries,
+                "aliases": {offset: sorted(set(held)) for offset, held in aliases.items()},
+                "language": language}
     finally:
         connection.close()
+
+
+def demangled_pairs(native_text: str, oracle_text: str, store: dict,
+                    oracle_store: dict) -> list[dict]:
+    """An object the image names in its mangled form, at an address stock's
+    demangler names again.
+
+    Both stores hold `_ZTIi` at the slot the COPY relocation names; stock's
+    demangler adds a qualified symbol (`int::typeinfo`) at the same address
+    and prints that in place of the address of the slot. Ours keeps the name
+    the image declared, which is what the relocation carries.
+    """
+    pairs = []
+    for address, ours in store["names"].items():
+        if not MANGLED.match(ours) or ours not in native_text:
+            continue
+        for theirs in oracle_store["aliases"].get(address, []):
+            if theirs == ours:
+                continue
+            if not re.search(rf"&?\b(?:\w+::)*{re.escape(theirs)}\b", oracle_text):
+                continue
+            pairs.append({
+                "address": f"{address:08x}", "oracle": theirs, "native": ours,
+                "substituted": f"&{ours}" if f"&{ours}" in native_text else ours})
+    return pairs
+
+
+def apply_demangled(oracle_text: str, pairs: list[dict]) -> str:
+    """Rewrite stock's demangled, qualified spelling into ours."""
+    for pair in pairs:
+        oracle_text = re.sub(rf"&?\b(?:\w+::)*{re.escape(pair['oracle'])}\b",
+                             lambda _, pair=pair: pair["substituted"], oracle_text)
+    return oracle_text
 
 
 def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: dict,
@@ -273,6 +329,41 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
         named["name-rendering"] = rendered
         if tokens(substituted) == tokens(native_text):
             return named
+
+    # A mangled name both stores hold, which stock's demangler names again.
+    demangled = demangled_pairs(native_text, substituted, store, oracle_store)
+    if demangled:
+        substituted = apply_demangled(substituted, demangled)
+        named["mangled-name"] = demangled
+        if tokens(substituted) == tokens(native_text):
+            return named
+
+    # Comments stock's exception analyzer writes from `.gcc_except_table` and
+    # its decompiler prints. We do not read that section, so the annotation is
+    # missing on our side -- and it annotates flow rather than deciding it.
+    annotations = [re.sub(r"\s+", " ", item) for item in EH_COMMENT.findall(substituted)]
+    if annotations:
+        substituted = EH_COMMENT.sub("", substituted)
+        named["exception-annotation"] = annotations
+        if tokens(substituted) == tokens(native_text):
+            return named
+
+    # The two sides disassembled with different language variants: stock's
+    # opinion files pick `PowerPC:BE:32:e500` where our loader picks
+    # `PowerPC:BE:32:default`, and the e500 variant names the four-byte view
+    # of `r2` as `_r2`. Only the register spelling is rewritten, and only
+    # where the recorded languages actually differ.
+    if store.get("language") != oracle_store.get("language"):
+        respelled = REGISTER_DERIVED.sub(lambda match: match.group(1), substituted)
+        names = sorted({item for item in re.findall(r"\b(?:unaff|in|extraout)__\w+",
+                                                   substituted)})
+        if names and respelled != substituted:
+            substituted = respelled
+            named["language-variant"] = {
+                "oracle": oracle_store.get("language"),
+                "native": store.get("language"), "registers": names}
+            if tokens(substituted) == tokens(native_text):
+                return named
 
     # A cast the two sides place differently because they type the same slot
     # differently: the store holds the import slot's own type, so our text
@@ -437,7 +528,8 @@ def numeric(token: str) -> str:
 
 
 def licensed(classes: dict, native_text: str, oracle_text: str,
-             store: dict) -> tuple[set[str], set[re.Pattern]]:
+             store: dict, native_row: dict, oracle_row: dict
+             ) -> tuple[set[str], set[re.Pattern]]:
     """The tokens each named class accounts for -- literal, then by shape."""
     words: set[str] = set()
     shapes: set[re.Pattern] = set()
@@ -456,6 +548,14 @@ def licensed(classes: dict, native_text: str, oracle_text: str,
             words.update(evidence)
             words.update(SHAPE)
             shapes.update({DERIVED, TYPE_NAME})
+            # Where the prototype missing is *this* function's own, the
+            # declaration is what stock prints: the parameter names it
+            # declares, and the assignment a non-void return introduces. A
+            # prototype missing for a function it merely calls licenses
+            # neither (m4-019 narrowed the class in that direction).
+            if native_row.get("name") in set(evidence):
+                words.update(tokens(oracle_row.get("signature") or ""))
+                words.add("=")
         elif name == "type-stronger":
             # The casts either side carries: where the store holds the slot's
             # type, the cast moves rather than disappearing, so the tokens of
@@ -478,6 +578,18 @@ def licensed(classes: dict, native_text: str, oracle_text: str,
                 words.update(tokens(json.dumps(item["value"])))
                 words.add(f"0x{int(item['address'], 16):x}")
                 words.update(DYNAMIC.findall(oracle_text))
+        elif name == "mangled-name":
+            for pair in evidence:
+                words.update({pair["oracle"], pair["native"], pair["substituted"]})
+            words.update(SHAPE)
+        elif name == "exception-annotation":
+            words.update(evidence)
+            words.update(tokens(" ".join(evidence)))
+        elif name == "language-variant":
+            # The register the variant spells differently, and the name the
+            # decompiler derives from it -- nothing else.
+            words.update(evidence["registers"])
+            shapes.update({DERIVED})
         elif name == "oracle-warning":
             # Stock warned about its own recovery: the tokens of that comment,
             # and nothing else. A warning does not license code.
@@ -514,7 +626,13 @@ def residue(native_text: str, oracle_text: str, native_row: dict, oracle_row: di
                              oracle_text)
     for held, identifier in classes.get("name-rendering", []):
         oracle_text = oracle_text.replace(held, identifier)
-    words, shapes = licensed(classes, native_text, oracle_text, store)
+    oracle_text = apply_demangled(oracle_text, classes.get("mangled-name", []))
+    if "exception-annotation" in classes:
+        oracle_text = EH_COMMENT.sub("", oracle_text)
+    if "language-variant" in classes:
+        oracle_text = REGISTER_DERIVED.sub(lambda match: match.group(1), oracle_text)
+    words, shapes = licensed(classes, native_text, oracle_text, store,
+                             native_row, oracle_row)
     words.update(filter(None, (native_name, oracle_name)))
     left = []
     # An integer's notation is not a fact: `0x0` and `0` are the same number,

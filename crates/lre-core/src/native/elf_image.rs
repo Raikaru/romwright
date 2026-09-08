@@ -292,10 +292,27 @@ pub(super) fn prepare(
     // not a value discovery has to guess.
     if let Some(pltgot) = dynamic_value(data, width, be, 3)? {
         if let Some(base) = pltgot.checked_add(bias) {
+            // A reserved word only exists where the PLT object has room for
+            // it: this image's `.plt` is two words long, so the third address
+            // is `.bss` -- someone else's byte, not a slot (m4-022).
+            let bound = sections
+                .iter()
+                .filter(|section| section.addr != 0 && section.size != 0)
+                .find(|section| {
+                    let start = section.addr.saturating_add(bias);
+                    (start..start.saturating_add(section.size)).contains(&base)
+                })
+                .map(|section| {
+                    section.addr.saturating_add(bias).saturating_add(section.size)
+                });
             import.plt_reserved_slots = (0..3)
                 .filter_map(|index| {
                     base.checked_add(index * width as u64)
                         .map(|address| (address, width as u64))
+                })
+                .filter(|(address, size)| match bound {
+                    Some(end) => address.saturating_add(*size) <= end,
+                    None => true,
                 })
                 .collect();
             import.plt_resolver_slot = import

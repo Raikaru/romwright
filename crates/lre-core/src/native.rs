@@ -1604,6 +1604,9 @@ pub const SHARED_RETURN_SOURCE: &str = "native-analysis:shared-return";
 pub const DATA_WIDTH_SOURCE: &str = "native-analysis:data-width";
 /// A word an initializer array proves holds a code address.
 pub const ELF_POINTER_SOURCE: &str = "native-import:elf-pointer";
+/// An object the dynamic linker copies into the image, named by the
+/// relocation that copies it.
+pub const ELF_COPY_SOURCE: &str = "native-import:elf-copy";
 
 /// The process-entry model when the language declares one, and nothing when
 /// it does not -- Ghidra catches the same failure and skips silently
@@ -1690,6 +1693,28 @@ pub fn store_import(
                 source: "native-import".into(),
             }),
     );
+    // An object a COPY relocation brings in *is* the named object: the
+    // dynamic linker copies the library's definition into this slot, so the
+    // slot carries that name (`R_*_COPY`; stock records the same symbol from
+    // the same relocation).
+    symbols.retain(|symbol| symbol.source != ELF_COPY_SOURCE);
+    let copied: Vec<lre_model::SymbolRow> = imp
+        .named_relocations
+        .iter()
+        .filter(|relocation| relocation.copies && relocation.address != 0)
+        .map(|relocation| lre_model::SymbolRow {
+            name: relocation.symbol.clone(),
+            address: lre_model::Address::ram(relocation.address),
+            external: false,
+            source: ELF_COPY_SOURCE.into(),
+        })
+        .collect();
+    let already: std::collections::HashSet<u64> = symbols
+        .iter()
+        .filter(|symbol| symbol.address.space == lre_model::AddressSpace::Ram)
+        .map(|symbol| symbol.address.offset)
+        .collect();
+    symbols.extend(copied.into_iter().filter(|row| !already.contains(&row.address.offset)));
     // A name the image's own dynamic table proves, where nothing else names
     // the address: Ghidra applies the same label under the same guard.
     let named: std::collections::HashSet<u64> = symbols
@@ -3086,15 +3111,11 @@ mod tests {
         );
     }
 
-    fn elf_plt_register_context_is_scoped() {
-        use crate::native_runtime::find_console;
-        let mut cfg = crate::session::RuntimeConfig::from_env();
-        cfg.language_id = "x86:LE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        }
+    /// A 32-bit ELF whose `.dynamic` declares `DT_PLTGOT = 0x3000`, with a
+    /// `.got` section of `got_size` bytes at that address and a two-slot PLT
+    /// read at 0x1000. The GOT section size is the parameter because the ABI's
+    /// three reserved words only exist where the object has room for them.
+    fn elf32_with_pltgot(got_size: u32) -> Vec<u8> {
         let mut bytes = vec![0u8; 0x300];
         bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
         for (offset, value) in [(16, 2u16), (18, 3), (40, 52), (42, 32), (44, 3),
@@ -3121,7 +3142,7 @@ mod tests {
         bytes[0x180..0x180 + names.len()].copy_from_slice(names);
         for (index, header) in [
             [1u32, 1, 6, 0x1000, 0x100, 6, 0, 0, 1, 0],
-            [6, 1, 3, 0x3000, 0x120, 16, 0, 0, 4, 0],
+            [6, 1, 3, 0x3000, 0x120, got_size, 0, 0, 4, 0],
             [11, 6, 3, 0x3020, 0x140, 16, 0, 0, 4, 8],
             [20, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
         ].iter().enumerate() {
@@ -3130,6 +3151,43 @@ mod tests {
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
             }
         }
+        bytes
+    }
+
+    #[test]
+    fn reserved_words_stop_at_the_object_that_holds_them() {
+        // `powerpc_many_o2`'s `.plt` is two words long, so the address the
+        // third reserved word would occupy belongs to `.bss` -- the guard byte
+        // `_FINI_0` reads. Typing it as a resolver pointer and treating its
+        // readers as PLT headers truncated that function to `halt_baddata()`
+        // (m4-022).
+        let import = import_elf(&elf32_with_pltgot(16)).unwrap();
+        assert_eq!(
+            import.plt_reserved_slots,
+            vec![(0x3000, 4), (0x3004, 4), (0x3008, 4)],
+            "a GOT with room for three words reserves three"
+        );
+        assert_eq!(import.plt_resolver_slot, Some(0x3008));
+
+        let import = import_elf(&elf32_with_pltgot(8)).unwrap();
+        assert_eq!(
+            import.plt_reserved_slots,
+            vec![(0x3000, 4), (0x3004, 4)],
+            "a two-word GOT reserves two, and the third address is not ours"
+        );
+        assert_eq!(import.plt_resolver_slot, None);
+    }
+
+    fn elf_plt_register_context_is_scoped() {
+        use crate::native_runtime::find_console;
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "x86:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let mut bytes = elf32_with_pltgot(16);
         let analyze = |bytes: &[u8]| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
@@ -3420,7 +3478,18 @@ fn apply_library_prototypes(
         .filter(|function| imports.contains(function.name.as_str()))
         .map(|function| (function.entry, function.name.as_str()))
         .collect();
-    let applied = crate::library_types::declared_for(&table, named);
+    // What this language's own core-type document declares decides which
+    // declarations can be applied: the parser resolves nothing else, and one
+    // unresolvable name fails the whole decompile (m4-022).
+    let Ok((_, specs, _, _)) =
+        crate::native_runtime::language_decompile_config(&imp.cfg, &imp.language)
+    else {
+        return Ok(());
+    };
+    let Some(known_types) = crate::library_types::core_type_names(&specs) else {
+        return Ok(());
+    };
+    let applied = crate::library_types::declared_for(&table, named, &known_types);
     if applied.is_empty() {
         return Ok(());
     }
