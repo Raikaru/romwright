@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T04:48:53.134615+00:00",
+ "recorded_at": "2026-09-08T05:29:30.130305+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 35 of 56 functions token-identical, 21 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 3, function-facts 5, missing-external-prototype 5, name-convention 3, oracle-warning 8, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 35 of 56 functions token-identical, 21 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 3, missing-external-prototype 5, name-convention 3, oracle-warning 8, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -15,7 +15,6 @@
   "parity.class.data-name-convention": 3,
   "parity.class.data-type-unknown": 2,
   "parity.class.flow": 3,
-  "parity.class.function-facts": 5,
   "parity.class.missing-external-prototype": 5,
   "parity.class.name-convention": 3,
   "parity.class.oracle-warning": 8,
@@ -30,14 +29,13 @@
    "identical_tokens": 129,
    "attributed": 4,
    "classes": [
-    "function-facts",
     "name-convention",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default.jsonl",
-    "sha256": "4993664c6a902ffbfbc35a85df1b4a57a12225bf0223c5555282e3accd544104"
+    "sha256": "25e1cb6acdf78c5dc8af6a3dbf0977f96c4131228f1e49b36d793c2b42d3f957"
    }
   },
   {
@@ -50,7 +48,6 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "function-facts",
     "missing-external-prototype",
     "name-convention",
     "oracle-warning",
@@ -58,7 +55,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "7b82c7d869b7dde7de9438ffefc570e4b2e2d9f12e37d87d9d234461d99f1079"
+    "sha256": "089e787de5c065ff34dc6735252c3bbd462f3e8b6b636147ca4356b82a16dd5a"
    }
   },
   {
@@ -70,14 +67,13 @@
    "attributed": 4,
    "classes": [
     "data-name-convention",
-    "function-facts",
     "missing-external-prototype",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "42acf81c2cc90c4787e920dcae56be2fef93d059a9a5301593932ec41de739d7"
+    "sha256": "f3b0364deaeb1ef86f3311805315ae98e311ed29a7122ff9827a259cd6ee29de"
    }
   },
   {
@@ -91,7 +87,6 @@
     "data-name-convention",
     "data-type-unknown",
     "flow",
-    "function-facts",
     "missing-external-prototype",
     "name-convention",
     "oracle-warning",
@@ -99,7 +94,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "3cc759cb67c03e3626e3bf72fcbfcedc4f17661387031a77fb4c87f42485ddf8"
+    "sha256": "18b6b4031ca299ede4196266b112c276dee0193cebf5a29f509ea8ec7ed63e72"
    }
   }
  ],

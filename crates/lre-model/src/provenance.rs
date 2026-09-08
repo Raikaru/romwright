@@ -93,6 +93,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "ghidra-bridge:recovered-signature",
+        explanation:         "A signature stock Ghidra says it recovered, exported by the Stage-1 \
+         bridge with the source that says so; its own placeholder signature is \
+         not recorded.",
+        evidence: EvidenceKind::Decoded,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-analysis:data-width",
         explanation:         "How many bytes an instruction touches at a location, from the p-code \
          access that reaches it: a load's output, a store's value, or a \

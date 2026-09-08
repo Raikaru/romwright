@@ -184,6 +184,13 @@ final class Dispatcher {
             o.addProperty("name", f.getName());
             o.addProperty("entry", entry.toString());
             o.addProperty("size", f.getBody().getNumAddresses());
+            // A signature Ghidra calls DEFAULT is its placeholder
+            // (`undefined FUN_x(void)`), not a recovered fact; the caller
+            // decides, so the source travels with the signature.
+            o.addProperty("signature", f.getSignature().getPrototypeString(true));
+            o.addProperty("signature_source", f.getSignatureSource().toString());
+            o.addProperty("return_type", f.getReturn().getDataType().getDisplayName());
+            o.addProperty("calling_convention", f.getCallingConventionName());
             funcs.add(o);
         }
         out.add("functions", funcs);

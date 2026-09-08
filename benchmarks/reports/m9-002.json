@@ -1,15 +1,15 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-08T03:56:13.441237+00:00",
+ "recorded_at": "2026-09-08T05:31:39.721371+00:00",
  "status": "pass",
  "passed": true,
- "summary": "23 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "24 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 23,
+  "evidence.classes": 24,
   "evidence.declared": 14,
   "evidence.declared_exercised": 7,
   "evidence.declared_elsewhere": 7,
@@ -28,6 +28,12 @@
   "evidence.attributed.native-import:thunk": 1.0
  },
  "classes": {
+  "ghidra-bridge:recovered-signature": {
+   "derives_confidence": false,
+   "evidence": "decoded",
+   "explanation": "A signature stock Ghidra says it recovered, exported by the Stage-1 bridge with the source that says so; its own placeholder signature is not recorded.",
+   "source": "ghidra-bridge:recovered-signature"
+  },
   "native-analysis": {
    "derives_confidence": false,
    "evidence": "inferred",

@@ -1,4 +1,8 @@
 {
+ "ghidra-bridge:recovered-signature": {
+  "evidence": "decoded",
+  "derives_confidence": false
+ },
  "native-analysis": {
   "evidence": "inferred",
   "derives_confidence": false

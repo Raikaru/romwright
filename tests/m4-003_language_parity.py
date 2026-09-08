@@ -224,9 +224,15 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
              entry: int, store: dict, oracle_store: dict) -> dict:
     """Name the fact each divergence comes from, with the evidence for it."""
     classes: dict[str, object] = {}
+    # A signature is content, not spelling: `int f(char *name)` and
+    # `int f(char *)` say the same thing about the return type and the arity,
+    # and neither decompiler's parameter naming is a fact about the image.
     differing = {key: [oracle_row.get(key), native_row.get(key)]
-                 for key in ("name", "signature", "return_type")
+                 for key in ("name", "return_type")
                  if oracle_row.get(key) != native_row.get(key)}
+    counts = (arity(oracle_row.get("signature")), arity(native_row.get("signature")))
+    if None not in counts and counts[0] != counts[1]:
+        differing["parameters"] = list(counts)
 
     # A name is a choice, not a gap: the loader-derived names differ on
     # purpose (`_plt` says which section proved the start; Ghidra's
@@ -366,6 +372,17 @@ def label_substitutions(native_text: str, oracle_text: str, store: dict,
             pairs.append({"address": f"{address:08x}", "oracle": oracle_name,
                           "native": ours[0]})
     return pairs
+
+
+def arity(signature: str | None) -> int | None:
+    """How many parameters a signature declares, or None when there is none to
+    read. `(void)` declares zero; `...` is one, spelled the same either way."""
+    if not signature or "(" not in signature or ")" not in signature:
+        return None
+    inner = signature[signature.index("(") + 1:signature.rindex(")")].strip()
+    if inner in ("", "void"):
+        return 0
+    return len([part for part in inner.split(",") if part.strip()])
 
 
 def numeric(token: str) -> str:

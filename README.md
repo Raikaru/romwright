@@ -980,7 +980,6 @@ The classes separate the gaps from the choices, and the *direction* of a
 difference decides which it is. Gaps:
 `missing-external-prototype` 5
 (an import the oracle calls by name and the store holds no signature for),
-`function-facts` 5,
 `flow` 3 -- a warning we emit and stock
 does not -- and `data-type-unknown` 2. Not
 ours: `oracle-warning` 8, stock warning
@@ -1000,7 +999,7 @@ holds the slot's type and the oracle types it `undefined *`.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Twelve tasks have shrunk the gaps by carrying facts the image, its ABI or the
+Thirteen tasks have shrunk the gaps by carrying facts the image, its ABI or the
 pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1033,6 +1032,14 @@ pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* the instrument's own silence (`tests/m4-018_oracle_prototypes.py`): the
+  bridge exported no signatures at all, so every return type we recovered read
+  as a divergence against a `None`. It now exports what stock says it
+  recovered -- with `getSignatureSource()`, so Ghidra's own
+  `undefined FUN_x(void)` placeholder is not recorded as a fact -- and a
+  signature is compared by content (return type, parameter count) rather than
+  by either decompiler's parameter spelling. The `function-facts` class went
+  10 -> 5 -> **0**.
 * the loader's own entry names (`tests/m4-017_entry_names.py`): `entry` for
   `e_entry` and `_DT_INIT`/`_DT_FINI` for the single-entry dynamic tags are
   names stock's loader gives from documented rules, and ours were a section
@@ -1632,7 +1639,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 3; `parity.class.function-facts` 5; `parity.class.missing-external-prototype` 5; `parity.class.name-convention` 3; `parity.class.oracle-warning` 8; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 21; `parity.functions_token_identical` 35; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 3; `parity.class.missing-external-prototype` 5; `parity.class.name-convention` 3; `parity.class.oracle-warning` 8; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 21; `parity.functions_token_identical` 35; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1646,6 +1653,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-015.json` | `m4-015` | M4 | pass | `named_in_text` 13; `overlap_warnings` 0; `rows` 4; `widths_recorded` 19 | `tests/m4-015_reference_widths.py` |
 | `m4-016.json` | `m4-016` | M4 | pass |  | `tests/m4-016_class_direction.py` |
 | `m4-017.json` | `m4-017` | M4 | pass | `symbol_wins` _start | `tests/m4-017_entry_names.py` |
+| `m4-018.json` | `m4-018` | M4 | pass | `agreed_return_type` int; `oracle_prototypes` 2 | `tests/m4-018_oracle_prototypes.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1658,7 +1666,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 98; `diagnostic_runs` 12; `generated_rows` 97; `published_ids` 82 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 99; `diagnostic_runs` 12; `generated_rows` 98; `published_ids` 83 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
@@ -1675,7 +1683,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-005.json` | `m8-005` | M8 | pass | `pe.imports.bound_descriptors` 0; `pe.imports.declared` 166; `pe.imports.libraries` 8; `pe.imports.misnamed` 0; `pe.imports.missing` 0; `pe.imports.not_external` 0; `pe.imports.unnamed_stubs` 0 | `tests/m8-005_pe_imports.py` |
 | `m8-006.json` | `m8-006` | M8 | pass | `pe.classes.declared` 4; `pe.classes.unexercised` 0; `pe.classes.unmeasured` 0; `pe.externals` 260; `pe.references` 865 | `tests/m8-006_pe_parity.py` |
 | `m9-001.json` | `m9-001` | M9 | pass | `provenance.api_facts_checked` 10; `provenance.classes` 18; `provenance.declared` 18; `provenance.observed` 11; `provenance.unexplained` 0; `ui.xrefs.rows` 19; `ui.xrefs.unexplained` 0 | `tests/m9-001_provenance_explained.py` |
-| `m9-002.json` | `m9-002` | M9 | pass | `evidence.attributed.native-analysis:constant-propagation` 1.0000; `evidence.attributed.native-import` 1.0000; `evidence.attributed.native-import:branch` 1.0000; `evidence.attributed.native-import:elf-pointer` 1.0000; `evidence.attributed.native-import:elf-reloc` 1.0000; `evidence.attributed.native-import:elf-unwind` 1.0000; `evidence.attributed.native-import:pe-export` 1.0000; `evidence.attributed.native-import:pe-reloc` 1.0000; `evidence.attributed.native-import:pe-tls` 1.0000; `evidence.attributed.native-import:pe-unwind` 1.0000; `evidence.attributed.native-import:thunk` 1.0000; `evidence.classes` 23; `evidence.declared` 14; `evidence.declared_elsewhere` 7; `evidence.declared_exercised` 7; `evidence.references` 4665; `evidence.unbacked_confidence` 0 | `tests/m9-002_fact_confidence.py` |
+| `m9-002.json` | `m9-002` | M9 | pass | `evidence.attributed.native-analysis:constant-propagation` 1.0000; `evidence.attributed.native-import` 1.0000; `evidence.attributed.native-import:branch` 1.0000; `evidence.attributed.native-import:elf-pointer` 1.0000; `evidence.attributed.native-import:elf-reloc` 1.0000; `evidence.attributed.native-import:elf-unwind` 1.0000; `evidence.attributed.native-import:pe-export` 1.0000; `evidence.attributed.native-import:pe-reloc` 1.0000; `evidence.attributed.native-import:pe-tls` 1.0000; `evidence.attributed.native-import:pe-unwind` 1.0000; `evidence.attributed.native-import:thunk` 1.0000; `evidence.classes` 24; `evidence.declared` 14; `evidence.declared_elsewhere` 7; `evidence.declared_exercised` 7; `evidence.references` 4665; `evidence.unbacked_confidence` 0 | `tests/m9-002_fact_confidence.py` |
 | `m9-003.json` | `m9-003` | M9 | pass | `filter.addresses` 20; `filter.facts_matched` 104; `filter.images` 5; `filter.kinds` 3; `filter.symbols_matched` 135 | `tests/m9-003_evidence_filter.py` |
 | `m9-004.json` | `m9-004` | M9 | pass | `surface.cli_rows_checked` 12; `surface.committed_ui_declared_rows` 13; `surface.narrowing_addresses` 2; `surface.ui_declared_rows` 0; `surface.ui_rows` 1 | `tests/m9-004_filter_surfaces.py` |
 | `m9-005.json` | `m9-005` | M9 | pass | `explanation.methods_answered` 28; `explanation.methods_published` 52; `explanation.printed_sources` 5; `explanation.silent_facts` 0; `explanation.window_declared_rows` 13; `explanation.window_unexplained` 0 | `tests/m9-005_explanation_milestone.py` |
