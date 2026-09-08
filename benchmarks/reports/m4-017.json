@@ -1,0 +1,36 @@
+{
+  "task": "m4-017",
+  "recorded_at": "2026-09-08T05:08:49.557217+00:00",
+  "scope": "naming acceptance with three controls, not a corpus gate",
+  "metrics": {
+    "symbol_wins": "_start",
+    "pe_untouched": [
+      "FUN_00401000",
+      "FUN_00401410",
+      "FUN_004014d0",
+      "FUN_00401500",
+      "FUN_00401510",
+      "FUN_00401520"
+    ],
+    "named": [
+      "aarch64_plain_o0:_DT_FINI",
+      "aarch64_plain_o0:_DT_INIT",
+      "aarch64_plain_o0:entry",
+      "i386_plain_o0:_DT_FINI",
+      "i386_plain_o0:_DT_INIT",
+      "i386_plain_o0:entry",
+      "powerpc_plain_o0:_DT_FINI",
+      "powerpc_plain_o0:_DT_INIT",
+      "powerpc_plain_o0:entry",
+      "x86_64_plain_o0:_DT_FINI",
+      "x86_64_plain_o0:_DT_INIT",
+      "x86_64_plain_o0:entry"
+    ],
+    "kept": [
+      "aarch64_plain_o0:_plt",
+      "i386_plain_o0:_plt",
+      "x86_64_plain_o0:_plt"
+    ]
+  },
+  "passed": true
+}

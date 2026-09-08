@@ -19,7 +19,7 @@ itself and requires the store to agree:
     store, so the label cannot exist without the fact;
   * stock Ghidra's name at the same address must agree, and every remaining
     difference must be a *proven-equivalent label*: the same address named
-    from a different source (our `_entry` for `e_entry`, our `_init` for
+    from a different source (before m4-017: our `_entry` for `e_entry`, our `_init` for
     `DT_INIT`), asserted by reading the header and the dynamic table.
 
 Usage:
@@ -54,9 +54,9 @@ DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
 # row would now be a real disagreement. A new row fails here.
 PATTERN_LABELS: dict[str, dict[str, str]] = {}
 
-# Labels for the same address from a different source: ours from the section
-# table or the ELF header, Ghidra's from the dynamic table.
-EQUIVALENT = {("_entry", "entry"), ("_init", "_DT_INIT"), ("_fini", "_DT_FINI")}
+# The loader's own entry names agree with stock since m4-017, so no
+# equivalence is needed for them.
+EQUIVALENT: set[tuple[str, str]] = set()
 
 DT = {"INIT_ARRAY": 25, "FINI_ARRAY": 26, "INIT_ARRAYSZ": 27, "FINI_ARRAYSZ": 28,
       "PREINIT_ARRAY": 32, "PREINIT_ARRAYSZ": 33, "INIT": 12, "FINI": 13}
@@ -210,10 +210,10 @@ def stock_names(install: Path, binary: Path, work: Path, timeout: int) -> dict[i
 def scored_row(identifier: str, elf: dict, native: dict, stock: dict[int, str]) -> dict:
     bias = None
     for address, name in native["functions"].items():
-        if name == "_entry":
+        if name == "entry":
             bias = address - elf["entry"]
             break
-    assert bias is not None, f"{identifier}: no _entry function to anchor the bias"
+    assert bias is not None, f"{identifier}: no entry function to anchor the bias"
 
     def executable(address: int) -> bool:
         return any(start <= address < start + size
