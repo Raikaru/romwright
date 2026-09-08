@@ -4692,24 +4692,61 @@ evidence:
 - The cost gates (`m7-001`..`m7-003`) do not use the cache: they measure the
   work it skips. `VENTRIS_GATE_CACHE=` switches reuse off everywhere.
 
+### m4-025 evidence
+- The rule, from the pinned tree: the decompiler's C parser resolves a type
+  name through `CParse::lookupIdentifier` -> `TypeFactory::findByName`, and
+  `TypeFactoryGhidra::findById` asks the *client* for any name the factory
+  does not already hold (`typegrp_ghidra.cc`:20-36). The answer needs a name,
+  a size and a metatype; the id may be omitted, and
+  `Datatype::decodeBasic` then derives `hashName(name)` itself
+  (`type.cc`:698-700). Widths come from the compiler spec's
+  `<data_organization>`, and where a spec omits it -- PowerPC's has no such
+  block at all -- Ghidra's own defaults apply: `short` 2, `int` 4, **`long`
+  4**, `long long` 8, `float` 4, `double` 8, `long double` 8
+  (`DataOrganizationImpl`:43-53).
+- Implemented: `library_types::language_base_types` reads those widths (with
+  the defaults), the import filter accepts a declaration whose base types the
+  language's `coretypes.xml` *or* its data organization names, and the worker
+  answers the decompiler's type query from the same table. So a 32-bit row
+  applies `long strtol(char *__nptr,char **__endptr,int __base)` and prints
+  it, where the same declaration used to fail the whole decompile with
+  `Syntax error at line 0 in stream / long`.
+- Measured (`tests/m4-025_declaration_types.py`,
+  `benchmarks/reports/m4-025.json`): **23 declared prototypes across all 20
+  ELF rows**, every one stock applied to a function we know is recorded by us
+  with the same declared types, and every one **printed with stock's own
+  signature** -- the only proof the type reached the decompiler. Controls:
+  **235** archive declarations whose types no language can express (`FILE *`)
+  stay refused, and a `noreturn` stock spells inside its signature string is
+  compared where we keep it -- in `return_behaviors`, not in the text.
+- `m4-003`: `missing-external-prototype` **4 -> 0** and `function-facts`
+  **2 -> 0**; eight classes left, 1739 of 1845 token-identical, 0 unexplained,
+  baseline re-recorded. The stub rows still differ, and now only by classes
+  that already had a direction: stock's own `Unknown calling convention`
+  warning and the cast our typed slot moves.
+- Regression: `cargo test --workspace` **258 pass**; every gate in `tests/`
+  passes, plus the five shell suites. Two of them caught the same omission
+  before this landed: `base_types` was set only on the CLI's provider, so the
+  API's own worker (`infer_prototypes`, `decompile_doc`) still failed the
+  parse -- the table now loads with the rest of the language facts in
+  `load_language_info`, which every provider calls.
+
 ## Next task
-- m4-025: the 32-bit `long` prototype path (`missing-external-prototype` 4 and
-  the `function-facts` 2 that follow it). A declaration from the pinned
-  archive is handed to the decompiler as C text, so it can only use type names
-  the language's own `coretypes.xml` declares -- and a 32-bit language names
-  `longlong` and no `long`, which is why `long strtol(char **, ...)` is
-  applied on the 64-bit rows and refused on the 32-bit ones. Stock does not
-  parse text: its Java side resolves the declaration against the program's
-  data organization and sends the decompiler a *type*. Read
-  `data_organization` in the pinned cspec and `PcodeDataTypeManager`'s type
-  stream first, then decide whether the worker should send a type document or
-  resolve the archive's names through the language's own sizes. The acceptance
-  test asserts the applied prototype on a 32-bit row against stock's, and the
-  parity classes go to 0 or the residue is named.
-- After it: `mangled-name` 8 (both stores hold `_ZTIi`; stock prints what its
-  demangler made of it) and `data-name-convention` 8 are naming choices, not
-  gaps -- closing them means deciding whether our store should hold the
-  demangled name, which changes what `m4-011`'s rendering rule applies to.
+- m4-026: `mangled-name` 8 and `data-name-convention` 8 are the last two
+  classes that are *choices*, and both are the same question: what a store
+  should hold for a name the image spells in a scheme C cannot. Both stores
+  hold `_ZTIi` from the COPY relocation; stock's demangler adds
+  `int::typeinfo` and prints that. Read Ghidra's `GnuDemangler` and
+  `DemanglerCmd` (namespace-qualified symbol creation) before deciding, and
+  note the constraint m4-011 set: a name C cannot spell is *rendered* as an
+  identifier while the store keeps what the image declared, so holding the
+  demangled name trades `mangled-name` for `name-rendering` unless the
+  rendering rule changes with it. The acceptance test must state which class
+  it intends to close and measure both.
+- Then: `data-type-unknown` 4 (both sides name the slot; stock holds defined
+  data with a type where our store holds a reference) and the two remaining
+  reserved items in `GOAL.md` C3 -- measured game-first sessions on the
+  approved targets, which needs a target game and is II.1-reserved.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

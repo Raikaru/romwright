@@ -352,6 +352,13 @@ jobs:
           python3 tests/m4-023_language_selection.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/language-selection.json"
+      - name: Apply declarations in the language's own type names
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-025_declaration_types.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/declaration-types.json"
       - name: Record the try ranges the exception tables declare
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

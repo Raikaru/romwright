@@ -1,13 +1,13 @@
 {"address": "004016f0", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "data-type-unknown": [{"oracle": "PTR_FUN_00402ae4", "native": ["DAT_00402ae4"]}], "data-name-convention": [{"address": "00402ae4", "oracle": "PTR_FUN_00402ae4", "native": "DAT_00402ae4"}]}, "oracle_tokens": 46, "native_tokens": 46}
 {"address": "00401820", "classes": {"mangled-name": [{"address": "00402aec", "oracle": "typeinfo", "native": "_ZTIi", "substituted": "&_ZTIi"}]}, "oracle_tokens": 94, "native_tokens": 91}
-{"address": "00401870", "classes": {"mangled-name": [{"address": "00402aec", "oracle": "typeinfo", "native": "_ZTIi", "substituted": "&_ZTIi"}], "missing-external-prototype": ["strtol"]}, "oracle_tokens": 145, "native_tokens": 136}
+{"address": "00401870", "classes": {"mangled-name": [{"address": "00402aec", "oracle": "typeinfo", "native": "_ZTIi", "substituted": "&_ZTIi"}]}, "oracle_tokens": 145, "native_tokens": 142}
 {"address": "00401930", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]], "type-stronger": ["(undefined *)"]}, "oracle_tokens": 34, "native_tokens": 30}
 {"address": "00401950", "classes": {"name-rendering": [["__i686.get_pc_thunk.bx", "__i686_get_pc_thunk_bx"]]}, "oracle_tokens": 10, "native_tokens": 10}
 {"address": "00401970", "classes": {"name-convention": ["FUN_00401970", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00401980", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00401990", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "004019a0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
-{"address": "004019b0", "classes": {"function-facts": {"return_type": ["long", null]}, "type-stronger": ["(code *)"], "missing-external-prototype": ["strtol"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 37, "native_tokens": 16}
+{"address": "004019b0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 37, "native_tokens": 32}
 {"address": "004019c0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}
 {"address": "004019d0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "004019e0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

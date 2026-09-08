@@ -97,6 +97,11 @@ pub struct ProgramProvider {
     /// Core type name -> (id, size) from the language's `coretypes.xml`.
     /// A type the language does not define is never referenced.
     pub core_types: HashMap<String, (u64, u64)>,
+    /// C base types the language's compiler spec declares a width for. The
+    /// decompiler's C parser asks the client for a type name it does not
+    /// already hold (`TypeFactoryGhidra::findById`), and on a 32-bit language
+    /// `long` is exactly such a name (m4-025).
+    pub base_types: std::collections::BTreeMap<String, lre_core::library_types::BaseType>,
     /// Pointer width in bytes, from the language's tspec.
     pub pointer_size: u64,
     /// Executable address ranges, from the store's memory regions: an unnamed
@@ -143,6 +148,7 @@ impl ProgramProvider {
             data_definitions: HashMap::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
+            base_types: std::collections::BTreeMap::new(),
             pointer_size: 8,
             registers: HashMap::new(),
             conventions: HashMap::new(),
@@ -259,6 +265,12 @@ impl ProgramProvider {
     /// indices from the tspec, and the prototype models the cspec declares —
     /// the files `dump_specs` writes.
     pub fn load_language_info(&mut self, lang_dir: &Path) -> Result<()> {
+        // The C base types this language declares a width for. Every path
+        // that loads language facts needs them, not just the CLI: the
+        // decompiler asks whichever provider is answering for a type name it
+        // does not hold, and an unanswered `long` fails the whole decompile
+        // (m4-025).
+        self.base_types = lre_core::library_types::language_base_types(lang_dir);
         let regs = std::fs::read_to_string(lang_dir.join("registers.txt"))
             .map_err(|e| WorkerError::Setup(format!("registers.txt: {e}")))?;
         for line in regs.lines() {
@@ -660,6 +672,34 @@ impl NativeWorker {
         let name = find_name_attribute(payload).unwrap_or_default();
         let mut buf = Vec::new();
         encode_burst(&mut buf, burst::QRESPONSE_OPEN);
+        // A base type the language declares a width for. The id is left out
+        // on purpose: `Datatype::decodeBasic` derives `hashName(name)` when
+        // none is given (`type.cc`:698-700), which is the same id the
+        // decompiler would have used for a type of its own.
+        if let Some(base) = provider
+            .base_types
+            .get(&name)
+            .filter(|_| !provider.core_types.contains_key(&name))
+        {
+            let mut doc = Vec::new();
+            wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::TYPE);
+            wire::encode_string_attribute(&mut doc, wire::attr::NAME, name.as_bytes());
+            wire::encode_attribute(
+                &mut doc,
+                wire::attr::SIZE,
+                wire::attr_type::POSITIVE_INT,
+                u64::from(base.size),
+            );
+            wire::encode_string_attribute(
+                &mut doc,
+                wire::attr::METATYPE,
+                base.metatype.as_bytes(),
+            );
+            wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::TYPE);
+            encode_string_stream(&mut buf, &doc);
+            encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+            return self.write_frame(&buf);
+        }
         if provider.datatypes.contains_key(&name) {
             let mut doc = Vec::new();
             wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::TYPE);
