@@ -961,9 +961,9 @@ difference (`tests/m4-003_language_parity.py`,
 |---|---|
 | bundled languages, each measured or blocked with a verified reason | 9 = 4 measured + 5 blocked |
 | functions compared, both ways, on the same stripped image | 56 |
-| token-identical to the oracle | **30** |
+| token-identical to the oracle | **35** |
 | differing only because our type is the stronger one | 18 |
-| differing, every one attributed to a named fact | 26 |
+| differing, every one attributed to a named fact | 21 |
 | differing tokens no named class accounts for | **0** |
 
 The last row is the load-bearing one. Naming *a* class used to be enough for
@@ -980,17 +980,18 @@ The classes separate the gaps from the choices, and the *direction* of a
 difference decides which it is. Gaps:
 `missing-external-prototype` 5
 (an import the oracle calls by name and the store holds no signature for),
-`function-facts` 10,
+`function-facts` 5,
 `flow` 3 -- a warning we emit and stock
 does not -- and `data-type-unknown` 2. Not
 ours: `oracle-warning` 8, stock warning
 about its own recovery (`Unknown calling convention -- yet parameter storage
 is locked`, on stubs whose text is otherwise ours exactly). Choices:
-`name-convention` 10 -- the whole
+`name-convention` 3 -- the whole
 difference is a name we picked on purpose, decided mechanically by
 substituting the oracle's name into its own text and finding the token streams
 equal (`_plt` names the section that proved the start; stock calls it
-`FUN_00201710`) -- `data-name-convention` 3,
+`FUN_00201710`, and that is the only name-convention row left) --
+`data-name-convention` 3,
 the same decision on a data label (the slot `DT_PLTGOT` reserves is named
 after the import it holds, where stock names it after the tag), and
 `type-stronger` 18,
@@ -999,7 +1000,7 @@ holds the slot's type and the oracle types it `undefined *`.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Eleven tasks have shrunk the gaps by carrying facts the image, its ABI or the
+Twelve tasks have shrunk the gaps by carrying facts the image, its ABI or the
 pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1032,6 +1033,12 @@ pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* the loader's own entry names (`tests/m4-017_entry_names.py`): `entry` for
+  `e_entry` and `_DT_INIT`/`_DT_FINI` for the single-entry dynamic tags are
+  names stock's loader gives from documented rules, and ours were a section
+  name or an invented underscore. A symbol from the image's own table still
+  wins, and `_plt` -- where stock has no name at all and ours says which
+  section proved the start -- stands. Token identity **30 -> 35**.
 * which side a difference belongs to (`tests/m4-016_class_direction.py`): the
   `flow` class licensed any warning in either direction, and the prototype
   class matched a callee name in the decompiled function's *own signature*
@@ -1058,7 +1065,7 @@ pinned install already declares:
   labels (`_DYNAMIC`, `__DT_<TAG>`), applied where nothing else names the
   address.
 
-Token identity has gone **18 -> 30**
+Token identity has gone **18 -> 35**
 of 56 across those tasks, with no class
 growing and every count pinned.
 
@@ -1625,7 +1632,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 3; `parity.class.function-facts` 10; `parity.class.missing-external-prototype` 5; `parity.class.name-convention` 10; `parity.class.oracle-warning` 8; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 26; `parity.functions_token_identical` 30; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 3; `parity.class.data-type-unknown` 2; `parity.class.flow` 3; `parity.class.function-facts` 5; `parity.class.missing-external-prototype` 5; `parity.class.name-convention` 3; `parity.class.oracle-warning` 8; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 21; `parity.functions_token_identical` 35; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1638,6 +1645,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-014.json` | `m4-014` | M4 | pass | `broken_sibling` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `explicit_override` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `sibling` /* WARNING: Removing unreachable block (ram,0x0040040f) *//* WARNING: Removing u; `workspace_agreement` 14 | `tests/m4-014_worker_resolution.py` |
 | `m4-015.json` | `m4-015` | M4 | pass | `named_in_text` 13; `overlap_warnings` 0; `rows` 4; `widths_recorded` 19 | `tests/m4-015_reference_widths.py` |
 | `m4-016.json` | `m4-016` | M4 | pass |  | `tests/m4-016_class_direction.py` |
+| `m4-017.json` | `m4-017` | M4 | pass | `symbol_wins` _start | `tests/m4-017_entry_names.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1678,15 +1686,15 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 <!-- support-matrix:begin -->
 | Input | Structural native import | Native flow/decode/decompile |
 |---|---|---|
-| ELF x86-64 | supported | **supported and gated**; **parity measured**: 7 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF x86-64 | supported | **supported and gated**; **parity measured**: 8 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF x86-32 | supported | **parity measured**: 9 of 15 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
 | PE32 x86 | supported | **gated**: DWARF recall 0.8065 over 93 functions, 0 unattributed, stock Ghidra 0.7634 on the same image (`tests/m8-002_pe32_roots.py`) |
-| ELF AARCH64 LE64 | supported | **parity measured**: 8 of 17 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF AARCH64 LE64 | supported | **parity measured**: 10 of 17 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF ARM LE32 | supported | no oracle comparison: no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for |
 | ELF MIPS LE32 | supported | no oracle comparison: no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader |
 | ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |
-| ELF PowerPC | supported | **parity measured**: 6 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
+| ELF PowerPC | supported | **parity measured**: 8 of 12 functions token-identical to the JVM oracle, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
 | PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:LE:32:default` (`tests/m5-003_psx.py`) |

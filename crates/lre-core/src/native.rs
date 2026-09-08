@@ -185,6 +185,10 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Entries whose name came from the image's own symbol table. Ghidra's
+    /// loader leaves such a function's name alone and only marks it an entry
+    /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
+    pub symbol_named: Vec<u64>,
     /// How wide the widest proven access to a location is, by address. A
     /// location whose address is only taken proves no width and is absent.
     pub reference_widths: Vec<(u64, u64)>,
@@ -437,22 +441,17 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             }
         }
     }
+    let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
         symbol_functions
             .into_iter()
             .map(|(entry, (_, name, size))| NativeFunction { entry, name, size }),
     );
     collect_elf_section_starts(&sections, &mut functions);
-    if entry != 0 && !functions.iter().any(|f| f.entry == entry) {
-        functions.push(NativeFunction {
-            entry,
-            name: "_entry".into(),
-            size: 1,
-        });
-    }
     functions.sort_by_key(|f| f.entry);
     let mut import = NativeImport {
         process_entry,
+        symbol_named,
         format: "elf32".into(),
         language: language.into(),
         compiler: Some(compiler),
@@ -699,19 +698,13 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
         }
     }
+    let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
         symbol_functions
             .into_iter()
             .map(|(entry, (_, name, size))| NativeFunction { entry, name, size }),
     );
     collect_elf_section_starts(&sections, &mut functions);
-    if entry != 0 && !functions.iter().any(|f| f.entry == entry) {
-        functions.push(NativeFunction {
-            entry,
-            name: "_entry".into(),
-            size: 1,
-        });
-    }
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
     let mut import = NativeImport {
@@ -719,6 +712,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         functions,
         externals,
         process_entry,
+        symbol_named,
         format: "ELF".into(),
         language: language.into(),
         compiler: Some(compiler),

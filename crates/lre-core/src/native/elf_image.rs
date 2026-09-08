@@ -282,6 +282,7 @@ pub(super) fn prepare(
     collect_plt_candidates(sections, import, machine, width as u64);
     collect_initializer_labels(data, import, width, be, bias)?;
     collect_dynamic_labels(data, import, width, be, bias)?;
+    name_entry_points(data, import, width, be, bias)?;
     if machine == 3 && width == 4 {
         collect_x86_plt_context(data, sections, import, bias, be)?;
     }
@@ -419,6 +420,63 @@ fn dynamic_value(data: &[u8], width: usize, be: bool, wanted: u64) -> Result<Opt
 /// array's base and size come from the dynamic table, the target from the
 /// slot's own word or from the relocation applied to that slot, and the index
 /// from the slot's position in the array. A zero slot names nothing.
+/// Names the loader's own entry points as the loader names them.
+///
+/// `e_entry` is `entry` (`ElfLoader.ELF_ENTRY_FUNCTION_NAME`, applied at
+/// `ElfProgramBuilder.processEntryPoints`:657) and the single-entry dynamic
+/// tags name their target `_DT_<TAG>` (`createDynamicEntryPoints`:678-679 and
+/// :704). The target must sit in an executable block, and a function that
+/// already exists there keeps its name -- the loader only marks it an entry
+/// point (`createEntryFunction`, :783-798) -- so a name from the image's own
+/// symbol table wins over the loader's, and the loader's wins over a name a
+/// section start guessed.
+fn name_entry_points(
+    data: &[u8],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+    bias: u64,
+) -> Result<()> {
+    let entry = word(data, 24, width, be)?;
+    let mut wanted: Vec<(u64, &'static str)> = Vec::new();
+    if entry != 0 {
+        wanted.push((entry.checked_add(bias).ok_or_else(|| bad("ELF entry overflow"))?, "entry"));
+    }
+    for (tag, name) in [(0xc_u64, "_DT_INIT"), (0xd, "_DT_FINI")] {
+        let Some(value) = dynamic_value(data, width, be, tag)? else { continue };
+        if value == 0 {
+            continue;
+        }
+        wanted.push((
+            value.checked_add(bias).ok_or_else(|| bad("ELF dynamic entry overflow"))?,
+            name,
+        ));
+    }
+    for (address, name) in wanted {
+        let executable = import
+            .mappings
+            .iter()
+            .any(|mapping| {
+                mapping.flags & 4 != 0 && address >= mapping.vaddr
+                    && address - mapping.vaddr < mapping.size
+            });
+        if !executable || import.symbol_named.contains(&address) {
+            continue;
+        }
+        match import.functions.iter_mut().find(|function| function.entry == address) {
+            Some(function) => function.name = name.into(),
+            None => import.functions.push(crate::native::NativeFunction {
+                entry: address,
+                name: name.into(),
+                size: 1,
+            }),
+        }
+    }
+    import.functions.sort_by_key(|function| function.entry);
+    import.functions.dedup_by_key(|function| function.entry);
+    Ok(())
+}
+
 /// Every dynamic tag whose value is an address, in Ghidra's own table
 /// (`ElfDynamicType`, the entries declared `ElfDynamicValueType.ADDRESS`).
 const ADDRESS_TAGS: &[(u64, &str)] = &[

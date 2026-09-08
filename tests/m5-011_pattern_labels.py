@@ -132,8 +132,8 @@ def score(identifier: str, binary: Path, patterns: list[tuple[bytes, str]],
           native: dict, stock: dict[int, str]) -> dict:
     entry, read = image_reader(binary)
     bias = next((address for address, name in native["functions"].items()
-                 if name == "_entry"), None)
-    assert bias is not None, f"{identifier}: no _entry function to anchor the bias"
+                 if name == "entry"), None)
+    assert bias is not None, f"{identifier}: no entry function to anchor the bias"
     bias -= entry
     by_label: dict[str, list[bytes]] = {}
     for shape, label in patterns:

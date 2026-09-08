@@ -4320,16 +4320,57 @@ m3-003, all three wired into continuous integration)
   `differential.sh`, `workflow.sh`, `data_xrefs.sh` pass. 98 reports indexed,
   both generators in sync.
 
+### m4-017 evidence
+- Diagnosis first, on the committed divergence files: `function-facts` (10)
+  split into exactly two causes of five rows each -- a differing **name**
+  (`entry`/`_entry`, `_DT_INIT`/`_init`, `_DT_FINI`/`_fini`) and a differing
+  **return type**, every one of the latter being `[None, ...]`: the oracle
+  store holds **zero** prototype rows, so that field compared our recovered
+  type against the instrument's silence.
+- The names were not a convention we chose. Stock's come from documented
+  loader rules -- `ElfLoader.ELF_ENTRY_FUNCTION_NAME = "entry"` applied to
+  `e_entry` (`processEntryPoints`:657), and `createDynamicEntryPoints(DT_INIT,
+  null, ...)` naming its target `"_" + tag.name` (:678-679, :704), whose array
+  forms this tree already matched in m5-010. Ours came from the section table
+  (`_init`) or an invented underscore (`_entry`). Adopted, with Ghidra's own
+  precedence: the target must be in an executable block, and **a function that
+  already exists there keeps its name** (`createEntryFunction`:783-798), so a
+  symbol from the image's table wins over the loader's name and the loader's
+  name wins over a section-derived guess.
+- Measured: token identity **30 -> 35** of 56, 0 unaccounted tokens.
+  `function-facts` 10 -> **5** (only the return-type cause remains),
+  `name-convention` 10 -> **3** -- and all three that remain are `_plt`, where
+  stock has no name at all and ours says which section proved the start.
+  Baseline re-recorded.
+- Controls: `.plt` keeps `_plt` on every row; the **unstripped twin** of the
+  x86-64 image keeps `_start` at its entry, because its own symbol table names
+  it; and a PE image gains no ELF dynamic-entry names.
+- Four gates anchored a bias or an allowlist on the old name and were updated
+  to the contract rather than to the text: `m5-009` accepts a loader name as
+  evidence-backed beside a section name, `m5-010`'s three-pair equivalence is
+  now empty because the names agree, and `m5-010`/`m5-011`/`m5-009` anchor on
+  `entry`.
+- Regression: `cargo test --workspace` **245 pass**; `m4-002`..`m4-017`,
+  `m3-001`, `m3-003`, `m2-008`, `m2-009`, `m2-016`, `m5-001`, `m5-002`,
+  `m5-006`..`m5-012`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m8-003`,
+  `m9-001`..`m9-003`, `m9-005`, `m10-003`, `m10-004`, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 99 reports indexed, both generators in
+  sync.
+
 ## Next task
-- m4-017: `function-facts` **10** is now the largest gap, and it is a bag: the
-  class records any difference in name, signature or return type without
-  saying which, so it hides three unrelated causes (a return type stock
-  recovers and we do not, a signature the archive supplied to one side only,
-  and a name difference that also drags parameters). Split it by field, count
-  each, and take the largest. Diagnosis first, on the committed divergence
-  files (`benchmarks/reports/m4-003-divergences/*.jsonl`), then a failing test
-  for whichever cause the count names. Acceptance: per-field counts recorded,
-  the chosen cause fixed with its own control, and identity re-measured.
+- m4-018: make the oracle record what it knows, so the last `function-facts`
+  rows measure something. The bridge exports name/entry/size per function and
+  no prototype at all (`Dispatcher.exportFacts`, the `functions` array), which
+  is why every return-type comparison reads `[None, ours]`. Export
+  `f.getSignature().getPrototypeString(true)`, `f.getReturn()`'s type and
+  `f.getCallingConventionName()` **with** `f.getSignatureSource()`, persist
+  only what stock says it recovered (not `SourceType.DEFAULT`, which is
+  `undefined FUN_x(void)`), and compare a signature by content -- return type
+  and parameter count -- rather than by spelling. Acceptance: a failing test
+  first, the oracle store holding prototypes for the stubs whose text already
+  shows one, per-field counts before and after, and a control proving a
+  default signature is not recorded as a recovered one.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

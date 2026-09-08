@@ -67,6 +67,10 @@ THRESHOLDS = {
 SYNTHETIC = re.compile(r"^_(INIT|FINI)_\d+$")
 DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
 # Names `collect_elf_section_starts` gives from the section table itself.
+# Names the ELF loader itself gives its entry points: `e_entry` and the
+# single-entry dynamic tags (m4-017, `ElfProgramBuilder`:657 and :704). The
+# evidence is the header and the dynamic table, not a symbol.
+LOADER_NAMES = {"entry", "_DT_INIT", "_DT_FINI"}
 SECTION_NAMES = {"_init", "_fini", "_plt", "_entry"}
 # Provenance of a reference that proves an address is an initializer target.
 INITIALIZER_SOURCES = ("native-import:elf-pointer", "native-import:elf-reloc",
@@ -123,7 +127,7 @@ def classify(identifier: str, stock: dict, native: dict,
     # references the address and gives the index in the name.
     unsupported = []
     for entry, name in sorted(native["functions"].items()):
-        if name.startswith("FUN_") or name in SECTION_NAMES:
+        if name.startswith("FUN_") or name in SECTION_NAMES or name in LOADER_NAMES:
             continue
         if name in native["symbols"].get(entry, set()):
             continue
@@ -193,7 +197,7 @@ def main() -> int:
             labels = patterns_module.labelled_patterns(arguments.ghidra, processor)
             file_entry, read = patterns_module.image_reader(binary)
             anchor = next((int(address, 16) for address, name
-                           in native["functions"].items() if name == "_entry"), None)
+                           in native["functions"].items() if name == "entry"), None)
             if anchor is not None:
                 bias = anchor - file_entry
                 for address, name in native["functions"].items():

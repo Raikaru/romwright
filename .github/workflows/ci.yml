@@ -264,6 +264,11 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Name the loader's own entry points as stock names them
+        run: |
+          python3 tests/m4-017_entry_names.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/entry-names.json"
       - name: Count each divergence in the direction it points
         run: |
           python3 tests/m4-016_class_direction.py \
