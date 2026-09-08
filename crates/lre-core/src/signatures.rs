@@ -77,7 +77,8 @@ impl crate::Core {
         let index = MatchIndex::build(&databases);
         let id = self.db.program_id(program)?;
         let language = self.db.program_language(id)?;
-        let import = native::parse_native(&std::fs::read(binary)?)?;
+        let mut import = native::parse_native(&std::fs::read(binary)?)?;
+        native::select_language(&mut import, &self.config)?;
         if import.language != language {
             return Err(
                 ImportError::Bad("signature input and stored language differ".into()).into(),

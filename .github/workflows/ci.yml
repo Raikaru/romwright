@@ -343,6 +343,13 @@ jobs:
           python3 tests/m4-004_data_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/data-names.json"
+      - name: Select every language from the install's own opinion data
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-023_language_selection.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/language-selection.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

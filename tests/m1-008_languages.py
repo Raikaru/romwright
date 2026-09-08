@@ -16,11 +16,15 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "target/debug/lre-cli"
 # Temporary compiler probes do not add entries to the committed corpus matrix.
+# The ARM rows are the install's own answer, not a preference of ours:
+# `ARM.opinion` pins `variant="v8"` for `e_machine` 40 and `v8LEInstruction`
+# behind the `EF_ARM_BE8` bit, and `m4-023` measures both against what stock
+# selects for the same bytes.
 CASES = [
     ("elf32_i386", "i386-linux-gnu", ["-fno-pie", "-no-pie"], "x86:LE:32:default", "little", False),
-    ("elf32_arm_le", "arm-none-eabi", ["-march=armv7-a"], "ARM:LE:32:v7", "little", False),
-    ("elf32_arm_be32", "armeb-none-eabi", ["-march=armv5t"], "ARM:BE:32:v7", "big", False),
-    ("elf32_arm_be8", "armeb-none-eabi", ["-march=armv7-a"], "ARM:LEBE:32:v7LEInstruction", "big", True),
+    ("elf32_arm_le", "arm-none-eabi", ["-march=armv7-a"], "ARM:LE:32:v8", "little", False),
+    ("elf32_arm_be32", "armeb-none-eabi", ["-march=armv5t"], "ARM:BE:32:v8", "big", False),
+    ("elf32_arm_be8", "armeb-none-eabi", ["-march=armv7-a"], "ARM:LEBE:32:v8LEInstruction", "big", True),
     ("pe32_i386", None, [], "x86:LE:32:default", "little", False),
     ("elf64_control", "x86_64-linux-gnu", ["-fno-pie", "-no-pie"], "x86:LE:64:default", "little", False),
 ]

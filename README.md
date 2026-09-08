@@ -990,10 +990,11 @@ from it -- `long strtol(char **, ...)` is applied on the 64-bit rows and
 refused on the 32-bit ones, because a 32-bit language's `coretypes` names
 `longlong` and no `long`, and one name the decompiler's C parser cannot
 resolve fails the whole decompile rather than one prototype; and
-`language-variant` 3, where stock's
-opinion files pick `PowerPC:BE:32:e500` and our loader picks
-`PowerPC:BE:32:default`, whose four-byte view of `r2` is spelled `r2` rather
-than `_r2`. Not ours:
+`language-variant` 3 -- **measured, and
+not ours**: `m4-023` proves nothing in the install separates the two
+languages, so stock's `PowerPC:BE:32:e500` is the first element of its own
+hash-ordered candidate set and ours is the neutral `PowerPC:BE:32:default`,
+whose four-byte view of `r2` is spelled `r2` rather than `_r2`. Not ours:
 `oracle-warning` 19, stock warning
 about its own recovery (`Unknown calling convention -- yet parameter storage
 is locked`, on stubs whose text is otherwise ours exactly). Choices:
@@ -1016,7 +1017,7 @@ identifier.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Seventeen tasks have shrunk the gaps by carrying facts the image, its ABI or
+Eighteen tasks have shrunk the gaps by carrying facts the image, its ABI or
 the pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1049,6 +1050,18 @@ the pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* the install decides the language (`tests/m4-023_language_selection.py`):
+  selection came from a hand-written table that answered `ARM:LE:32:v7` where
+  the pinned `ARM.opinion` pins `variant="v8"` -- and `v8LEInstruction` behind
+  the `EF_ARM_BE8` bit, a secondary key the table never read. The loader now
+  queries the install's own opinion data as `ElfLoader` does, with `e_machine`
+  as the primary key and `e_flags` as the secondary one, and filters candidates
+  by the image's endianness and pointer size: **6 of 7 measured rows are the
+  language stock selects for the same bytes**, ARM included, where three were
+  wrong before. The seventh is PowerPC, where the data pins no variant at all
+  and stock's answer is the first of 12 equally preferred candidates in a
+  `HashSet` iteration; ours is the neutral `default`, and the gate records the
+  disagreement with the evidence that nothing separates them.
 * four variants, two bugs (`tests/m4-003_language_parity.py`): widening the
   gate from one build per language to four -- unoptimised, optimised, C++ with
   exceptions, and a 400-function image, 56 functions -> **1845** -- found two
@@ -1706,6 +1719,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-019.json` | `m4-019` | M4 | pass |  | `tests/m4-019_prototype_direction.py` |
 | `m4-020.json` | `m4-020` | M4 | pass | `data_labels` 5 | `tests/m4-020_label_prefixes.py` |
 | `m4-021.json` | `m4-021` | M4 | pass |  | `tests/m4-021_initializer_slots.py` |
+| `m4-023.json` | `m4-023` | M4 | pass | `language.rows_identical_to_stock` 6; `language.rows_measured` 7; `language.rows_stock_unconstrained` 1; `language.rows_unexplained` 0 | `tests/m4-023_language_selection.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |

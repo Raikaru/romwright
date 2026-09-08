@@ -238,11 +238,21 @@ fn signatures(args: &[String]) -> Result<(), String> {
                 &package,
                 &license,
                 min_compared,
-                // One project-wide machine table (lre-core), not a second copy.
-                &|machine, big_endian, flags| {
-                    lre_core::native::elf_specs(machine, big_endian, flags)
-                        .ok()
-                        .map(|(language, _)| language.to_string())
+                // One project-wide answer: the install's own opinion data,
+                // queried exactly as an import queries it (lre-core).
+                &|machine, big_endian, class64, flags| {
+                    let install = lre_core::session::RuntimeConfig::from_env().ghidra_install;
+                    lre_core::opinion::elf_selection(
+                        &install,
+                        lre_core::opinion::ElfMachine {
+                            machine,
+                            flags,
+                            bits: if class64 { 64 } else { 32 },
+                            big_endian,
+                        },
+                    )
+                    .ok()
+                    .map(|selection| selection.language)
                 },
             )
             .map_err(|error| error.to_string())?;

@@ -233,10 +233,17 @@ pub struct NativeImport {
     /// ELF section-address code roots and exclusive bounds, not function seeds.
     pub reference_roots: Vec<(u64, u64)>,
     pub format: String,
-    /// Ghidra-compatible language id selected from the file machine.
+    /// Ghidra-compatible language id. For a format whose header names a
+    /// machine this is selected from the install's own opinion data
+    /// (`opinion::elf_selection`), which is why it is empty until a caller
+    /// with a configured install fills it in; a container that declares its
+    /// own language sets it at parse time.
     pub language: String,
     /// Loader-selected base compiler specification; absent for raw/default images.
-    pub compiler: Option<&'static str>,
+    pub compiler: Option<String>,
+    /// What an ELF header said about its machine: the primary and secondary
+    /// keys the install's opinion data is queried with.
+    pub elf_machine: Option<crate::opinion::ElfMachine>,
     /// Runtime configuration used to reach the SLEIGH console/worker.
     pub cfg: crate::session::RuntimeConfig,
     /// Path to the binary used for console-driven x86 flow.
@@ -376,7 +383,12 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             u16_at(data, o)
         }
     };
-    let (language, compiler) = elf_specs(rd16(18)?, be, rd32(36)?)?;
+    let elf_machine = crate::opinion::ElfMachine {
+        machine: rd16(18)?,
+        flags: rd32(36)?,
+        bits: 32,
+        big_endian: be,
+    };
     let entry = rd32(24)? as u64;
     let process_entry = elf_process_entry(data, entry, rd16(16)?);
     let (mut sections, _shstr) = parse_elf32_sections(data, be)?;
@@ -456,8 +468,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         process_entry,
         symbol_named,
         format: "elf32".into(),
-        language: language.into(),
-        compiler: Some(compiler),
+        elf_machine: Some(elf_machine),
         mappings,
         functions,
         xrefs: Vec::new(),
@@ -550,30 +561,6 @@ fn elf_process_entry(data: &[u8], entry: u64, e_type: u16) -> Option<u64> {
     (entry != 0 && matches!(e_type, 2 | 3) && linux_or_unspecified).then_some(entry)
 }
 
-/// The project's single ELF machine → (language id, compiler spec) table.
-pub fn elf_specs(machine: u16, big_endian: bool, flags: u32) -> Result<(&'static str, &'static str)> {
-    // ARM ELF EF_ARM_BE8: big-endian data, little-endian instructions.
-    // The pinned ARM.ldefs calls this variant v7LEInstruction.
-    const EF_ARM_BE8: u32 = 0x0080_0000;
-    // Base ELF compiler opinions from the pinned processor language directories.
-    // x86 and RISC-V use gcc, not the native architecture's default compiler.
-    match (machine, big_endian) {
-        (0x03e, false) => Ok(("x86:LE:64:default", "gcc")),
-        (0x003, false) => Ok(("x86:LE:32:default", "gcc")),
-        (0x0b7, false) => Ok(("AARCH64:LE:64:v8A", "default")),
-        (0x028, false) => Ok(("ARM:LE:32:v7", "default")),
-        (0x028, true) if flags & EF_ARM_BE8 != 0 => Ok(("ARM:LEBE:32:v7LEInstruction", "default")),
-        (0x028, true) => Ok(("ARM:BE:32:v7", "default")),
-        (0x008, false) => Ok(("MIPS:LE:32:default", "default")),
-        (0x008, true) => Ok(("MIPS:BE:32:default", "default")),
-        (0x0f3, false) => Ok(("RISCV:LE:64:default", "gcc")),
-        (0x014, false) => Ok(("PowerPC:LE:32:default", "default")),
-        (0x014, true) => Ok(("PowerPC:BE:32:default", "default")),
-        (0x015, false) => Ok(("PowerPC:LE:64:default", "default")),
-        (0x015, true) => Ok(("PowerPC:BE:64:default", "default")),
-        (other, _) => err(format!("unsupported ELF machine {other:#x}")),
-    }
-}
 
 /// ELF64 parse. Returns (mappings, functions from symtab + entry, externals).
 /// ELF symbol preference for one address: exported before local, and an
@@ -600,7 +587,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if data[4] != 2 || data[5] != 1 {
         return err("ELF64 little-endian expected");
     }
-    let (language, compiler) = elf_specs(u16_at(data, 18)?, false, u32_at(data, 48)?)?;
+    let elf_machine = crate::opinion::ElfMachine {
+        machine: u16_at(data, 18)?,
+        flags: u32_at(data, 48)?,
+        bits: 64,
+        big_endian: false,
+    };
     let entry = u64_at(data, 24)?;
     let process_entry = elf_process_entry(data, entry, u16_at(data, 16)?);
     let (mut sections, _shstr) = parse_elf_sections(data)?;
@@ -717,8 +709,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         process_entry,
         symbol_named,
         format: "ELF".into(),
-        language: language.into(),
-        compiler: Some(compiler),
+        elf_machine: Some(elf_machine),
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
@@ -1158,6 +1149,23 @@ fn phase(imp: &mut NativeImport, name: &str, started: std::time::Instant) {
 
 /// Loads every image `<binary>` carries, closing each one's seeds through
 /// SLEIGH flow with that image's own language.
+/// Fills in the language and compiler spec for an image whose header names a
+/// machine, from the install the configuration points at.
+///
+/// A container that declares its own language (GBA, N64, DOL) has already
+/// answered and is left alone: `elf_machine` is what says "ask the opinion
+/// data".
+pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConfig) -> Result<()> {
+    let Some(machine) = imp.elf_machine else {
+        return Ok(());
+    };
+    let selection = crate::opinion::elf_selection(&cfg.ghidra_install, machine)
+        .map_err(|e| ImportError::Bad(e.to_string()))?;
+    imp.language = selection.language;
+    imp.compiler = Some(selection.compiler);
+    Ok(())
+}
+
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
@@ -1168,6 +1176,8 @@ pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
     for (suffix, mut imp) in images {
         imp.binary = canonical.clone();
         imp.cfg = crate::session::RuntimeConfig::from_env();
+        let cfg = imp.cfg.clone();
+        select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
         phase(&mut imp, "parse", parse_started);
         discover(&mut imp)?;
@@ -1290,6 +1300,8 @@ pub fn load_native(binary: &Path) -> Result<NativeImport> {
     let mut imp = parse_native(&data)?;
     imp.binary = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     imp.cfg = crate::session::RuntimeConfig::from_env();
+    let cfg = imp.cfg.clone();
+    select_language(&mut imp, &cfg)?;
     imp.cfg.adopt_language(&imp.language);
     phase(&mut imp, "parse", parse_started);
     discover(&mut imp)?;
@@ -2014,10 +2026,43 @@ mod tests {
 
 
     #[test]
-    fn architecture_selection_rejects_unsupported_machines() {
-        assert_eq!(elf_specs(0x0b7, false, 0).unwrap().0, "AARCH64:LE:64:v8A");
-        assert_eq!(elf_specs(0x0f3, false, 0).unwrap().0, "RISCV:LE:64:default");
-        assert!(elf_specs(0xffff, false, 0).is_err());
+    fn an_elf_records_the_machine_it_names_and_selects_no_language_alone() {
+        // The machine and flags an ELF header names are facts of the file;
+        // which language answers for them is the install's decision, made by
+        // `opinion::elf_selection` and tested against the pinned tree there.
+        // A parse on its own selects nothing, so no caller can inherit a
+        // language that no install agreed to.
+        let mut bytes = elf32_with_pltgot(16);
+        bytes[36..40].copy_from_slice(&0x0580_0000u32.to_le_bytes()); // e_flags
+        let import = import_elf(&bytes).unwrap();
+        assert_eq!(
+            import.elf_machine,
+            Some(crate::opinion::ElfMachine {
+                machine: 3,
+                flags: 0x0580_0000,
+                bits: 32,
+                big_endian: false,
+            })
+        );
+        assert!(import.language.is_empty() && import.compiler.is_none());
+
+        // With an install, the same bytes are answered from its data.
+        let cfg = crate::session::RuntimeConfig::from_env();
+        let mut selected = import;
+        if cfg.ghidra_install.join("Ghidra/Processors").is_dir() {
+            select_language(&mut selected, &cfg).unwrap();
+            assert_eq!(selected.language, "x86:LE:32:default");
+            assert_eq!(selected.compiler.as_deref(), Some("gcc"));
+        }
+        // A machine no install declares is refused rather than guessed.
+        let mut unknown = selected;
+        unknown.elf_machine = Some(crate::opinion::ElfMachine {
+            machine: 0xfffe,
+            flags: 0,
+            bits: 32,
+            big_endian: false,
+        });
+        assert!(select_language(&mut unknown, &cfg).is_err());
     }
 
     #[test]
@@ -2106,12 +2151,16 @@ mod tests {
         for (o, off) in [(0x240usize, 1usize), (0x280, 7), (0x2c0, 14)] {
             b[o..o + 4].copy_from_slice(&(off as u32).to_le_bytes());
         }
-        let imp = import_elf(&b).unwrap();
+        let mut imp = import_elf(&b).unwrap();
         let f = imp.functions.iter().find(|f| f.name == "add").unwrap();
         assert_eq!(f.entry, 0x401000);
         assert_eq!(f.size, 4);
         assert_eq!(imp.mappings[0].vaddr, 0x401000);
-        assert_eq!(imp.language, "x86:LE:64:default");
+        let cfg = crate::session::RuntimeConfig::from_env();
+        if cfg.ghidra_install.join("Ghidra/Processors").is_dir() {
+            select_language(&mut imp, &cfg).unwrap();
+            assert_eq!(imp.language, "x86:LE:64:default");
+        }
     }
 
     #[test]
@@ -2819,7 +2868,7 @@ mod tests {
             return;
         }
         let mut import = NativeImport {
-            language: cfg.language_id.clone(), compiler: Some("gcc"),
+            language: cfg.language_id.clone(), compiler: Some("gcc".into()),
             format: "elf".into(), cfg: cfg.clone(),
             functions: vec![
                 NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() },
@@ -2916,7 +2965,7 @@ mod tests {
             return;
         }
         let mut import = NativeImport {
-            language: cfg.language_id.clone(), compiler: Some("gcc"),
+            language: cfg.language_id.clone(), compiler: Some("gcc".into()),
             format: "elf".into(), cfg: cfg.clone(),
             functions: vec![NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() }],
             mappings: vec![
@@ -3191,6 +3240,7 @@ mod tests {
         let analyze = |bytes: &[u8]| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
+            select_language(&mut import, &cfg).unwrap();
             let mut session = discovery::discover_seeded(&mut import).unwrap().session;
             import.xrefs.clear();
             infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
@@ -3263,6 +3313,7 @@ mod tests {
         let analyze = |bytes: &[u8], caller_first: bool| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
+            select_language(&mut import, &cfg).unwrap();
             import.functions = [(0x1000, 8), (0x1100, 16), (0x1200, 8)].into_iter()
                 .map(|(entry, size)| NativeFunction { entry, size, name: format!("FUN_{entry:x}") })
                 .collect();
@@ -3351,6 +3402,7 @@ mod tests {
         let analyze = |bytes: &[u8]| {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
+            select_language(&mut import, &cfg).unwrap();
             import.functions.clear();
             import.xrefs.clear();
             let mut session = ConsoleSession::new(&cfg).unwrap();

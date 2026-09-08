@@ -4541,25 +4541,75 @@ m3-003, all three wired into continuous integration)
   `05b8b4e` with the source changes stashed, so they are earlier tasks' debts,
   recorded here rather than folded into this commit.
 
+### m4-023 evidence
+- The rule, read from the pinned tree before changing anything:
+  `ElfLoader.findSupportedLoadSpecs` queries the opinion database with
+  `e_machine` as the primary key and `e_flags` as the secondary one, then
+  drops every answer whose endianness or pointer size contradicts the image.
+  The constraint that matches names the processor and the compiler spec, and
+  often the variant: `ARM.opinion` pins `variant="v8"`, and
+  `variant="v8LEInstruction"` behind a masked secondary key
+  (`0b .... .... 1... ...` = `EF_ARM_BE8`); `AARCH64.opinion` pins `v8A`;
+  x86 pins `compilerSpecID="gcc"`. **PowerPC pins nothing**: primary 20,
+  processor PowerPC, size 32, no variant and no secondary.
+- **Why stock says `e500`.** Probed with a throwaway Ghidra script against the
+  pinned install: the ELF query for primary 20 returns **27** pairs in
+  `HashSet<QueryResult>` iteration order, all with `preferred=true` except
+  the non-`default` compiler specs; `PowerPC:BE:32:e500/default` is index
+  **0** and `PowerPC:BE:32:default/default` is index **12**. After the
+  loader's endian/size filter the first surviving preferred spec wins, so
+  stock's variant is hash order, not evidence from the image. Recorded, not
+  copied: Ventris takes the neutral `default` variant.
+- **Our own defect, found by the same reading:** the loader answered from a
+  hand-written table that said `ARM:LE:32:v7`, `ARM:BE:32:v7` and
+  `ARM:LEBE:32:v7LEInstruction` -- three rows the pinned install contradicts,
+  and a secondary key the table never read. Selection is now
+  `opinion::elf_selection`, which parses the install's `*.opinion` and
+  `*.ldefs` (declaration order, variants, compiler specs, `deprecated`
+  excluded) and applies Ghidra's own filter.
+- Measured (`tests/m4-023_language_selection.py`,
+  `benchmarks/reports/m4-023.json`): **7 ELF rows, 6 identical to what stock
+  selects for the same bytes** (x86-64, i386, AArch64 and all three ARM rows,
+  where three were wrong before), **1 stock-unconstrained** (PowerPC) recorded
+  with the proof that no constraint pins a variant, no secondary key matches
+  `e_flags = 0x0`, both languages sit at the same processor/endian/size, and
+  ours is the neutral one. `language.rows_unexplained` **0**.
+- An import still needs no Ghidra install (`m2-015`): the offline rows are the
+  install's own answers for the machines the corpus holds, and
+  `the_offline_rows_match_the_pinned_install` compares every one against the
+  pinned tree, so the fallback cannot drift from the data it stands in for.
+- `m1-008`'s hand-written expectations moved to the install's answer
+  (`v7 -> v8`, `v7LEInstruction -> v8LEInstruction`), with the opinion file
+  cited in the case table and `docs/toolchains.md` rewritten to the rule.
+- Regression: `cargo test --workspace` **255 pass** (7 in `opinion`, 2 of them
+  against the pinned install); `m1-006`..`m1-009`, `m2-002`, `m2-005`..`m2-009`,
+  `m2-015`, `m2-016`, `m3-001`..`m3-003`, `m4-001`..`m4-021`, `m4-023`,
+  `m5-001`..`m5-012`, `m6-001`..`m6-006`, `m7-001`..`m7-003`, `m8-001`,
+  `m8-003`..`m8-006`, `m9-001`..`m9-005`, `m10-001`..`m10-004`,
+  `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. `m4-003` is unchanged at **1739 of 1845**
+  with the same eleven classes: no corpus row's language moved.
+- Still failing, still not this task's: `m2-006_thunks` (a
+  decompiler-recovered prototype on the import stub at `00201710` with the
+  `processEntry` convention) fails identically at `05b8b4e`, as do
+  `m1-008b_pointer_seeds` and `m2-006_specs`/`m2-006_specs_rebuild`
+  (`gen_native_specs.py --check` refuses the committed bundles on this host),
+  and `main_window_split_test` (`main_window.cpp` 446 lines, cap 400).
+
 ## Next task
-- m4-023: **the two sides disagree about the language, not about a name.**
-  `language-variant` 3 is the only remaining class where stock analyses a
-  different machine than we do: Ghidra's ELF opinion files select
-  `PowerPC:BE:32:e500` for the corpus's PowerPC rows (whose GPRs are 8 bytes,
-  with `_r2` naming the four-byte view) while our loader selects
-  `PowerPC:BE:32:default` from machine + class + endianness alone. Read the
-  rule from the pinned tree first -- `Ghidra/Processors/PowerPC/data/languages
-  /PowerPC.opinion` and `ElfLoader`/`ElfProgramBuilder`'s use of `e_flags` --
-  and record which constraint selects e500 for `powerpc_*.bin` before
-  changing anything. The acceptance test asserts the selected language per
-  corpus row against the oracle store's, not against a hand-written list.
-  Note before starting: a change here moves `tests/corpus.lock.json`'s
-  `expected_language`, needs a `PowerPC-BE-32-e500` spec bundle dumped through
-  the JVM bridge, and re-records every PowerPC baseline. Regenerate each with
-  the script that owns it; if the rule turns out to require a language the
-  install does not bundle, stop and ask (II.1 reserves platforms).
-- After it, in order: `.gcc_except_table` try/catch annotations
-  (`exception-annotation` 4), and the 32-bit `long` prototype path
+- m4-024: `.gcc_except_table` try/catch annotations (`exception-annotation`
+  4). Stock's exception analyzer reads the LSDA the C++ rows carry and writes
+  the `/* try { // try from X to Y has its CatchHandler @ Z */` comments its
+  decompiler then prints; we read neither the table nor `.eh_frame`'s
+  augmentation data for it, so four `cpp_o2` rows differ by those comments
+  alone. Read the format from the pinned tree first
+  (`GccExceptionAnalyzer`/`EHFrame` under `.ghidra-java`, and the LSDA layout
+  in the public Itanium C++ ABI), record which section each corpus row carries,
+  and store the ranges as facts with their own provenance class before
+  rendering anything. The acceptance test asserts the recorded ranges against
+  stock's own comments on the committed rows, and the parity class goes to
+  **0** or the residue is named.
+- After it: the 32-bit `long` prototype path
   (`missing-external-prototype` 4 + `function-facts` 2), which needs the
   worker to receive a *type* rather than a C declaration string, since a
   32-bit language's `coretypes` has no name for the archive's `long`.

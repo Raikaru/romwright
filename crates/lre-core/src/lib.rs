@@ -12,6 +12,7 @@ pub mod graph;
 pub mod sigscan;
 pub mod listing;
 pub mod native;
+pub mod opinion;
 pub mod native_runtime;
 pub mod session;
 mod prototypes;

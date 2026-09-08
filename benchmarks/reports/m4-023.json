@@ -1,0 +1,151 @@
+{
+ "id": "m4-023",
+ "recorded_at": "2026-09-08T10:45:06.820382+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "7 ELF rows selected from the install's opinion data, 6 identical to stock's own choice, 1 differing only where the data pins no variant and stock takes the first of its equally preferred candidates; 0 skipped",
+ "metrics": {
+  "language.rows_measured": 7,
+  "language.rows_identical_to_stock": 6,
+  "language.rows_stock_unconstrained": 1,
+  "language.rows_unexplained": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_plain_o0",
+   "machine": 183,
+   "flags": "0x0",
+   "endian": "little",
+   "bits": 64,
+   "expected": "AARCH64:LE:64:v8A",
+   "compiler": "default",
+   "candidates": [
+    "AARCH64:LE:64:v8A",
+    "AARCH64:LE:32:ilp32"
+   ],
+   "ours": "AARCH64:LE:64:v8A",
+   "stock": "AARCH64:LE:64:v8A:default",
+   "agreement": "identical"
+  },
+  {
+   "id": "i386_plain_o0",
+   "machine": 3,
+   "flags": "0x0",
+   "endian": "little",
+   "bits": 32,
+   "expected": "x86:LE:32:default",
+   "compiler": "gcc",
+   "candidates": [
+    "x86:LE:32:default"
+   ],
+   "ours": "x86:LE:32:default",
+   "stock": "x86:LE:32:default:gcc",
+   "agreement": "identical"
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "machine": 20,
+   "flags": "0x0",
+   "endian": "big",
+   "bits": 32,
+   "expected": "PowerPC:BE:32:default",
+   "compiler": "default",
+   "candidates": [
+    "PowerPC:BE:32:default",
+    "PowerPC:BE:64:64-32addr",
+    "PowerPC:BE:32:4xx",
+    "PowerPC:BE:32:MPC8270",
+    "PowerPC:BE:32:QUICC",
+    "PowerPC:BE:32:e500",
+    "PowerPC:BE:32:e500mc",
+    "PowerPC:BE:64:A2-32addr",
+    "PowerPC:BE:64:A2ALT-32addr",
+    "PowerPC:BE:64:VLE-32addr",
+    "PowerPC:BE:64:VLEALT-32addr"
+   ],
+   "ours": "PowerPC:BE:32:default",
+   "stock": "PowerPC:BE:32:e500:default",
+   "agreement": "stock-unconstrained",
+   "evidence": {
+    "pinned_variants": [],
+    "flags": "0x0",
+    "ours": "PowerPC:BE:32:default",
+    "stock": "PowerPC:BE:32:e500",
+    "siblings": [
+     "PowerPC:BE:32:4xx",
+     "PowerPC:BE:32:MPC8270",
+     "PowerPC:BE:32:QUICC",
+     "PowerPC:BE:32:default",
+     "PowerPC:BE:32:e500",
+     "PowerPC:BE:32:e500mc",
+     "PowerPC:BE:64:64-32addr",
+     "PowerPC:BE:64:A2-32addr",
+     "PowerPC:BE:64:A2ALT-32addr",
+     "PowerPC:BE:64:VLE-32addr",
+     "PowerPC:BE:64:VLEALT-32addr"
+    ]
+   }
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "machine": 62,
+   "flags": "0x0",
+   "endian": "little",
+   "bits": 64,
+   "expected": "x86:LE:64:default",
+   "compiler": "gcc",
+   "candidates": [
+    "x86:LE:64:default"
+   ],
+   "ours": "x86:LE:64:default",
+   "stock": "x86:LE:64:default:gcc",
+   "agreement": "identical"
+  },
+  {
+   "id": "arm_le",
+   "machine": 40,
+   "flags": "0x5000200",
+   "endian": "little",
+   "bits": 32,
+   "expected": "ARM:LE:32:v8",
+   "compiler": "default",
+   "candidates": [
+    "ARM:LE:32:v8"
+   ],
+   "ours": "ARM:LE:32:v8",
+   "stock": "ARM:LE:32:v8:default",
+   "agreement": "identical"
+  },
+  {
+   "id": "arm_be32",
+   "machine": 40,
+   "flags": "0x5000200",
+   "endian": "big",
+   "bits": 32,
+   "expected": "ARM:BE:32:v8",
+   "compiler": "default",
+   "candidates": [
+    "ARM:BE:32:v8"
+   ],
+   "ours": "ARM:BE:32:v8",
+   "stock": "ARM:BE:32:v8:default",
+   "agreement": "identical"
+  },
+  {
+   "id": "arm_be8",
+   "machine": 40,
+   "flags": "0x5800200",
+   "endian": "big",
+   "bits": 32,
+   "expected": "ARM:LEBE:32:v8LEInstruction",
+   "compiler": "default",
+   "candidates": [
+    "ARM:LEBE:32:v8LEInstruction"
+   ],
+   "ours": "ARM:LEBE:32:v8LEInstruction",
+   "stock": "ARM:LEBE:32:v8LEInstruction:default",
+   "agreement": "identical"
+  }
+ ],
+ "skipped": []
+}

@@ -1,8 +1,8 @@
 {
   "gate": "m1-008",
   "milestone": "M1",
-  "commit": "a52b19ed8456e3afd2cf0e36a249822269f1d5ea",
-  "date": "2026-09-04",
+  "commit": "24855af4118b7fa1eb1c2f6f7ddbcc39861aee61",
+  "date": "2026-09-08",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64",
@@ -27,10 +27,10 @@
       "metrics": {},
       "thresholds": {},
       "runs": 1,
-      "expected_language": "ARM:LE:32:v7",
+      "expected_language": "ARM:LE:32:v8",
       "elf_flags": "0x05000200",
-      "selected_language": "ARM:LE:32:v7",
-      "slafile": "ARM7_le.sla"
+      "selected_language": "ARM:LE:32:v8",
+      "slafile": "ARM8_le.sla"
     },
     {
       "id": "elf32_arm_be32",
@@ -39,10 +39,10 @@
       "metrics": {},
       "thresholds": {},
       "runs": 1,
-      "expected_language": "ARM:BE:32:v7",
+      "expected_language": "ARM:BE:32:v8",
       "elf_flags": "0x05000200",
-      "selected_language": "ARM:BE:32:v7",
-      "slafile": "ARM7_be.sla"
+      "selected_language": "ARM:BE:32:v8",
+      "slafile": "ARM8_be.sla"
     },
     {
       "id": "elf32_arm_be8",
@@ -51,10 +51,10 @@
       "metrics": {},
       "thresholds": {},
       "runs": 1,
-      "expected_language": "ARM:LEBE:32:v7LEInstruction",
+      "expected_language": "ARM:LEBE:32:v8LEInstruction",
       "elf_flags": "0x05800200",
-      "selected_language": "ARM:LEBE:32:v7LEInstruction",
-      "slafile": "ARM7_le.sla"
+      "selected_language": "ARM:LEBE:32:v8LEInstruction",
+      "slafile": "ARM8_le.sla"
     },
     {
       "id": "pe32_i386",

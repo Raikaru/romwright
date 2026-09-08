@@ -152,7 +152,8 @@ impl crate::Core {
         program: &str,
     ) -> crate::Result<ClassReport> {
         let id = self.db.program_id(program)?;
-        let import = native::parse_native(&std::fs::read(binary)?)?;
+        let mut import = native::parse_native(&std::fs::read(binary)?)?;
+        native::select_language(&mut import, &self.config)?;
         if import.language != self.db.program_language(id)? {
             return Err(ImportError::Bad("class input and stored language differ".into()).into());
         }

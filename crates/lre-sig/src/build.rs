@@ -73,7 +73,7 @@ pub fn from_archive(
     package: &str,
     license: &str,
     min_compared: usize,
-    resolve_language: &dyn Fn(u16, bool, u32) -> Option<String>,
+    resolve_language: &dyn Fn(u16, bool, bool, u32) -> Option<String>,
 ) -> Result<(SignatureDb, BuildReport), BuildError> {
     let mut report = BuildReport::default();
     let mut identity: Option<(u16, bool, bool, u32)> = None;
@@ -153,10 +153,10 @@ pub fn from_archive(
             }
         }
     }
-    let Some((machine, big_endian, _, flags)) = identity else {
+    let Some((machine, big_endian, class64, flags)) = identity else {
         return Err(BuildError::NoObjects);
     };
-    let language = resolve_language(machine, big_endian, flags)
+    let language = resolve_language(machine, big_endian, class64, flags)
         .ok_or(BuildError::UnsupportedMachine { machine })?;
     report.language = language.clone();
     // Masks can make one body match another function: glibc's tunable setters
@@ -218,7 +218,7 @@ fn indistinguishable(left: &(Vec<u8>, Vec<u8>), right: &(Vec<u8>, Vec<u8>)) -> b
 mod tests {
     use super::*;
 
-    fn language(machine: u16, big_endian: bool, _flags: u32) -> Option<String> {
+    fn language(machine: u16, big_endian: bool, _class64: bool, _flags: u32) -> Option<String> {
         match (machine, big_endian) {
             (0x3e, false) => Some("x86:LE:64:default".into()),
             _ => None,
@@ -333,7 +333,7 @@ mod tests {
 
     #[test]
     fn an_unmapped_machine_is_a_refusal_not_a_guess() {
-        let error = from_archive(&archive_bytes(), "p", "MIT", MIN_COMPARED, &|_, _, _| None)
+        let error = from_archive(&archive_bytes(), "p", "MIT", MIN_COMPARED, &|_, _, _, _| None)
             .unwrap_err();
         assert!(
             matches!(error, BuildError::UnsupportedMachine { machine: 0x3e }),
