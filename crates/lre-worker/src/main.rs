@@ -20,7 +20,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
     if args.len() < 6 {
         eprintln!(
-            "usage: lre-worker <ghidra_opt> <lang-dir> <binary> <program> <addr-hex> [--project DIR] [--base HEX]"
+            "usage: lre-worker <ghidra_opt> <lang-dir> <binary> <program> <addr-hex>... [--project DIR] [--base HEX]"
         );
         std::process::exit(2);
     }
@@ -33,8 +33,16 @@ fn main() {
         .and_then(|i| std::env::args().nth(i + 1))
         .and_then(|v| u64::from_str_radix(v.trim_start_matches("0x"), 16).ok())
         .unwrap_or(0x400000);
+    // Every positional after the program name is an address: one decompiler
+    // launch answers a whole batch, which is what makes comparing a 400-row
+    // corpus variant affordable (m4-022).
+    let addresses: Vec<String> = args[5..]
+        .iter()
+        .take_while(|argument| !argument.starts_with("--"))
+        .cloned()
+        .collect();
     if let Err(e) = run(
-        &args[1], &args[2], &args[3], &args[4], &args[5], &project, base,
+        &args[1], &args[2], &args[3], &args[4], &addresses, &project, base,
     ) {
         eprintln!("error: {e}");
         std::process::exit(1);
@@ -46,7 +54,7 @@ fn run(
     lang_dir: &str,
     binary: &str,
     program: &str,
-    addr: &str,
+    addresses: &[String],
     project: &str,
     base: u64,
 ) -> lre_worker::Result<()> {
@@ -183,8 +191,16 @@ fn run(
     provider.load_return_behaviors(&db, pid, false)?;
     provider.load_calling_conventions(&db, pid)?;
 
-    let offset = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
-        .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))?;
+    let offsets = addresses
+        .iter()
+        .map(|address| {
+            u64::from_str_radix(address.trim_start_matches("0x"), 16)
+                .map_err(|e| lre_worker::WorkerError::Setup(e.to_string()))
+        })
+        .collect::<lre_worker::Result<Vec<u64>>>()?;
+    let Some(&offset) = offsets.first() else {
+        return Err(lre_worker::WorkerError::Setup("no address to decompile".into()));
+    };
     let specs = lre_worker::load_specs(Path::new(lang_dir))?;
     provider.core_types = lre_worker::parse_core_types(&specs.3);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
@@ -197,9 +213,44 @@ fn run(
         &specs.3,
         &function_shell,
     )?;
+    let ram = provider.ram_space_index as u32;
+    // A batch answers every address from one launch, in one JSON object; a
+    // single address keeps the plain-text answer every existing caller reads.
+    if offsets.len() > 1 {
+        let structured = std::env::var_os("WORKER_STRUCTURED").is_some();
+        let mut answers = serde_json::Map::new();
+        for offset in offsets {
+            worker.prepare_function(&mut provider, offset)?;
+            worker.set_action(&mut provider, "decompile", "")?;
+            let raw = worker.decompile_at(&mut provider, ram, offset)?;
+            let value = if structured {
+                let decoded = lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
+                serde_json::to_value(lre_model::DecompDoc {
+                    tokens: decoded.tokens,
+                    prototype: decoded.prototype,
+                    jump_tables: decoded.jump_tables,
+                    address: lre_model::Address::ram(offset),
+                    revision: 0,
+                    storage: decoded.storage,
+                })
+                .map_err(|e| lre_worker::WorkerError::Setup(format!("encode document: {e}")))?
+            } else {
+                let tokens = lre_worker::decode_tokens_with_ram_space(&raw, Some(ram as u64));
+                serde_json::Value::String(
+                    tokens.iter().map(|token| token.text.as_str()).collect::<String>(),
+                )
+            };
+            answers.insert(format!("{offset:08x}"), value);
+        }
+        println!(
+            "{}",
+            serde_json::to_string(&serde_json::Value::Object(answers))
+                .map_err(|e| lre_worker::WorkerError::Setup(format!("encode batch: {e}")))?
+        );
+        return Ok(());
+    }
     worker.prepare_function(&mut provider, offset)?;
     worker.set_action(&mut provider, "decompile", "")?;
-    let ram = provider.ram_space_index as u32;
     let raw = worker.decompile_at(&mut provider, ram, offset)?;
     // The packed response is the source of truth for both structured tokens
     // and rendered compatibility text. `decode_tokens_with_ram_space` follows

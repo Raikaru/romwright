@@ -32,6 +32,7 @@ fn usage() {
         "usage:
   lre-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--timings] [--project DIR]
   lre-cli decompile <binary> <address> [--name NAME] [--project DIR] [--base HEX]
+  lre-cli decompile-batch <binary> <addr,addr,...> [--name NAME] [--project DIR] [--base HEX]
   lre-cli decompile-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   lre-cli disasm <binary> <address> [-n N]
   lre-cli architectures [--project DIR]   (uses VENTRIS_GHIDRA)
@@ -62,6 +63,7 @@ fn usage() {
 oracle generation only (launches the Stage-1 Java bridge):
   lre-cli import <binary> --oracle [--name NAME] [--project DIR] [--ghidra DIR]
   lre-cli decompile <program> <address> --oracle [--ghidra DIR]
+  lre-cli decompile-batch <program> <addr,addr,...> --oracle [--ghidra DIR]
   lre-cli disasm <program> <address> --oracle [-n N] [--ghidra DIR]
   lre-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]"
         );
@@ -436,6 +438,34 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 )
                 .map_err(|e| e.to_string())?;
             print!("{code}");
+        }
+        "decompile-batch" if !has_flag(args, "--oracle") => {
+            let binary = args
+                .get(2)
+                .ok_or("decompile-batch needs a binary path")?
+                .clone();
+            let addresses: Vec<String> = args
+                .get(3)
+                .ok_or("decompile-batch needs a comma-separated address list")?
+                .split(',')
+                .filter(|item| !item.trim().is_empty())
+                .map(|item| item.trim().to_string())
+                .collect();
+            let program = flag(args, "--name").unwrap_or_else(|| {
+                Path::new(&binary)
+                    .file_name()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "program".into())
+            });
+            let base = flag(args, "--base")
+                .and_then(|b| u64::from_str_radix(b.trim_start_matches("0x"), 16).ok());
+            let answers = core
+                .decompile_native_batch(Path::new(&binary), &addresses, &program, base)
+                .map_err(|e| e.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string(&answers).map_err(|e| e.to_string())?
+            );
         }
         "decompile-doc" => {
             let binary = args
@@ -918,6 +948,38 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .dump_specs(&session, &out)
                 .map_err(|e| e.to_string())?;
             println!("specs written to {out}");
+            bridge.shutdown().map_err(|e| e.to_string())?;
+        }
+        "decompile-batch" => {
+            let program = args
+                .get(2)
+                .ok_or("--oracle needs a program name")?
+                .clone();
+            let addresses: Vec<String> = args
+                .get(3)
+                .ok_or("--oracle needs a comma-separated address list")?
+                .split(',')
+                .filter(|item| !item.trim().is_empty())
+                .map(|item| item.trim().to_string())
+                .collect();
+            let mut bridge = launch_bridge(args)?;
+            let session = format!("cli-{program}");
+            bridge.open(&session, &program).map_err(|e| e.to_string())?;
+            // One JVM launch and one analysis for the whole batch: the bridge
+            // session is what makes a corpus-wide comparison affordable.
+            let mut answers = std::collections::BTreeMap::new();
+            for address in &addresses {
+                let code = core
+                    .decompile(&mut bridge, &session, address)
+                    .map_err(|e| e.to_string())?;
+                let offset = u64::from_str_radix(address.trim_start_matches("0x"), 16)
+                    .map_err(|e| e.to_string())?;
+                answers.insert(format!("{offset:08x}"), code);
+            }
+            println!(
+                "{}",
+                serde_json::to_string(&answers).map_err(|e| e.to_string())?
+            );
             bridge.shutdown().map_err(|e| e.to_string())?;
         }
         "decompile" | "disasm" => {
