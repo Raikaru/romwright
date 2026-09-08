@@ -4951,17 +4951,55 @@ evidence:
   Ghidra refuses a project path with a dot component
   (`NamingUtilities.checkName`), so `~/.cache` will not do.
 
+### m4-031 evidence
+- Decision: **the coined name is kept.** The class is one decision repeated 11
+  times -- the function at the head of `.plt` is `_plt` here and
+  `FUN_<address>` in stock -- and the name is derived from a fact the image
+  declares (the section header), on a function both stores hold, where stock
+  has no name of its own. Ghidra names the PLT *entries* after the imports
+  they resolve, which we match (`m5-008`, `m5-009`); only the resolver stub at
+  the head is unnamed there.
+- Bounded rather than assumed. `tests/m4-031_section_names.py` reads the
+  image's own section and symbol tables (in the gate, so the claim needs no
+  `readelf`) and the store's own image bias, and holds the coinage to four
+  conditions: **14 coined names across 20 ELF rows**, every one at its
+  section's loaded start, every one on a function stock also holds, every
+  stock name at those addresses its own `FUN_` default, and **0** coined over
+  an address the image itself names. It is a guard for a kept decision, so it
+  passes on arrival -- its four controls are the ways the coinage could spread
+  (a name away from a section start, a name on a function stock lacks, a name
+  over a real symbol, a name where stock is not silent).
+- `_init` and `_fini` never appear in a store: the dynamic table's own
+  `_DT_INIT`/`_DT_FINI` already name those entries (m4-029), and the coinage
+  yields to a function that exists.
+- `m4-003` unchanged at **1761 of 1845** token-identical, 0 unexplained, five
+  classes. Regression: `cargo test --workspace` **263 pass**; every gate in
+  `tests/` passes, plus the five shell suites.
+
+### M4 divergence: the explained floor
+- Five classes remain and each one is now named, measured and directional:
+  - `type-stronger` **58** -- ours, justified: a slot typed from the image's
+    own declaration (m4-030), where stock types every marked-up word
+    `undefined *`.
+  - `oracle-warning` **19** -- stock's, about its own recovery (`Unknown
+    calling convention -- yet parameter storage is locked`).
+  - `name-rendering` **12** -- stock's own two spellings of one name, proved
+    unreachable from any client (m4-026).
+  - `name-convention` **11** -- ours, kept and bounded (m4-031).
+  - `language-variant` **3** -- measured and not ours: nothing in the install
+    separates `PowerPC:BE:32:e500` from `default` (m4-023).
+- Closing any of the remaining five means either a human decision (a corpus
+  row for a blocked language, a user-visible naming or typing reversal) or a
+  change in stock, so **M4's parity work has reached its explained floor**.
+  The next unreserved work is elsewhere; C3 is the only open GOAL criterion
+  and it needs an approved target.
+
 ## Next task
-- m4-031: `name-convention` 11. Every one is a name we picked on purpose --
-  `_plt` for a linkage stub where stock keeps `FUN_<addr>` -- and the gate
-  already proves the texts are otherwise token-identical by substituting the
-  oracle's name. Decide whether the store should keep our name, stock's, or
-  both (a second symbol with its own provenance, the way m4-028 keeps a
-  mangled name beside its demangled form), and record the decision with the
-  fact that justifies it. The acceptance test compares the stored names at
-  those addresses against stock's and pins whichever the worker sends.
-- Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
-  approved targets) needs a target game, which II.1 reserves for the human.
+- Blocked on the human, not on evidence: `GOAL.md` C3 (measured game-first
+  sessions on the approved targets) needs a target game, and II.1 reserves
+  adding a corpus binary, target game or platform. The same reservation blocks
+  the five languages `m4-003` reports as unmeasured, each verified absent from
+  the corpus lock rather than assumed.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

@@ -1372,10 +1372,6 @@ pub fn parse_core_types(xml: &str) -> HashMap<String, (u64, u64)> {
 
 /// `<doc id="0">` wraps every query answer the C++ scope decodes
 /// (`ScopeGhidra::processResult`).
-fn open_document(out: &mut Vec<u8>) {
-    open_document_in(out, 0);
-}
-
 /// The `<doc id=...>` a mapped-symbol answer carries is the id of the
 /// namespace the symbol lives in (`DecompileCallback.encodeResult`, :807-826);
 /// zero is the global scope.
