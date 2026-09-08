@@ -185,6 +185,9 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// How wide the widest proven access to a location is, by address. A
+    /// location whose address is only taken proves no width and is absent.
+    pub reference_widths: Vec<(u64, u64)>,
     /// Branches an unconditional-jump-to-a-function-entry rule proved to be
     /// calls that return, keyed by the branching instruction. Recorded by
     /// `record_branch_transfers`, applied once every rule that owns an
@@ -1533,6 +1536,23 @@ fn infer_data_references(
     // Context adds precise accesses; existing speculative DATA remains evidence.
     // Publish no partial pass if any query fails.
     for (_, _, facts, _) in work {
+        // The width of an access is a fact about the location, not about the
+        // instruction: stock defines data of the access size at every
+        // referenced location, which is what keeps a wider read from
+        // overlapping a one-byte symbol.
+        for fact in &facts {
+            if fact.size == 0 || fact.size > 8 || fact.kind == ReferenceKind::Data {
+                continue;
+            }
+            match import
+                .reference_widths
+                .iter_mut()
+                .find(|(address, _)| *address == fact.to)
+            {
+                Some((_, width)) => *width = (*width).max(fact.size as u64),
+                None => import.reference_widths.push((fact.to, fact.size as u64)),
+            }
+        }
         import.xrefs.extend(facts.into_iter().map(|fact| {
             let kind = match fact.kind {
                 ReferenceKind::Read => "READ",
@@ -1583,6 +1603,8 @@ pub const ENTRY_CONVENTION_SOURCE: &str = "native-import:entry-convention";
 pub const DYNAMIC_LABEL_SOURCE: &str = "native-import:dynamic-tag";
 /// A branch that leaves its function for another function's entry.
 pub const SHARED_RETURN_SOURCE: &str = "native-analysis:shared-return";
+/// How wide the access that reached a location was.
+pub const DATA_WIDTH_SOURCE: &str = "native-analysis:data-width";
 
 /// The process-entry model when the language declares one, and nothing when
 /// it does not -- Ghidra catches the same failure and skips silently
@@ -1744,6 +1766,28 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
+    // A location another rule types keeps that type; this rule only says how
+    // wide the access that reached it was.
+    let mut widths: Vec<lre_model::DataDefinitionRow> = imp
+        .reference_widths
+        .iter()
+        .filter(|(address, _)| {
+            !imp.plt_reserved_slots.iter().any(|(slot, _)| slot == address)
+        })
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: "undefined".into(),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: DATA_WIDTH_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    widths.sort_by_key(|row| row.address.offset);
+    widths.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, DATA_WIDTH_SOURCE, &widths)?;
     // The rule owns its rows: re-importing an image the rule no longer covers
     // clears the fact, and an assertion over it is left alone.
     let conventions: Vec<lre_model::CallingConventionRow> = imp

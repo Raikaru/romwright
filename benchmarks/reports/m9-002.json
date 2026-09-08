@@ -1,15 +1,15 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-08T00:54:21.878257+00:00",
+ "recorded_at": "2026-09-08T03:56:13.441237+00:00",
  "status": "pass",
  "passed": true,
- "summary": "21 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "23 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 21,
+  "evidence.classes": 23,
   "evidence.declared": 14,
   "evidence.declared_exercised": 7,
   "evidence.declared_elsewhere": 7,
@@ -39,6 +39,18 @@
    "evidence": "inferred",
    "explanation": "A constant the decompiler propagated to this instruction: the address is computed by the code, not stored in the image.",
    "source": "native-analysis:constant-propagation"
+  },
+  "native-analysis:data-width": {
+   "derives_confidence": false,
+   "evidence": "decoded",
+   "explanation": "How many bytes an instruction touches at a location, from the p-code access that reaches it: a load's output, a store's value, or a memory operand's own size.",
+   "source": "native-analysis:data-width"
+  },
+  "native-analysis:shared-return": {
+   "derives_confidence": false,
+   "evidence": "decoded",
+   "explanation": "An unconditional branch that leaves its own function for another function's entry: the transfer is a call whose callee returns to this function's caller, proved by decoding the branch.",
+   "source": "native-analysis:shared-return"
   },
   "native-import": {
    "derives_confidence": false,
@@ -239,7 +251,8 @@
    "evidence-classes.json"
   ],
   "native-import:entry-convention": [
-   "evidence-classes.json"
+   "evidence-classes.json",
+   "m4-012.json"
   ],
   "native-import:known-name": [
    "evidence-classes.json",

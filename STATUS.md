@@ -4243,17 +4243,62 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 96 reports indexed, both generators in
   sync, parity re-verified at 30 of 56 with 0 unaccounted tokens.
 
+### m4-015 evidence
+- **The fact three m4-014 variants were substituting for.** A referenced
+  location reached the decompiler as a bare `<labelsym>` -- a name and no type,
+  so one byte -- and a four- or eight-byte access over it raised
+  `Globals starting with '_' overlap smaller symbols at the same address`
+  (`Funcdata::checkGlobals`, funcdata_varnode.cc:1742). Stock never warns
+  because it answers with the *data defined there*
+  (`DecompileCallback.encodeData`, :835-855) and its analyzers define it as
+  wide as the access. Answering "nothing" instead, which is what stock does
+  only when it has neither symbol nor data, costs **5 of 30** identical
+  functions -- measured, twice, with correct builds.
+- The width was already decoded and thrown away. `ventris_constants.hh`
+  recorded `{pc, target, access}` per reference; it now records the bytes the
+  access touches -- a `CPUI_LOAD`'s output size, a `CPUI_STORE`'s value size,
+  a memory varnode's own size -- merges the widest when two accesses share a
+  location, and sends it as `"size"` in the `REFERENCES` payload. A taken
+  address proves no width and carries zero.
+- Stored as `undefined<width>` data with provenance
+  `native-analysis:data-width`, and answered as a symbol of that width with
+  the name the store would have used anyway -- so the label m4-004 earned is
+  kept and the width is what is new. A location another rule types (the three
+  `DT_PLTGOT` words) keeps that type.
+- Measured: **19 access widths** on four corpus rows, 0 overlap warnings, and
+  token identity **30 of 56 unchanged** with 0 unaccounted tokens -- the point
+  was to stop lying about a width without losing a name. Classes improved:
+  `flow` 9 -> **8**, `function-facts` 11 -> **10**,
+  `missing-external-prototype` 11 -> **10**, `name-convention` 9 -> **10**
+  (one row's whole difference is now just its name). Baseline re-recorded.
+- Controls: a width nothing dereferenced is refused (the gate fails if a
+  `DATA`-only target carries one), every stored width is 1..8 and has a
+  READ/WRITE/READ_WRITE access to prove it, and a unit test decodes
+  `mov eax,[rip]` (4), `mov rax,[rip]` (8) and `lea rax,[rip]` (0).
+- Three `native_runtime` tests compared whole `ReferenceFact` literals; they
+  assert *which* references exist, so they now compare `(from, to, kind)`
+  triples and the width has its own test rather than being pinned in nine
+  unrelated literals.
+- Regression: `cargo test --workspace` **245 pass**; `m4-002`..`m4-015`,
+  `m3-001`, `m3-003`, `m2-002`, `m2-008`, `m2-009`, `m2-016`, `m5-001`,
+  `m5-002`, `m5-008`..`m5-012`, `m6-002`, `m6-006`, `m8-003`, `m9-001`..
+  `m9-003`, `m9-005`, `m10-003`, `corpus.sh`, `differential.sh`,
+  `workflow.sh`, `data_xrefs.sh`, `generic_discovery_test.sh` pass. 97 reports
+  indexed, both generators in sync.
+
 ## Next task
-- m4-015: record the width of every data reference, which is the fact three
-  m4-014 variants were substituting for. The console already decodes the
-  access that proves it (`ReferenceFact` carries `from`, `to`, `kind` and
-  drops the p-code LOAD/STORE size); carry that size through the reference
-  protocol into a `data_definitions` row of `undefined<width>`, and only then
-  apply `encodeData`'s fall-through for locations with no fact at all.
-  Acceptance: a failing test naming the two rows that warn today, the warning
-  gone, token identity **not below 30**, and a control showing an address
-  whose width nothing proves still gets no invented type. Re-record the parity
-  baseline in the same commit as the measurement.
+- m4-016: the largest remaining class is `missing-external-prototype` **10**,
+  and the pair dump says five of those rows are *the oracle's* defect, not
+  ours: on `printf`/`abort` stubs across four languages our text is the
+  oracle's minus `/* WARNING: Unknown calling convention -- yet parameter
+  storage is locked */`, which stock emits about its own locked-storage
+  prototype. The class also over-fires: its second condition matches a name in
+  the function's *own* signature, and checks a prototype at the import slot
+  rather than at the stub. Split the warning classes (a warning we emit and
+  stock does not is a gap; the reverse is not), narrow the prototype condition
+  to a call the oracle makes by name, and re-measure. Acceptance: a failing
+  test first, per-class counts before and after, and a control proving a row
+  where *we* warn and stock does not still counts against us.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

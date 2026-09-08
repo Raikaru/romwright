@@ -469,6 +469,10 @@ pub struct ReferenceFact {
     pub from: u64,
     pub to: u64,
     pub kind: ReferenceKind,
+    /// Bytes the access touches, from the p-code that performs it. Zero when
+    /// the address is only taken, which proves no width.
+    #[serde(default)]
+    pub size: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -1451,6 +1455,13 @@ impl Drop for ConsoleSession {
 
 #[cfg(test)]
 mod tests {
+    /// The reference facts as (instruction, target, kind): what a test about
+    /// *which* references exist is asserting. Access widths have their own
+    /// test, `reference_facts_carry_the_access_width`.
+    fn triples(facts: &[super::ReferenceFact]) -> Vec<(u64, u64, super::ReferenceKind)> {
+        facts.iter().map(|fact| (fact.from, fact.to, fact.kind)).collect()
+    }
+
     use super::*;
 
     #[test]
@@ -1849,9 +1860,7 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1010, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![ReferenceFact {
-            from: 0x100b, to: 0x4001, kind: ReferenceKind::Data,
-        }], "computed intermediates are not references; the return references its last setter");
+        assert_eq!(triples(&refs), vec![(0x100bu64, 0x4001u64, ReferenceKind::Data)], "computed intermediates are not references; the return references its last setter");
         // Equal pointer values at a join retain both possible setter origins.
         import.mappings[0].bytes = vec![
             0x48, 0xc7, 0xc0, 0xff, 0x3f, 0, 0,
@@ -1863,9 +1872,9 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1016, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x100b, to: 0x4001, kind: ReferenceKind::Data },
-            ReferenceFact { from: 0x1011, to: 0x4001, kind: ReferenceKind::Data },
+        assert_eq!(triples(&refs), vec![
+            (0x100bu64, 0x4001u64, ReferenceKind::Data),
+            (0x1011u64, 0x4001u64, ReferenceKind::Data),
         ], "a joined value must not lose either reaching setter");
         // A computed argument must be observed before CALL clobbers its
         // register, and attributed to the setter rather than the call.
@@ -1883,8 +1892,8 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1014, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x1008, to: 0x4001, kind: ReferenceKind::Data },
+        assert_eq!(triples(&refs), vec![
+            (0x1008u64, 0x4001u64, ReferenceKind::Data),
         ], "computed arguments need source attribution before call effects");
         // The e500 ABI uses an unnamed 32-bit slice of a 64-bit register.
         // Without a named-register setter, the return is the reference source.
@@ -1901,8 +1910,8 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1010, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x100c, to: 0x4001, kind: ReferenceKind::Data },
+        assert_eq!(triples(&refs), vec![
+            (0x100cu64, 0x4001u64, ReferenceKind::Data),
         ], "unnamed register slices must not invent a named-register setter");
     }
 
@@ -1942,13 +1951,13 @@ mod tests {
             session.load_mapped(&import).unwrap();
             let refs = session.references(0x1000, 0x101e, &import.mappings, false).unwrap();
             let mut expected = vec![
-                ReferenceFact { from: 0x1012, to: 0x4002, kind: ReferenceKind::Data },
+                (0x1012u64, 0x4002u64, ReferenceKind::Data),
             ];
             if compiler == "gcc" {
                 expected.insert(0,
-                    ReferenceFact { from: 0x1007, to: 0x4001, kind: ReferenceKind::Data });
+                    (0x1007u64, 0x4001u64, ReferenceKind::Data));
             }
-            assert_eq!(refs, expected,
+            assert_eq!(triples(&refs), expected,
                 "RDI is a SysV argument but not a Windows x64 argument ({compiler})");
         }
     }
@@ -1979,9 +1988,59 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1006, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x1000, to: 0x1006, kind: ReferenceKind::Read },
+        assert_eq!(triples(&refs), vec![
+            (0x1000u64, 0x1006u64, ReferenceKind::Read),
         ], "a real access to following data must not be suppressed");
+    }
+
+    #[test]
+    fn reference_facts_carry_the_access_width() {
+        // `mov eax,[rip+0]` reads four bytes; `mov rax,[rip+0]` reads eight.
+        // The width is the access's, not the pointer's, and an address that is
+        // only computed proves none.
+        let cfg = RuntimeConfig::from_env();
+        for (bytes, expected) in [
+            (vec![0x8b, 0x05, 0, 0, 0, 0, 0xc3], 4u32),
+            (vec![0x48, 0x8b, 0x05, 0, 0, 0, 0, 0xc3], 8u32),
+        ] {
+            let end = 0x1000 + bytes.len() as u64;
+            let mut padded = bytes.clone();
+            padded.resize(16, 0);
+            let import = crate::native::NativeImport {
+                binary: std::path::PathBuf::new(),
+                language: cfg.language_id.clone(),
+                mappings: vec![crate::native::Mapping {
+                    vaddr: 0x1000, size: 16, file_off: 0, flags: 6, bytes: padded,
+                }],
+                ..Default::default()
+            };
+            let mut session = ConsoleSession::new(&cfg).unwrap();
+            session.load_mapped(&import).unwrap();
+            let refs = session.references(0x1000, end, &import.mappings, false).unwrap();
+            let read = refs
+                .iter()
+                .find(|fact| fact.kind == ReferenceKind::Read)
+                .unwrap_or_else(|| panic!("no read reference in {refs:?}"));
+            assert_eq!(read.size, expected, "{refs:?}");
+        }
+        // `lea rax,[rip+0]` takes an address without touching it.
+        let import = crate::native::NativeImport {
+            binary: std::path::PathBuf::new(),
+            language: cfg.language_id.clone(),
+            mappings: vec![crate::native::Mapping {
+                vaddr: 0x1000, size: 16, file_off: 0, flags: 6,
+                bytes: vec![0x48, 0x8d, 0x05, 0xf9, 0x2f, 0, 0, 0xc3, 0, 0, 0, 0, 0, 0, 0, 0],
+            }],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x1000, 0x1008, &import.mappings, false).unwrap();
+        for fact in &refs {
+            if fact.kind == ReferenceKind::Data {
+                assert_eq!(fact.size, 0, "a taken address proves no width: {refs:?}");
+            }
+        }
     }
 
     #[test]
@@ -2014,8 +2073,8 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x1008, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x1000, to: 0x4000, kind: ReferenceKind::Data },
+        assert_eq!(triples(&refs), vec![
+            (0x1000u64, 0x4000u64, ReferenceKind::Data),
         ], "returned addresses remain eligible for computed reference inference");
     }
 
@@ -2049,8 +2108,8 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session.references(0x1000, 0x100b, &import.mappings, false).unwrap();
-        assert_eq!(refs, vec![
-            ReferenceFact { from: 0x1005, to: 0x4000, kind: ReferenceKind::Data },
+        assert_eq!(triples(&refs), vec![
+            (0x1005u64, 0x4000u64, ReferenceKind::Data),
         ], "computed address operands are references even when not returned");
         import.mappings[0].bytes[5..8].copy_from_slice(&[0x83, 0xc3, 1]); // add ebx,1
         let mut session = ConsoleSession::new(&cfg).unwrap();

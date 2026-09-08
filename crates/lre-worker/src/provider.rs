@@ -796,6 +796,36 @@ impl NativeWorker {
                         |out| wire::encode_pointer_type(out, ("code", code_id), size),
                     );
                     close_document(&mut doc);
+                } else if let (Some(width), Some((type_id, _))) = (
+                    provider
+                        .data_definitions
+                        .get(&vaddr)
+                        .filter(|(kind, _)| kind == "undefined")
+                        .map(|(_, width)| *width),
+                    provider
+                        .data_definitions
+                        .get(&vaddr)
+                        .filter(|(kind, _)| kind == "undefined")
+                        .and_then(|(_, width)| core(&format!("undefined{width}"))),
+                ) {
+                    // A location of known width and unknown contents. Ghidra
+                    // answers a referenced location with the *data* defined
+                    // there, and its analyzers define it as wide as the access
+                    // (`DecompileCallback.encodeData`, :835-855). A symbol
+                    // narrower than the access makes the decompiler warn that
+                    // a global overlaps it (`Funcdata::checkGlobals`,
+                    // funcdata_varnode.cc:1742).
+                    let name = provider
+                        .symbol_names
+                        .get(&vaddr)
+                        .cloned()
+                        .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
+                    open_document(&mut doc);
+                    wire::encode_data_symbol(
+                        &mut doc, space as u32, vaddr, &name, read_only,
+                        |out| wire::encode_typeref(out, &format!("undefined{width}"), type_id),
+                    );
+                    close_document(&mut doc);
                 } else if provider.data_targets.contains(&vaddr) {
                     // Only a reference: a name, with no claim about width or
                     // type. Ghidra sends the same shape for a symbol that is
