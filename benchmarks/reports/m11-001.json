@@ -1,0 +1,112 @@
+{
+ "id": "m11-001",
+ "milestone": "M11",
+ "criterion": "GOAL.md C3: measured game-first sessions on the approved targets",
+ "recorded_at": "2026-09-08T21:51:15.834823+00:00",
+ "machine": {
+  "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "cpu": "x86_64"
+ },
+ "target": {
+  "path": "/home/raikaru/Projects/agent-under-fire/orig/GQFE78/files/Bond.elf",
+  "sha256": "424880792a74f6220f6534f4c99e3b43d71abdfca50f78d070df901e9730a1e2"
+ },
+ "thresholds": {
+  "session.import_wall_s": 60.0,
+  "session.import_peak_kb": 300000,
+  "session.functions_recovered": 8000,
+  "session.fn_recall": 0.95,
+  "session.fn_precision": 0.9,
+  "session.page_ms": 500.0,
+  "session.decompile_ms": 2000.0,
+  "session.inference_analyzed": 1,
+  "session.bounded_analyzed": 1,
+  "session.worker_recycles": 1
+ },
+ "metrics": {
+  "session.oracle_functions": 8522,
+  "session.import_wall_s": 11.49,
+  "session.import_peak_kb": 65248,
+  "session.functions_recovered": 8899,
+  "session.functions_matched": 8351,
+  "session.fn_recall": 0.979934287725886,
+  "session.fn_precision": 0.9384200471963142,
+  "session.language_is_powerpc_be32": 1.0,
+  "session.page_ms": 371.006776986178,
+  "session.xrefs_rows": 1,
+  "session.listing_rows": 16,
+  "session.decompile_ms": 17.45678804581985,
+  "session.decompiled": 5,
+  "session.inference_analyzed": 1744,
+  "session.memory_bytes": 8,
+  "session.live_bytes": 16,
+  "session.edit_survived_reimport": 1.0,
+  "session.worker_recycles": 8,
+  "session.bounded_analyzed": 1716
+ },
+ "steps": {
+  "import": {
+   "wall_s": 11.49,
+   "peak_kb": 65248,
+   "message": "imported bond natively (8899 functions, PowerPC:BE:32:default)"
+  },
+  "language": "PowerPC:BE:32:default",
+  "recover_classes": {
+   "anchors": 0,
+   "bases": 0,
+   "classes": 0,
+   "revision": 9,
+   "typeinfo": 0,
+   "without_vtable": 0,
+   "ms": 17.5
+  },
+  "infer_prototypes": {
+   "analyzed": 1744,
+   "changed": 0,
+   "rounds": 0,
+   "stop_reason": "budget",
+   "worker_recycles": 4,
+   "ms": 20014.0
+  },
+  "memory_live": {
+   "endpoint": "127.0.0.1:24689",
+   "bytes": [
+    71,
+    87,
+    55,
+    69,
+    54,
+    57,
+    0,
+    1,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "disc_id": "GW7E69",
+   "ms": 0.9
+  },
+  "reimport": {
+   "wall_s": 9.69,
+   "peak_kb": 65184,
+   "message": "imported bond natively (8899 functions, PowerPC:BE:32:default)"
+  },
+  "infer_prototypes_bounded": {
+   "analyzed": 1716,
+   "changed": 0,
+   "rounds": 0,
+   "stop_reason": "budget",
+   "worker_recycles": 8,
+   "ms": 20023.8,
+   "cap_bytes": 125829120
+  }
+ },
+ "status": "pass",
+ "passed": true,
+ "summary": "a JVM-free session on the approved target: 8899 functions recovered from the stripped module in 11.5 s at 65 MB, recall 0.9799 and precision 0.9384 against the module's own 8522 function symbols, 5 functions decompiled (median 17 ms), 1744 analysed by prototype inference, and one rename read back after a second import"
+}

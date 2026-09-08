@@ -4991,15 +4991,72 @@ evidence:
 - Closing any of the remaining five means either a human decision (a corpus
   row for a blocked language, a user-visible naming or typing reversal) or a
   change in stock, so **M4's parity work has reached its explained floor**.
-  The next unreserved work is elsewhere; C3 is the only open GOAL criterion
-  and it needs an approved target.
+  The next unreserved work was C3 itself: the approved target had already
+  arrived (Phase 4 above), so the session was measured rather than deferred --
+  see m11-001.
+
+### m11-001 evidence (GOAL C3)
+- The claim the criterion asks for is a *session*, so the gate runs one, on
+  the approved target (007 Agent Under Fire, GameCube GQFE78,
+  `files/Bond.elf` pinned by sha256 `42488079...`), with no JVM in any step:
+  blind import, navigation, decompilation, the recovery passes, an analyst
+  edit, and the running console. Report:
+  `benchmarks/reports/m11-001.json`.
+- **Blind recovery.** The module is stripped into the work directory (the copy
+  is asserted to carry no symbol table) and imported: **8899 functions in
+  11.5 s at 65 MB peak**, language `PowerPC:BE:32:default`, scored against the
+  unstripped module's own **8522** `STT_FUNC` symbols -- **recall 0.9799,
+  precision 0.9384** (8351 matched). The symbols never reach the importer.
+- **The session's surfaces**, through one real `lre-api` process: paged
+  functions filtered and unfiltered, xrefs into a recovered callee, a listing
+  window, **5 functions decompiled** (median **17 ms**, tokens and a prototype
+  for each), static memory, `recover_classes` (recorded, not asserted: a
+  CodeWarrior image carries no Itanium `type_info`, and it found none), and
+  prototype inference over the module -- **1744 functions analysed** under a
+  20 s budget.
+- **The live console.** Dolphin 2606a serving GDB on 24689 with the retail RVZ
+  booted headless (`Null` backend): `memory_live` read 16 bytes at
+  `0x80000000` beginning `47 57 37 45 36 39` -- the disc id `GW7E69` -- in
+  0.9 ms. Dolphin's stub accepts one client per boot, which the gate documents.
+- **Two defects the session found, both fixed here:**
+  - `infer_prototypes` died on this module with `worker exceed memory cap
+    (rss 270200832 > cap 268435456); killed`. The cap exists to bound a long
+    session's memory, not to fail the request that discovers the growth, and
+    the cap's own comment already described a retry path nobody implemented.
+    Every pooled operation now recycles once on a cap hit
+    (`with_worker_retrying`), the pass counts the recycles, and the gate proves
+    the path on purpose: with `VENTRIS_WORKER_MEMORY_CAP` at 120 MiB the same
+    inference **recycled 8 workers and still analysed 1716 functions** instead
+    of failing. A fresh worker over the cap still fails -- then the cap is
+    below the language's floor.
+  - An analyst rename did **not** survive re-importing the same image:
+    `replace_functions` deletes and reinserts every row. An assertion outlives
+    the pass that rediscovered the function -- Ghidra never renames a
+    `USER_DEFINED` symbol during re-analysis -- so the store now re-applies
+    the name every live `rename` in the command journal asserts, and an undone
+    rename is never resurrected. Two store regressions pin both directions.
+- `VENTRIS_WORKER_MEMORY_CAP` is new and documented in README: a host with
+  less memory bounds its workers lower, and the parse refuses a value under
+  16 MiB rather than failing every request.
+- Not wired into CI, for the same reason `m1-009` is not: the image is a
+  retail disc. With the target absent the gate records `skipped` with that
+  reason and passes, so a machine without the disc reports honestly instead of
+  failing.
+- Regression: `cargo test --workspace` **266 pass**; every gate in `tests/`
+  passes, plus the five shell suites.
 
 ## Next task
-- Blocked on the human, not on evidence: `GOAL.md` C3 (measured game-first
-  sessions on the approved targets) needs a target game, and II.1 reserves
-  adding a corpus binary, target game or platform. The same reservation blocks
-  the five languages `m4-003` reports as unmeasured, each verified absent from
-  the corpus lock rather than assumed.
+- m11-002: a second measured session on the *same* approved target's other
+  modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
+  `Movie.elf`, `driving.elf`, and the `bond.dol` image `m1-009` already
+  scores), so widening the session needs no new target and no reservation.
+  Score each module the way `m11-001` scores this one, and record which
+  surfaces answer differently on a module that is loaded rather than booted.
+- Reserved, and the only things left that are: adding a *new* target game,
+  platform or corpus binary (II.1), which is what the five languages
+  `m4-003` reports as unmeasured are waiting on; tagging a release; and
+  reversing a user-visible naming or typing choice to close
+  `name-convention` 11 or `type-stronger` 58.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

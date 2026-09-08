@@ -138,7 +138,11 @@ total, the phases (`parse`, `patterns`, `flow`, `discovery`, `references`,
 `store`), the console shard count, and what the flow phase asked of the
 console. Batch-parallel work (flow batches, reference rounds) runs one
 console per physical core, capped at eight; `VENTRIS_CONSOLE_SHARDS` pins
-that count. Requests inside a batch or a reference round are independent, so
+that count. `VENTRIS_WORKER_MEMORY_CAP` bounds one decompiler worker's
+resident size in bytes (256 MiB by default, values under 16 MiB refused): a
+worker that grows past it is recycled mid-pass rather than failing the request
+that discovered the growth, and `benchmarks/reports/m11-001.json` records eight
+such recycles inside one bounded inference pass over a game module. Requests inside a batch or a reference round are independent, so
 shards change wall time and nothing else — `tests/m2-016_import_budget.py`
 asserts that a one-console import and an N-console import write identical
 function, xref, string, symbol and thunk sets.
@@ -1697,7 +1701,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `evidence-classes.json` | `evidence-classes` | - | recorded | recorded | - |
 | `parity-baseline.json` | `parity-baseline` | - | recorded | recorded | - |
 | `session-envelope.json` | `session-envelope` | - | recorded | `headroom` 1.2500; `rounds` 8; `warmup_rounds` 4 | - |
-| `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.1600; `peak_decompile_kb` 39160; `peak_disasm_kb` 0; `peak_import_kb` 5908 | - |
+| `stage4-gate.json` | `stage4-gate` | - | recorded | `median_wall_s` 0.7500; `peak_decompile_kb` 39280; `peak_disasm_kb` 40884; `peak_import_kb` 40876 | - |
 | `ui-gate.json` | `ui` | M0 | pass | 1 pass, 0 fail, 0 skipped | `benchmarks/ui_gate.py` |
 | `discovery-gate.json` | `discovery` | M1 | pass | 20 pass, 0 fail, 0 skipped | `benchmarks/discovery_gate.py` |
 | `m1-003.json` | `m1-003` | M1 | pass | recorded | `tests/m1-003_batched_flow.sh` |
@@ -1713,6 +1717,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m10-002.json` | `m10-002` | M10 | pass | `images.follow_facts_compared` 8; `images.followed_programs` 2; `images.ui_programs` 2; `images.ui_switch_functions` 112 | `tests/m10-002_image_navigation.py` |
 | `m10-003.json` | `m10-003` | M10 | pass | `edits.reads_compared` 16; `edits.revision_after_second_import` 9; `edits.win_functions` 112 | `tests/m10-003_edit_durability.py` |
 | `m10-004.json` | `m10-004` | M10 | pass | `images.methods_excused` 0; `images.methods_program_scoped` 41; `images.reads_discriminating` 13; `images.reads_isolated` 54; `images.writes_inert` 4; `images.writes_isolated` 14 | `tests/m10-004_multi_image_milestone.py` |
+| `m11-001.json` | `m11-001` | M11 | pass | `session.bounded_analyzed` 1716; `session.decompile_ms` 17.4568; `session.decompiled` 5; `session.edit_survived_reimport` 1.0000; `session.fn_precision` 0.9384; `session.fn_recall` 0.9799; `session.functions_matched` 8351; `session.functions_recovered` 8899; `session.import_peak_kb` 65248; `session.import_wall_s` 11.4900; `session.inference_analyzed` 1744; `session.language_is_powerpc_be32` 1.0000; `session.listing_rows` 16; `session.live_bytes` 16; `session.memory_bytes` 8; `session.oracle_functions` 8522; `session.page_ms` 371.0068; `session.worker_recycles` 8; `session.xrefs_rows` 1 | `tests/m11-001_game_session.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |

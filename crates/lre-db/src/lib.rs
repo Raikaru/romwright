@@ -619,9 +619,54 @@ impl ProjectDb {
             ])?;
         }
         drop(stmt);
-                self.bump_and_record(&tx, program, "replace-functions", &format!("{}", rows.len()))?;
+        // An analyst's rename is an assertion, and an assertion outlives the
+        // pass that rediscovered the function: Ghidra never renames a
+        // `USER_DEFINED` symbol during re-analysis
+        // (`SymbolUtilities.createPreferredLabelOrFunctionSymbol`, and
+        // `DemanglerAnalyzer.skipSymbol` refuses to touch one). The command
+        // journal is the record of those assertions, so the name each live
+        // `rename` still carries is re-applied over this pass's name. An
+        // undone rename is marked `done` and never comes back; a rename of a
+        // function this pass no longer recovers simply does not apply.
+        for (entry, name) in Self::asserted_names(&tx, program)? {
+            tx.execute(
+                "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
+                params![program.0, entry, name],
+            )?;
+        }
+        self.bump_and_record(&tx, program, "replace-functions", &format!("{}", rows.len()))?;
         tx.commit()?;
         Ok(())
+    }
+
+    /// The name every live analyst rename asserts, by address cell, oldest
+    /// first so the newest rename of an address wins.
+    fn asserted_names(
+        tx: &rusqlite::Transaction<'_>,
+        program: ProgramId,
+    ) -> Result<Vec<(String, String)>> {
+        let mut statement = tx.prepare(
+            "SELECT payload FROM command_journal
+             WHERE program_id = ?1 AND kind = 'rename' AND done = 0
+             ORDER BY seq",
+        )?;
+        let payloads = statement
+            .query_map(params![program.0], |row| row.get::<_, String>(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        let mut named = Vec::new();
+        for payload in payloads {
+            let value: serde_json::Value = match serde_json::from_str(&payload) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if let (Some(entry), Some(name)) = (
+                value.get("entry").and_then(serde_json::Value::as_str),
+                value.get("name").and_then(serde_json::Value::as_str),
+            ) {
+                named.push((entry.to_string(), name.to_string()));
+            }
+        }
+        Ok(named)
     }
 
     /// Replaces the symbol set of a program inside one transaction.
@@ -3103,6 +3148,50 @@ mod tests {
         assert_eq!(db.datatypes(id).unwrap()[0].name, "int");
         db.replace_comments(id, &[]).unwrap();
         assert!(db.comments(id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn an_analyst_rename_survives_the_next_import() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let entry = lre_model::Address::ram(0x401000);
+        let discovered = |name: &str| {
+            vec![FunctionRow {
+                entry: entry.clone(),
+                name: name.into(),
+                size: 32,
+                signature: None,
+                calling_convention: None,
+            }]
+        };
+        db.replace_functions(id, &discovered("FUN_00401000")).unwrap();
+        db.rename_command(id, &entry, "parse_header", "FUN_00401000")
+            .unwrap();
+        // The same image imported again: discovery names it by default once
+        // more, and the analyst's name still wins.
+        db.replace_functions(id, &discovered("FUN_00401000")).unwrap();
+        assert_eq!(db.functions(id).unwrap()[0].name, "parse_header");
+    }
+
+    #[test]
+    fn an_undone_rename_is_not_reapplied_by_an_import() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let entry = lre_model::Address::ram(0x401000);
+        let rows = vec![FunctionRow {
+            entry: entry.clone(),
+            name: "FUN_00401000".into(),
+            size: 32,
+            signature: None,
+            calling_convention: None,
+        }];
+        db.replace_functions(id, &rows).unwrap();
+        db.rename_command(id, &entry, "parse_header", "FUN_00401000")
+            .unwrap();
+        let journal = db.journal_latest(id).unwrap().unwrap();
+        db.undo_rename(id, &entry, "FUN_00401000", journal.seq).unwrap();
+        db.replace_functions(id, &rows).unwrap();
+        assert_eq!(db.functions(id).unwrap()[0].name, "FUN_00401000");
     }
 
     #[test]
