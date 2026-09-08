@@ -288,6 +288,11 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
             == tokens(re.sub(CAST, "", native_text))):
         return {**named, "type-stronger": sorted(oracle_casts ^ native_casts)}
 
+    # A name we substituted or rendered is a difference in its own right, and
+    # the rest of the classification compares the text after those rewrites --
+    # otherwise the same warning is counted once in each direction.
+    classes.update(named)
+    oracle_text = substituted
     if differing:
         classes["function-facts"] = differing
 

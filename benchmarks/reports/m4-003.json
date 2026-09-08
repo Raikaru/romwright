@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T06:11:39.500254+00:00",
+ "recorded_at": "2026-09-08T06:36:36.881477+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 36 of 56 functions token-identical, 20 differing only where a named fact differs (data-name-convention 2, data-type-unknown 1, flow 1, name-convention 3, name-rendering 2, oracle-warning 6, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 36 of 56 functions token-identical, 20 differing only where a named fact differs (data-name-convention 2, data-type-unknown 1, name-convention 3, name-rendering 3, oracle-warning 5, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -14,10 +14,9 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 2,
   "parity.class.data-type-unknown": 1,
-  "parity.class.flow": 1,
   "parity.class.name-convention": 3,
-  "parity.class.name-rendering": 2,
-  "parity.class.oracle-warning": 6,
+  "parity.class.name-rendering": 3,
+  "parity.class.oracle-warning": 5,
   "parity.class.type-stronger": 18
  },
  "measured": [
@@ -82,7 +81,6 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "flow",
     "name-convention",
     "name-rendering",
     "oracle-warning",
@@ -90,7 +88,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "61464d7158fd45a87c04011ea94ca12dbf4c3f8b017dcfaae637feff61c40d82"
+    "sha256": "a83b4a31e828b4d0e84b18e7c8c2b7a9a5e3ec1987fcf2f091c154b5837b81a3"
    }
   }
  ],

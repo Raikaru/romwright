@@ -601,6 +601,12 @@ fn collect_initializer_labels(
                     && target - mapping.vaddr < mapping.size
             });
             if executable {
+                // The array proves the slot holds a code address: that is the
+                // same evidence that names the target, and it types the word
+                // that holds it.
+                import.initializer_slots.push((slot, width as u64));
+            }
+            if executable {
                 labels.push((target, format!("{prefix}{index}")));
             }
         }
