@@ -35,6 +35,10 @@
   "evidence": "declared",
   "derives_confidence": false
  },
+ "native-import:elf-exception": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
  "native-import:elf-pointer": {
   "evidence": "inferred",
   "derives_confidence": false

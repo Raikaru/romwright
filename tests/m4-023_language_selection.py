@@ -23,6 +23,7 @@ image.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 from datetime import datetime, timezone
 import json
 import os
@@ -35,6 +36,8 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+import gate_cache  # noqa: E402
 CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 ELF_LOADER = "Executable and Linking Format (ELF)"
@@ -214,29 +217,43 @@ def unconstrained(install: Path, header: dict, ours: str, theirs: str) -> dict:
 
 
 def stock_language(install: Path, binary: Path, work: Path, name: str) -> str:
-    """What stock selects for the same bytes, with no analysis."""
-    project = work / f"stock-{name}"
-    project.mkdir(parents=True, exist_ok=True)
-    environment = dict(os.environ, DEBUGINFOD_URLS="")
-    result = subprocess.run(
-        [str(install / "support/analyzeHeadless"), str(project), name,
-         "-import", str(binary), "-noanalysis"],
-        capture_output=True, text=True, env=environment, timeout=900)
-    match = re.search(r"Using Language/Compiler: (\S+)", result.stdout)
-    assert match, f"{name}: stock printed no language: {result.stdout[-400:]}"
-    return match.group(1)
+    """What stock selects for the same bytes, with no analysis.
+
+    The answer depends on the bytes and on the pinned install, so it is cached
+    under exactly those (`benchmarks/gate_cache.py`); a different binary, a
+    different install revision, or an empty `VENTRIS_GATE_CACHE` all run
+    `analyzeHeadless` again.
+    """
+    def probe() -> str:
+        project = work / f"stock-{name}"
+        project.mkdir(parents=True, exist_ok=True)
+        environment = dict(os.environ, DEBUGINFOD_URLS="")
+        result = subprocess.run(
+            [str(install / "support/analyzeHeadless"), str(project), name,
+             "-import", str(binary), "-noanalysis"],
+            capture_output=True, text=True, env=environment, timeout=900)
+        match = re.search(r"Using Language/Compiler: (\S+)", result.stdout)
+        assert match, f"{name}: stock printed no language: {result.stdout[-400:]}"
+        return match.group(1)
+
+    return gate_cache.document(
+        gate_cache.stock_key(binary, install, artifact="language"), probe)
 
 
 def our_language(binary: Path, work: Path, name: str) -> str:
     """What our loader selects, read from the import summary."""
-    project = work / f"native-{name}"
-    result = subprocess.run(
-        [str(CLI), "import", str(binary), "--name", name, "--project", str(project)],
-        capture_output=True, text=True, timeout=900)
-    assert result.returncode == 0, f"{name}: import failed: {result.stderr[-400:]}"
-    match = re.search(r"\(\d+ functions, ([^)]+)\)", result.stdout)
-    assert match, f"{name}: no import summary: {result.stdout[-200:]}"
-    return match.group(1)
+    def probe() -> str:
+        project = work / f"native-{name}"
+        result = subprocess.run(
+            [str(CLI), "import", str(binary), "--name", name, "--project", str(project)],
+            capture_output=True, text=True, timeout=900)
+        assert result.returncode == 0, f"{name}: import failed: {result.stderr[-400:]}"
+        match = re.search(r"\(\d+ functions, ([^)]+)\)", result.stdout)
+        assert match, f"{name}: no import summary: {result.stdout[-200:]}"
+        return match.group(1)
+
+    return gate_cache.document(
+        gate_cache.native_key(binary, artifact="selected-language"), probe)
 
 
 def corpus_rows(corpus: Path) -> list[tuple[str, Path]]:
@@ -277,6 +294,8 @@ def main() -> int:
                         default=Path(os.environ.get("VENTRIS_GHIDRA",
                                                     Path.home() / "ghidra_12.1.3_PUBLIC")))
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--jobs", type=int, default=4,
+                        help="rows probed concurrently; an uncached row runs a JVM")
     arguments = parser.parse_args()
     install = arguments.ghidra
     assert (install / "support/analyzeHeadless").is_file(), f"no install at {install}"
@@ -288,10 +307,8 @@ def main() -> int:
         work = Path(temporary)
         rows = [(name, binary, None) for name, binary in corpus_rows(arguments.corpus_dir)]
         rows += probe_rows(work)
-        for name, binary, reason in rows:
-            if reason is not None or not binary.is_file():
-                skipped.append({"id": name, "reason": reason or f"missing {binary}"})
-                continue
+        def measure(item: tuple[str, Path, str | None]) -> dict:
+            name, binary, _ = item
             header = elf_header(binary.read_bytes())
             language, compiler, candidates = expected_selection(install, header)
             ours = our_language(binary, work, name)
@@ -309,8 +326,19 @@ def main() -> int:
             else:
                 row["agreement"] = "stock-unconstrained"
                 row["evidence"] = unconstrained(install, header, ours, stock_language_id)
-            measured.append(row)
-            print(f"{row['agreement']:>20} {name}: ours {ours}, stock {theirs}", flush=True)
+            return row
+
+        runnable = []
+        for name, binary, reason in rows:
+            if reason is not None or not binary.is_file():
+                skipped.append({"id": name, "reason": reason or f"missing {binary}"})
+                continue
+            runnable.append((name, binary, reason))
+        with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.jobs) as pool:
+            for row in pool.map(measure, runnable):
+                measured.append(row)
+                print(f"{row['agreement']:>20} {row['id']}: ours {row['ours']}, "
+                      f"stock {row['stock']}", flush=True)
 
     assert measured, "no row was measured"
     identical = [row for row in measured if row["agreement"] == "identical"]

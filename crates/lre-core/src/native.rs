@@ -18,6 +18,7 @@ mod nds;
 mod psx;
 pub(crate) mod dol;
 mod discovery;
+mod elf_exception;
 mod elf_pointers;
 mod elf_unwind;
 mod elf_image;
@@ -244,6 +245,9 @@ pub struct NativeImport {
     /// What an ELF header said about its machine: the primary and secondary
     /// keys the install's opinion data is queried with.
     pub elf_machine: Option<crate::opinion::ElfMachine>,
+    /// Call sites `.gcc_except_table` declares protected, with the handler
+    /// each one branches to.
+    pub exception_sites: Vec<elf_exception::ExceptionSite>,
     /// Runtime configuration used to reach the SLEIGH console/worker.
     pub cfg: crate::session::RuntimeConfig,
     /// Path to the binary used for console-driven x86 flow.
@@ -478,6 +482,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
     elf_pointers::collect(data, &sections, &mut import, 4, be)?;
     elf_unwind::collect(data, &sections, &mut import, 4, be);
+    elf_exception::collect(data, &sections, &mut import, 4, be);
     Ok(import)
 }
 
@@ -715,6 +720,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
     elf_pointers::collect(data, &sections, &mut import, 8, false)?;
     elf_unwind::collect(data, &sections, &mut import, 8, false);
+    elf_exception::collect(data, &sections, &mut import, 8, false);
     Ok(import)
 }
 
@@ -1620,6 +1626,9 @@ pub const ELF_POINTER_SOURCE: &str = "native-import:elf-pointer";
 /// relocation that copies it.
 pub const ELF_COPY_SOURCE: &str = "native-import:elf-copy";
 
+/// A call site `.gcc_except_table` declares protected, with its handler.
+pub const ELF_EXCEPTION_SOURCE: &str = "native-import:elf-exception";
+
 /// The process-entry model when the language declares one, and nothing when
 /// it does not -- Ghidra catches the same failure and skips silently
 /// (`processEntryPoints`, :666-672). An undeclared name would be worse than
@@ -1858,6 +1867,25 @@ pub fn store_import(
         .into_iter()
         .collect();
     db.replace_inferred_calling_conventions(pid, ENTRY_CONVENTION_SOURCE, &conventions)?;
+    // The image's own exception tables: a range and the handler it enters,
+    // not a rendering. The worker turns them into the comment Ghidra's
+    // analyzer writes (m4-024).
+    let sites: Vec<lre_model::ExceptionSiteRow> = imp
+        .exception_sites
+        .iter()
+        .map(|site| lre_model::ExceptionSiteRow {
+            function: lre_model::Address::ram(site.function),
+            start: lre_model::Address::ram(site.start),
+            end: lre_model::Address::ram(site.end),
+            landing_pad: lre_model::Address::ram(site.landing_pad),
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Asserted,
+                source: ELF_EXCEPTION_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    db.replace_exception_sites(pid, ELF_EXCEPTION_SOURCE, &sites)?;
     apply_library_prototypes(db, pid, imp)?;
     // A name on Ghidra's own pinned list is a declared exit: without the fact
     // the decompiler walks past the call and takes the next function's body

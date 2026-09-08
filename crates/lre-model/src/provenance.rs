@@ -149,6 +149,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:elf-exception",
+        explanation:         "A call site the image's own `.gcc_except_table` declares protected, \
+         with the handler that call site enters when it throws: the range and \
+         the landing pad are read from the LSDA the frame points at.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:elf-copy",
         explanation:         "An object the dynamic linker copies into the image at load time: the \
          relocation names the library definition it copies, so the slot is \

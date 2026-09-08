@@ -10,6 +10,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import gate_cache
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -23,7 +24,8 @@ EXPORTER = ROOT / 'scripts/ExportThunks.java'
 TOLERANCE = 0.01
 
 
-def stock_thunks(install, binary, work, timeout):
+def export_thunks(install, binary, work, timeout):
+    """One `analyzeHeadless` run of the pinned thunk exporter."""
     if not EXPORTER.is_file():
         raise OSError(f'Missing stock thunk exporter: {EXPORTER}')
     output = work / 'thunks.json'
@@ -43,7 +45,22 @@ def stock_thunks(install, binary, work, timeout):
         raise
     if process.returncode or not output.is_file():
         raise ValueError(f'Stock thunk export failed: {log[-4000:]}')
-    result = json.loads(output.read_text())
+    return json.loads(output.read_text())
+
+
+def stock_thunks(install, binary, work, timeout):
+    """Stock's thunk facts for one image, reused across gate runs.
+
+    Four gates (`m5-008`..`m5-011`) ask stock the same questions about the
+    same corpus rows; the answer depends on the bytes, on the exporter script
+    and on the pinned install, so it is keyed by exactly those and by nothing
+    else (`benchmarks/gate_cache.py`). Every shape check below still runs on
+    the reused answer.
+    """
+    result = gate_cache.document(
+        gate_cache.stock_key(binary, install, artifact='thunks',
+                             exporter_sha256=digest(EXPORTER)),
+        lambda: export_thunks(install, binary, work, timeout))
     thunks = {address(entry): dict(fact, thunked=None if fact['thunked'] is None
         else address(fact['thunked'])) for entry, fact in result['thunks'].items()}
     if len(thunks) != len(result['thunks']) or not thunks:

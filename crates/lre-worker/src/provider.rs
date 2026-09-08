@@ -1208,13 +1208,20 @@ fn string_label(text: &str, address: u64) -> String {
     format!("s_{body}_{address:08x}")
 }
 
+/// Ghidra's own mapping from a listing comment type to the decompiler's
+/// property name (`DecompileCallback.encodeCommentsType`:576-595): EOL is
+/// `user1`, PRE is `user2`, POST is `user3` and PLATE is `header`. The
+/// difference is load-bearing -- the decompiler's default body mask is
+/// `user2 | warning` (`printlanguage.cc`:586), so a PRE comment sent as
+/// `header` is silently dropped from the function body (m4-024).
 fn comment_type_name(kind: &str) -> &'static str {
     match kind.to_ascii_lowercase().as_str() {
-        "header" | "plate" | "pre" => "header",
+        "eol" | "user1" => "user1",
+        "pre" | "user2" => "user2",
+        "post" | "user3" => "user3",
+        "header" | "plate" => "header",
         "warning" => "warning",
         "warningheader" => "warningheader",
-        "user2" => "user2",
-        "user3" => "user3",
         _ => "user1",
     }
 }

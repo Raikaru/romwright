@@ -23,16 +23,19 @@ text, since a fact the decompiler never sees closes nothing.
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
 from pathlib import Path
 import sqlite3
 import subprocess
 import sys
-import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+import gate_cache  # noqa: E402
 CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 # The shapes Ghidra's exception analyzer writes; nothing else in a comment is
@@ -77,33 +80,49 @@ def rendered_sites(store: Path) -> dict[tuple[str, str], str]:
     return rendered
 
 
-def native_import(binary: Path, work: Path, name: str) -> Path:
-    project = work / f"native-{name}"
-    result = subprocess.run(
-        [str(CLI), "import", str(binary), "--name", name, "--project", str(project)],
-        capture_output=True, text=True, timeout=900)
-    assert result.returncode == 0, f"{name}: native import failed: {result.stderr[-400:]}"
-    return project
+def native_import(binary: Path, name: str) -> Path:
+    """A native store, reused while the binary and the build are unchanged."""
+    def build(directory: Path) -> None:
+        result = subprocess.run(
+            [str(CLI), "import", str(binary), "--name", name,
+             "--project", str(directory)],
+            capture_output=True, text=True, timeout=900)
+        assert result.returncode == 0, (
+            f"{name}: native import failed: {result.stderr[-400:]}")
+
+    return gate_cache.store(gate_cache.native_key(binary, program=name), build)
 
 
-def oracle_import(binary: Path, work: Path, name: str, install: Path) -> Path:
-    project = work / f"oracle-{name}"
-    result = subprocess.run(
-        [str(CLI), "import", str(binary), "--name", name, "--oracle",
-         "--project", str(project), "--ghidra", str(install)],
-        capture_output=True, text=True, timeout=1800,
-        env=dict(os.environ, DEBUGINFOD_URLS=""))
-    assert result.returncode == 0, f"{name}: oracle import failed: {result.stderr[-400:]}"
-    return project
+def oracle_import(binary: Path, name: str, install: Path) -> Path:
+    """The oracle's store for the same bytes, keyed by its own provenance."""
+    def build(directory: Path) -> None:
+        result = subprocess.run(
+            [str(CLI), "import", str(binary), "--name", name, "--oracle",
+             "--project", str(directory), "--ghidra", str(install)],
+            capture_output=True, text=True, timeout=1800,
+            env=dict(os.environ, DEBUGINFOD_URLS=""))
+        assert result.returncode == 0, (
+            f"{name}: oracle import failed: {result.stderr[-400:]}")
+
+    return gate_cache.store(gate_cache.oracle_key(binary, install, program=name), build)
 
 
-def decompiled(binary: Path, project: Path, name: str, address: str) -> str:
-    result = subprocess.run(
-        [str(CLI), "decompile-batch", str(binary), address, "--name", name,
-         "--project", str(project)],
-        capture_output=True, text=True, timeout=900)
-    assert result.returncode == 0, f"{name}: decompile failed: {result.stderr[-400:]}"
-    return json.loads(result.stdout).get(address, "")
+def decompiled(binary: Path, project: Path, name: str, addresses: list[str]) -> dict:
+    """One launch for every function this row needs, not one launch each."""
+    joined = ",".join(addresses)
+    def build() -> dict:
+        result = subprocess.run(
+            [str(CLI), "decompile-batch", str(binary), joined, "--name", name,
+             "--project", str(project)],
+            capture_output=True, text=True, timeout=900)
+        assert result.returncode == 0, (
+            f"{name}: decompile failed: {result.stderr[-400:]}")
+        return json.loads(result.stdout)
+
+    return gate_cache.document(
+        gate_cache.native_key(binary, program=name, artifact="decompile-batch",
+                              addresses=hashlib.sha256(joined.encode()).hexdigest()),
+        build)
 
 
 def main() -> int:
@@ -113,6 +132,8 @@ def main() -> int:
                         default=Path(os.environ.get("VENTRIS_GHIDRA",
                                                     Path.home() / "ghidra_12.1.3_PUBLIC")))
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--jobs", type=int, default=4,
+                        help="rows measured concurrently; an uncached row runs a JVM")
     arguments = parser.parse_args()
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
                    cwd=ROOT, check=True)
@@ -124,43 +145,52 @@ def main() -> int:
               and entry.get("variant") in ("cpp_o2", "plain_o0")]
     assert wanted, "the lock holds no ELF rows to measure"
 
-    measured, missing, invented = [], [], []
-    with tempfile.TemporaryDirectory(prefix="m4-024-") as temporary:
-        work = Path(temporary)
-        for entry in sorted(wanted, key=lambda item: item["binary"]):
-            binary = arguments.corpus_dir / entry["binary"]
-            name = Path(entry["binary"]).stem
-            if not binary.is_file():
-                continue
-            native = native_import(binary, work, name)
-            oracle = oracle_import(binary, work, name, arguments.ghidra)
-            ours = rendered_sites(native / "project.sqlite")
-            theirs = exception_comments(oracle / "project.sqlite")
-            held = exception_comments(native / "project.sqlite")
-            assert not held, (
-                f"{name}: derived ranges must not be written into the analyst's "
-                f"comments: {held}")
-            for key, text in theirs.items():
-                if ours.get(key) != text:
-                    missing.append({"row": name, "address": key[0], "function": key[1],
-                                    "stock": text, "ours": ours.get(key)})
-            for key, text in ours.items():
-                if theirs.get(key) != text:
-                    invented.append({"row": name, "address": key[0], "function": key[1],
-                                     "ours": text, "stock": theirs.get(key)})
-            row = {"id": name, "variant": entry["variant"], "sites": len(ours),
-                   "stock_comments": len(theirs)}
-            # A recorded range has to reach the decompiler, or the parity class
-            # it was recorded for stays open.
+    def measure(entry: dict) -> tuple[dict, list, list]:
+        binary = arguments.corpus_dir / entry["binary"]
+        name = Path(entry["binary"]).stem
+        native = native_import(binary, name)
+        oracle = oracle_import(binary, name, arguments.ghidra)
+        ours = rendered_sites(native / "project.sqlite")
+        theirs = exception_comments(oracle / "project.sqlite")
+        held = exception_comments(native / "project.sqlite")
+        assert not held, (
+            f"{name}: derived ranges must not be written into the analyst's "
+            f"comments: {held}")
+        absent, extra = [], []
+        for key, text in theirs.items():
+            if ours.get(key) != text:
+                absent.append({"row": name, "address": key[0], "function": key[1],
+                               "stock": text, "ours": ours.get(key)})
+        for key, text in ours.items():
+            if theirs.get(key) != text:
+                extra.append({"row": name, "address": key[0], "function": key[1],
+                              "ours": text, "stock": theirs.get(key)})
+        row = {"id": name, "variant": entry["variant"], "sites": len(ours),
+               "stock_comments": len(theirs)}
+        # A recorded range has to reach the decompiler, or the parity class it
+        # was recorded for stays open. One launch answers every function this
+        # row records a range for.
+        if ours:
+            functions = sorted({function for _, function in ours})
+            bodies = decompiled(binary, native, name, functions)
             for (address, function), text in sorted(ours.items()):
-                body = decompiled(binary, native, name, function)
+                body = bodies.get(function, "")
                 assert text in body, (
                     f"{name}: the comment at {address} is not in the text of "
                     f"{function}: {body[:200]!r}")
-                row["rendered"] = text
-                break
+            row["rendered"] = sorted(ours.values())[0]
+        return row, absent, extra
+
+    measured, missing, invented = [], [], []
+    rows = [entry for entry in sorted(wanted, key=lambda item: item["binary"])
+            if (arguments.corpus_dir / entry["binary"]).is_file()]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.jobs) as pool:
+        for row, absent, extra in pool.map(measure, rows):
             measured.append(row)
-            print(f"{name:24} sites {len(ours)} stock {len(theirs)}", flush=True)
+            missing.extend(absent)
+            invented.extend(extra)
+            print(f"{row['id']:24} sites {row['sites']} stock {row['stock_comments']}",
+                  flush=True)
 
     assert measured, "no row was measured"
     assert not missing, f"exception ranges stock recorded and we did not: {missing}"

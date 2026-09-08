@@ -1,0 +1,68 @@
+{
+ "id": "m4-024",
+ "recorded_at": "2026-09-08T13:54:23.913206+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "4 try ranges recorded from `.gcc_except_table` across 4 of 8 ELF rows, each identical to the comment stock recorded for the same bytes and present in the text our worker prints; 0 missing, 0 invented",
+ "metrics": {
+  "exception.rows_measured": 8,
+  "exception.rows_with_ranges": 4,
+  "exception.ranges_recorded": 4,
+  "exception.ranges_missing": 0,
+  "exception.ranges_invented": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "sites": 1,
+   "stock_comments": 1,
+   "rendered": "try { // try from 00210b6c to 00210b7b has its CatchHandler @ 00210bc4"
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "sites": 0,
+   "stock_comments": 0
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "sites": 1,
+   "stock_comments": 1,
+   "rendered": "try { // try from 004018df to 004018f1 has its CatchHandler @ 004018f2"
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "sites": 0,
+   "stock_comments": 0
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "sites": 1,
+   "stock_comments": 1,
+   "rendered": "try { // try from 10010848 to 10010857 has its CatchHandler @ 10010858"
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "sites": 0,
+   "stock_comments": 0
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "sites": 1,
+   "stock_comments": 1,
+   "rendered": "try { // try from 00201a3c to 00201a4a has its CatchHandler @ 00201a4b"
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "sites": 0,
+   "stock_comments": 0
+  }
+ ]
+}

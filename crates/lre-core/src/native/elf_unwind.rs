@@ -3,7 +3,9 @@
 //! ExceptionHandlerFrameHeader, FdeTable, DwarfEHDataDecodeFormat (Apache-2.0).
 use super::{ElfSection, NativeFunction, NativeImport, NativeXref};
 
-fn decode(bytes: &[u8], cursor: &mut usize, encoding: u8, base: u64, width: usize, be: bool) -> Option<u64> {
+/// One DWARF EH pointer, as the LSB extensions encode them. Shared with
+/// `elf_exception`, which reads the same encodings out of the same CIEs.
+pub(super) fn decode(bytes: &[u8], cursor: &mut usize, encoding: u8, base: u64, width: usize, be: bool) -> Option<u64> {
     let field = *cursor;
     if encoding & 0x80 != 0 { return None; }
     let form = encoding & 0xf;

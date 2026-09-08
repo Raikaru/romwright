@@ -46,6 +46,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+import gate_cache  # noqa: E402
 CLI = ROOT / "target/release/lre-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 GHIDRA = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
@@ -112,6 +114,27 @@ def context() -> dict:
             "definitions": set(), "names": {}, "functions": {}}
 
 
+def cached_stores(binary: Path, timeout: int) -> tuple[Path, Path]:
+    """The native and oracle stores for `binary`, reused across gate runs.
+
+    Both are keyed by the provenance that produced them -- the binary and the
+    build for ours, the binary, the bridge sources and the install revision
+    for stock's -- so a rebuilt worker or an edited bridge is a miss
+    (`benchmarks/gate_cache.py`). Nothing here writes to a store.
+    """
+    def build_native(directory: Path) -> None:
+        result = cli("import", str(binary), "--project", str(directory), timeout=timeout)
+        assert result.returncode == 0, result.stderr.strip()
+
+    def build_oracle(directory: Path) -> None:
+        result = cli("import", str(binary), "--oracle", "--project", str(directory),
+                     "--ghidra", str(GHIDRA), timeout=timeout)
+        assert result.returncode == 0, result.stderr.strip()
+
+    return (gate_cache.store(gate_cache.native_key(binary), build_native),
+            gate_cache.store(gate_cache.oracle_key(binary, GHIDRA), build_oracle))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
@@ -132,13 +155,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="m4-018-") as directory:
         work = Path(directory)
-        native_project, oracle_project = work / "native", work / "oracle"
-        imported = cli("import", str(binary), "--project", str(native_project),
-                       timeout=arguments.timeout)
-        assert imported.returncode == 0, imported.stderr.strip()
-        oracle = cli("import", str(binary), "--oracle", "--project", str(oracle_project),
-                     "--ghidra", str(GHIDRA), timeout=arguments.timeout)
-        assert oracle.returncode == 0, oracle.stderr.strip()
+        native_project, oracle_project = cached_stores(binary, arguments.timeout)
 
         ours = store(native_project, binary.name)
         theirs = store(oracle_project, binary.name)

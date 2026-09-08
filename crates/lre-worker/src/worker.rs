@@ -392,6 +392,26 @@ impl NativeWorker {
         self.run_command(provider, "decompileAt", &[arch_id.as_bytes(), &addr])
     }
 
+    /// Clears the caches the decompiler keeps between functions, as Ghidra's
+    /// own client does after every decompile
+    /// (`DecompInterface.decompileFunction`:828-834 sends `flushNative`
+    /// unconditionally). The comment cache is the load-bearing one: it is
+    /// filled once per function and only `clear()` refills it
+    /// (`comment_ghidra.hh`: "The cache needs to be cleared between
+    /// functions"), so a batch that never flushed gave every function the
+    /// first one's comments -- which is none, for the first function that has
+    /// none (m4-024).
+    pub fn flush_native(&mut self, provider: &mut ProgramProvider) -> Result<()> {
+        let arch_id = self.arch_id.to_string();
+        let _ = self.run_command(provider, "flushNative", &[arch_id.as_bytes()])?;
+        // The flush deletes the scopes the applied signatures live in, so the
+        // memo that avoids re-applying them is now a lie: without this, the
+        // second function in a batch decompiled `printf` as `void
+        // printf(void)` while the first saw the declaration.
+        self.applied_prototypes.clear();
+        Ok(())
+    }
+
     /// Selects the decompiler action root (Java: `setAction "decompile" ""`),
     /// which also enables C-code printing on the result. Without it the
     /// default action name leaves the raw C out of the response.
