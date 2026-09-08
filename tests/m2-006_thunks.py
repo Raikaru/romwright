@@ -42,7 +42,19 @@ def main():
         assert len(after['prototype']['parameters']) == 2, after
         imported = {row['address']['offset'] for row in symbols if row['external']}
         assert imported, symbols
-        assert not [row for row in prototypes if row['function']['offset'] in imported], prototypes
+        # What this protects is the caller: an *inferred* prototype on an
+        # unknown library thunk would be recovered from a body that never
+        # returns to its caller, and would erase the caller's parameters. A
+        # prototype the pinned type archive *declares* for the name the image
+        # imports is the opposite -- the fact that makes the caller's text
+        # right (m4-009) -- so the rule is about where a prototype came from,
+        # not merely where it sits.
+        attached = [row for row in prototypes if row['function']['offset'] in imported]
+        recovered = [row for row in attached
+                     if row['provenance'].get('evidence') != 'declared']
+        assert not recovered, recovered
+        assert all(row['provenance']['source'] == 'native-import:type-archive'
+                   for row in attached), attached
         assert any(row['function'] == target['address'] for row in prototypes), prototypes
         print(json.dumps(dict(passed=True, architecture=args.architecture, entry=entry,
             parameters=2, rounds=report['rounds'], imported_symbols=len(imported))))
