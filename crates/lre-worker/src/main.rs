@@ -204,6 +204,22 @@ fn run(
             provider.data_targets.insert(target.offset);
         }
     }
+    // A pointer's label names its referent, so a pointer-typed slot's target
+    // has to travel with it. Which rule typed the slot does not matter: what
+    // the label needs is the address the slot holds (m4-027).
+    for xref in db.xrefs(pid)? {
+        let pointer = matches!(
+            provider.data_definitions.get(&xref.from.offset),
+            Some((kind, _)) if kind == "pointer"
+        );
+        if pointer
+            && xref.kind == "DATA"
+            && xref.from.space == lre_model::AddressSpace::Ram
+            && xref.to.space == lre_model::AddressSpace::Ram
+        {
+            provider.pointer_targets.insert(xref.from.offset, xref.to.offset);
+        }
+    }
     provider.load_call_edges(&db, pid)?;
     provider.load_return_behaviors(&db, pid, false)?;
     provider.load_calling_conventions(&db, pid)?;

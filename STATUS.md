@@ -4764,23 +4764,58 @@ evidence:
   unexplained**, eight classes. The gate written for the refuted claim is
   removed rather than weakened into something that passes.
 
+### m4-027 evidence
+- Two rules from the pinned tree, both needed, and each measured before it
+  was written:
+  - `OperandReferenceAnalyzer.checkForPointer` (:952-1035): a reference lands
+    on an undefined location, the pointer-sized value there is read, and the
+    location becomes `PointerDataType` unless the value is below 4096, is not
+    in memory, is offcut, or lands inside a function that is not its entry.
+  - `ElfDefaultGotPltMarkup.processGOTSections` (:78-94) and `processGOT`
+    (:400-416): every initialized block whose name starts with `.got` is
+    walked in pointer-size steps and **every** word is typed through
+    `createPointer` (:562-585). The value decides only whether the reference
+    survives (`isValidPointer`, :611-623: mapped memory, or a name); a word
+    holding zero is still a pointer, which is why stock labels it
+    `PTR_10020728` with no referent.
+- The label is composed, not stored: `PointerDataType.getLabelString`
+  (:192-238) takes the primary reference from the slot, cleans the referent's
+  name with `SymbolUtilities.getCleanSymbolName` (:950-972, which strips a
+  trailing `_<address>` only when the name is exactly base plus that address),
+  and yields `PTR_<clean>`; the listing appends the slot. So a default name
+  contributes its prefix -- `FUN_00401570` at the slot `004026d8` prints
+  `PTR_FUN_004026d8`.
+- Implemented: `elf_pointers::confirm_referenced_pointers` (the reference
+  rule, run after reference inference, since the reference is its evidence)
+  and `elf_pointers::collect_got` (the loader rule, run on both ELF widths),
+  with sources `native-analysis:data-pointer` and `native-import:elf-got`.
+  A word another rule owns keeps that rule's provenance -- the ABI-reserved
+  `.got.plt` head, an initializer entry, an ifunc slot, an import -- and the
+  width rule now yields the address instead of claiming it `undefined`
+  (the store's `ON CONFLICT DO NOTHING` makes the first writer the owner).
+  The worker composes the label from any pointer-typed slot's stored target,
+  not from one rule's provenance.
+- Measured (`tests/m4-027_pointer_slots.py`,
+  `benchmarks/reports/m4-027.json`): **37 slots across 20 ELF rows**, every
+  one typed as a pointer on both sides, **0 missing and 0 invented**. Stock's
+  side is read from labels because the oracle export carries no data
+  definitions at all (measured: 0 rows), so a slot where stock has its own
+  name (`__DT_PLTGOT`, `__DT_PPC_GOT`) is evidence-free and out of scope; the
+  rendering is proven by parity instead.
+- `m4-003`: `data-type-unknown` **4 -> 0** (the class is gone) and
+  `data-name-convention` **8 -> 4**, so 154 -> 146 attributed differences.
+  1739 of 1845 token-identical, 0 unexplained, seven classes left, baseline
+  re-recorded.
+- Regression: `cargo test --workspace` **258 pass**; every gate in `tests/`
+  passes, plus the five shell suites.
+
 ## Next task
-- m4-027: `data-type-unknown` 4. Both stores name the same address and
-  disagree about what is there: stock holds defined data with a type where our
-  store holds a reference, so its text prints `PTR_FUN_004026d8` where ours
-  prints `PTR__INIT_0_004026d8` and the cast placement differs. Read
-  `DecompileCallback.encodeData`/`encodeHole` (:820-1010, how stock answers a
-  data address) and `PointerDataType.getLabelString` in the pinned tree,
-  record what stock's store holds at each of the four addresses, and decide
-  whether the fact we are missing is a data definition or a reference width.
-  The acceptance test asserts the store's answer at those addresses against
-  stock's, not the rendered label.
-- Then `mangled-name` 8, whose direction is now known: both stores hold
+- m4-028: `mangled-name` 8, whose direction is known: both stores hold
   `_ZTIi`; stock's demangler adds a namespace-qualified symbol at the same
   address and prints it. Closing it means holding the demangled name as a
   second symbol with its own provenance, and deciding which of the two the
-  worker sends -- the `name`/`label` split above is the mechanism, and the
-  m4-026 measurements are the constraint.
+  worker sends -- the `name`/`label` split measured in m4-026 is the
+  mechanism, and its findings are the constraint.
 - Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
   approved targets) needs a target game, which II.1 reserves for the human.
 

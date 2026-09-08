@@ -1,23 +1,24 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-08T05:31:39.721371+00:00",
+ "recorded_at": "2026-09-08T17:46:54.099263+00:00",
  "status": "pass",
  "passed": true,
- "summary": "24 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "28 classes classified as declared/decoded/inferred; 8 of 17 declared classes scored here and 9 by another committed gate, each attributing 1.0000 of the 4540 entries they named; 4669 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 24,
-  "evidence.declared": 14,
-  "evidence.declared_exercised": 7,
-  "evidence.declared_elsewhere": 7,
+  "evidence.classes": 28,
+  "evidence.declared": 17,
+  "evidence.declared_exercised": 8,
+  "evidence.declared_elsewhere": 9,
   "evidence.unbacked_confidence": 0,
-  "evidence.references": 4665,
+  "evidence.references": 4669,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
   "evidence.attributed.native-import": 1.0,
   "evidence.attributed.native-import:branch": 1.0,
+  "evidence.attributed.native-import:elf-got": 1.0,
   "evidence.attributed.native-import:elf-pointer": 1.0,
   "evidence.attributed.native-import:elf-reloc": 1.0,
   "evidence.attributed.native-import:elf-unwind": 1.0,
@@ -45,6 +46,12 @@
    "evidence": "inferred",
    "explanation": "A constant the decompiler propagated to this instruction: the address is computed by the code, not stored in the image.",
    "source": "native-analysis:constant-propagation"
+  },
+  "native-analysis:data-pointer": {
+   "derives_confidence": false,
+   "evidence": "inferred",
+   "explanation": "A referenced word whose bytes are a function's entry: something reads this location, and what it holds is code, so the location is a pointer to that function.",
+   "source": "native-analysis:data-pointer"
   },
   "native-analysis:data-width": {
    "derives_confidence": false,
@@ -75,6 +82,24 @@
    "evidence": "declared",
    "explanation": "An address the image's own dynamic table names: the table itself, or the target of a tag whose value is an address, labelled where nothing else names it.",
    "source": "native-import:dynamic-tag"
+  },
+  "native-import:elf-copy": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "An object the dynamic linker copies into the image at load time: the relocation names the library definition it copies, so the slot is that object.",
+   "source": "native-import:elf-copy"
+  },
+  "native-import:elf-exception": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A call site the image's own `.gcc_except_table` declares protected, with the handler that call site enters when it throws: the range and the landing pad are read from the LSDA the frame points at.",
+   "source": "native-import:elf-exception"
+  },
+  "native-import:elf-got": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "A word inside a `.got` section: the ELF's own global offset table holds addresses, so every entry of it is a pointer whatever value it currently carries.",
+   "source": "native-import:elf-got"
   },
   "native-import:elf-pointer": {
    "derives_confidence": false,
@@ -195,6 +220,13 @@
    "rate": 1.0,
    "evidence": "decoded"
   },
+  "native-import:elf-got": {
+   "references": 4,
+   "attributed": 4,
+   "misses": [],
+   "rate": 1.0,
+   "evidence": "declared"
+  },
   "native-import:elf-pointer": {
    "references": 36,
    "attributed": 36,
@@ -254,6 +286,12 @@
  },
  "declared_elsewhere": {
   "native-import:dynamic-tag": [
+   "evidence-classes.json"
+  ],
+  "native-import:elf-copy": [
+   "evidence-classes.json"
+  ],
+  "native-import:elf-exception": [
    "evidence-classes.json"
   ],
   "native-import:entry-convention": [

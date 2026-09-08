@@ -11,6 +11,10 @@
   "evidence": "inferred",
   "derives_confidence": false
  },
+ "native-analysis:data-pointer": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
  "native-analysis:data-width": {
   "evidence": "decoded",
   "derives_confidence": false
@@ -36,6 +40,10 @@
   "derives_confidence": false
  },
  "native-import:elf-exception": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:elf-got": {
   "evidence": "declared",
   "derives_confidence": false
  },

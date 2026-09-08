@@ -189,6 +189,10 @@ pub struct NativeImport {
     /// Initializer-array words, with their width: each holds a code address,
     /// proved by the array it belongs to.
     pub initializer_slots: Vec<(u64, u64)>,
+    /// Referenced words whose bytes are a function's entry, with their width.
+    pub pointer_slots: Vec<(u64, u64)>,
+    /// Words inside a `.got` section, with their width.
+    pub got_slots: Vec<(u64, u64)>,
     /// Entries whose name came from the image's own symbol table. Ghidra's
     /// loader leaves such a function's name alone and only marks it an entry
     /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
@@ -481,6 +485,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     };
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
     elf_pointers::collect(data, &sections, &mut import, 4, be)?;
+    elf_pointers::collect_got(data, &sections, &mut import, 4, be)?;
     elf_unwind::collect(data, &sections, &mut import, 4, be);
     elf_exception::collect(data, &sections, &mut import, 4, be);
     Ok(import)
@@ -719,6 +724,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     };
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
     elf_pointers::collect(data, &sections, &mut import, 8, false)?;
+    elf_pointers::collect_got(data, &sections, &mut import, 8, false)?;
     elf_unwind::collect(data, &sections, &mut import, 8, false);
     elf_exception::collect(data, &sections, &mut import, 8, false);
     Ok(import)
@@ -1221,6 +1227,10 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     name_linkage_stubs(imp);
     apply_initializer_labels(imp);
     apply_pattern_labels(imp);
+    // A word a reference landed on, whose bytes are a function's entry: the
+    // references have to exist first, which is why this is not a loader pass
+    // (m4-027).
+    elf_pointers::confirm_referenced_pointers(imp);
     Ok(())
 }
 
@@ -1622,6 +1632,12 @@ pub const SHARED_RETURN_SOURCE: &str = "native-analysis:shared-return";
 pub const DATA_WIDTH_SOURCE: &str = "native-analysis:data-width";
 /// A word an initializer array proves holds a code address.
 pub const ELF_POINTER_SOURCE: &str = "native-import:elf-pointer";
+
+/// A referenced word whose bytes are a function's entry.
+pub const DATA_POINTER_SOURCE: &str = "native-analysis:data-pointer";
+
+/// A word inside a `.got` section, which the ELF loader types as a pointer.
+pub const ELF_GOT_SOURCE: &str = "native-import:elf-got";
 /// An object the dynamic linker copies into the image, named by the
 /// relocation that copies it.
 pub const ELF_COPY_SOURCE: &str = "native-import:elf-copy";
@@ -1818,6 +1834,8 @@ pub fn store_import(
         .iter()
         .filter(|(address, _)| {
             !imp.plt_reserved_slots.iter().any(|(slot, _)| slot == address)
+                && !imp.pointer_slots.iter().any(|(slot, _)| slot == address)
+                && !imp.got_slots.iter().any(|(slot, _)| slot == address)
         })
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),
@@ -1850,6 +1868,40 @@ pub fn store_import(
     slots.sort_by_key(|row| row.address.offset);
     slots.dedup_by_key(|row| row.address.offset);
     db.replace_inferred_data_definitions(pid, ELF_POINTER_SOURCE, &slots)?;
+    let mut pointers: Vec<lre_model::DataDefinitionRow> = imp
+        .pointer_slots
+        .iter()
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: "pointer".into(),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: DATA_POINTER_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    pointers.sort_by_key(|row| row.address.offset);
+    pointers.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, DATA_POINTER_SOURCE, &pointers)?;
+    let mut got: Vec<lre_model::DataDefinitionRow> = imp
+        .got_slots
+        .iter()
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: "pointer".into(),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: ELF_GOT_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    got.sort_by_key(|row| row.address.offset);
+    got.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, ELF_GOT_SOURCE, &got)?;
     // The rule owns its rows: re-importing an image the rule no longer covers
     // clears the fact, and an assertion over it is left alone.
     let conventions: Vec<lre_model::CallingConventionRow> = imp

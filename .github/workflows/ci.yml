@@ -366,6 +366,13 @@ jobs:
           python3 tests/m4-024_exception_annotations.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/exception-annotations.json"
+      - name: Type the words that hold addresses as pointers
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-027_pointer_slots.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/pointer-slots.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

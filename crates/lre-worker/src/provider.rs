@@ -77,6 +77,10 @@ pub struct ProgramProvider {
     /// dynamic-label case Ghidra composes on demand rather than storing
     /// (`SymbolUtilities.getDynamicName`).
     pub data_targets: HashSet<u64>,
+    /// Pointer slot -> the address its bytes hold. Ghidra names a pointer
+    /// after its referent, so the label needs the target, not just the slot
+    /// (`PointerDataType.getLabelString`, :192-238).
+    pub pointer_targets: HashMap<u64, u64>,
     /// Entry address -> stored prototype, including its assertion status.
     pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
     /// RAM entries with a stored non-returning fact.
@@ -138,6 +142,7 @@ impl ProgramProvider {
             external_names: HashMap::new(),
             strings: HashMap::new(),
             data_targets: HashSet::new(),
+            pointer_targets: HashMap::new(),
             prototypes: HashMap::new(),
             non_returning: HashSet::new(),
             call_edges: Vec::new(),
@@ -208,6 +213,23 @@ impl ProgramProvider {
     /// The model to send for a function, if the store holds one.
     pub fn convention(&self, vaddr: u64) -> Option<&str> {
         self.conventions.get(&vaddr).map(String::as_str)
+    }
+
+    /// The name Ghidra composes a pointer label from: the referent's symbol
+    /// with its address suffix stripped
+    /// (`PointerDataType.getLabelString` :229-231 calls
+    /// `SymbolUtilities.getCleanSymbolName`, :950-972, which removes a
+    /// trailing `_<address>` only when the whole name is exactly base plus
+    /// that address). A default name therefore contributes its prefix -- a
+    /// slot holding `FUN_00401570` is labelled `PTR_FUN_<slot>` -- and a real
+    /// name contributes itself.
+    pub fn pointer_referent(&self, vaddr: u64) -> Option<String> {
+        let target = *self.pointer_targets.get(&vaddr)?;
+        let name = self
+            .function_names
+            .get(&target)
+            .or_else(|| self.symbol_names.get(&target))?;
+        Some(clean_symbol_name(name, target))
     }
 
     /// The compiler spec's call fixup for a function, by name. Ghidra tries
@@ -828,7 +850,10 @@ impl NativeWorker {
                     // `getDynamicDataName`, SymbolUtilities.java:541-544).
                     let name = match provider.external_names.get(&vaddr) {
                         Some(target) => format!("PTR_{target}_{vaddr:08x}"),
-                        None => format!("PTR_{vaddr:08x}"),
+                        None => match provider.pointer_referent(vaddr) {
+                            Some(referent) => format!("PTR_{referent}_{vaddr:08x}"),
+                            None => format!("PTR_{vaddr:08x}"),
+                        },
                     };
                     let size = provider
                         .data_definitions
@@ -1329,5 +1354,18 @@ mod tests {
         wire::encode_addr_element(&mut payload, 3, 0x401178);
         wire::encode_header(&mut payload, wire::ELEMENT_END, wire::query::GETSTRINGDATA);
         assert_eq!(decode_addr_element(&payload), Some((3, 0x401178, 0)));
+    }
+}
+
+/// Strips the address suffix a dynamic name carries, exactly as Ghidra's
+/// `SymbolUtilities.getCleanSymbolName` (:950-972) does: the name is split at
+/// its last `_` and the tail must be the symbol's own address rendered the way
+/// the store renders it, or the name is returned untouched.
+fn clean_symbol_name(name: &str, address: u64) -> String {
+    match name.rsplit_once('_') {
+        Some((base, tail)) if !base.is_empty() && tail == format!("{address:08x}") => {
+            base.to_string()
+        }
+        _ => name.to_string(),
     }
 }

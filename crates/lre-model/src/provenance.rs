@@ -200,6 +200,22 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:elf-got",
+        explanation: "A word inside a `.got` section: the ELF's own global offset table \
+         holds addresses, so every entry of it is a pointer whatever value it \
+         currently carries.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:data-pointer",
+        explanation: "A referenced word whose bytes are a function's entry: something \
+         reads this location, and what it holds is code, so the location is a \
+         pointer to that function.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:pe-reloc",
         explanation:         "A PE base relocation: the loader will rebase this slot, so the value \
          in it is an address rather than a number.",

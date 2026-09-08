@@ -53,6 +53,97 @@ pub(super) fn collect(data: &[u8], sections: &[ElfSection], import: &mut NativeI
     Ok(())
 }
 
+/// Types every word of every `.got` section as a pointer.
+///
+/// Ghidra's loader does this before any analyzer runs:
+/// `ElfDefaultGotPltMarkup.processGOTSections` (:78-94) takes each initialized
+/// block whose name starts with `.got`, forces it read-only, and
+/// `processGOT` (:400-416) walks it in pointer-size steps calling
+/// `createPointer` (:562-585) on every entry -- the value is never consulted
+/// when deciding *whether* to type the word, only whether to keep the
+/// reference it produces (`isValidPointer`, :611-623: the value has to be
+/// mapped memory or carry a name). A word holding zero is still a pointer;
+/// it just has no reference, which is why stock labels it `PTR_<address>`.
+///
+/// A word another rule already owns keeps that rule's provenance: the ABI's
+/// reserved `.got.plt` head, an initializer array entry, and an import slot
+/// are all typed elsewhere with stronger evidence than "it lives in .got".
+pub(super) fn collect_got(
+    data: &[u8],
+    sections: &[ElfSection],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+) -> Result<()> {
+    let relocated: HashMap<_, _> = import
+        .xrefs
+        .iter()
+        .filter(|x| x.provenance == "native-import:elf-reloc")
+        .map(|x| (x.from, x.to))
+        .collect();
+    let owned: std::collections::HashSet<u64> = import
+        .initializer_slots
+        .iter()
+        .chain(import.plt_reserved_slots.iter())
+        .chain(import.ifunc_slots.iter())
+        .map(|(address, _)| *address)
+        .chain(import.externals.iter().map(|(address, _)| *address))
+        .collect();
+    let mut slots: Vec<(u64, u64)> = Vec::new();
+    let mut references: Vec<(u64, u64)> = Vec::new();
+    for section in sections {
+        if !section.name.starts_with(".got") || section.flags & 2 == 0 || section.typ == 8 {
+            continue;
+        }
+        let Some(end) = section.off.checked_add(section.size) else {
+            return err("ELF got section file range overflow");
+        };
+        let Some(bytes) = usize::try_from(section.off)
+            .ok()
+            .zip(usize::try_from(end).ok())
+            .and_then(|(start, end)| data.get(start..end))
+        else {
+            return err("ELF got section outside file");
+        };
+        for (index, chunk) in bytes.chunks_exact(width).enumerate() {
+            let Some(slot) = section.addr.checked_add((index * width) as u64) else {
+                return err("ELF got section address overflow");
+            };
+            if owned.contains(&slot) {
+                continue;
+            }
+            slots.push((slot, width as u64));
+            let target = relocated.get(&slot).copied().unwrap_or_else(|| match (width, be) {
+                (4, false) => u32::from_le_bytes(chunk.try_into().unwrap()) as u64,
+                (4, true) => u32::from_be_bytes(chunk.try_into().unwrap()) as u64,
+                (8, false) => u64::from_le_bytes(chunk.try_into().unwrap()),
+                (8, true) => u64::from_be_bytes(chunk.try_into().unwrap()),
+                _ => unreachable!("ELF got pointer width"),
+            });
+            let mapped = import
+                .mappings
+                .iter()
+                .any(|m| target >= m.vaddr && target - m.vaddr < m.size);
+            let named = import.externals.iter().any(|(address, _)| *address == target);
+            if mapped || named {
+                references.push((slot, target));
+            }
+        }
+    }
+    for (slot, target) in references {
+        import.xrefs.push(NativeXref::with_provenance(
+            slot,
+            target,
+            "DATA",
+            super::ELF_GOT_SOURCE,
+        ));
+    }
+    slots.sort_unstable();
+    slots.dedup();
+    import.got_slots = slots;
+    Ok(())
+}
+
 pub(super) fn confirm_initializers(import: &mut NativeImport) {
     use crate::native_runtime::{ConsoleSession, FlowKind};
     let candidates: Vec<_> = import.initializer_candidates.iter().copied()
@@ -66,4 +157,84 @@ pub(super) fn confirm_initializers(import: &mut NativeImport) {
             import.functions.push(super::NativeFunction { entry, name: format!("FUN_{entry:08x}"), size: 1 });
         }
     }
+}
+
+/// A referenced word whose bytes are the entry of a function is a pointer.
+///
+/// Ghidra's rule, from `OperandReferenceAnalyzer.checkForPointer`
+/// (:952-1035): a reference lands on an undefined location, the
+/// pointer-sized value there is read, and the location is typed
+/// `PointerDataType` unless the value is below 4096, is not in memory, is
+/// offcut, or lands inside a function that is not its entry. This records the
+/// case the corpus proves: the value *is* a function entry, so no
+/// pseudo-disassembly is needed to know the target is code.
+///
+/// The slot is left alone when another rule already owns it -- an initializer
+/// array word, an ABI-reserved PLT word, an import slot -- so a type never
+/// depends on which pass ran last.
+pub(super) fn confirm_referenced_pointers(import: &mut NativeImport) {
+    let Some(machine) = import.elf_machine else {
+        return;
+    };
+    let width = u64::from(machine.bits / 8);
+    if width == 0 {
+        return;
+    }
+    let entries: std::collections::HashSet<u64> =
+        import.functions.iter().map(|function| function.entry).collect();
+    let owned: std::collections::HashSet<u64> = import
+        .initializer_slots
+        .iter()
+        .chain(import.plt_reserved_slots.iter())
+        .map(|(address, _)| *address)
+        .chain(import.externals.iter().map(|(address, _)| *address))
+        .collect();
+    let mut targets: Vec<u64> = import
+        .xrefs
+        .iter()
+        .filter(|xref| matches!(xref.kind.as_str(), "DATA" | "READ" | "WRITE"))
+        .map(|xref| xref.to)
+        .collect();
+    targets.sort_unstable();
+    targets.dedup();
+    let mut found: Vec<(u64, u64)> = Vec::new();
+    for slot in targets {
+        if owned.contains(&slot) || entries.contains(&slot) {
+            continue;
+        }
+        let Some(value) = word_at(import, slot, width, machine.big_endian) else {
+            continue;
+        };
+        // Ghidra refuses a small value outright: an address table with a zero
+        // in it is possible, but a low number is not an address.
+        if value < 4096 || !entries.contains(&value) {
+            continue;
+        }
+        found.push((slot, width));
+        import.xrefs.push(NativeXref::with_provenance(
+            slot,
+            value,
+            "DATA",
+            super::DATA_POINTER_SOURCE,
+        ));
+    }
+    found.sort_unstable();
+    found.dedup();
+    import.pointer_slots = found;
+}
+
+/// The pointer-sized word at one address, from the mapping that carries it.
+fn word_at(import: &NativeImport, address: u64, width: u64, be: bool) -> Option<u64> {
+    let mapping = import.mappings.iter().find(|mapping| {
+        address >= mapping.vaddr && address - mapping.vaddr < mapping.size
+    })?;
+    let offset = usize::try_from(address - mapping.vaddr).ok()?;
+    let end = offset.checked_add(usize::try_from(width).ok()?)?;
+    let bytes = mapping.bytes.get(offset..end)?;
+    let mut value = 0u64;
+    for index in 0..bytes.len() {
+        let byte = bytes[if be { index } else { bytes.len() - 1 - index }];
+        value = (value << 8) | u64::from(byte);
+    }
+    Some(value)
 }
