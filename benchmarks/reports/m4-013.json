@@ -1,0 +1,28 @@
+{
+  "task": "m4-013",
+  "recorded_at": "2026-09-08T01:50:30.050929+00:00",
+  "scope": "positive acceptance plus four fixture controls, not a locked corpus gate",
+  "metrics": {
+    "corpus": [
+      {
+        "program": "powerpc_plain_o0.bin",
+        "caller": "100103f0",
+        "branch": "10010420",
+        "calls": "__libc_start_main"
+      },
+      {
+        "program": "aarch64_plain_o0.bin",
+        "caller": "00210704",
+        "branch": "00210710",
+        "calls": "__gmon_start__"
+      }
+    ],
+    "shapes": {
+      "tail_call": "00400187",
+      "internal_jump": "no override, no transfer",
+      "conditional": "no shared-return override",
+      "entry_branch": "no override"
+    }
+  },
+  "passed": true
+}

@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T00:32:32.906768+00:00",
+ "recorded_at": "2026-09-08T01:30:03.137450+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 30 of 56 functions token-identical, 26 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 10, function-facts 11, missing-external-prototype 11, name-convention 9, type-stronger 9), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 30 of 56 functions token-identical, 26 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 9, function-facts 11, missing-external-prototype 11, name-convention 9, type-stronger 9), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -14,7 +14,7 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 3,
   "parity.class.data-type-unknown": 2,
-  "parity.class.flow": 10,
+  "parity.class.flow": 9,
   "parity.class.function-facts": 11,
   "parity.class.missing-external-prototype": 11,
   "parity.class.name-convention": 9,
@@ -58,7 +58,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "325a5673a02dd02037007a08ef67dc682a55e549e196d0d5caf9574fb41dfac8"
+    "sha256": "c35b4af4fb5753c9740f3a14d4d1cdcea28d73ac9b44e5ef4be409501c427a24"
    }
   },
   {
@@ -78,7 +78,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "7192eaea962c8f4f4d7566ac2e43c071ed97c749764a197285acc413dea474b8"
+    "sha256": "293100de2002691ffa9cdbe69063a5a814ac590dc07ca2dec52afa68e49452cf"
    }
   },
   {

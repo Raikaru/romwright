@@ -185,6 +185,11 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Branches an unconditional-jump-to-a-function-entry rule proved to be
+    /// calls that return, keyed by the branching instruction. Recorded by
+    /// `record_branch_transfers`, applied once every rule that owns an
+    /// override has run.
+    pub shared_return_branches: Vec<u64>,
     /// Addresses the dynamic table names, labelled as Ghidra labels them:
     /// `__DT_<TAG>` for every ADDRESS-valued tag with a nonzero value, and
     /// `_DYNAMIC` for the table itself
@@ -1193,6 +1198,10 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // The instruction that reads the resolver slot only exists once reference
     // inference has run, so this rule reads its facts, not discovery's seeds.
     discovery::record_plt_header_flow(imp);
+    // Last, so a rule that owns an instruction's override keeps it: Ghidra
+    // skips an instruction that already carries one
+    // (`SharedReturnAnalysisCmd.processFunctionJumpReferences`, :417-419).
+    discovery::apply_shared_returns(imp);
     name_linkage_stubs(imp);
     apply_initializer_labels(imp);
     apply_pattern_labels(imp);
@@ -1572,6 +1581,8 @@ pub const PROCESS_ENTRY_MODEL: &str = "processEntry";
 pub const ENTRY_CONVENTION_SOURCE: &str = "native-import:entry-convention";
 /// A name the dynamic table itself carries.
 pub const DYNAMIC_LABEL_SOURCE: &str = "native-import:dynamic-tag";
+/// A branch that leaves its function for another function's entry.
+pub const SHARED_RETURN_SOURCE: &str = "native-analysis:shared-return";
 
 /// The process-entry model when the language declares one, and nothing when
 /// it does not -- Ghidra catches the same failure and skips silently
@@ -1701,7 +1712,7 @@ pub fn store_import(
     db.replace_xrefs(pid, &xrows)?;
     // Each rule owns its rows: the ABI-reserved slot and a stub's own branch
     // are different evidence for the same kind of correction.
-    for source in [PLT_HEADER_SOURCE, THUNK_SOURCE] {
+    for source in [PLT_HEADER_SOURCE, THUNK_SOURCE, SHARED_RETURN_SOURCE] {
         let overrides: Vec<lre_model::FlowOverrideRow> = imp
             .flow_overrides
             .iter()

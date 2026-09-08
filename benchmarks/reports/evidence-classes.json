@@ -7,6 +7,10 @@
   "evidence": "inferred",
   "derives_confidence": false
  },
+ "native-analysis:shared-return": {
+  "evidence": "decoded",
+  "derives_confidence": false
+ },
  "native-import": {
   "evidence": "declared",
   "derives_confidence": false

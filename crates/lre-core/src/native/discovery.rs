@@ -1427,6 +1427,11 @@ pub fn record_branch_transfers(imp: &mut NativeImport) {
         // function entry: Ghidra treats that as a thunk and leaves the jump
         // reference alone (`funcMgr.getFunctionAt(refInstrAddr) != null`).
         let kind = if entries.contains(&to) && !entries.contains(&from) {
+            // The same rule sets the override that makes it one. A single
+            // decoded unconditional branch is one flow reference by
+            // construction, which is Ghidra's `getSingleFlowReferenceFrom`
+            // condition; the jump leaving its own body is checked above.
+            imp.shared_return_branches.push(from);
             "UNCONDITIONAL_CALL"
         } else {
             "UNCONDITIONAL_JUMP"
@@ -1449,6 +1454,25 @@ pub fn record_branch_transfers(imp: &mut NativeImport) {
         }
     }
     imp.branch_transfers = transfers;
+}
+
+/// Turns each proven shared-return branch into the override that carries it.
+///
+/// Ghidra sets `FlowOverride.CALL_RETURN` on the branching instruction and
+/// leaves an instruction that already carries an override alone
+/// (`SharedReturnAnalysisCmd.processFunctionJumpReferences`, :417-423), so a
+/// stub's own transfer keeps the thunk rule's override and its provenance.
+pub fn apply_shared_returns(imp: &mut NativeImport) {
+    let mut branches = std::mem::take(&mut imp.shared_return_branches);
+    branches.sort_unstable();
+    branches.dedup();
+    for branch in &branches {
+        if imp.flow_overrides.iter().any(|(address, _)| address == branch) {
+            continue;
+        }
+        imp.flow_overrides.push((*branch, crate::native::SHARED_RETURN_SOURCE));
+    }
+    imp.shared_return_branches = branches;
 }
 
 fn linkage_flow_shape(target: u64, instructions: &[(u64, u64)], endings: &[(u64, bool)]) -> bool {

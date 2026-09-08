@@ -1,5 +1,5 @@
 {"address": "002106c0", "classes": {"function-facts": {"name": ["entry", "_entry"]}, "missing-external-prototype": ["__libc_start_main", "abort"], "data-type-unknown": [{"oracle": "LAB_002106f4", "native": ["DAT_002106f4"]}], "data-name-convention": [{"address": "002106f4", "oracle": "LAB_002106f4", "native": "DAT_002106f4"}]}, "oracle_tokens": 33, "native_tokens": 33}
-{"address": "00210704", "classes": {"missing-external-prototype": ["__gmon_start__"], "flow": ["/* WARNING: Could not recover jumptable at 0x002108ac. Too many branches */", "/* WARNING: Treating indirect jump as call */"]}, "oracle_tokens": 28, "native_tokens": 29}
+{"address": "00210704", "classes": {"missing-external-prototype": ["__gmon_start__"]}, "oracle_tokens": 28, "native_tokens": 24}
 {"address": "00210828", "classes": {"name-convention": ["_DT_INIT", "_init"]}, "oracle_tokens": 13, "native_tokens": 13}
 {"address": "00210840", "classes": {"name-convention": ["_DT_FINI", "_fini"]}, "oracle_tokens": 9, "native_tokens": 9}
 {"address": "00210860", "classes": {"name-convention": ["FUN_00210860", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
