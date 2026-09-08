@@ -75,8 +75,46 @@ fn run(
             .insert(off, lre_worker::c_identifier(&f.name));
         provider.function_sizes.insert(off, f.size as u64);
     }
-    for symbol in db.symbols(pid)? {
-        let rendered = lre_worker::c_identifier(&symbol.name);
+    let held = db.symbols(pid)?;
+    // Stock applies a demangled name as the *primary* symbol at its address
+    // (`DemangledAddressTable.applyTo`, :86, through
+    // `DemangledObject.applyDemangledName`, :551-554), and the primary is the
+    // name a decompiler prints. Which is why `_ZTIi` prints as `typeinfo`.
+    let primary: std::collections::HashMap<u64, String> = held
+        .iter()
+        .filter(|symbol| symbol.source == lre_core::native::DEMANGLE_SOURCE)
+        .map(|symbol| (symbol.address.offset, lre_worker::c_identifier(&symbol.name)))
+        .collect();
+    // A demangled name is applied inside the namespace the mangled name
+    // names -- `typeinfo` in `int` -- and the decompiler prints a symbol
+    // outside the global scope scope-qualified. The namespace is re-derived
+    // from the mangled name beside it, so one demangler answers both.
+    // Scope ids share one space with the function ids this session hands out
+    // in mapped-symbol answers (`index + 1`), and a collision makes the
+    // decompiler reuse the function's scope instead of asking for the
+    // namespace's path (`ScopeGhidra::reresolveScope`,
+    // database_ghidra.cc:48-61). Namespaces get their own high range.
+    const NAMESPACE_BASE: u64 = 1 << 48;
+    let mut next_namespace = NAMESPACE_BASE;
+    for symbol in &held {
+        if !primary.contains_key(&symbol.address.offset) {
+            continue;
+        }
+        if let Some(demangled) = lre_core::demangle::demangle(&symbol.name) {
+            if !demangled.namespace.is_empty() {
+                next_namespace += 1;
+                provider.namespaces.insert(
+                    symbol.address.offset,
+                    (next_namespace, lre_worker::c_identifier(&demangled.namespace)),
+                );
+            }
+        }
+    }
+    for symbol in &held {
+        let rendered = primary
+            .get(&symbol.address.offset)
+            .cloned()
+            .unwrap_or_else(|| lre_worker::c_identifier(&symbol.name));
         provider
             .symbol_names
             .entry(symbol.address.offset)

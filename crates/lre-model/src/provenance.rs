@@ -208,6 +208,22 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:elf-object",
+        explanation: "The size an ELF symbol declares for the object it names: the image \
+         says this many bytes belong to that object, so that much of the \
+         address is one datum.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:demangle",
+        explanation: "The name a mangled name was mangled from, applied beside it: the \
+         mangled name is kept as the evidence, and the name it encodes is what \
+         a reader sees.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-analysis:data-pointer",
         explanation: "A referenced word whose bytes are a function's entry: something \
          reads this location, and what it holds is code, so the location is a \

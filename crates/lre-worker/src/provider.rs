@@ -81,6 +81,11 @@ pub struct ProgramProvider {
     /// after its referent, so the label needs the target, not just the slot
     /// (`PointerDataType.getLabelString`, :192-238).
     pub pointer_targets: HashMap<u64, u64>,
+    /// Address -> the namespace its symbol lives in, and the id this session
+    /// gave that namespace. A symbol outside the global scope is printed
+    /// scope-qualified (`PrintC::pushSymbolScope`, printc.cc:202-231), which
+    /// is how `_ZTIi` prints as `int::typeinfo`.
+    pub namespaces: HashMap<u64, (u64, String)>,
     /// Entry address -> stored prototype, including its assertion status.
     pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
     /// RAM entries with a stored non-returning fact.
@@ -143,6 +148,7 @@ impl ProgramProvider {
             strings: HashMap::new(),
             data_targets: HashSet::new(),
             pointer_targets: HashMap::new(),
+            namespaces: HashMap::new(),
             prototypes: HashMap::new(),
             non_returning: HashSet::new(),
             call_edges: Vec::new(),
@@ -511,6 +517,7 @@ impl NativeWorker {
             wire::query::GETDATATYPE => self.answer_datatype(provider, &payload),
             wire::query::GETEXTERNALREF => self.answer_external_ref(provider, &payload),
             wire::query::ISNAMEUSED => self.answer_name_used(provider, &payload),
+            wire::query::GETNAMESPACEPATH => self.answer_namespace_path(provider, &payload),
             // These callbacks have no durable facts in the current model.
             // An empty response is the protocol's defined "unknown" value,
             // not a hang or a fabricated fallback.
@@ -518,7 +525,6 @@ impl NativeWorker {
             | wire::query::GETCALLMECH
             | wire::query::GETCALLOTHERFIXUP
             | wire::query::GETCPOOLREF
-            | wire::query::GETNAMESPACEPATH
             | wire::query::GETPCODE
             | wire::query::GETPCODEEXECUTABLE => self.answer_empty(),
             wire::query::GETUSEROPNAME => self.answer_str(""),
@@ -633,10 +639,55 @@ impl NativeWorker {
     }
 
     /// Answers `isNameUsed` from all durable function and symbol names.
+    /// getNamespacePath (`ArchitectureGhidra::getNamespacePath`,
+    /// ghidra_arch.cc:608-622): the query carries a namespace id and the
+    /// answer is the path from the root scope down to it. An id this session
+    /// did not hand out gets the bare root, which is what a client that keeps
+    /// every symbol global answers.
+    fn answer_namespace_path(
+        &mut self,
+        provider: &mut ProgramProvider,
+        payload: &[u8],
+    ) -> Result<()> {
+        let wanted = u64::try_from(
+            find_numeric_attribute(payload, wire::attr::ID).unwrap_or_default(),
+        )
+        .unwrap_or(0);
+        let components: Vec<(u64, String)> = provider
+            .namespaces
+            .values()
+            .find(|(id, _)| *id == wanted)
+            .map(|(id, name)| vec![(*id, name.clone())])
+            .unwrap_or_default();
+        let mut doc = Vec::new();
+        wire::encode_namespace_path(&mut doc, &components);
+        let mut buf = Vec::new();
+        encode_burst(&mut buf, burst::QRESPONSE_OPEN);
+        encode_string_stream(&mut buf, &doc);
+        encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
+        self.write_frame(&buf)
+    }
+
+    /// isNameUsed (`ArchitectureGhidra::isNameUsed`, ghidra_arch.cc:624-645):
+    /// the query names a symbol and the two ends of a namespace path, and the
+    /// answer says whether a symbol of that name lives anywhere along it.
+    /// Ghidra skips symbols in the global scope outright -- "common case we
+    /// know can't match anything in path" (`DecompileCallback.isNameUsed`,
+    /// :491-533) -- so a global name never makes a namespace refuse a symbol.
+    /// Answering otherwise loses the symbol: `ScopeGhidraNamespace::isNameUsed`
+    /// (database_ghidra.cc:373-381) asks this before every insertion.
     fn answer_name_used(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let name = find_name_attribute(payload).unwrap_or_default();
-        let used = provider.function_names.values().any(|value| value == &name)
-            || provider.symbol_names.values().any(|value| value == &name);
+        let start = u64::try_from(
+            find_numeric_attribute(payload, wire::attr::FIRST).unwrap_or_default(),
+        )
+        .unwrap_or(0);
+        // Every namespace this session hands out is a child of the global
+        // scope, so the path from one is that namespace alone.
+        let used = start != 0
+            && provider.namespaces.iter().any(|(address, (id, _))| {
+                *id == start && provider.symbol_names.get(address) == Some(&name)
+            });
         self.answer_bool(used)
     }
 
@@ -818,6 +869,15 @@ impl NativeWorker {
                 // rather than storing one.
                 let mut doc = Vec::new();
                 let core = |name: &str| provider.core_types.get(name).copied();
+                // Every mapped-symbol answer carries the namespace of the
+                // symbol it describes (`DecompileCallback.encodeData`, :852,
+                // and `encodeLabel`, :874), and a symbol outside the global
+                // scope prints scope-qualified.
+                let namespace = provider
+                    .namespaces
+                    .get(&vaddr)
+                    .map(|(id, _)| *id)
+                    .unwrap_or(0);
                 let read_only = provider
                     .read_only
                     .iter()
@@ -829,7 +889,7 @@ impl NativeWorker {
                     // the terminator the image carries.
                     let count = text.len() as u64 + 1;
                     let name = string_label(text, vaddr);
-                    open_document(&mut doc);
+                    open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
                         &mut doc, space as u32, vaddr, &name, read_only,
                         |out| wire::encode_array_type(out, ("char", char_id), count),
@@ -860,10 +920,34 @@ impl NativeWorker {
                         .get(&vaddr)
                         .map(|(_, width)| *width)
                         .unwrap_or(provider.pointer_size);
-                    open_document(&mut doc);
+                    open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
                         &mut doc, space as u32, vaddr, &name, read_only,
                         |out| wire::encode_pointer_type(out, ("code", code_id), size),
+                    );
+                    close_document(&mut doc);
+                } else if let (Some(count), Some((byte_id, _))) = (
+                    provider
+                        .data_definitions
+                        .get(&vaddr)
+                        .filter(|(kind, _)| kind == "undefined1[]")
+                        .map(|(_, size)| *size),
+                    core("undefined1"),
+                ) {
+                    // An object wider than a word: Ghidra applies the size the
+                    // ELF symbol declares as an array of `undefined1`
+                    // (`Undefined.getUndefinedDataType`, :51-53), and the C
+                    // printer drops the '&' in front of an array
+                    // (printc.cc:1082-1090).
+                    let name = provider
+                        .symbol_names
+                        .get(&vaddr)
+                        .cloned()
+                        .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
+                    open_document_in(&mut doc, namespace);
+                    wire::encode_data_symbol(
+                        &mut doc, space as u32, vaddr, &name, read_only,
+                        |out| wire::encode_array_type(out, ("undefined1", byte_id), count),
                     );
                     close_document(&mut doc);
                 } else if let (Some(width), Some((type_id, _))) = (
@@ -890,7 +974,7 @@ impl NativeWorker {
                         .get(&vaddr)
                         .cloned()
                         .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
-                    open_document(&mut doc);
+                    open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
                         &mut doc, space as u32, vaddr, &name, read_only,
                         |out| wire::encode_typeref(out, &format!("undefined{width}"), type_id),
@@ -914,7 +998,7 @@ impl NativeWorker {
                             format!("{prefix}_{vaddr:08x}")
                         },
                     );
-                    open_document(&mut doc);
+                    open_document_in(&mut doc, namespace);
                     wire::encode_label_symbol(&mut doc, space as u32, vaddr, &name);
                     close_document(&mut doc);
                 }
@@ -1248,8 +1332,15 @@ pub fn parse_core_types(xml: &str) -> HashMap<String, (u64, u64)> {
 /// `<doc id="0">` wraps every query answer the C++ scope decodes
 /// (`ScopeGhidra::processResult`).
 fn open_document(out: &mut Vec<u8>) {
+    open_document_in(out, 0);
+}
+
+/// The `<doc id=...>` a mapped-symbol answer carries is the id of the
+/// namespace the symbol lives in (`DecompileCallback.encodeResult`, :807-826);
+/// zero is the global scope.
+fn open_document_in(out: &mut Vec<u8>, namespace: u64) {
     wire::encode_header(out, wire::ELEMENT_START, wire::elem::DOC);
-    wire::encode_attribute(out, wire::attr::ID, wire::attr_type::UNSIGNED_INT, 0);
+    wire::encode_attribute(out, wire::attr::ID, wire::attr_type::UNSIGNED_INT, namespace);
 }
 
 fn close_document(out: &mut Vec<u8>) {

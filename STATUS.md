@@ -4809,13 +4809,73 @@ evidence:
 - Regression: `cargo test --workspace` **258 pass**; every gate in `tests/`
   passes, plus the five shell suites.
 
+### m4-028 evidence
+- Three facts, not one, and the third was found by measuring rather than by
+  reasoning. Stock prints `int::typeinfo` where we printed `_ZTIi`, and the
+  pinned install's own answer at that address
+  (`analyzeHeadless` probe on `x86_64_cpp_o2`, `00202d08`) is:
+  `dataAt=undefined1[16]`, `primary=typeinfo ns=int source=ANALYSIS`,
+  `sym=_ZTIi ns=Global source=IMPORTED`, `extRef=null`.
+  - The **name**: `GnuDemanglerParser.getSpecialPrefixHandler` (:502-514)
+    routes `typeinfo for int` to `AddressTableHandler` (:1877-1913), whose
+    name is the prefix up to its last space and whose namespace is the type;
+    `DemangledAddressTable.applyTo` (:74-90) applies it with
+    `SourceType.ANALYSIS` and makes it primary.
+  - The **namespace**: a mapped-symbol answer carries the symbol's namespace
+    id (`DecompileCallback.encodeResult`, :807-826), the decompiler asks for
+    its path (`ArchitectureGhidra::getNamespacePath`, ghidra_arch.cc:608-622;
+    `Database::decodeScopePath`, database.cc:3395-3425), and a symbol outside
+    the global scope prints scope-qualified (`PrintC::pushSymbolScope`,
+    printc.cc:202-231).
+  - The **width**: an ELF `OBJECT` symbol with a size gets undefined data of
+    exactly that size (`ElfProgramBuilder.processSymbols`, :1703-1706, and
+    `allocateUndefinedSymbolData`, :1358-1381, through
+    `Undefined.getUndefinedDataType`, :47-55). `_ZTIi` declares 16 bytes, so
+    stock holds `undefined1[16]` there, and the C printer drops the `&` in
+    front of an array (printc.cc:1082-1090). On 32-bit rows the same symbol
+    declares 8 bytes, stays a scalar, and stock prints `&int::typeinfo` --
+    which is exactly what we now print.
+- Implemented: `lre_core::demangle`, an Itanium C++ ABI demangler for the
+  four names the ABI defines for data (`TV`, `TT`, `TI`, `TS`) over the type
+  grammar it parses -- builtins, nested and `std`-scoped class names,
+  sequential and standard substitutions, pointers, references, cv-qualifiers,
+  arrays, function types, integer and boolean template literals. It refuses
+  everything else (function encodings, construction vtables, thunks,
+  expressions in template arguments) rather than guessing; 7 unit tests pin
+  every rendering against the GNU demangler's own output. The importer
+  applies it beside the mangled name (`native-analysis:demangle`), records
+  object sizes (`native-import:elf-object`), and the worker sends the
+  demangled name -- stock's primary -- inside the namespace the mangled name
+  names.
+- One trap, worth keeping: `ScopeGhidraNamespace::isNameUsed`
+  (database_ghidra.cc:373-381) asks the client before every insertion into a
+  namespace, and our answer was "any symbol anywhere has this name", so the
+  symbol was refused and printed as `&ram0x00202d08`. Ghidra skips symbols in
+  the global scope outright (`DecompileCallback.isNameUsed`, :491-533); with
+  that rule the insertion succeeds. A second trap: scope ids share a space
+  with the function ids the same session hands out, so namespaces now start
+  at `1 << 48` -- with a colliding id the decompiler silently reuses the
+  function's scope and never asks for the path.
+- Measured (`tests/m4-028_demangled_names.py`,
+  `benchmarks/reports/m4-028.json`): **4 names stock derives from a mangled
+  name across 20 ELF rows**, every one held at the same address with the same
+  text, **0 invented**, and every mangled name kept beside the name derived
+  from it.
+- `m4-003`: `mangled-name` **8 -> 0** (the class is gone), **1745 of 1845**
+  token-identical (up from 1739), 0 unexplained, six classes left, baseline
+  re-recorded.
+- Regression: `cargo test --workspace` **263 pass**; every gate in `tests/`
+  passes, plus the five shell suites.
+
 ## Next task
-- m4-028: `mangled-name` 8, whose direction is known: both stores hold
-  `_ZTIi`; stock's demangler adds a namespace-qualified symbol at the same
-  address and prints it. Closing it means holding the demangled name as a
-  second symbol with its own provenance, and deciding which of the two the
-  worker sends -- the `name`/`label` split measured in m4-026 is the
-  mechanism, and its findings are the constraint.
+- m4-029: `data-name-convention` 4. Both stores name the same address on
+  purpose and differently: the slot `DT_PLTGOT` reserves is named after the
+  import it holds where stock names it after the tag. Decide which name the
+  store should carry by reading what stock's own naming rule is for that slot
+  (`ElfDefaultGotPltMarkup`, and the dynamic-tag labels
+  `ElfProgramBuilder.markupDynamicTable`), and either adopt stock's name or
+  record the divergence as a measured choice with its reason. The acceptance
+  test compares the stored name at each such address against stock's.
 - Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
   approved targets) needs a target game, which II.1 reserves for the human.
 

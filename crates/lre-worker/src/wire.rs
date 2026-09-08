@@ -176,6 +176,8 @@ pub mod elem {
     pub const HOLE: u32 = 74;
     /// ELEM_PARENT (database.cc:39).
     pub const PARENT: u32 = 77;
+    /// `<val>` (marshal.cc: shared vocabulary), a namespace path component.
+    pub const VAL: u32 = 8;
     /// ELEM_EXTERNREFSYMBOL (database.cc:32).
     pub const EXTERNREFSYMBOL: u32 = 70;
     /// ELEM_COMMENT (comment.cc:21).
@@ -458,6 +460,24 @@ pub(crate) fn encode_flow_override(out: &mut Vec<u8>, space: u32, branches: &[u6
 /// C++ decodes into a `LabSymbol` -- one byte of `TYPE_UNKNOWN`
 /// (database.cc:728-757), the same shape Ghidra's own `encodeLabel` sends for
 /// a symbol that is not data (DecompileCallback.java:872-876).
+/// `<parent>`: the formal path from the global scope down to one namespace,
+/// as `HighFunction.encodeNamespace` writes it (:600-629) and
+/// `Database::decodeScopePath` reads it (database.cc:3395-3425) -- an empty
+/// first `<val>` for the root scope, then one `<val id=...>name</val>` per
+/// component below it.
+pub(crate) fn encode_namespace_path(out: &mut Vec<u8>, components: &[(u64, String)]) {
+    encode_header(out, ELEMENT_START, elem::PARENT);
+    encode_header(out, ELEMENT_START, elem::VAL);
+    encode_header(out, ELEMENT_END, elem::VAL);
+    for (id, name) in components {
+        encode_header(out, ELEMENT_START, elem::VAL);
+        encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, *id);
+        encode_string_attribute(out, attr::CONTENT, name.as_bytes());
+        encode_header(out, ELEMENT_END, elem::VAL);
+    }
+    encode_header(out, ELEMENT_END, elem::PARENT);
+}
+
 pub(crate) fn encode_label_symbol(out: &mut Vec<u8>, space: u32, address: u64, name: &str) {
     encode_header(out, ELEMENT_START, elem::MAPSYM);
     encode_header(out, ELEMENT_START, elem::LABELSYM);

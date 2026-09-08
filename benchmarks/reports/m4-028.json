@@ -1,0 +1,197 @@
+{
+ "id": "m4-028",
+ "recorded_at": "2026-09-08T19:04:08.291532+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "4 names stock derives from a mangled name across 20 ELF rows, every one held at the same address with the same text, none invented, and every mangled name kept beside the name derived from it",
+ "metrics": {
+  "demangle.rows_measured": 20,
+  "demangle.names_stock_derives": 4,
+  "demangle.names_held": 4,
+  "demangle.names_missing": 0,
+  "demangle.names_invented": 0,
+  "demangle.mangled_names_kept": 4
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_derives": 1,
+   "held": 1,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "variant": "many_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "variant": "plain_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "variant": "plain_pie",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_derives": 1,
+   "held": 1,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "i386_many_o2",
+   "variant": "many_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "variant": "plain_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "variant": "plain_pie",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_derives": 1,
+   "held": 1,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "powerpc_many_o2",
+   "variant": "many_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "variant": "plain_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "variant": "plain_pie",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_derives": 1,
+   "held": 1,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "variant": "many_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "variant": "plain_o2",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "variant": "plain_pie",
+   "stock_derives": 0,
+   "held": 0,
+   "missing": [],
+   "invented": [],
+   "dropped_mangled": []
+  }
+ ]
+}
