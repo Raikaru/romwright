@@ -271,6 +271,10 @@ pub struct NativeImport {
     pub mapping_names: Vec<String>,
     /// Console request accounting for the flow phase, when it ran.
     pub flow: Option<lre_model::FlowStats>,
+    /// Why console-driven discovery was not used, when it was not. A silent
+    /// fallback to pointer-only seeds is how a MIPS image came back with a
+    /// third of its functions and no complaint (m11-002).
+    pub discovery_note: Option<String>,
 }
 /// One platform-defined region with no bytes in the image.
 #[derive(Debug, Clone)]
@@ -2135,6 +2139,7 @@ pub fn store_import(
         language: imp.language.clone(),
         phases: imp.phases.clone(),
         flow: imp.flow,
+        discovery_note: imp.discovery_note.clone(),
     })
 }
 
@@ -3083,6 +3088,56 @@ mod tests {
         // Directory 5 is absent, so .reloc section MUST BE IGNORED
         assert!(imp.xrefs.is_empty(), "xrefs must be empty when directory 5 is absent");
         assert!(imp.reloc_candidates.is_empty(), "reloc_candidates must be empty when directory 5 is absent");
+    }
+
+    #[test]
+    fn flow_batch_answers_every_address_it_is_asked() {
+        // One undecodable address used to discard the rest of the command line,
+        // so a batch came back short and discovery fell back to pointer-only
+        // seeds: MIPS lost half its functions to a delay slot at a mapping's
+        // end (sleigh.cc:385) and to addresses the image does not cover
+        // (loadimage_xml.cc:236).
+        use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "MIPS:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            compiler: Some("default".into()),
+            format: "elf".into(),
+            cfg: cfg.clone(),
+            mappings: vec![Mapping {
+                vaddr: 0x1000,
+                size: 16,
+                file_off: 0,
+                flags: 6,
+                // Sixteen bytes of real MIPS text. Read at 0x1002 they are a
+                // branch-likely whose delay slot never reaches the pcode
+                // state, so SleighBuilder::delaySlot raises a plain
+                // LowlevelError (sleigh.cc:385) rather than BadDataError.
+                bytes: vec![
+                    0x82, 0x05, 0x0e, 0x46, 0x03, 0x52, 0x0c, 0x46,
+                    0x00, 0x45, 0x1a, 0x46, 0xda, 0x00, 0x04, 0x0c,
+                ],
+            }],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let asked = [0x1002u64, 0x1004, 0x9000];
+        let flows = session.flow_batch(&asked).expect("batch must not fail");
+        assert_eq!(
+            flows.iter().map(|flow| flow.address).collect::<Vec<_>>(),
+            asked,
+            "one answer per requested address, in order"
+        );
+        assert_eq!(flows[0].kind, FlowKind::Bad, "branch whose delay slot cannot be cached");
+        assert_eq!(flows[1].kind, FlowKind::Fallthrough, "the aligned instruction still decodes");
+        assert_eq!(flows[2].kind, FlowKind::Bad, "address the image does not map");
     }
 
     #[test]

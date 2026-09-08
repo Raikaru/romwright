@@ -194,6 +194,7 @@ impl Core {
             language: self.db.program_language(id)?,
             phases: Vec::new(),
             flow: None,
+            discovery_note: None,
         })
     }
 
@@ -1113,6 +1114,7 @@ impl Core {
             language: self.db.program_language(id)?,
             phases: Vec::new(),
             flow: None,
+            discovery_note: None,
         })
     }
 

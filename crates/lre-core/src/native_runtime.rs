@@ -432,6 +432,47 @@ fn program_image_base(program: &str, project_dir: &Path) -> Option<u64> {
 /// Reads console output until the interactive prompt "[decomp]> " is seen.
 /// The prompt carries no trailing newline, so `read_line` deadlocks; the
 /// console also buffers, so the read must be byte-wise.
+/// One console output line, or the prompt that means the console has said all
+/// it intends to.
+///
+/// The prompt carries no newline, so a reader that waits for one waits for
+/// ever: a MIPS image whose BFD target the console refused answered
+/// `Execution error: No architecture loaded` and then the prompt, and an
+/// import that expected one `FLOW` line per address hung on the second read
+/// for fourteen minutes before this existed.
+enum ConsoleOutput {
+    Line(String),
+    Prompt(String),
+}
+
+fn read_line_or_prompt(
+    reader: &mut std::io::BufReader<std::process::ChildStdout>,
+) -> Result<ConsoleOutput> {
+    use std::io::Read as _;
+    const PROMPT: &[u8] = b"[decomp]> ";
+    let mut buf: Vec<u8> = Vec::with_capacity(256);
+    let mut byte = [0u8; 1];
+    loop {
+        let read = reader
+            .read(&mut byte)
+            .map_err(|e| NativeRuntimeError(format!("console read: {e}")))?;
+        if read == 0 {
+            return err("console closed before answering");
+        }
+        buf.push(byte[0]);
+        if byte[0] == b'\n' {
+            return Ok(ConsoleOutput::Line(
+                String::from_utf8_lossy(&buf).into_owned(),
+            ));
+        }
+        if buf.ends_with(PROMPT) {
+            return Ok(ConsoleOutput::Prompt(
+                String::from_utf8_lossy(&buf).into_owned(),
+            ));
+        }
+    }
+}
+
 fn read_until_prompt(reader: &mut std::io::BufReader<std::process::ChildStdout>) -> Result<String> {
     use std::io::Read as _;
     const PROMPT: &[u8] = b"[decomp]> ";
@@ -471,8 +512,14 @@ fn bfd_target_for(language_id: &str, binary: &Path) -> Result<String> {
             "pei-i386".into()
         });
     }
-    if language_id.starts_with("PowerPC:") {
-        return Ok("PowerPC:BE:32:default".into());
+    // A colon-bearing "target" is the language id, which the console's patched
+    // loader takes as a raw architecture instead of asking BFD to recognise the
+    // file. That is the only workable answer for a machine BFD's x86 targets
+    // refuse: handed `elf32-i386`, a MIPS image answers `not in recognized
+    // object file format` and then `Could not create architecture`, which is
+    // how one hung an import for fourteen minutes (m11-002).
+    if !language_id.starts_with("x86:") {
+        return Ok(language_id.to_string());
     }
     let sixty_four = language_id.contains(":64:");
     Ok(if sixty_four {
@@ -1248,7 +1295,6 @@ impl ConsoleSession {
             return Ok(Vec::new());
         }
         use std::fmt::Write as _;
-        use std::io::{BufRead as _, Read as _};
         let mut script = String::with_capacity(addresses.len() * 12 + 8);
         script.push_str("flow");
         for addr in addresses {
@@ -1257,27 +1303,33 @@ impl ConsoleSession {
         script.push('\n');
         self.send(&script)?;
 
-        // Read and discard echo line
-        let mut echo = String::new();
-        if self
-            .reader
-            .read_line(&mut echo)
-            .map_err(|e| NativeRuntimeError(format!("console read echo: {e}")))?
-            == 0
-        {
-            return err("console closed before flow_batch output");
-        }
+        // The echo of the command itself.
+        let echo = match read_line_or_prompt(&mut self.reader)? {
+            ConsoleOutput::Line(line) => line,
+            ConsoleOutput::Prompt(text) => {
+                return err(format!("console answered no flow output: {}", text.trim()));
+            }
+        };
+        let _ = echo;
 
         let mut results = Vec::with_capacity(addresses.len());
-        let mut line = String::with_capacity(256);
-        for &addr in addresses {
-            line.clear();
-            let n = self
-                .reader
-                .read_line(&mut line)
-                .map_err(|e| NativeRuntimeError(format!("console read line: {e}")))?;
-            if n == 0 {
-                return err("console closed during flow_batch output");
+        for (index, &addr) in addresses.iter().enumerate() {
+            let line = match read_line_or_prompt(&mut self.reader)? {
+                ConsoleOutput::Line(line) => line,
+                // The prompt before the last result: the console refused the
+                // request (an unloaded image, a parse error) and said so once
+                // instead of once per address.
+                ConsoleOutput::Prompt(text) => {
+                    return err(format!(
+                        "console answered {index} of {} flow results (first unanswered 0x{:x}): {}",
+                        addresses.len(),
+                        addr,
+                        text.trim()
+                    ));
+                }
+            };
+            if line.contains("Execution error") || line.contains("Command parsing error") {
+                return err(format!("console refused the flow request: {}", line.trim()));
             }
             if line.contains("Low-level ERROR") {
                 results.push(FlowResult {
@@ -1310,13 +1362,14 @@ impl ConsoleSession {
             }
         }
 
-        // Read trailing prompt "[decomp]> "
-        let mut prompt = [0u8; 10];
-        self.reader
-            .read_exact(&mut prompt)
-            .map_err(|e| NativeRuntimeError(format!("console prompt: {e}")))?;
-
-        Ok(results)
+        // The trailing prompt, which every answered request ends with.
+        match read_line_or_prompt(&mut self.reader)? {
+            ConsoleOutput::Prompt(_) => Ok(results),
+            ConsoleOutput::Line(line) => err(format!(
+                "console said more than it was asked for: {}",
+                line.trim()
+            )),
+        }
     }
 
     /// Same as `flow_batch` but never errors, returning fallback results on failure.
