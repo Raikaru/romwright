@@ -1,4 +1,4 @@
 {"address": "10010568", "classes": {"type-stronger": ["(code *)"], "missing-external-prototype": ["__libc_start_main"], "data-name-convention": [{"address": "1003074c", "oracle": "__DT_PLTGOT", "native": "PTR___libc_start_main_1003074c"}]}, "oracle_tokens": 20, "native_tokens": 16}
-{"address": "10010578", "classes": {"function-facts": {"return_type": [null, "int"]}, "type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}
+{"address": "10010578", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}
 {"address": "10010588", "classes": {"type-stronger": ["(undefined *)"], "missing-external-prototype": ["__gmon_start__"]}, "oracle_tokens": 26, "native_tokens": 22}
 {"address": "100105cc", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

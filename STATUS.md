@@ -4358,19 +4358,47 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 99 reports indexed, both generators in
   sync.
 
+### m4-018 evidence
+- The instrument was silent and the gate counted the silence. `exportFacts`
+  sent name, entry and size per function and no signature at all, so the
+  oracle store held **0** prototype rows and every `return_type` comparison
+  read `[None, ours]` -- on rows whose text already agreed
+  (`int printf(char *__format,...)` both ways).
+- The bridge now exports `getSignature().getPrototypeString(true)`,
+  `getReturn()`'s type, `getCallingConventionName()` **and**
+  `getSignatureSource()`, and only a non-`DEFAULT` source is persisted:
+  Ghidra's placeholder is `undefined FUN_x(void)`, which is not a fact about
+  the image. Recorded as `ghidra-bridge:recovered-signature`.
+- A signature is compared by **content**: return type and parameter count,
+  parsed from either side's spelling, because `int f(char *name)` and
+  `int f(char *)` say the same thing and neither decompiler's parameter naming
+  is a fact. A differing return type or arity still counts.
+- Measured: `function-facts` 10 -> 5 (m4-017) -> **0**; token identity **35**
+  of 56 unchanged, 0 unaccounted tokens, baseline re-recorded. What is left is
+  5 `missing-external-prototype`, 3 `flow` and 2 `data-type-unknown` as gaps;
+  3 `name-convention` (all `_plt`), 3 `data-name-convention` and 18
+  `type-stronger` as choices; 8 `oracle-warning` as stock's own.
+- Controls: no function carrying Ghidra's placeholder signature is recorded as
+  having a prototype; two spellings of one signature are not a divergence; a
+  differing return type is; a differing arity is.
+- Regression: `cargo test --workspace` **245 pass**; `m4-002`, `m4-009`,
+  `m4-012`, `m4-015`..`m4-018`, `m2-016`, `m9-001`, `m9-002`, `m5-012`,
+  `m6-006`, `differential.sh`, `workflow.sh` pass. 100 reports indexed, both
+  generators in sync.
+
 ## Next task
-- m4-018: make the oracle record what it knows, so the last `function-facts`
-  rows measure something. The bridge exports name/entry/size per function and
-  no prototype at all (`Dispatcher.exportFacts`, the `functions` array), which
-  is why every return-type comparison reads `[None, ours]`. Export
-  `f.getSignature().getPrototypeString(true)`, `f.getReturn()`'s type and
-  `f.getCallingConventionName()` **with** `f.getSignatureSource()`, persist
-  only what stock says it recovered (not `SourceType.DEFAULT`, which is
-  `undefined FUN_x(void)`), and compare a signature by content -- return type
-  and parameter count -- rather than by spelling. Acceptance: a failing test
-  first, the oracle store holding prototypes for the stubs whose text already
-  shows one, per-field counts before and after, and a control proving a
-  default signature is not recorded as a recovered one.
+- m4-019: `missing-external-prototype` **5** is the largest remaining gap, and
+  it is one fact: `__libc_start_main`, `abort` and `__gmon_start__` are
+  imports whose declarations the pinned `generic_clib_64.gdt` does not hold
+  (m4-009 supplies 6627 that it does). Two sources are available offline and
+  neither has been measured: the other pinned type archives under
+  `Ghidra/Features/Base/data/typeinfo` (there are `.gdt` files beyond
+  `generic_clib_64`), and the version records in the image's own `.dynsym`,
+  which name the library each import comes from without declaring it.
+  Diagnose which source holds each of the three names, then supply what is
+  actually there. Acceptance: a failing test naming the three imports, the
+  count of them that gain a signature, the class count before and after, and
+  a control proving a name neither source declares still counts as a gap.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

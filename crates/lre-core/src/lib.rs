@@ -1135,11 +1135,39 @@ impl Core {
         self.db.replace_functions(id, functions)?;
         // One batched round-trip instead of one RPC per function: the per-call
         // overhead after analysis dominated the import time otherwise.
-        let (functions, xrefs, comments, datatypes) = bridge.export_facts(session)?;
+        let (functions, xrefs, comments, datatypes, signatures) =
+            bridge.export_facts(session)?;
         self.db.replace_functions(id, &functions)?;
         self.db.replace_xrefs(id, &xrefs)?;
         self.db.replace_comments(id, &comments)?;
         self.db.replace_datatypes(id, &datatypes)?;
+        // What stock says it recovered, recorded as stock's own fact: an
+        // oracle store that holds no signature makes every comparison against
+        // it measure silence (m4-018).
+        for row in &signatures {
+            let Some(signature) = row.signature.as_deref().filter(|text| !text.is_empty())
+            else {
+                continue;
+            };
+            let Ok(offset) = u64::from_str_radix(row.entry.trim_start_matches("0x"), 16)
+            else {
+                continue;
+            };
+            self.db.set_prototype(
+                id,
+                &lre_model::PrototypeRow {
+                    function: lre_model::Address::ram(offset),
+                    signature: signature.to_string(),
+                    calling_convention: row.calling_convention.clone(),
+                    return_type: row.return_type.clone(),
+                    provenance: lre_model::FactProvenance {
+                        kind: lre_model::FactKind::Asserted,
+                        source: "ghidra-bridge:recovered-signature".into(),
+                        confidence: None,
+                    },
+                },
+            )?;
+        }
         Ok(())
     }
 }

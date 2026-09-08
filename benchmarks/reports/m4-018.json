@@ -1,0 +1,23 @@
+{
+  "task": "m4-018",
+  "recorded_at": "2026-09-08T05:31:52.380002+00:00",
+  "scope": "instrument acceptance plus classifier controls",
+  "metrics": {
+    "oracle_printf": {
+      "signature": "int printf(char * __format, ...)",
+      "return_type": "int"
+    },
+    "oracle_prototypes": 2,
+    "agreed_return_type": "int",
+    "content_comparison": {
+      "spelling": [],
+      "return_type": [
+        "function-facts"
+      ],
+      "arity": [
+        "function-facts"
+      ]
+    }
+  },
+  "passed": true
+}

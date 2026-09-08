@@ -34,6 +34,22 @@ pub enum BridgeError {
 /// Convenience alias with the error defaulted per project convention.
 pub type Result<T, E = BridgeError> = std::result::Result<T, E>;
 
+/// A signature stock says it recovered, with the source that says so and the
+/// return type it names. Parsed from the same `functions` array, because the
+/// bridge answers one query.
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct OracleSignature {
+    pub entry: String,
+    #[serde(default)]
+    pub signature: Option<String>,
+    #[serde(default)]
+    pub signature_source: Option<String>,
+    #[serde(default)]
+    pub return_type: Option<String>,
+    #[serde(default)]
+    pub calling_convention: Option<String>,
+}
+
 /// A running ventris-service child process.
 pub struct Bridge {
     child: Child,
@@ -261,11 +277,25 @@ impl Bridge {
     pub fn export_facts(
         &mut self,
         session: &str,
-    ) -> Result<(Vec<FunctionRow>, Vec<XrefRow>, Vec<CommentRow>, Vec<DataTypeRow>)> {
+    ) -> Result<(
+        Vec<FunctionRow>,
+        Vec<XrefRow>,
+        Vec<CommentRow>,
+        Vec<DataTypeRow>,
+        Vec<OracleSignature>,
+    )> {
         let v = self.call("export_facts", json!({"session": session}))?;
         let functions: Vec<FunctionRow> = Self::parse_rows(
             v.get("functions").cloned().unwrap_or(Value::Null),
         )?;
+        // Only what stock says it recovered: a DEFAULT signature source means
+        // `undefined FUN_x(void)`, Ghidra's placeholder rather than a fact.
+        let signatures: Vec<OracleSignature> = Self::parse_rows::<OracleSignature>(
+            v.get("functions").cloned().unwrap_or(Value::Null),
+        )?
+        .into_iter()
+        .filter(|row| row.signature_source.as_deref().is_some_and(|s| s != "DEFAULT"))
+        .collect();
         let xrefs: Vec<XrefRow> = Self::parse_rows(
             v.get("xrefs").cloned().unwrap_or(Value::Null),
         )?;
@@ -275,7 +305,7 @@ impl Bridge {
         let datatypes: Vec<DataTypeRow> = Self::parse(
             v.get("types").cloned().unwrap_or(Value::Null),
         )?;
-        Ok((functions, xrefs, comments, datatypes))
+        Ok((functions, xrefs, comments, datatypes, signatures))
     }
 
     /// Applies a function rename.
