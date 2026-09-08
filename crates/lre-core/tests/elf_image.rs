@@ -122,7 +122,7 @@ fn shared_data_strings_use_alignment_and_reference_evidence() {
             ..Default::default()
         };
         let db = lre_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
-        store_import(&db, "shared-data", &import).unwrap();
+        store_import(&db, "shared-data", &import, None).unwrap();
         let rows = db.strings(db.program_id("shared-data").unwrap()).unwrap();
         let actual: Vec<_> = rows.into_iter().map(|row| (row.address.offset, row.value, row.kind)).collect();
         assert_eq!(actual, vec![(address, "A😀BC".into(), "UTF-16LE".into())],
@@ -140,7 +140,7 @@ fn elf_string_tables_preserve_namespaces_and_utf8() {
         }
         let import = import_elf(&data).unwrap();
         let db = lre_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
-        lre_core::native::store_import(&db, "strings", &import).unwrap();
+        lre_core::native::store_import(&db, "strings", &import, None).unwrap();
         let mut rows = db.strings(db.program_id("strings").unwrap()).unwrap();
         rows.sort_by_key(|row| row.address.offset);
         let actual: Vec<_> = rows.into_iter()

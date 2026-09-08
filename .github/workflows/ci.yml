@@ -257,6 +257,13 @@ jobs:
           python3 tests/m4-011_widths_exits_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/widths-exits-names.json"
+      - name: Record the facts the exact token accounting names
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-012_remaining_facts.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/remaining-facts.json"
       - name: Put each stub's override on the branch that transfers
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

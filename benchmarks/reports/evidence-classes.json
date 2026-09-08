@@ -15,6 +15,10 @@
   "evidence": "decoded",
   "derives_confidence": false
  },
+ "native-import:dynamic-tag": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
  "native-import:elf-pointer": {
   "evidence": "inferred",
   "derives_confidence": false
@@ -32,6 +36,10 @@
   "derives_confidence": true
  },
  "native-import:elf-unwind": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:entry-convention": {
   "evidence": "declared",
   "derives_confidence": false
  },

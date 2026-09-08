@@ -185,6 +185,19 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Addresses the dynamic table names, labelled as Ghidra labels them:
+    /// `__DT_<TAG>` for every ADDRESS-valued tag with a nonzero value, and
+    /// `_DYNAMIC` for the table itself
+    /// (`ElfProgramBuilder.markupDynamicTable`, :2691-2723, and
+    /// `addDynamicMemoryReference`, :2753-2773). A label is only applied
+    /// where nothing else names the address, which is Ghidra's own guard.
+    pub dynamic_labels: Vec<(u64, String)>,
+    /// The address the operating system enters the process at, when the ABI
+    /// says the platform's process-entry model applies to it: `e_entry` of an
+    /// executable or shared object whose OS ABI is Linux or unspecified
+    /// (`ElfProgramBuilder.processEntryPoints`, :655-673). The language
+    /// decides whether such a model exists; the image decides the address.
+    pub process_entry: Option<u64>,
     /// Relocation code targets to be verified as candidate function entries.
     pub reloc_candidates: Vec<u64>,
     /// Untrusted data pointers; never functions until flow confirms them.
@@ -350,6 +363,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     };
     let (language, compiler) = elf_specs(rd16(18)?, be, rd32(36)?)?;
     let entry = rd32(24)? as u64;
+    let process_entry = elf_process_entry(data, entry, rd16(16)?);
     let (mut sections, _shstr) = parse_elf32_sections(data, be)?;
 
     let mut mappings = Vec::new();
@@ -430,7 +444,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     }
     functions.sort_by_key(|f| f.entry);
     let mut import = NativeImport {
-
+        process_entry,
         format: "elf32".into(),
         language: language.into(),
         compiler: Some(compiler),
@@ -516,6 +530,16 @@ fn parse_elf_sections(data: &[u8]) -> Result<(Vec<ElfSection>, Vec<u8>)> {
     Ok((sections, shstr))
 }
 
+/// Ghidra's rule, verbatim: `e_entry` of an executable (`ET_EXEC`) or shared
+/// object (`ET_DYN`) whose `e_ident[EI_OSABI]` is `ELFOSABI_LINUX` or
+/// `ELFOSABI_NONE` -- the latter meaning "no ABI-specific extensions", which
+/// also stands for unspecified (`ElfProgramBuilder.processEntryPoints`,
+/// :655-673, with `ElfConstants`).
+fn elf_process_entry(data: &[u8], entry: u64, e_type: u16) -> Option<u64> {
+    let linux_or_unspecified = matches!(data.get(7), Some(0 | 3));
+    (entry != 0 && matches!(e_type, 2 | 3) && linux_or_unspecified).then_some(entry)
+}
+
 /// The project's single ELF machine → (language id, compiler spec) table.
 pub fn elf_specs(machine: u16, big_endian: bool, flags: u32) -> Result<(&'static str, &'static str)> {
     // ARM ELF EF_ARM_BE8: big-endian data, little-endian instructions.
@@ -568,6 +592,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     }
     let (language, compiler) = elf_specs(u16_at(data, 18)?, false, u32_at(data, 48)?)?;
     let entry = u64_at(data, 24)?;
+    let process_entry = elf_process_entry(data, entry, u16_at(data, 16)?);
     let (mut sections, _shstr) = parse_elf_sections(data)?;
 
     // Mappings: SHF_ALLOC sections carrying file bytes (SHT_PROGBITS etc).
@@ -685,6 +710,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         mappings,
         functions,
         externals,
+        process_entry,
         format: "ELF".into(),
         language: language.into(),
         compiler: Some(compiler),
@@ -1539,10 +1565,31 @@ pub fn close_call_targets(imp: &mut NativeImport) {
 }
 
 /// Writes a native import into the store, returning the summary.
+/// Ghidra's own name for the model the operating system enters a process
+/// with (`ElfProgramBuilder.PROCESS_ENTRY_CALLING_CONVENTION_NAME`, :67).
+pub const PROCESS_ENTRY_MODEL: &str = "processEntry";
+/// The rule that proved it: an ABI-reserved entry point, not an analysis.
+pub const ENTRY_CONVENTION_SOURCE: &str = "native-import:entry-convention";
+/// A name the dynamic table itself carries.
+pub const DYNAMIC_LABEL_SOURCE: &str = "native-import:dynamic-tag";
+
+/// The process-entry model when the language declares one, and nothing when
+/// it does not -- Ghidra catches the same failure and skips silently
+/// (`processEntryPoints`, :666-672). An undeclared name would be worse than
+/// none: the decompiler answers an unrecognized model with a placeholder
+/// that has no parameter storage at all (`fspec.cc:4695-4698`).
+pub fn declared_entry_model(cfg: &crate::session::RuntimeConfig, language: &str) -> Option<&'static str> {
+    let (_, specs, _, _) = crate::native_runtime::language_decompile_config(cfg, language).ok()?;
+    let cspec = std::fs::read_to_string(specs.join("cspec.xml")).ok()?;
+    crate::register_params::declares_model(&cspec, PROCESS_ENTRY_MODEL)
+        .then_some(PROCESS_ENTRY_MODEL)
+}
+
 pub fn store_import(
     db: &ProjectDb,
     program: &str,
     imp: &NativeImport,
+    entry_model: Option<&str>,
 ) -> Result<ProgramSummary> {
     let mut functions = imp.functions.clone();
     functions.sort_by_key(|f| f.entry);
@@ -1601,6 +1648,7 @@ pub fn store_import(
     // Refresh this loader's facts without discarding symbols from other owners.
     let mut symbols = db.symbols(pid)?;
     symbols.retain(|symbol| symbol.source != "native-import");
+    symbols.retain(|symbol| symbol.source != DYNAMIC_LABEL_SOURCE);
     symbols.extend(
         imp.externals.iter().filter(|(entry, _)| *entry != 0)
             .map(|(entry, name)| lre_model::SymbolRow {
@@ -1608,6 +1656,25 @@ pub fn store_import(
                 address: lre_model::Address::ram(*entry),
                 external: true,
                 source: "native-import".into(),
+            }),
+    );
+    // A name the image's own dynamic table proves, where nothing else names
+    // the address: Ghidra applies the same label under the same guard.
+    let named: std::collections::HashSet<u64> = symbols
+        .iter()
+        .filter(|symbol| symbol.address.space == lre_model::AddressSpace::Ram)
+        .map(|symbol| symbol.address.offset)
+        .chain(imp.functions.iter().map(|function| function.entry))
+        .collect();
+    symbols.extend(
+        imp.dynamic_labels
+            .iter()
+            .filter(|(address, _)| !named.contains(address))
+            .map(|(address, name)| lre_model::SymbolRow {
+                name: name.clone(),
+                address: lre_model::Address::ram(*address),
+                external: false,
+                source: DYNAMIC_LABEL_SOURCE.into(),
             }),
     );
     db.replace_symbols(pid, &symbols)?;
@@ -1666,6 +1733,23 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
+    // The rule owns its rows: re-importing an image the rule no longer covers
+    // clears the fact, and an assertion over it is left alone.
+    let conventions: Vec<lre_model::CallingConventionRow> = imp
+        .process_entry
+        .zip(entry_model)
+        .map(|(entry, model)| lre_model::CallingConventionRow {
+            function: lre_model::Address::ram(entry),
+            convention: model.to_string(),
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: ENTRY_CONVENTION_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .into_iter()
+        .collect();
+    db.replace_inferred_calling_conventions(pid, ENTRY_CONVENTION_SOURCE, &conventions)?;
     apply_library_prototypes(db, pid, imp)?;
     // A name on Ghidra's own pinned list is a declared exit: without the fact
     // the decompiler walks past the call and takes the next function's body
@@ -2012,12 +2096,12 @@ mod tests {
         let imp = import_pe(&b).unwrap();
         let db = ProjectDb::open_in_memory().unwrap();
         let pid = db.upsert_program("pe", &imp.language, &native_provenance()).unwrap();
-        store_import(&db, "pe", &imp).unwrap();
+        store_import(&db, "pe", &imp, None).unwrap();
         assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "r--");
         // Executable, writable code retains all three permissions.
         b[sec + 36..sec + 40].copy_from_slice(&0xe0000000u32.to_le_bytes());
         let imp = import_pe(&b).unwrap();
-        store_import(&db, "pe", &imp).unwrap();
+        store_import(&db, "pe", &imp, None).unwrap();
         assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "rwx");
     }
 

@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import difflib
 import hashlib
 import importlib.util
 import json
@@ -79,6 +80,23 @@ WARNING = re.compile(r"/\* WARNING:.*?\*/", re.S)
 # A C cast to a pointer of a core type, e.g. `(code *)`.
 CAST = re.compile(r"\(\s*(?:code|undefined[0-9]?|byte|char|u?int|u?long|u?short)"
                   r"\s*\*+\s*\)")
+# What each class of fact licenses in the token stream, and nothing else.
+# A name the decompiler derives from storage rather than from a symbol: these
+# change when a prototype, a type or a convention changes, and never otherwise
+# (`Funcdata::nameRecommendation`, `ActionNameVars`).
+DERIVED = re.compile(
+    r"^(?:param_\d+|[a-z]{1,3}Var\d+|[a-z]{1,3}Stack_[0-9a-fx]+|local_[0-9a-fx]+"
+    r"|in_stack_[0-9a-fx]+|unaff_\w+|extraout_\w+|stack0x[0-9a-f]+"
+    r"|in_[A-Z]\w*|[a-z]{1,4}Ram[0-9a-f]+|uRam[0-9a-f]+)$")
+# The core type names a prototype or a type fact can supply.
+TYPE_NAME = re.compile(
+    r"^(?:void|undefined[0-9]?|byte|u?char|u?short|u?int|u?long|u?longlong"
+    r"|float[0-9]?|double|bool|code|size_t|ssize_t|wchar[0-9]?|undefined)$")
+# The punctuation a differing argument list or a differing structure moves.
+SHAPE = set("(),*&;{}")
+# Keywords whose presence follows from a flow disagreement, not from text.
+CONTROL = {"do", "while", "if", "else", "goto", "switch", "case", "break",
+           "return", "default", "continue"}
 TOKEN = re.compile(
     r"""/\*.*?\*/|//[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_]\w*"""
     r"""|0[xX][0-9a-fA-F]+|\d+|[^\s]""", re.S)
@@ -181,14 +199,24 @@ def store_context(store: Path, program: str) -> dict:
         strings = {offset: value for address, value in connection.execute(
             "SELECT address, value FROM strings WHERE program_id = ?", (identifier,))
             if (offset := ram_offset(address)) is not None}
+        # Addresses the store holds a type for. An import slot and an
+        # ABI-reserved GOT word are both typed facts, and either explains why
+        # our text needs no cast where the oracle's does.
+        definitions = {offset for (address,) in connection.execute(
+            "SELECT address FROM data_definitions WHERE program_id = ?", (identifier,))
+            if (offset := ram_offset(address)) is not None}
+        names = {offset: name for address, name in connection.execute(
+            "SELECT address, name FROM symbols WHERE program_id = ?", (identifier,))
+            if (offset := ram_offset(address)) is not None}
         return {"symbols": symbols, "prototypes": prototypes,
-                "externals": externals, "strings": strings}
+                "externals": externals, "strings": strings,
+                "definitions": definitions, "names": names}
     finally:
         connection.close()
 
 
 def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: dict,
-             entry: int, store: dict) -> dict:
+             entry: int, store: dict, oracle_store: dict) -> dict:
     """Name the fact each divergence comes from, with the evidence for it."""
     classes: dict[str, object] = {}
     differing = {key: [oracle_row.get(key), native_row.get(key)]
@@ -201,24 +229,36 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     # whether the name is the *only* difference, so a deliberate convention is
     # never counted as a missing fact.
     native_name, oracle_name = native_row.get("name"), oracle_row.get("name")
+    named: dict[str, object] = {}
+    substituted = oracle_text
     if native_name and oracle_name and native_name != oracle_name:
         substituted = re.sub(rf"\b{re.escape(oracle_name)}\b", native_name, oracle_text)
+        # Only a name we chose is a convention. If ours is the decompiler's
+        # own default and the oracle has a real name, the name is missing,
+        # not different.
+        default = re.match(r"(?:FUN|SUB|UNK)_[0-9a-f]+$", native_name)
+        named = {"missing-name" if default else "name-convention":
+                 [oracle_name, native_name]}
         if tokens(substituted) == tokens(native_text):
-            # Only a name we chose is a convention. If ours is the decompiler's
-            # own default and the oracle has a real name, the name is missing,
-            # not different.
-            default = re.match(r"(?:FUN|SUB|UNK)_[0-9a-f]+$", native_name)
-            return {"missing-name" if default else "name-convention":
-                    [oracle_name, native_name]}
+            return named
 
-    # A cast the oracle needs and we do not: it types an import slot
-    # `undefined *` and casts at the call, while the store knows the slot holds
-    # a code pointer. Dropping those casts from the oracle's own text decides
-    # it -- if the streams then match, the only difference is that our type is
-    # the stronger one.
-    casts = re.findall(CAST, oracle_text)
-    if casts and tokens(re.sub(CAST, "", oracle_text)) == tokens(native_text):
-        return {"type-stronger": sorted({cast.strip() for cast in casts})}
+    # A cast the two sides place differently because they type the same slot
+    # differently: the store holds the import slot's own type, so our text
+    # casts at the comparison and not at the call, while the oracle types the
+    # slot `undefined` and casts at the call. Dropping every core-type pointer
+    # cast from *both* sides decides it, and the claim is only made when the
+    # slot is one the store holds as an import. The two normalisations
+    # compose: naming one fact never excuses the other.
+    oracle_casts = {cast.strip() for cast in re.findall(CAST, substituted)}
+    native_casts = {cast.strip() for cast in re.findall(CAST, native_text)}
+    typed = store["externals"].keys() | store["definitions"]
+    typed_slot = any(int(match.group(1), 16) in typed
+                     for match in re.finditer(r"\b(?:PTR|DAT)_\w*?_?([0-9a-f]{6,16})\b",
+                                              native_text))
+    if (oracle_casts != native_casts and typed_slot
+            and tokens(re.sub(CAST, "", substituted))
+            == tokens(re.sub(CAST, "", native_text))):
+        return {**named, "type-stronger": sorted(oracle_casts ^ native_casts)}
 
     if differing:
         classes["function-facts"] = differing
@@ -265,12 +305,138 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if typed:
         classes["data-type-unknown"] = typed
 
+    # A data label both stores name, and name differently on purpose.
+    labels = label_substitutions(native_text, oracle_text, store, oracle_store)
+    if labels:
+        classes["data-name-convention"] = labels
+
     # Flow the two sides disagree about, on the same bytes.
     native_warnings = {re.sub(r"\s+", " ", item) for item in WARNING.findall(native_text)}
     oracle_warnings = {re.sub(r"\s+", " ", item) for item in WARNING.findall(oracle_text)}
     if native_warnings != oracle_warnings:
         classes["flow"] = sorted(native_warnings - oracle_warnings)[:3]
     return classes
+
+
+def label_substitutions(native_text: str, oracle_text: str, store: dict,
+                        oracle_store: dict) -> list[dict]:
+    """Addresses both stores name, deliberately and differently.
+
+    Ours names the slot after the import it holds (the relocation proves it);
+    Ghidra names it after the dynamic tag that reserves it. Our text prints
+    the address inside its label, so the pair can be matched by address
+    rather than by guessing.
+    """
+    pairs = []
+    for address, oracle_name in oracle_store["names"].items():
+        if store["names"].get(address) == oracle_name:
+            continue
+        if not re.search(rf"\b{re.escape(oracle_name)}\b", oracle_text):
+            continue
+        ours = [item for item in DYNAMIC.findall(native_text)
+                if item.endswith(f"{address:08x}")]
+        if len(ours) == 1 and ours[0] != oracle_name:
+            pairs.append({"address": f"{address:08x}", "oracle": oracle_name,
+                          "native": ours[0]})
+    return pairs
+
+
+def numeric(token: str) -> str:
+    """An integer literal as its value, so notation is never a divergence."""
+    try:
+        return str(int(token, 0))
+    except ValueError:
+        return token
+
+
+def licensed(classes: dict, native_text: str, oracle_text: str,
+             store: dict) -> tuple[set[str], set[re.Pattern]]:
+    """The tokens each named class accounts for -- literal, then by shape."""
+    words: set[str] = set()
+    shapes: set[re.Pattern] = set()
+    for name, evidence in classes.items():
+        if name == "function-facts":
+            # A signature or a return type the two stores disagree about: the
+            # values themselves, the types they name, and the names the
+            # decompiler derives from them.
+            for pair in evidence.values():
+                for value in pair:
+                    words.update(tokens(value or ""))
+            shapes.update({DERIVED, TYPE_NAME})
+        elif name == "missing-external-prototype":
+            # A declared prototype changes the argument list: its types, its
+            # length, and the locals the decompiler derives without it.
+            words.update(evidence)
+            words.update(SHAPE)
+            shapes.update({DERIVED, TYPE_NAME})
+        elif name == "type-stronger":
+            # The casts either side carries: where the store holds the slot's
+            # type, the cast moves rather than disappearing, so the tokens of
+            # a shared cast move with it.
+            for cast in set(evidence) | set(re.findall(CAST, native_text)) \
+                    | set(re.findall(CAST, oracle_text)):
+                words.update(tokens(cast))
+        elif name == "missing-data-symbol":
+            words.update(DYNAMIC.findall(oracle_text))
+            words.update(item.group(0) for item in
+                         re.finditer(r"\b[a-z]{1,4}Ram[0-9a-f]{8,16}\b", native_text))
+            words.update(f"0x{int(address, 16):x}" for address in evidence)
+        elif name == "data-type-unknown":
+            for item in evidence:
+                words.add(item["oracle"])
+                words.update(item["native"])
+        elif name == "string-not-rendered":
+            for item in evidence:
+                words.add(f'"{item["value"]}"')
+                words.update(tokens(json.dumps(item["value"])))
+                words.add(f"0x{int(item['address'], 16):x}")
+                words.update(DYNAMIC.findall(oracle_text))
+        elif name == "flow":
+            # Where the two sides disagree about flow they disagree about the
+            # structure that follows from it: its warnings, its keywords, its
+            # labels and the punctuation that carries them.
+            words.update(re.sub(r"\s+", " ", item)
+                         for item in WARNING.findall(native_text) + WARNING.findall(oracle_text))
+            words.update(CONTROL)
+            words.update(SHAPE)
+            words.update(DYNAMIC.findall(native_text))
+            words.update(DYNAMIC.findall(oracle_text))
+            shapes.update({DERIVED})
+    return words, shapes
+
+
+def residue(native_text: str, oracle_text: str, native_row: dict, oracle_row: dict,
+            classes: dict, store: dict) -> list[str]:
+    """Every differing token no named class accounts for.
+
+    A class that names one fact does not excuse the rest of a function: the
+    gate subtracts what the class licenses and fails on what is left, which
+    is how `processEntry` -- a convention no fact recorded -- stayed hidden
+    behind a name that did differ.
+    """
+    native_name, oracle_name = native_row.get("name"), oracle_row.get("name")
+    if native_name and oracle_name and native_name != oracle_name:
+        oracle_text = re.sub(rf"\b{re.escape(oracle_name)}\b", native_name, oracle_text)
+    for pair in classes.get("data-name-convention", []):
+        oracle_text = re.sub(rf"\b{re.escape(pair['oracle'])}\b", pair["native"],
+                             oracle_text)
+    words, shapes = licensed(classes, native_text, oracle_text, store)
+    words.update(filter(None, (native_name, oracle_name)))
+    left = []
+    # An integer's notation is not a fact: `0x0` and `0` are the same number,
+    # and which one the decompiler prints follows from the operand's type.
+    # A differing *value* still differs after this.
+    matcher = difflib.SequenceMatcher(a=[numeric(item) for item in tokens(oracle_text)],
+                                      b=[numeric(item) for item in tokens(native_text)],
+                                      autojunk=False)
+    for operation, i1, i2, j1, j2 in matcher.get_opcodes():
+        if operation == "equal":
+            continue
+        for token in matcher.a[i1:i2] + matcher.b[j1:j2]:
+            if token in words or any(shape.match(token) for shape in shapes):
+                continue
+            left.append(token)
+    return sorted(set(left))
 
 
 def compare_language(language: str, binary: Path, work: Path, timeout: int) -> dict:
@@ -291,6 +457,7 @@ def compare_language(language: str, binary: Path, work: Path, timeout: int) -> d
     native_facts = facts(native_project / "project.sqlite", program)
     oracle_facts = facts(oracle_project / "project.sqlite", program)
     store = store_context(native_project / "project.sqlite", program)
+    oracle_store = store_context(oracle_project / "project.sqlite", program)
     shared = sorted(set(native_facts) & set(oracle_facts))
     assert shared, f"{language}: the two stores share no function"
 
@@ -312,14 +479,17 @@ def compare_language(language: str, binary: Path, work: Path, timeout: int) -> d
             identical.append({"address": address, "tokens": len(native_stream)})
             continue
         classes = classify(native_text.stdout, oracle_text.stdout,
-                           native_facts[entry], oracle_facts[entry], entry, store)
-        if classes:
+                           native_facts[entry], oracle_facts[entry], entry, store,
+                           oracle_store)
+        left = residue(native_text.stdout, oracle_text.stdout, native_facts[entry],
+                       oracle_facts[entry], classes, store) if classes else []
+        if classes and not left:
             attributed.append({"address": address, "classes": classes,
                                "oracle_tokens": len(oracle_stream),
                                "native_tokens": len(native_stream)})
         else:
             unattributed.append({
-                "address": address,
+                "address": address, "classes": sorted(classes), "residue": left[:12],
                 "oracle": " ".join(oracle_stream)[:400],
                 "native": " ".join(native_stream)[:400]})
     return {"language": language, "program": program, "shared": len(shared),
@@ -394,8 +564,8 @@ def main() -> int:
     for row in measured:
         assert not row["unattributed"], (
             f"{row['language']}: {len(row['unattributed'])} function(s) differ from "
-            f"the oracle with no fact to explain it: "
-            f"{[item['address'] for item in row['unattributed']]}")
+            f"the oracle by tokens no fact explains: "
+            f"{[(item['address'], item['classes'], item['residue']) for item in row['unattributed']][:4]}")
         assert not row["skipped"], (
             f"{row['language']}: {len(row['skipped'])} function(s) could not be "
             f"compared: {row['skipped'][:2]}")

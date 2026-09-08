@@ -922,7 +922,8 @@ impl Core {
                 format!("{name}.{suffix}")
             };
             let started = std::time::Instant::now();
-            let mut summary = native::store_import(&self.db, &program, imp)?;
+            let entry_model = native::declared_entry_model(&self.config, &imp.language);
+            let mut summary = native::store_import(&self.db, &program, imp, entry_model)?;
             summary.phases.push(lre_model::PhaseTiming {
                 phase: "store".into(),
                 seconds: started.elapsed().as_secs_f64(),

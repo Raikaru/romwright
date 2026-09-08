@@ -516,7 +516,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 core.functions(&program).map_err(|e| e.to_string())?
             };
             for f in &rows {
-                println!("{}  {:6}  {}", f.entry, f.size, f.name);
+                // A convention is a fact about the function: show it where
+                // the function is listed, not only in decompiled text.
+                match f.calling_convention.as_deref() {
+                    Some(model) => {
+                        println!("{}  {:6}  {}  [{model}]", f.entry, f.size, f.name)
+                    }
+                    None => println!("{}  {:6}  {}", f.entry, f.size, f.name),
+                }
             }
             if limit == 0 {
                 println!("-- {} functions", rows.len());

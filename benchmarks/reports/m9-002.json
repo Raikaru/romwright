@@ -1,18 +1,18 @@
 {
  "id": "m9-002",
- "recorded_at": "2026-09-07T22:13:23.623559+00:00",
+ "recorded_at": "2026-09-08T00:54:21.878257+00:00",
  "status": "pass",
  "passed": true,
- "summary": "19 classes classified as declared/decoded/inferred; 7 of 12 declared classes scored here and 5 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
+ "summary": "21 classes classified as declared/decoded/inferred; 7 of 14 declared classes scored here and 7 by another committed gate, each attributing 1.0000 of the 4536 entries they named; 4665 promoted references scored in total; no fact carries a confidence its class does not derive",
  "thresholds": {
   "declared class attribution": 1.0,
   "evidence.unbacked_confidence": 0
  },
  "metrics": {
-  "evidence.classes": 19,
-  "evidence.declared": 12,
+  "evidence.classes": 21,
+  "evidence.declared": 14,
   "evidence.declared_exercised": 7,
-  "evidence.declared_elsewhere": 5,
+  "evidence.declared_elsewhere": 7,
   "evidence.unbacked_confidence": 0,
   "evidence.references": 4665,
   "evidence.attributed.native-analysis:constant-propagation": 1.0,
@@ -52,6 +52,12 @@
    "explanation": "A transfer of control the SLEIGH decoder proved by decoding the instruction that performs it.",
    "source": "native-import:branch"
   },
+  "native-import:dynamic-tag": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "An address the image's own dynamic table names: the table itself, or the target of a tag whose value is an address, labelled where nothing else names it.",
+   "source": "native-import:dynamic-tag"
+  },
   "native-import:elf-pointer": {
    "derives_confidence": false,
    "evidence": "inferred",
@@ -81,6 +87,12 @@
    "evidence": "declared",
    "explanation": "An entry in the ELF `.eh_frame_hdr` index: the compiler recorded unwind data for a function starting here.",
    "source": "native-import:elf-unwind"
+  },
+  "native-import:entry-convention": {
+   "derives_confidence": false,
+   "evidence": "declared",
+   "explanation": "The address the operating system enters the process at, carrying the platform's process-entry model: an ELF executable or shared object's e_entry under a Linux or unspecified OS ABI, where the language declares such a model.",
+   "source": "native-import:entry-convention"
   },
   "native-import:known-name": {
    "derives_confidence": false,
@@ -223,6 +235,12 @@
   }
  },
  "declared_elsewhere": {
+  "native-import:dynamic-tag": [
+   "evidence-classes.json"
+  ],
+  "native-import:entry-convention": [
+   "evidence-classes.json"
+  ],
   "native-import:known-name": [
    "evidence-classes.json",
    "m4-011.json"

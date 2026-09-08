@@ -151,6 +151,15 @@ pub fn augment(
     true
 }
 
+/// Whether a compiler spec declares a prototype model by that name. Ghidra
+/// asks the same question through `CompilerSpec.getCallingConvention` and
+/// skips the fact when the answer is nothing.
+pub(crate) fn declares_model(cspec: &str, name: &str) -> bool {
+    elements(cspec, "prototype")
+        .into_iter()
+        .any(|element| attribute(element.header, "name").as_deref() == Some(name))
+}
+
 /// Reads the models of one compiler spec. A dumped spec encodes parameter
 /// storage as `<addr space="register" offset="..">`; an installed spec uses
 /// `<register name="..">`. Both are accepted, resolved through the register
