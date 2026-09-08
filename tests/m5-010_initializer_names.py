@@ -40,6 +40,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "benchmarks"))
+import gate_cache  # noqa: E402
 EXPORTER = ROOT / "scripts" / "ExportFunctionScoring.java"
 
 THRESHOLDS = {
@@ -193,17 +195,30 @@ def native_facts(cli: Path, binary: Path, work: Path, timeout: int) -> dict:
 
 
 def stock_names(install: Path, binary: Path, work: Path, timeout: int) -> dict[int, str]:
-    output = work / "names.json"
-    result = subprocess.run(
-        [str(install / "support/analyzeHeadless"), str(work), "names",
-         "-import", str(binary), "-scriptPath", str(EXPORTER.parent),
-         "-postScript", EXPORTER.name, str(output), "-deleteProject"],
-        capture_output=True, text=True, timeout=timeout,
-        env=dict(os.environ, DEBUGINFOD_URLS=""))
-    assert output.is_file(), (
-        f"{binary.name}: stock name export produced nothing: "
-        f"{result.stdout[-400:]}")
-    return {int(row["entry"], 16): row["name"] for row in json.loads(output.read_text())
+    """Stock's function names for one image.
+
+    The export depends on the bytes, on the exporter script and on the pinned
+    install, so it is reused under exactly that key -- the same answer
+    `m5-010` and `m5-011` both ask for (`benchmarks/gate_cache.py`).
+    """
+    def export() -> list:
+        output = work / "names.json"
+        result = subprocess.run(
+            [str(install / "support/analyzeHeadless"), str(work), "names",
+             "-import", str(binary), "-scriptPath", str(EXPORTER.parent),
+             "-postScript", EXPORTER.name, str(output), "-deleteProject"],
+            capture_output=True, text=True, timeout=timeout,
+            env=dict(os.environ, DEBUGINFOD_URLS=""))
+        assert output.is_file(), (
+            f"{binary.name}: stock name export produced nothing: "
+            f"{result.stdout[-400:]}")
+        return json.loads(output.read_text())
+
+    rows = gate_cache.document(
+        gate_cache.stock_key(binary, install, artifact="names",
+                             exporter_sha256=gate_cache.digest(EXPORTER)),
+        export)
+    return {int(row["entry"], 16): row["name"] for row in rows
             if row.get("block_execute")}
 
 

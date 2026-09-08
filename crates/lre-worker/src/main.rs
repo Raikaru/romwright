@@ -94,6 +94,23 @@ fn run(
             .or_default()
             .push((comment.address.offset, comment.kind, comment.text));
     }
+    // A protected call site is a fact with a range and a handler; the comment
+    // is its rendering, and it is Ghidra's: `GccExceptionAnalyzer` writes
+    // exactly this PRE comment at the range's first address (m4-024).
+    for site in db.exception_sites(pid)? {
+        provider
+            .comments
+            .entry(site.function.offset)
+            .or_default()
+            .push((
+                site.start.offset,
+                "pre".to_string(),
+                format!(
+                    "try {{ // try from {:08x} to {:08x} has its CatchHandler @ {:08x}",
+                    site.start.offset, site.end.offset, site.landing_pad.offset
+                ),
+            ));
+    }
     for datatype in db.datatypes(pid)? {
         provider
             .datatypes
@@ -223,6 +240,10 @@ fn run(
             worker.prepare_function(&mut provider, offset)?;
             worker.set_action(&mut provider, "decompile", "")?;
             let raw = worker.decompile_at(&mut provider, ram, offset)?;
+            // One launch, many functions: the decompiler's per-function
+            // caches have to be cleared between them exactly as Ghidra's
+            // client clears them.
+            worker.flush_native(&mut provider)?;
             let value = if structured {
                 let decoded = lre_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
                 serde_json::to_value(lre_model::DecompDoc {

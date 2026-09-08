@@ -982,9 +982,7 @@ The classes separate the gaps from the choices, and the *direction* of a
 difference decides which it is. Gaps -- and no `flow` row at all, so every
 warning either side emits is accounted for:
 `data-type-unknown` 4;
-`exception-annotation` 4, the try/catch
-comments Ghidra's exception analyzer writes from `.gcc_except_table` and we do
-not read; `missing-external-prototype` 4
+`missing-external-prototype` 4
 with the `function-facts` 2 that follow
 from it -- `long strtol(char **, ...)` is applied on the 64-bit rows and
 refused on the 32-bit ones, because a 32-bit language's `coretypes` names
@@ -1017,7 +1015,7 @@ identifier.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Eighteen tasks have shrunk the gaps by carrying facts the image, its ABI or
+Nineteen tasks have shrunk the gaps by carrying facts the image, its ABI or
 the pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1050,6 +1048,24 @@ the pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* the ranges an image declares protected
+  (`tests/m4-024_exception_annotations.py`): Ghidra's exception analyzer walks
+  each function's LSDA call-site table and writes `try { // try from X to Y
+  has its CatchHandler @ Z` at the range's first address. The loader now reads
+  the same table -- through `.eh_frame`'s `L` augmentation, whose personality
+  pointer is `DW_EH_PE_indirect|pcrel|sdata8` on AArch64 and only has to be
+  stepped over -- and records the range and its handler as facts
+  (`native-import:elf-exception`), which the worker renders into Ghidra's own
+  comment. **4 ranges across the four C++ rows, each identical to the comment
+  stock recorded for the same bytes**, none invented, and none on a row whose
+  call sites have no handler. Two defects fell out of it: a batched decompile
+  never sent the `flushNative` Ghidra's own client sends after every function
+  (`DecompInterface.decompileFunction`:828-834), so every function after the
+  first saw the first one's caches -- no comments, and a stale "already
+  applied" memo that decompiled `printf` as `void printf(void)`; and a PRE
+  comment was sent as `header` where Ghidra sends `user2`
+  (`DecompileCallback.encodeCommentsType`:576-595), which the decompiler's
+  default body mask drops. `exception-annotation` **4 -> 0**.
 * the install decides the language (`tests/m4-023_language_selection.py`):
   selection came from a hand-written table that answered `ARM:LE:32:v7` where
   the pinned `ARM.opinion` pins `variant="v8"` -- and `v8LEInstruction` behind
@@ -1701,7 +1717,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 8; `parity.class.data-type-unknown` 4; `parity.class.exception-annotation` 4; `parity.class.function-facts` 2; `parity.class.language-variant` 3; `parity.class.mangled-name` 8; `parity.class.missing-external-prototype` 4; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 106; `parity.functions_token_identical` 1739; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 8; `parity.class.data-type-unknown` 4; `parity.class.function-facts` 2; `parity.class.language-variant` 3; `parity.class.mangled-name` 8; `parity.class.missing-external-prototype` 4; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 106; `parity.functions_token_identical` 1739; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1720,6 +1736,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-020.json` | `m4-020` | M4 | pass | `data_labels` 5 | `tests/m4-020_label_prefixes.py` |
 | `m4-021.json` | `m4-021` | M4 | pass |  | `tests/m4-021_initializer_slots.py` |
 | `m4-023.json` | `m4-023` | M4 | pass | `language.rows_identical_to_stock` 6; `language.rows_measured` 7; `language.rows_stock_unconstrained` 1; `language.rows_unexplained` 0 | `tests/m4-023_language_selection.py` |
+| `m4-024.json` | `m4-024` | M4 | pass | `exception.ranges_invented` 0; `exception.ranges_missing` 0; `exception.ranges_recorded` 4; `exception.rows_measured` 8; `exception.rows_with_ranges` 4 | `tests/m4-024_exception_annotations.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |

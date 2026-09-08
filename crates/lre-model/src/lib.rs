@@ -668,6 +668,22 @@ pub struct PrototypeRow {
 
 /// A function's return behavior is unknown unless a producer supplies a fact.
 /// `no_return = false` can explicitly override an inferred non-returning flag.
+/// One call site an image declares protected by an exception handler, and the
+/// handler it branches to. The range is the call site's own, inclusive at both
+/// ends, exactly as `.gcc_except_table` states it.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ExceptionSiteRow {
+    /// Entry of the function the frame describes.
+    pub function: Address,
+    /// First address of the protected range.
+    pub start: Address,
+    /// Last address of the protected range, inclusive.
+    pub end: Address,
+    /// The handler the call site enters when it throws.
+    pub landing_pad: Address,
+    pub provenance: FactProvenance,
+}
+
 /// One instruction whose flow a fact corrects: the raw decode says "branch",
 /// the image's own structure says the transfer behaves like a call. Ghidra
 /// holds the same fact per instruction (`Instruction.getFlowOverride`).

@@ -24,7 +24,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 14;
+pub const SCHEMA_VERSION: i64 = 15;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -202,6 +202,21 @@ impl ProjectDb {
                  PRIMARY KEY (program_id, src, dst, kind)
              );
              CREATE INDEX IF NOT EXISTS idx_xrefs_dst ON xrefs(program_id, dst);
+
+             CREATE TABLE IF NOT EXISTS exception_sites (
+                 program_id INTEGER NOT NULL REFERENCES programs(id),
+                 function TEXT NOT NULL,
+                 start TEXT NOT NULL,
+                 end TEXT NOT NULL,
+                 landing_pad TEXT NOT NULL,
+                 provenance TEXT NOT NULL,
+                 provenance_kind TEXT NOT NULL
+                     CHECK(provenance_kind IN ('asserted', 'inferred')),
+                 confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                 PRIMARY KEY(program_id, start)
+             );
+             CREATE INDEX IF NOT EXISTS idx_exception_sites_fn
+                 ON exception_sites(program_id, function);
 
              CREATE TABLE IF NOT EXISTS comments (
                  program_id INTEGER NOT NULL REFERENCES programs(id),
@@ -1173,6 +1188,89 @@ impl ProjectDb {
     }
 
     /// Instruction flow the image's own structure corrects.
+    /// The protected call sites of one program, ordered by range start.
+    pub fn exception_sites(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<lre_model::ExceptionSiteRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT function, start, end, landing_pad, provenance, provenance_kind, confidence
+             FROM exception_sites WHERE program_id = ?1 ORDER BY start",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                Ok(lre_model::ExceptionSiteRow {
+                    function: addr_from_cell(row.get(0)?, 0)?,
+                    start: addr_from_cell(row.get(1)?, 1)?,
+                    end: addr_from_cell(row.get(2)?, 2)?,
+                    landing_pad: addr_from_cell(row.get(3)?, 3)?,
+                    provenance: lre_model::FactProvenance {
+                        kind: if row.get::<_, String>(5)? == "asserted" {
+                            lre_model::FactKind::Asserted
+                        } else {
+                            lre_model::FactKind::Inferred
+                        },
+                        source: row.get(4)?,
+                        confidence: row.get(6)?,
+                    },
+                })
+            })?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        Ok(rows)
+    }
+
+    /// Replaces the protected call sites one producer owns, leaving another
+    /// producer's rows alone.
+    pub fn replace_exception_sites(
+        &self,
+        program: ProgramId,
+        source: &str,
+        rows: &[lre_model::ExceptionSiteRow],
+    ) -> Result<()> {
+        if source.trim().is_empty() {
+            return Err(DbError::InvalidFactProvenance(
+                "exception site source is empty".into(),
+            ));
+        }
+        for row in rows {
+            validate_fact_provenance(&row.provenance)?;
+            if row.provenance.source != source {
+                return Err(DbError::InvalidFactProvenance(format!(
+                    "exception site does not belong to source {source}"
+                )));
+            }
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "DELETE FROM exception_sites WHERE program_id = ?1 AND provenance = ?2",
+            params![program.0, source],
+        )?;
+        {
+            let mut stmt = tx.prepare(
+                "INSERT OR REPLACE INTO exception_sites(program_id, function, start, end,
+                     landing_pad, provenance, provenance_kind, confidence)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            )?;
+            for row in rows {
+                stmt.execute(params![
+                    program.0,
+                    addr_cell(&row.function),
+                    addr_cell(&row.start),
+                    addr_cell(&row.end),
+                    addr_cell(&row.landing_pad),
+                    row.provenance.source,
+                    match row.provenance.kind {
+                        FactKind::Asserted => "asserted",
+                        FactKind::Inferred => "inferred",
+                    },
+                    row.provenance.confidence,
+                ])?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn flow_overrides(
         &self,
         program: ProgramId,

@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T10:57:03.318426+00:00",
+ "recorded_at": "2026-09-08T13:11:19.687019+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1739 of 1845 functions token-identical, 106 differing only where a named fact differs (data-name-convention 8, data-type-unknown 4, exception-annotation 4, function-facts 2, language-variant 3, mangled-name 8, missing-external-prototype 4, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1739 of 1845 functions token-identical, 106 differing only where a named fact differs (data-name-convention 8, data-type-unknown 4, function-facts 2, language-variant 3, mangled-name 8, missing-external-prototype 4, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -15,7 +15,6 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 8,
   "parity.class.data-type-unknown": 4,
-  "parity.class.exception-annotation": 4,
   "parity.class.function-facts": 2,
   "parity.class.language-variant": 3,
   "parity.class.mangled-name": 8,
@@ -71,7 +70,6 @@
    "identical_tokens": 135,
    "attributed": 12,
    "classes": [
-    "exception-annotation",
     "mangled-name",
     "name-convention",
     "oracle-warning",
@@ -79,7 +77,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-64-default-cpp_o2.jsonl",
-    "sha256": "c5fb011febebd914a03427326dc2be10837660557922a726061d0a3d1f54d7de"
+    "sha256": "a41f1de988ff315474681cb38a5c3cc2c45e49470f35f114e308ecf15a5f528d"
    }
   },
   {
@@ -143,7 +141,6 @@
    "identical_tokens": 204,
    "attributed": 13,
    "classes": [
-    "exception-annotation",
     "mangled-name",
     "name-convention",
     "oracle-warning",
@@ -151,7 +148,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-cpp_o2.jsonl",
-    "sha256": "22b82a69e3e366c949ddce46f023c821d2ee393a7a9eed1e07d4709640466237"
+    "sha256": "0d5962eb9d7e2a0938924f1fa96141563d8618b1f13deae0f972e1ed78bb7abb"
    }
   },
   {
@@ -218,7 +215,6 @@
    "attributed": 12,
    "classes": [
     "data-name-convention",
-    "exception-annotation",
     "function-facts",
     "language-variant",
     "mangled-name",
@@ -228,7 +224,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-cpp_o2.jsonl",
-    "sha256": "81ee317f2cb2bc8b0c129c688184bc5565df2b5874c6b04bd161804b5bc13e7c"
+    "sha256": "1b916603a3581743680cf653eb8c6d1de42360f1e371e2d7bf474d29751b527e"
    }
   },
   {
@@ -301,7 +297,6 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "exception-annotation",
     "function-facts",
     "mangled-name",
     "missing-external-prototype",
@@ -312,7 +307,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default-cpp_o2.jsonl",
-    "sha256": "b355ddf7fb4fb043563ef1455f593249cab12948e8837457e25ed9e9961d9069"
+    "sha256": "cef3c0c1c2ae5cb1beb59fbe92e4478ff05a21a9f6700edcf3f8060ac8a4240b"
    }
   },
   {

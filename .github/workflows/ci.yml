@@ -102,6 +102,8 @@ jobs:
         run: |
           python3 tests/m8-002_pe32_roots.py \
             --report "$RUNNER_TEMP/pe32-roots.json"
+      - name: Check that reused gate stores are keyed by their provenance
+        run: python3 tests/gate_cache_test.py
       - name: Check the evidence index
         run: python tests/m5-012_evidence_index.py
       - name: Run the documented workflow
@@ -350,6 +352,13 @@ jobs:
           python3 tests/m4-023_language_selection.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/language-selection.json"
+      - name: Record the try ranges the exception tables declare
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-024_exception_annotations.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/exception-annotations.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

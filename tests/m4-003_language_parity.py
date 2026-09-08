@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import difflib
 import hashlib
 import importlib.util
@@ -43,6 +44,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "benchmarks"))
+import gate_cache  # noqa: E402
 SPECS = ROOT / "native/specs"
 LOCK = ROOT / "tests/corpus.lock.json"
 GHIDRA = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
@@ -247,6 +250,14 @@ def store_context(store: Path, program: str) -> dict:
         connection.close()
 
 
+def strip_annotations(text: str, wanted: list[str]) -> str:
+    """Removes only the exception comments a class actually claimed."""
+    for match in EH_COMMENT.findall(text):
+        if re.sub(r"\s+", " ", match) in wanted:
+            text = text.replace(match, "")
+    return text
+
+
 def demangled_pairs(native_text: str, oracle_text: str, store: dict,
                     oracle_store: dict) -> list[dict]:
     """An object the image names in its mangled form, at an address stock's
@@ -338,12 +349,15 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
         if tokens(substituted) == tokens(native_text):
             return named
 
-    # Comments stock's exception analyzer writes from `.gcc_except_table` and
-    # its decompiler prints. We do not read that section, so the annotation is
-    # missing on our side -- and it annotates flow rather than deciding it.
-    annotations = [re.sub(r"\s+", " ", item) for item in EH_COMMENT.findall(substituted)]
+    # Comments the exception analyzer writes from `.gcc_except_table`. Both
+    # sides read that table now (m4-024), so the class has a direction: only
+    # an annotation stock prints and we do not is a difference, and a matching
+    # pair cancels in the token streams without a class.
+    ours = {re.sub(r"\s+", " ", item) for item in EH_COMMENT.findall(native_text)}
+    annotations = sorted({re.sub(r"\s+", " ", item) for item in EH_COMMENT.findall(substituted)}
+                         - ours)
     if annotations:
-        substituted = EH_COMMENT.sub("", substituted)
+        substituted = strip_annotations(substituted, annotations)
         named["exception-annotation"] = annotations
         if tokens(substituted) == tokens(native_text):
             return named
@@ -628,7 +642,7 @@ def residue(native_text: str, oracle_text: str, native_row: dict, oracle_row: di
         oracle_text = oracle_text.replace(held, identifier)
     oracle_text = apply_demangled(oracle_text, classes.get("mangled-name", []))
     if "exception-annotation" in classes:
-        oracle_text = EH_COMMENT.sub("", oracle_text)
+        oracle_text = strip_annotations(oracle_text, classes["exception-annotation"])
     if "language-variant" in classes:
         oracle_text = REGISTER_DERIVED.sub(lambda match: match.group(1), oracle_text)
     words, shapes = licensed(classes, native_text, oracle_text, store,
@@ -665,36 +679,65 @@ def batch(*arguments: str, timeout: int) -> dict[str, str]:
     return json.loads(result.stdout)
 
 
+def import_native(binary: Path, timeout: int) -> Path:
+    """A store for `binary`, reused while the binary and the build are the same.
+
+    Re-analysing bytes that never changed with executables that never changed
+    is the whole of this gate's old wall time. The key is the provenance:
+    the binary's digest and the digests of the `lre-cli` and `lre-worker` that
+    read it, so a rebuilt worker is a miss (`benchmarks/gate_cache.py`).
+    """
+    def build(directory: Path) -> None:
+        result = cli("import", str(binary), "--project", str(directory), timeout=timeout)
+        assert result.returncode == 0, (
+            f"{binary.name}: native import failed: {result.stderr.strip()}")
+
+    return gate_cache.store(gate_cache.native_key(binary), build)
+
+
+def import_oracle(binary: Path, timeout: int) -> Path:
+    """The same, for the JVM oracle: keyed by the binary, the bridge sources
+    and the pinned install's revision -- the digests every committed oracle
+    reference is already pinned by."""
+    def build(directory: Path) -> None:
+        result = cli("import", str(binary), "--oracle", "--project", str(directory),
+                     "--ghidra", str(GHIDRA), timeout=timeout)
+        assert result.returncode == 0, (
+            f"{binary.name}: oracle import failed: {result.stderr.strip()}")
+
+    return gate_cache.store(gate_cache.oracle_key(binary, GHIDRA), build)
+
+
 def compare_row(language: str, variant: str, binary: Path, work: Path,
                 timeout: int) -> dict:
     """Import both ways, then compare every function both stores hold."""
     program = binary.name
-    native_project, oracle_project = work / "native", work / "oracle"
-    imported = cli("import", str(binary), "--project", str(native_project),
-                   timeout=timeout)
-    assert imported.returncode == 0, (
-        f"{language}: native import failed: {imported.stderr.strip()}")
-    assert language in imported.stdout, (
-        f"{language}: native import reported {imported.stdout.strip()!r}")
-    oracle = cli("import", str(binary), "--oracle", "--project", str(oracle_project),
-                 "--ghidra", str(GHIDRA), timeout=timeout)
-    assert oracle.returncode == 0, (
-        f"{language}: oracle import failed: {oracle.stderr.strip()}")
-
+    native_project = import_native(binary, timeout)
+    oracle_project = import_oracle(binary, timeout)
     native_facts = facts(native_project / "project.sqlite", program)
     oracle_facts = facts(oracle_project / "project.sqlite", program)
     store = store_context(native_project / "project.sqlite", program)
     oracle_store = store_context(oracle_project / "project.sqlite", program)
+    # The language is read from the store, not from an import message: a
+    # reused store has no message, and the recorded fact is the claim anyway.
+    assert store["language"] == language, (
+        f"{language}: the native store recorded {store['language']!r}")
     shared = sorted(set(native_facts) & set(oracle_facts))
     assert shared, f"{language}: the two stores share no function"
 
     addresses = [f"{entry:08x}" for entry in shared]
     joined = ",".join(addresses)
-    native_texts = batch("decompile-batch", str(binary), joined,
-                         "--project", str(native_project), timeout=timeout)
-    oracle_texts = batch("decompile-batch", program, joined, "--oracle",
-                         "--project", str(oracle_project), "--ghidra", str(GHIDRA),
-                         timeout=timeout)
+    digest = hashlib.sha256(joined.encode()).hexdigest()
+    native_texts = gate_cache.document(
+        gate_cache.native_key(binary, artifact="decompile-batch", addresses=digest),
+        lambda: batch("decompile-batch", str(binary), joined,
+                      "--project", str(native_project), timeout=timeout))
+    oracle_texts = gate_cache.document(
+        gate_cache.oracle_key(binary, GHIDRA, artifact="decompile-batch",
+                              addresses=digest),
+        lambda: batch("decompile-batch", program, joined, "--oracle",
+                      "--project", str(oracle_project), "--ghidra", str(GHIDRA),
+                      timeout=timeout))
 
     identical, attributed, unattributed, skipped = [], [], [], []
     for entry in shared:
@@ -755,6 +798,8 @@ def main() -> int:
     parser.add_argument("--record", action="store_true",
                         help="write the parity baseline instead of checking it")
     parser.add_argument("--timeout", type=int, default=1200)
+    parser.add_argument("--jobs", type=int, default=4,
+                        help="rows compared concurrently; an uncached row runs a JVM")
     arguments = parser.parse_args()
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
@@ -778,7 +823,7 @@ def main() -> int:
         f"these languages are blocked for want of a corpus row that now exists: "
         f"{stale}")
 
-    measured, blocked = [], {}
+    measured, blocked, pending = [], {}, []
     with tempfile.TemporaryDirectory(prefix="m4-003-") as directory:
         work = Path(directory)
         for language in languages:
@@ -801,8 +846,23 @@ def main() -> int:
                 assert binary.is_file(), f"{language}/{variant}: {binary} is missing"
                 row_work = work / f"{language.replace(':', '-')}-{variant}"
                 row_work.mkdir(parents=True)
-                measured.append(compare_row(language, variant, binary, row_work,
-                                            arguments.timeout))
+                pending.append((language, variant, binary, row_work))
+        # The rows are independent: each one imports its own binary and
+        # compares its own functions. They run concurrently, bounded because
+        # an uncached row still spawns a JVM whose analysis wants memory --
+        # and the results are re-ordered afterwards, so the report and the
+        # baseline do not depend on which row finished first.
+        order = {(language, variant): index
+                 for index, (language, variant, _, _) in enumerate(pending)}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=arguments.jobs) as pool:
+            futures = {
+                pool.submit(compare_row, language, variant, binary, row_work,
+                            arguments.timeout): (language, variant)
+                for language, variant, binary, row_work in pending
+            }
+            for future in concurrent.futures.as_completed(futures):
+                measured.append(future.result())
+        measured.sort(key=lambda row: order[(row["language"], row["variant"])])
 
     for row in measured:
         assert not row["unattributed"], (

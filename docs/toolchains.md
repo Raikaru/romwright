@@ -211,3 +211,35 @@ The x86 probes use Linux GNU targets and explicit `-fno-pie -no-pie`.
 Ubuntu LLVM 18 routes generic `*-none-elf` x86 links through GCC, whose
 default PIE mode rejects the probes' absolute relocations. The explicit
 targets/model avoid that host-dependent driver behavior.
+
+## Reusable gate stores (`VENTRIS_GATE_CACHE`)
+
+A gate run spent most of its wall time re-analysing bytes that never changed
+with analysers that never changed: `m4-003` imported sixteen corpus rows
+through the JVM bridge on every invocation, and four M5 gates asked stock the
+same questions about the same rows. `benchmarks/gate_cache.py` reuses those
+answers, keyed by the provenance that produced them and nothing else:
+
+| Artifact | Key |
+|---|---|
+| oracle store, oracle decompile texts | binary digest + `bridge_sources_sha256` + install `upstream_version`/`upstream_revision` |
+| stock headless export (thunks, names, selected language) | binary digest + exporter-script digest + install version/revision |
+| native store, native decompile texts | binary digest + `lre-cli` digest + `lre-worker` digest |
+
+The native key carries the executables on purpose: m4-014 recorded three
+measurement rounds driven by a stale worker, and a key that omitted the build
+would reintroduce that failure as a cache hit. A miss, a changed input, a
+corrupt marker or a crashed build all fall through to real work, and
+`tests/gate_cache_test.py` pins each of those properties.
+
+Set `VENTRIS_GATE_CACHE=/some/path` to relocate the store (default:
+`$TMPDIR/ventris-gate-cache`), or `VENTRIS_GATE_CACHE=` to switch reuse off.
+The cost gates (`m7-001`..`m7-003`) never use it: they measure the work it
+skips. Measured on the corpus: `m4-003` 690-1300 s -> **250 s** cold and
+**3 s** reused, `m5-008` 172 s -> 14 s, `m5-011` 177 s -> 6 s, `m4-023` 65 s
+-> 0.6 s, `m4-024` 54 s -> 0.3 s.
+
+Rows inside a gate run concurrently (`--jobs`, default 4). The bound is
+memory, not CPU: an uncached row still starts a JVM whose analysis wants a
+few hundred megabytes. Results are re-ordered by row before anything is
+recorded, so a report never depends on which row finished first.

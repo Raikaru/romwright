@@ -4621,23 +4621,95 @@ evidence:
   **378 lines**, all ten docks present, and the Qt gates (`m6-003`,
   `m9-004`, `m10-002`) pass against a rebuilt binary.
 
+### m4-024 evidence
+- The rule, from the pinned tree: `GccExceptionAnalyzer.processCallSiteRecord`
+  marks every LSDA call site whose landing-pad offset is nonzero, and
+  `markStartOfTry` (:292-303) writes `try { // try from <first> to <last> has
+  its CatchHandler @ <pad>` as a **PRE** comment at the range's first address.
+  `LSDAHeader.createLPStartPointer` supplies the default the encoding omits
+  (`lpStart = region.getRangeStart()`, the function the FDE describes), and
+  `LSDACallSiteRecord.create` fixes the arithmetic: range
+  `[lpStart + position, lpStart + position + length - 1]`, handler
+  `lpStart + landingPadOffset`.
+- Implemented as facts, not text: `native/elf_exception.rs` walks `.eh_frame`
+  (CIE augmentation `z`/`P`/`L`/`R`, 32- and 64-bit length forms, FDE CIE
+  back-pointers) to the LSDA and records
+  `exception_sites(function, start, end, landing_pad)` with provenance
+  `native-import:elf-exception` (store schema **14 -> 15**). The worker
+  renders Ghidra's comment from the range; the analyst's `comments` table is
+  untouched, which the gate asserts.
+- **The personality pointer is skipped, not decoded.** AArch64 builds encode
+  it `DW_EH_PE_indirect|pcrel|sdata8` (`0x9b`), which cannot be resolved to an
+  address without reading the slot it names; refusing to decode it had cost
+  the whole CIE, and with it every AArch64 range.
+- Measured (`tests/m4-024_exception_annotations.py`,
+  `benchmarks/reports/m4-024.json`): **4 ranges across the four `cpp_o2`
+  rows**, each identical to the comment stock recorded for the same bytes,
+  each present in the text our worker prints; **0 missing, 0 invented**, and
+  the four `plain_o0` controls record none. `m4-003`'s
+  `exception-annotation` class is **4 -> 0**, with token identity unchanged at
+  1739 of 1845 and 0 unexplained.
+- **Two defects the comment exposed**, both in our own plumbing:
+  - a batched decompile never sent `flushNative`, which Ghidra's client sends
+    after *every* decompile (`DecompInterface.decompileFunction`:828-834). The
+    comment cache is filled once per function and only `clear()` refills it
+    (`comment_ghidra.hh`), so every function after the first in a batch saw
+    the first one's comments -- none. Worse, our own "already applied"
+    prototype memo survived the flush, so the second appearance of a stub
+    decompiled as `void printf(void)` where a single-address run printed
+    `int printf(char *__format,...)`. The memo is cleared with the flush.
+  - a PRE comment was sent to the decompiler as `header`, where Ghidra sends
+    `user2` (`DecompileCallback.encodeCommentsType`:576-595). The decompiler's
+    default body mask is `user2 | warning` (`printlanguage.cc`:586), so every
+    pre-comment -- ours and the analyst's -- was silently dropped from the
+    function body.
+- Regression: `cargo test --workspace` **257 pass**; every gate in `tests/`
+  passes, plus `corpus.sh`, `differential.sh`, `workflow.sh`,
+  `data_xrefs.sh`, `generic_discovery_test.sh`.
+
+### Gate wall time, measured and reduced
+- Where it went: `m4-003` 690-1300 s (16 rows x native import + JVM oracle
+  import + two batched decompiles), four M5 gates at 172-185 s each (one
+  `analyzeHeadless` export per corpus row), `m4-023` 65 s, `m4-024` 54 s.
+  Every one of those re-analysed bytes that had not changed with an analyser
+  that had not changed.
+- `benchmarks/gate_cache.py` reuses an artifact under the provenance that
+  produced it: an oracle artifact by binary digest + `bridge_sources_sha256` +
+  the install's `upstream_revision`; a stock headless export by binary +
+  exporter-script + install; a native artifact by binary + the `lre-cli` and
+  `lre-worker` digests, because m4-014 is the standing proof that a key
+  without the build is a stale-worker trap. A miss, a changed input, a corrupt
+  marker or a crashed build all fall through to real work
+  (`tests/gate_cache_test.py`, 8 tests).
+- Rows now run concurrently (`--jobs`, default 4, bounded by JVM memory) and
+  `m4-024` decompiles a row's functions in one launch instead of one each.
+- Measured: `m4-003` **250 s cold, 3 s reused** (from 690-1300 s), `m5-008`
+  172 -> **14 s**, `m5-011` 177 -> **6 s**, `m5-009` 176 -> **6 s**, `m5-010`
+  169 -> **6 s**, `m4-023` 65 -> **0.6 s**, `m4-024` 54 -> **0.3 s**, and
+  `m4-018`/`m4-019` **0.2 s** each by sharing `m4-003`'s stores. Numbers, not
+  adjectives: the whole `tests/*.py` sweep was 2375 s with `m4-003` included
+  and every cache cold.
+- The cost gates (`m7-001`..`m7-003`) do not use the cache: they measure the
+  work it skips. `VENTRIS_GATE_CACHE=` switches reuse off everywhere.
+
 ## Next task
-- m4-024: `.gcc_except_table` try/catch annotations (`exception-annotation`
-  4). Stock's exception analyzer reads the LSDA the C++ rows carry and writes
-  the `/* try { // try from X to Y has its CatchHandler @ Z */` comments its
-  decompiler then prints; we read neither the table nor `.eh_frame`'s
-  augmentation data for it, so four `cpp_o2` rows differ by those comments
-  alone. Read the format from the pinned tree first
-  (`GccExceptionAnalyzer`/`EHFrame` under `.ghidra-java`, and the LSDA layout
-  in the public Itanium C++ ABI), record which section each corpus row carries,
-  and store the ranges as facts with their own provenance class before
-  rendering anything. The acceptance test asserts the recorded ranges against
-  stock's own comments on the committed rows, and the parity class goes to
-  **0** or the residue is named.
-- After it: the 32-bit `long` prototype path
-  (`missing-external-prototype` 4 + `function-facts` 2), which needs the
-  worker to receive a *type* rather than a C declaration string, since a
-  32-bit language's `coretypes` has no name for the archive's `long`.
+- m4-025: the 32-bit `long` prototype path (`missing-external-prototype` 4 and
+  the `function-facts` 2 that follow it). A declaration from the pinned
+  archive is handed to the decompiler as C text, so it can only use type names
+  the language's own `coretypes.xml` declares -- and a 32-bit language names
+  `longlong` and no `long`, which is why `long strtol(char **, ...)` is
+  applied on the 64-bit rows and refused on the 32-bit ones. Stock does not
+  parse text: its Java side resolves the declaration against the program's
+  data organization and sends the decompiler a *type*. Read
+  `data_organization` in the pinned cspec and `PcodeDataTypeManager`'s type
+  stream first, then decide whether the worker should send a type document or
+  resolve the archive's names through the language's own sizes. The acceptance
+  test asserts the applied prototype on a 32-bit row against stock's, and the
+  parity classes go to 0 or the residue is named.
+- After it: `mangled-name` 8 (both stores hold `_ZTIi`; stock prints what its
+  demangler made of it) and `data-name-convention` 8 are naming choices, not
+  gaps -- closing them means deciding whether our store should hold the
+  demangled name, which changes what `m4-011`'s rendering rule applies to.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
