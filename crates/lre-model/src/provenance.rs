@@ -93,6 +93,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-analysis:shared-return",
+        explanation:         "An unconditional branch that leaves its own function for another \
+         function's entry: the transfer is a call whose callee returns to this \
+         function's caller, proved by decoding the branch.",
+        evidence: EvidenceKind::Decoded,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:dynamic-tag",
         explanation:         "An address the image's own dynamic table names: the table itself, \
          or the target of a tag whose value is an address, labelled where \

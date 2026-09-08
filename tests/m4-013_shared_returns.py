@@ -80,18 +80,20 @@ _start:
     hlt
     .size _start,.-_start
 
+    /* The destination sits before its callers, so no transfer here is a
+       fallthrough to the next address. */
+    .type callee,@function
+callee:
+    inc %eax
+    ret
+    .size callee,.-callee
+
     /* A tail call: one unconditional jump, straight to another entry. */
     .type caller,@function
 caller:
     xor %eax,%eax
     jmp callee
     .size caller,.-caller
-
-    .type callee,@function
-callee:
-    inc %eax
-    ret
-    .size callee,.-callee
 
     /* A jump to the branching function's own entry: an internal loop. */
     .type looper,@function
@@ -198,6 +200,28 @@ def tail_branch(facts: dict, entry: int, target: int) -> int:
     return found[0]
 
 
+def containing(facts: dict, address: int) -> int | None:
+    """The function whose body holds `address`."""
+    for entry, (_, size) in facts["functions"].items():
+        if entry <= address < entry + size:
+            return entry
+    return None
+
+
+def branches_into(facts: dict, target: int) -> list[tuple[int, int]]:
+    """Recorded transfers to `target` from inside some other function, as
+    (branching function, branch address). The caller is derived rather than
+    named: which function tail-branches into a stub is the image's business."""
+    found = []
+    for (source, destination) in facts["branches"]:
+        if destination != target:
+            continue
+        function = containing(facts, source)
+        if function is not None and function != target:
+            found.append((function, source))
+    return sorted(set(found))
+
+
 def build_fixture(work: Path) -> tuple[Path, dict[str, int]]:
     """Assemble the four shapes the rule distinguishes, and read their addresses."""
     compiler = shutil.which("cc") or shutil.which("gcc")
@@ -241,32 +265,33 @@ def main() -> int:
 
         # 1. The corpus rows whose whole difference is this fact.
         rows = []
-        for name, caller_name, import_name in (
-                ("powerpc_plain_o0", "_entry", "__libc_start_main"),
-                ("aarch64_plain_o0", "_init", "__gmon_start__")):
+        for name, import_name in (("powerpc_plain_o0", "__libc_start_main"),
+                                  ("aarch64_plain_o0", "__gmon_start__")):
             binary = (arguments.corpus_dir / recipes[name]["binary"]).resolve()
             assert binary.is_file(), f"{binary} is missing"
             project = work / name
             imported(binary, project, arguments.timeout)
             facts = store(project, binary.name)
             by_name = {label: entry for entry, (label, _) in facts["functions"].items()}
-            assert caller_name in by_name, (
-                f"{name} records no {caller_name}: {sorted(by_name)}")
             assert import_name in by_name, (
                 f"{name} records no {import_name} stub: {sorted(by_name)}")
-            caller, target = by_name[caller_name], by_name[import_name]
-            branch = tail_branch(facts, caller, target)
-            held = facts["overrides"].get(branch)
-            assert held == ("callreturn", SOURCE), (
-                f"{name}: the branch at {branch:08x} transfers to {import_name} at "
-                f"{target:08x} and holds {held}")
-            text = decompiled(binary, caller, project, arguments.timeout)
-            assert f"{import_name}(" in text, (
-                f"{name}: {caller_name} does not call {import_name}: {text[:220]}")
-            assert not JUMPTABLE.search(text), (
-                f"{name}: {caller_name} still asks for a jumptable: {text[:220]}")
-            rows.append({"program": binary.name, "caller": f"{caller:08x}",
-                         "branch": f"{branch:08x}", "calls": import_name})
+            target = by_name[import_name]
+            transfers = branches_into(facts, target)
+            assert transfers, (
+                f"{name}: nothing tail-branches into {import_name} at "
+                f"{target:08x}, so this row proves nothing")
+            for caller, branch in transfers:
+                held = facts["overrides"].get(branch)
+                assert held == ("callreturn", SOURCE), (
+                    f"{name}: the branch at {branch:08x} transfers to {import_name} "
+                    f"at {target:08x} and holds {held}")
+                text = decompiled(binary, caller, project, arguments.timeout)
+                assert f"{import_name}(" in text, (
+                    f"{name}: {caller:08x} does not call {import_name}: {text[:220]}")
+                assert not JUMPTABLE.search(text), (
+                    f"{name}: {caller:08x} still asks for a jumptable: {text[:220]}")
+                rows.append({"program": binary.name, "caller": f"{caller:08x}",
+                             "branch": f"{branch:08x}", "calls": import_name})
         findings["corpus"] = rows
 
         # 2. The rule's own conditions, one fixture shape apiece.
@@ -282,20 +307,23 @@ def main() -> int:
             f"{facts['overrides'].get(branch)}")
         shapes["tail_call"] = f"{branch:08x}"
 
-        # The branching function is the destination: an internal jump.
-        internal = [source for (source, destination) in facts["branches"]
-                    if destination == symbols["looper"]
-                    and symbols["looper"] <= source]
-        assert internal, "the fixture records no jump to looper's own entry"
-        for source in internal:
-            held = facts["overrides"].get(source)
-            assert held is None or held[1] != SOURCE, (
-                f"an internal jump to its own function's entry at {source:08x} "
-                f"was overridden: {held}")
-            kind = facts["branches"][(source, symbols["looper"])]
-            assert "JUMP" in kind, (
-                f"a jump to its own function's entry was typed {kind}")
-        shapes["internal_jump"] = [f"{address:08x}" for address in internal]
+        # The branching function is the destination: an internal jump. It
+        # leaves no transfer to record (a body's own branches are not
+        # inter-function references) and must leave no override either.
+        _, looper_size = facts["functions"][symbols["looper"]]
+        looper_body = range(symbols["looper"], symbols["looper"] + looper_size)
+        claimed = [f"{address:08x}" for address, (_, provenance) in
+                   facts["overrides"].items()
+                   if address in looper_body and provenance == SOURCE]
+        assert not claimed, (
+            f"an internal jump to its own function's entry was overridden: "
+            f"{claimed}")
+        mistyped = {edge: kind for edge, kind in facts["branches"].items()
+                    if edge[1] == symbols["looper"] and edge[0] in looper_body}
+        assert not mistyped, (
+            f"a jump to its own function's entry was recorded as a transfer: "
+            f"{ {f'{a:08x}->{b:08x}': k for (a, b), k in mistyped.items()} }")
+        shapes["internal_jump"] = "no override, no transfer"
 
         # A conditional branch: excluded while `considerConditionalBranches`
         # is off, which is the default.

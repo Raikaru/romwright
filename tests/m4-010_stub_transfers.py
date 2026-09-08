@@ -108,8 +108,17 @@ def facts(project: Path, program: str) -> dict:
                 reads.setdefault(to_offset, []).append(from_offset)
         definitions = {ram(address) for (address,) in connection.execute(
             "SELECT address FROM data_definitions WHERE program_id = ?", (identifier,))}
+        # Transfers a branch performs, by branching instruction: the evidence
+        # the shared-return rule acts on (m4-013).
+        transfers = {}
+        for source, destination, kind in connection.execute(
+                "SELECT src, dst, kind FROM xrefs WHERE program_id = ?", (identifier,)):
+            from_offset, to_offset = ram(source), ram(destination)
+            if from_offset is not None and to_offset is not None and (
+                    "JUMP" in kind or "CALL" in kind):
+                transfers.setdefault(from_offset, set()).add(to_offset)
         return {"functions": functions, "thunks": thunks, "overrides": overrides,
-                "reads": reads, "definitions": definitions}
+                "reads": reads, "definitions": definitions, "transfers": transfers}
     finally:
         connection.close()
 
@@ -204,21 +213,30 @@ def main() -> int:
             assert not warned, (
                 f"{name}: these still ask for a jumptable: {warned}")
 
-            # 3. Nothing else is overridden.
+            # 3. Nothing else is overridden. Three rules may own an override,
+            #    and each has to show its own evidence: a stub's transfer, a
+            #    reserved-slot read, or a branch that leaves its function for
+            #    another function's entry (m4-013's shared return).
             stray = []
             for item in row["overrides"]:
                 owner = containing(row["functions"], item["address"])
+                shared_return = (
+                    owner is not None
+                    and owner != item["address"]
+                    and any(target in row["functions"] and target != owner
+                            for target in row["transfers"].get(item["address"], ())))
                 known = owner is not None and (
                     any(stub["entry"] == owner for stub in row["thunks"])
                     or any(slot in row["definitions"]
                            for slot in row["reads"]
                            if owner == containing(row["functions"],
-                                                  min(row["reads"][slot]))))
+                                                  min(row["reads"][slot])))
+                    or shared_return)
                 if not known:
                     stray.append(f"{item['address']:08x} ({item['provenance']})")
             assert not stray, (
-                f"{name}: these overrides belong to no stub or reserved slot: "
-                f"{stray}")
+                f"{name}: these overrides belong to no stub, reserved slot or "
+                f"proven shared return: {stray}")
             measured[name] = {"stubs": len(stubs), "overrides": len(row["overrides"])}
 
     metrics = {"stubs.rows_measured": len(measured),

@@ -4158,18 +4158,63 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 94 reports indexed, both README
   generators in sync.
 
+### m4-013 evidence
+- The recorded hypothesis was **wrong, and the measurement says so**: m4-013
+  was written down as "supply the library declarations the remaining imports
+  need". Decompiling all 11 `missing-external-prototype` rows both ways showed
+  that is not what they differ by. Five of them (`printf`/`abort` stubs on
+  four languages) are *already* the oracle's text minus a warning the oracle
+  emits about **its own** locked-storage prototype; two more differ only by a
+  data label both stores name on purpose. What was actually missing was one
+  flow fact.
+- **The fact.** Ghidra's default-enabled `SharedReturnAnalyzer` converts a
+  branch to a function into a call that returns
+  (`SharedReturnAnalysisCmd.processFunctionJumpReferences`, :376-424): an
+  unconditional jump reference to a function entry, one flow reference on the
+  instruction, no function *at* the branch, the containing function not being
+  the destination, and no override already there. This tree already decided
+  the *consequence* -- `record_branch_transfers` types such a branch
+  `UNCONDITIONAL_CALL` and cites the same command -- and never recorded the
+  override, so nothing reached the decompiler. Now
+  `native-analysis:shared-return` records it, applied last so a stub's or the
+  PLT header's override keeps its owner, exactly as Ghidra skips an
+  instruction that already carries one.
+- Measured: the PowerPC entry went from
+  `/* Could not recover jumptable at 0x10010574 */ (*PTR___libc_start_main_1003074c)();`
+  to `__libc_start_main();`, and the AArch64 `.init` caller from the same
+  shape to `__gmon_start__();`. Class `flow` **10 -> 9**; token identity
+  **30** of 56 unchanged, because both rows still differ elsewhere (the
+  PowerPC row by a warning *we* emit about a global wider than the label we
+  sent, the AArch64 row by a pointer type on a GOT slot).
+- Controls, on a fixture built for the rule's four conditions: a tail call is
+  overridden; a jump to its own function's entry is neither overridden nor
+  recorded as a transfer; a conditional branch to a function entry is not
+  overridden (`considerConditionalBranches` is false by default); and a branch
+  that *is* a function entry keeps the thunk rule's provenance.
+- `m4-010` asserted every override belongs to a stub or a reserved slot -- an
+  exhaustive claim that a third owner falsified. Extended, not re-pinned: each
+  override must now show *its own* evidence, and a shared-return override must
+  point at a function entry outside the function that holds the branch.
+- Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-013`,
+  `m3-001`, `m3-003`, `m2-008`, `m2-009`, `m5-001`, `m5-002`, `m5-008`..
+  `m5-012`, `m6-002`, `m6-006`, `m8-003`, `m9-001`..`m9-003`, `m9-005`,
+  `m10-003`, `corpus.sh`, `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 95 reports indexed, both generators in
+  sync.
+
 ## Next task
-- m4-013: close the largest remaining gap the accounting now measures --
-  `missing-external-prototype` **11** and `function-facts` **11**. Diagnosis
-  from the residue run: every one is an import the store names but holds no
-  signature for, on a name the pinned C library archive does *not* declare
-  (`__libc_start_main`, `abort`, `__gmon_start__`, `_ITM_*`), so m4-009's
-  archive pass cannot supply it. Decide by measurement which of the two
-  sources closes it: the pinned `.gdt` archives beyond `generic_clib_64`
-  (`Ghidra/Features/Base/data/typeinfo`), or the declarations the image's own
-  `.dynsym` version records name. Acceptance: a failing test first, naming
-  the imports whose signatures appear, the class counts before and after, and
-  a control showing a name neither source declares still counts as a gap.
+- m4-014: answer a data query the way Ghidra answers it. Two measured
+  consequences of not doing so: (a) the PowerPC entry warns
+  `Globals starting with '_' overlap smaller symbols at the same address`
+  because we send a bare `<labelsym>` for an address a 4-byte access reads,
+  and a symbol narrower than the access is worse than none -- the decompiler
+  would otherwise size one itself; (b) an AArch64 GOT slot the image
+  relocates is compared against integer `0` where stock compares against
+  `(undefined *)0x0`, because the store types no pointer there.
+  `DecompileCallback.encodeData` (:835-855) and `Scope::queryProperties` are
+  the two sides to read first. Acceptance: a failing test naming both rows,
+  the warning gone, the slot typed from its own relocation, and a control
+  proving an address with no evidence still gets no invented type.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

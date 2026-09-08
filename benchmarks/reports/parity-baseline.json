@@ -1,6 +1,6 @@
 {
  "id": "parity-baseline",
- "recorded_at": "2026-09-08T00:27:20.334766+00:00",
+ "recorded_at": "2026-09-08T01:22:42.892837+00:00",
  "note": "token identity against the JVM oracle per language, and the fact class each divergence comes from; recorded once and compared against afterwards",
  "counts": {
   "languages": {
@@ -24,7 +24,7 @@
   "classes": {
    "data-name-convention": 3,
    "data-type-unknown": 2,
-   "flow": 10,
+   "flow": 9,
    "function-facts": 11,
    "missing-external-prototype": 11,
    "name-convention": 9,
