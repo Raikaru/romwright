@@ -4731,22 +4731,58 @@ evidence:
   parse -- the table now loads with the rest of the language facts in
   `load_language_info`, which every provider calls.
 
+### m4-026: hypothesis refuted, recorded
+- The task assumed `name-rendering` 12 was ours: m4-011 renders a name C
+  cannot spell as an identifier before handing it to the decompiler, and stock
+  appeared to print `__i686.get_pc_thunk.bx` verbatim. Measured, it is not
+  ours.
+- What stock actually prints, on `i386_plain_o0` and `i386_cpp_o2`:
+  `void __i686_get_pc_thunk_bx(void)` in the declaration -- the **same
+  identifier we print** -- and `/* WARNING: Function:
+  __i686.get_pc_thunk.bx replaced with injection: get_pc_thunk_bx */` in the
+  caller. Two spellings of one name, in one run.
+- Three client-side attempts, each built and measured: the declared name in
+  both `name` and `label` (declaration *and* warning both dotted -- two
+  x86-64 rows became unattributed); the identifier in both (both sanitised,
+  which is what we already did); and one in each, split by query path
+  (`getMappedSymbols` versus the preloaded function shell -- both sanitised).
+  The pinned decompiler prints `getDisplayName()` at both sites
+  (`printc.cc`:2724 for the declaration, `flow.cc`:1326-1345 through
+  `FuncCallSpecs::getName`, whose `name` is `fd->getDisplayName()`,
+  `fspec.cc`:4958), so no single name a client can send produces stock's mix.
+  Ghidra's own encoder sends no `label` at all headless: its transformer is
+  `IdentityNameTransformer` (`DecompileOptions.getNameTransformer`:1333-1338,
+  and `HighFunction.encode`:437-442 writes the label only when `simplify`
+  changes the name).
+- One thing the attempts did find, and it is now in the code's comments:
+  `FunctionSymbol::decode` has no "empty display name means the name"
+  fallback (`database.cc`:593-615), so a function element without a `label`
+  prints an empty identifier -- a called function's argument came out as
+  `(,param_2,...)`. The shell encoder already wrote both attributes; that is
+  why.
+- Left as it was, with parity re-verified unchanged at **1739 of 1845, 0
+  unexplained**, eight classes. The gate written for the refuted claim is
+  removed rather than weakened into something that passes.
+
 ## Next task
-- m4-026: `mangled-name` 8 and `data-name-convention` 8 are the last two
-  classes that are *choices*, and both are the same question: what a store
-  should hold for a name the image spells in a scheme C cannot. Both stores
-  hold `_ZTIi` from the COPY relocation; stock's demangler adds
-  `int::typeinfo` and prints that. Read Ghidra's `GnuDemangler` and
-  `DemanglerCmd` (namespace-qualified symbol creation) before deciding, and
-  note the constraint m4-011 set: a name C cannot spell is *rendered* as an
-  identifier while the store keeps what the image declared, so holding the
-  demangled name trades `mangled-name` for `name-rendering` unless the
-  rendering rule changes with it. The acceptance test must state which class
-  it intends to close and measure both.
-- Then: `data-type-unknown` 4 (both sides name the slot; stock holds defined
-  data with a type where our store holds a reference) and the two remaining
-  reserved items in `GOAL.md` C3 -- measured game-first sessions on the
-  approved targets, which needs a target game and is II.1-reserved.
+- m4-027: `data-type-unknown` 4. Both stores name the same address and
+  disagree about what is there: stock holds defined data with a type where our
+  store holds a reference, so its text prints `PTR_FUN_004026d8` where ours
+  prints `PTR__INIT_0_004026d8` and the cast placement differs. Read
+  `DecompileCallback.encodeData`/`encodeHole` (:820-1010, how stock answers a
+  data address) and `PointerDataType.getLabelString` in the pinned tree,
+  record what stock's store holds at each of the four addresses, and decide
+  whether the fact we are missing is a data definition or a reference width.
+  The acceptance test asserts the store's answer at those addresses against
+  stock's, not the rendered label.
+- Then `mangled-name` 8, whose direction is now known: both stores hold
+  `_ZTIi`; stock's demangler adds a namespace-qualified symbol at the same
+  address and prints it. Closing it means holding the demangled name as a
+  second symbol with its own provenance, and deciding which of the two the
+  worker sends -- the `name`/`label` split above is the mechanism, and the
+  m4-026 measurements are the constraint.
+- Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
+  approved targets) needs a target game, which II.1 reserves for the human.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
