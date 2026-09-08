@@ -1618,6 +1618,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-011.json` | `m4-011` | M4 | pass | `render.field_extractions` 0; `render.no_return_facts` 1; `render.pointer_widths` 2; `render.sanitised_names` 2 | `tests/m4-011_widths_exits_names.py` |
 | `m4-012.json` | `m4-012` | M4 | pass | `entry` 00201590; `rendered` void processEntry _entry(undefined8 param_1,undefined8 param_2) | `tests/m4-012_remaining_facts.py` |
 | `m4-013.json` | `m4-013` | M4 | pass |  | `tests/m4-013_shared_returns.py` |
+| `m4-014.json` | `m4-014` | M4 | pass | `broken_sibling` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `explicit_override` tive runtime: worker failed (exit status: 3): this worker is deliberately broken; `sibling` /* WARNING: Removing unreachable block (ram,0x0040040f) *//* WARNING: Removing u; `workspace_agreement` 14 | `tests/m4-014_worker_resolution.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1630,7 +1631,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 95; `diagnostic_runs` 12; `generated_rows` 94; `published_ids` 79 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 96; `diagnostic_runs` 12; `generated_rows` 95; `published_ids` 80 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

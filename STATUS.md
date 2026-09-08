@@ -4202,19 +4202,58 @@ m3-003, all three wired into continuous integration)
   `generic_discovery_test.sh` pass. 95 reports indexed, both generators in
   sync.
 
+### m4-014 evidence
+- **The recorded task was refuted, and the refutation found a worse bug.**
+  m4-014 was written down as "answer a data query the way Ghidra answers it":
+  send nothing where the store holds neither a name nor a type, so a symbol
+  narrower than the access stops making the decompiler warn
+  (`Funcdata::checkGlobals`, funcdata_varnode.cc:1742;
+  `DecompileCallback.encodeData`, :841-848). Implemented, it read **25 of 56**
+  token-identical against a pinned 30. Two more variants -- typing the words
+  the relocation table names as pointers, then as `undefined<width>` -- read
+  25 as well. So did an unmodified tree at `HEAD`, twice.
+- The cause was not the data rule. `RuntimeConfig::from_env` resolved the
+  worker as the literal `target/debug/lre-worker`, so the **release** CLI that
+  every gate builds drove whatever `cargo build` had last left in
+  `target/debug`. Three measurement rounds were made against a build that was
+  not the tree, and the conclusion drawn from them was wrong. After
+  `cargo build --workspace` at the same `HEAD`: **30 of 56**, the pinned
+  number, reproducibly.
+- Fixed where it belongs: `VENTRIS_WORKER` still wins, then the worker
+  **beside the running executable**, then the workspace's release and debug
+  paths, each of which has to exist. Every gate that measures with the release
+  CLI now builds the release worker with it (11 gates), so a gate's number
+  comes from the binaries that gate built.
+- Controls, all three firing: a CLI with a working worker beside it decompiles
+  from a directory where no workspace path resolves; the same CLI with a
+  *broken* worker beside it fails (without which the first control proves
+  nothing about which worker ran); and `VENTRIS_WORKER` still overrides a good
+  sibling. Plus: the release and debug builds now produce identical text for
+  the same function.
+- The data-answer question is **not** closed, and the measurement says why:
+  our composed `DAT_` labels earn 5 of the 30 identical rows, and stock earns
+  them by holding *undefined data of the access width* at referenced
+  locations, which is a fact we do not record. Typing relocated words as
+  pointers is not it -- stock's own text names them `DAT_`, not `PTR_`.
+- Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-014`,
+  `m3-001`, `m3-003`, `m2-008`, `m2-009`, `m2-016`, `m5-001`, `m5-002`,
+  `m5-006`..`m5-012`, `m6-001`, `m6-002`, `m6-005`, `m6-006`, `m8-003`,
+  `m9-001`..`m9-003`, `m9-005`, `m10-003`, `m10-004`, `corpus.sh`,
+  `differential.sh`, `workflow.sh`, `data_xrefs.sh`,
+  `generic_discovery_test.sh` pass. 96 reports indexed, both generators in
+  sync, parity re-verified at 30 of 56 with 0 unaccounted tokens.
+
 ## Next task
-- m4-014: answer a data query the way Ghidra answers it. Two measured
-  consequences of not doing so: (a) the PowerPC entry warns
-  `Globals starting with '_' overlap smaller symbols at the same address`
-  because we send a bare `<labelsym>` for an address a 4-byte access reads,
-  and a symbol narrower than the access is worse than none -- the decompiler
-  would otherwise size one itself; (b) an AArch64 GOT slot the image
-  relocates is compared against integer `0` where stock compares against
-  `(undefined *)0x0`, because the store types no pointer there.
-  `DecompileCallback.encodeData` (:835-855) and `Scope::queryProperties` are
-  the two sides to read first. Acceptance: a failing test naming both rows,
-  the warning gone, the slot typed from its own relocation, and a control
-  proving an address with no evidence still gets no invented type.
+- m4-015: record the width of every data reference, which is the fact three
+  m4-014 variants were substituting for. The console already decodes the
+  access that proves it (`ReferenceFact` carries `from`, `to`, `kind` and
+  drops the p-code LOAD/STORE size); carry that size through the reference
+  protocol into a `data_definitions` row of `undefined<width>`, and only then
+  apply `encodeData`'s fall-through for locations with no fact at all.
+  Acceptance: a failing test naming the two rows that warn today, the warning
+  gone, token identity **not below 30**, and a control showing an address
+  whose width nothing proves still gets no invented type. Re-record the parity
+  baseline in the same commit as the measurement.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

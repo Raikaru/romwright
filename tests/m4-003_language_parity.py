@@ -525,7 +525,8 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=1200)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
+                    "-p", "lre-worker"],
                    cwd=ROOT, check=True, env=environment())
     assert (ROOT / "service/build/ventris-service.jar").is_file(), (
         "the oracle bridge jar is missing; build service/ before this gate")

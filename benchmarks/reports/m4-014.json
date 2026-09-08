@@ -1,0 +1,12 @@
+{
+  "task": "m4-014",
+  "recorded_at": "2026-09-08T02:56:30.546312+00:00",
+  "scope": "resolution acceptance with three controls, not a corpus gate",
+  "metrics": {
+    "sibling": "/* WARNING: Removing unreachable block (ram,0x0040040f) *//* WARNING: Removing u",
+    "broken_sibling": "tive runtime: worker failed (exit status: 3): this worker is deliberately broken",
+    "explicit_override": "tive runtime: worker failed (exit status: 3): this worker is deliberately broken",
+    "workspace_agreement": 14
+  },
+  "passed": true
+}
