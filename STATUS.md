@@ -4412,18 +4412,48 @@ m3-003, all three wired into continuous integration)
   `m4-012`, `m4-016`, `m4-018`, `m4-019`, `m5-012`, `m6-006` pass; both
   generators in sync, 101 reports indexed.
 
+### m4-020 evidence
+- Two facts, both small, both from a pinned rule:
+  - **a label says whether the address is code.** Our provider prefixed every
+    unnamed location `DAT_`; Ghidra has two constants,
+    `DEFAULT_SYMBOL_PREFIX = "LAB_"` for a code address and
+    `DEFAULT_DATA_PREFIX = "DAT_"` for data (`SymbolUtilities`:49-53). The
+    worker now reads the store's own executable regions, so the AArch64 entry
+    passes `&LAB_002106f4` exactly as stock does.
+  - **a rendered name is a rendering.** All three `flow` rows carried the same
+    warning from *both* decompilers, differing only in the name inside it:
+    stock prints `__i686.get_pc_thunk.bx`, we print
+    `__i686_get_pc_thunk_bx`, because m4-011 renders a name C cannot spell
+    while the store keeps what the image declared. Comparing text now applies
+    the same rendering to stock's names and names the choice
+    `name-rendering`, instead of filing it as flow we disagree about.
+- Measured: token identity **35 -> 36** of 56, 0 unaccounted tokens.
+  `flow` 3 -> **1**, `data-type-unknown` 2 -> **1**, `oracle-warning` 8 -> 6,
+  `name-rendering` **2** (new), `data-name-convention` 3 -> 2. Baseline
+  re-recorded.
+- Controls: no label contradicts its own mapping's permissions on any of the
+  four ELF rows (5 data addresses keep `DAT_`), and a warning that differs by
+  anything other than a rendered name is still `flow`.
+- Regression: `cargo test --workspace` **245 pass**; `m4-003`, `m4-004`,
+  `m4-011`, `m4-012`, `m4-015`, `m4-018`..`m4-020`, `m5-009`, `m5-012`,
+  `m6-006`, `m9-003`, `data_xrefs.sh`, `differential.sh`, `workflow.sh` pass.
+  102 reports indexed, both generators in sync.
+
 ## Next task
-- m4-020: two gaps are left and both are small and specific.
-  `data-type-unknown` **2** -- the AArch64 and x86-32 entry rows pass
-  `&DAT_002106f4` where stock passes `&LAB_002106f4`: the address is code
-  (stock disassembled it), and our provider labels every unnamed location
-  `DAT_`. Ghidra's own rule is `SymbolUtilities.DEFAULT_SYMBOL_PREFIX = "LAB_"`
-  for a code address versus `DEFAULT_DATA_PREFIX = "DAT_"` for data
-  (SymbolUtilities.java:49-53), and the store already knows which mappings are
-  executable. `flow` **3** is the second: diagnose each of the three from the
-  divergence files before deciding. Acceptance: a failing test naming both
-  rows, the label prefix decided by the mapping's own permissions, a control
-  proving a data address keeps `DAT_`, and the class counts re-measured.
+- m4-021: **one row is left with a gap**, x86-32 `00401440`, and both of its
+  gap classes are the same missing fact. Stock names the slot at `004026d8`
+  `PTR_FUN_004026d8` -- a pointer whose target is a function -- while we call
+  it `DAT_004026d8`, because the slot is an `.init_array` entry whose target
+  m5-010 already names (`_INIT_0`) without typing the slot that holds it. Type
+  an initializer-array slot as a pointer from the array it belongs to, which
+  is the same evidence m5-010 uses, and the label follows
+  (`PointerDataType.getLabelString`:212-238 composes `PTR_<target>_<addr>`).
+  Acceptance: a failing test naming the slot, the label matching stock's on
+  every row that has an initializer array, a control proving a slot with no
+  array behind it gains no type, and the class counts re-measured. That row's
+  remaining `flow` entry is the injection warning, which m4-020 showed is a
+  rendering difference on the *callee* name -- check whether the same
+  substitution closes it once the label matches.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

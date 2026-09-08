@@ -120,6 +120,16 @@ fn run(
                 .push((region.start.offset, region.start.offset + region.size));
         }
     }
+    for region in db.memory_regions(pid)? {
+        if region.start.space == lre_model::AddressSpace::Ram
+            && region.permissions.contains('x')
+            && region.size > 0
+        {
+            provider
+                .executable
+                .push((region.start.offset, region.start.offset + region.size));
+        }
+    }
     for row in db.data_definitions(pid)? {
         if row.address.space == lre_model::AddressSpace::Ram && row.size > 0 {
             provider

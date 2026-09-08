@@ -253,6 +253,23 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
         if tokens(substituted) == tokens(native_text):
             return named
 
+    # A name C cannot spell is rendered as a C identifier (m4-011) while the
+    # store keeps what the image declared; stock prints the raw name into its
+    # own C, including inside its warnings. Comparing text means applying the
+    # same rendering to stock's names first.
+    rendered = []
+    for held in sorted(set(oracle_store["functions"])
+                       | set(oracle_store["names"].values()), key=len, reverse=True):
+        identifier = c_identifier(held)
+        if identifier == held or held not in substituted:
+            continue
+        substituted = substituted.replace(held, identifier)
+        rendered.append([held, identifier])
+    if rendered:
+        named["name-rendering"] = rendered
+        if tokens(substituted) == tokens(native_text):
+            return named
+
     # A cast the two sides place differently because they type the same slot
     # differently: the store holds the import slot's own type, so our text
     # casts at the comparison and not at the call, while the oracle types the
@@ -375,6 +392,12 @@ def label_substitutions(native_text: str, oracle_text: str, store: dict,
     return pairs
 
 
+def c_identifier(name: str) -> str:
+    """The name as C can spell it: the rendering `lre_worker::c_identifier`
+    applies, so a label like `__i686.get_pc_thunk.bx` is comparable."""
+    return re.sub(r"[^A-Za-z0-9_]", "_", name)
+
+
 def held_signature(store: dict, name: str) -> bool:
     """Whether a store holds a signature for the function that name resolves
     to, or -- for a name it knows only as an import slot -- for the slot."""
@@ -480,6 +503,8 @@ def residue(native_text: str, oracle_text: str, native_row: dict, oracle_row: di
     for pair in classes.get("data-name-convention", []):
         oracle_text = re.sub(rf"\b{re.escape(pair['oracle'])}\b", pair["native"],
                              oracle_text)
+    for held, identifier in classes.get("name-rendering", []):
+        oracle_text = oracle_text.replace(held, identifier)
     words, shapes = licensed(classes, native_text, oracle_text, store)
     words.update(filter(None, (native_name, oracle_name)))
     left = []

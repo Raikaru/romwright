@@ -264,6 +264,13 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Label a code address as code
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-020_label_prefixes.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/label-prefixes.json"
       - name: Count a prototype gap only where stock has the signature
         run: |
           python3 tests/m4-019_prototype_direction.py \
