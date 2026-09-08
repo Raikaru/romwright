@@ -264,6 +264,11 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Count a prototype gap only where stock has the signature
+        run: |
+          python3 tests/m4-019_prototype_direction.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/prototype-direction.json"
       - name: Export what stock says it recovered
         run: |
           python3 tests/m4-018_oracle_prototypes.py \

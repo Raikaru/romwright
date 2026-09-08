@@ -1,0 +1,27 @@
+{
+  "task": "m4-019",
+  "recorded_at": "2026-09-08T05:50:22.644145+00:00",
+  "scope": "classifier acceptance plus a measured corpus check",
+  "metrics": {
+    "neither": [],
+    "theirs_only": [
+      "missing-external-prototype"
+    ],
+    "ours_only": [],
+    "corpus": {
+      "ours": {
+        "__libc_start_main": null,
+        "__gmon_start__": null
+      },
+      "stock": {
+        "__libc_start_main": null,
+        "__gmon_start__": null
+      }
+    },
+    "recorded_pair": [
+      "data-name-convention",
+      "type-stronger"
+    ]
+  },
+  "passed": true
+}
