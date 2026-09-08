@@ -1003,9 +1003,15 @@ demangler made of it (`int::typeinfo`),
 `type-stronger` 89,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`, and
-`name-rendering` 12, where stock prints a
-name C cannot spell (`__i686.get_pc_thunk.bx`) and we render it as an
-identifier.
+`name-rendering` 12, which is stock's own
+warning text: **both decompilers print the same identifier**
+(`__i686_get_pc_thunk_bx`), and stock's `Function: ... replaced with
+injection` warning cites the declared `__i686.get_pc_thunk.bx` instead.
+Measured, not assumed -- m4-026 tried the client side three ways (the
+declared name in both the `name` and `label` attributes, the identifier in
+both, and one in each per query path) and the pinned decompiler prints
+`getDisplayName()` in both places every time, so no name a client can send
+reproduces stock's two spellings at once.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
@@ -1747,6 +1753,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-023.json` | `m4-023` | M4 | pass | `language.rows_identical_to_stock` 6; `language.rows_measured` 7; `language.rows_stock_unconstrained` 1; `language.rows_unexplained` 0 | `tests/m4-023_language_selection.py` |
 | `m4-024.json` | `m4-024` | M4 | pass | `exception.ranges_invented` 0; `exception.ranges_missing` 0; `exception.ranges_recorded` 4; `exception.rows_measured` 8; `exception.rows_with_ranges` 4 | `tests/m4-024_exception_annotations.py` |
 | `m4-025.json` | `m4-025` | M4 | pass | `declaration.applied_with_other_types` 0; `declaration.declared_by_stock` 23; `declaration.held` 23; `declaration.noreturn_recorded_as_facts` 5; `declaration.rows_measured` 20; `declaration.signatures_printed_as_stock` 23; `declaration.unexpressible_declarations_refused` 235 | `tests/m4-025_declaration_types.py` |
+| `m4-026.json` | `m4-026` | M4 | pass | `names.printed_by_stock_and_not_by_us` 0; `names.printed_with_substitution` 0; `names.prototypes_parsed` 23; `names.rows_holding_unspellable` 5; `names.rows_measured` 20; `names.unspellable_declared` 2 | - |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |

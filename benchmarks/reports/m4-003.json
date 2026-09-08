@@ -1,6 +1,6 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T14:49:18.501112+00:00",
+ "recorded_at": "2026-09-08T16:02:26.955681+00:00",
  "status": "pass",
  "passed": true,
  "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1739 of 1845 functions token-identical, 106 differing only where a named fact differs (data-name-convention 8, data-type-unknown 4, language-variant 3, mangled-name 8, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
