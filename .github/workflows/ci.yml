@@ -264,6 +264,13 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Type an initializer slot from the array that holds it
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-021_initializer_slots.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/initializer-slots.json"
       - name: Label a code address as code
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

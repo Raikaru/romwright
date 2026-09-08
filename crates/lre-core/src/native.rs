@@ -185,6 +185,9 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Initializer-array words, with their width: each holds a code address,
+    /// proved by the array it belongs to.
+    pub initializer_slots: Vec<(u64, u64)>,
     /// Entries whose name came from the image's own symbol table. Ghidra's
     /// loader leaves such a function's name alone and only marks it an entry
     /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
@@ -1599,6 +1602,8 @@ pub const DYNAMIC_LABEL_SOURCE: &str = "native-import:dynamic-tag";
 pub const SHARED_RETURN_SOURCE: &str = "native-analysis:shared-return";
 /// How wide the access that reached a location was.
 pub const DATA_WIDTH_SOURCE: &str = "native-analysis:data-width";
+/// A word an initializer array proves holds a code address.
+pub const ELF_POINTER_SOURCE: &str = "native-import:elf-pointer";
 
 /// The process-entry model when the language declares one, and nothing when
 /// it does not -- Ghidra catches the same failure and skips silently
@@ -1782,6 +1787,23 @@ pub fn store_import(
     widths.sort_by_key(|row| row.address.offset);
     widths.dedup_by_key(|row| row.address.offset);
     db.replace_inferred_data_definitions(pid, DATA_WIDTH_SOURCE, &widths)?;
+    let mut slots: Vec<lre_model::DataDefinitionRow> = imp
+        .initializer_slots
+        .iter()
+        .map(|(address, width)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: "pointer".into(),
+            size: *width,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: ELF_POINTER_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    slots.sort_by_key(|row| row.address.offset);
+    slots.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, ELF_POINTER_SOURCE, &slots)?;
     // The rule owns its rows: re-importing an image the rule no longer covers
     // clears the fact, and an assertion over it is left alone.
     let conventions: Vec<lre_model::CallingConventionRow> = imp

@@ -978,9 +978,9 @@ differing *value* still is.
 
 The classes separate the gaps from the choices, and the *direction* of a
 difference decides which it is. Gaps:
-`flow` 1 -- a warning we emit and stock
-does not -- and `data-type-unknown` 1. Not
-ours: `oracle-warning` 6, stock warning
+`data-type-unknown` 1 -- and no `flow` row
+at all: every warning either side emits is now accounted for. Not
+ours: `oracle-warning` 5, stock warning
 about its own recovery (`Unknown calling convention -- yet parameter storage
 is locked`, on stubs whose text is otherwise ours exactly). Choices:
 `name-convention` 3 -- the whole
@@ -994,13 +994,13 @@ after the import it holds, where stock names it after the tag), and
 `type-stronger` 18,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`, and
-`name-rendering` 2, where stock prints a
+`name-rendering` 3, where stock prints a
 name C cannot spell (`__i686.get_pc_thunk.bx`) and we render it as an
 identifier.
 A name that is *missing* is not a choice: if ours were the decompiler's own
 default and the oracle had a real name, the gate would count `missing-name`.
 
-Fifteen tasks have shrunk the gaps by carrying facts the image, its ABI or the
+Sixteen tasks have shrunk the gaps by carrying facts the image, its ABI or the
 pinned install already declares:
 
 * strings and data references (`tests/m4-004_data_names.py`): it prints
@@ -1033,6 +1033,12 @@ pinned install already declares:
   stops at `abort()` instead of swallowing the next function, and a label C
   cannot spell (`__i686.get_pc_thunk.bx`) is rendered with the characters
   replaced while the store keeps what the image declared.
+* a slot that holds code (`tests/m4-021_initializer_slots.py`): an
+  `.init_array` word holds a code address -- the same evidence that names its
+  target `_INIT_0` -- so the slot is typed as a pointer and rendered `PTR_`
+  rather than `DAT_`. And a name we render survives a row that differs
+  elsewhere too, so the injection warning both decompilers emit stops being
+  counted once in each direction: `flow` 1 -> **0**.
 * what a label says (`tests/m4-020_label_prefixes.py`): an unnamed address in
   an executable mapping is `LAB_`, not `DAT_` -- Ghidra's own two default
   prefixes (`SymbolUtilities`:49-53) -- so the AArch64 entry passes
@@ -1613,6 +1619,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m1-003.json` | `m1-003` | M1 | pass | recorded | `tests/m1-003_batched_flow.sh` |
 | `m1-006.json` | `m1-006` | M1 | recorded | `passed_entries` 20; `skipped_entries` 5; `total_entries` 25 | `tests/m1-006_corpus.sh` |
 | `m1-007.json` | `m1-007` | M1 | pass | 20 pass, 0 fail, 0 skipped | `tests/m1-007_oracle_test.py` |
+| `oracle-regen.json` | `m1-007` | M1 | pass | 20 pass, 0 fail, 0 skipped | `tests/m1-007_oracle_test.py` |
 | `m1-008.json` | `m1-008` | M1 | pass | 6 pass, 0 fail, 0 skipped | `tests/m1-008_languages.py` |
 | `m1-008b-classification.json` | `m1-008b` | M1 | recorded | recorded | `tests/m1-008b_pointer_seeds.py` |
 | `m1-008b-v1.json` | `m1-008b` | M1 | pass | 2 pass, 0 fail, 0 skipped | `tests/m1-008b_pointer_seeds.py` |
@@ -1653,7 +1660,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 2; `parity.class.data-type-unknown` 1; `parity.class.flow` 1; `parity.class.name-convention` 3; `parity.class.name-rendering` 2; `parity.class.oracle-warning` 6; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 20; `parity.functions_token_identical` 36; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 2; `parity.class.data-type-unknown` 1; `parity.class.name-convention` 3; `parity.class.name-rendering` 3; `parity.class.oracle-warning` 5; `parity.class.type-stronger` 18; `parity.functions_compared` 56; `parity.functions_fact_attributed` 20; `parity.functions_token_identical` 36; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1670,6 +1677,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-018.json` | `m4-018` | M4 | pass | `agreed_return_type` int; `oracle_prototypes` 2 | `tests/m4-018_oracle_prototypes.py` |
 | `m4-019.json` | `m4-019` | M4 | pass |  | `tests/m4-019_prototype_direction.py` |
 | `m4-020.json` | `m4-020` | M4 | pass | `data_labels` 5 | `tests/m4-020_label_prefixes.py` |
+| `m4-021.json` | `m4-021` | M4 | pass |  | `tests/m4-021_initializer_slots.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1682,7 +1690,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-009.json` | `m5-009` | M5 | pass | `linkage.name.agreement` 1.0000; `linkage.name.missing_import` 0; `linkage.name.presentation` 0; `linkage.name.unexplained` 0; `linkage.name.unsupported` 0 | `tests/m5-009_linkage_names.py` |
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
-| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 101; `diagnostic_runs` 12; `generated_rows` 100; `published_ids` 85 | `tests/m5-012_evidence_index.py` |
+| `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 102; `diagnostic_runs` 12; `generated_rows` 101; `published_ids` 86 | `tests/m5-012_evidence_index.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

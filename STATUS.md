@@ -4439,21 +4439,54 @@ m3-003, all three wired into continuous integration)
   `m6-006`, `m9-003`, `data_xrefs.sh`, `differential.sh`, `workflow.sh` pass.
   102 reports indexed, both generators in sync.
 
+### m4-021 evidence
+- The last row with gap classes, x86-32 `00401440`, carried two independent
+  defects and both are closed:
+  - **the slot.** An `.init_array` word holds a code address -- the array
+    proves it, which is the same evidence m5-010 uses to name the target
+    `_INIT_0` while leaving the word that holds it untyped. The loader now
+    records the slot as an 8/4-byte pointer
+    (`native-import:elf-pointer`), so it renders `PTR_` rather than `DAT_`:
+    **8 slots** across the four ELF rows.
+  - **the name.** `classify` built its name classes (`name-convention`,
+    `missing-name`, `name-rendering`) and then *dropped* them whenever the row
+    differed elsewhere too, and compared the rest against the un-rendered
+    text. So the injection warning both decompilers emit was counted once as
+    `flow` (ours, with the C identifier) and once as `oracle-warning`
+    (stock's, with the dotted name). The classes are now kept and the rest of
+    the comparison runs against the rendered text.
+- Measured: token identity **36** of 56, 0 unaccounted tokens. `flow`
+  **1 -> 0**: no row now carries a warning we emit and stock does not.
+  `oracle-warning` 6 -> 5, `name-rendering` 2 -> 3, `data-type-unknown` 1
+  (the same slot, now a naming choice between `PTR_FUN_004026d8` and our
+  `PTR__INIT_0_004026d8`). Baseline re-recorded.
+- **The bridge change in m4-018 invalidated every committed oracle
+  reference**, by design: `gen_oracle.py` pins `bridge_sources_sha256` over
+  the bridge sources, so the references and the DWARF baseline both refused.
+  Regenerated with the scripts that own them, and the regeneration is the
+  evidence: all 21 oracle references are **byte-identical apart from that
+  hash**, and the recomputed ground-truth baseline has **identical totals and
+  identical per-row metrics**, with only `bridge_sources_sha256` and
+  `oracle_sha256` moving. `m3-001` recall 1.0000 native / 1.0000 stock and
+  `m3-003` arity 0.7537 both sides, as recorded.
+- Controls: a word with no array behind it keeps `DAT_` and gains no pointer
+  type; a warning that genuinely differs is still counted in its own
+  direction.
+- Regression: `cargo test --workspace` **245 pass**; `m1-007`, `m2-016`,
+  `m3-001`, `m3-003`, `m4-002`..`m4-021`, `m5-009`, `m5-010`, `m5-012`,
+  `m6-006`, `m8-002`..`m8-006`, `m9-001`..`m9-003` pass; 104 reports indexed,
+  both generators in sync.
+
 ## Next task
-- m4-021: **one row is left with a gap**, x86-32 `00401440`, and both of its
-  gap classes are the same missing fact. Stock names the slot at `004026d8`
-  `PTR_FUN_004026d8` -- a pointer whose target is a function -- while we call
-  it `DAT_004026d8`, because the slot is an `.init_array` entry whose target
-  m5-010 already names (`_INIT_0`) without typing the slot that holds it. Type
-  an initializer-array slot as a pointer from the array it belongs to, which
-  is the same evidence m5-010 uses, and the label follows
-  (`PointerDataType.getLabelString`:212-238 composes `PTR_<target>_<addr>`).
-  Acceptance: a failing test naming the slot, the label matching stock's on
-  every row that has an initializer array, a control proving a slot with no
-  array behind it gains no type, and the class counts re-measured. That row's
-  remaining `flow` entry is the injection warning, which m4-020 showed is a
-  rendering difference on the *callee* name -- check whether the same
-  substitution closes it once the label matches.
+- m4-022: the parity account now has **no gap class left except one naming
+  choice**, so the next measurement is not a fix but a widening: the gate
+  measures one variant (`plain_o0`) of four languages. Extend it to the
+  optimized rows the corpus already holds (`plain_o2`, `cpp_o2`, `many_o2`)
+  for the same four languages, which the lock file lists and no gate compares
+  token-for-token. Expect new classes; the acceptance is that every differing
+  token is still accounted for, with the per-variant counts recorded and the
+  new baseline committed. Do not add a corpus row (II.1 reserves that) -- only
+  variants already committed.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

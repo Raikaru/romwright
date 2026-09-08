@@ -1,0 +1,27 @@
+{
+  "task": "m4-021",
+  "recorded_at": "2026-09-08T06:36:42.759677+00:00",
+  "scope": "slot-typing acceptance on four rows plus classifier controls",
+  "metrics": {
+    "typed_slots": [
+      "aarch64_plain_o0:002208c0",
+      "aarch64_plain_o0:002208c8",
+      "i386_plain_o0:00402610",
+      "i386_plain_o0:00402614",
+      "powerpc_plain_o0:10020654",
+      "powerpc_plain_o0:10020658",
+      "x86_64_plain_o0:00202730",
+      "x86_64_plain_o0:00202738"
+    ],
+    "labelled": [],
+    "rendering_survives": [
+      "name-rendering"
+    ],
+    "real_difference": [
+      "flow",
+      "name-rendering",
+      "oracle-warning"
+    ]
+  },
+  "passed": true
+}
