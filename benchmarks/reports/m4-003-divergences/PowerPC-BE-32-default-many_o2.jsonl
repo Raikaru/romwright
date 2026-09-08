@@ -1,3 +1,2 @@
-{"address": "10014f98", "classes": {"type-stronger": ["(code *)"], "data-name-convention": [{"address": "10035168", "oracle": "__DT_PLTGOT", "native": "PTR___libc_start_main_10035168"}]}, "oracle_tokens": 20, "native_tokens": 16}
-{"address": "10014fa8", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 26, "native_tokens": 22}
+{"address": "10014fa8", "classes": {"type-stronger": ["(code *)", "(undefined *)"]}, "oracle_tokens": 26, "native_tokens": 26}
 {"address": "10014fec", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

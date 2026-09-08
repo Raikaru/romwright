@@ -81,6 +81,11 @@ pub struct ProgramProvider {
     /// after its referent, so the label needs the target, not just the slot
     /// (`PointerDataType.getLabelString`, :192-238).
     pub pointer_targets: HashMap<u64, u64>,
+    /// Addresses the image's own dynamic table names, and the name it gives
+    /// them (`__DT_PLTGOT`, ...). Stock holds these as real symbols, so an
+    /// address that has one is never given a composed label
+    /// (`ElfProgramBuilder.markupDynamicTable`, :2691-2773).
+    pub tag_names: HashMap<u64, String>,
     /// Address -> the namespace its symbol lives in, and the id this session
     /// gave that namespace. A symbol outside the global scope is printed
     /// scope-qualified (`PrintC::pushSymbolScope`, printc.cc:202-231), which
@@ -148,6 +153,7 @@ impl ProgramProvider {
             strings: HashMap::new(),
             data_targets: HashSet::new(),
             pointer_targets: HashMap::new(),
+            tag_names: HashMap::new(),
             namespaces: HashMap::new(),
             prototypes: HashMap::new(),
             non_returning: HashSet::new(),
@@ -908,11 +914,19 @@ impl NativeWorker {
                     // name and `PTR_<address>` when it does not
                     // (`PointerDataType.getLabelString`, :212-238, and
                     // `getDynamicDataName`, SymbolUtilities.java:541-544).
-                    let name = match provider.external_names.get(&vaddr) {
-                        Some(target) => format!("PTR_{target}_{vaddr:08x}"),
-                        None => match provider.pointer_referent(vaddr) {
-                            Some(referent) => format!("PTR_{referent}_{vaddr:08x}"),
-                            None => format!("PTR_{vaddr:08x}"),
+                    // A label is composed only where stock has no symbol; the
+                    // dynamic table's own name is a symbol, so it is sent as
+                    // it stands. On PowerPC `DT_PLTGOT` is the first PLT slot,
+                    // which is why stock prints `__DT_PLTGOT` there and not
+                    // the import the slot resolves to.
+                    let name = match provider.tag_names.get(&vaddr) {
+                        Some(tag) => tag.clone(),
+                        None => match provider.external_names.get(&vaddr) {
+                            Some(target) => format!("PTR_{target}_{vaddr:08x}"),
+                            None => match provider.pointer_referent(vaddr) {
+                                Some(referent) => format!("PTR_{referent}_{vaddr:08x}"),
+                                None => format!("PTR_{vaddr:08x}"),
+                            },
                         },
                     };
                     let size = provider
@@ -920,10 +934,20 @@ impl NativeWorker {
                         .get(&vaddr)
                         .map(|(_, width)| *width)
                         .unwrap_or(provider.pointer_size);
+                    // What the slot points at, as the store holds it: a
+                    // linkage slot resolves to code, but the word the dynamic
+                    // table names is the ABI's own reserved datum -- stock
+                    // types it a plain pointer (`dataAt=pointer` at
+                    // `1003074c` on `powerpc_plain_o0`), which is why its call
+                    // through it carries a `(code *)` cast.
+                    let pointee = match (provider.tag_names.contains_key(&vaddr), core("undefined1")) {
+                        (true, Some((byte_id, _))) => ("undefined1", byte_id),
+                        _ => ("code", code_id),
+                    };
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
                         &mut doc, space as u32, vaddr, &name, read_only,
-                        |out| wire::encode_pointer_type(out, ("code", code_id), size),
+                        |out| wire::encode_pointer_type(out, pointee, size),
                     );
                     close_document(&mut doc);
                 } else if let (Some(count), Some((byte_id, _))) = (

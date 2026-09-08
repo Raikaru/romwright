@@ -1,12 +1,11 @@
 {"address": "10010750", "classes": {"language-variant": {"oracle": "PowerPC:BE:32:e500", "native": "PowerPC:BE:32:default", "registers": ["unaff__r2"]}}, "oracle_tokens": 94, "native_tokens": 94}
 {"address": "100107b8", "classes": {"language-variant": {"oracle": "PowerPC:BE:32:e500", "native": "PowerPC:BE:32:default", "registers": ["unaff__r2"]}}, "oracle_tokens": 146, "native_tokens": 146}
 {"address": "10010884", "classes": {"language-variant": {"oracle": "PowerPC:BE:32:e500", "native": "PowerPC:BE:32:default", "registers": ["unaff__r2"]}}, "oracle_tokens": 16, "native_tokens": 16}
-{"address": "10010890", "classes": {"type-stronger": ["(code *)"], "data-name-convention": [{"address": "10030b08", "oracle": "__DT_PLTGOT", "native": "PTR___libc_start_main_10030b08"}]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "100108a0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "100108b0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "100108c0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 37, "native_tokens": 32}
 {"address": "100108d0", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}
 {"address": "100108e0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "100108f0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
-{"address": "10010900", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 26, "native_tokens": 22}
+{"address": "10010900", "classes": {"type-stronger": ["(code *)", "(undefined *)"]}, "oracle_tokens": 26, "native_tokens": 26}
 {"address": "10010944", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

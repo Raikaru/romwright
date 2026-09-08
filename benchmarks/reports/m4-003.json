@@ -1,24 +1,23 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T18:38:38.667874+00:00",
+ "recorded_at": "2026-09-08T19:17:20.554314+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1745 of 1845 functions token-identical, 100 differing only where a named fact differs (data-name-convention 4, language-variant 3, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 89), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1749 of 1845 functions token-identical, 96 differing only where a named fact differs (language-variant 3, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 85), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
   "parity.languages_blocked": 5,
   "parity.rows_measured": 16,
   "parity.functions_compared": 1845,
-  "parity.functions_token_identical": 1745,
-  "parity.functions_fact_attributed": 100,
+  "parity.functions_token_identical": 1749,
+  "parity.functions_fact_attributed": 96,
   "parity.functions_unattributed": 0,
-  "parity.class.data-name-convention": 4,
   "parity.class.language-variant": 3,
   "parity.class.name-convention": 11,
   "parity.class.name-rendering": 12,
   "parity.class.oracle-warning": 19,
-  "parity.class.type-stronger": 89
+  "parity.class.type-stronger": 85
  },
  "measured": [
   {
@@ -106,7 +105,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o0.jsonl",
-    "sha256": "12620131238b13a08cb5f7aa7d58787515653e27c29cc94f40af2c1b4082d345"
+    "sha256": "a606bfe288caf278e88508a1ac37b24a61c8ca8b24f957bd735bc793277db55b"
    }
   },
   {
@@ -124,7 +123,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-plain_o2.jsonl",
-    "sha256": "4ee62b77bf2ffb4f5e99ba23f641d04d66ccf747fe67fb0df25d41159e7eb8e1"
+    "sha256": "d153c81a9ea36fac9077e40e31e2d09e437e57ab0f81ed2b4cbecce74bead854"
    }
   },
   {
@@ -142,7 +141,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-cpp_o2.jsonl",
-    "sha256": "2b282a9aa1bc12188f3786ff6fde16ca3bf31d669519d2743f59b0aa16a3d023"
+    "sha256": "5342bb176317be200d0987e5e63079716210141360957987aecf71fe7f32d522"
    }
   },
   {
@@ -160,7 +159,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-many_o2.jsonl",
-    "sha256": "2ba1ea48c8dfd79edac87bdac4265eda5714467b2286677dff6267e624e74e2f"
+    "sha256": "1c1f3b4ce5dbf1622d705b3d95dd48108cfc382dc55cdc65ee5cfbcd5327e541"
    }
   },
   {
@@ -168,17 +167,16 @@
    "variant": "plain_o0",
    "program": "powerpc_plain_o0.bin",
    "shared": 12,
-   "identical": 8,
-   "identical_tokens": 129,
-   "attributed": 4,
+   "identical": 9,
+   "identical_tokens": 149,
+   "attributed": 3,
    "classes": [
-    "data-name-convention",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-plain_o0.jsonl",
-    "sha256": "0a7ae32d7785c43c4b6e76d979c0e6e8ad51f8bdebcd3687d65d2de9d9471af6"
+    "sha256": "87a70f9aced86b77a2b8519cffc3014d5c9fad6617644397f3ae781ba2d47b6d"
    }
   },
   {
@@ -186,17 +184,16 @@
    "variant": "plain_o2",
    "program": "powerpc_plain_o2.bin",
    "shared": 12,
-   "identical": 8,
-   "identical_tokens": 117,
-   "attributed": 4,
+   "identical": 9,
+   "identical_tokens": 137,
+   "attributed": 3,
    "classes": [
-    "data-name-convention",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-plain_o2.jsonl",
-    "sha256": "fcc05c6e089227bb3586c3edffe27b81365cf52fb8f8d3db62d993b1e66f95d2"
+    "sha256": "a76e2111562b5228686ebece3ba4112d31d278bebb05effd2858c887b6629619"
    }
   },
   {
@@ -204,18 +201,17 @@
    "variant": "cpp_o2",
    "program": "powerpc_cpp_o2.bin",
    "shared": 19,
-   "identical": 7,
-   "identical_tokens": 112,
-   "attributed": 12,
+   "identical": 8,
+   "identical_tokens": 132,
+   "attributed": 11,
    "classes": [
-    "data-name-convention",
     "language-variant",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-cpp_o2.jsonl",
-    "sha256": "84cbd45e9e364f01c789612f5fc72934526f773c19ed05dc2016b0101338bbde"
+    "sha256": "b6a4b21e584c5f491d8c8f8eeb2bad58ce6631cce301ebdc62037ac90ab93520"
    }
   },
   {
@@ -223,16 +219,15 @@
    "variant": "many_o2",
    "program": "powerpc_many_o2.bin",
    "shared": 410,
-   "identical": 407,
-   "identical_tokens": 10494,
-   "attributed": 3,
+   "identical": 408,
+   "identical_tokens": 10514,
+   "attributed": 2,
    "classes": [
-    "data-name-convention",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default-many_o2.jsonl",
-    "sha256": "b0c6bb4906c261bfe91e6a370a05ed96bcdf561d312c6ae432d1272d6813a5e4"
+    "sha256": "0c6d8917039b0dea8b24d5635c17b1966696b4e5f37b1f4225007b59788626ea"
    }
   },
   {

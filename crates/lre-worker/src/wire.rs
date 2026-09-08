@@ -213,6 +213,8 @@ pub mod attr {
     pub const ARRAYSIZE: u32 = 48;
     /// ATTRIB_NAMELOCK (marshal.cc:1246).
     pub const NAMELOCK: u32 = 15;
+    /// ATTRIB_TYPELOCK (`AttributeId`, :79; read in database.cc:439).
+    pub const TYPELOCK: u32 = 23;
     /// ATTRIB_METATYPE (marshal.cc:1243).
     pub const METATYPE: u32 = 12;
     /// ATTRIB_TYPE (marshal.cc:1253).
@@ -417,9 +419,14 @@ pub(crate) fn encode_data_symbol(
     encode_header(out, ELEMENT_START, elem::SYMBOL);
     encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, 0);
     encode_string_attribute(out, attr::NAME, name.as_bytes());
-    // The name is the store's fact; the type is this pass's inference, so
-    // only the name is locked (Symbol::decodeHeader, database.cc:394-434).
+    // Both the name and the type are the store's facts, and stock locks both
+    // on every mapped data symbol it answers with
+    // (`HighCodeSymbol`, :41-46: `setNameLock(true)`, `setTypeLock(true)`;
+    // read in `Symbol::decodeHeader`, database.cc:394-434). Without the type
+    // lock the decompiler retypes the symbol and drops the cast stock prints.
     encode_header(out, ATTRIBUTE, attr::NAMELOCK);
+    out.push((attr_type::BOOLEAN << 4) | 1);
+    encode_header(out, ATTRIBUTE, attr::TYPELOCK);
     out.push((attr_type::BOOLEAN << 4) | 1);
     if read_only {
         // `Varnode::readonly`, which is what lets the printer render a string

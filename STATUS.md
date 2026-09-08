@@ -4867,15 +4867,51 @@ evidence:
 - Regression: `cargo test --workspace` **263 pass**; every gate in `tests/`
   passes, plus the five shell suites.
 
+### m4-029 evidence
+- The rule: Ghidra's loader labels every nonzero ADDRESS-valued dynamic tag's
+  target `__DT_<TAG>` (`ElfProgramBuilder.markupDynamicTable` through
+  `addDynamicMemoryReference`, :2691-2773), and the processor extensions
+  declare tags of their own -- `DT_PPC_GOT` is `ElfDynamicValueType.ADDRESS`
+  in `PowerPC_ElfExtension` (:44-45), whose `canHandle` is `EM_PPC && is32Bit`
+  (:61-63), so the tag number is only asked for there.
+- What we had wrong, measured on the pinned install rather than assumed:
+  - We dropped the label wherever anything else already named the address.
+    Stock applies it *beside* the other name: at `10010588` on
+    `powerpc_plain_o0` the probe reports both the function `_DT_INIT`
+    (primary) and the label `__DT_INIT` (non-primary), and at `1003074c` --
+    `DT_PLTGOT`, which on PowerPC is also the first `R_PPC_JMP_SLOT` slot --
+    it holds **only** `__DT_PLTGOT`, because the import the slot resolves to
+    lives in its EXTERNAL block, tied to the slot by a reference.
+  - So the worker now resolves a name the way stock's primary symbol does:
+    demangled name, then a name the image gives the object, then the dynamic
+    table's label, then the import a linkage slot resolves to. A tag-named
+    slot is sent as it stands rather than as a composed `PTR_<import>_<addr>`
+    label -- composition is for data stock has no symbol for.
+  - And the type it is sent with is the store's, locked. `HighCodeSymbol`
+    (:41-46) sets `setNameLock(true)` **and** `setTypeLock(true)` on every
+    mapped data symbol stock answers with; we locked only the name, so the
+    decompiler retyped our slots and dropped the cast stock prints. Locking
+    the type closed four more rows on its own.
+- Measured (`tests/m4-029_dynamic_tags.py`,
+  `benchmarks/reports/m4-029.json`): **243 dynamic-tag names across 20 ELF
+  rows**, every one held at the same address with the same text, **0
+  invented**.
+- `m4-003`: `data-name-convention` **4 -> 0** (the class is gone) and
+  `type-stronger` **89 -> 85**, **1749 of 1845** token-identical (up from
+  1745), 0 unexplained, five classes left, baseline re-recorded.
+- Regression: `cargo test --workspace` **263 pass**; every gate in `tests/`
+  passes, plus the five shell suites.
+
 ## Next task
-- m4-029: `data-name-convention` 4. Both stores name the same address on
-  purpose and differently: the slot `DT_PLTGOT` reserves is named after the
-  import it holds where stock names it after the tag. Decide which name the
-  store should carry by reading what stock's own naming rule is for that slot
-  (`ElfDefaultGotPltMarkup`, and the dynamic-tag labels
-  `ElfProgramBuilder.markupDynamicTable`), and either adopt stock's name or
-  record the divergence as a measured choice with its reason. The acceptance
-  test compares the stored name at each such address against stock's.
+- m4-030: `type-stronger` 85, now the largest class and the one with a
+  measured direction: where our store holds a slot's type and stock types it
+  `undefined *`, each side puts its cast in a different place. Read what stock
+  actually holds at those slots (the `analyzeHeadless` probe in
+  `/tmp/probe/ProbeSlot.java` shape is the tool: `getDataAt` plus the primary
+  symbol), decide per class of slot whether our stronger type is evidence or
+  invention, and either send what stock sends or record the divergence with
+  the fact that justifies it. The acceptance test compares the stored type at
+  each such address against stock's own answer at the same address.
 - Reserved and unchanged: `GOAL.md` C3 (measured game-first sessions on the
   approved targets) needs a target game, which II.1 reserves for the human.
 

@@ -111,6 +111,30 @@ fn run(
         }
     }
     for symbol in &held {
+        if symbol.source == lre_core::native::DYNAMIC_LABEL_SOURCE
+            && symbol.address.space == lre_model::AddressSpace::Ram
+        {
+            provider
+                .tag_names
+                .insert(symbol.address.offset, lre_worker::c_identifier(&symbol.name));
+        }
+    }
+    // Which name an address answers with, in the order stock's primary symbol
+    // resolves: the demangled name first (it is applied primary,
+    // `DemangledAddressTable.applyTo`, :86), then a name the image gives the
+    // object, then the dynamic table's label -- which the pinned install keeps
+    // non-primary wherever something else names the address (measured at
+    // `_DT_INIT`) -- and last the import a linkage slot resolves to, which
+    // stock keeps in its EXTERNAL block rather than at the slot.
+    let rank = |symbol: &lre_model::SymbolRow| match symbol.source.as_str() {
+        _ if primary.contains_key(&symbol.address.offset) => 0,
+        lre_core::native::DYNAMIC_LABEL_SOURCE => 2,
+        _ if symbol.external => 3,
+        _ => 1,
+    };
+    let mut ordered: Vec<&lre_model::SymbolRow> = held.iter().collect();
+    ordered.sort_by_key(|symbol| rank(symbol));
+    for symbol in ordered {
         let rendered = primary
             .get(&symbol.address.offset)
             .cloned()
@@ -122,7 +146,8 @@ fn run(
         if symbol.external {
             provider
                 .external_names
-                .insert(symbol.address.offset, rendered);
+                .entry(symbol.address.offset)
+                .or_insert(rendered);
         }
     }
     for comment in db.comments(pid)? {
