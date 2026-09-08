@@ -5045,6 +5045,35 @@ evidence:
 - Regression: `cargo test --workspace` **266 pass**; every gate in `tests/`
   passes, plus the five shell suites.
 
+### m4-032 evidence (every flow request is answered)
+- The rule: a batched `flow` request answers exactly one result per address,
+  whatever the bytes at that address are. It did not. `IfcFlow::execute`
+  caught `BadDataError` and `UnimplError` only, so any other low-level fault
+  escaped the command and **discarded the rest of the command line** -- the
+  console printed its prompt and the remaining addresses in that batch were
+  never answered.
+- Two faults reach it in practice, both from the pinned tree:
+  `LoadImageXml::loadFill` raises `DataUnavailError` for an address the image
+  does not cover (`loadimage_xml.cc:236`), and `SleighBuilder::delaySlot`
+  raises a plain `LowlevelError` when a delay slot's own instruction never
+  reached the pcode state (`sleigh.cc:385`). Both mean what Ghidra's
+  `Disassembler` concludes for the same bytes -- no instruction here -- so the
+  command now answers `kind=BAD` and keeps going.
+- Measured on the MIPS-III corpus image (`dungeon_game.elf`, stripped, 781
+  `STT_FUNC` symbols): the batch of 149 addresses came back with **82**
+  answers, discovery treated the short batch as a console failure, and the
+  import fell back to pointer-only seeds -- **247 functions, recall 0.3065**.
+  With the arm in place the same import runs the flow phase (1013 requests,
+  9417 instructions decoded) and recovers **480 functions, recall 0.4353**.
+- The silent part is fixed too: a discovery fallback now records *why* in
+  `ProgramSummary::discovery_note`, which `lre-cli import --timings` prints,
+  naming the first unanswered address. A whole architecture lost half its
+  functions to a fallback that reported nothing.
+- Regression: `flow_batch_answers_every_address_it_is_asked` pins the
+  invariant with sixteen bytes of real MIPS text (a branch-likely at an odd
+  address, its undecodable delay slot, and an unmapped address in one batch).
+  It fails against a console built without the arm and passes with it.
+
 ## Next task
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,

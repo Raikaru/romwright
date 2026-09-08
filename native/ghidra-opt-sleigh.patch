@@ -379,7 +379,7 @@ index e62ab6a..6d42a2d 100644
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
      addr = addr + sz;
-@@ -836,6 +856,80 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +856,83 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
@@ -427,6 +427,9 @@ index e62ab6a..6d42a2d 100644
 +      continue;
 +    } catch(UnimplError &err) {
 +      *status->fileoptr << "FLOW " << addr.getShortcut() << "0x" << hex << addr.getOffset() << " len=1 fall=none kind=UNIMPL terminal=0 conditional=0 return_op=0 delays= targets=" << '\n';
++      continue;
++    } catch(LowlevelError &err) {
++      *status->fileoptr << "FLOW " << addr.getShortcut() << "0x" << hex << addr.getOffset() << " len=1 fall=none kind=BAD terminal=0 conditional=0 return_op=0 delays= targets=" << '\n';
 +      continue;
 +    }
 +

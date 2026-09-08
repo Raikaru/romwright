@@ -154,19 +154,28 @@ pub(super) struct ConsoleLanes {
 /// ELF/PE retain structural facts when the optional console is unavailable.
 /// All supported languages use the same mapped addresses and flow worklist.
 pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes> {
-    if import.mappings.is_empty()
-        || import
-            .cfg
-            .console_path
-            .as_ref()
-            .map_or(true, |path| !path.is_file())
-    {
+    if import.mappings.is_empty() {
+        import.discovery_note = Some("the image has no mapped bytes".into());
         return None;
     }
-    let Ok(mut session) = ConsoleSession::new(&import.cfg) else {
+    if import
+        .cfg
+        .console_path
+        .as_ref()
+        .map_or(true, |path| !path.is_file())
+    {
+        import.discovery_note = Some("no SLEIGH console is configured".into());
         return None;
+    }
+    let mut session = match ConsoleSession::new(&import.cfg) {
+        Ok(session) => session,
+        Err(error) => {
+            import.discovery_note = Some(format!("console did not start: {error}"));
+            return None;
+        }
     };
-    if session.load_mapped(import).is_err() {
+    if let Err(error) = session.load_mapped(import) {
+        import.discovery_note = Some(format!("console did not load the image: {error}"));
         return None;
     }
     let patterns_started = std::time::Instant::now();
@@ -174,8 +183,12 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     if ranges.is_empty() {
         return None;
     }
-    let Ok(patterns) = session.function_patterns(&ranges) else {
-        return None;
+    let patterns = match session.function_patterns(&ranges) {
+        Ok(patterns) => patterns,
+        Err(error) => {
+            import.discovery_note = Some(format!("console refused the pattern search: {error}"));
+            return None;
+        }
     };
     import.pattern_labels = session.pattern_labels().to_vec();
     super::phase(import, "patterns", patterns_started);
@@ -187,9 +200,13 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
         failure: None,
         instructions: 0,
     };
-    if flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider).is_err()
-        || provider.failure.is_some()
-    {
+    let walked = flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider);
+    if let Err(error) = walked {
+        import.discovery_note = Some(format!("console-driven flow failed: {error}"));
+        return None;
+    }
+    if let Some(failure) = provider.failure.as_ref().map(ToString::to_string) {
+        import.discovery_note = Some(format!("console-driven flow failed: {failure}"));
         return None;
     }
     super::phase(import, "flow", flow_started);

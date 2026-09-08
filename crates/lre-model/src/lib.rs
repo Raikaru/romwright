@@ -501,6 +501,10 @@ pub struct ProgramSummary {
     /// Console request accounting for the flow phase, when it ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub flow: Option<FlowStats>,
+    /// Why console-driven discovery did not run, when it did not: a silent
+    /// fallback to pointer-only seeds hides a whole architecture's flow.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub discovery_note: Option<String>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
