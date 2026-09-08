@@ -4386,19 +4386,44 @@ m3-003, all three wired into continuous integration)
   `m6-006`, `differential.sh`, `workflow.sh` pass. 100 reports indexed, both
   generators in sync.
 
+### m4-019 evidence
+- Diagnosis, measured offline before touching anything: the five remaining
+  `missing-external-prototype` rows named exactly two imports,
+  `__libc_start_main` (3) and `__gmon_start__` (2). The pinned archive
+  declares **6627** functions -- `abort`, `printf`, `exit` among them -- and
+  neither of those two. And after m4-018 the oracle store records every
+  signature stock says it recovered: for these two names, at the stub and in
+  its EXTERNAL block alike, it records **none**. There was nothing to supply.
+- So the class was over-firing a third time, in the same shape m4-016 fixed
+  for warnings: it asked only whether *our* store held a signature. A name
+  nobody declares is nobody's gap. It now requires that stock hold one and we
+  not: `missing-external-prototype` 5 -> **0**.
+- Measured: token identity **35** of 56, 0 unaccounted tokens, baseline
+  re-recorded. What remains, in the direction each points: gaps `flow` 3 and
+  `data-type-unknown` 2; choices `name-convention` 3 (all `_plt`),
+  `data-name-convention` 3, `type-stronger` 18; stock's own `oracle-warning`
+  8.
+- Controls: stock holding a signature we lack still counts (m4-016's own
+  "real gap" case, updated to supply it); holding one stock lacks does not;
+  the two names carry no signature in either store on the corpus; and the
+  PowerPC row that used to carry the class is still accounted for token by
+  token with the class gone.
+- Regression: `cargo test --workspace` **245 pass**; `m4-003`, `m4-009`,
+  `m4-012`, `m4-016`, `m4-018`, `m4-019`, `m5-012`, `m6-006` pass; both
+  generators in sync, 101 reports indexed.
+
 ## Next task
-- m4-019: `missing-external-prototype` **5** is the largest remaining gap, and
-  it is one fact: `__libc_start_main`, `abort` and `__gmon_start__` are
-  imports whose declarations the pinned `generic_clib_64.gdt` does not hold
-  (m4-009 supplies 6627 that it does). Two sources are available offline and
-  neither has been measured: the other pinned type archives under
-  `Ghidra/Features/Base/data/typeinfo` (there are `.gdt` files beyond
-  `generic_clib_64`), and the version records in the image's own `.dynsym`,
-  which name the library each import comes from without declaring it.
-  Diagnose which source holds each of the three names, then supply what is
-  actually there. Acceptance: a failing test naming the three imports, the
-  count of them that gain a signature, the class count before and after, and
-  a control proving a name neither source declares still counts as a gap.
+- m4-020: two gaps are left and both are small and specific.
+  `data-type-unknown` **2** -- the AArch64 and x86-32 entry rows pass
+  `&DAT_002106f4` where stock passes `&LAB_002106f4`: the address is code
+  (stock disassembled it), and our provider labels every unnamed location
+  `DAT_`. Ghidra's own rule is `SymbolUtilities.DEFAULT_SYMBOL_PREFIX = "LAB_"`
+  for a code address versus `DEFAULT_DATA_PREFIX = "DAT_"` for data
+  (SymbolUtilities.java:49-53), and the store already knows which mappings are
+  executable. `flow` **3** is the second: diagnose each of the three from the
+  divergence files before deciding. Acceptance: a failing test naming both
+  rows, the label prefix decided by the mapping's own permissions, a control
+  proving a data address keeps `DAT_`, and the class counts re-measured.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

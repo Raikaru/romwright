@@ -1,5 +1,5 @@
-{"address": "002106c0", "classes": {"missing-external-prototype": ["__libc_start_main"], "data-type-unknown": [{"oracle": "LAB_002106f4", "native": ["DAT_002106f4"]}], "data-name-convention": [{"address": "002106f4", "oracle": "LAB_002106f4", "native": "DAT_002106f4"}]}, "oracle_tokens": 33, "native_tokens": 33}
-{"address": "00210704", "classes": {"type-stronger": ["(undefined *)"], "missing-external-prototype": ["__gmon_start__"]}, "oracle_tokens": 28, "native_tokens": 24}
+{"address": "002106c0", "classes": {"data-type-unknown": [{"oracle": "LAB_002106f4", "native": ["DAT_002106f4"]}], "data-name-convention": [{"address": "002106f4", "oracle": "LAB_002106f4", "native": "DAT_002106f4"}]}, "oracle_tokens": 33, "native_tokens": 33}
+{"address": "00210704", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 28, "native_tokens": 24}
 {"address": "00210860", "classes": {"name-convention": ["FUN_00210860", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00210880", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 21, "native_tokens": 16}
 {"address": "00210890", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

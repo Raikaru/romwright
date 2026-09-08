@@ -296,28 +296,29 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if unrendered:
         classes["string-not-rendered"] = unrendered
 
-    # An import with no prototype: this function, or one the oracle *calls* by
-    # a name the store holds as an import. A name in the decompiled function's
-    # own signature is not a call, and the prototype that would answer it
-    # belongs to the stub the name resolves to -- never to the import slot,
-    # which carries no signature by construction.
+    # An import the oracle *calls* by name, whose signature stock holds and we
+    # do not. Three narrowings, each measured: a name in the decompiled
+    # function's own signature is not a call (m4-016); the signature that
+    # would answer it belongs to the stub the name resolves to, never to the
+    # import slot; and a name **nobody** declares -- `__gmon_start__` is in no
+    # pinned archive and stock records no signature for it either -- is not a
+    # gap of ours (m4-019). A gap is a difference, and a difference has a
+    # direction.
     without = []
-    if entry in store["externals"] and entry not in store["prototypes"]:
-        without.append(native_row.get("name"))
     body = oracle_text[oracle_text.index("{"):] if "{" in oracle_text else ""
     for name in set(store["externals"].values()):
         if not re.search(rf"\b{re.escape(name)}\s*\(", body):
             continue
-        stub = store["functions"].get(name)
-        if stub is not None and stub in store["prototypes"]:
+        if held_signature(store, name):
             continue
-        if stub is None and all(
-                address in store["prototypes"]
-                for address, held in store["externals"].items() if held == name):
+        if not held_signature(oracle_store, name):
             continue
         without.append(name)
+    if entry in store["externals"] and entry not in store["prototypes"] \
+            and entry in oracle_store["prototypes"]:
+        without.append(native_row.get("name"))
     if without:
-        classes["missing-external-prototype"] = sorted(set(without))
+        classes["missing-external-prototype"] = sorted(set(filter(None, without)))
 
     # Both sides name the location, and disagree about what is there: the
     # store holds a reference, the oracle holds defined data with a type.
@@ -372,6 +373,16 @@ def label_substitutions(native_text: str, oracle_text: str, store: dict,
             pairs.append({"address": f"{address:08x}", "oracle": oracle_name,
                           "native": ours[0]})
     return pairs
+
+
+def held_signature(store: dict, name: str) -> bool:
+    """Whether a store holds a signature for the function that name resolves
+    to, or -- for a name it knows only as an import slot -- for the slot."""
+    stub = store["functions"].get(name)
+    if stub is not None:
+        return stub in store["prototypes"]
+    return any(address in store["prototypes"]
+               for address, held in store["externals"].items() if held == name)
 
 
 def arity(signature: str | None) -> int | None:

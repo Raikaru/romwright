@@ -121,12 +121,17 @@ def main() -> int:
         f"prototype: {classes}")
     findings["own_signature"] = sorted(classes)
 
-    # ... and it still fires for a call the oracle makes by name.
-    calling = context(externals={0x2038f0: "printf"}, functions={"printf": 0x201720})
+    # ... and it still fires for a call the oracle makes by name to an import
+    # whose signature stock holds and we do not. (m4-019 added the second
+    # half: a name *nobody* declares is nobody's gap, so the stock store here
+    # has to hold the signature for this to be one.)
+    ours_only = context(externals={0x2038f0: "printf"}, functions={"printf": 0x201720})
+    stock_has = context(externals={0x2038f0: "printf"}, functions={"printf": 0x201720},
+                        prototypes={0x201720})
     native_call = "void f(void){(*PTR_printf_002038f0)();return;}"
     oracle_call = "void f(void){printf(\"hi\");return;}"
     classes = module.classify(native_call, oracle_call, rows[0], rows[1], 0x1000,
-                              calling, calling)
+                              ours_only, stock_has)
     assert classes.get("missing-external-prototype") == ["printf"], (
         f"a call the oracle makes by name to an import with no signature is a "
         f"gap, and was classified {classes}")

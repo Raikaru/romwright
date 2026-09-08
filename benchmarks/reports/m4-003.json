@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T05:29:30.130305+00:00",
+ "recorded_at": "2026-09-08T05:50:14.445885+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 35 of 56 functions token-identical, 21 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 3, missing-external-prototype 5, name-convention 3, oracle-warning 8, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 35 of 56 functions token-identical, 21 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 3, name-convention 3, oracle-warning 8, type-stronger 18), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -15,7 +15,6 @@
   "parity.class.data-name-convention": 3,
   "parity.class.data-type-unknown": 2,
   "parity.class.flow": 3,
-  "parity.class.missing-external-prototype": 5,
   "parity.class.name-convention": 3,
   "parity.class.oracle-warning": 8,
   "parity.class.type-stronger": 18
@@ -48,14 +47,13 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "missing-external-prototype",
     "name-convention",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A.jsonl",
-    "sha256": "089e787de5c065ff34dc6735252c3bbd462f3e8b6b636147ca4356b82a16dd5a"
+    "sha256": "2667908d36099f7c931bcf508e8102614b8191be4d31fd0ae2aac1ee56f3d7dd"
    }
   },
   {
@@ -67,13 +65,12 @@
    "attributed": 4,
    "classes": [
     "data-name-convention",
-    "missing-external-prototype",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "f3b0364deaeb1ef86f3311805315ae98e311ed29a7122ff9827a259cd6ee29de"
+    "sha256": "0a7ae32d7785c43c4b6e76d979c0e6e8ad51f8bdebcd3687d65d2de9d9471af6"
    }
   },
   {
@@ -87,14 +84,13 @@
     "data-name-convention",
     "data-type-unknown",
     "flow",
-    "missing-external-prototype",
     "name-convention",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "18b6b4031ca299ede4196266b112c276dee0193cebf5a29f509ea8ec7ed63e72"
+    "sha256": "99662adda04f5fedb5b8329588cbbded2d13d4fa655626cbd989ec3e65a054b2"
    }
   }
  ],
