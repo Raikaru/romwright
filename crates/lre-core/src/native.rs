@@ -193,6 +193,8 @@ pub struct NativeImport {
     pub pointer_slots: Vec<(u64, u64)>,
     /// Words inside a `.got` section, with their width.
     pub got_slots: Vec<(u64, u64)>,
+    /// Addresses an ELF `OBJECT` symbol declares, with the size it declares.
+    pub object_sizes: Vec<(u64, u64)>,
     /// Entries whose name came from the image's own symbol table. Ghidra's
     /// loader leaves such a function's name alone and only marks it an entry
     /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
@@ -425,6 +427,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     let mut symbol_functions: std::collections::HashMap<u64, (u8, String, u64)> =
         std::collections::HashMap::new();
     let mut externals = Vec::new();
+    let mut object_sizes: Vec<(u64, u64)> = Vec::new();
     // SHT_SYMTAB (2) and SHT_DYNSYM (11): 16-byte Elf32_Sym.
     for s in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
         let strtab = sections
@@ -459,6 +462,13 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
                     *slot = (rank, name.clone(), size.max(1));
                 }
             }
+            // STT_OBJECT with a size and an address: Ghidra defines undefined
+            // data of exactly that size there
+            // (`ElfProgramBuilder.processSymbols`, :1703-1706, and
+            // `allocateUndefinedSymbolData`, :1358-1381).
+            if typ == 1 && shndx != 0 && value != 0 && size > 0 {
+                object_sizes.push((value, size));
+            }
             if shndx == 0 && !name.is_empty() {
                 externals.push((0, name.clone()));
             }
@@ -481,6 +491,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         functions,
         xrefs: Vec::new(),
         externals,
+        object_sizes,
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
@@ -633,6 +644,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     let mut symbol_functions: std::collections::HashMap<u64, (u8, String, u64)> =
         std::collections::HashMap::new();
     let mut externals = Vec::new();
+    let mut object_sizes: Vec<(u64, u64)> = Vec::new();
     for s in sections.iter() {
         if s.typ != 2 {
             continue;
@@ -670,6 +682,9 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
                     *slot = (rank, name.clone(), size.max(1));
                 }
             }
+            if typ == 1 && value != 0 && size > 0 {
+                object_sizes.push((value, size));
+            }
             if value == 0 && typ == 1 && !name.is_empty() {
                 externals.push((0, name));
             }
@@ -692,12 +707,20 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
                 break;
             }
             let name_off = u32_at(data, hdr)? as usize;
+            let info = data[hdr + 4];
             let shndx = u16_at(data, hdr + 6)?;
+            let value = u64_at(data, hdr + 8)?;
+            let size = u64_at(data, hdr + 16)?;
             let name = strtab
                 .get(name_off..)
                 .and_then(|r| r.split(|c| *c == 0).next())
                 .map(|r| String::from_utf8_lossy(r).into_owned())
                 .unwrap_or_default();
+            // A copy-relocated object is *defined* in the executable's own
+            // dynamic table, with the size the library declares.
+            if info & 0xf == 1 && shndx != 0 && value != 0 && size > 0 {
+                object_sizes.push((value, size));
+            }
             if !name.is_empty() && shndx == 0 {
                 externals.push((0, name));
             }
@@ -716,6 +739,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         mappings,
         functions,
         externals,
+        object_sizes,
         process_entry,
         symbol_named,
         format: "ELF".into(),
@@ -1638,6 +1662,12 @@ pub const DATA_POINTER_SOURCE: &str = "native-analysis:data-pointer";
 
 /// A word inside a `.got` section, which the ELF loader types as a pointer.
 pub const ELF_GOT_SOURCE: &str = "native-import:elf-got";
+
+/// The name a mangled name was mangled from, applied beside it.
+pub const DEMANGLE_SOURCE: &str = "native-analysis:demangle";
+
+/// The size an ELF `OBJECT` symbol declares for the object it names.
+pub const ELF_OBJECT_SOURCE: &str = "native-import:elf-object";
 /// An object the dynamic linker copies into the image, named by the
 /// relocation that copies it.
 pub const ELF_COPY_SOURCE: &str = "native-import:elf-copy";
@@ -1771,6 +1801,27 @@ pub fn store_import(
                 source: DYNAMIC_LABEL_SOURCE.into(),
             }),
     );
+    // A mangled name also carries the name it was mangled from. Stock's
+    // demangler applies that name as a *second* symbol at the same address,
+    // with `SourceType.ANALYSIS`, and makes it primary
+    // (`DemangledAddressTable.applyTo`, :74-90;
+    // `DemangledObject.applyDemangledName`, :527-555) -- so the mangled name
+    // stays as evidence and the derived name is what a decompiler prints.
+    symbols.retain(|symbol| symbol.source != DEMANGLE_SOURCE);
+    let derived: Vec<lre_model::SymbolRow> = symbols
+        .iter()
+        .filter(|symbol| symbol.address.space == lre_model::AddressSpace::Ram)
+        .filter_map(|symbol| {
+            let demangled = crate::demangle::demangle(&symbol.name)?;
+            Some(lre_model::SymbolRow {
+                name: demangled.name,
+                address: symbol.address.clone(),
+                external: symbol.external,
+                source: DEMANGLE_SOURCE.into(),
+            })
+        })
+        .collect();
+    symbols.extend(derived);
     db.replace_symbols(pid, &symbols)?;
     let xrows: Vec<XrefRow> = imp
         .xrefs
@@ -1827,6 +1878,30 @@ pub fn store_import(
         })
         .collect();
     db.replace_inferred_data_definitions(pid, PLT_RESERVED_SOURCE, &definitions)?;
+    // The size an ELF symbol declares for an object, applied as the undefined
+    // data Ghidra applies: one `undefinedN` up to eight bytes, an array of
+    // `undefined1` beyond that (`Undefined.getUndefinedDataType`, :47-55,
+    // called from `allocateUndefinedSymbolData`, :1358-1381). An object wider
+    // than a word is why stock prints `int::typeinfo` and not
+    // `&int::typeinfo`: the '&' is dropped for an array
+    // (`PrintC`, printc.cc:1082-1090).
+    let mut objects: Vec<lre_model::DataDefinitionRow> = imp
+        .object_sizes
+        .iter()
+        .map(|(address, size)| lre_model::DataDefinitionRow {
+            address: lre_model::Address::ram(*address),
+            data_type: if *size > 8 { "undefined1[]".into() } else { "undefined".into() },
+            size: *size,
+            provenance: lre_model::FactProvenance {
+                kind: lre_model::FactKind::Inferred,
+                source: ELF_OBJECT_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    objects.sort_by_key(|row| row.address.offset);
+    objects.dedup_by_key(|row| row.address.offset);
+    db.replace_inferred_data_definitions(pid, ELF_OBJECT_SOURCE, &objects)?;
     // A location another rule types keeps that type; this rule only says how
     // wide the access that reached it was.
     let mut widths: Vec<lre_model::DataDefinitionRow> = imp
@@ -1836,6 +1911,7 @@ pub fn store_import(
             !imp.plt_reserved_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.pointer_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.got_slots.iter().any(|(slot, _)| slot == address)
+                && !imp.object_sizes.iter().any(|(slot, _)| slot == address)
         })
         .map(|(address, width)| lre_model::DataDefinitionRow {
             address: lre_model::Address::ram(*address),

@@ -999,9 +999,9 @@ equal (`_plt` names the section that proved the start; stock calls it
 `FUN_00201710`) -- `data-name-convention` 4,
 the same decision on a data label (the slot `DT_PLTGOT` reserves is named
 after the import it holds, where stock names it after the tag),
-`mangled-name` 8, where both stores hold
-the name a COPY relocation carries (`_ZTIi`) and stock prints what its
-demangler made of it (`int::typeinfo`),
+no `mangled-name` row any more: `m4-028` demangles the name a COPY relocation
+carries (`_ZTIi`) into the symbol Ghidra applies beside it -- `typeinfo` in the
+namespace `int` -- and both stores now print `int::typeinfo`,
 `type-stronger` 89,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`, and
@@ -1734,7 +1734,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 4; `parity.class.language-variant` 3; `parity.class.mangled-name` 8; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 106; `parity.functions_token_identical` 1739; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 4; `parity.class.language-variant` 3; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 100; `parity.functions_token_identical` 1745; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1756,6 +1756,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-024.json` | `m4-024` | M4 | pass | `exception.ranges_invented` 0; `exception.ranges_missing` 0; `exception.ranges_recorded` 4; `exception.rows_measured` 8; `exception.rows_with_ranges` 4 | `tests/m4-024_exception_annotations.py` |
 | `m4-025.json` | `m4-025` | M4 | pass | `declaration.applied_with_other_types` 0; `declaration.declared_by_stock` 23; `declaration.held` 23; `declaration.noreturn_recorded_as_facts` 5; `declaration.rows_measured` 20; `declaration.signatures_printed_as_stock` 23; `declaration.unexpressible_declarations_refused` 235 | `tests/m4-025_declaration_types.py` |
 | `m4-027.json` | `m4-027` | M4 | pass | `pointer.rows_measured` 20; `pointer.slots_held` 37; `pointer.slots_invented` 0; `pointer.slots_missing` 0; `pointer.slots_stock_types` 37 | `tests/m4-027_pointer_slots.py` |
+| `m4-028.json` | `m4-028` | M4 | pass | `demangle.mangled_names_kept` 4; `demangle.names_held` 4; `demangle.names_invented` 0; `demangle.names_missing` 0; `demangle.names_stock_derives` 4; `demangle.rows_measured` 20 | `tests/m4-028_demangled_names.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1785,7 +1786,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m8-005.json` | `m8-005` | M8 | pass | `pe.imports.bound_descriptors` 0; `pe.imports.declared` 166; `pe.imports.libraries` 8; `pe.imports.misnamed` 0; `pe.imports.missing` 0; `pe.imports.not_external` 0; `pe.imports.unnamed_stubs` 0 | `tests/m8-005_pe_imports.py` |
 | `m8-006.json` | `m8-006` | M8 | pass | `pe.classes.declared` 4; `pe.classes.unexercised` 0; `pe.classes.unmeasured` 0; `pe.externals` 260; `pe.references` 865 | `tests/m8-006_pe_parity.py` |
 | `m9-001.json` | `m9-001` | M9 | pass | `provenance.api_facts_checked` 10; `provenance.classes` 18; `provenance.declared` 18; `provenance.observed` 11; `provenance.unexplained` 0; `ui.xrefs.rows` 19; `ui.xrefs.unexplained` 0 | `tests/m9-001_provenance_explained.py` |
-| `m9-002.json` | `m9-002` | M9 | pass | `evidence.attributed.native-analysis:constant-propagation` 1.0000; `evidence.attributed.native-import` 1.0000; `evidence.attributed.native-import:branch` 1.0000; `evidence.attributed.native-import:elf-got` 1.0000; `evidence.attributed.native-import:elf-pointer` 1.0000; `evidence.attributed.native-import:elf-reloc` 1.0000; `evidence.attributed.native-import:elf-unwind` 1.0000; `evidence.attributed.native-import:pe-export` 1.0000; `evidence.attributed.native-import:pe-reloc` 1.0000; `evidence.attributed.native-import:pe-tls` 1.0000; `evidence.attributed.native-import:pe-unwind` 1.0000; `evidence.attributed.native-import:thunk` 1.0000; `evidence.classes` 28; `evidence.declared` 17; `evidence.declared_elsewhere` 9; `evidence.declared_exercised` 8; `evidence.references` 4669; `evidence.unbacked_confidence` 0 | `tests/m9-002_fact_confidence.py` |
+| `m9-002.json` | `m9-002` | M9 | pass | `evidence.attributed.native-analysis:constant-propagation` 1.0000; `evidence.attributed.native-import` 1.0000; `evidence.attributed.native-import:branch` 1.0000; `evidence.attributed.native-import:elf-got` 1.0000; `evidence.attributed.native-import:elf-pointer` 1.0000; `evidence.attributed.native-import:elf-reloc` 1.0000; `evidence.attributed.native-import:elf-unwind` 1.0000; `evidence.attributed.native-import:pe-export` 1.0000; `evidence.attributed.native-import:pe-reloc` 1.0000; `evidence.attributed.native-import:pe-tls` 1.0000; `evidence.attributed.native-import:pe-unwind` 1.0000; `evidence.attributed.native-import:thunk` 1.0000; `evidence.classes` 30; `evidence.declared` 18; `evidence.declared_elsewhere` 10; `evidence.declared_exercised` 8; `evidence.references` 4669; `evidence.unbacked_confidence` 0 | `tests/m9-002_fact_confidence.py` |
 | `m9-003.json` | `m9-003` | M9 | pass | `filter.addresses` 20; `filter.facts_matched` 104; `filter.images` 5; `filter.kinds` 3; `filter.symbols_matched` 135 | `tests/m9-003_evidence_filter.py` |
 | `m9-004.json` | `m9-004` | M9 | pass | `surface.cli_rows_checked` 12; `surface.committed_ui_declared_rows` 13; `surface.narrowing_addresses` 2; `surface.ui_declared_rows` 0; `surface.ui_rows` 1 | `tests/m9-004_filter_surfaces.py` |
 | `m9-005.json` | `m9-005` | M9 | pass | `explanation.methods_answered` 28; `explanation.methods_published` 52; `explanation.printed_sources` 5; `explanation.silent_facts` 0; `explanation.window_declared_rows` 13; `explanation.window_unexplained` 0 | `tests/m9-005_explanation_milestone.py` |
@@ -1796,11 +1797,11 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 <!-- support-matrix:begin -->
 | Input | Structural native import | Native flow/decode/decompile |
 |---|---|---|
-| ELF x86-64 | supported | **supported and gated**; **parity measured**: 431 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
-| ELF x86-32 | supported | **parity measured**: 435 of 466 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF x86-64 | supported | **supported and gated**; **parity measured**: 433 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF x86-32 | supported | **parity measured**: 437 of 466 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
 | PE32 x86 | supported | **gated**: DWARF recall 0.8065 over 93 functions, 0 unattributed, stock Ghidra 0.7634 on the same image (`tests/m8-002_pe32_roots.py`) |
-| ELF AARCH64 LE64 | supported | **parity measured**: 443 of 473 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF AARCH64 LE64 | supported | **parity measured**: 445 of 473 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF ARM LE32 | supported | no oracle comparison: no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for |
 | ELF MIPS LE32 | supported | no oracle comparison: no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader |
 | ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |

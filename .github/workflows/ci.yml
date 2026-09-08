@@ -373,6 +373,13 @@ jobs:
           python3 tests/m4-027_pointer_slots.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/pointer-slots.json"
+      - name: Hold the name a mangled name was mangled from
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m4-028_demangled_names.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/discovery/demangled-names.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

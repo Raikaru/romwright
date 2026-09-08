@@ -82,6 +82,9 @@ pub(super) fn prepare(
             *address = rebase(*address)?;
         }
     }
+    for (address, _) in &mut import.object_sizes {
+        *address = rebase(*address)?;
+    }
     for section in sections.iter_mut().filter(|s| s.flags & 2 != 0) {
         section.addr = rebase(section.addr)?;
     }

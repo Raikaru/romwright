@@ -1,6 +1,4 @@
 {"address": "00201890", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 52, "native_tokens": 48}
-{"address": "002019a0", "classes": {"mangled-name": [{"address": "00202d08", "oracle": "typeinfo", "native": "_ZTIi", "substituted": "&_ZTIi"}]}, "oracle_tokens": 93, "native_tokens": 91}
-{"address": "002019e0", "classes": {"mangled-name": [{"address": "00202d08", "oracle": "typeinfo", "native": "_ZTIi", "substituted": "&_ZTIi"}]}, "oracle_tokens": 146, "native_tokens": 144}
 {"address": "00201a84", "classes": {"type-stronger": ["(undefined *)"]}, "oracle_tokens": 33, "native_tokens": 29}
 {"address": "00201ab0", "classes": {"name-convention": ["FUN_00201ab0", "_plt"], "type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00201ac0", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}

@@ -19,6 +19,10 @@
   "evidence": "decoded",
   "derives_confidence": false
  },
+ "native-analysis:demangle": {
+  "evidence": "inferred",
+  "derives_confidence": false
+ },
  "native-analysis:shared-return": {
   "evidence": "decoded",
   "derives_confidence": false
@@ -44,6 +48,10 @@
   "derives_confidence": false
  },
  "native-import:elf-got": {
+  "evidence": "declared",
+  "derives_confidence": false
+ },
+ "native-import:elf-object": {
   "evidence": "declared",
   "derives_confidence": false
  },
