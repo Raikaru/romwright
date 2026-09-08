@@ -182,12 +182,26 @@ It requires Clang/LLD, Rust and the Ghidra installation metadata; it does not
 launch the Java bridge. Compiler probes and import databases are temporary;
 the committed corpus matrix is unchanged.
 
-ARM ELF `EF_ARM_BE8` (`0x00800000`, defined in the public ELF SDK header
-`elf.h`) denotes big-endian data with little-endian instructions. Selection
-uses this flag rather than `EI_DATA` alone: the pinned `ARM.ldefs` entry is
-`ARM:LEBE:32:v7LEInstruction`, with `instructionEndian="little"`. Ordinary
-big-endian ARM remains `ARM:BE:32:v7`; ELF32 i386 and PE32 remain
-`x86:LE:32:default`. This verifies language selection, not ARM decompile parity.
+Selection is the install's decision, not ours (`m4-023`): the pinned
+`*.opinion` files are queried with `e_machine` as the primary key and
+`e_flags` as the secondary one, exactly as `ElfLoader.findSupportedLoadSpecs`
+queries them, and the constraint that matches names the processor, the
+compiler spec, and often the variant. `ARM.opinion` pins `variant="v8"` and,
+behind the `EF_ARM_BE8` bit (`0x00800000`: big-endian data, little-endian
+instructions), `variant="v8LEInstruction"` -- so ARM little-endian is
+`ARM:LE:32:v8`, ordinary big-endian ARM is `ARM:BE:32:v8`, and BE8 is
+`ARM:LEBE:32:v8LEInstruction`, whose `.ldefs` entry carries
+`instructionEndian="little"`. ELF32 i386 and PE32 remain `x86:LE:32:default`.
+This verifies language selection, not ARM decompile parity.
+
+Where the data pins no variant -- PowerPC, MIPS, 32-bit RISC-V -- the choice is
+open. Ghidra's importer then takes the first element of a
+`HashSet<QueryResult>` iteration over candidates that are all equally
+preferred, which for a flags-0 32-bit big-endian PowerPC ELF is
+`PowerPC:BE:32:e500` (`PowerPC:BE:32:default` is twelfth in the same set).
+Hash order is not a fact about the image, so Ventris takes the neutral
+`default` variant and `m4-023` records the disagreement with the proof that
+nothing in the data separates the two.
 
 `--update-report` explicitly writes `benchmarks/reports/m1-008.json`; normal
 runs leave the working tree unchanged. All six cases must pass, with zero

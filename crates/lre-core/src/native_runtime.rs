@@ -89,7 +89,7 @@ fn console_output(cfg: &RuntimeConfig, binary: &Path, address: &str) -> Result<S
     } else {
         format!("0x{address}")
     };
-    let mapped = MappedImage::for_elf_or_dol(binary)?;
+    let mapped = MappedImage::for_elf_or_dol(cfg, binary)?;
     let bfd_target = bfd_target_for(&cfg.language_id, binary)?;
     let load_script = if let Some(image) = &mapped {
         image.command()
@@ -602,7 +602,7 @@ pub fn console_flow(cfg: &RuntimeConfig, binary: &Path, address: u64) -> Result<
     let ghroot = cfg.ghidra_install.to_string_lossy().into_owned();
     let langs = cfg.language_dir.to_string_lossy().into_owned();
 
-    let mapped = MappedImage::for_elf_or_dol(binary)?;
+    let mapped = MappedImage::for_elf_or_dol(cfg, binary)?;
     let target = bfd_target_for(&cfg.language_id, binary)?;
     let mappings = crate::native::load_native_mappings(binary).unwrap_or_default();
     let adjust_vma = mappings
@@ -771,6 +771,8 @@ pub struct ConsoleSession {
     stdin: std::process::ChildStdin,
     reader: std::io::BufReader<std::process::ChildStdout>,
     language_id: String,
+    /// The install a mapped ELF image's language is selected from.
+    install: std::path::PathBuf,
     reference_labels: Option<Vec<(u64, String)>>,
     reference_registers: Vec<crate::native::NativeRegisterContext>,
     active_reference_registers: usize,
@@ -818,6 +820,7 @@ impl ConsoleSession {
             stdin,
             reader,
             language_id: cfg.language_id.clone(),
+            install: cfg.ghidra_install.clone(),
             reference_labels: None,
             reference_registers: Vec::new(),
             active_reference_registers: 0,
@@ -835,7 +838,11 @@ impl ConsoleSession {
         self.active_reference_registers = 0;
         self.reference_call_register = None;
         self.new_reference_targets.clear();
-        if let Some(image) = MappedImage::for_elf_or_dol(binary)? {
+        let selection = RuntimeConfig {
+            ghidra_install: self.install.clone(),
+            ..RuntimeConfig::from_env()
+        };
+        if let Some(image) = MappedImage::for_elf_or_dol(&selection, binary)? {
             return self.load_xml(&image);
         }
         let target = bfd_target_for(&self.language_id, binary)?;
@@ -1980,7 +1987,7 @@ mod tests {
             ..Default::default()
         };
         for compiler in ["gcc", "default"] {
-            import.compiler = Some(compiler);
+            import.compiler = Some(compiler.to_string());
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let refs = session.references(0x1000, 0x101e, &import.mappings, false).unwrap();
@@ -2123,7 +2130,7 @@ mod tests {
         }
         let mut import = NativeImport {
             language: cfg.language_id.clone(),
-            compiler: Some("gcc"),
+            compiler: Some("gcc".into()),
             mappings: vec![
                 crate::native::Mapping {
                     vaddr: 0x1000, size: 11, file_off: 0, flags: 6,
@@ -2322,7 +2329,8 @@ mod tests {
             elf[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
         }
         elf[0x180..0x186].copy_from_slice(&[0xc3, 0x55, 0x48, 0x89, 0xe5, 0xc3]);
-        let import = crate::native::import_elf(&elf).unwrap();
+        let mut import = crate::native::import_elf(&elf).unwrap();
+        crate::native::select_language(&mut import, &cfg).unwrap();
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         session.send("functionstarts 0x1000 0x1006\n").unwrap();

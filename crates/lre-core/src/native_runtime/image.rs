@@ -10,7 +10,13 @@ pub(super) struct MappedImage {
 }
 
 impl MappedImage {
-    pub(super) fn for_elf_or_dol(binary: &Path) -> Result<Option<Self>> {
+    /// The console's loader needs the full `language:compiler` arch string, so
+    /// an ELF image is selected from the install's opinion data exactly as an
+    /// import selects it (`opinion::elf_selection`).
+    pub(super) fn for_elf_or_dol(
+        cfg: &crate::session::RuntimeConfig,
+        binary: &Path,
+    ) -> Result<Option<Self>> {
         let mut file = std::fs::File::open(binary)
             .map_err(|e| NativeRuntimeError(format!("image probe: {e}")))?;
         let mut prefix = [0; 4];
@@ -24,7 +30,9 @@ impl MappedImage {
         file.read_to_end(&mut bytes)
             .map_err(|e| NativeRuntimeError(format!("mapped image read: {e}")))?;
         if prefix == *b"\x7fELF" {
-            let import = crate::native::import_elf(&bytes)
+            let mut import = crate::native::import_elf(&bytes)
+                .map_err(|e| NativeRuntimeError(format!("ELF image: {e}")))?;
+            crate::native::select_language(&mut import, cfg)
                 .map_err(|e| NativeRuntimeError(format!("ELF image: {e}")))?;
             return Self::new(&import).map(Some);
         }
@@ -55,7 +63,7 @@ impl MappedImage {
                 writer,
                 "<binaryimage arch=\"{}:{}\">",
                 import.language,
-                import.compiler.unwrap_or("default")
+                import.compiler.as_deref().unwrap_or("default")
             )?;
             for mapping in &import.mappings {
                 // BSS is non-executable and has no instruction bytes. Native

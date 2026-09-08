@@ -81,6 +81,7 @@ impl crate::Core {
             return Err(ImportError::Bad("no RAM function entries to analyze".into()).into());
         }
         let mut import = native::parse_native(&std::fs::read(binary)?)?;
+        native::select_language(&mut import, &self.config)?;
         if import.language != self.db.program_language(id)? {
             return Err(
                 ImportError::Bad("nonreturn input and stored language differ".into()).into(),
