@@ -1,0 +1,176 @@
+{
+ "id": "m4-027",
+ "recorded_at": "2026-09-08T17:18:49.192979+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "37 pointer slots across 20 ELF rows, every one typed on both sides and none typed by only one; import slots are excluded, being pointers through the external symbol they name",
+ "metrics": {
+  "pointer.rows_measured": 20,
+  "pointer.slots_stock_types": 37,
+  "pointer.slots_held": 37,
+  "pointer.slots_missing": 0,
+  "pointer.slots_invented": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_pointers": 1,
+   "held": 1,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "variant": "many_o2",
+   "stock_pointers": 1,
+   "held": 1,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "stock_pointers": 1,
+   "held": 1,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "variant": "plain_o2",
+   "stock_pointers": 1,
+   "held": 1,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "variant": "plain_pie",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_pointers": 3,
+   "held": 3,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "i386_many_o2",
+   "variant": "many_o2",
+   "stock_pointers": 3,
+   "held": 3,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "stock_pointers": 3,
+   "held": 3,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "variant": "plain_o2",
+   "stock_pointers": 3,
+   "held": 3,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "variant": "plain_pie",
+   "stock_pointers": 3,
+   "held": 3,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_pointers": 0,
+   "held": 0,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "powerpc_many_o2",
+   "variant": "many_o2",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "variant": "plain_o2",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "variant": "plain_pie",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "variant": "many_o2",
+   "stock_pointers": 0,
+   "held": 0,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "variant": "plain_o2",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "variant": "plain_pie",
+   "stock_pointers": 2,
+   "held": 2,
+   "missing": [],
+   "invented": []
+  }
+ ]
+}
