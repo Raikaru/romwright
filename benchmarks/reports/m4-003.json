@@ -1,9 +1,9 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T02:56:29.561687+00:00",
+ "recorded_at": "2026-09-08T04:06:22.860577+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 30 of 56 functions token-identical, 26 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 9, function-facts 11, missing-external-prototype 11, name-convention 9, type-stronger 9), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "4 of 9 bundled languages measured against the JVM oracle on committed corpus rows: 30 of 56 functions token-identical, 26 differing only where a named fact differs (data-name-convention 3, data-type-unknown 2, flow 8, function-facts 10, missing-external-prototype 10, name-convention 10, type-stronger 9), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 4,
@@ -14,10 +14,10 @@
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 3,
   "parity.class.data-type-unknown": 2,
-  "parity.class.flow": 9,
-  "parity.class.function-facts": 11,
-  "parity.class.missing-external-prototype": 11,
-  "parity.class.name-convention": 9,
+  "parity.class.flow": 8,
+  "parity.class.function-facts": 10,
+  "parity.class.missing-external-prototype": 10,
+  "parity.class.name-convention": 10,
   "parity.class.type-stronger": 9
  },
  "measured": [
@@ -78,7 +78,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/PowerPC-BE-32-default.jsonl",
-    "sha256": "293100de2002691ffa9cdbe69063a5a814ac590dc07ca2dec52afa68e49452cf"
+    "sha256": "ab17b6c4c6e95fb24700047e0ce7869586fab5b89ed2571b3e9f39828322404a"
    }
   },
   {
@@ -99,7 +99,7 @@
    ],
    "evidence": {
     "path": "m4-003-divergences/x86-LE-32-default.jsonl",
-    "sha256": "7bea82264d826e6a365603d372a71f715ac3a242ea180e882c7ddcb8bc792fb6"
+    "sha256": "323f7ff905972374c76453689ae265d6aa11ee7b4e9037aaf2b1f9ab16e3a9a3"
    }
   }
  ],

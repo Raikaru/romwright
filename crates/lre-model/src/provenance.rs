@@ -93,6 +93,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-analysis:data-width",
+        explanation:         "How many bytes an instruction touches at a location, from the p-code \
+         access that reaches it: a load's output, a store's value, or a \
+         memory operand's own size.",
+        evidence: EvidenceKind::Decoded,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-analysis:shared-return",
         explanation:         "An unconditional branch that leaves its own function for another \
          function's entry: the transfer is a call whose callee returns to this \

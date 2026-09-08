@@ -1,0 +1,22 @@
+{
+  "task": "m4-015",
+  "recorded_at": "2026-09-08T03:56:03.605765+00:00",
+  "scope": "positive acceptance on four corpus rows plus two controls",
+  "metrics": {
+    "rows": 4,
+    "overlap_warnings": 0,
+    "widths_recorded": 19,
+    "named_in_text": 13,
+    "widths": [
+      "aarch64_plain_o0:00220a50/8",
+      "aarch64_plain_o0:00220a58/8",
+      "aarch64_plain_o0:00220a60/8",
+      "aarch64_plain_o0:00230a90/8",
+      "aarch64_plain_o0:00230a98/8",
+      "aarch64_plain_o0:00230aa0/8",
+      "aarch64_plain_o0:00230aa8/8",
+      "aarch64_plain_o0:00230ab0/1"
+    ]
+  },
+  "passed": true
+}

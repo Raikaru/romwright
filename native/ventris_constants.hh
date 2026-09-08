@@ -41,6 +41,10 @@ struct Fact {
 struct ReferenceFact {
   Word pc, target;
   unsigned access;
+  // Bytes the access touches, from the p-code that performs it: a LOAD's
+  // output, a STORE's value, a memory varnode's own size. Zero when the
+  // address is only taken, which proves no width at all.
+  unsigned width;
   std::pair<Word, Word> key() const { return std::make_pair(pc, target); }
   const char *kind() const {
     if ((access & 3) == 3) return "READ_WRITE";
@@ -233,7 +237,7 @@ class Propagation {
   }
 
   void reference(const PcodeOp &op, AddrSpace *space, Value value, unsigned access,
-                 bool addressOperand = false) {
+                 bool addressOperand = false, unsigned width = 0) {
     Location address;
     if (!collectReferences || value.base >= 0 || !location(space, value, address) ||
         address.offset < 4 || address.offset > space->getHighest() || region(address.offset) == nullptr)
@@ -276,7 +280,8 @@ class Propagation {
           return;
       }
     }
-    references.push_back(ReferenceFact{op.getAddr().getOffset(), address.offset, access});
+    references.push_back(
+        ReferenceFact{op.getAddr().getOffset(), address.offset, access, width});
   }
 
   void literalReferences() {
@@ -386,7 +391,11 @@ class Propagation {
           access = 4;
         }
       }
-      reference(op, space, pointer, access);
+      // A LOAD's output and a STORE's value are the access: their size is
+      // how many bytes the instruction touches at the target.
+      const Varnode *accessed = code == CPUI_LOAD ? op.getOut() : op.getIn(2);
+      unsigned width = accessed == nullptr ? 0 : (unsigned)accessed->getSize();
+      reference(op, space, pointer, access, false, access == 4 ? 0 : width);
       if (code == CPUI_STORE)
         reference(op, dataSpace, get(state, op.getIn(2)), 4);
     }
@@ -398,13 +407,15 @@ class Propagation {
         continue;
       AddrSpace *space = input->getSpace();
       reference(op, space, Value::constant(input->getOffset() / space->getWordSize(),
-                                          space->getAddrSize()), loadAccess(op));
+                                          space->getAddrSize()), loadAccess(op),
+                false, (unsigned)input->getSize());
     }
     const Varnode *output = op.getOut();
     if (output != nullptr && memorySpace(output->getSpace())) {
       AddrSpace *space = output->getSpace();
       reference(op, space, Value::constant(output->getOffset() / space->getWordSize(),
-                                          space->getAddrSize()), 2);
+                                          space->getAddrSize()), 2, false,
+                (unsigned)output->getSize());
     }
   }
 
@@ -824,8 +835,11 @@ public:
         [](const ReferenceFact &a, const ReferenceFact &b) { return a.key() < b.key(); });
     std::size_t count = 0;
     for (std::size_t index = 0; index < references.size(); ++index) {
-      if (count != 0 && references[count - 1].key() == references[index].key())
+      if (count != 0 && references[count - 1].key() == references[index].key()) {
         references[count - 1].access |= references[index].access;
+        references[count - 1].width =
+            std::max(references[count - 1].width, references[index].width);
+      }
       else {
         if (count != index)
           references[count] = references[index];
@@ -934,7 +948,7 @@ public:
           out << ',';
         first = false;
         out << "{\"from\":" << fact.pc << ",\"to\":" << fact.target
-            << ",\"kind\":\"" << fact.kind() << "\"}";
+            << ",\"kind\":\"" << fact.kind() << "\",\"size\":" << fact.width << "}";
       }
     }
     for (const auto &fact : facts) {
