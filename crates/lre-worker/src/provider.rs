@@ -99,6 +99,10 @@ pub struct ProgramProvider {
     pub core_types: HashMap<String, (u64, u64)>,
     /// Pointer width in bytes, from the language's tspec.
     pub pointer_size: u64,
+    /// Executable address ranges, from the store's memory regions: an unnamed
+    /// address in one of them is code, and Ghidra's label for code is `LAB_`
+    /// (`SymbolUtilities.DEFAULT_SYMBOL_PREFIX`, :49-53).
+    pub executable: Vec<(u64, u64)>,
     /// Register name -> (offset, size) from registers.txt (register space).
     pub registers: HashMap<String, (u64, u64)>,
     /// Function entry -> the model the store holds for it. Only models the
@@ -135,6 +139,7 @@ impl ProgramProvider {
             ram_space_index: 3,
             register_space_index: 4,
             read_only: Vec::new(),
+            executable: Vec::new(),
             data_definitions: HashMap::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
@@ -831,11 +836,19 @@ impl NativeWorker {
                     // type. Ghidra sends the same shape for a symbol that is
                     // not defined data, and its own analyzers are what turn
                     // such a location into typed data.
-                    let name = provider
-                        .symbol_names
-                        .get(&vaddr)
-                        .cloned()
-                        .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
+                    // `LAB_` for an address in executable memory, `DAT_`
+                    // otherwise: Ghidra's two default prefixes
+                    // (`SymbolUtilities`, :49-53).
+                    let code = provider
+                        .executable
+                        .iter()
+                        .any(|(start, end)| *start <= vaddr && vaddr < *end);
+                    let name = provider.symbol_names.get(&vaddr).cloned().unwrap_or_else(
+                        || {
+                            let prefix = if code { "LAB" } else { "DAT" };
+                            format!("{prefix}_{vaddr:08x}")
+                        },
+                    );
                     open_document(&mut doc);
                     wire::encode_label_symbol(&mut doc, space as u32, vaddr, &name);
                     close_document(&mut doc);

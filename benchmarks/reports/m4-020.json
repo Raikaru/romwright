@@ -1,0 +1,19 @@
+{
+  "task": "m4-020",
+  "recorded_at": "2026-09-08T06:11:45.460693+00:00",
+  "scope": "label acceptance on four corpus rows plus classifier controls",
+  "metrics": {
+    "code_labels": [
+      "aarch64_plain_o0:002106f4"
+    ],
+    "data_labels": 5,
+    "rendering": [
+      "name-rendering"
+    ],
+    "still_flow": [
+      "flow",
+      "oracle-warning"
+    ]
+  },
+  "passed": true
+}
