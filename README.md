@@ -996,13 +996,16 @@ is locked`, on stubs whose text is otherwise ours exactly). Choices:
 difference is a name we picked on purpose, decided mechanically by
 substituting the oracle's name into its own text and finding the token streams
 equal (`_plt` names the section that proved the start; stock calls it
-`FUN_00201710`) -- `data-name-convention` 4,
-the same decision on a data label (the slot `DT_PLTGOT` reserves is named
-after the import it holds, where stock names it after the tag),
+`FUN_00201710`) --
+and no `data-name-convention` row either: `m4-029` gives the addresses the
+dynamic table declares the names it declares (`__DT_PLTGOT`, `__DT_PPC_GOT`,
+`__DT_INIT`), beside whatever else names them, and prefers the tag's name over
+a label composed from the import a linkage slot resolves to -- which is what
+stock does, since it keeps that import in its EXTERNAL block,
 no `mangled-name` row any more: `m4-028` demangles the name a COPY relocation
 carries (`_ZTIi`) into the symbol Ghidra applies beside it -- `typeinfo` in the
 namespace `int` -- and both stores now print `int::typeinfo`,
-`type-stronger` 89,
+`type-stronger` 85,
 where the only difference is where each side needed a cast because the store
 holds the slot's type and the oracle types it `undefined *`, and
 `name-rendering` 12, which is stock's own
@@ -1734,7 +1737,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 4; `parity.class.language-variant` 3; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 89; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 100; `parity.functions_token_identical` 1745; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.language-variant` 3; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 85; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 96; `parity.functions_token_identical` 1749; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1757,6 +1760,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m4-025.json` | `m4-025` | M4 | pass | `declaration.applied_with_other_types` 0; `declaration.declared_by_stock` 23; `declaration.held` 23; `declaration.noreturn_recorded_as_facts` 5; `declaration.rows_measured` 20; `declaration.signatures_printed_as_stock` 23; `declaration.unexpressible_declarations_refused` 235 | `tests/m4-025_declaration_types.py` |
 | `m4-027.json` | `m4-027` | M4 | pass | `pointer.rows_measured` 20; `pointer.slots_held` 37; `pointer.slots_invented` 0; `pointer.slots_missing` 0; `pointer.slots_stock_types` 37 | `tests/m4-027_pointer_slots.py` |
 | `m4-028.json` | `m4-028` | M4 | pass | `demangle.mangled_names_kept` 4; `demangle.names_held` 4; `demangle.names_invented` 0; `demangle.names_missing` 0; `demangle.names_stock_derives` 4; `demangle.rows_measured` 20 | `tests/m4-028_demangled_names.py` |
+| `m4-029.json` | `m4-029` | M4 | pass | `tags.names_held` 243; `tags.names_invented` 0; `tags.names_missing` 0; `tags.names_stock_holds` 243; `tags.rows_measured` 20 | `tests/m4-029_dynamic_tags.py` |
 | `m5-001.json` | `m5-001` | M5 | pass | `dwarf.fn.recall` 1.0000; `dwarf.functions` 6; `functions` 7; `unattributed` 0 | `tests/m5-001_gba.py` |
 | `m5-002.json` | `m5-002` | M5 | pass | imported nds.arm9 natively (5 functions, ARM:LE:32:v5t)
 imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` |
@@ -1805,7 +1809,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | ELF ARM LE32 | supported | no oracle comparison: no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for |
 | ELF MIPS LE32 | supported | no oracle comparison: no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader |
 | ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |
-| ELF PowerPC | supported | **parity measured**: 430 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
+| ELF PowerPC | supported | **parity measured**: 434 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
 | PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:LE:32:default` (`tests/m5-003_psx.py`) |

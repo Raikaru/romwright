@@ -539,7 +539,18 @@ fn collect_dynamic_labels(
         import.dynamic_labels.push((table, "_DYNAMIC".into()));
         break;
     }
-    for (tag, name) in ADDRESS_TAGS {
+    // Processor extensions declare ADDRESS-valued tags of their own:
+    // `DT_PPC_GOT` on 32-bit PowerPC (`PowerPC_ElfExtension`, :44-45, whose
+    // `canHandle` is `EM_PPC && is32Bit`, :61-63). A tag number in the
+    // processor range means something else on another machine, so it is asked
+    // for only where its extension applies.
+    let machine = word(data, 18, 2, be)?;
+    let extension: &[(u64, &str)] = if machine == 20 && width == 4 {
+        &[(0x70000000, "DT_PPC_GOT")]
+    } else {
+        &[]
+    };
+    for (tag, name) in ADDRESS_TAGS.iter().chain(extension.iter()) {
         let Some(value) = dynamic_value(data, width, be, *tag)? else { continue };
         if value == 0 {
             continue;

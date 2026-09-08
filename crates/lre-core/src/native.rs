@@ -1782,18 +1782,16 @@ pub fn store_import(
         .map(|symbol| symbol.address.offset)
         .collect();
     symbols.extend(copied.into_iter().filter(|row| !already.contains(&row.address.offset)));
-    // A name the image's own dynamic table proves, where nothing else names
-    // the address: Ghidra applies the same label under the same guard.
-    let named: std::collections::HashSet<u64> = symbols
-        .iter()
-        .filter(|symbol| symbol.address.space == lre_model::AddressSpace::Ram)
-        .map(|symbol| symbol.address.offset)
-        .chain(imp.functions.iter().map(|function| function.entry))
-        .collect();
+    // A name the image's own dynamic table proves. Ghidra applies it beside
+    // whatever else names the address rather than instead of it: at a
+    // `DT_INIT` target the pinned install holds both the function `_DT_INIT`
+    // and the label `__DT_INIT` (measured on `powerpc_plain_o0`, `10010588`),
+    // and at a `DT_PLTGOT` target that is also the first PLT slot it holds
+    // only the label -- the import the slot resolves to lives in its EXTERNAL
+    // block (`ElfProgramBuilder.markupDynamicTable`, :2691-2773).
     symbols.extend(
         imp.dynamic_labels
             .iter()
-            .filter(|(address, _)| !named.contains(address))
             .map(|(address, name)| lre_model::SymbolRow {
                 name: name.clone(),
                 address: lre_model::Address::ram(*address),

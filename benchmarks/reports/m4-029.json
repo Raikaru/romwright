@@ -1,0 +1,236 @@
+{
+ "id": "m4-029",
+ "recorded_at": "2026-09-08T19:43:13.755709+00:00",
+ "status": "pass",
+ "passed": true,
+ "summary": "243 dynamic-tag names across 20 ELF rows, every one held at the same address with the same text and none invented",
+ "metrics": {
+  "tags.rows_measured": 20,
+  "tags.names_stock_holds": 243,
+  "tags.names_held": 243,
+  "tags.names_missing": 0,
+  "tags.names_invented": 0
+ },
+ "measured": [
+  {
+   "id": "aarch64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "aarch64_many_o2",
+   "variant": "many_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "aarch64_plain_o0",
+   "variant": "plain_o0",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "aarch64_plain_o2",
+   "variant": "plain_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "aarch64_plain_pie",
+   "variant": "plain_pie",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "i386_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "i386_many_o2",
+   "variant": "many_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "i386_plain_o0",
+   "variant": "plain_o0",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "i386_plain_o2",
+   "variant": "plain_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "i386_plain_pie",
+   "variant": "plain_pie",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "powerpc_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_tags": 13,
+   "held": 13,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": [
+    {
+     "address": "10030b08",
+     "names": [
+      "__DT_PLTGOT",
+      "__libc_start_main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "powerpc_many_o2",
+   "variant": "many_o2",
+   "stock_tags": 13,
+   "held": 13,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": [
+    {
+     "address": "10035168",
+     "names": [
+      "__DT_PLTGOT",
+      "__libc_start_main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "powerpc_plain_o0",
+   "variant": "plain_o0",
+   "stock_tags": 13,
+   "held": 13,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": [
+    {
+     "address": "1003074c",
+     "names": [
+      "__DT_PLTGOT",
+      "__libc_start_main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "powerpc_plain_o2",
+   "variant": "plain_o2",
+   "stock_tags": 13,
+   "held": 13,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": [
+    {
+     "address": "10030704",
+     "names": [
+      "__DT_PLTGOT",
+      "__libc_start_main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "powerpc_plain_pie",
+   "variant": "plain_pie",
+   "stock_tags": 13,
+   "held": 13,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": [
+    {
+     "address": "000408c0",
+     "names": [
+      "__DT_PLTGOT",
+      "__libc_start_main"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "x86_64_cpp_o2",
+   "variant": "cpp_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "x86_64_many_o2",
+   "variant": "many_o2",
+   "stock_tags": 10,
+   "held": 10,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "x86_64_plain_o0",
+   "variant": "plain_o0",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "x86_64_plain_o2",
+   "variant": "plain_o2",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  },
+  {
+   "id": "x86_64_plain_pie",
+   "variant": "plain_pie",
+   "stock_tags": 12,
+   "held": 12,
+   "missing": [],
+   "invented": [],
+   "names_at_tagged": []
+  }
+ ]
+}
