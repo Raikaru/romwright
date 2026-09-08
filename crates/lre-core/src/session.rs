@@ -106,6 +106,31 @@ pub fn program_language(
     Ok(db.program_language(id)?)
 }
 
+/// The worker this build drives: an explicit pin, then the worker beside the
+/// running executable, then the workspace's release and debug paths.
+///
+/// The sibling comes before the workspace paths because a release `lre-cli`
+/// driving whatever `cargo build` last left in `target/debug` makes a measured
+/// number depend on a build nobody asked for -- which is how a pinned parity
+/// count read 25 instead of 30 on an unmodified tree.
+fn worker_candidate() -> PathBuf {
+    if let Ok(pinned) = std::env::var("VENTRIS_WORKER") {
+        return PathBuf::from(pinned);
+    }
+    let sibling = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("lre-worker")));
+    let fallbacks = [
+        PathBuf::from("target/release/lre-worker"),
+        PathBuf::from("target/debug/lre-worker"),
+    ];
+    sibling
+        .into_iter()
+        .chain(fallbacks)
+        .find(|candidate| candidate.is_file())
+        .unwrap_or_else(|| PathBuf::from("target/debug/lre-worker"))
+}
+
 impl RuntimeConfig {
     /// Builds a config from the environment (the CLI's documented surface),
     /// with repo/install-relative defaults.
@@ -129,9 +154,7 @@ impl RuntimeConfig {
                     .flatten()
             })
             .unwrap_or_else(|| install.join("Ghidra/Processors/x86/data/languages"));
-        let worker_path = std::env::var("VENTRIS_WORKER")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("target/debug/lre-worker"));
+        let worker_path = worker_candidate();
         let decompiler_path = std::env::var("VENTRIS_GHIDRA_OPT")
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("native/build/ghidra_opt"));

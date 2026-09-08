@@ -264,6 +264,10 @@ jobs:
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
+      - name: Drive the worker the build was built with
+        run: |
+          python3 tests/m4-014_worker_resolution.py \
+            --report "$RUNNER_TEMP/discovery/worker-resolution.json"
       - name: Override the branch that leaves a function for another entry
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

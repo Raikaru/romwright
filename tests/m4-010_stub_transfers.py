@@ -152,7 +152,9 @@ def main() -> int:
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
                    cwd=ROOT, check=True, env=environment())
-    subprocess.run(["cargo", "build", "-q", "-p", "lre-worker"],
+    # The release CLI drives the worker beside it, so the gate builds the pair
+    # it measures (m4-014).
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-worker"],
                    cwd=ROOT, check=True, env=environment())
 
     lock = json.loads(LOCK.read_text())

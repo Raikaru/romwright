@@ -122,7 +122,8 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
+                    "-p", "lre-worker"],
                    cwd=ROOT, check=True)
     lanes = min(os.cpu_count() or 1, 6)
     report["consoles"] = lanes
