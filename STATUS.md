@@ -5155,6 +5155,42 @@ evidence:
   rest of its input, and both sides blocked forever. `set_contexts` and the
   reference fixups now write in batches of 128 and read each batch's answers.
 
+### m4-035 evidence (four approved platforms, measured)
+- The corpus gained PlayStation 4, PlayStation Portable and PlayStation
+  prototype binaries. Each was imported JVM-free and scored against the
+  truth its own file carries.
+- **PlayStation 4, x86-64** (`game-ps4-prof.elf`, Crash Team Racing Nitro
+  Fueled, 53 MB after `--strip-all`; the copy carries **no symbol table and
+  no dynamic symbols**, so this is blind recovery). Scored against the
+  unstripped module's 145576 sized `STT_FUNC` symbols:
+  **146441 functions, recall 0.9992, precision 0.9933**, 343 s,
+  962 MB peak, 6.9 M instructions decoded and 354004 pattern matches.
+  The image keeps `.eh_frame`, and the unwind pass reads it.
+  Two defects stood between the import and that number, both fixed:
+  - The propagation command asked `Funcdata::followFlow` to *throw* on an
+    unresolvable instruction. `FlowInfo` already truncates control flow at bad
+    bytes and warns (flow.cc:420-456) whenever `error_unimplemented` is clear,
+    so the command now clears it for the duration of its own walk and restores
+    it. A single undecodable byte used to fail the whole import.
+  - One range the console still cannot answer now costs that range's
+    references, not the image. The count is reported as
+    `references_refused` by `lre-cli import --timings` rather than swallowed.
+- **PlayStation, MIPS R3000 PS-EXE** (`VS.EXE`, Darkstalkers 3 prototype,
+  1998-05-25, with the build's own `VS.MAP`). The map names 818 addresses
+  inside the main `.text` (0x801395f0-0x8018ed2b): **751 matched, recall
+  0.9181**. A linker map names only what the linker exported, so the 1993
+  functions Ventris recovers there cannot be scored for precision against it.
+- **PlayStation Portable, MIPS Allegrex PRX** (`BOOT.BIN`, Puzzle Bobble
+  Pocket, 621 sized `STT_FUNC` symbols): **634 functions, recall 0.7778,
+  precision 0.7618**. The oracle needs care: this is a relocatable module, so
+  a symbol's address is its section's base plus its value
+  (`ElfLoadAdapter.getSectionSymbolRelativeOffset`, 561-567), and reading the
+  values as absolute makes every symbol 0x40 low. Ghidra's own
+  `isRelocatable()` is `e_type == ET_REL` (ElfHeader:1532), which a PSP
+  module's `0xffa0` is not, so stock places these symbols exactly as Ventris
+  does -- the skew is in the oracle, not in either store.
+- Regression: `cargo test --workspace` **269 pass**.
+
 ## Next task
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
