@@ -5301,6 +5301,12 @@ evidence:
 - Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
   than RDRAM loads with its boot segment resident).
 
+### m4-038 evidence (N64 parity ratchet 17 -> 58 of 116)
+- Raw-SLEIGH mode ignored the tspec's `<truncate_space space="ram" size="4"/>`: `GhidraTranslate::decode` applied it in client-driven mode, the `Sleigh` path never did, so `Architecture::decodeStackPointer` (architecture.cc:1006-1012) kept an 8-byte stack pointer in a 4-byte space and no sp-relative access on MIPS64-32addr was a stack address (`(longlong)((int)&stack0x00000000 + -0x18)`, `unaff_retaddr` stores kept). `ArchitectureGhidra` now keeps the tspec's truncations and applies them from `modifySpaces` as `SleighArchitecture::modifySpaces` does (sleigh_arch.cc:423-429).
+- `getCodeLabel` answers `LAB_<addr>` for a branch target inside a function body with no symbol -- Ghidra's flow leaves a reference on every branch target and `SymbolUtilities.getDynamicInstructionName` (:584-607) names it so; the decompiler printed `code_r0x...` before.
+- The propagation wraps a sign-extended value into the space before it becomes a location (`SymbolicPropogator.makeReference`, :2624-2633): MIPS64's `lui` sign-extends every 32-bit address, so the N64 store held 1 READ across 116 functions; now 68 READ, 41 WRITE, and the decompiler prints `DAT_` where the oracle does.
+- m4-003: N64 row 17 -> 58 of 116 identical (ratchet raised to 58), DS 373 -> 376, committed rows unchanged (1796/1892, same classes). m5-013 unchanged (0.6320/0.9912).
+
 ### m5-014 evidence (decode contexts reach the decompiler, and flow carries the instruction set)
 - Diagnosis: 182 of the 512 sampled DS functions decompiled to "bad instruction data" natively. The worker read every Thumb body as ARM: discovery's `LowBitCodeMode` values lived only in the console sessions and the store kept none.
 - The store now holds `decode_contexts` (`replace_decode_contexts`/`decode_contexts`): every pattern-declared mode, computed-target mode, flowed mode and entry mode discovery settled, `TMode`/`ISA_MODE` folded to the `LowBitCodeMode` each language aliases (ARM.sinc:90-93, mips.sinc:416-417). `lre-worker` replays them as `<context_set>` ranges in the cspec's `<context_data>` (`ContextInternal::decodeFromSpec`, globalcontext.cc:531-553), each value holding to the next recorded point.

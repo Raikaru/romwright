@@ -1,6 +1,6 @@
 {
   "id": "m5-013",
-  "recorded_at": "2026-09-09T08:43:07.473209+00:00",
+  "recorded_at": "2026-09-09T09:41:47.274060+00:00",
   "thresholds": {
     "fn.recall": 0.61,
     "fn.precision": 0.99

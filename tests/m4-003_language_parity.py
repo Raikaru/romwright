@@ -95,13 +95,16 @@ UNREACHED = {
         "sha256": "4e51142acac686d96861cecc58cf7cb7c3b06b21733b7f8ed609a709dc039a21",
         "variant": "cartridge",
         "shared_floor": 116,
-        "identical_floor": 17,
+        "identical_floor": 58,
         "reason": "both stores load the ROM -- the install now carries an N64 "
                   "loader and ours maps the boot segment at the header's boot "
-                  "address -- and 17 of the 116 shared functions are "
-                  "token-identical; the rest differ where the oracle names "
-                  "MIPS coprocessor registers and external thunks we do not, "
-                  "and where its wider variable renaming reorders locals",
+                  "address -- and 58 of the 116 shared functions are "
+                  "token-identical now that the raw-SLEIGH worker truncates "
+                  "the ram space as the language declares, answers LAB_ code "
+                  "labels, and sign-extended lui addresses wrap into the "
+                  "space; the rest differ where the oracle's callee "
+                  "prototypes, global-overlap warnings and thunk names differ "
+                  "from ours",
     },
 }
 # A language neither the corpus, a fixture, nor an image reaches cannot be
