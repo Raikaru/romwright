@@ -347,11 +347,12 @@ index e62ab6a..6d42a2d 100644
  }
  #include "pcodeparse.hh"
  #include "blockaction.hh"
-@@ -63,6 +68,12 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
+@@ -63,6 +68,13 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
    status->registerCom(new IfcMapconvert(),"map","convert");
    status->registerCom(new IfcMapunionfacet(), "map", "unionfacet");
    status->registerCom(new IfcPrintdisasm(),"disassemble");
 +  status->registerCom(new IfcFlow(),"flow");
++  status->registerCom(new IfcContext(),"context");
 +  status->registerCom(new IfcLinkage(),"linkage");
 +  status->registerCom(new IfcFunctionStarts(),"functionstarts");
 +  status->registerCom(new IfcConstants(),"constants");
@@ -379,10 +380,41 @@ index e62ab6a..6d42a2d 100644
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
      addr = addr + sz;
-@@ -836,6 +856,83 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +856,114 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
++/// \class IfcContext
++/// \brief Set a context register value: `context <name> <address> <value>`
++///
++/// The value applies from \e address onward, which is how a processor's own
++/// mode register is carried into disassembly (ContextDatabase::setVariable).
++void IfcContext::execute(istream &s)
++
++{
++  if (dcp->conf == (Architecture *)0)
++    throw IfaceExecutionError("No architecture loaded");
++  string name;
++  s >> ws >> name;
++  if (name.empty())
++    throw IfaceExecutionError("Missing context register name");
++  int4 size;
++  Address addr = parse_machaddr(s,size,*dcp->conf->types);
++  if (addr.isInvalid())
++    throw IfaceExecutionError("Missing context address");
++  uintb value;
++  s >> ws;
++  s.unsetf(ios::dec | ios::hex | ios::oct);
++  if (!(s >> value))
++    throw IfaceExecutionError("Missing context value");
++  dcp->conf->context->setVariable(name,addr,(uintm)value);
++  if (const Sleigh *sleigh = dynamic_cast<const Sleigh *>(dcp->conf->translate))
++    const_cast<Sleigh *>(sleigh)->invalidateContextCache();
++  *status->fileoptr << "CONTEXT " << name << ' ' << addr.getShortcut() << "0x" << hex
++                    << addr.getOffset() << " = " << dec << value << '\n';
++  status->fileoptr->flush();
++}
++
 +void IfcFlow::execute(istream &s)
 +
 +{
@@ -467,10 +499,15 @@ diff --git a/decompiler/ifacedecomp.hh b/decompiler/ifacedecomp.hh
 index 5958f67..1eb9d55 100644
 --- a/decompiler/ifacedecomp.hh
 +++ b/decompiler/ifacedecomp.hh
-@@ -203,6 +203,11 @@ public:
+@@ -203,6 +203,16 @@ public:
    virtual void execute(istream &s);
  };
  
++class IfcContext : public IfaceDecompCommand {
++public:
++  virtual void execute(istream &s);
++};
++
 +class IfcFlow : public IfaceDecompCommand {
 +public:
 +  virtual void execute(istream &s);
@@ -479,6 +516,26 @@ index 5958f67..1eb9d55 100644
  class IfcDump : public IfaceDecompCommand {
  public:
    virtual void execute(istream &s);
+diff --git a/decompiler/context.hh b/decompiler/context.hh
+--- a/decompiler/context.hh
++++ b/decompiler/context.hh
+@@ -191,7 +191,15 @@ inline void ParserContext::deallocateState(ParserWalkerChange &walker) {
+ }
+ 
+ inline void ParserContext::allocateOperand(int4 i,ParserWalkerChange &walker) {
+-  ConstructState *opstate = &state[alloc++];
++  // The state array is fixed (Sleigh::DisassemblyCache sizes it at 75,
++  // sleigh.cc:457). Bytes that are not an instruction can drive the
++  // constructor walk past that, and indexing past the end corrupted memory:
++  // an ARM image decoded in Thumb mode at a data address took the console
++  // down with it. Out of states means what the caller already handles -- no
++  // instruction here.
++  if (alloc >= (int4)state.size())
++    throw SleighError("Parser state exhausted");
++  ConstructState *opstate = &state[alloc++];
+   opstate->parent = walker.point;
+   opstate->ct = (Constructor *)0;
+   walker.point->resolve[i] = opstate;
 diff --git a/decompiler/sleigh.hh b/decompiler/sleigh.hh
 --- a/decompiler/sleigh.hh
 +++ b/decompiler/sleigh.hh
@@ -509,12 +566,13 @@ diff --git a/decompiler/sleigh.hh b/decompiler/sleigh.hh
  protected:
    ParserContext *obtainContext(const Address &addr,int4 state) const;
    void resolve(ParserContext &pos) const;	///< Generate a parse tree suitable for disassembly
-@@ -179,6 +183,8 @@ public:
+@@ -179,6 +183,9 @@ public:
    virtual void setContextDefault(const string &nm,uintm val);
    virtual void allowContextSet(bool val) const;
    virtual int4 instructionLength(const Address &baseaddr) const;
    virtual int4 oneInstruction(PcodeEmit &emit,const Address &baseaddr) const;
 +  int4 oneInstructionFlow(PcodeEmit &emit,const Address &baseaddr,InstructionFlow &flow) const;
++  void invalidateContextCache(void);
 +  const ParserContext *getInstructionContext(const Address &addr) const { return obtainContext(addr,ParserContext::pcode); }
    virtual int4 printAssembly(AssemblyEmit &emit,const Address &baseaddr) const;
  };
@@ -569,7 +627,7 @@ diff --git a/decompiler/sleigh.cc b/decompiler/sleigh.cc
    cache->addLabel( op->getIn(0)->getOffset().getReal()+getLabelBase() );
  }
  
-@@ -741,6 +749,17 @@
+@@ -741,6 +749,38 @@
  int4 Sleigh::oneInstruction(PcodeEmit &emit,const Address &baseaddr) const
 +{
 +  return translateInstruction(emit,baseaddr,nullptr);
@@ -579,6 +637,27 @@ diff --git a/decompiler/sleigh.cc b/decompiler/sleigh.cc
 +{
 +  flow.clear();
 +  return translateInstruction(emit,baseaddr,&flow);
++}
++
++/// A context value written after an instruction was parsed invalidates two
++/// caches: ContextCache keeps a pointer into the database's own context blob
++/// (globalcontext.hh:317-331), which a set may move, and every ParserContext
++/// in the DisassemblyCache was resolved under the value that just changed.
++/// Rebuild both, exactly as initialize() sizes them.
++void Sleigh::invalidateContextCache(void)
++{
++  delete discache;
++  discache = (DisassemblyCache *)0;
++  delete cache;
++  cache = new ContextCache(context_db);
++  uint4 parser_cachesize = 2;
++  uint4 parser_windowsize = 32;
++  if ((maxdelayslotbytes > 1)||(unique_allocatemask != 0)) {
++    parser_cachesize = 8;
++    parser_windowsize = 256;
++  }
++  discache = new DisassemblyCache(this,cache,getConstantSpace(),parser_cachesize,parser_windowsize);
++  pcode_cache.clear();
 +}
 +
 +int4 Sleigh::translateInstruction(PcodeEmit &emit,const Address &baseaddr,InstructionFlow *flow) const

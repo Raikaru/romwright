@@ -62,6 +62,17 @@ pub struct Mapping {
     pub bytes: Vec<u8>,
 }
 
+/// A context register value the image declares at an address.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NativeContext {
+    /// Context register name, as the language declares it (`TMode`).
+    pub name: String,
+    /// Address the value applies from.
+    pub address: u64,
+    /// The value itself.
+    pub value: u64,
+}
+
 /// A discovered function.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NativeFunction {
@@ -273,6 +284,12 @@ pub struct NativeImport {
     pub flow: Option<lre_model::FlowStats>,
     /// Pattern accounting for the pattern phase, when it ran.
     pub patterns_seen: Option<lre_model::PatternStats>,
+    /// Processor mode values the image itself declares, applied to a console
+    /// before anything decodes: ARM marks Thumb code with the low bit of a
+    /// function address and with `$t`/`$a` mapping symbols
+    /// (`ARM_ElfExtension.creatingFunction`, 116-140, and
+    /// `evaluateElfSymbol`, 142-209).
+    pub contexts: Vec<NativeContext>,
     /// Why console-driven discovery was not used, when it was not. A silent
     /// fallback to pointer-only seeds is how a MIPS image came back with a
     /// third of its functions and no complaint (m11-002).
@@ -436,6 +453,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         std::collections::HashMap::new();
     let mut externals = Vec::new();
     let mut object_sizes: Vec<(u64, u64)> = Vec::new();
+    let mut contexts: Vec<NativeContext> = Vec::new();
     // SHT_SYMTAB (2) and SHT_DYNSYM (11): 16-byte Elf32_Sym.
     for s in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
         let strtab = sections
@@ -463,7 +481,27 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
                 .map(|r| String::from_utf8_lossy(r).into_owned())
                 .unwrap_or_default();
             let typ = info & 0xf;
+            // ARM tags Thumb code with the low bit of a function's address and
+            // with `$t`/`$a` mapping symbols. The address is the aligned one;
+            // the bit is a mode declaration, not part of it
+            // (`ARM_ElfExtension`, 116-209).
+            let arm = elf_machine.machine == 0x28;
+            if arm {
+                if name == "$t" || name.starts_with("$t.") {
+                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 1 });
+                } else if name == "$a" || name.starts_with("$a.") {
+                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 0 });
+                }
+            }
+            let (value, thumb) = if arm && typ == 2 && value & 1 != 0 {
+                (value & !1, true)
+            } else {
+                (value, false)
+            };
             if typ == 2 && shndx != 0 && value != 0 && !name.is_empty() {
+                if thumb {
+                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 1 });
+                }
                 let rank = symbol_rank(info, &name);
                 let slot = symbol_functions.entry(value).or_insert((rank, name.clone(), size.max(1)));
                 if rank < slot.0 {
@@ -500,6 +538,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         xrefs: Vec::new(),
         externals,
         object_sizes,
+        contexts,
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
@@ -3100,6 +3139,52 @@ mod tests {
         // Directory 5 is absent, so .reloc section MUST BE IGNORED
         assert!(imp.xrefs.is_empty(), "xrefs must be empty when directory 5 is absent");
         assert!(imp.reloc_candidates.is_empty(), "reloc_candidates must be empty when directory 5 is absent");
+    }
+
+    #[test]
+    fn a_mode_declaration_never_takes_the_console_down() {
+        // These are ARM instructions. Read in Thumb mode -- which a `$t`
+        // symbol or a pattern's `setcontext` can ask for at any address --
+        // they drove the constructor walk past the parser's fixed 75 states
+        // (sleigh.cc:457), and indexing past the end killed the console
+        // mid-import. Out of states is a decode failure, not a crash.
+        use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        cfg.language_id = "ARM:LE:32:v8".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/ARM/data/languages");
+        if find_console(&cfg).is_err() {
+            eprintln!("SKIP: SLEIGH console not available");
+            return;
+        }
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            compiler: Some("default".into()),
+            format: "elf32".into(),
+            cfg: cfg.clone(),
+            mappings: vec![Mapping {
+                vaddr: 0x1000,
+                size: 24,
+                file_off: 0,
+                flags: 6,
+                bytes: vec![
+                    0x02, 0x8b, 0x2d, 0xed, 0x00, 0x8a, 0xb7, 0xee, 0x24, 0xd0, 0x4d, 0xe2,
+                    0x00, 0x70, 0xa0, 0xe1, 0x10, 0x60, 0x8d, 0xe2, 0x0d, 0x50, 0xa0, 0xe1,
+                ],
+            }],
+            contexts: vec![NativeContext {
+                name: "TMode".into(),
+                address: 0x1002,
+                value: 1,
+            }],
+            ..Default::default()
+        };
+        let mut session = ConsoleSession::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let flows = session
+            .flow_batch(&[0x1002, 0x1004])
+            .expect("the console must answer, not die");
+        assert_eq!(flows.len(), 2, "one answer per address");
+        assert_eq!(flows[0].kind, FlowKind::Bad, "no Thumb instruction there");
     }
 
     #[test]

@@ -257,6 +257,7 @@ pub(super) fn collect<P: FlowProvider>(
     conditional_targets: &HashSet<u64>,
     fell_into: &HashSet<u64>,
     refused: &mut std::collections::BTreeMap<String, u64>,
+    applied: &mut Vec<crate::native::NativeContext>,
     provider: &mut P,
 ) -> super::Result<Vec<Candidate>> {
     let mut refuse = |reason: &str, refused: &mut std::collections::BTreeMap<String, u64>| {
@@ -331,15 +332,45 @@ pub(super) fn collect<P: FlowProvider>(
             }
         }
         let rule = &patterns.rules[hit.rule];
+        // A declared processor mode is applied first, and only where nothing
+        // has been decoded yet: Ghidra queues the value in `ContextAction` and
+        // lays it down from `setCurrentContext` before scheduling the
+        // disassembly that the same match asks for
+        // (FunctionStartAnalyzer, 133-150 and 709-742). Applying it after the
+        // bytes were read in the other mode would prove nothing.
+        for action in &rule.actions {
+            if action.kind != "setcontext" || decoded_here {
+                continue;
+            }
+            let Some(name) = action.attributes.get("name") else {
+                return Err(super::ImportError::Bad(format!(
+                    "pattern setcontext without a register name: {}",
+                    rule.file
+                )));
+            };
+            let value = action
+                .attributes
+                .get("value")
+                .ok_or_else(|| {
+                    super::ImportError::Bad(format!(
+                        "pattern setcontext without a value: {}",
+                        rule.file
+                    ))
+                })?
+                .parse::<u64>()
+                .map_err(|error| {
+                    super::ImportError::Bad(format!("invalid pattern context value: {error}"))
+                })?;
+            provider.set_context(name, address, value);
+            applied.push(crate::native::NativeContext {
+                name: name.clone(),
+                address,
+                value,
+            });
+        }
         for action in &rule.actions {
             match action.kind.as_str() {
-                "codeboundary" => continue,
-                "setcontext" => {
-                    return Err(super::ImportError::Bad(format!(
-                        "function-pattern context prerequisite is unavailable: {}",
-                        rule.file
-                    )))
-                }
+                "codeboundary" | "setcontext" => continue,
                 "funcstart" | "possiblefuncstart" => {}
                 kind => {
                     return Err(super::ImportError::Bad(format!(
