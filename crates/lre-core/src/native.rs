@@ -137,6 +137,8 @@ pub struct NativeStringTable {
 
 /// Single owner name for flow-proven thunk facts and their jump xrefs.
 pub const THUNK_SOURCE: &str = "native-import:thunk";
+/// Provenance of a jump-to-case reference the decompiler's table recovery proved.
+pub const SWITCH_PROVENANCE: &str = "native-import:switch";
 /// The PLT header's jump reads `DT_PLTGOT + 2 * pointer size`, which the
 /// System V ABI reserves for the dynamic linker's resolver.
 pub const PLT_HEADER_SOURCE: &str = "native-import:plt-header";
@@ -197,6 +199,14 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Every decoded indirect jump, whatever the image's linkage: the
+    /// instructions a switch round asks the decompiler about.
+    pub indirect_jumps: Vec<u64>,
+    /// Jump tables the decompiler recovered at an indirect branch, keyed by
+    /// the branch: the case targets discovery walks from it, as Ghidra's
+    /// `DecompilerSwitchAnalyzer` lays references on the jump and
+    /// disassembles them.
+    pub switch_tables: std::collections::HashMap<u64, Vec<u64>>,
     /// Computed-call targets the propagation reached with the low address
     /// bit set, aligned: on a low-bit-mode language each is decoded in the
     /// alternate instruction set from then on.
@@ -1328,6 +1338,118 @@ fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
     targets
 }
 
+/// Ghidra's `DecompilerSwitchAnalyzer` runs the decompiler on every function
+/// holding an indirect jump, lays a reference from the jump to each table
+/// entry it recovers, and disassembles them; the case bodies then reach the
+/// calls the walk stopped short of. The decompile worker reads the program
+/// from a store, so the image is stored to a scratch project first. Returns
+/// the number of tables this round added; a branch already holding one is
+/// not asked again.
+/// A process-unique scratch directory removed on drop.
+struct ScratchDir {
+    path: std::path::PathBuf,
+}
+
+impl ScratchDir {
+    fn new(prefix: &str) -> Option<Self> {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .ok()?
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+        std::fs::create_dir_all(&path).ok()?;
+        Some(Self { path })
+    }
+}
+
+impl Drop for ScratchDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.path);
+    }
+}
+
+fn recover_switch_tables(imp: &mut NativeImport) -> usize {
+    let extents: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| (function.entry, function.entry + function.size))
+        .collect();
+    let owner = |address: u64| {
+        extents
+            .iter()
+            .find(|&&(start, end)| start <= address && address < end)
+            .map(|&(start, _)| start)
+    };
+    let mut owners: Vec<u64> = imp
+        .indirect_jumps
+        .iter()
+        .filter(|branch| !imp.switch_tables.contains_key(branch))
+        .filter_map(|&branch| owner(branch))
+        .collect();
+    owners.sort_unstable();
+    owners.dedup();
+    if owners.is_empty() {
+        return 0;
+    }
+    let scratch = ScratchDir::new("ventris-switch");
+    let Some(scratch) = scratch else {
+        imp.discovery_note = Some("switch recovery has no scratch dir".into());
+        return 0;
+    };
+    let program = "switch-recovery";
+    let stored = ProjectDb::open(&scratch.path.join("project.sqlite"))
+        .map_err(|error| error.to_string())
+        .and_then(|db| {
+            store_import(&db, program, imp, declared_entry_model(&imp.cfg, &imp.language))
+                .map_err(|error| error.to_string())
+        });
+    if let Err(error) = stored {
+        imp.discovery_note = Some(format!("switch recovery could not store the image: {error}"));
+        return 0;
+    }
+    let addresses: Vec<String> = owners.iter().map(|entry| format!("{entry:#x}")).collect();
+    let mut added = 0;
+    for chunk in addresses.chunks(256) {
+        let docs = match crate::native_runtime::decompile_native_docs(
+            &imp.cfg,
+            &imp.binary,
+            chunk,
+            program,
+            &scratch.path,
+            None,
+        ) {
+            Ok(docs) => docs,
+            Err(error) => {
+                imp.discovery_note = Some(format!("switch recovery decompile failed: {error}"));
+                return added;
+            }
+        };
+        for doc in docs.values() {
+            for table in doc.jump_tables.iter().flatten() {
+                if table.branch.space != lre_model::AddressSpace::Ram {
+                    continue;
+                }
+                let mut targets: Vec<u64> = table
+                    .targets
+                    .iter()
+                    .filter(|target| target.space == lre_model::AddressSpace::Ram)
+                    .map(|target| target.offset)
+                    .collect();
+                targets.sort_unstable();
+                targets.dedup();
+                if targets.is_empty() {
+                    continue;
+                }
+                if imp.switch_tables.insert(table.branch.offset, targets).is_none() {
+                    added += 1;
+                }
+            }
+        }
+    }
+    added
+}
+
 /// Runs discovery and reference inference for one loaded image.
 fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
@@ -1377,7 +1499,8 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         let targets = computed_flow_targets(imp);
-        if targets.is_empty() {
+        let tables = recover_switch_tables(imp);
+        if targets.is_empty() && tables == 0 {
             break;
         }
         let mode = low_bit_code_mode(&imp.language);
@@ -1403,6 +1526,23 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         let again = std::time::Instant::now();
         lanes = discovery::discover_seeded(imp);
         phase(imp, "discovery", again);
+    }
+    // The reference Ghidra's switch analyzer lays from the jump to each case
+    // (`DecompilerSwitchAnalyzer`, `COMPUTED_JUMP`); the walk consumed the
+    // tables while the references were rebuilt each round.
+    let mut switch_edges: Vec<(u64, u64)> = imp
+        .switch_tables
+        .iter()
+        .flat_map(|(&branch, targets)| targets.iter().map(move |&target| (branch, target)))
+        .collect();
+    switch_edges.sort_unstable();
+    for (branch, target) in switch_edges {
+        imp.xrefs.push(NativeXref::with_provenance(
+            branch,
+            target,
+            "COMPUTED_JUMP",
+            SWITCH_PROVENANCE,
+        ));
     }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.

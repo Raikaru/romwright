@@ -5301,6 +5301,10 @@ evidence:
 - Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
   than RDRAM loads with its boot segment resident).
 
+### m5-014 evidence (switch tables feed discovery)
+- Discovery's round loop now does what `DecompilerSwitchAnalyzer` does: every function holding an indirect jump (`indirect_jumps`, recorded whatever the image's linkage) is decompiled through the worker against a scratch store, each recovered `JumpTable` is kept on `switch_tables`, and the next walk treats the jump's cases as its own flow, owned by the function (`FlowKind::BranchInd` in both walk loops). The jump-to-case references are stored as `COMPUTED_JUMP` with provenance `native-import:switch`. A branch already holding a table is not asked again; the round repeats while a computed target or a table is new.
+- HeartGold ARM9: 277 tables over two rounds, 7026 -> 7329 functions; m5-013 fn.recall 0.6320 -> 0.6594, precision 0.9914; import 95 -> 116 s. Parity sample 376 -> 394 of 512, shared 6874 -> 7168 (ratchets raised). Committed rows unchanged (1796/1892, same classes); every acceptance script passes.
+
 ### m4-038 evidence (N64 parity ratchet 17 -> 58 of 116)
 - Raw-SLEIGH mode ignored the tspec's `<truncate_space space="ram" size="4"/>`: `GhidraTranslate::decode` applied it in client-driven mode, the `Sleigh` path never did, so `Architecture::decodeStackPointer` (architecture.cc:1006-1012) kept an 8-byte stack pointer in a 4-byte space and no sp-relative access on MIPS64-32addr was a stack address (`(longlong)((int)&stack0x00000000 + -0x18)`, `unaff_retaddr` stores kept). `ArchitectureGhidra` now keeps the tspec's truncations and applies them from `modifySpaces` as `SleighArchitecture::modifySpaces` does (sleigh_arch.cc:423-429).
 - `getCodeLabel` answers `LAB_<addr>` for a branch target inside a function body with no symbol -- Ghidra's flow leaves a reference on every branch target and `SymbolUtilities.getDynamicInstructionName` (:584-607) names it so; the decompiler printed `code_r0x...` before.
