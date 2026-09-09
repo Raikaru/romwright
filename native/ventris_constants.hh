@@ -12,6 +12,7 @@
 #include <cstring>
 #include <deque>
 #include <tuple>
+#include "flow.hh"
 
 namespace ghidra {
 namespace ventris_constants {
@@ -935,6 +936,22 @@ public:
     } symbol{arch.symboltab->getGlobalScope(), nullptr};
     symbol.added = symbol.owner->addFunction(entry, "ventris_constants");
     Funcdata &function = *symbol.added->getFunction();
+    // Bad bytes inside the range end that path's flow; they do not abort the
+    // pass. FlowInfo already truncates control flow at an unresolvable
+    // instruction and warns, unless the architecture asks it to throw
+    // (flow.cc:420-456), and a propagation query over a real image reaches
+    // data all the time -- one such byte failed the whole import of a
+    // 53 MB executable.
+    struct FlowOptions {
+      Architecture &arch;
+      uint4 saved;
+      explicit FlowOptions(Architecture &a) : arch(a), saved(a.flowoptions) {
+        arch.flowoptions &= ~(uint4)(FlowInfo::error_unimplemented |
+                                     FlowInfo::error_reinterpreted |
+                                     FlowInfo::error_toomanyinstructions);
+      }
+      ~FlowOptions() { arch.flowoptions = saved; }
+    } options(arch);
     function.followFlow(entry, Address(space, end - 1));
     ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0,
                                                 std::move(seeds), tracked);

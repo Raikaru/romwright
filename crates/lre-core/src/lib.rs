@@ -195,6 +195,7 @@ impl Core {
             phases: Vec::new(),
             flow: None,
             patterns: None,
+            references_refused: 0,
             discovery_note: None,
         })
     }
@@ -1116,6 +1117,7 @@ impl Core {
             phases: Vec::new(),
             flow: None,
             patterns: None,
+            references_refused: 0,
             discovery_note: None,
         })
     }

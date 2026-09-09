@@ -400,13 +400,17 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         )
                     })
                     .unwrap_or_default();
+                let refused = match summary.references_refused {
+                    0 => String::new(),
+                    count => format!(",\"references_refused\":{count}"),
+                };
                 let note = summary
                     .discovery_note
                     .as_deref()
                     .map(|note| format!(",\"discovery_note\":{}", serde_json::json!(note)))
                     .unwrap_or_default();
                 println!(
-                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{note}}}",
+                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{refused}{note}}}",
                     summary.functions,
                     core.runtime_config().console_shards
                 );

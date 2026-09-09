@@ -284,6 +284,8 @@ pub struct NativeImport {
     pub flow: Option<lre_model::FlowStats>,
     /// Pattern accounting for the pattern phase, when it ran.
     pub patterns_seen: Option<lre_model::PatternStats>,
+    /// Reference ranges the console refused, counted so the loss is reported.
+    pub references_refused: u64,
     /// Processor mode values the image itself declares, applied to a console
     /// before anything decodes: ARM marks Thumb code with the low bit of a
     /// function address and with `$t`/`$a` mapping symbols
@@ -1413,10 +1415,19 @@ fn query_references(
     start: u64,
     end: u64,
     mappings: &[Mapping],
+    refused: &std::sync::atomic::AtomicU64,
 ) -> Result<Option<Vec<crate::native_runtime::ReferenceFact>>> {
-    session
-        .optional_references(start, end, mappings, true)
-        .map_err(|error| ImportError::Bad(format!("data references at {start:#x}: {error}")))
+    match session.optional_references(start, end, mappings, true) {
+        Ok(facts) => Ok(facts),
+        // One range the console cannot answer costs that range's references,
+        // never the image. A 53 MB game executable always holds bytes that
+        // are not instructions; the count is reported so the loss stays
+        // visible instead of being swallowed.
+        Err(_) => {
+            refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            Ok(None)
+        }
+    }
 }
 
 /// One lane of a sharded round: claim ranges until the round is drained.
@@ -1425,6 +1436,7 @@ fn claim_references(
     ranges: &[(usize, u64, u64)],
     cursor: &std::sync::atomic::AtomicUsize,
     mappings: &[Mapping],
+    refused: &std::sync::atomic::AtomicU64,
 ) -> Result<Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)>> {
     let mut facts = Vec::new();
     loop {
@@ -1432,7 +1444,7 @@ fn claim_references(
         let Some(&(index, start, end)) = ranges.get(next) else {
             return Ok(facts);
         };
-        if let Some(found) = query_references(session, start, end, mappings)? {
+        if let Some(found) = query_references(session, start, end, mappings, refused)? {
             facts.push((index, found));
         }
     }
@@ -1455,6 +1467,8 @@ fn infer_data_references(
         .filter(|&&(start, _)| !import.functions.iter()
             .any(|function| function.entry == start && function.size > 1))
         .copied();
+    // Ranges the console could not answer. Counted, not hidden.
+    let refused = std::sync::atomic::AtomicU64::new(0);
     let mut work = functions
         .map(|range| range.map(|(start, end)| (start, end, Vec::new(), true)))
         .collect::<Result<Vec<_>>>()?;
@@ -1502,7 +1516,9 @@ fn infer_data_references(
         let mut discovered: Vec<NativeRegisterContext> = Vec::new();
         if shards.is_empty() || ranges.len() < 2 {
             for &(index, start, end) in &ranges {
-                if let Some(facts) = query_references(session, start, end, &import.mappings)? {
+                if let Some(facts) =
+                    query_references(session, start, end, &import.mappings, &refused)?
+                {
                     results.push((index, facts));
                 }
             }
@@ -1520,11 +1536,13 @@ fn infer_data_references(
                 for shard in shards.iter_mut() {
                     let ranges = &ranges;
                     let cursor = &cursor;
+                    let refused = &refused;
                     handles.push(scope.spawn(move || {
-                        claim_references(shard, ranges, cursor, mappings)
+                        claim_references(shard, ranges, cursor, mappings, refused)
                     }));
                 }
-                let mut collected = vec![claim_references(session, &ranges, &cursor, mappings)?];
+                let mut collected =
+                    vec![claim_references(session, &ranges, &cursor, mappings, &refused)?];
                 for handle in handles {
                     collected.push(handle.join().unwrap_or_else(|_| {
                         Err(ImportError::Bad("reference shard panicked".into()))
@@ -1670,6 +1688,7 @@ fn infer_data_references(
             )
         }));
     }
+    import.references_refused = refused.load(std::sync::atomic::Ordering::Relaxed);
     Ok(())
 }
 
@@ -2190,6 +2209,7 @@ pub fn store_import(
         phases: imp.phases.clone(),
         flow: imp.flow,
         patterns: imp.patterns_seen.clone(),
+        references_refused: imp.references_refused,
         discovery_note: imp.discovery_note.clone(),
     })
 }

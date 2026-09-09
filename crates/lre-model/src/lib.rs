@@ -516,6 +516,9 @@ pub struct ProgramSummary {
     /// Byte-pattern accounting for the pattern phase, when it ran.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub patterns: Option<PatternStats>,
+    /// Ranges whose reference query the console refused, when any did.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub references_refused: u64,
     /// Why console-driven discovery did not run, when it did not: a silent
     /// fallback to pointer-only seeds hides a whole architecture's flow.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -951,4 +954,8 @@ mod tests {
         assert_eq!(a.space, AddressSpace::Ram);
         assert_eq!(a.offset, 0x404000);
     }
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
