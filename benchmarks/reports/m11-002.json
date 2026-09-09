@@ -1,0 +1,517 @@
+{
+ "id": "m11-002",
+ "milestone": "M11",
+ "criterion": "GOAL.md C3: measured game-first sessions on the approved targets",
+ "recorded_at": "2026-09-09T12:07:59.851048+00:00",
+ "machine": {
+  "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+  "cpu": "x86_64"
+ },
+ "files": "/home/raikaru/Projects/agent-under-fire/orig/GQFE78/files",
+ "floors": {
+  "common": {
+   "import_wall_s": 90.0,
+   "import_peak_kb": 300000,
+   "page_ms": 500.0,
+   "decompile_ms": 2000.0
+  },
+  "modules": {
+   "boot.elf": {
+    "sha256": "29b2a3b48badbfef7b62542d14a0ca41f4bfc72a728bb4644c012bc69061446d",
+    "recall": 0.92,
+    "precision": 0.85,
+    "functions": 600
+   },
+   "base.elf": {
+    "sha256": "22cc9ec3ec53652cf7c3a05bc050a88a9a2c0ed2c5e2bea9ab7f5ef073f961be",
+    "recall": 0.92,
+    "precision": 0.85,
+    "functions": 600
+   },
+   "Movie.elf": {
+    "sha256": "408014af8990ed7d7e449d7614f6dc4e46c8981c2dc7e551932b0d3b22da8ac7",
+    "recall": 0.93,
+    "precision": 0.75,
+    "functions": 1500
+   },
+   "driving.elf": {
+    "sha256": "fcb6f28c96d2e503524e4657c05c82c86006a74e3a7c795a4b79a850d9a305e8",
+    "recall": 0.94,
+    "precision": 0.88,
+    "functions": 5500
+   }
+  }
+ },
+ "modules": {
+  "boot.elf": {
+   "layout": {
+    "entry": "80680040",
+    "load": "80680000",
+    "segments": [
+     {
+      "vaddr": "80680000",
+      "memsz": 9228,
+      "flags": 5
+     },
+     {
+      "vaddr": "80682420",
+      "memsz": 104,
+      "flags": 4
+     },
+     {
+      "vaddr": "806824a0",
+      "memsz": 188,
+      "flags": 4
+     },
+     {
+      "vaddr": "80682560",
+      "memsz": 130104,
+      "flags": 5
+     },
+     {
+      "vaddr": "806a21a0",
+      "memsz": 12,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a21c0",
+      "memsz": 16,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a21e0",
+      "memsz": 1894,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a2960",
+      "memsz": 9779,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a4fa0",
+      "memsz": 18616,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9860",
+      "memsz": 225,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9960",
+      "memsz": 708,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9c40",
+      "memsz": 264,
+      "flags": 6
+     }
+    ]
+   },
+   "steps": {
+    "import": {
+     "wall_s": 2.75,
+     "peak_kb": 24684,
+     "message": "imported bond natively (694 functions, PowerPC:BE:32:default)"
+    },
+    "language": "PowerPC:BE:32:default",
+    "recover_classes": {
+     "anchors": 0,
+     "bases": 0,
+     "classes": 0,
+     "revision": 10,
+     "typeinfo": 0,
+     "without_vtable": 0,
+     "ms": 19.3
+    },
+    "infer_prototypes": {
+     "analyzed": 1206,
+     "changed": 840,
+     "rounds": 3,
+     "stop_reason": "round_limit",
+     "worker_recycles": 0,
+     "ms": 7242.9
+    },
+    "reimport": {
+     "wall_s": 2.63,
+     "peak_kb": 23904,
+     "message": "imported bond natively (694 functions, PowerPC:BE:32:default)"
+    }
+   },
+   "metrics": {
+    "oracle_functions": 644,
+    "import_wall_s": 2.75,
+    "import_peak_kb": 24684,
+    "functions": 694,
+    "functions_matched": 610,
+    "recall": 0.9472049689440993,
+    "precision": 0.8789625360230547,
+    "page_ms": 63.389317016117275,
+    "xrefs_rows": 1,
+    "listing_rows": 16,
+    "decompile_ms": 25.372288015205413,
+    "decompiled": 5,
+    "inference_analyzed": 1206,
+    "memory_bytes": 8,
+    "edit_survived_reimport": 1.0
+   },
+   "sha256": "29b2a3b48badbfef7b62542d14a0ca41f4bfc72a728bb4644c012bc69061446d"
+  },
+  "base.elf": {
+   "layout": {
+    "entry": "80680040",
+    "load": "80680000",
+    "segments": [
+     {
+      "vaddr": "80680000",
+      "memsz": 9228,
+      "flags": 5
+     },
+     {
+      "vaddr": "80682420",
+      "memsz": 104,
+      "flags": 4
+     },
+     {
+      "vaddr": "806824a0",
+      "memsz": 188,
+      "flags": 4
+     },
+     {
+      "vaddr": "80682560",
+      "memsz": 130144,
+      "flags": 5
+     },
+     {
+      "vaddr": "806a21c0",
+      "memsz": 12,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a21e0",
+      "memsz": 16,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a2200",
+      "memsz": 1918,
+      "flags": 4
+     },
+     {
+      "vaddr": "806a2980",
+      "memsz": 9779,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a4fc0",
+      "memsz": 18616,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9880",
+      "memsz": 225,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9980",
+      "memsz": 708,
+      "flags": 6
+     },
+     {
+      "vaddr": "806a9c60",
+      "memsz": 264,
+      "flags": 6
+     }
+    ]
+   },
+   "steps": {
+    "import": {
+     "wall_s": 2.75,
+     "peak_kb": 24500,
+     "message": "imported bond natively (694 functions, PowerPC:BE:32:default)"
+    },
+    "language": "PowerPC:BE:32:default",
+    "recover_classes": {
+     "anchors": 0,
+     "bases": 0,
+     "classes": 0,
+     "revision": 10,
+     "typeinfo": 0,
+     "without_vtable": 0,
+     "ms": 18.3
+    },
+    "infer_prototypes": {
+     "analyzed": 1206,
+     "changed": 839,
+     "rounds": 3,
+     "stop_reason": "round_limit",
+     "worker_recycles": 0,
+     "ms": 7383.9
+    },
+    "reimport": {
+     "wall_s": 2.63,
+     "peak_kb": 24292,
+     "message": "imported bond natively (694 functions, PowerPC:BE:32:default)"
+    }
+   },
+   "metrics": {
+    "oracle_functions": 644,
+    "import_wall_s": 2.75,
+    "import_peak_kb": 24500,
+    "functions": 694,
+    "functions_matched": 610,
+    "recall": 0.9472049689440993,
+    "precision": 0.8789625360230547,
+    "page_ms": 64.64774097548798,
+    "xrefs_rows": 1,
+    "listing_rows": 16,
+    "decompile_ms": 22.18056801939383,
+    "decompiled": 5,
+    "inference_analyzed": 1206,
+    "memory_bytes": 8,
+    "edit_survived_reimport": 1.0
+   },
+   "sha256": "22cc9ec3ec53652cf7c3a05bc050a88a9a2c0ed2c5e2bea9ab7f5ef073f961be"
+  },
+  "Movie.elf": {
+   "layout": {
+    "entry": "8000922c",
+    "load": "80007100",
+    "segments": [
+     {
+      "vaddr": "80007100",
+      "memsz": 9204,
+      "flags": 5
+     },
+     {
+      "vaddr": "80009500",
+      "memsz": 368524,
+      "flags": 5
+     },
+     {
+      "vaddr": "800634a0",
+      "memsz": 8,
+      "flags": 4
+     },
+     {
+      "vaddr": "800634c0",
+      "memsz": 8,
+      "flags": 4
+     },
+     {
+      "vaddr": "800634e0",
+      "memsz": 4672,
+      "flags": 4
+     },
+     {
+      "vaddr": "80064720",
+      "memsz": 46648,
+      "flags": 6
+     },
+     {
+      "vaddr": "8006fd60",
+      "memsz": 542968,
+      "flags": 6
+     },
+     {
+      "vaddr": "800f4660",
+      "memsz": 716,
+      "flags": 6
+     },
+     {
+      "vaddr": "800f4940",
+      "memsz": 2244,
+      "flags": 6
+     },
+     {
+      "vaddr": "800f5220",
+      "memsz": 1320,
+      "flags": 6
+     }
+    ]
+   },
+   "steps": {
+    "import": {
+     "wall_s": 7.07,
+     "peak_kb": 67224,
+     "message": "imported bond natively (1678 functions, PowerPC:BE:32:default)"
+    },
+    "language": "PowerPC:BE:32:default",
+    "recover_classes": {
+     "anchors": 0,
+     "bases": 0,
+     "classes": 0,
+     "revision": 10,
+     "typeinfo": 0,
+     "without_vtable": 0,
+     "ms": 19.0
+    },
+    "infer_prototypes": {
+     "analyzed": 2415,
+     "changed": 1678,
+     "rounds": 1,
+     "stop_reason": "budget",
+     "worker_recycles": 2,
+     "ms": 20022.0
+    },
+    "reimport": {
+     "wall_s": 7.01,
+     "peak_kb": 67052,
+     "message": "imported bond natively (1678 functions, PowerPC:BE:32:default)"
+    }
+   },
+   "metrics": {
+    "oracle_functions": 1379,
+    "import_wall_s": 7.07,
+    "import_peak_kb": 67224,
+    "functions": 1678,
+    "functions_matched": 1317,
+    "recall": 0.9550398839738942,
+    "precision": 0.7848629320619785,
+    "page_ms": 129.80874901404604,
+    "xrefs_rows": 0,
+    "listing_rows": 16,
+    "decompile_ms": 20.883721997961402,
+    "decompiled": 5,
+    "inference_analyzed": 2415,
+    "memory_bytes": 8,
+    "edit_survived_reimport": 1.0
+   },
+   "sha256": "408014af8990ed7d7e449d7614f6dc4e46c8981c2dc7e551932b0d3b22da8ac7"
+  },
+  "driving.elf": {
+   "layout": {
+    "entry": "8000922c",
+    "load": "80007100",
+    "segments": [
+     {
+      "vaddr": "80007100",
+      "memsz": 9228,
+      "flags": 5
+     },
+     {
+      "vaddr": "80009520",
+      "memsz": 592,
+      "flags": 4
+     },
+     {
+      "vaddr": "80009780",
+      "memsz": 872,
+      "flags": 4
+     },
+     {
+      "vaddr": "80009b00",
+      "memsz": 1625388,
+      "flags": 5
+     },
+     {
+      "vaddr": "80196840",
+      "memsz": 776,
+      "flags": 4
+     },
+     {
+      "vaddr": "80196b60",
+      "memsz": 16,
+      "flags": 4
+     },
+     {
+      "vaddr": "80196b80",
+      "memsz": 56340,
+      "flags": 4
+     },
+     {
+      "vaddr": "801a4800",
+      "memsz": 322305,
+      "flags": 6
+     },
+     {
+      "vaddr": "801f3320",
+      "memsz": 806424,
+      "flags": 6
+     },
+     {
+      "vaddr": "802b8140",
+      "memsz": 3724,
+      "flags": 6
+     },
+     {
+      "vaddr": "802b8fe0",
+      "memsz": 7632,
+      "flags": 6
+     },
+     {
+      "vaddr": "802badc0",
+      "memsz": 17192,
+      "flags": 6
+     }
+    ]
+   },
+   "steps": {
+    "import": {
+     "wall_s": 25.43,
+     "peak_kb": 124612,
+     "message": "imported bond natively (5954 functions, PowerPC:BE:32:default)"
+    },
+    "language": "PowerPC:BE:32:default",
+    "recover_classes": {
+     "anchors": 0,
+     "bases": 0,
+     "classes": 0,
+     "revision": 10,
+     "typeinfo": 0,
+     "without_vtable": 0,
+     "ms": 24.2
+    },
+    "infer_prototypes": {
+     "analyzed": 1498,
+     "changed": 0,
+     "rounds": 0,
+     "stop_reason": "budget",
+     "worker_recycles": 4,
+     "ms": 20023.8
+    },
+    "reimport": {
+     "wall_s": 22.51,
+     "peak_kb": 120252,
+     "message": "imported bond natively (5954 functions, PowerPC:BE:32:default)"
+    }
+   },
+   "metrics": {
+    "oracle_functions": 5648,
+    "import_wall_s": 25.43,
+    "import_peak_kb": 124612,
+    "functions": 5954,
+    "functions_matched": 5461,
+    "recall": 0.9668909348441926,
+    "precision": 0.9171985220020155,
+    "page_ms": 252.83582700649276,
+    "xrefs_rows": 0,
+    "listing_rows": 16,
+    "decompile_ms": 27.601272973697633,
+    "decompiled": 5,
+    "inference_analyzed": 1498,
+    "memory_bytes": 8,
+    "edit_survived_reimport": 1.0
+   },
+   "sha256": "fcb6f28c96d2e503524e4657c05c82c86006a74e3a7c795a4b79a850d9a305e8"
+  }
+ },
+ "status": "pass",
+ "passed": true,
+ "loaded_not_booted": {
+  "load_addresses": {
+   "boot.elf": "80680000",
+   "base.elf": "80680000",
+   "Movie.elf": "80007100",
+   "driving.elf": "80007100"
+  },
+  "shared_load_address": [
+   "80007100",
+   "80680000"
+  ],
+  "surface": "memory_live answers for the resident module only; this gate makes no live claim on any of them. Every file-backed surface (functions, xrefs, listing, decompile, memory, rename) answered the same way it does for Bond.elf"
+ },
+ "summary": "boot.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 25 ms), 1206 inferred; base.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 22 ms), 1206 inferred; Movie.elf: 1678 functions in 7.1 s, recall 0.9550 precision 0.7849 over 1379 symbols, 5 decompiled (median 21 ms), 2415 inferred; driving.elf: 5954 functions in 25.4 s, recall 0.9669 precision 0.9172 over 5648 symbols, 5 decompiled (median 28 ms), 1498 inferred"
+}

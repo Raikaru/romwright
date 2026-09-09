@@ -207,6 +207,12 @@ pub struct NativeImport {
     /// `DecompilerSwitchAnalyzer` lays references on the jump and
     /// disassembles them.
     pub switch_tables: std::collections::HashMap<u64, Vec<u64>>,
+    /// Indirect jumps the decompiler was already asked about, with the size
+    /// of the function that held each at the time: Ghidra runs its switch
+    /// analyzer again on a function whose body changed, and so does this.
+    pub switch_asked: std::collections::HashMap<u64, u64>,
+    /// Address ranges the last walk decoded, merged and sorted.
+    pub decoded_ranges: Vec<(u64, u64)>,
     /// Computed-call targets the propagation reached with the low address
     /// bit set, aligned: on a low-bit-mode language each is decoded in the
     /// alternate instruction set from then on.
@@ -1379,14 +1385,21 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         extents
             .iter()
             .find(|&&(start, end)| start <= address && address < end)
-            .map(|&(start, _)| start)
+            .map(|&(start, end)| (start, end - start))
     };
-    let mut owners: Vec<u64> = imp
-        .indirect_jumps
-        .iter()
-        .filter(|branch| !imp.switch_tables.contains_key(branch))
-        .filter_map(|&branch| owner(branch))
-        .collect();
+    let started = std::time::Instant::now();
+    let mut owners: Vec<u64> = Vec::new();
+    for &branch in &imp.indirect_jumps {
+        if imp.switch_tables.contains_key(&branch) {
+            continue;
+        }
+        let Some((entry, size)) = owner(branch) else {
+            continue;
+        };
+        if imp.switch_asked.insert(branch, size) != Some(size) {
+            owners.push(entry);
+        }
+    }
     owners.sort_unstable();
     owners.dedup();
     if owners.is_empty() {
@@ -1409,20 +1422,59 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         return 0;
     }
     let addresses: Vec<String> = owners.iter().map(|entry| format!("{entry:#x}")).collect();
+    // One worker per chunk, as many at once as the host has cores: the
+    // decompiles are independent and each worker loads the language once.
+    let lanes = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .clamp(1, 8);
+    let chunk_size = addresses.len().div_ceil(lanes).clamp(1, 256);
+    let chunks: Vec<&[String]> = addresses.chunks(chunk_size).collect();
+    // Each lane reads its own copy of the store: the worker opens it for
+    // writing, and two on one file lock each other out.
+    let mut lane_dirs = Vec::with_capacity(chunks.len());
+    for index in 0..chunks.len() {
+        let lane = scratch.path.join(format!("lane-{index}"));
+        if let Err(error) = std::fs::create_dir_all(&lane).and_then(|_| {
+            std::fs::copy(scratch.path.join("project.sqlite"), lane.join("project.sqlite"))
+        }) {
+            imp.discovery_note = Some(format!("switch recovery could not copy the store: {error}"));
+            return 0;
+        }
+        lane_dirs.push(lane);
+    }
+    let outcomes: Vec<Result<std::collections::BTreeMap<String, lre_model::DecompDoc>>> =
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = chunks
+                .iter()
+                .zip(lane_dirs.iter())
+                .map(|(chunk, project)| {
+                    let cfg = &imp.cfg;
+                    let binary = &imp.binary;
+                    scope.spawn(move || {
+                        crate::native_runtime::decompile_native_docs(
+                            cfg, binary, chunk, program, project, None,
+                        )
+                        .map_err(|error| ImportError::Bad(error.to_string()))
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| {
+                    handle
+                        .join()
+                        .unwrap_or_else(|_| Err(ImportError::Bad("switch worker panicked".into())))
+                })
+                .collect()
+        });
     let mut added = 0;
-    for chunk in addresses.chunks(256) {
-        let docs = match crate::native_runtime::decompile_native_docs(
-            &imp.cfg,
-            &imp.binary,
-            chunk,
-            program,
-            &scratch.path,
-            None,
-        ) {
+    for outcome in outcomes {
+        let docs = match outcome {
             Ok(docs) => docs,
             Err(error) => {
                 imp.discovery_note = Some(format!("switch recovery decompile failed: {error}"));
-                return added;
+                continue;
             }
         };
         for doc in docs.values() {
@@ -1441,13 +1493,64 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
                 if targets.is_empty() {
                     continue;
                 }
-                if imp.switch_tables.insert(table.branch.offset, targets).is_none() {
+                // The reference Ghidra's switch analyzer lays from the jump
+                // to each case (`COMPUTED_JUMP`), before the pattern analyzer
+                // runs: a case label is owned by flow from then on
+                // (`checkAlreadyInFunctionAbove`, 514-527).
+                for &target in &targets {
+                    imp.xrefs.push(NativeXref::with_provenance(
+                        table.branch.offset,
+                        target,
+                        "COMPUTED_JUMP",
+                        SWITCH_PROVENANCE,
+                    ));
+                }
+                // A table whose every case the walk already decoded changes
+                // no body; only one reaching bytes nothing read is a reason
+                // to walk again.
+                let reaches_new = targets.iter().any(|&target| {
+                    let index = imp.decoded_ranges.partition_point(|&(start, _)| start <= target);
+                    !index
+                        .checked_sub(1)
+                        .is_some_and(|i| target < imp.decoded_ranges[i].1)
+                });
+                if imp.switch_tables.insert(table.branch.offset, targets).is_none() && reaches_new {
                     added += 1;
                 }
             }
         }
     }
+    if added > 0 {
+        demote_case_blocks(imp);
+    }
+    phase(imp, "switch", started);
     added
+}
+
+/// Ghidra recovers a jump's table at `CODE_ANALYSIS`, before the pattern
+/// analyzer's delayed creator runs at `DATA_ANALYSIS.after()` and finds the
+/// case block already inside a function (`PossibleDelayedFunctionCreator`,
+/// 1001-1012). Here the patterns ran a round earlier, so a function whose
+/// only evidence is a pattern match at a case target is withdrawn; the next
+/// walk gives the block to the function that jumps to it. A target anything
+/// calls or points at keeps its function.
+fn demote_case_blocks(imp: &mut NativeImport) {
+    let targets: std::collections::HashSet<u64> = imp
+        .switch_tables
+        .values()
+        .flat_map(|targets| targets.iter().copied())
+        .collect();
+    let evidenced: std::collections::HashSet<u64> = imp
+        .xrefs
+        .iter()
+        .filter(|xref| xref.kind.ends_with("CALL") || xref.kind == "DATA")
+        .map(|xref| xref.to)
+        .collect();
+    imp.functions.retain(|function| {
+        !(targets.contains(&function.entry)
+            && function.name.starts_with("FUN_")
+            && !evidenced.contains(&function.entry))
+    });
 }
 
 /// Runs discovery and reference inference for one loaded image.
@@ -1526,23 +1629,6 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         let again = std::time::Instant::now();
         lanes = discovery::discover_seeded(imp);
         phase(imp, "discovery", again);
-    }
-    // The reference Ghidra's switch analyzer lays from the jump to each case
-    // (`DecompilerSwitchAnalyzer`, `COMPUTED_JUMP`); the walk consumed the
-    // tables while the references were rebuilt each round.
-    let mut switch_edges: Vec<(u64, u64)> = imp
-        .switch_tables
-        .iter()
-        .flat_map(|(&branch, targets)| targets.iter().map(move |&target| (branch, target)))
-        .collect();
-    switch_edges.sort_unstable();
-    for (branch, target) in switch_edges {
-        imp.xrefs.push(NativeXref::with_provenance(
-            branch,
-            target,
-            "COMPUTED_JUMP",
-            SWITCH_PROVENANCE,
-        ));
     }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
