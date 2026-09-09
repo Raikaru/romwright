@@ -562,6 +562,12 @@ class Propagation {
         return false;
       result.space = space->getIndex();
       offset = pointer.bits;
+      // SymbolicPropogator.makeReference (:2624-2633): a negative offset was
+      // sign-extended past the space -- MIPS64 with 32-bit addresses does
+      // that to every lui -- and is chopped to the space's width; a positive
+      // one is taken as it is.
+      if ((offset >> (size * 8 - 1)) & 1)
+        offset = space->wrapOffset(offset);
     }
     if (offset > ~Word(0) / space->getWordSize())
       return false;

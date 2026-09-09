@@ -159,10 +159,15 @@ impl ProgramProvider {
         if storage.1 == 0 || storage.1 > 8 {
             return None;
         }
+        Some((self.function_containing(address)?, storage))
+    }
+
+    /// The entry of the function whose recorded extent holds `address`.
+    pub fn function_containing(&self, address: u64) -> Option<u64> {
         let index = self.functions.partition_point(|entry| *entry <= address);
         let entry = *self.functions.get(index.checked_sub(1)?)?;
         let size = self.function_sizes.get(&entry).copied().unwrap_or(1).max(1);
-        (address < entry.saturating_add(size)).then_some((entry, storage))
+        (address < entry.saturating_add(size)).then_some(entry)
     }
 
     pub fn new(backing: BinaryBacking, functions: Vec<u64>) -> Self {
@@ -750,15 +755,28 @@ impl NativeWorker {
     /// HighSymbol.encodeMapSym); anything else answers an empty response,
     /// which readAll treats as "no data" (a hole).
     /// Resolves labels from durable symbols and function names.
+    /// getCodeLabel (`DecompileCallback.getCodeLabel`, :429-441) answers the
+    /// primary symbol at a branch target. Ghidra's flow analysis leaves a
+    /// reference on every branch target, so an instruction inside a
+    /// function body with no real symbol carries the dynamic label
+    /// `SymbolUtilities.getDynamicInstructionName` builds: `LAB_` and the
+    /// address (:584-607). A function entry keeps its own name.
     fn answer_code_label(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let (_, address, _) = decode_addr_element(payload)
             .ok_or_else(|| WorkerError::Protocol("bad getCodeLabel address".into()))?;
-        let name = provider
+        let dynamic;
+        let name = match provider
             .symbol_names
             .get(&address)
             .or_else(|| provider.function_names.get(&address))
-            .map(String::as_str)
-            .unwrap_or("");
+        {
+            Some(name) => name.as_str(),
+            None if provider.function_containing(address).is_some() => {
+                dynamic = format!("LAB_{address:08x}");
+                dynamic.as_str()
+            }
+            None => "",
+        };
         self.answer_str(name)
     }
 
