@@ -380,7 +380,7 @@ index e62ab6a..6d42a2d 100644
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
      addr = addr + sz;
-@@ -836,6 +856,122 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +856,143 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
@@ -490,9 +490,30 @@ index e62ab6a..6d42a2d 100644
 +    // The instruction set this address was decoded in, on a language that
 +    // carries one in a context field named as Ghidra names it. A caller
 +    // records it, so a later console decodes the same bytes the same way.
++    // Ghidra's disassembler also carries that value along flow to every
++    // branch and call target (DisassemblerContextImpl); this database only
++    // holds explicit change points, so name what flows to each target: a
++    // globalset at the target (an ARM blx, ARMinstructions.sinc:773) wins
++    // and is named so a sibling console learns it, otherwise the value
++    // flows unchanged and is named only where the held value differs.
 +    try {
-+      uintm mode = dcp->conf->context->getVariable("LowBitCodeMode", addr);
++      ContextDatabase *contextdb = dcp->conf->context;
++      uintm mode = contextdb->getVariable("LowBitCodeMode", addr);
 +      *status->fileoptr << " mode=" << dec << mode;
++      *status->fileoptr << " flow_modes=";
++      bool firstMode = true;
++      for(size_t i=0;i<flow.targets.size();++i) {
++        const Address &target(flow.targets[i]);
++        if (target.getSpace() != addr.getSpace()) continue;
++        uintb first,last;
++        contextdb->getContext(target,first,last);
++        uintm held = contextdb->getVariable("LowBitCodeMode", target);
++        bool changePoint = first == target.getOffset();
++        if (!changePoint && held == mode) continue;
++        if (!firstMode) *status->fileoptr << ",";
++        firstMode = false;
++        *status->fileoptr << target.getShortcut() << "0x" << hex << target.getOffset() << ":" << dec << (changePoint ? held : mode);
++      }
 +    } catch(LowlevelError &err) {
 +    }
 +    *status->fileoptr << '\n';
@@ -707,11 +728,13 @@ diff --git a/decompiler/flow.cc b/decompiler/flow.cc
 diff --git a/decompiler/slghsymbol.hh b/decompiler/slghsymbol.hh
 --- a/decompiler/slghsymbol.hh
 +++ b/decompiler/slghsymbol.hh
-@@ -524,6 +524,7 @@ public:
+@@ -524,6 +524,9 @@ public:
    void print(ostream &s,ParserWalker &pos) const;
    void printMnemonic(ostream &s,ParserWalker &walker) const;
    void printBody(ostream &s,ParserWalker &walker) const;
 +  void collectOperandScalars(ParserWalker &walker,vector<VarnodeData> &scalars,bool bodyOnly) const;
++  void collectOperandObjects(ParserWalker &walker,vector<vector<struct OperandObject> > &operands) const;
++  void collectOperandObjectsInto(ParserWalker &walker,vector<struct OperandObject> &objects,bool bodyOnly) const;
    void removeTrailingSpace(void);
    void applyContext(ParserWalkerChange &walker) const {
      vector<ContextChange *>::const_iterator iter;

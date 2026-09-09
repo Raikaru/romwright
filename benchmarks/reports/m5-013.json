@@ -1,18 +1,18 @@
 {
   "id": "m5-013",
-  "recorded_at": "2026-09-09T05:39:02.017509+00:00",
+  "recorded_at": "2026-09-09T08:43:07.473209+00:00",
   "thresholds": {
     "fn.recall": 0.61,
     "fn.precision": 0.99
   },
   "status": "pass",
   "passed": true,
-  "summary": "ARM9 unpacked to 1122040 bytes (stored 762644); 6822 functions, fn.recall 0.6144 and fn.precision 0.9924 over 11019 symbols; NitroMain 420 bytes, decompiled",
+  "summary": "ARM9 unpacked to 1122040 bytes (stored 762644); 7026 functions, fn.recall 0.6320 and fn.precision 0.9912 over 11019 symbols; NitroMain 420 bytes, decompiled",
   "metrics": {
-    "fn.recall": 0.6143933206280062,
-    "fn.precision": 0.9923776018762827,
+    "fn.recall": 0.6319992739813051,
+    "fn.precision": 0.991175633361799,
     "fn.symbols": 11019,
-    "fn.recovered": 6822,
+    "fn.recovered": 7026,
     "arm9.module_bytes": 1122040,
     "arm9.stored_bytes": 762644
   }

@@ -212,6 +212,7 @@ impl NativeWorker {
             &provider.conventions,
             &std::collections::HashMap::new(),
             &provider.call_return_branches,
+            |_| Vec::new(),
         );
         self.register_program_with_shell(provider, pspec, cspec, tspec, corespec, &shell)
     }
@@ -300,6 +301,7 @@ impl NativeWorker {
         conventions: &std::collections::HashMap<u64, String>,
         fixups: &std::collections::HashMap<u64, String>,
         call_return_branches: &std::collections::HashMap<u64, Vec<u64>>,
+        locals_for: impl Fn(u64) -> Vec<(String, u64, u64, String, u64)>,
     ) -> Vec<u8> {
         let mut doc = Vec::new();
         crate::wire::encode_header(&mut doc, crate::wire::ELEMENT_START, crate::wire::elem::DOC);
@@ -317,8 +319,22 @@ impl NativeWorker {
             // corrects is sent whole even when it returns normally.
             let convention = conventions.get(offset).map(String::as_str);
             let fixup = fixups.get(offset).map(String::as_str);
+            // A declared frame is a fact the shell cannot carry: a lazy shell
+            // gets a default local scope when the decompiler builds it
+            // (funcdata.cc:828-833), so a function with locals is sent whole.
+            let owned = locals_for(*offset);
+            let locals: Vec<crate::wire::StackLocal> = owned
+                .iter()
+                .map(|(name, offset, size, type_name, type_id)| crate::wire::StackLocal {
+                    name,
+                    offset: *offset,
+                    size: *size,
+                    type_name,
+                    type_id: *type_id,
+                })
+                .collect();
             if non_returning.contains(offset) || convention.is_some() || fixup.is_some()
-                || !branches.is_empty()
+                || !branches.is_empty() || !locals.is_empty()
             {
                 crate::wire::encode_function_element(
                     &mut doc,
@@ -331,6 +347,7 @@ impl NativeWorker {
                     convention,
                     fixup,
                     branches,
+                    &locals,
                 );
             } else {
                 crate::wire::encode_header(

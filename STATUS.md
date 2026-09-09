@@ -5301,6 +5301,14 @@ evidence:
 - Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
   than RDRAM loads with its boot segment resident).
 
+### m5-014 evidence (decode contexts reach the decompiler, and flow carries the instruction set)
+- Diagnosis: 182 of the 512 sampled DS functions decompiled to "bad instruction data" natively. The worker read every Thumb body as ARM: discovery's `LowBitCodeMode` values lived only in the console sessions and the store kept none.
+- The store now holds `decode_contexts` (`replace_decode_contexts`/`decode_contexts`): every pattern-declared mode, computed-target mode, flowed mode and entry mode discovery settled, `TMode`/`ISA_MODE` folded to the `LowBitCodeMode` each language aliases (ARM.sinc:90-93, mips.sinc:416-417). `lre-worker` replays them as `<context_set>` ranges in the cspec's `<context_data>` (`ContextInternal::decodeFromSpec`, globalcontext.cc:531-553), each value holding to the next recorded point.
+- Discovery carries the instruction set along flow as `DisassemblerContextImpl` does: the console names, per branch/call target, the value that flows there (`flow_modes=`; a globalset at the target -- an ARM `blx`, ARMinstructions.sinc:773 -- wins and is named so sibling shards learn it), and discovery sets it before the target decodes. Entry modes disagreeing with the ELF's `$a`/`$t` mapping symbols: 116 of 6818 before, 11 of 7021 after.
+- Pattern rounds now follow Ghidra's pass order: a match landing inside a body an earlier match of the same round decoded is refused as `offcut` (the disassembler's conflict; `PossibleDelayedFunctionCreator` 1001-1012), and a refused match hands the console region back the mode it held (`setCurrentContext` sets one address; the console paints to the next change point). Before this a Thumb `push.w` pattern two bytes into an ARM `stmdb` painted the stretch Thumb and, with flow, cascaded into 164 lost ARM functions.
+- Measured: m5-013 fn.recall 0.6144 -> 0.6320, fn.precision 0.9924 -> 0.9912 (7026 functions); DS parity sample 211 -> 373 of 512 token-identical, 0 native-only "bad instruction data"; ratchet raised to 373. m4-003 re-recorded: `missing-stack-frame` 4 -> 0 (native frames), every other class unchanged, 1796/1892 identical.
+- `m1-006_corpus.sh` runs the mipsel row under `qemu-mipsel` with the vendored sysroot instead of exec'ing it on the host.
+
 ### m5-013 evidence (a retail Nintendo DS cartridge, scored and measured)
 - The corpus gained Pokemon HeartGold (USA) and a byte-matching
   `pret/pokeheartgold` build; `tests/m5-013_nds.py` scores the `nds.rs`

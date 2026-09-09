@@ -52,6 +52,9 @@ struct ReferenceFact {
     // resolved: `COMPUTED_CALL` and `COMPUTED_JUMP` (RefType.java).
     if (access & 16) return "COMPUTED_CALL";
     if (access & 32) return "COMPUTED_JUMP";
+    // A load or store through the stack pointer: `target` is the offset from
+    // the entry stack pointer, two's complement, and `width` the access.
+    if (access & 64) return "STACK";
     if ((access & 3) == 3) return "READ_WRITE";
     if (access & 8) return "DATA"; // INDIRECTION in Ghidra's reference model.
     if (access & 2) return "WRITE";
@@ -411,12 +414,81 @@ class Propagation {
                                        code == CPUI_CALLIND ? 16u : 32u, 0});
   }
 
+  int pointerSizeOf(const PcodeOp &op) const {
+    return op.getIn(1) == nullptr ? pointerSize : op.getIn(1)->getSize();
+  }
+
+  /// Does one of the instruction's display operands add up to this stack
+  /// offset? Registers count with the offset the propagation holds for them
+  /// when that value is stack-relative, scalars with their signed value
+  /// (`NewFunctionStackAnalysisCmd.getStackOpIndex`, also accepting a match
+  /// in the low 16 bits).
+  bool operandNamesSlot(const Address &pc, Snapshot &state, Word offset, int size) const {
+    const auto *sleigh = dynamic_cast<const Sleigh *>(arch.translate);
+    if (sleigh == nullptr)
+      return false;
+    std::vector<std::vector<OperandObject> > operands;
+    try {
+      // A returning instruction names no slot: `pop {..., pc}` reloads the
+      // frame it tears down, and Ghidra's analyzer skips it
+      // (`evaluateSymbolicReference`: "if (instr.getFlowType().isTerminal())
+      // return false").
+      MetadataOnlyEmit emitted;
+      InstructionFlow flow;
+      sleigh->oneInstructionFlow(emitted, pc, flow);
+      if (flow.type().terminal)
+        return false;
+      ParserWalker walker(sleigh->getInstructionContext(pc));
+      walker.baseState();
+      walker.getConstructor()->collectOperandObjects(walker, operands);
+    } catch (LowlevelError &) {
+      return false;
+    }
+    Word mask = widthMask(size);
+    for (const auto &operand : operands) {
+      Word local = 0;
+      for (const OperandObject &object : operand) {
+        if (object.isRegister) {
+          Value value = state.registers.get(object.storage.space->getIndex(),
+                                            object.storage.offset, (int)object.storage.size);
+          if (value.base != stackBase)
+            continue;
+          local += value.bits;
+        } else {
+          local += (Word)object.scalar;
+        }
+        if (((local ^ offset) & mask) == 0 || ((local ^ offset) & 0xffff) == 0)
+          return true;
+      }
+    }
+    return false;
+  }
+
   void memoryReferences(const PcodeOp &op, Snapshot &state) {
     OpCode code = op.code();
     if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
       AddrSpace *space = op.getIn(0)->getSpaceFromConst();
       Value pointer = get(state, op.getIn(1));
       unsigned access = code == CPUI_LOAD ? 1 : 2;
+      // A stack access is a fact about the frame, not about memory: Ghidra's
+      // stack analyzer turns every operand SymbolicPropogator resolves to the
+      // stack space into a stack reference and then a variable
+      // (`NewFunctionStackAnalysisCmd.defineFuncVariable`, sized from the
+      // LOAD output or STORE value like `getRefSize`). It is reported with
+      // the offset relative to the entry stack pointer, which is what Ghidra's
+      // frame offsets are.
+      if (stackBase >= 0 && pointer.base == stackBase && collectReferences) {
+        const Varnode *accessed = code == CPUI_LOAD ? op.getOut() : op.getIn(2);
+        unsigned width = accessed == nullptr ? 0 : (unsigned)accessed->getSize();
+        // Only an access an instruction *operand* spells as a stack slot: a
+        // register the propagation knows to be stack-relative plus the
+        // operand's scalars summing to the offset (`getStackOpIndex`). A
+        // push or pop stores through the stack pointer too, but names no
+        // slot, and Ghidra creates no variable for it.
+        if (width != 0 && operandNamesSlot(op.getAddr(), state, pointer.bits, pointerSizeOf(op)))
+          references.push_back(ReferenceFact{op.getAddr().getOffset(), pointer.bits,
+                                             64u | access, width});
+      }
       Location candidate;
       if (pointer.base >= 0 && pointer.base != stackBase &&
           location(space, Value(pointer.bits, pointer.known, -1, pointer.size), candidate) &&
@@ -642,6 +714,17 @@ class Propagation {
         return Value::relative(right.base, left.bits + right.bits, size);
       if (left.base >= 0 && left.base == right.base && code == CPUI_INT_SUB)
         return Value::constant(left.bits - right.bits, size);
+      // `or rd, rs, zero` is how MIPS spells a register move; a zero operand
+      // leaves the other side, symbolic origin included, exactly as
+      // VarnodeContext's or/xor keep a symbolic value when the other operand
+      // is the constant zero.
+      if (code == CPUI_INT_OR || code == CPUI_INT_XOR) {
+        if (left.base >= 0 && right.complete(op.getIn(1)->getSize()) && right.bits == 0)
+          return Value::relative(left.base, left.bits, size);
+        if (right.base >= 0 && left.complete(op.getIn(0)->getSize()) && left.bits == 0 &&
+            op.getIn(1)->getSize() == size)
+          return Value::relative(right.base, right.bits, size);
+      }
     }
     if (left.base < 0 && right.base < 0 && inputs == 2) {
       if (code == CPUI_INT_AND)

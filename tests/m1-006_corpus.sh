@@ -300,6 +300,7 @@ for entry in run_manifest["entries"]:
             "i386": ("qemu-i386", "i686-linux-gnu"),
             "aarch64": ("qemu-aarch64", "aarch64-linux-gnu"),
             "powerpc": ("qemu-ppc", "powerpc-linux-gnu"),
+            "mipsel": ("qemu-mipsel", "mipsel-linux-gnu"),
         }
         command = []
         if arch in runners:

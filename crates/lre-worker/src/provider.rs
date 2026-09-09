@@ -26,6 +26,16 @@ impl BinaryBacking {
         })
     }
 
+    /// One past the highest mapped address, zero for an empty image.
+    pub fn image_end(&self) -> u64 {
+        self.image
+            .regions()
+            .iter()
+            .map(|region| region.vaddr.saturating_add(region.size))
+            .max()
+            .unwrap_or(0)
+    }
+
     pub fn read(&self, vaddr: u64, size: u64) -> Option<Vec<u8>> {
         // DecompileCallback.getBytes returns a zero-initialized buffer after
         // a valid short read; an unmapped initial address is still an error.
@@ -95,6 +105,9 @@ pub struct ProgramProvider {
     pub prototypes: HashMap<u64, lre_model::PrototypeRow>,
     /// RAM entries with a stored non-returning fact.
     pub non_returning: HashSet<u64>,
+    /// Declared stack locals per function entry: (name, offset, size),
+    /// the frame the store recovered or was told.
+    pub stack_frames: HashMap<u64, Vec<(String, i64, u64)>>,
     /// RAM call edges ordered by source/destination offset.
     pub call_edges: Vec<(lre_model::Address, lre_model::Address)>,
     /// Track which space index `ram` occupies once the tspec registers it.
@@ -171,6 +184,7 @@ impl ProgramProvider {
             namespaces: HashMap::new(),
             prototypes: HashMap::new(),
             non_returning: HashSet::new(),
+            stack_frames: HashMap::new(),
             call_edges: Vec::new(),
             ram_space_index: 3,
             register_space_index: 4,
@@ -198,6 +212,48 @@ impl ProgramProvider {
             from.space == lre_model::AddressSpace::Ram && to.space == lre_model::AddressSpace::Ram
         });
         Ok(())
+    }
+
+    /// The stack frame the store holds for each function, as the decompiler
+    /// will be handed it: Ghidra's client sends every variable of the
+    /// function's frame in `<localdb>` (`LocalSymbolMap.grabFromFunction`).
+    pub fn load_stack_frames(&mut self, db: &lre_db::ProjectDb, pid: lre_model::ProgramId) -> Result<()> {
+        let rows = db
+            .stack_variables(pid, None)
+            .map_err(|e| WorkerError::Setup(format!("stack variables: {e}")))?;
+        for row in rows {
+            let (Some(offset), Some(size)) = (row.offset, row.size) else {
+                continue;
+            };
+            if size == 0 || size > 8 {
+                continue;
+            }
+            self.stack_frames
+                .entry(row.function.offset)
+                .or_default()
+                .push((row.name, offset, size));
+        }
+        Ok(())
+    }
+
+    /// The function's declared locals in wire form, typed `undefined<size>`
+    /// from the core types this language carries; a width the language has
+    /// no undefined type for is left out rather than mistyped.
+    pub fn stack_locals(&self, entry: u64) -> Vec<(String, u64, u64, String, u64)> {
+        let mask = if self.pointer_size >= 8 { u64::MAX } else { (1u64 << (self.pointer_size * 8)) - 1 };
+        self.stack_frames
+            .get(&entry)
+            .map(|frame| {
+                frame
+                    .iter()
+                    .filter_map(|(name, offset, size)| {
+                        let type_name = format!("undefined{size}");
+                        let (type_id, _) = self.core_types.get(&type_name).copied()?;
+                        Some((name.clone(), (*offset as u64) & mask, *size, type_name, type_id))
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
     }
 
     pub fn load_return_behaviors(
@@ -301,6 +357,7 @@ impl ProgramProvider {
             &self.conventions,
             &fixups,
             &self.call_return_branches,
+            |entry| self.stack_locals(entry),
         ))
     }
 
@@ -911,6 +968,17 @@ impl NativeWorker {
                     .get(&vaddr)
                     .cloned()
                     .unwrap_or_default();
+                let owned = provider.stack_locals(vaddr);
+                let locals: Vec<wire::StackLocal> = owned
+                    .iter()
+                    .map(|(name, offset, size, type_name, type_id)| wire::StackLocal {
+                        name,
+                        offset: *offset,
+                        size: *size,
+                        type_name,
+                        type_id: *type_id,
+                    })
+                    .collect();
                 wire::encode_function_element(
                     &mut doc,
                     space as u32,
@@ -922,6 +990,7 @@ impl NativeWorker {
                     provider.convention(vaddr),
                     provider.call_fixup(vaddr),
                     &branches,
+                    &locals,
                 );
                 wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);
                 wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::RANGELIST);

@@ -304,6 +304,14 @@ impl ProjectDb {
                  PRIMARY KEY (program_id, function)
              );
 
+             CREATE TABLE IF NOT EXISTS decode_contexts (
+                 program_id INTEGER NOT NULL REFERENCES programs(id),
+                 address TEXT NOT NULL,
+                 name TEXT NOT NULL,
+                 value INTEGER NOT NULL,
+                 PRIMARY KEY (program_id, address, name)
+             );
+
              CREATE TABLE IF NOT EXISTS stack_variables (
                  program_id INTEGER NOT NULL REFERENCES programs(id),
                  function TEXT NOT NULL,
@@ -2189,6 +2197,43 @@ impl ProjectDb {
     }
 
     /// Replaces recovered stack variables.
+    /// Replaces the processor-context values discovery settled for this
+    /// program: the instruction set each function entry was decoded in and
+    /// every declared mode change (`LowBitCodeMode`/`TMode` on ARM,
+    /// `ISA_MODE` on MIPS). A decompile worker replays them so it reads the
+    /// same bytes the same way.
+    pub fn replace_decode_contexts(
+        &self,
+        program: ProgramId,
+        rows: &[(lre_model::Address, String, u64)],
+    ) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute("DELETE FROM decode_contexts WHERE program_id = ?1", params![program.0])?;
+        let mut stmt = tx.prepare(
+            "INSERT OR REPLACE INTO decode_contexts(program_id, address, name, value)
+             VALUES (?1, ?2, ?3, ?4)",
+        )?;
+        for (address, name, value) in rows {
+            stmt.execute(params![program.0, addr_cell(address), name, *value as i64])?;
+        }
+        drop(stmt);
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// The decode contexts recorded for a program, ascending by address.
+    pub fn decode_contexts(&self, program: ProgramId) -> Result<Vec<(lre_model::Address, String, u64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT address, name, value FROM decode_contexts WHERE program_id = ?1 ORDER BY address",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                Ok((addr_from_cell(row.get(0)?, 0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)? as u64))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
     pub fn replace_stack_variables(
         &self,
         program: ProgramId,

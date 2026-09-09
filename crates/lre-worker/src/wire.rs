@@ -156,6 +156,12 @@ pub mod elem {
     pub const ADDR: u32 = 11;
     /// ELEM_RANGELIST (address.cc:27)
     pub const RANGELIST: u32 = 13;
+    /// ELEM_SCOPE (database.cc:42)
+    pub const SCOPE: u32 = 80;
+    /// ELEM_SYMBOLLIST (database.cc:43)
+    pub const SYMBOLLIST: u32 = 81;
+    /// ELEM_LOCALDB (varmap.cc:24)
+    pub const LOCALDB: u32 = 228;
     /// ELEM_SYMBOL (marshal.cc type table)
     pub const SYMBOL: u32 = 6;
     /// ELEM_FUNCTIONSHELL (database.cc:34)
@@ -217,6 +223,10 @@ pub mod attr {
     pub const ARRAYSIZE: u32 = 48;
     /// ATTRIB_NAMELOCK (marshal.cc:1246).
     pub const NAMELOCK: u32 = 15;
+    /// ATTRIB_LOCK (varmap.cc:21)
+    pub const LOCK: u32 = 133;
+    /// ATTRIB_MAIN (varmap.cc:22)
+    pub const MAIN: u32 = 134;
     /// ATTRIB_TYPELOCK (`AttributeId`, :79; read in database.cc:439).
     pub const TYPELOCK: u32 = 23;
     /// ATTRIB_METATYPE (marshal.cc:1243).
@@ -276,8 +286,79 @@ pub mod attr_type {
     pub const UNSIGNED_INT: u8 = 4;
     /// Address space, encoded as its index.
     pub const SPACE: u8 = 5;
+    /// Special address space (marshal.hh:497); the low bits name it.
+    pub const SPECIAL_SPACE: u8 = 6;
     /// String; integer payload is the byte length.
     pub const STRING: u8 = 7;
+}
+
+/// `PackedEncode::writeSpace` for the stack space (marshal.cc:1200-1210):
+/// a special-space type byte carrying `SPECIALSPACE_STACK` (marshal.hh:499),
+/// which the decoder resolves to the architecture's own stack space.
+pub fn encode_stack_space_attribute(out: &mut Vec<u8>, attribute: u32) {
+    encode_header(out, ATTRIBUTE, attribute);
+    out.push(attr_type::SPECIAL_SPACE << 4);
+}
+
+/// A declared stack local, as the decompiler's local scope takes it.
+pub struct StackLocal<'a> {
+    pub name: &'a str,
+    /// Offset from the entry stack pointer, two's complement in the address
+    /// width (`AddressXML.encode` writes the unsigned offset).
+    pub offset: u64,
+    pub size: u64,
+    /// The `undefined<size>` core type, by name and id.
+    pub type_name: &'a str,
+    pub type_id: u64,
+}
+
+/// The function's declared locals, in the shape Ghidra's client sends inside
+/// `<function>` (`LocalSymbolMap.encodeLocalDb`): `<localdb lock main>
+/// <scope name><parent id/><rangelist/><symbollist><mapsym>…</mapsym>…`.
+/// Each mapping is `HighSymbol.encodeMapSym`: the symbol with its type, its
+/// stack address with a size, and an empty range list because the analyzer's
+/// frame variables carry no first-use point. The name is locked and the type
+/// is not: that pairing is what the decompiler turns into a *name
+/// recommendation* -- the symbol itself is deleted and rebuilt from the
+/// varnodes it finds, and the recommended name is applied to the rebuilt
+/// variable at that stack location (`ScopeLocal::collectNameRecs`,
+/// varmap.cc:357-381). A typelocked symbol would survive as declared and an
+/// unlocked one would be discarded with its name.
+pub(crate) fn encode_localdb(out: &mut Vec<u8>, function_name: &str, locals: &[StackLocal]) {
+    encode_header(out, ELEMENT_START, elem::LOCALDB);
+    encode_header(out, ATTRIBUTE, attr::LOCK);
+    out.push(attr_type::BOOLEAN << 4);
+    encode_stack_space_attribute(out, attr::MAIN);
+    encode_header(out, ELEMENT_START, elem::SCOPE);
+    encode_string_attribute(out, attr::NAME, function_name.as_bytes());
+    encode_header(out, ELEMENT_START, elem::PARENT);
+    encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, 0);
+    encode_header(out, ELEMENT_END, elem::PARENT);
+    encode_header(out, ELEMENT_START, elem::RANGELIST);
+    encode_header(out, ELEMENT_END, elem::RANGELIST);
+    encode_header(out, ELEMENT_START, elem::SYMBOLLIST);
+    for local in locals {
+        encode_header(out, ELEMENT_START, elem::MAPSYM);
+        encode_header(out, ELEMENT_START, elem::SYMBOL);
+        encode_string_attribute(out, attr::NAME, local.name.as_bytes());
+        encode_header(out, ATTRIBUTE, attr::TYPELOCK);
+        out.push(attr_type::BOOLEAN << 4);
+        encode_header(out, ATTRIBUTE, attr::NAMELOCK);
+        out.push((attr_type::BOOLEAN << 4) | 1);
+        encode_typeref(out, local.type_name, local.type_id);
+        encode_header(out, ELEMENT_END, elem::SYMBOL);
+        encode_header(out, ELEMENT_START, elem::ADDR);
+        encode_stack_space_attribute(out, attr::SPACE);
+        encode_attribute(out, attr::OFFSET, attr_type::UNSIGNED_INT, local.offset);
+        encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, local.size);
+        encode_header(out, ELEMENT_END, elem::ADDR);
+        encode_header(out, ELEMENT_START, elem::RANGELIST);
+        encode_header(out, ELEMENT_END, elem::RANGELIST);
+        encode_header(out, ELEMENT_END, elem::MAPSYM);
+    }
+    encode_header(out, ELEMENT_END, elem::SYMBOLLIST);
+    encode_header(out, ELEMENT_END, elem::SCOPE);
+    encode_header(out, ELEMENT_END, elem::LOCALDB);
 }
 
 /// Encodes a 7-bit-per-byte integer, matching PackedEncode::encodeLength.
@@ -364,14 +445,24 @@ pub(crate) fn encode_function_element(
     convention: Option<&str>,
     fixup: Option<&str>,
     call_return_branches: &[u64],
+    locals: &[StackLocal],
 ) {
     encode_header(out, ELEMENT_START, elem::FUNCTION);
     encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, scope_id);
     encode_string_attribute(out, attr::NAME, name.as_bytes());
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_addr_element(out, space, address);
+    // The local scope must precede the prototype: `Funcdata::decode` builds
+    // the prototype's scope from `<localdb>` when one was seen
+    // (funcdata.cc:804-822).
+    if !locals.is_empty() {
+        encode_localdb(out, name, locals);
+    }
     encode_flow_override(out, space, call_return_branches);
-    if no_return || convention.is_some() || fixup.is_some() {
+    // A local scope is always followed by a prototype: `Funcdata::decode`
+    // attaches the prototype to the scope it was given (funcdata.cc:821),
+    // and Ghidra's client writes the two together (`HighFunction.encode`).
+    if no_return || convention.is_some() || fixup.is_some() || !locals.is_empty() {
         encode_header(out, ELEMENT_START, elem::PROTOTYPE);
         // A named model, locked: Ghidra's own encoder locks the model whenever
         // the name is known and not "unknown"

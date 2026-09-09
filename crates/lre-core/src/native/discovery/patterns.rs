@@ -64,19 +64,16 @@ pub(super) fn valid_code<P: FlowProvider>(
     instructions: &[(u64, u64)],
     data: &[(u64, u64)],
     provider: &mut P,
-) -> bool {
+) -> Option<Vec<(u64, u64)>> {
     let mut nonzero = false;
     for offset in 0..8 {
-        let Some(byte) = entry
+        let byte = entry
             .checked_add(offset)
-            .and_then(|address| loaded_byte(import, address))
-        else {
-            return false;
-        };
+            .and_then(|address| loaded_byte(import, address))?;
         nonzero |= byte != 0;
     }
     if !nonzero {
-        return false;
+        return None;
     }
     let mut body = Vec::new();
     let mut starts = HashSet::new();
@@ -93,17 +90,17 @@ pub(super) fn valid_code<P: FlowProvider>(
         let Some(address) = target else { break };
         let mut flows = provider.flow(&[address]);
         let Some(flow) = flows.pop() else {
-            return false;
+            return None;
         };
         if !flows.is_empty()
             || flow.address != address
             || flow.length == 0
             || matches!(flow.kind, FlowKind::Bad | FlowKind::Unimpl)
         {
-            return false;
+            return None;
         }
         let Some(end) = address.checked_add(flow.length as u64) else {
-            return false;
+            return None;
         };
         let slots: u64 = flow
             .delay_slots
@@ -111,7 +108,7 @@ pub(super) fn valid_code<P: FlowProvider>(
             .map(|&length| u64::from(length))
             .sum();
         if slots >= u64::from(flow.length) {
-            return false;
+            return None;
         }
         let instruction_end = end - slots;
         // Existing starts are allowed; offcut decoding and overlapping pseudo
@@ -123,7 +120,7 @@ pub(super) fn valid_code<P: FlowProvider>(
             .iter()
             .any(|&(start, end)| start < instruction_end && address < end)
         {
-            return false;
+            return None;
         }
         if contiguous_end.is_none() || !requirement.contiguous || contiguous_end == Some(address) {
             count += 1;
@@ -132,7 +129,7 @@ pub(super) fn valid_code<P: FlowProvider>(
         let mut repeated = loaded_byte(import, address);
         for byte_address in address..instruction_end {
             let Some(byte) = loaded_byte(import, byte_address) else {
-                return false;
+                return None;
             };
             if Some(byte) != repeated {
                 repeated = None;
@@ -141,7 +138,7 @@ pub(super) fn valid_code<P: FlowProvider>(
         if repeated.is_some() && repeated == repeat_byte {
             repeat_count += 1;
             if repeat_count > 4 {
-                return false;
+                return None;
             }
         } else {
             repeat_byte = repeated;
@@ -153,7 +150,7 @@ pub(super) fn valid_code<P: FlowProvider>(
         for &length in &flow.delay_slots {
             let mut slots = provider.flow(&[slot_address]);
             let Some(slot) = slots.pop() else {
-                return false;
+                return None;
             };
             if length == 0
                 || !slots.is_empty()
@@ -162,7 +159,7 @@ pub(super) fn valid_code<P: FlowProvider>(
                 || !slot.delay_slots.is_empty()
                 || matches!(slot.kind, FlowKind::Bad | FlowKind::Unimpl)
             {
-                return false;
+                return None;
             }
             let slot_end = slot_address + u64::from(length);
             if nearby_instructions(instructions, slot_address, slot_end).any(|&(start, length)| {
@@ -174,7 +171,7 @@ pub(super) fn valid_code<P: FlowProvider>(
                 .iter()
                 .any(|&(start, end)| start < slot_end && slot_address < end)
             {
-                return false;
+                return None;
             }
             body.push((slot_address, slot_end));
             starts.insert(slot_address);
@@ -201,7 +198,7 @@ pub(super) fn valid_code<P: FlowProvider>(
         if jump {
             for &to in &flow.targets {
                 if flow.fallthrough == Some(to) && flow.delay_slots.is_empty() {
-                    return false;
+                    return None;
                 }
                 if functions.contains(&to) {
                     valid_call = true;
@@ -227,7 +224,7 @@ pub(super) fn valid_code<P: FlowProvider>(
             }
         }
     }
-    count >= requirement.minimum
+    let valid = count >= requirement.minimum
         && (!requirement.must_terminate || terminated || valid_call)
         && targets
             .iter()
@@ -240,7 +237,8 @@ pub(super) fn valid_code<P: FlowProvider>(
             !data
                 .iter()
                 .any(|&(data_start, data_end)| start < data_end && data_start < end)
-        })
+        });
+    valid.then_some(body)
 }
 
 #[derive(Clone, Copy)]
@@ -281,10 +279,23 @@ pub(super) fn collect<P: FlowProvider>(
         })
         .collect();
     let mut candidates = Vec::new();
+    // Bodies the round's earlier accepted matches decoded, in address order.
+    // Ghidra disassembles every match of a pass in that order and a later
+    // start landing inside an instruction is a conflict it skips; its
+    // delayed creator then finds a function already containing the address
+    // (PossibleDelayedFunctionCreator, 1001-1012).
+    let mut round_bodies: Vec<(u64, u64)> = Vec::new();
     for hit in &patterns.matches {
         let address = hit.address;
         if contains(&data, address) {
             refuse("data-slot", refused);
+            continue;
+        }
+        if round_bodies
+            .iter()
+            .any(|&(start, end)| start < address && address < end)
+        {
+            refuse("offcut", refused);
             continue;
         }
         if address % patterns.alignment != 0 {
@@ -338,6 +349,11 @@ pub(super) fn collect<P: FlowProvider>(
         // disassembly that the same match asks for
         // (FunctionStartAnalyzer, 133-150 and 709-742). Applying it after the
         // bytes were read in the other mode would prove nothing.
+        // Ghidra lays the value down at the one address (setCurrentContext,
+        // 133-150); the console paints it to the next change point, so a
+        // match refused below hands the region back the value it held.
+        let mut restore: Vec<(String, u64)> = Vec::new();
+        let mut pushed = 0usize;
         for action in &rule.actions {
             if action.kind != "setcontext" || decoded_here {
                 continue;
@@ -361,13 +377,25 @@ pub(super) fn collect<P: FlowProvider>(
                 .map_err(|error| {
                     super::ImportError::Bad(format!("invalid pattern context value: {error}"))
                 })?;
+            if let Some(held) = provider
+                .flow(&[address])
+                .pop()
+                .filter(|flow| flow.address == address)
+                .and_then(|flow| flow.mode)
+            {
+                if held != value {
+                    restore.push((name.clone(), held));
+                }
+            }
             provider.set_context(name, address, value);
             applied.push(crate::native::NativeContext {
                 name: name.clone(),
                 address,
                 value,
             });
+            pushed += 1;
         }
+        let mut accepted = None;
         for action in &rule.actions {
             match action.kind.as_str() {
                 "codeboundary" | "setcontext" => continue,
@@ -466,7 +494,7 @@ pub(super) fn collect<P: FlowProvider>(
                     contiguous: !attribute("contiguous")
                         .is_some_and(|value| value.eq_ignore_ascii_case("false")),
                 };
-                if !valid_code(
+                let Some(body) = valid_code(
                     import,
                     address,
                     &requirement,
@@ -474,10 +502,11 @@ pub(super) fn collect<P: FlowProvider>(
                     instructions,
                     &data,
                     provider,
-                ) {
+                ) else {
                     refuse("valid-code", refused);
                     continue;
-                }
+                };
+                round_bodies.extend(body);
             } else {
                 let flows = provider.flow(&[address]);
                 if flows.len() != 1
@@ -488,11 +517,20 @@ pub(super) fn collect<P: FlowProvider>(
                     refuse("undecodable", refused);
                     continue;
                 }
+                round_bodies.push((address, address + flows[0].length as u64));
             }
-            candidates.push(Candidate {
+            let candidate = Candidate {
                 address,
                 possible: action.kind == "possiblefuncstart",
-            });
+            };
+            candidates.push(candidate);
+            accepted = Some(candidate);
+        }
+        if accepted.is_none() {
+            for (name, held) in restore {
+                provider.set_context(&name, address, held);
+            }
+            applied.truncate(applied.len() - pushed);
         }
     }
     // A definite action wins over a possible action at the same address.
