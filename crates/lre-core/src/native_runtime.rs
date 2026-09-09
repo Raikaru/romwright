@@ -920,7 +920,9 @@ impl ConsoleSession {
     /// Load existing native mappings without flattening sparse virtual addresses.
     pub fn load_mapped(&mut self, import: &NativeImport) -> Result<()> {
         let image = MappedImage::new(import)?;
-        self.load_xml(&image)
+        self.load_xml(&image)?;
+        // The image's own mode declarations, before anything decodes.
+        self.set_contexts(&import.contexts)
     }
 
     fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
@@ -991,15 +993,54 @@ impl ConsoleSession {
         self.reference_call_register = import.reference_call_register;
         self.new_reference_targets.clear();
         if self.reference_labels.is_none() {
-            let ranges = import.mappings.iter().filter(|mapping| mapping.flags & 4 != 0)
-                .map(|mapping| {
-                    mapping.vaddr.checked_add(mapping.size)
-                        .map(|end| (mapping.vaddr, end))
-                        .ok_or_else(|| NativeRuntimeError("pattern mapping range overflows".into()))
-                }).collect::<Result<Vec<_>>>()?;
+            // Only byte-backed ranges are searchable: a section's virtual
+            // extent can outrun its contents, and the load image raises
+            // DataUnavailError for the rest.
+            let ranges = crate::native::code_ranges(import);
             self.function_patterns(&ranges)?;
         }
         self.send_reference_fixups(import)
+    }
+
+    /// Applies context register values before anything decodes. A context is
+    /// only honoured for an address the console has not parsed yet: the
+    /// disassembly cache keys parsed instructions by address
+    /// (`DisassemblyCache`, sleigh.hh:107-122), so the caller sends these
+    /// immediately after the image loads.
+    pub(crate) fn set_contexts(&mut self, contexts: &[crate::native::NativeContext]) -> Result<()> {
+        use std::fmt::Write as _;
+        if contexts.is_empty() {
+            return Ok(());
+        }
+        // Written in batches: one write of every command would fill the
+        // console's stdout pipe while it waits for the rest of its input, and
+        // both sides would block. An image can declare thousands of these.
+        for batch in contexts.chunks(128) {
+            let mut script = String::new();
+            for context in batch {
+                if context.name.is_empty()
+                    || context
+                        .name
+                        .chars()
+                        .any(|c| !c.is_ascii_alphanumeric() && c != '_')
+                {
+                    return err(format!("invalid context register name: {}", context.name));
+                }
+                let _ = writeln!(
+                    script,
+                    "context {} 0x{:x} {}",
+                    context.name, context.address, context.value
+                );
+            }
+            self.send(&script)?;
+            for _ in 0..batch.len() {
+                let response = read_until_prompt(&mut self.reader)?;
+                if !response.contains("CONTEXT ") {
+                    return err(format!("context command failed: {}", response.trim()));
+                }
+            }
+        }
+        Ok(())
     }
 
     /// Names the pattern-proven function starts inside this console, so a
@@ -1022,12 +1063,34 @@ impl ConsoleSession {
             count += 1;
         }
         if count != 0 {
-            self.send(&script)?;
-            for _ in 0..count {
-                let response = read_until_prompt(&mut self.reader)?;
-                if !response.lines().any(|line| matches!(line, "FIXUP 0" | "FIXUP 1")) {
-                    return err(format!("reference context failed: {response}"));
+            // Batched for the same reason as `set_contexts`: one write of
+            // every command would deadlock against the console's own output.
+            let mut pending = 0usize;
+            let mut chunk = String::new();
+            for line in script.lines() {
+                chunk.push_str(line);
+                chunk.push('\n');
+                pending += 1;
+                if pending == 128 {
+                    self.flush_fixups(&chunk, pending)?;
+                    chunk.clear();
+                    pending = 0;
                 }
+            }
+            if pending != 0 {
+                self.flush_fixups(&chunk, pending)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Writes one batch of `referencefixup` commands and reads its answers.
+    fn flush_fixups(&mut self, script: &str, count: usize) -> Result<()> {
+        self.send(script)?;
+        for _ in 0..count {
+            let response = read_until_prompt(&mut self.reader)?;
+            if !response.lines().any(|line| matches!(line, "FIXUP 0" | "FIXUP 1")) {
+                return err(format!("reference context failed: {response}"));
             }
         }
         Ok(())
@@ -1534,7 +1597,17 @@ impl ConsoleSession {
         self.stdin
             .write_all(s.as_bytes())
             .and_then(|_| self.stdin.flush())
-            .map_err(|e| NativeRuntimeError(format!("console write: {e}")))
+            .map_err(|e| {
+                // A write fails because the console is gone. Say how it went:
+                // a silent exit is otherwise indistinguishable from a bug on
+                // this side of the pipe.
+                let fate = match self.child.try_wait() {
+                    Ok(Some(status)) => format!(" (console exited: {status})"),
+                    Ok(None) => String::new(),
+                    Err(error) => format!(" (console status unknown: {error})"),
+                };
+                NativeRuntimeError(format!("console write: {e}{fate}"))
+            })
     }
 }
 impl Drop for ConsoleSession {

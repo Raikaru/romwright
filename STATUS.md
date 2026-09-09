@@ -5113,6 +5113,48 @@ evidence:
   `differential.sh`, `workflow.sh`, `data_xrefs.sh` and
   `generic_discovery_test.sh` all pass.
 
+### m4-034 evidence (ARM: the mode the image declares)
+- An Android ARM library arrived in the corpus (`librealfootball2011.so`,
+  Real Football 2011, 12136 `STT_FUNC` symbols; the scored copy has its
+  symbol table stripped and keeps only the dynamic one). Ventris recovered
+  **8** of them. Three things were missing, each one in Ghidra's own rules:
+  - **The Thumb bit is a mode, not an address.** ARM marks Thumb code with
+    the low bit of a function's address and with `$t`/`$a` mapping symbols;
+    the address is the aligned one and the bit means `TMode=1`
+    (`ARM_ElfExtension.creatingFunction`, 116-140, `evaluateElfSymbol`,
+    142-209). Every odd address was taken literally before, so nothing lined
+    up with anything.
+  - **The console had no way to be told.** It does now: `context <name>
+    <address> <value>` calls `ContextDatabase::setVariable`, and the import
+    sends every declaration the image makes immediately after the image
+    loads, before anything decodes. A pattern's own `<setcontext>` -- which
+    is how ARM's pattern file separates Thumb prologues from ARM ones -- is
+    applied the same way, at the match address, and only where nothing has
+    been decoded yet (`FunctionStartAnalyzer`, 133-150, 709-742). It used to
+    abort the whole pattern search as an unavailable prerequisite.
+  - **A mode declaration could kill the console.** Setting a value invalidates
+    two caches -- `ContextCache` holds a pointer into the database's own blob
+    that a set may move, and every `ParserContext` in the disassembly cache
+    was resolved under the old value -- so the console rebuilds both. And
+    reading arbitrary bytes in Thumb mode drove the constructor walk past the
+    parser's fixed 75 states (`sleigh.cc:457`); indexing past the end took the
+    process down with SIGSEGV mid-import. Out of states is now a decode
+    failure, which is what every caller already handles.
+- Measured, JVM-free: **12680 functions, recall 0.9698, precision 0.9282**,
+  16.5 s, 95 MB peak, 795921 instructions decoded. The dynamic symbol table
+  supplies most starts, so this is a symbol-assisted number, not blind
+  recovery -- what it establishes is that ARM/Thumb images are now *read*
+  rather than mangled.
+- Regressions: `flow_batch_answers_every_address_it_is_asked`,
+  `pattern_search_reads_only_the_bytes_the_image_carries` and
+  `a_mode_declaration_never_takes_the_console_down` pin the three console
+  rules with real bytes. `cargo test --workspace` **269 pass**; all five
+  shell suites pass.
+- Two batching deadlocks fixed on the way: writing thousands of commands in
+  one `write_all` filled the console's stdout pipe while it waited for the
+  rest of its input, and both sides blocked forever. `set_contexts` and the
+  reference fixups now write in batches of 128 and read each batch's answers.
+
 ## Next task
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,

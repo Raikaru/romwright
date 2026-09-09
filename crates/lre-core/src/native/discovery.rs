@@ -17,6 +17,9 @@ mod tests;
 
 trait FlowProvider {
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult>;
+    /// Applies a processor mode value at an address, before anything there is
+    /// decoded. A provider with no console has nothing to tell.
+    fn set_context(&mut self, _name: &str, _address: u64, _value: u64) {}
     fn linkages(&mut self, addresses: &[u64]) -> Vec<LinkageResult>;
     fn plt_linkages(&mut self, addresses: &[u64]) -> Vec<LinkageResult>;
     fn context_linkages(&mut self, contexts: &[LinkageContext]) -> Vec<LinkageResult>;
@@ -76,6 +79,24 @@ impl ConsoleProvider {
 }
 
 impl FlowProvider for ConsoleProvider {
+    fn set_context(&mut self, name: &str, address: u64, value: u64) {
+        let context = [crate::native::NativeContext {
+            name: name.to_string(),
+            address,
+            value,
+        }];
+        if let Err(error) = self.session.set_contexts(&context) {
+            self.failure = Some(error);
+            return;
+        }
+        for shard in self.shards.iter_mut() {
+            if let Err(error) = shard.set_contexts(&context) {
+                self.failure = Some(error);
+                return;
+            }
+        }
+    }
+
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
         // Seeded walking already visits each instruction once. Only the
         // section sweep has decoded results worth retaining and reusing.
@@ -750,6 +771,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 extents[instruction_start..].sort_unstable();
                 {
                     let mut refused = std::collections::BTreeMap::new();
+                    let mut applied = Vec::new();
                     let collected = patterns::collect(
                         imp,
                         patterns,
@@ -758,8 +780,12 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         &conditional_targets,
                         &fell_into,
                         &mut refused,
+                        &mut applied,
                         flow_provider,
                     )?;
+                    // Every later console -- the reference pass, a decompile
+                    // worker -- must decode these addresses in the same mode.
+                    imp.contexts.extend(applied);
                     imp.patterns_seen = Some(lre_model::PatternStats {
                         hits: patterns.matches.len() as u64,
                         accepted: collected.len() as u64,
