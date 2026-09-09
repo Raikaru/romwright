@@ -1496,6 +1496,21 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     indirect_jumps.sort_unstable();
     indirect_jumps.dedup();
     imp.indirect_jumps = indirect_jumps;
+    // The bytes this walk decoded, merged into ranges: what a later pass
+    // reads to tell a target it has seen from one it has not.
+    let mut decoded: Vec<(u64, u64)> = Vec::new();
+    let mut sorted_extents: Vec<(u64, u64)> = extents[instruction_start..]
+        .iter()
+        .map(|&(start, length)| (start, start + length))
+        .collect();
+    sorted_extents.sort_unstable();
+    for (start, end) in sorted_extents {
+        match decoded.last_mut() {
+            Some(last) if start <= last.1 => last.1 = last.1.max(end),
+            _ => decoded.push((start, end)),
+        }
+    }
+    imp.decoded_ranges = decoded;
     imp.indirect_transfers = flow_endings
         .iter()
         .filter(|&&(_, indirect)| indirect)

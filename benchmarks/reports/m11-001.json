@@ -2,7 +2,7 @@
  "id": "m11-001",
  "milestone": "M11",
  "criterion": "GOAL.md C3: measured game-first sessions on the approved targets",
- "recorded_at": "2026-09-08T21:51:15.834823+00:00",
+ "recorded_at": "2026-09-09T12:10:14.418053+00:00",
  "machine": {
   "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
   "cpu": "x86_64"
@@ -25,88 +25,68 @@
  },
  "metrics": {
   "session.oracle_functions": 8522,
-  "session.import_wall_s": 11.49,
-  "session.import_peak_kb": 65248,
-  "session.functions_recovered": 8899,
-  "session.functions_matched": 8351,
-  "session.fn_recall": 0.979934287725886,
-  "session.fn_precision": 0.9384200471963142,
+  "session.import_wall_s": 45.01,
+  "session.import_peak_kb": 228664,
+  "session.functions_recovered": 9186,
+  "session.functions_matched": 8353,
+  "session.fn_recall": 0.9801689744191504,
+  "session.fn_precision": 0.9093185281950795,
   "session.language_is_powerpc_be32": 1.0,
-  "session.page_ms": 371.006776986178,
+  "session.page_ms": 312.19098501605913,
   "session.xrefs_rows": 1,
   "session.listing_rows": 16,
-  "session.decompile_ms": 17.45678804581985,
+  "session.decompile_ms": 19.039363018237054,
   "session.decompiled": 5,
-  "session.inference_analyzed": 1744,
+  "session.inference_analyzed": 1770,
   "session.memory_bytes": 8,
-  "session.live_bytes": 16,
   "session.edit_survived_reimport": 1.0,
-  "session.worker_recycles": 8,
-  "session.bounded_analyzed": 1716
+  "session.worker_recycles": 10,
+  "session.bounded_analyzed": 1770
  },
  "steps": {
   "import": {
-   "wall_s": 11.49,
-   "peak_kb": 65248,
-   "message": "imported bond natively (8899 functions, PowerPC:BE:32:default)"
+   "wall_s": 45.01,
+   "peak_kb": 228664,
+   "message": "imported bond natively (9186 functions, PowerPC:BE:32:default)"
   },
   "language": "PowerPC:BE:32:default",
   "recover_classes": {
    "anchors": 0,
    "bases": 0,
    "classes": 0,
-   "revision": 9,
+   "revision": 10,
    "typeinfo": 0,
    "without_vtable": 0,
-   "ms": 17.5
+   "ms": 27.7
   },
   "infer_prototypes": {
-   "analyzed": 1744,
+   "analyzed": 1770,
    "changed": 0,
    "rounds": 0,
    "stop_reason": "budget",
    "worker_recycles": 4,
-   "ms": 20014.0
+   "ms": 20016.0
   },
   "memory_live": {
-   "endpoint": "127.0.0.1:24689",
-   "bytes": [
-    71,
-    87,
-    55,
-    69,
-    54,
-    57,
-    0,
-    1,
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0
-   ],
-   "disc_id": "GW7E69",
-   "ms": 0.9
+   "status": "skipped",
+   "reason": "no VENTRIS_LIVE_ENDPOINT: no GDB stub was serving the running console, so no live read is claimed"
   },
   "reimport": {
-   "wall_s": 9.69,
-   "peak_kb": 65184,
-   "message": "imported bond natively (8899 functions, PowerPC:BE:32:default)"
+   "wall_s": 39.72,
+   "peak_kb": 235848,
+   "message": "imported bond natively (9186 functions, PowerPC:BE:32:default)"
   },
   "infer_prototypes_bounded": {
-   "analyzed": 1716,
+   "analyzed": 1770,
    "changed": 0,
    "rounds": 0,
    "stop_reason": "budget",
-   "worker_recycles": 8,
-   "ms": 20023.8,
+   "worker_recycles": 10,
+   "ms": 20022.6,
    "cap_bytes": 125829120
   }
  },
  "status": "pass",
  "passed": true,
- "summary": "a JVM-free session on the approved target: 8899 functions recovered from the stripped module in 11.5 s at 65 MB, recall 0.9799 and precision 0.9384 against the module's own 8522 function symbols, 5 functions decompiled (median 17 ms), 1744 analysed by prototype inference, and one rename read back after a second import"
+ "summary": "a JVM-free session on the approved target: 9186 functions recovered from the stripped module in 45.0 s at 229 MB, recall 0.9802 and precision 0.9093 against the module's own 8522 function symbols, 5 functions decompiled (median 19 ms), 1770 analysed by prototype inference, and one rename read back after a second import"
 }
