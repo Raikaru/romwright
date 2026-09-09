@@ -593,6 +593,10 @@ pub enum ReferenceKind {
     ComputedCall,
     /// A branch through a register whose value the propagation resolved.
     ComputedJump,
+    /// A load or store through the stack pointer: `to` is the offset from the
+    /// entry stack pointer in the pointer's width, two's complement, and
+    /// `size` the access width.
+    Stack,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -633,6 +637,13 @@ pub struct FlowResult {
     /// MIPS's ISA mode); absent on every other language.
     #[serde(default)]
     pub mode: Option<u64>,
+    /// Branch and call targets whose instruction set, as it flows from this
+    /// instruction, differs from what the console currently holds there:
+    /// `(target, mode)`. Ghidra's disassembler carries context along flow
+    /// (`DisassemblerContextImpl`); the native console only paints explicit
+    /// change points, so a caller sets these before decoding the target.
+    #[serde(default)]
+    pub target_modes: Vec<(u64, u64)>,
 }
 
 /// Bounded SLEIGH evidence for an indirect transfer through a pointer slot.
@@ -764,6 +775,7 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
             let mut return_op = false;
             let mut delay_slots = Vec::new();
             let mut mode = None;
+            let mut target_modes = Vec::new();
             let mut metadata = 0u8;
 
             for part in rest.split_whitespace() {
@@ -797,6 +809,18 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
                     metadata |= 2;
                 } else if let Some(val) = part.strip_prefix("mode=") {
                     mode = val.parse::<u64>().ok();
+                } else if let Some(val) = part.strip_prefix("flow_modes=") {
+                    for item in val.split(',').filter(|item| !item.is_empty()) {
+                        let (target, value) = item.split_once(':').ok_or_else(|| {
+                            NativeRuntimeError("invalid flow_modes entry".into())
+                        })?;
+                        let target = parse_address_token(target)
+                            .ok_or_else(|| NativeRuntimeError("invalid flow_modes target".into()))?;
+                        let value = value
+                            .parse::<u64>()
+                            .map_err(|_| NativeRuntimeError("invalid flow_modes value".into()))?;
+                        target_modes.push((target, value));
+                    }
                 } else if let Some(val) = part.strip_prefix("return_op=") {
                     return_op = val == "1";
                     metadata |= 4;
@@ -833,7 +857,9 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
                 terminal,
                 conditional,
                 return_op,
-                delay_slots, mode,
+                delay_slots,
+                mode,
+                target_modes,
                 no_op,
                 pure_jump,
                 address: addr,
@@ -1375,7 +1401,7 @@ impl ConsoleSession {
                 terminal: false,
                 conditional: false,
                 return_op: false,
-                delay_slots: Vec::new(), mode: None,
+                delay_slots: Vec::new(), mode: None, target_modes: Vec::new(),
                 no_op: false,
                 pure_jump: false,
                 address,
@@ -1396,7 +1422,7 @@ impl ConsoleSession {
             terminal: false,
             conditional: false,
             return_op: false,
-            delay_slots: Vec::new(), mode: None,
+            delay_slots: Vec::new(), mode: None, target_modes: Vec::new(),
             no_op: false,
             pure_jump: false,
             address,
@@ -1453,7 +1479,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(), mode: None,
+                    delay_slots: Vec::new(), mode: None, target_modes: Vec::new(),
                     no_op: false,
                     pure_jump: false,
                     address: addr,
@@ -1467,7 +1493,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(), mode: None,
+                    delay_slots: Vec::new(), mode: None, target_modes: Vec::new(),
                     no_op: false,
                     pure_jump: false,
                     address: addr,
@@ -1498,7 +1524,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(), mode: None,
+                    delay_slots: Vec::new(), mode: None, target_modes: Vec::new(),
                     no_op: false,
                     pure_jump: false,
                     address: addr,
@@ -2677,10 +2703,12 @@ mod tests {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
-        for (setup, transfer, candidate) in [
-            ([0x48, 0x89, 0xf8], 0x60, true), // rax = unknown rdi; jmp [rax+offset]
-            ([0x48, 0x89, 0xe0], 0x60, false), // rax = stack alias; jmp [rax+offset]
-            ([0x48, 0x89, 0xf8], 0x50, false), // original call [rax+offset]
+        for (setup, transfer, expected) in [
+            // rax = unknown rdi; jmp [rax+offset]: a data slot
+            ([0x48, 0x89, 0xf8], 0x60, vec![(0x1009, 0x10048, ReferenceKind::Data)]),
+            // rax = stack alias; jmp [rax+offset]: a frame slot, never data
+            ([0x48, 0x89, 0xe0], 0x60, vec![(0x1009, 0x10048, ReferenceKind::Stack)]),
+            ([0x48, 0x89, 0xf8], 0x50, Vec::new()), // original call [rax+offset]
         ] {
             let mut code = setup.to_vec();
             code.extend_from_slice(&[0x48, 0x05, 0, 0, 1, 0]); // add rax,0x10000
@@ -2703,11 +2731,6 @@ mod tests {
             session.load_mapped(&import).unwrap();
             let facts = session.references(0x1000, end, &import.mappings, false).unwrap();
             let triples: Vec<_> = facts.iter().map(|fact| (fact.from, fact.to, fact.kind)).collect();
-            let expected = if candidate {
-                vec![(0x1009, 0x10048, ReferenceKind::Data)]
-            } else {
-                Vec::new()
-            };
             assert_eq!(triples, expected, "setup={setup:x?}, transfer={transfer:x}");
             assert!(session.constants(0x1000, end, &import.mappings, false).unwrap().is_empty(),
                 "a symbolic offset is not a proven constant pointer");

@@ -15,6 +15,29 @@ mod patterns;
 #[cfg(test)]
 mod tests;
 
+/// Carries each decoded instruction's instruction set to the branch and
+/// call targets it flows to, as Ghidra's disassembler does
+/// (`DisassemblerContextImpl` flows the context register along every flow).
+/// The console names only the targets whose held value differs, and a target
+/// already decoded keeps the value it was decoded under: Ghidra's first
+/// disassembly of an address wins the same way.
+fn flow_modes_into_targets(
+    flows: &[FlowResult],
+    visited: &HashSet<u64>,
+    flowed: &mut HashMap<u64, u64>,
+    flow_provider: &mut dyn FlowProvider,
+) {
+    for info in flows {
+        for &(target, mode) in &info.target_modes {
+            if visited.contains(&target) || flowed.contains_key(&target) {
+                continue;
+            }
+            flowed.insert(target, mode);
+            flow_provider.set_context("LowBitCodeMode", target, mode);
+        }
+    }
+}
+
 trait FlowProvider {
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult>;
     /// Applies a processor mode value at an address, before anything there is
@@ -520,6 +543,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         addr_origin.insert(s, s);
     }
     let mut visited: HashSet<u64> = HashSet::with_capacity(32768);
+    let mut flowed_modes: HashMap<u64, u64> = HashMap::new();
     // Entries a data pointer proposed, as opposed to a seed the loader
     // declared or a call reached: only these are retractable below.
     let mut data_derived: HashSet<u64> = HashSet::new();
@@ -538,6 +562,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         let mut next_active: Vec<u64> = Vec::new();
         for chunk in to_query.chunks(1024) {
             let flows = flow_provider.flow(chunk);
+            flow_modes_into_targets(&flows, &visited, &mut flowed_modes, flow_provider);
             // Branch targets need an unconditional transfer to a proven import
             // stub; direct calls independently establish their target entries.
             if has_linkage_slots {
@@ -940,6 +965,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     let mut next_active: Vec<u64> = Vec::new();
                     for chunk in to_query.chunks(1024) {
                         let flows = flow_provider.flow(chunk);
+                        flow_modes_into_targets(&flows, &visited, &mut flowed_modes, flow_provider);
                         for (addr, info) in chunk.iter().copied().zip(flows) {
                             if let Some(mode) = info.mode {
                                 if addr_origin.get(&addr) == Some(&addr) {
@@ -1399,6 +1425,18 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         let entries: HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
         entry_modes.sort_unstable();
         entry_modes.dedup();
+        // Flowed values were set before their targets decoded, so an entry's
+        // recorded mode already agrees; the rest name mid-body targets a
+        // later decode must read the same way.
+        let mut flowed: Vec<(u64, u64)> = flowed_modes.drain().collect();
+        flowed.sort_unstable();
+        imp.contexts.extend(flowed.into_iter().map(|(address, value)| {
+            crate::native::NativeContext {
+                name: "LowBitCodeMode".into(),
+                address,
+                value,
+            }
+        }));
         imp.contexts.extend(
             entry_modes
                 .iter()

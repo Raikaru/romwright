@@ -296,7 +296,7 @@ mod tests {
             conditional: kind == FlowKind::CBranch,
             return_op: kind == FlowKind::Return,
             delay_slots: Vec::new(),
-            mode: None,
+            mode: None, target_modes: Vec::new(),
         }
     }
 

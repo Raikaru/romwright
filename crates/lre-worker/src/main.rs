@@ -63,37 +63,55 @@ fn with_entry_register_tracking(
     cspec: &str,
     provider: &lre_worker::ProgramProvider,
     lang_dir: &str,
+    contexts: &[(u64, String, u64)],
 ) -> String {
-    if !lang_dir.contains("MIPS") {
-        return cspec.to_string();
-    }
-    let Some(&(register_offset, register_size)) = provider.registers.get("t9") else {
-        return cspec.to_string();
-    };
-    if register_size == 0 || register_size > 8 {
-        return cspec.to_string();
-    }
     let Some(close) = cspec.rfind("</compiler_spec>") else {
         return cspec.to_string();
     };
-    let mut entries: Vec<u64> = provider.functions.clone();
-    entries.sort_unstable();
-    entries.dedup();
-    if entries.is_empty() {
-        return cspec.to_string();
-    }
-    let mut tracked = String::from("<context_data>\n");
-    for entry in entries {
-        tracked.push_str(&format!(
-            "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{entry:x}\">\n\
-             <set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{entry:x}\"/>\n\
-             </tracked_set>\n"
+    let mut data = String::new();
+    // The instruction set discovery settled at each point, replayed as the
+    // `<context_set>` ranges `ContextDatabase::decodeFromSpec` takes: a value
+    // holds from its address up to the next recorded point. This is the
+    // program context Ghidra's client carries for it; without it a Thumb
+    // function decoded as ARM and the decompiler reported bad instruction
+    // data (182 of 512 sampled DS functions).
+    let image_end = provider.backing.image_end();
+    for (index, (address, name, value)) in contexts.iter().enumerate() {
+        let last = contexts
+            .get(index + 1)
+            .map(|(next, _, _)| next.saturating_sub(1))
+            .unwrap_or(image_end.saturating_sub(1))
+            .max(*address);
+        data.push_str(&format!(
+            "<context_set space=\"ram\" first=\"0x{address:x}\" last=\"0x{last:x}\">\n\
+             <set name=\"{name}\" val=\"{value}\"/>\n\
+             </context_set>\n"
         ));
     }
-    tracked.push_str("</context_data>\n");
-    let mut out = String::with_capacity(cspec.len() + tracked.len());
+    if lang_dir.contains("MIPS") {
+        if let Some(&(register_offset, register_size)) = provider.registers.get("t9") {
+            if register_size != 0 && register_size <= 8 {
+                let mut entries: Vec<u64> = provider.functions.clone();
+                entries.sort_unstable();
+                entries.dedup();
+                for entry in entries {
+                    data.push_str(&format!(
+                        "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{entry:x}\">\n\
+                         <set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{entry:x}\"/>\n\
+                         </tracked_set>\n"
+                    ));
+                }
+            }
+        }
+    }
+    if data.is_empty() {
+        return cspec.to_string();
+    }
+    let mut out = String::with_capacity(cspec.len() + data.len() + 32);
     out.push_str(&cspec[..close]);
-    out.push_str(&tracked);
+    out.push_str("<context_data>\n");
+    out.push_str(&data);
+    out.push_str("</context_data>\n");
     out.push_str(&cspec[close..]);
     out
 }
@@ -334,6 +352,7 @@ fn run(
     }
     provider.load_call_edges(&db, pid)?;
     provider.load_return_behaviors(&db, pid, false)?;
+    provider.load_stack_frames(&db, pid)?;
     provider.load_calling_conventions(&db, pid)?;
 
     let offsets = addresses
@@ -357,7 +376,14 @@ fn run(
     // (`ActionConstbase::apply`, coreaction.cc:693-705). Raw-SLEIGH mode uses
     // ContextInternal, which takes tracked sets from the compiler spec
     // (`decodeFromSpec`, globalcontext.cc:531-552), so that is where it goes.
-    let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir);
+    let mut contexts: Vec<(u64, String, u64)> = db
+        .decode_contexts(pid)?
+        .into_iter()
+        .filter(|(address, _, _)| address.space == lre_model::AddressSpace::Ram)
+        .map(|(address, name, value)| (address.offset, name, value))
+        .collect();
+    contexts.sort_by(|left, right| left.0.cmp(&right.0));
+    let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir, &contexts);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(

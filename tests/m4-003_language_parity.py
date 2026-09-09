@@ -81,13 +81,14 @@ UNREACHED = {
         "native_program": "pokeheartgold.us.nds.arm9",
         "sample": 512,
         "shared_floor": 6685,
-        "identical_floor": 251,
+        "identical_floor": 373,
         "reason": "both stores load the cartridge -- the install now carries an "
                   "NDS loader and ours unpacks the ARM9 module as crt0 does -- "
                   "and the ARM9 program shares 6685 functions with the oracle, "
-                  "251 of the first 512 token-identical; the rest differ where "
-                  "the oracle's switch recovery and stack frames name what ours "
-                  "does not yet",
+                  "373 of the first 512 token-identical now that the decompile "
+                  "worker replays the instruction set discovery settled at "
+                  "each point; the rest differ where the oracle's switch "
+                  "recovery and stack frames name what ours does not yet",
     },
     "MIPS:BE:64:64-32addr": {
         "image": Path.home() / "ventris-corpus/perfect_dark_ntsc_final.z64",

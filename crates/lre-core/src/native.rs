@@ -201,6 +201,10 @@ pub struct NativeImport {
     /// bit set, aligned: on a low-bit-mode language each is decoded in the
     /// alternate instruction set from then on.
     pub computed_mode_targets: Vec<u64>,
+    /// The stack frame the propagation recovered per function: every slot a
+    /// load or store reached through the stack pointer, merged where
+    /// accesses overlap, named as Ghidra's stack analyzer names them.
+    pub stack_variables: Vec<lre_model::StackVariableRow>,
     /// Initializer-array words, with their width: each holds a code address,
     /// proved by the array it belongs to.
     pub initializer_slots: Vec<(u64, u64)>,
@@ -1581,6 +1585,67 @@ fn claim_references(
     }
 }
 
+/// The address width the language id declares (`ARM:LE:32:v5t`), which is
+/// the width a stack offset travels in.
+fn language_pointer_bits(language: &str) -> u32 {
+    language
+        .split(':')
+        .nth(2)
+        .and_then(|bits| bits.parse().ok())
+        .unwrap_or(64)
+}
+
+fn sign_extend(value: u64, bits: u32) -> i64 {
+    if bits == 0 || bits >= 64 {
+        return value as i64;
+    }
+    let shift = 64 - bits;
+    (((value << shift) as i64) >> shift)
+}
+
+/// Ghidra's stack analyzer, from the accesses one function makes through
+/// its stack pointer (`NewFunctionStackAnalysisCmd`): an offset outside
+/// `[-64K, 2048]` is refused (`defineFuncVariable`), every referenced slot
+/// becomes a variable sized by its access, overlapping slots merge into one
+/// spanning them all (`accumulateVariable`), and -- with the analyzer's
+/// default of creating locals but not parameters -- only offsets below the
+/// parameter area become variables. The name is
+/// `SymbolUtilities.getDefaultLocalName`: `local_` and the offset's
+/// magnitude in hex; the type is `undefined<size>`.
+fn stack_frame(function: u64, accesses: &[(i64, u32)]) -> Vec<lre_model::StackVariableRow> {
+    let mut slots: Vec<(i64, i64)> = accesses
+        .iter()
+        .filter(|&&(offset, size)| {
+            size > 0 && (-(64 * 1024)..=2048).contains(&offset) && offset < 0
+        })
+        .map(|&(offset, size)| (offset, offset + size as i64))
+        .collect();
+    slots.sort_unstable();
+    let mut merged: Vec<(i64, i64)> = Vec::new();
+    for (start, end) in slots {
+        match merged.last_mut() {
+            Some(last) if start < last.1 => last.1 = last.1.max(end),
+            _ => merged.push((start, end)),
+        }
+    }
+    merged
+        .into_iter()
+        .enumerate()
+        .map(|(ordinal, (start, end))| {
+            let size = (end - start) as u64;
+            lre_model::StackVariableRow {
+                function: lre_model::Address::ram(function),
+                ordinal: ordinal as u32,
+                name: format!("local_{:x}", -start),
+                storage: format!("Stack[-0x{:x}]:{size}", -start),
+                type_name: Some(format!("undefined{size}")),
+                offset: Some(start),
+                size: Some(size),
+            }
+        })
+        .collect()
+}
+
 fn infer_data_references(
     import: &mut NativeImport,
     session: &mut crate::native_runtime::ConsoleSession,
@@ -1789,7 +1854,27 @@ fn infer_data_references(
     import.thunks.extend(thunked);
     // Context adds precise accesses; existing speculative DATA remains evidence.
     // Publish no partial pass if any query fails.
-    for (_, _, facts, _) in work {
+    let pointer_bits = language_pointer_bits(&import.language);
+    // A pass covers every function, and a later round covers them again with
+    // more of the image known: the frames are this pass's, not a sum.
+    import.stack_variables.clear();
+    for (index, (start, _, facts, _)) in work.into_iter().enumerate() {
+        // The frame this function's own accesses describe. Roots that are
+        // not functions carry no frame.
+        if index < function_count {
+            let accesses: Vec<(i64, u32)> = facts
+                .iter()
+                .filter(|fact| fact.kind == ReferenceKind::Stack)
+                .map(|fact| (sign_extend(fact.to, pointer_bits), fact.size))
+                .collect();
+            import
+                .stack_variables
+                .extend(stack_frame(start, &accesses));
+        }
+        let facts: Vec<crate::native_runtime::ReferenceFact> = facts
+            .into_iter()
+            .filter(|fact| fact.kind != ReferenceKind::Stack)
+            .collect();
         // The width of an access is a fact about the location, not about the
         // instruction: stock defines data of the access size at every
         // referenced location, which is what keeps a wider read from
@@ -1834,6 +1919,7 @@ fn infer_data_references(
                 ReferenceKind::Data => ("DATA", fact.to),
                 ReferenceKind::ComputedCall => ("COMPUTED_CALL", aligned),
                 ReferenceKind::ComputedJump => ("COMPUTED_JUMP", aligned),
+                ReferenceKind::Stack => unreachable!("stack facts were taken out above"),
             };
             NativeXref::with_provenance(fact.from, to, kind, "native-analysis:constant-propagation")
         }));
@@ -1976,6 +2062,28 @@ pub fn store_import(
         })
         .collect();
     db.replace_functions(pid, &rows)?;
+    // The frame each function's own stack accesses describe, so the worker
+    // can hand the decompiler the same declared locals stock's does.
+    db.replace_stack_variables(pid, &imp.stack_variables)?;
+    // The instruction set at every point discovery settled: a mapping symbol,
+    // a pattern's declared mode, a computed target's low bit, and each
+    // entry's decoded mode. The last value written for an address wins, in
+    // the order discovery settled them.
+    // `TMode` (ARM) and `ISA_MODE` (MIPS) are the bit each language aliases
+    // as `LowBitCodeMode` (ARM.sinc:90-93, mips.sinc:416-417); one name per
+    // address keeps the last value written the one that applies.
+    let contexts: Vec<(lre_model::Address, String, u64)> = imp
+        .contexts
+        .iter()
+        .map(|context| {
+            let name = match context.name.as_str() {
+                "TMode" | "ISA_MODE" => "LowBitCodeMode".to_string(),
+                other => other.to_string(),
+            };
+            (lre_model::Address::ram(context.address), name, context.value)
+        })
+        .collect();
+    db.replace_decode_contexts(pid, &contexts)?;
     // Refresh this loader's facts without discarding symbols from other owners.
     let mut symbols = db.symbols(pid)?;
     symbols.retain(|symbol| symbol.source != "native-import");
@@ -2444,7 +2552,7 @@ mod tests {
                 0x1030 => (FlowKind::Bad, None, vec![]),
                 _ => (FlowKind::Return, None, vec![]),
             };
-            FlowResult { terminal: kind == FlowKind::Return, conditional: false, return_op: kind == FlowKind::Return, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough, targets, kind, mode: None }
+            FlowResult { terminal: kind == FlowKind::Return, conditional: false, return_op: kind == FlowKind::Return, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough, targets, kind, mode: None, target_modes: Vec::new() }
         }).collect());
         assert!(imp.functions.iter().any(|f| f.entry == 0x1020));
         assert!(imp.functions.iter().any(|f| f.entry == 0x1040),
@@ -2470,7 +2578,7 @@ mod tests {
             FlowResult { terminal: address != 0x1000, conditional: false, return_op: address != 0x1000, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough: None,
             targets: if address == 0x1000 { vec![0x3000] } else { vec![] },
             kind: if address == 0x1000 { FlowKind::Branch } else { FlowKind::Return },
-            mode: None,
+            mode: None, target_modes: Vec::new(),
             }
         }).collect());
         assert!(imp.functions.iter().any(|f| f.entry == 0x2000),
@@ -2788,7 +2896,7 @@ mod tests {
         flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
             crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
                 targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
-                mode: None,
+                mode: None, target_modes: Vec::new(),
             }
         }).collect());
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1040));
@@ -2847,7 +2955,7 @@ mod tests {
         flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
             crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
                 targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
-                mode: None,
+                mode: None, target_modes: Vec::new(),
             }
         }).collect());
         assert!(!imp.functions.iter().any(|f| f.entry == 0x99999));
@@ -2887,7 +2995,7 @@ mod tests {
                     fallthrough: Some(0x1024),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
-            mode: None,
+            mode: None, target_modes: Vec::new(),
                 },
             );
         assert!(
@@ -2940,7 +3048,7 @@ mod tests {
                     fallthrough: Some(0x2054),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
-            mode: None,
+            mode: None, target_modes: Vec::new(),
                 },
             );
         assert!(
@@ -3080,55 +3188,55 @@ mod tests {
                     fallthrough: Some(0x1001),
                     targets: Vec::new(),
                     kind: FlowKind::Fallthrough,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1001 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1001,
                     length: 3,
                     fallthrough: Some(0x1004),
                     targets: Vec::new(),
                     kind: FlowKind::Fallthrough,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1004 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1004,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
                     kind: FlowKind::Return,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1040 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1040,
                     length: 1,
                     fallthrough: Some(0x1041),
                     targets: Vec::new(),
                     kind: FlowKind::Fallthrough,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1041 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1041,
                     length: 3,
                     fallthrough: Some(0x1044),
                     targets: Vec::new(),
                     kind: FlowKind::Fallthrough,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1044 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1044,
                     length: 5,
                     fallthrough: Some(0x1049),
                     targets: vec![0x1080],
                     kind: FlowKind::Call,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1049 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1049,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
                     kind: FlowKind::Return,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     0x1080 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1080,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
                     kind: FlowKind::Return,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                     other => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: other,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
                     kind: FlowKind::Return,
-                    mode: None, },
+                    mode: None, target_modes: Vec::new(), },
                 }
             }).collect()
         });
