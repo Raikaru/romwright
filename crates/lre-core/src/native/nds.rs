@@ -142,18 +142,115 @@ fn regions(cpu: &str) -> Vec<DeclaredRegion> {
     declared
 }
 
+/// NitroSDK `crt0.c`: `_start_ModuleParams` is a table of nine words the
+/// linker places in the uncompressed head of the ARM9 static module --
+/// autoload list, autoload start, static bss start and end, then
+/// `CompressedStaticEnd` at index 5, the SDK version, and two checker words
+/// `SDK_NITROCODE_BE` (0xdec00621) and `SDK_NITROCODE_LE` (0x2106c0de) at
+/// indices 7 and 8 (crt0.c:362-372). The pair is what identifies the table.
+const NITROCODE_BE: u32 = 0xdec0_0621;
+const NITROCODE_LE: u32 = 0x2106_c0de;
+const COMPRESSED_STATIC_END: usize = 5;
+
+/// Where the module's compressed data ends, in RAM, when the module is
+/// compressed at all: `_start_ModuleParams[5]`, which crt0 hands to
+/// `MIi_UncompressBackward` (crt0.c:277-279) and which is zero for an
+/// uncompressed module.
+fn compressed_static_end(module: &[u8]) -> Option<u64> {
+    let word = |at: usize| -> Option<u32> {
+        Some(u32::from_le_bytes(module.get(at..at + 4)?.try_into().ok()?))
+    };
+    (0..module.len().saturating_sub(8))
+        .step_by(4)
+        .find(|&at| word(at) == Some(NITROCODE_BE) && word(at + 4) == Some(NITROCODE_LE))
+        .and_then(|checker| {
+            let base = checker.checked_sub(7 * 4)?;
+            let end = word(base + COMPRESSED_STATIC_END * 4)?;
+            (end != 0).then_some(u64::from(end))
+        })
+}
+
+/// `MIi_UncompressBackward` (crt0.c:396-457), byte for byte. `bottom` is the
+/// end of the packed archive; the footer just below it holds the offset back
+/// to the top of the compressed data (24 bits), the offset back to the bottom
+/// of the compressed data (8 bits) and the offset forward to the bottom of
+/// the original data. Decompression runs downward from `bottom + original`,
+/// copying literals or `(length nibble) + 3` bytes from `index + 2` ahead.
+/// Returns the module with the decompressed tail, or `None` when the footer
+/// does not describe the bytes it sits in.
+fn uncompress_backward(module: &[u8], ram: u64, bottom: u64) -> Option<Vec<u8>> {
+    let bottom = usize::try_from(bottom.checked_sub(ram)?).ok()?;
+    if bottom < 8 || bottom > module.len() {
+        return None;
+    }
+    let word = |at: usize| u32::from_le_bytes(module[at..at + 4].try_into().unwrap());
+    let footer = word(bottom - 8);
+    let original = word(bottom - 4) as usize;
+    let mut inp = bottom.checked_sub((footer >> 24) as usize)?;
+    let inp_top = bottom.checked_sub((footer & 0x00ff_ffff) as usize)?;
+    if inp_top > inp || original == 0 || original > 0x0400_0000 {
+        return None;
+    }
+    let mut out = module.to_vec();
+    out.resize(bottom.checked_add(original)?, 0);
+    let mut outp = out.len();
+    while inp > inp_top {
+        inp -= 1;
+        let mut flag = out[inp];
+        for _ in 0..8 {
+            if inp <= inp_top {
+                break;
+            }
+            if flag & 0x80 != 0 {
+                if inp < 2 {
+                    return None;
+                }
+                inp -= 1;
+                let len = out[inp];
+                inp -= 1;
+                let index = ((usize::from(len & 0x0f) << 8) | usize::from(out[inp])) + 2;
+                for _ in 0..(usize::from(len >> 4) + 3) {
+                    let source = outp.checked_add(index)?;
+                    if source >= out.len() || outp == 0 {
+                        return None;
+                    }
+                    outp -= 1;
+                    out[outp] = out[source];
+                }
+            } else {
+                inp -= 1;
+                if outp == 0 {
+                    return None;
+                }
+                outp -= 1;
+                out[outp] = out[inp];
+            }
+            flag <<= 1;
+        }
+    }
+    // Everything the archive wrote lands above the compressed data's top;
+    // the uncompressed head below it is untouched.
+    (outp >= inp_top).then_some(out)
+}
+
 fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> NativeImport {
     let start = descriptor.rom_offset as usize;
     let end = start + descriptor.size as usize;
+    let stored = &data[start..end];
+    // The ARM9 static module is usually stored compressed and unpacked by
+    // crt0 before anything else runs; the store must hold what runs.
+    let bytes = compressed_static_end(stored)
+        .and_then(|bottom| uncompress_backward(stored, descriptor.ram, bottom))
+        .unwrap_or_else(|| stored.to_vec());
     let mut import = NativeImport {
         mappings: vec![Mapping {
             vaddr: descriptor.ram,
-            size: descriptor.size,
+            size: bytes.len() as u64,
             file_off: descriptor.rom_offset,
             // Code loaded into RAM: readable, writable and executable, as
             // the console leaves it.
             flags: 0x7,
-            bytes: data[start..end].to_vec(),
+            bytes,
         }],
         mapping_names: vec![cpu.into()],
         declared_regions: regions(cpu),

@@ -305,6 +305,7 @@ impl ProgramImage {
         })?;
         // Region derivation reuses the native parser (sections -> ranges;
         // flags preserved so discovery classification still sees them).
+        let mut patches = BTreeMap::new();
         let (regions, relocations) = match crate::native::parse_container(&map) {
             Ok(images) => {
                 // A container holds one image per processor at different
@@ -324,9 +325,21 @@ impl ProgramImage {
                 let Some((_, import)) = selected else {
                     return Err(crate::native::ImportError::Bad("empty container".into()).into());
                 };
-                let regions = import.mappings.iter().map(|m| MemoryRegion {
-                    vaddr: m.vaddr, size: m.size, file_off: m.file_off,
-                    file_size: m.bytes.len() as u64, flags: m.flags,
+                let regions = import.mappings.iter().map(|m| {
+                    // A loader may hand over bytes the file does not hold at
+                    // that offset -- a DS ARM9 module unpacked the way crt0
+                    // unpacks it -- and those bytes, not the file's, are what
+                    // runs. They ride as a patch over the file-backed view.
+                    let stored = usize::try_from(m.file_off)
+                        .ok()
+                        .and_then(|off| map.get(off..off.checked_add(m.bytes.len())?));
+                    if stored != Some(m.bytes.as_slice()) {
+                        patches.insert(m.vaddr, m.bytes.clone());
+                    }
+                    MemoryRegion {
+                        vaddr: m.vaddr, size: m.size, file_off: m.file_off,
+                        file_size: m.bytes.len() as u64, flags: m.flags,
+                    }
                 }).collect();
                 (regions, import.relocations.clone())
             }
@@ -343,7 +356,7 @@ impl ProgramImage {
             map,
             regions,
             relocations,
-            patches: BTreeMap::new(),
+            patches,
         })
     }
 

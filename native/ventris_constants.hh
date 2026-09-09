@@ -48,6 +48,10 @@ struct ReferenceFact {
   unsigned width;
   std::pair<Word, Word> key() const { return std::make_pair(pc, target); }
   const char *kind() const {
+    // Ghidra's RefType names for a flow whose target the propagation
+    // resolved: `COMPUTED_CALL` and `COMPUTED_JUMP` (RefType.java).
+    if (access & 16) return "COMPUTED_CALL";
+    if (access & 32) return "COMPUTED_JUMP";
     if ((access & 3) == 3) return "READ_WRITE";
     if (access & 8) return "DATA"; // INDIRECTION in Ghidra's reference model.
     if (access & 2) return "WRITE";
@@ -112,9 +116,13 @@ class Propagation {
   const std::vector<Region> &regions;
   AddrSpace *dataSpace, *codeSpace;
   const VarnodeData *stackRegister = nullptr;
+  VarnodeData modeRegister;
+  bool hasModeRegister = false;
   Word first, end;
   int pointerSize, uniqueSpace, spaceCount, stackBase = -1;
   bool bigEndian, trustWritable;
+  // The instruction being evaluated, for the literal-pool rule in load().
+  mutable Word currentPc = ~Word(0);
   std::size_t operations = 0;
   std::vector<ReferenceFact> references;
   std::vector<Word> instructionStarts;
@@ -369,6 +377,40 @@ class Propagation {
     return 1;
   }
 
+  // A call or branch through a register the propagation knows: Ghidra's
+  // SymbolicPropogator hands such a flow to `evaluateDestination` and
+  // `evaluateReference` with the flow's own RefType, and the ARM analyzer
+  // turns a target's low bit into the instruction-set mode
+  // (`PseudoDisassembler.setTargetContextForDisassembly`). The target is
+  // reported as the register holds it, low bit included, so the consumer can
+  // apply that rule; only a value inside the image is a target at all.
+  void computedFlow(const PcodeOp &op, Snapshot &state) {
+    OpCode code = op.code();
+    if ((code != CPUI_CALLIND && code != CPUI_BRANCHIND) || op.numInput() < 1)
+      return;
+    const Varnode *operand = op.getIn(0);
+    if (memorySpace(operand->getSpace()) || operand->isConstant())
+      return; // A slot read is a data reference; a literal target is direct flow.
+    Value target = get(state, operand);
+    if (target.base >= 0 || !target.complete(operand->getSize()))
+      return;
+    // The branch already cleared the mode bit from the address it wrote to
+    // the program counter; the mode itself sits in the switch register. It is
+    // handed back in the target's low bit, which is how the address was
+    // spelled before the branch took it apart.
+    Word raw = target.bits & ~Word(1);
+    if (hasModeRegister) {
+      Value mode = state.registers.get(modeRegister.space->getIndex(), modeRegister.offset,
+                                       (int)modeRegister.size);
+      if (mode.base < 0 && mode.complete((int)modeRegister.size) && (mode.bits & 1) != 0)
+        raw |= 1;
+    }
+    if (raw < 4 || region(raw & ~Word(1)) == nullptr)
+      return;
+    references.push_back(ReferenceFact{op.getAddr().getOffset(), raw,
+                                       code == CPUI_CALLIND ? 16u : 32u, 0});
+  }
+
   void memoryReferences(const PcodeOp &op, Snapshot &state) {
     OpCode code = op.code();
     if ((code == CPUI_LOAD || code == CPUI_STORE) && op.numInput() >= 2) {
@@ -471,11 +513,23 @@ class Propagation {
         Word(size - 1) > ~Word(0) - address.offset)
       return Value();
     Value value = state.memory.get(address.space, address.offset, size);
-    if (value.base >= 0 || value.complete(size) || address.space < 0 || state.unknownWrites)
+    if (value.base >= 0 || value.complete(size) || address.space < 0)
+      return value;
+    // Ghidra reads writable memory without asking the evaluator when it lies
+    // within 4096 bytes ahead of the instruction (`VarnodeContext.getValue`:
+    // "if the value loaded is too far away, ask the evaluator"), which is
+    // what makes a pc-relative literal pool a constant on ARM even though
+    // the code was copied into RAM -- and nothing the function did before
+    // (a call, a coprocessor operation) is taken to have rewritten its own
+    // literal pool. Farther away, writable memory is trusted only on
+    // request, and never once something may have written it.
+    bool nearby = currentPc != ~Word(0) && address.offset >= currentPc &&
+                  address.offset - currentPc <= 4096;
+    if (!nearby && state.unknownWrites)
       return value;
     const Region *mapping = region(address.offset, size);
     if (mapping == nullptr || (mapping->flags & 2) == 0 ||
-        ((mapping->flags & 1) != 0 && (!trustWritable || state.callWrites)) ||
+        ((mapping->flags & 1) != 0 && !nearby && (!trustWritable || state.callWrites)) ||
         (size != 1 && size != 2 && size != 4 && size != 8))
       return value;
     uint1 bytes[8];
@@ -629,6 +683,7 @@ class Propagation {
     int branch = -1;
     for (auto it = block.beginOp(); it != block.endOp(); ++it) {
       const PcodeOp &op = **it;
+      currentPc = op.getAddr().getOffset();
       if (++operations > 1000000)
         throw LowlevelError("Constant propagation exceeds one million p-code operations");
       if (op.getAddr().getOffset() < first || op.getAddr().getOffset() >= end)
@@ -639,6 +694,7 @@ class Propagation {
         memoryReferences(op, state);
         useReferences(op, state);
         callRegister(op, state);
+        computedFlow(op, state);
       }
       if (code == CPUI_CBRANCH && op.numInput() == 2) {
         Value condition = get(state, op.getIn(1));
@@ -681,8 +737,12 @@ class Propagation {
                               size, restored);
         }
       } else if (code == CPUI_CALLOTHER) {
-        state.registers.retain([&](int space, Word, int) { return space == uniqueSpace; });
-        forgetMemory(state, false);
+        // A user-defined operation touches only what it names: Ghidra clears
+        // the op's output and nothing else (`SymbolicPropogator.applyPcode`,
+        // `case PcodeOp.CALLOTHER`). Wiping every register here lost the
+        // instruction-set switch ARM writes just before an interworking
+        // branch (`SetThumbMode`: `TB = ...; setISAMode(TB)`), so no computed
+        // target ever carried its mode.
       }
       if (op.getOut() != nullptr) {
         Value value = code == CPUI_CALLOTHER ? Value() : evaluate(state, op);
@@ -763,6 +823,28 @@ public:
     AddrSpace *stack = arch.getStackSpace();
     if (stack != nullptr && stack->numSpacebase() != 0)
       stackRegister = &stack->getSpacebase(0);
+    // The register an interworking branch writes the target's instruction
+    // set into: ARM's `SetThumbMode` sets `TB`, which its specs name
+    // `ISAModeSwitch` for analysis (ARM.sinc:208-225); MIPS names its own
+    // switch the same (mips.sinc:388). Ghidra's ARM analyzer reads exactly
+    // this register at a computed flow -- "if the TB register is set, that
+    // trumps any mode we are tracking" (`ArmAnalyzer.flowArmThumb`).
+    try {
+      modeRegister = arch.translate->getRegister("ISAModeSwitch");
+      hasModeRegister = modeRegister.size >= 1 && modeRegister.size <= 8;
+    } catch (LowlevelError &) {
+      hasModeRegister = false;
+    }
+  }
+
+  /// The switch register under the name the language's own spec gives it,
+  /// when the pspec only aliases it (ARM's `TB`).
+  void useModeRegister(const std::string &name) {
+    try {
+      modeRegister = arch.translate->getRegister(name);
+      hasModeRegister = modeRegister.size >= 1 && modeRegister.size <= 8;
+    } catch (LowlevelError &) {
+    }
   }
 
   std::vector<Fact> run(bool referenceMode = false) {
@@ -871,6 +953,7 @@ class IfcConstants : public IfaceDecompCommand {
   }
 
 public:
+  std::string modeRegisterName;
   explicit IfcConstants(bool references = false) : referenceMode(references) {}
   virtual void execute(istream &input) {
     if (dcp->conf == nullptr)
@@ -883,6 +966,7 @@ public:
     vector<ventris_constants::Region> regions;
     vector<ventris_constants::RegisterSeed> seeds;
     const VarnodeData *tracked = nullptr;
+    modeRegisterName.clear();
     while (true) {
       input >> ws;
       if (input.eof())
@@ -891,9 +975,16 @@ public:
         string option, name;
         uintb value;
         if (!(input >> option >> name) ||
-            (option != "--register" && option != "--track-register"))
-          throw IfaceParseError("Expected --register <name> <value> or --track-register <name>");
+            (option != "--register" && option != "--track-register" &&
+             option != "--mode-register"))
+          throw IfaceParseError("Expected --register <name> <value>, --track-register <name> or --mode-register <name>");
         const VarnodeData &storage = dcp->conf->translate->getRegister(name);
+        if (option == "--mode-register") {
+          // The register the pspec aliases as ISAModeSwitch; see
+          // Propagation's constructor for why the alias travels by option.
+          modeRegisterName = name;
+          continue;
+        }
         if (storage.space->getType() != IPTR_PROCESSOR ||
             storage.space == dcp->conf->getDefaultCodeSpace() ||
             storage.space == dcp->conf->getDefaultDataSpace() ||
@@ -955,6 +1046,8 @@ public:
     function.followFlow(entry, Address(space, end - 1));
     ventris_constants::Propagation propagation(arch, function, regions, start, end, trust != 0,
                                                 std::move(seeds), tracked);
+    if (!modeRegisterName.empty())
+      propagation.useModeRegister(modeRegisterName);
     vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;
     out << (referenceMode ? "REFERENCES [" : "CONSTANTS [") << dec;
