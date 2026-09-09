@@ -19,6 +19,7 @@ fn result(address: u64, kind: FlowKind, target: Option<u64>, pure_jump: bool) ->
         targets: target.into_iter().collect(),
         kind,
         pure_jump,
+        mode: None,
     }
 }
 

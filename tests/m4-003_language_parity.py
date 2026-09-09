@@ -74,6 +74,21 @@ CONTAINERS = {
 # a note. The image is a retail cartridge that cannot be committed, so it is
 # pinned by hash and its absence is reported rather than passed over silently.
 UNREACHED = {
+    "ARM:LE:32:v5t": {
+        "image": Path.home() / "ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+        "sha256": "65f02a56842b75aa92d775d56d657a56fe3fa993550b04dc20704ab82d760105",
+        "variant": "cartridge",
+        "native_program": "pokeheartgold.us.nds.arm9",
+        "sample": 512,
+        "shared_floor": 6685,
+        "identical_floor": 251,
+        "reason": "both stores load the cartridge -- the install now carries an "
+                  "NDS loader and ours unpacks the ARM9 module as crt0 does -- "
+                  "and the ARM9 program shares 6685 functions with the oracle, "
+                  "251 of the first 512 token-identical; the rest differ where "
+                  "the oracle's switch recovery and stack frames name what ours "
+                  "does not yet",
+    },
     "MIPS:BE:64:64-32addr": {
         "image": Path.home() / "ventris-corpus/perfect_dark_ntsc_final.z64",
         "sha256": "4e51142acac686d96861cecc58cf7cb7c3b06b21733b7f8ed609a709dc039a21",
@@ -91,9 +106,6 @@ UNREACHED = {
 # A language neither the corpus, a fixture, nor an image reaches cannot be
 # measured; each needs a reason, and every reason names what was tried.
 BLOCKED = {
-    "ARM:LE:32:v5t": {"reason": "no v5t image exists here at all: the corpus "
-                                "holds no Nintendo DS cartridge, and the "
-                                "install carries no NDS loader either"},
     "PowerPC:BE:32:e500": {"reason": "no image selects e500: the GameCube DOLs "
                                      "the corpus holds load as Gekko_Broadway "
                                      "through the oracle and BE32 default "
@@ -770,14 +782,20 @@ def import_oracle(binary: Path, timeout: int) -> Path:
 
 
 def compare_row(language: str, variant: str, binary: Path, work: Path,
-                timeout: int) -> dict:
-    """Import both ways, then compare every function both stores hold."""
+                timeout: int, native_program: str | None = None,
+                sample: int | None = None) -> dict:
+    """Import both ways, then compare every function both stores hold.
+
+    A container yields one native program per processor, named by suffix;
+    the oracle loads the one the console boots under the file's own name.
+    `native_program` names ours where the two differ."""
     program = binary.name
+    native_name = native_program or program
     native_project = import_native(binary, timeout)
     oracle_project = import_oracle(binary, timeout)
-    native_facts = facts(native_project / "project.sqlite", program)
+    native_facts = facts(native_project / "project.sqlite", native_name)
     oracle_facts = facts(oracle_project / "project.sqlite", program)
-    store = store_context(native_project / "project.sqlite", program)
+    store = store_context(native_project / "project.sqlite", native_name)
     oracle_store = store_context(oracle_project / "project.sqlite", program)
     # The language is read from the store, not from an import message: a
     # reused store has no message, and the recorded fact is the claim anyway.
@@ -785,13 +803,21 @@ def compare_row(language: str, variant: str, binary: Path, work: Path,
         f"{language}: the native store recorded {store['language']!r}")
     shared = sorted(set(native_facts) & set(oracle_facts))
     assert shared, f"{language}: the two stores share no function"
+    # A retail module shares thousands of functions, and the oracle
+    # decompiles one at a time through the JVM. A ratcheted row compares a
+    # fixed prefix of the shared set: deterministic, so the floor means the
+    # same thing every run, and stated in the report.
+    shared_total = len(shared)
+    if sample is not None:
+        shared = shared[:sample]
 
     addresses = [f"{entry:08x}" for entry in shared]
     joined = ",".join(addresses)
     digest = hashlib.sha256(joined.encode()).hexdigest()
     native_texts = gate_cache.document(
-        gate_cache.native_key(binary, artifact="decompile-batch", addresses=digest),
-        lambda: batch("decompile-batch", str(binary), joined,
+        gate_cache.native_key(binary, artifact="decompile-batch",
+                              addresses=f"{native_name}:{digest}"),
+        lambda: batch("decompile-batch", str(binary), joined, "--name", native_name,
                       "--project", str(native_project), timeout=timeout))
     oracle_texts = gate_cache.document(
         gate_cache.oracle_key(binary, GHIDRA, artifact="decompile-batch",
@@ -829,8 +855,8 @@ def compare_row(language: str, variant: str, binary: Path, work: Path,
                 "oracle": " ".join(oracle_stream)[:400],
                 "native": " ".join(native_stream)[:400]})
     return {"language": language, "variant": variant, "program": program,
-            "shared": len(shared), "identical": identical, "attributed": attributed,
-            "unattributed": unattributed, "skipped": skipped}
+            "shared": shared_total, "compared": len(shared), "identical": identical,
+            "attributed": attributed, "unattributed": unattributed, "skipped": skipped}
 
 
 def container_image(entry: dict, work: Path) -> Path:
@@ -912,7 +938,8 @@ def main() -> int:
                 row_work = work / f"{language.replace(':', '-')}-{entry['variant']}"
                 row_work.mkdir(parents=True)
                 row = compare_row(language, entry["variant"], image, row_work,
-                                  arguments.timeout)
+                                  arguments.timeout, entry.get("native_program"),
+                                  entry.get("sample"))
                 assert len(row["identical"]) >= entry["identical_floor"], (
                     f"{language}: {len(row['identical'])} token-identical "
                     f"function(s), below the {entry['identical_floor']} the "
@@ -923,7 +950,8 @@ def main() -> int:
                     f"records")
                 unreached[language] = {
                     "reason": entry["reason"], "program": row["program"],
-                    "shared": row["shared"], "identical": len(row["identical"]),
+                    "shared": row["shared"], "compared": row["compared"],
+                    "identical": len(row["identical"]),
                     "attributed": len(row["attributed"]),
                     "unattributed": len(row["unattributed"]),
                     "floors": {"shared": entry["shared_floor"],
@@ -996,7 +1024,8 @@ def main() -> int:
     metrics.update({f"parity.class.{name}": count
                     for name, count in sorted(per_class.items())})
     reached = ", ".join(
-        f"{language} {note.get('identical', 0)}/{note.get('shared', 0)} identical"
+        f"{language} {note.get('identical', 0)}/{note.get('compared', 0)} identical "
+        f"of {note.get('shared', 0)} shared"
         if "shared" in note else f"{language} image absent"
         for language, note in sorted(unreached.items()))
     summary = (

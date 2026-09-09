@@ -380,7 +380,7 @@ index e62ab6a..6d42a2d 100644
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
      addr = addr + sz;
-@@ -836,6 +856,114 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +856,122 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
@@ -486,6 +486,14 @@ index e62ab6a..6d42a2d 100644
 +    for(size_t i=0;i<flow.targets.size();++i) {
 +      if (i > 0) *status->fileoptr << ",";
 +      *status->fileoptr << flow.targets[i].getShortcut() << "0x" << hex << flow.targets[i].getOffset();
++    }
++    // The instruction set this address was decoded in, on a language that
++    // carries one in a context field named as Ghidra names it. A caller
++    // records it, so a later console decodes the same bytes the same way.
++    try {
++      uintm mode = dcp->conf->context->getVariable("LowBitCodeMode", addr);
++      *status->fileoptr << " mode=" << dec << mode;
++    } catch(LowlevelError &err) {
 +    }
 +    *status->fileoptr << '\n';
 +  }

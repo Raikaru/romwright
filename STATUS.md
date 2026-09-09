@@ -5301,6 +5301,58 @@ evidence:
 - Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
   than RDRAM loads with its boot segment resident).
 
+### m5-013 evidence (a retail Nintendo DS cartridge, scored and measured)
+- The corpus gained Pokemon HeartGold (USA) and a byte-matching
+  `pret/pokeheartgold` build; `tests/m5-013_nds.py` scores the `nds.rs`
+  loader's ARM9 program against the build's 11019 sized `FUNC` symbols inside
+  the static module and pins the images by hash. **PASS: 6822 functions,
+  fn.recall 0.6144, fn.precision 0.9924; NitroMain 420 bytes, decompiled.**
+  Stock Ghidra with the NDS loader installed tonight reaches 8528 functions,
+  recall 0.7698, on the same module.
+- Four things stood between 189 functions and that number, each a rule
+  Ghidra has and we did not:
+  - **The ARM9 module is stored compressed.** `_start_ModuleParams[5]`
+    (NitroSDK `crt0.c`:362-372) names where the packed archive ends, and
+    `MIi_UncompressBackward` (crt0.c:396-457) unpacks it in place before
+    anything runs. `nds.rs` now does exactly that, byte for byte, and the
+    session image carries bytes a loader hands over that the file does not
+    hold at that offset (a patch over the file-backed view). 762644 stored
+    bytes become 1122040.
+  - **A pattern's prerequisite is met one function at a time.**
+    `after="function"` needs the bytes before the match decoded, and the
+    function that decodes them is usually itself a match; Ghidra's
+    FunctionStartAnalyzer runs again on every new instruction range. The
+    pattern round now repeats until it accepts nothing (8293 refusals became
+    2050).
+  - **Computed calls create functions, in the mode their target names.**
+    The propagation reports a call or branch through a register whose value
+    it knows (`COMPUTED_CALL`/`COMPUTED_JUMP`, Ghidra's RefType names), with
+    the target's instruction set read from the interworking switch register
+    Ghidra's ARM analyzer reads (`ArmAnalyzer.flowArmThumb`: "if the TB
+    register is set, that trumps any mode we are tracking"; the pspec aliases
+    `TB` as `ISAModeSwitch`, so the name travels by option). Discovery then
+    seeds those targets with `LowBitCodeMode` set as
+    `PseudoDisassembler.setTargetContextForDisassembly` sets it, and re-walks;
+    three rounds reached every target. Two propagation rules were wrong for
+    this and are now Ghidra's: a load from writable memory within 4096 bytes
+    ahead of the instruction is read without asking (`VarnodeContext.getValue`
+    -- the ARM literal pool), and a CALLOTHER clears only its output
+    (`SymbolicPropogator.applyPcode`) rather than every register. crt0's
+    `ldr r1,=NitroMain; bx r1` is a `COMPUTED_CALL` to `0x02000ca4` in Thumb.
+  - **A probing console poisons its own context.** Every candidate the
+    discovery console decodes writes the mode switches its bytes carry into
+    the one context database (SLEIGH `globalset`), so by the time the
+    reference pass ran, crt0 read as Thumb and yielded nothing. The flow
+    answer now reports the mode each entry was decoded in, discovery records
+    it, and the reference pass runs on fresh consoles that know only the
+    recorded contexts.
+- `m4-003`: **ARM:LE:32:v5t is measured, not blocked** -- the ARM9 program
+  shares 6685 functions with the oracle's, 251 of the first 512 are
+  token-identical, both numbers ratcheted. The blocked list is down to
+  `PowerPC:BE:32:e500`. All 21 committed rows unchanged (1796/1892
+  identical, 0 unexplained); the eight shell gates, m5-001 and
+  `cargo test --workspace` (270) pass.
+
 ## Next task
 - m4-037: native stack-frame recovery. The oracle store now carries Ghidra's
   recovered stack frames (`stack_variables`), and four MIPS functions are
@@ -5316,11 +5368,14 @@ evidence:
   (`uRegister00002050` vs `EntryHi_00`), external thunk naming
   (`thunk_EXT_FUN_7020126c`) and local ordering. Each is a fact class to name
   or a store fact to add; the floor moves up as they close.
-- m5-013: the Nintendo DS row. The HeartGold ROM and its byte-matching
-  build are on the box, so the `nds.rs` loader's two CPU images can be scored
-  against `pokeheartgold.elf` (ARM9) and `ichneumon_sub.elf` (ARM7) the way
-  m5-001 scores the GBA cartridge, and `ARM:LE:32:v5t` stops being blocked on the oracle side
-  only if an NDS loader is installed the way the six above were.
+- m5-014: switch recovery at discovery time. 1386 of the 1843 functions
+  stock finds on HeartGold's ARM9 and we do not are call targets, and 385 of
+  those are called from inside bodies we hold whose calls we never decoded:
+  Thumb `add pc, rN` tables (`sub_02000F60`) stop our walk where Ghidra's
+  `ARM_switch_patterns.xml` and its jump-table analysis continue. m2-007
+  recovers tables at decompile time only; feeding them back into discovery,
+  as the computed-call round now does for register calls, is the next recall
+  step and raises both DS ratchets.
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
   `Movie.elf`, `driving.elf`, and the `bond.dol` image `m1-009` already

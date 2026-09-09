@@ -197,6 +197,10 @@ pub struct NativeImport {
     /// Indirect transfers the flow walk decoded, sorted: a rule that needs the
     /// branch rather than the load it follows reads these.
     pub indirect_transfers: Vec<u64>,
+    /// Computed-call targets the propagation reached with the low address
+    /// bit set, aligned: on a low-bit-mode language each is decoded in the
+    /// alternate instruction set from then on.
+    pub computed_mode_targets: Vec<u64>,
     /// Initializer-array words, with their width: each holds a code address,
     /// proved by the array it belongs to.
     pub initializer_slots: Vec<(u64, u64)>,
@@ -1280,22 +1284,121 @@ pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
     Ok(loaded)
 }
 
+/// The context field the pinned languages alias to the instruction-set mode
+/// a code address carries in its low bit: ARM declares
+/// `LowBitCodeMode = (0,0)` beside `TMode` (ARM.sinc:90-93), MIPS declares
+/// `LowBitCodeMode = (1,1)` beside `ISA_MODE` (mips.sinc:416-417). Ghidra
+/// keys the rule on a register of exactly this name
+/// (`PseudoDisassembler.setTargetContextForDisassembly`,
+/// `LOW_BIT_CODE_MODE_REGISTER_NAME`); no other pinned language declares it.
+fn low_bit_code_mode(language: &str) -> bool {
+    language.starts_with("ARM:") || language.starts_with("MIPS:")
+}
+
+/// Function starts the propagation proved by resolving a call or branch
+/// through a register, that no pass has created yet. Ghidra creates these
+/// from the reference the constant-propagation analyzer lays down
+/// (`ConstantPropagationContextEvaluator.evaluateDestination`, then
+/// disassembly and function creation follow the reference); a target with
+/// the low bit set on a low-bit-mode language is decoded in that mode from
+/// then on (`setTargetContextForDisassembly`: clear the bit, set the mode).
+fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
+    let entries: std::collections::HashSet<u64> =
+        import.functions.iter().map(|function| function.entry).collect();
+    let in_code = |address: u64| {
+        import.mappings.iter().any(|mapping| {
+            mapping.flags & 4 != 0
+                && address >= mapping.vaddr
+                && address - mapping.vaddr < mapping.size
+        })
+    };
+    let mut targets: Vec<u64> = import
+        .xrefs
+        .iter()
+        .filter(|xref| xref.kind == "COMPUTED_CALL")
+        .map(|xref| xref.to)
+        .filter(|&target| !entries.contains(&target) && in_code(target))
+        .collect();
+    targets.sort_unstable();
+    targets.dedup();
+    targets
+}
+
 /// Runs discovery and reference inference for one loaded image.
 fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
-    let lanes = if imp.format == "dol" {
+    let mut lanes = if imp.format == "dol" {
         Some(discovery::discover_mapped(imp)?)
     } else {
         elf_pointers::confirm_initializers(imp);
         discovery::discover_seeded(imp)
     };
     phase(imp, "discovery", discovery_started);
-    if let Some(lanes) = lanes {
+    // Ghidra's analysis is a loop: a reference the propagation lays down on a
+    // computed call is disassembled and made a function, whose own code the
+    // propagation then walks. The round repeats while it creates something,
+    // bounded because each round re-walks the image. Three rounds reached
+    // every computed target on a DS ARM9 module whose crt0 enters the game
+    // through `bx r1`.
+    for round in 0..4 {
+        if lanes.take().is_none() {
+            break;
+        }
+        // The reference pass reads bytes through a console that has decoded
+        // nothing but what the recorded contexts say. The discovery console
+        // has probed thousands of candidates by now, and every probe wrote
+        // the mode switches its bytes carried into that console's one
+        // context database (SLEIGH `globalset`), so crt0 of a DS ROM read as
+        // Thumb there and yielded no references at all.
         let references_started = std::time::Instant::now();
-        let mut session = lanes.session;
+        let mut session = match crate::native_runtime::ConsoleSession::new(&imp.cfg) {
+            Ok(session) => session,
+            Err(error) => {
+                imp.discovery_note = Some(format!("reference console did not start: {error}"));
+                break;
+            }
+        };
+        if let Err(error) = session.load_mapped(imp) {
+            imp.discovery_note = Some(format!("reference console did not load the image: {error}"));
+            break;
+        }
+        let shards = crate::native_runtime::ConsoleSession::open_image_shards(
+            imp,
+            imp.cfg.console_shards.max(1) - 1,
+        );
         seed_mips_entry_register(imp);
-        infer_data_references(imp, &mut session, lanes.shards)?;
+        infer_data_references(imp, &mut session, shards)?;
         phase(imp, "references", references_started);
+        if round == 3 {
+            break;
+        }
+        let targets = computed_flow_targets(imp);
+        if targets.is_empty() {
+            break;
+        }
+        let mode = low_bit_code_mode(&imp.language);
+        for &target in &targets {
+            if mode {
+                // The reference kept the aligned address; the mode it carried
+                // is the call's own fact. A caller whose register held an
+                // even address leaves the context as it was, as Ghidra does.
+                if imp.computed_mode_targets.contains(&target) {
+                    imp.contexts.push(NativeContext {
+                        name: "LowBitCodeMode".into(),
+                        address: target,
+                        value: 1,
+                    });
+                }
+            }
+            imp.functions.push(NativeFunction {
+                entry: target,
+                name: format!("FUN_{target:08x}"),
+                size: 1,
+            });
+        }
+        let again = std::time::Instant::now();
+        lanes = discovery::discover_seeded(imp);
+        phase(imp, "discovery", again);
     }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
@@ -1692,7 +1795,13 @@ fn infer_data_references(
         // referenced location, which is what keeps a wider read from
         // overlapping a one-byte symbol.
         for fact in &facts {
-            if fact.size == 0 || fact.size > 8 || fact.kind == ReferenceKind::Data {
+            if fact.size == 0
+                || fact.size > 8
+                || matches!(
+                    fact.kind,
+                    ReferenceKind::Data | ReferenceKind::ComputedCall | ReferenceKind::ComputedJump
+                )
+            {
                 continue;
             }
             match import
@@ -1704,16 +1813,29 @@ fn infer_data_references(
                 None => import.reference_widths.push((fact.to, fact.size as u64)),
             }
         }
+        if low_bit_code_mode(&import.language) {
+            for fact in &facts {
+                if fact.kind == ReferenceKind::ComputedCall && fact.to & 1 != 0 {
+                    import.computed_mode_targets.push(fact.to & !1);
+                }
+            }
+        }
+        let mode = low_bit_code_mode(&import.language);
         import.xrefs.extend(facts.into_iter().map(|fact| {
-            let kind = match fact.kind {
-                ReferenceKind::Read => "READ",
-                ReferenceKind::Write => "WRITE",
-                ReferenceKind::ReadWrite => "READ_WRITE",
-                ReferenceKind::Data => "DATA",
+            // The reference lands where the flow does; on a language that
+            // carries the instruction-set mode in the low bit, that bit is a
+            // mode, not part of the address, and the mode is recorded
+            // separately (`computed_mode_targets`).
+            let aligned = if mode { fact.to & !1 } else { fact.to };
+            let (kind, to) = match fact.kind {
+                ReferenceKind::Read => ("READ", fact.to),
+                ReferenceKind::Write => ("WRITE", fact.to),
+                ReferenceKind::ReadWrite => ("READ_WRITE", fact.to),
+                ReferenceKind::Data => ("DATA", fact.to),
+                ReferenceKind::ComputedCall => ("COMPUTED_CALL", aligned),
+                ReferenceKind::ComputedJump => ("COMPUTED_JUMP", aligned),
             };
-            NativeXref::with_provenance(
-                fact.from, fact.to, kind, "native-analysis:constant-propagation",
-            )
+            NativeXref::with_provenance(fact.from, to, kind, "native-analysis:constant-propagation")
         }));
     }
     import.references_refused = refused.load(std::sync::atomic::Ordering::Relaxed);
@@ -2322,7 +2444,7 @@ mod tests {
                 0x1030 => (FlowKind::Bad, None, vec![]),
                 _ => (FlowKind::Return, None, vec![]),
             };
-            FlowResult { terminal: kind == FlowKind::Return, conditional: false, return_op: kind == FlowKind::Return, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough, targets, kind }
+            FlowResult { terminal: kind == FlowKind::Return, conditional: false, return_op: kind == FlowKind::Return, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough, targets, kind, mode: None }
         }).collect());
         assert!(imp.functions.iter().any(|f| f.entry == 0x1020));
         assert!(imp.functions.iter().any(|f| f.entry == 0x1040),
@@ -2347,7 +2469,9 @@ mod tests {
         flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
             FlowResult { terminal: address != 0x1000, conditional: false, return_op: address != 0x1000, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough: None,
             targets: if address == 0x1000 { vec![0x3000] } else { vec![] },
-            kind: if address == 0x1000 { FlowKind::Branch } else { FlowKind::Return }, }
+            kind: if address == 0x1000 { FlowKind::Branch } else { FlowKind::Return },
+            mode: None,
+            }
         }).collect());
         assert!(imp.functions.iter().any(|f| f.entry == 0x2000),
                 "a distant branch must not suppress a function in the unvisited gap");
@@ -2663,7 +2787,9 @@ mod tests {
         };
         flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
             crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
-                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false }
+                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
+                mode: None,
+            }
         }).collect());
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1040));
     }
@@ -2720,7 +2846,9 @@ mod tests {
         };
         flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
             crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
-                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false }
+                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
+                mode: None,
+            }
         }).collect());
         assert!(!imp.functions.iter().any(|f| f.entry == 0x99999));
     }
@@ -2759,6 +2887,7 @@ mod tests {
                     fallthrough: Some(0x1024),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
+            mode: None,
                 },
             );
         assert!(
@@ -2811,6 +2940,7 @@ mod tests {
                     fallthrough: Some(0x2054),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
+            mode: None,
                 },
             );
         assert!(
@@ -2949,47 +3079,56 @@ mod tests {
                     length: 1,
                     fallthrough: Some(0x1001),
                     targets: Vec::new(),
-                    kind: FlowKind::Fallthrough, },
+                    kind: FlowKind::Fallthrough,
+                    mode: None, },
                     0x1001 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1001,
                     length: 3,
                     fallthrough: Some(0x1004),
                     targets: Vec::new(),
-                    kind: FlowKind::Fallthrough, },
+                    kind: FlowKind::Fallthrough,
+                    mode: None, },
                     0x1004 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1004,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
-                    kind: FlowKind::Return, },
+                    kind: FlowKind::Return,
+                    mode: None, },
                     0x1040 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1040,
                     length: 1,
                     fallthrough: Some(0x1041),
                     targets: Vec::new(),
-                    kind: FlowKind::Fallthrough, },
+                    kind: FlowKind::Fallthrough,
+                    mode: None, },
                     0x1041 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1041,
                     length: 3,
                     fallthrough: Some(0x1044),
                     targets: Vec::new(),
-                    kind: FlowKind::Fallthrough, },
+                    kind: FlowKind::Fallthrough,
+                    mode: None, },
                     0x1044 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1044,
                     length: 5,
                     fallthrough: Some(0x1049),
                     targets: vec![0x1080],
-                    kind: FlowKind::Call, },
+                    kind: FlowKind::Call,
+                    mode: None, },
                     0x1049 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1049,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
-                    kind: FlowKind::Return, },
+                    kind: FlowKind::Return,
+                    mode: None, },
                     0x1080 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1080,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
-                    kind: FlowKind::Return, },
+                    kind: FlowKind::Return,
+                    mode: None, },
                     other => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: other,
                     length: 1,
                     fallthrough: None,
                     targets: Vec::new(),
-                    kind: FlowKind::Return, },
+                    kind: FlowKind::Return,
+                    mode: None, },
                 }
             }).collect()
         });

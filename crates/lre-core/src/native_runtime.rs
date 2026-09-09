@@ -54,6 +54,31 @@ pub fn ghidra_dir() -> PathBuf {
         })
 }
 
+/// The register the spec bundle aliases as `ISAModeSwitch`, when the
+/// language has one: Ghidra's ARM analyzer reads the register of that name
+/// at every computed flow to learn the target's instruction set
+/// (`ArmAnalyzer.flowArmThumb`), and the pinned pspecs spell the alias as
+/// `<register name="TB" alias="ISAModeSwitch"/>`. The decompiler's own
+/// pspec reader keeps no aliases, so the name travels to the console by
+/// option. A language that declares the register under that name itself
+/// needs no alias and gets none.
+fn mode_register_alias(spec_root: &std::path::Path, language: &str) -> Option<String> {
+    let bundle = spec_root.join(language.replace(':', "-")).join("pspec.xml");
+    let text = std::fs::read_to_string(bundle).ok()?;
+    for element in text.split('<').filter(|element| element.starts_with("register ")) {
+        let attribute = |name: &str| {
+            let key = format!("{name}=\"");
+            let start = element.find(&key)? + key.len();
+            let end = element[start..].find('"')? + start;
+            Some(element[start..end].to_string())
+        };
+        if attribute("alias").as_deref() == Some("ISAModeSwitch") {
+            return attribute("name");
+        }
+    }
+    None
+}
+
 pub fn find_console(cfg: &RuntimeConfig) -> Result<PathBuf> {
     if let Some(ref p) = cfg.console_path {
         if p.is_file() {
@@ -563,6 +588,11 @@ pub enum ReferenceKind {
     Write,
     ReadWrite,
     Data,
+    /// A call through a register whose value the propagation resolved; the
+    /// target is reported as held, low bit included.
+    ComputedCall,
+    /// A branch through a register whose value the propagation resolved.
+    ComputedJump,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -598,6 +628,11 @@ pub struct FlowResult {
     pub return_op: bool,
     /// Length of each delay-slot instruction; `length` includes these bytes.
     pub delay_slots: Vec<u8>,
+    /// The instruction set the address was decoded in, on a language that
+    /// carries one in its `LowBitCodeMode` context field (ARM's Thumb bit,
+    /// MIPS's ISA mode); absent on every other language.
+    #[serde(default)]
+    pub mode: Option<u64>,
 }
 
 /// Bounded SLEIGH evidence for an indirect transfer through a pointer slot.
@@ -728,6 +763,7 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
             let mut conditional = false;
             let mut return_op = false;
             let mut delay_slots = Vec::new();
+            let mut mode = None;
             let mut metadata = 0u8;
 
             for part in rest.split_whitespace() {
@@ -759,6 +795,8 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
                 } else if let Some(val) = part.strip_prefix("conditional=") {
                     conditional = val == "1";
                     metadata |= 2;
+                } else if let Some(val) = part.strip_prefix("mode=") {
+                    mode = val.parse::<u64>().ok();
                 } else if let Some(val) = part.strip_prefix("return_op=") {
                     return_op = val == "1";
                     metadata |= 4;
@@ -795,7 +833,7 @@ fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
                 terminal,
                 conditional,
                 return_op,
-                delay_slots,
+                delay_slots, mode,
                 no_op,
                 pure_jump,
                 address: addr,
@@ -824,6 +862,11 @@ pub struct ConsoleSession {
     reference_registers: Vec<crate::native::NativeRegisterContext>,
     active_reference_registers: usize,
     reference_call_register: Option<&'static str>,
+    /// The register an interworking branch writes the target's instruction
+    /// set into, under the name Ghidra's analyzers use for it: the spec
+    /// bundle's `<register name="TB" alias="ISAModeSwitch"/>` names ARM's;
+    /// MIPS declares a register of that name outright.
+    reference_mode_register: Option<String>,
     new_reference_targets: Vec<u64>,
     /// Commands written to this console. Batching is a claim about this
     /// number against the instructions decoded, not about wall time.
@@ -837,6 +880,7 @@ pub(crate) struct ReferenceShardSpec {
     registers: Vec<crate::native::NativeRegisterContext>,
     active: usize,
     call_register: Option<&'static str>,
+    mode_register: Option<String>,
 }
 
 impl ConsoleSession {
@@ -872,6 +916,7 @@ impl ConsoleSession {
             reference_registers: Vec::new(),
             active_reference_registers: 0,
             reference_call_register: None,
+            reference_mode_register: None,
             new_reference_targets: Vec::new(),
             requests: 0,
         })
@@ -991,6 +1036,7 @@ impl ConsoleSession {
         self.reference_registers.clone_from(&import.register_contexts);
         self.active_reference_registers = self.reference_registers.len();
         self.reference_call_register = import.reference_call_register;
+        self.reference_mode_register = mode_register_alias(&import.cfg.spec_root, &import.language);
         self.new_reference_targets.clear();
         if self.reference_labels.is_none() {
             // Only byte-backed ranges are searchable: a section's virtual
@@ -1110,6 +1156,7 @@ impl ConsoleSession {
             registers: self.reference_registers.clone(),
             active: self.active_reference_registers,
             call_register: self.reference_call_register,
+            mode_register: self.reference_mode_register.clone(),
         }
     }
 
@@ -1150,6 +1197,7 @@ impl ConsoleSession {
         self.reference_registers.clone_from(&spec.registers);
         self.active_reference_registers = spec.active;
         self.reference_call_register = spec.call_register;
+        self.reference_mode_register = spec.mode_register.clone();
         self.new_reference_targets.clear();
         self.send_reference_fixups(import)
     }
@@ -1234,6 +1282,12 @@ impl ConsoleSession {
                     return err("invalid call-context register");
                 }
                 let _ = write!(script, " --track-register {register}");
+            }
+            if let Some(register) = self.reference_mode_register.as_deref() {
+                if register.is_empty() || register.chars().any(|c| c.is_whitespace() || c.is_control()) {
+                    return err("invalid mode register");
+                }
+                let _ = write!(script, " --mode-register {register}");
             }
             for context in self.reference_registers.iter().take(self.active_reference_registers) {
                 if context.start <= start && start < context.end {
@@ -1321,7 +1375,7 @@ impl ConsoleSession {
                 terminal: false,
                 conditional: false,
                 return_op: false,
-                delay_slots: Vec::new(),
+                delay_slots: Vec::new(), mode: None,
                 no_op: false,
                 pure_jump: false,
                 address,
@@ -1342,7 +1396,7 @@ impl ConsoleSession {
             terminal: false,
             conditional: false,
             return_op: false,
-            delay_slots: Vec::new(),
+            delay_slots: Vec::new(), mode: None,
             no_op: false,
             pure_jump: false,
             address,
@@ -1399,7 +1453,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(),
+                    delay_slots: Vec::new(), mode: None,
                     no_op: false,
                     pure_jump: false,
                     address: addr,
@@ -1413,7 +1467,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(),
+                    delay_slots: Vec::new(), mode: None,
                     no_op: false,
                     pure_jump: false,
                     address: addr,
@@ -1444,7 +1498,7 @@ impl ConsoleSession {
                     terminal: false,
                     conditional: false,
                     return_op: false,
-                    delay_slots: Vec::new(),
+                    delay_slots: Vec::new(), mode: None,
                     no_op: false,
                     pure_jump: false,
                     address: addr,

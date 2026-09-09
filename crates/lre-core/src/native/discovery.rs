@@ -506,6 +506,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     let mut terminal_transfers: HashMap<u64, u64> = HashMap::new();
     let mut proven_bodies: std::collections::HashMap<u64, u64> =
         std::collections::HashMap::with_capacity(4096);
+    // The instruction set each function entry was decoded in, taken at the
+    // moment its first instruction was read: a later console -- the reference
+    // pass, a decompile worker -- must read the same bytes the same way, and
+    // asking this console afterwards would not do, because every probe it
+    // has made since has written the mode switches those bytes carry into its
+    // one context database (SLEIGH `globalset`; Ghidra keeps pseudo-
+    // disassembly out of the program's context, this console cannot).
+    let mut entry_modes: Vec<(u64, u64)> = Vec::new();
     let mut addr_origin: std::collections::HashMap<u64, u64> =
         std::collections::HashMap::with_capacity(32768);
     for &s in &entries {
@@ -571,6 +579,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 flow_provider,
             );
             for (addr, info) in chunk.iter().copied().zip(flows) {
+                if let Some(mode) = info.mode {
+                    if addr_origin.get(&addr) == Some(&addr) {
+                        entry_modes.push((addr, mode));
+                    }
+                }
                 if info.address == addr
                     && info.no_op
                     && info.length != 0
@@ -765,7 +778,19 @@ fn flow_discover_with_candidates<P: FlowProvider>(
 
     // Settle loader/call-derived ownership before testing pattern prerequisites.
     // Pattern entries are a separate creation batch, not mergeable relocations.
-    for pattern_round in [false, true] {
+    //
+    // The pattern round repeats until it accepts nothing new. A pattern with
+    // an `after="function"` prerequisite needs the bytes before it decoded,
+    // and the function that decodes them is often itself a pattern match --
+    // Ghidra's FunctionStartAnalyzer runs again on every range of new
+    // instructions, so its prerequisites are met one function at a time. One
+    // pass refused 8293 of 10837 matches on a DS ARM9 module whose Thumb half
+    // nothing else reaches.
+    let mut round = 0usize;
+    let mut pattern_accepted = 0u64;
+    loop {
+        let pattern_round = round != 0;
+        let mut round_accepted = false;
         let pattern_candidates = if pattern_round {
             if let Some(patterns) = patterns {
                 extents[instruction_start..].sort_unstable();
@@ -786,9 +811,18 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     // Every later console -- the reference pass, a decompile
                     // worker -- must decode these addresses in the same mode.
                     imp.contexts.extend(applied);
+                    // A match accepted in an earlier round is a known entry
+                    // now; that is not a refusal of the match.
+                    if let Some(known) = refused.get_mut("known-entry") {
+                        *known = known.saturating_sub(pattern_accepted);
+                        if *known == 0 {
+                            refused.remove("known-entry");
+                        }
+                    }
+                    pattern_accepted += collected.len() as u64;
                     imp.patterns_seen = Some(lre_model::PatternStats {
                         hits: patterns.matches.len() as u64,
-                        accepted: collected.len() as u64,
+                        accepted: pattern_accepted,
                         refused,
                     });
                     collected
@@ -870,6 +904,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     if !entries.contains(&r) {
                         entries.push(r);
                         addr_origin.insert(r, r);
+                        round_accepted = true;
                         // Where this entry came from, for the containment
                         // reconciliation once every body is proven. A byte
                         // pattern is not an address taken from data: the
@@ -906,6 +941,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     for chunk in to_query.chunks(1024) {
                         let flows = flow_provider.flow(chunk);
                         for (addr, info) in chunk.iter().copied().zip(flows) {
+                            if let Some(mode) = info.mode {
+                                if addr_origin.get(&addr) == Some(&addr) {
+                                    entry_modes.push((addr, mode));
+                                }
+                            }
                             let origin = get_canonical_origin(addr, &addr_origin);
                             let span = addr + info.length as u64;
                             if pattern_round
@@ -1088,6 +1128,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 }
             }
             entries.retain(|entry| !rejected.contains(entry));
+        }
+        round += 1;
+        // The first pattern round always runs; a later one runs only while the
+        // one before it created a function. Every round adds at least one
+        // entry and the matches are finite, so this ends; the bound only
+        // guards the loop against a defect, not against a long chain of
+        // adjacent functions each proving the next.
+        if pattern_round && (!round_accepted || round > 100_000) {
+            break;
         }
     }
     // A local linkage must reach an indirect branch in at most eight contiguous
@@ -1346,6 +1395,21 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         };
     }
     imp.functions = merged;
+    {
+        let entries: HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+        entry_modes.sort_unstable();
+        entry_modes.dedup();
+        imp.contexts.extend(
+            entry_modes
+                .iter()
+                .filter(|(entry, _)| entries.contains(entry))
+                .map(|&(entry, mode)| crate::native::NativeContext {
+                    name: "LowBitCodeMode".into(),
+                    address: entry,
+                    value: mode,
+                }),
+        );
+    }
     // Bodies are known now, so a stub's terminal branch can be identified.
     flow_endings.sort_unstable();
     record_stub_transfers(imp, &flow_endings);
