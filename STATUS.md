@@ -5293,8 +5293,11 @@ evidence:
   from-source `arm-none-eabi` binutils **byte-matches the retail Emerald ROM**
   (SHA256 `a9dec84d…85af` both sides); `pokeemerald.elf` carries 15858
   `FUNC` symbols and lives beside the ROM in the corpus cache, not the repo.
-  `pret/pokeheartgold` is building against the HeartGold ROM that arrived
-  tonight.
+  `pret/pokeheartgold` (0985e87, `mwccarm` under wine, NitroSDK 3.2) built
+  in 536 s and **byte-matches the retail HeartGold ROM** (SHA256
+  `65f02a56…0105`, 128 MiB, verified against the zip member independently of
+  the project's own `rom.sha1` check); `pokeheartgold.elf` (ARM9, 170814
+  `FUNC` symbols) and `ichneumon_sub.elf` (ARM7, 1107) sit beside it.
 - Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
   than RDRAM loads with its boot segment resident).
 
@@ -5313,10 +5316,10 @@ evidence:
   (`uRegister00002050` vs `EntryHi_00`), external thunk naming
   (`thunk_EXT_FUN_7020126c`) and local ordering. Each is a fact class to name
   or a store fact to add; the floor moves up as they close.
-- m5-013: the Nintendo DS row. A HeartGold ROM is now on the box and
-  `pret/pokeheartgold` is building; with an ARM9 ELF carrying symbols, the
-  `nds.rs` loader's two CPU images can be scored the way m5-001 scores the
-  GBA cartridge, and `ARM:LE:32:v5t` stops being blocked on the oracle side
+- m5-013: the Nintendo DS row. The HeartGold ROM and its byte-matching
+  build are on the box, so the `nds.rs` loader's two CPU images can be scored
+  against `pokeheartgold.elf` (ARM9) and `ichneumon_sub.elf` (ARM7) the way
+  m5-001 scores the GBA cartridge, and `ARM:LE:32:v5t` stops being blocked on the oracle side
   only if an NDS loader is installed the way the six above were.
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
