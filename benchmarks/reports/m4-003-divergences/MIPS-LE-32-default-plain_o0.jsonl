@@ -1,0 +1,2 @@
+{"address": "00020510", "classes": {"data-type-unknown": [{"oracle": "PTR_FUN_00040798", "native": ["PTR_00040798"]}], "data-name-convention": [{"address": "00040798", "oracle": "PTR_FUN_00040798", "native": "PTR_00040798"}], "missing-stack-frame": ["local_10", "local_8", "local_c"]}, "oracle_tokens": 68, "native_tokens": 68}
+{"address": "00020750", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 33, "native_tokens": 28}

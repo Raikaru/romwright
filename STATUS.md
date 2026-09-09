@@ -5191,7 +5191,133 @@ evidence:
   does -- the skew is in the oracle, not in either store.
 - Regression: `cargo test --workspace` **269 pass**.
 
+### m4-036 evidence (the oracle can load every corpus container)
+- The parity gate measured five bundled languages and blocked four. Three of
+  the four were blocked on the *oracle's* loaders, not on Ventris, so the
+  install at `~/ghidra_12.1.3_PUBLIC` was completed, with every extension
+  built by `javac` against its jars (no gradle on the box) and verified with
+  stock `analyzeHeadless`, headless, on a real corpus image. Each port's diff
+  is kept beside its clone under `~/opt/`:
+  - **GameCubeLoader** (already installed, two defects): `findSupportedLoadSpecs`
+    claimed every file (`binaryType` starts at `UNKNOWN` and the guard tested
+    `!= null`), which is why a GBA cartridge imported as
+    `PowerPC:BE:32:Gekko_Broadway` with no memory; and the DOL/RAM-dump/REL
+    builders opened a Swing symbol-map dialog, which is why `main.dol`
+    threw `HeadlessException`. Now: `!= BinaryType.UNKNOWN`, a declared
+    `-loader-symbolMapFile` option, and `SystemUtilities.isInHeadlessMode()`
+    guards. `main.dol` imports headlessly as `PowerPC:BE:32:Gekko_Broadway`,
+    622 stock functions against our 675.
+  - **gba-ghidra-loader** was never broken: `GBALoader.findSupportedLoadSpecs`
+    reads the first eight Nintendo-logo bytes and the `0x96` at `0xB2`, and
+    the m5-001 fixture header carried only the latter. The fixture now carries
+    the eight logo bytes (not the bitmap). Its `load` maps the whole console
+    address space, which is why a 420-byte cartridge ran the JVM out of a 2G
+    heap: the bridge now launches with `-Xmx8g` (`VENTRIS_BRIDGE_MAXMEM`).
+  - **PsxLoader** (`lab313ru/ghidra_psx_ldr` 6f6be18): Swing RAM choosers
+    replaced by declared options, the MIPS pre-analyzer un-shadowed. `VS.EXE`
+    imports as `MIPS:LE:32:default`, 2012 functions, `main`/`VSync`/
+    `ResetGraph` at the addresses `VS.MAP` names.
+  - **N64Loader** (`zeroKilo/N64LoaderWV` 2bd5376): a physical cartridge view
+    added; `perfect_dark_ntsc_final.z64` imports as
+    `MIPS:BE:64:64-32addr:o32`, 131 functions in the boot segment (the game
+    payload is compressed; a per-game unpacker is not a loader and was not
+    shipped).
+  - **XEXLoaderWV** (`zeroKilo/XEXLoaderWV` edbceeb): an upstream bug fixed --
+    basic-compressed XEX decryption ran past the declared block sizes and
+    threw on this file's 105410 trailing bytes (bounded per Xenia's
+    `ReadImageBasicCompressed`). Black Ops II `default_mp_script.exe`
+    imports as `PowerPC:BE:32:default`, 19897 functions, three `.map`
+    symbols on analyzed function starts.
+  - **Ghidra3DS** (`Stary2001/ghidra-3ds` ea387e0): Fire Emblem Fates'
+    `code.bin` (reverse-LZSS, 3.4 MB -> 6.3 MB, decompressor checked against
+    GodMode9 `codelzss.c`) imports as `ARM:LE:32:v6`, 15839 functions.
+  - **Vita**: no loader can help -- `eboot.bin` is an NPDRM SELF with all
+    three segments `encryption=1`. Decrypted locally (never into a repository)
+    with the title's published zRIF via `sceutils`; the ELF's SHA256 equals
+    the SELF's embedded file hash, stock imports it as `ARM:LE:32:v7`, 19842
+    functions, `main`/`free`/`memcpy` on function starts from its `.MAP`.
+  - Two install facts learned the hard way and recorded for the next port:
+    `ClassJar.isModuleDependencyJar` requires the jar basename to start with
+    the module directory name, case-sensitively, or the jar is ignored; and
+    `analyzeHeadless -loader` takes the Java class simple name, not the
+    display name ("missing opinion for GBALoader" was a refused file, not a
+    missing opinion).
+- **Parity, MIPS:LE:32:default: four rows measured, all pass.** Three store
+  facts were missing and one bridge fact was invisible:
+  - The tracked-register seed (`t9`) went into the compiler spec for the
+    *first* address of a batch only, so `_DT_INIT` decompiled as
+    `in_t9 + 0x200d0` in a batch and as `PTR___gmon_start___000407a0` alone.
+    The spec now carries a `<tracked_set>` for every function entry, as
+    `MipsAddressAnalyzer` seeds every function.
+  - The linkage evaluator refused every MIPS PLT stub because `JXWritePC`
+    computes `(addr & 1) != 0` for `setISAMode` and branches to `addr & -2`
+    (`mips.sinc`). On a language that declares `LowBitCodeMode` -- Ghidra's
+    own criterion, `PseudoDisassembler.hasLowBitCodeModeInAddrValues` -- the
+    mask is identity for the pointer and the mode bit is a flag value, which
+    `CreateThunkFunctionCmd` tolerates (`allow8bitNonUse`). `AND` is matched
+    both ways round because SLEIGH writes it both ways. `printf` is now
+    named and typed exactly as stock (`int printf(char *__format,...)`).
+  - `R_MIPS_COPY` (126) was not in the copy-relocation table, so `_ZTIi` in
+    `.bss.rel.ro` had no symbol and `__cxa_throw` took `&DAT_00030b8c` where
+    stock takes `&int::typeinfo`.
+  - Stock's `entry` prints `local_10`/`local_c`/`local_8` where ours prints
+    `uStack_10`/`uStack_c`/`puStack_8`. The names are Ghidra's Java stack
+    analyzer's (`SymbolUtilities.getDefaultLocalName`), fed to its decompiler
+    as declared locals; the C++ decompiler alone cannot produce `local_`
+    (`ScopeLocal::buildVariableName`, varmap.cc). The bridge did not export
+    that frame, so the oracle store showed 0 `stack_variables` and the
+    difference was unattributable. It now exports every function's stack
+    frame (16 rows on `plain_o0`), and the gate attributes the names to a
+    new class `missing-stack-frame` only when the oracle store declares slots
+    for that function, ours declares none, and the oracle text prints those
+    names -- and only the analyzer's own `local_` names, since a stack
+  parameter the frame also lists (`__format`) is a prototype's fact.
+  Native stack-frame recovery is the open item that closes it.
+- **ARM:LE:32:v4t measured** from the committed m5-001 fixture, not a prose
+  blocker: 4 of 4 shared functions token-identical.
+- **MIPS:BE:64:64-32addr measured but not at parity**, and ratcheted rather
+  than noted: the native loader refused every retail ROM because it required
+  the whole image to fit in RDRAM (Perfect Dark is 32 MB against 8), so the
+  file fell through to the DOL parser; it now maps the boot segment resident
+  and the whole cartridge at `0x10000000`. Both stores load the ROM, share
+  116 functions, and 17 are token-identical; the gate fails if either number
+  drops. A batch no longer dies when one function branches into unmapped
+  memory (`DataUnavailError` at `0x8712bcb4`): that function is omitted from
+  the answer, as Ghidra's client reports one failed function.
+- `m4-003`: **PASS -- 6 of 9 languages measured on 21 rows, 1796 of 1892
+  functions token-identical, 96 attributed, 0 unexplained; 1 unreached
+  (17/116); 2 blocked** (`ARM:LE:32:v5t`: no DS image existed on the box
+  until today, no NDS loader in the install; `PowerPC:BE:32:e500`: no image
+  selects it). Baseline re-recorded.
+- Ground truth for handhelds: `pret/pokeemerald` built with `agbcc` and a
+  from-source `arm-none-eabi` binutils **byte-matches the retail Emerald ROM**
+  (SHA256 `a9dec84d…85af` both sides); `pokeemerald.elf` carries 15858
+  `FUNC` symbols and lives beside the ROM in the corpus cache, not the repo.
+  `pret/pokeheartgold` is building against the HeartGold ROM that arrived
+  tonight.
+- Regression: `cargo test --workspace` **270 pass** (one new: a ROM larger
+  than RDRAM loads with its boot segment resident).
+
 ## Next task
+- m4-037: native stack-frame recovery. The oracle store now carries Ghidra's
+  recovered stack frames (`stack_variables`), and four MIPS functions are
+  attributed to `missing-stack-frame` because ours carries none. The
+  propagation pass already knows every load and store through the stack
+  pointer (`ventris_constants.hh`, `stackBase`); emitting those as facts,
+  naming them as `SymbolUtilities.getDefaultLocalName` does, and sending them
+  as declared locals in the worker's `<localdb>` turns the class into
+  identity. Acceptance: `missing-stack-frame` 0 on every measured row, the
+  native store holding the same slots the oracle store holds.
+- m4-038: raise the MIPS:BE:64 ratchet. 17 of 116 Perfect Dark boot-segment
+  functions are token-identical; the residue is coprocessor register naming
+  (`uRegister00002050` vs `EntryHi_00`), external thunk naming
+  (`thunk_EXT_FUN_7020126c`) and local ordering. Each is a fact class to name
+  or a store fact to add; the floor moves up as they close.
+- m5-013: the Nintendo DS row. A HeartGold ROM is now on the box and
+  `pret/pokeheartgold` is building; with an ARM9 ELF carrying symbols, the
+  `nds.rs` loader's two CPU images can be scored the way m5-001 scores the
+  GBA cartridge, and `ARM:LE:32:v5t` stops being blocked on the oracle side
+  only if an NDS loader is installed the way the six above were.
 - m11-002: a second measured session on the *same* approved target's other
   modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
   `Movie.elf`, `driving.elf`, and the `bond.dol` image `m1-009` already
@@ -5199,10 +5325,11 @@ evidence:
   Score each module the way `m11-001` scores this one, and record which
   surfaces answer differently on a module that is loaded rather than booted.
 - Reserved, and the only things left that are: adding a *new* target game,
-  platform or corpus binary (II.1), which is what the five languages
-  `m4-003` reports as unmeasured are waiting on; tagging a release; and
-  reversing a user-visible naming or typing choice to close
-  `name-convention` 11 or `type-stronger` 58.
+  platform or corpus binary (II.1) -- the retail images used tonight (Perfect
+  Dark, Emerald, HeartGold, the Vita and 3DS titles) were approved by the
+  user in conversation and live in the corpus cache, never the repository;
+  tagging a release; and reversing a user-visible naming or typing choice to
+  close `name-convention` 11 or `type-stronger` 66.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

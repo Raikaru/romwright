@@ -94,6 +94,9 @@ pub(super) fn prepare(
     if machine == 20 && width == 4 && dynamic_value(data, width, be, 0x70000000)?.is_some() {
         import.reference_call_register = Some("r30"); // DT_PPC_GOT: old ELF32 PIC ABI.
     }
+    if machine == 8 {
+        collect_mips_got_symbols(data, sections, import, width, be, &rebase)?;
+    }
     let linkage_types = match machine {
         3 | 62 => [6, 7],
         20 | 21 => [20, 21],
@@ -123,9 +126,11 @@ pub(super) fn prepare(
     };
     // Public elf.h: a loader-copied object (COPY) and a word-sized absolute
     // binding. Both name a symbol at a data address, which is how the Itanium
-    // ABI ties a type_info to its `__cxxabiv1` vtable.
+    // ABI ties a type_info to its `__cxxabiv1` vtable. MIPS is `R_MIPS_COPY`
+    // (126), emitted for non-PIC executables into `.bss.rel.ro`.
     let copy_type = match machine {
         3 | 62 => Some(5),
+        8 => Some(126),
         20 | 21 => Some(19),
         183 => Some(1024),
         40 => Some(20),
@@ -413,6 +418,83 @@ fn complete_load_segments(
         if cursor < end { add_gap(cursor, end)?; }
         import.mappings.extend(gaps);
         import.mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
+    }
+    Ok(())
+}
+
+/// Names the global GOT entries a MIPS image implies rather than relocates.
+///
+/// The classic MIPS ABI has no relocation per imported symbol: the dynamic
+/// table says where the global part of the GOT starts and which dynamic symbol
+/// it starts at, and entry `LOCAL_GOTNO + (index - GOTSYM)` belongs to dynamic
+/// symbol `index`. Ghidra reads the same three tags and writes the symbol's
+/// address into that slot (`MIPS_ElfExtension.updateNonRelocatebleGotEntries`,
+/// 447-494), which is why stock prints `PTR___gmon_start___000407a0` where an
+/// unnamed slot prints only its address.
+fn collect_mips_got_symbols(
+    data: &[u8],
+    sections: &[ElfSection],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+    rebase: &impl Fn(u64) -> Result<u64>,
+) -> Result<()> {
+    const DT_PLTGOT: u64 = 3;
+    const DT_MIPS_LOCAL_GOTNO: u64 = 0x7000000a;
+    const DT_MIPS_SYMTABNO: u64 = 0x70000011;
+    const DT_MIPS_GOTSYM: u64 = 0x70000013;
+    let (Some(got), Some(local), Some(first)) = (
+        dynamic_value(data, width, be, DT_PLTGOT)?,
+        dynamic_value(data, width, be, DT_MIPS_LOCAL_GOTNO)?,
+        dynamic_value(data, width, be, DT_MIPS_GOTSYM)?,
+    ) else {
+        return Ok(());
+    };
+    let Some(table) = sections.iter().position(|section| section.typ == 11) else {
+        return Ok(());
+    };
+    let dynsym = &sections[table];
+    let entry = if width == 4 { 16u64 } else { 24 };
+    let declared = dynamic_value(data, width, be, DT_MIPS_SYMTABNO)?;
+    let count = declared.unwrap_or(dynsym.size / entry).min(dynsym.size / entry);
+    for index in first..count {
+        let Some(name) =
+            relocation_symbol(data, sections, table as u32, index, width, be)?
+        else {
+            continue;
+        };
+        if name.is_empty() {
+            continue;
+        }
+        let slot = local
+            .checked_add(index - first)
+            .and_then(|slot| slot.checked_mul(width as u64))
+            .and_then(|offset| got.checked_add(offset))
+            .ok_or_else(|| bad("MIPS GOT slot overflows"))?;
+        let header = usize::try_from(dynsym.off + index * entry)
+            .map_err(|_| bad("MIPS dynamic symbol offset overflows"))?;
+        let value = word(data.get(header..).unwrap_or(&[]), width.min(8), width, be)
+            .unwrap_or(0);
+        let slot = rebase(slot)?;
+        let symbol = String::from_utf8_lossy(name).into_owned();
+        // The slot is the import's address for every reader: Ghidra names the
+        // pointer after the symbol it will hold, so a load through it prints
+        // `PTR___gmon_start___000407a0` rather than a bare address.
+        if !import
+            .externals
+            .iter()
+            .any(|(address, _)| *address == slot)
+        {
+            import.externals.push((slot, symbol.clone()));
+        }
+        import
+            .named_relocations
+            .push(crate::native::NamedRelocation {
+                address: slot,
+                symbol,
+                addend: if value == 0 { 0 } else { rebase(value)? },
+                copies: false,
+            });
     }
     Ok(())
 }

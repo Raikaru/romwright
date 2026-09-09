@@ -64,6 +64,21 @@ ARCHITECTURES = {
             "-L", str(SYSROOTS_DIR / "aarch64" / "usr" / "lib" / "gcc-cross" / "aarch64-linux-gnu" / "12"),
         ],
     },
+    "mipsel": {
+        "target": "mipsel-linux-gnu",
+        "endian": "little",
+        "format": "elf",
+        "sysroot": SYSROOTS_DIR / "mipsel",
+        "c_compiler": ["clang", "--target=mipsel-linux-gnu", "-fuse-ld=lld"],
+        "cxx_compiler": ["clang++", "--target=mipsel-linux-gnu", "-fuse-ld=lld"],
+        "extra_flags": [
+            "-B", str(SYSROOTS_DIR / "mipsel" / "usr" / "lib" / "gcc-cross" / "mipsel-linux-gnu" / "12"),
+            "-L", str(SYSROOTS_DIR / "mipsel" / "usr" / "lib" / "gcc-cross" / "mipsel-linux-gnu" / "12"),
+            # Debian's mipsel crt objects carry no PT_GNU_STACK note, and lld
+            # refuses to guess: the flag says what the objects already imply.
+            "-Wl,-z,execstack",
+        ],
+    },
     "powerpc": {
         "target": "powerpc-linux-gnu",
         "endian": "big",
@@ -526,7 +541,8 @@ def main():
                         help="Path to authoritative corpus lock file.")
     parser.add_argument("--update-lock", action="store_true",
                         help="Refresh source digests only, preserving matrix and recipes; do not build.")
-    parser.add_argument("--architectures", type=str, default="x86_64,i386,aarch64,powerpc,msvc",
+    parser.add_argument("--architectures", type=str,
+                        default="x86_64,i386,aarch64,powerpc,mipsel,msvc",
                         help="Comma-separated list of architectures to build (or 'msvc').")
     parser.add_argument("--msvc-only", action="store_true",
                         help="Shorthand for --architectures msvc.")
@@ -552,7 +568,8 @@ def main():
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest_path = args.manifest or (out_dir / "manifest.json")
 
-    needs_cross = any(a in selected_archs for a in ["i386", "aarch64", "powerpc"])
+    needs_cross = any(a in selected_archs
+                      for a in ["i386", "aarch64", "powerpc", "mipsel"])
     if needs_cross and not args.skip_sysroots and sys.platform != "win32":
         ensure_sysroots()
 

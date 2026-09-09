@@ -195,6 +195,31 @@ final class Dispatcher {
         }
         out.add("functions", funcs);
 
+        // The stack frame Ghidra's own analysis recovered. These names are
+        // Ghidra's (`SymbolUtilities.getDefaultLocalName` spells them
+        // `local_<offset>`), they are what its decompiler prints for a stack
+        // variable, and without them a comparison cannot tell a naming
+        // convention apart from a missing fact.
+        JsonArray stackVariables = new JsonArray();
+        for (Address entry : session.functionEntries()) {
+            Function f = session.functionAt(entry);
+            ghidra.program.model.listing.Variable[] locals =
+                f.getStackFrame().getStackVariables();
+            for (int i = 0; i < locals.length; ++i) {
+                ghidra.program.model.listing.Variable v = locals[i];
+                JsonObject o = new JsonObject();
+                o.addProperty("function", entry.toString());
+                o.addProperty("ordinal", i);
+                o.addProperty("name", v.getName());
+                o.addProperty("storage", v.getVariableStorage().toString());
+                o.addProperty("type_name", v.getDataType().getDisplayName());
+                o.addProperty("offset", v.getStackOffset());
+                o.addProperty("size", v.getLength());
+                stackVariables.add(o);
+            }
+        }
+        out.add("stack_variables", stackVariables);
+
         ghidra.program.model.listing.Listing listing =
             session.program().getListing();
         JsonArray xrefs = new JsonArray();

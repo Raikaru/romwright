@@ -19,6 +19,7 @@
     "i386",
     "aarch64",
     "powerpc",
+    "mipsel",
     "msvc"
   ],
   "expected_variants": [
@@ -248,6 +249,61 @@
       "unstripped_twin": "powerpc_many_o2.unstripped",
       "min_symbols": 400,
       "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/powerpc_many_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_many_o2.bin"
+    },
+    {
+      "architecture": "mipsel",
+      "endian": "little",
+      "format": "elf",
+      "variant": "plain_o0",
+      "expected_language": "MIPS:LE:32:default",
+      "binary": "mipsel_plain_o0.bin",
+      "unstripped_twin": "mipsel_plain_o0.unstripped",
+      "min_symbols": 10,
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O0 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o0.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o0.bin"
+    },
+    {
+      "architecture": "mipsel",
+      "endian": "little",
+      "format": "elf",
+      "variant": "plain_o2",
+      "expected_language": "MIPS:LE:32:default",
+      "binary": "mipsel_plain_o2.bin",
+      "unstripped_twin": "mipsel_plain_o2.unstripped",
+      "min_symbols": 10,
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o2.bin"
+    },
+    {
+      "architecture": "mipsel",
+      "endian": "little",
+      "format": "elf",
+      "variant": "plain_pie",
+      "expected_language": "MIPS:LE:32:default",
+      "binary": "mipsel_plain_pie.bin",
+      "unstripped_twin": "mipsel_plain_pie.unstripped",
+      "min_symbols": 10,
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/mipsel_plain_pie.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_pie.bin"
+    },
+    {
+      "architecture": "mipsel",
+      "endian": "little",
+      "format": "elf",
+      "variant": "cpp_o2",
+      "expected_language": "MIPS:LE:32:default",
+      "binary": "mipsel_cpp_o2.bin",
+      "unstripped_twin": "mipsel_cpp_o2.unstripped",
+      "min_symbols": 15,
+      "command": "clang++ --target=mipsel-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/mipsel_cpp_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_cpp_o2.bin"
+    },
+    {
+      "architecture": "mipsel",
+      "endian": "little",
+      "format": "elf",
+      "variant": "many_o2",
+      "expected_language": "MIPS:LE:32:default",
+      "binary": "mipsel_many_o2.bin",
+      "unstripped_twin": "mipsel_many_o2.unstripped",
+      "min_symbols": 400,
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/mipsel_many_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_many_o2.bin"
     },
     {
       "architecture": "msvc",

@@ -138,6 +138,20 @@ pub struct ProgramProvider {
 }
 
 impl ProgramProvider {
+    /// The value a processor's ABI puts in a register on entry to the function
+    /// containing `address`, with that register's storage. MIPS is the case
+    /// that has one: `t9` holds the callee's own entry address.
+    pub fn entry_register(&self, address: u64) -> Option<(u64, (u64, u64))> {
+        let storage = *self.registers.get("t9")?;
+        if storage.1 == 0 || storage.1 > 8 {
+            return None;
+        }
+        let index = self.functions.partition_point(|entry| *entry <= address);
+        let entry = *self.functions.get(index.checked_sub(1)?)?;
+        let size = self.function_sizes.get(&entry).copied().unwrap_or(1).max(1);
+        (address < entry.saturating_add(size)).then_some((entry, storage))
+    }
+
     pub fn new(backing: BinaryBacking, functions: Vec<u64>) -> Self {
         let mut functions = functions;
         functions.sort_unstable();
@@ -534,7 +548,9 @@ impl NativeWorker {
             | wire::query::GETPCODE
             | wire::query::GETPCODEEXECUTABLE => self.answer_empty(),
             wire::query::GETUSEROPNAME => self.answer_str(""),
-            wire::query::GETTRACKEDREGISTERS => self.answer_tracked_pointset(),
+            wire::query::GETTRACKEDREGISTERS => {
+                self.answer_tracked_pointset(provider, &payload)
+            }
             other => {
                 let msg = format!("ventris-worker: unsupported query id {other}");
                 let mut buf = Vec::new();
@@ -603,13 +619,58 @@ impl NativeWorker {
         Ok(())
     }
 
-    /// Empty <tracked_pointset> for getTrackedRegisters.
-    fn answer_tracked_pointset(&mut self) -> Result<()> {
-        let mut buf = Vec::new();
-        encode_burst(&mut buf, burst::QRESPONSE_OPEN);
+    /// `<tracked_pointset>` for getTrackedRegisters: the register values that
+    /// hold at an address.
+    ///
+    /// MIPS calling code leaves a function's own address in `t9`, and every
+    /// position-independent load inside the function is written relative to
+    /// it. Ghidra tracks that: `MipsAddressAnalyzer` ships with "Assume T9 set
+    /// to Function entry" on and writes `t9 = entry` into the program context
+    /// (`unknownValue`, 462-504), which is what its decompiler then reads
+    /// through `getTrackedRegisters`. Without the value a `lw` through `t9`
+    /// decompiles as `in_t9 + offset` instead of the pointer it is.
+    fn answer_tracked_pointset(
+        &mut self,
+        provider: &mut ProgramProvider,
+        payload: &[u8],
+    ) -> Result<()> {
         let mut el = Vec::new();
         wire::encode_header(&mut el, wire::ELEMENT_START, wire::elem::TRACKED_POINTSET);
+        if let Some((space, offset, _)) = decode_addr_element(payload) {
+            if space == provider.ram_space_index {
+                if let Some((register, (reg_offset, reg_size))) = provider.entry_register(offset) {
+                    wire::encode_header(&mut el, wire::ELEMENT_START, wire::elem::SET);
+                    wire::encode_attribute(
+                        &mut el,
+                        wire::attr::SPACE,
+                        wire::attr_type::SPACE,
+                        provider.register_space_index as u64,
+                    );
+                    wire::encode_attribute(
+                        &mut el,
+                        wire::attr::OFFSET,
+                        wire::attr_type::UNSIGNED_INT,
+                        reg_offset,
+                    );
+                    wire::encode_attribute(
+                        &mut el,
+                        wire::attr::SIZE,
+                        wire::attr_type::POSITIVE_INT,
+                        reg_size,
+                    );
+                    wire::encode_attribute(
+                        &mut el,
+                        wire::attr::TRACKED_VALUE,
+                        wire::attr_type::UNSIGNED_INT,
+                        register,
+                    );
+                    wire::encode_header(&mut el, wire::ELEMENT_END, wire::elem::SET);
+                }
+            }
+        }
         wire::encode_header(&mut el, wire::ELEMENT_END, wire::elem::TRACKED_POINTSET);
+        let mut buf = Vec::new();
+        encode_burst(&mut buf, burst::QRESPONSE_OPEN);
         encode_string_stream(&mut buf, &el);
         encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
         self.write_frame(&buf)?;

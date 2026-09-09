@@ -1582,10 +1582,6 @@ fn promote_linkage(
     let target = linkage.address;
     if linkage.needs_context
         || linkage.length == 0
-        || imp
-            .functions
-            .iter()
-            .any(|function| function.entry == target)
         || !code.iter().any(|&(start, end)| {
             start <= target && target < end && linkage.length as u64 <= end - target
         })
@@ -1598,11 +1594,25 @@ fn promote_linkage(
     let Some((_, name)) = imp.externals.iter().find(|(address, _)| *address == slot) else {
         return false;
     };
-    imp.functions.push(NativeFunction {
-        entry: target,
-        name: name.clone(),
-        size: linkage.length as u64,
-    });
+    let name = name.clone();
+    // A stub the walk already reached is still a linkage stub: the slot names
+    // it. Ghidra applies the name to whatever function is there rather than
+    // refusing (`ElfDefaultGotPltMarkup.processLinkageTable`), which is the
+    // difference between calling `printf` and calling `FUN_00020750`. Only an
+    // auto-name is replaced; a name from the image stays.
+    if let Some(existing) = imp.functions.iter_mut().find(|f| f.entry == target) {
+        if !existing.name.starts_with("FUN_") {
+            return false;
+        }
+        existing.name = name.clone();
+        existing.size = existing.size.max(linkage.length as u64);
+    } else {
+        imp.functions.push(NativeFunction {
+            entry: target,
+            name: name.clone(),
+            size: linkage.length as u64,
+        });
+    }
     // The slot that named this stub is also the destination it reaches, so
     // the stub is a linkage thunk. Stock Ghidra records the same fact with
     // its own EXTERNAL-block stub as the destination; the slot is the

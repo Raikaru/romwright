@@ -10,17 +10,17 @@ This gate closes that by measurement rather than by prose. For every language
 bundle it enumerates from `native/specs`, it either measures parity or names
 a blocker it verifies:
 
-  * **measured**: the language has an ELF row in the committed corpus lock, so
-    the same stripped image is imported natively and through the bridge, every
-    function both stores hold is decompiled both ways, and the token streams
-    must be identical;
+  * **measured**: the language has an ELF row in the committed corpus lock, or
+    a committed fixture builds an image both stores load, so the same image is
+    imported natively and through the bridge, every function both stores hold
+    is decompiled both ways, and the token streams must be identical;
   * **attributed**: where the two stores disagree about a function's name or
     signature, the decompilations may differ -- that is the point of recovering
     facts -- but the gate must be able to name the differing fact, and any
     difference it cannot attribute fails;
-  * **blocked**: the language has no corpus row, which II.1 reserves adding.
-    The gate verifies the absence rather than trusting the note, and for a
-    container language it also verifies that the oracle cannot load the image.
+  * **blocked**: the language has no corpus row and no fixture that reaches it,
+    which II.1 reserves adding. The gate verifies the absence rather than
+    trusting the note.
 
 Usage:
     python3 tests/m4-003_language_parity.py --corpus-dir DIR [--report OUT.json]
@@ -58,22 +58,47 @@ BASELINE = ROOT / "benchmarks/reports/parity-baseline.json"
 # addresses for the same function, which is a comparison of loaders rather
 # than of decompilers.
 VARIANTS = ("plain_o0", "plain_o2", "cpp_o2", "many_o2")
-# A language with no corpus row cannot be measured; each needs a reason, and
-# `container` reasons are checked by asking the oracle to load the image.
+# A language reached only by a container image is measured from a committed
+# fixture: the builder writes the image from `tests/fixtures-src`, both stores
+# import that image, and the row is compared like any corpus row. Ghidra's GBA
+# loader identifies a cartridge by the first eight logo bytes and the 0x96 at
+# 0xB2 (`GBALoader.findSupportedLoadSpecs`), which the fixture header carries.
+CONTAINERS = {
+    "ARM:LE:32:v4t": {"module": "m5_001", "path": ROOT / "tests/m5-001_gba.py",
+                      "variant": "cartridge"},
+}
+# A language both stores can load, whose token parity is not reached yet. The
+# row is still measured on every run, against floors the last run proved: the
+# imports must keep working, the shared function set must not shrink, and the
+# identical count can only go up. That makes an open gap a ratchet rather than
+# a note. The image is a retail cartridge that cannot be committed, so it is
+# pinned by hash and its absence is reported rather than passed over silently.
+UNREACHED = {
+    "MIPS:BE:64:64-32addr": {
+        "image": Path.home() / "ventris-corpus/perfect_dark_ntsc_final.z64",
+        "sha256": "4e51142acac686d96861cecc58cf7cb7c3b06b21733b7f8ed609a709dc039a21",
+        "variant": "cartridge",
+        "shared_floor": 116,
+        "identical_floor": 17,
+        "reason": "both stores load the ROM -- the install now carries an N64 "
+                  "loader and ours maps the boot segment at the header's boot "
+                  "address -- and 17 of the 116 shared functions are "
+                  "token-identical; the rest differ where the oracle names "
+                  "MIPS coprocessor registers and external thunks we do not, "
+                  "and where its wider variable renaming reorders locals",
+    },
+}
+# A language neither the corpus, a fixture, nor an image reaches cannot be
+# measured; each needs a reason, and every reason names what was tried.
 BLOCKED = {
-    "ARM:LE:32:v4t": {"reason": "no ARM32 ELF row in the corpus lock; the ARM "
-                                "images that exist are cartridge containers the "
-                                "oracle has no loader for",
-                      "container": "gba"},
-    "ARM:LE:32:v5t": {"reason": "same ARM32 gap: the only images are the NDS "
-                                "cartridge's two CPU views"},
-    "MIPS:LE:32:default": {"reason": "no MIPS ELF row in the corpus lock; the "
-                                     "PS-EXE container has no oracle loader"},
-    "MIPS:BE:64:64-32addr": {"reason": "no MIPS ELF row in the corpus lock; the "
-                                       "Nintendo 64 ROM has no oracle loader"},
-    "PowerPC:BE:32:e500": {"reason": "the e500 images are GameCube DOL "
-                                     "containers, which the oracle cannot load; "
-                                     "the corpus PowerPC row is BE32 default"},
+    "ARM:LE:32:v5t": {"reason": "no v5t image exists here at all: the corpus "
+                                "holds no Nintendo DS cartridge, and the "
+                                "install carries no NDS loader either"},
+    "PowerPC:BE:32:e500": {"reason": "no image selects e500: the GameCube DOLs "
+                                     "the corpus holds load as Gekko_Broadway "
+                                     "through the oracle and BE32 default "
+                                     "natively, and the corpus PowerPC ELF row "
+                                     "is BE32 default too"},
 }
 # Ghidra's dynamic label prefixes, from the pinned tree
 # (`SymbolUtilities.DYNAMIC_PREFIX_ARRAY`, SymbolUtilities.java:84-86) plus the
@@ -241,10 +266,20 @@ def store_context(store: Path, program: str) -> dict:
                 aliases.setdefault(offset, []).append(name)
         (language,) = connection.execute(
             "SELECT language FROM programs WHERE id = ?", (identifier,)).fetchone()
+        # The stack frame each store declares. Ghidra's analysis recovers one
+        # and names its slots `local_<offset>`; a store without it leaves the
+        # decompiler to name the same slots itself.
+        frames: dict[int, list[str]] = {}
+        for address, name in connection.execute(
+                "SELECT function, name FROM stack_variables WHERE program_id = ?",
+                (identifier,)):
+            if (offset := ram_offset(address)) is not None:
+                frames.setdefault(offset, []).append(name)
         return {"symbols": symbols, "prototypes": prototypes,
                 "externals": externals, "strings": strings,
                 "definitions": definitions, "names": names, "functions": entries,
                 "aliases": {offset: sorted(set(held)) for offset, held in aliases.items()},
+                "frames": {offset: sorted(set(held)) for offset, held in frames.items()},
                 "language": language}
     finally:
         connection.close()
@@ -470,6 +505,25 @@ def classify(native_text: str, oracle_text: str, native_row: dict, oracle_row: d
     if labels:
         classes["data-name-convention"] = labels
 
+    # A stack frame the oracle store declares and ours does not. Ghidra's
+    # analysis names each slot it recovers (`SymbolUtilities.getDefaultLocalName`
+    # spells it `local_<offset>`) and hands those names to its decompiler; a
+    # store with no frame leaves the same slots to the decompiler, which names
+    # them from the storage instead (`ScopeLocal::buildVariableName`, varmap.cc,
+    # spells them `uStack_<offset>`). The claim is evidence-backed and has a
+    # direction: the oracle store must hold slots for this function, ours must
+    # hold none, and the oracle text must actually print those names.
+    # Only the analyzer's own default names: a stack *parameter* the frame
+    # also lists (`__format`) is named by a prototype, which is another class's
+    # fact, and a name both texts print is not a difference at all.
+    declared = [name for name in oracle_store.get("frames", {}).get(entry, [])
+                if name.startswith("local_")]
+    printed = [name for name in declared
+               if re.search(rf"\b{re.escape(name)}\b", oracle_text)
+               and not re.search(rf"\b{re.escape(name)}\b", native_text)]
+    if printed and not store.get("frames", {}).get(entry):
+        classes["missing-stack-frame"] = printed
+
     # Flow the two sides disagree about, on the same bytes -- and which side
     # says so. A warning we emit and stock does not is a gap of ours; the
     # reverse is stock warning about its own recovery (its locked-storage
@@ -604,6 +658,13 @@ def licensed(classes: dict, native_text: str, oracle_text: str,
             # decompiler derives from it -- nothing else.
             words.update(evidence["registers"])
             shapes.update({DERIVED})
+        elif name == "missing-stack-frame":
+            # The names the oracle's declared frame supplies, and the names
+            # our decompiler derives for the same slots because no frame was
+            # declared. Only names: a frame does not license code or types.
+            words.update(evidence)
+            words.update(item.group(0) for item in
+                         re.finditer(r"\b[a-z]{1,3}Stack[XY]?_[0-9a-fx]+\b", native_text))
         elif name == "oracle-warning":
             # Stock warned about its own recovery: the tokens of that comment,
             # and nothing else. A warning does not license code.
@@ -772,23 +833,20 @@ def compare_row(language: str, variant: str, binary: Path, work: Path,
             "unattributed": unattributed, "skipped": skipped}
 
 
-def container_refused(kind: str, work: Path, timeout: int) -> str:
-    """Ask the oracle to load a cartridge image, and record its refusal."""
-    builders = {"gba": ("m5_001", ROOT / "tests/m5-001_gba.py")}
-    name, path = builders[kind]
-    specification = importlib.util.spec_from_file_location(name, path)
+def container_image(entry: dict, work: Path) -> Path:
+    """Build a container image from its committed fixture sources.
+
+    The container, not its ELF twin: the twin is an ordinary ELF the oracle
+    loads as ARM:LE:32:v8, which would prove nothing about the cartridge
+    language. The builder is the m5-001 gate's, so one set of sources feeds
+    both gates and neither can drift from the other."""
+    specification = importlib.util.spec_from_file_location(entry["module"],
+                                                           entry["path"])
     module = importlib.util.module_from_spec(specification)
     specification.loader.exec_module(module)
     work.mkdir(parents=True, exist_ok=True)
-    # The container, not its ELF twin: the twin is an ordinary ELF the oracle
-    # loads happily (as ARM:LE:32:v8), which proves nothing about the ROM.
     _, image = module.build(work)
-    attempt = cli("import", str(image), "--oracle", "--project", str(work / "oracle"),
-                  "--ghidra", str(GHIDRA), timeout=timeout)
-    assert attempt.returncode != 0, (
-        f"the oracle loaded {image.name}, so the blocker is stale: "
-        f"{attempt.stdout.strip()}")
-    return (attempt.stderr.strip() or attempt.stdout.strip())[-300:]
+    return image
 
 
 def main() -> int:
@@ -812,7 +870,7 @@ def main() -> int:
     rows = {(row["expected_language"], row["variant"]): row
             for row in lock["entries"]
             if row["format"] == "elf" and row["variant"] in VARIANTS}
-    measurable = {language for language, _ in rows}
+    measurable = {language for language, _ in rows} | set(CONTAINERS) | set(UNREACHED)
     languages = bundled_languages()
     unclassified = [language for language in languages
                     if language not in measurable and language not in BLOCKED]
@@ -820,19 +878,57 @@ def main() -> int:
         f"these bundled languages are neither measured nor blocked: {unclassified}")
     stale = [language for language in BLOCKED if language in measurable]
     assert not stale, (
-        f"these languages are blocked for want of a corpus row that now exists: "
+        f"these languages are blocked for want of an image that now exists: "
         f"{stale}")
+    overlap = [language for language in CONTAINERS if (language, "plain_o0") in rows]
+    assert not overlap, (
+        f"these languages have both a corpus row and a container fixture, so the "
+        f"corpus row is the measurement: {overlap}")
 
-    measured, blocked, pending = [], {}, []
+    measured, blocked, pending, unreached = [], {}, [], {}
     with tempfile.TemporaryDirectory(prefix="m4-003-") as directory:
         work = Path(directory)
         for language in languages:
             if language in BLOCKED:
-                note = dict(BLOCKED[language])
-                if "container" in note:
-                    note["oracle_refusal"] = container_refused(
-                        note.pop("container"), work / "container", arguments.timeout)
-                blocked[language] = note
+                blocked[language] = dict(BLOCKED[language])
+                continue
+            if language in CONTAINERS:
+                entry = CONTAINERS[language]
+                row_work = work / f"{language.replace(':', '-')}-{entry['variant']}"
+                image = container_image(entry, row_work / "image")
+                pending.append((language, entry["variant"], image, row_work))
+                continue
+            if language in UNREACHED:
+                entry = UNREACHED[language]
+                image = Path(entry["image"])
+                if not image.is_file():
+                    unreached[language] = {"reason": entry["reason"],
+                                           "image_absent": str(image)}
+                    continue
+                digest = hashlib.sha256(image.read_bytes()).hexdigest()
+                assert digest == entry["sha256"], (
+                    f"{language}: {image} hashes to {digest}, not the pinned "
+                    f"{entry['sha256']}")
+                row_work = work / f"{language.replace(':', '-')}-{entry['variant']}"
+                row_work.mkdir(parents=True)
+                row = compare_row(language, entry["variant"], image, row_work,
+                                  arguments.timeout)
+                assert len(row["identical"]) >= entry["identical_floor"], (
+                    f"{language}: {len(row['identical'])} token-identical "
+                    f"function(s), below the {entry['identical_floor']} the "
+                    f"floor records")
+                assert row["shared"] >= entry["shared_floor"], (
+                    f"{language}: the two stores share {row['shared']} "
+                    f"function(s), below the {entry['shared_floor']} the floor "
+                    f"records")
+                unreached[language] = {
+                    "reason": entry["reason"], "program": row["program"],
+                    "shared": row["shared"], "identical": len(row["identical"]),
+                    "attributed": len(row["attributed"]),
+                    "unattributed": len(row["unattributed"]),
+                    "floors": {"shared": entry["shared_floor"],
+                               "identical": entry["identical_floor"]},
+                }
                 continue
             # Every variant the lock holds for this language, so an
             # optimized or C++ row cannot hide behind the smallest one.
@@ -889,6 +985,7 @@ def main() -> int:
     metrics = {
         "parity.languages_bundled": len(languages),
         "parity.languages_measured": len({row["language"] for row in measured}),
+        "parity.languages_unreached": len(unreached),
         "parity.languages_blocked": len(blocked),
         "parity.rows_measured": len(measured),
         "parity.functions_compared": identical + attributed,
@@ -898,6 +995,10 @@ def main() -> int:
     }
     metrics.update({f"parity.class.{name}": count
                     for name, count in sorted(per_class.items())})
+    reached = ", ".join(
+        f"{language} {note.get('identical', 0)}/{note.get('shared', 0)} identical"
+        if "shared" in note else f"{language} image absent"
+        for language, note in sorted(unreached.items()))
     summary = (
         f"{len({row['language'] for row in measured})} of {len(languages)} bundled "
         f"languages measured against the JVM oracle on {len(measured)} committed "
@@ -905,7 +1006,8 @@ def main() -> int:
         f"{identical + attributed} functions token-identical, {attributed} differing "
         f"only where a named fact differs "
         f"({', '.join(f'{name} {count}' for name, count in sorted(per_class.items()))}"
-        f"), 0 unexplained; {len(blocked)} languages blocked for want of a corpus row "
+        f"), 0 unexplained; {len(unreached)} measured but not yet at parity "
+        f"({reached}); {len(blocked)} languages blocked for want of an image "
         f"II.1 reserves adding, each verified absent")
 
     # Every count is pinned: an improvement and a regression both have to be
@@ -971,7 +1073,7 @@ def main() -> int:
             "summary": summary,
             "metrics": metrics,
             "measured": rows,
-            "blocked": blocked,
+            "unreached": unreached,
         }, indent=1) + "\n")
     print(f"m4-003: PASS ({summary})")
     return 0

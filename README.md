@@ -1820,8 +1820,8 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | PE32+ x86-64 | supported | **gated**: DWARF recall 1.0000 over 180 functions, 192 `RUNTIME_FUNCTION` records (`tests/m8-001_pe_unwind.py`) |
 | PE32 x86 | supported | **gated**: DWARF recall 0.8065 over 93 functions, 0 unattributed, stock Ghidra 0.7634 on the same image (`tests/m8-002_pe32_roots.py`) |
 | ELF AARCH64 LE64 | supported | **parity measured**: 449 of 473 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
-| ELF ARM LE32 | supported | no oracle comparison: no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for |
-| ELF MIPS LE32 | supported | no oracle comparison: no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader |
+| ELF ARM LE32 | supported | **parity measured**: 4 of 4 functions token-identical to the JVM oracle across 1 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
+| ELF MIPS LE32 | supported | **parity measured**: 31 of 43 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |
 | ELF PowerPC | supported | **parity measured**: 438 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |

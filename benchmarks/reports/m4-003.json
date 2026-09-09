@@ -1,23 +1,27 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-08T20:10:43.700209+00:00",
+ "recorded_at": "2026-09-09T03:56:57.311762+00:00",
  "status": "pass",
  "passed": true,
- "summary": "4 of 9 bundled languages measured against the JVM oracle on 16 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1761 of 1845 functions token-identical, 84 differing only where a named fact differs (language-variant 3, name-convention 11, name-rendering 12, oracle-warning 19, type-stronger 58), 0 unexplained; 5 languages blocked for want of a corpus row II.1 reserves adding, each verified absent",
+ "summary": "6 of 9 bundled languages measured against the JVM oracle on 21 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1796 of 1892 functions token-identical, 96 differing only where a named fact differs (data-name-convention 4, data-type-unknown 4, language-variant 3, missing-stack-frame 4, name-convention 11, name-rendering 12, oracle-warning 23, type-stronger 66), 0 unexplained; 1 measured but not yet at parity (MIPS:BE:64:64-32addr 17/116 identical); 2 languages blocked for want of an image II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
-  "parity.languages_measured": 4,
-  "parity.languages_blocked": 5,
-  "parity.rows_measured": 16,
-  "parity.functions_compared": 1845,
-  "parity.functions_token_identical": 1761,
-  "parity.functions_fact_attributed": 84,
+  "parity.languages_measured": 6,
+  "parity.languages_unreached": 1,
+  "parity.languages_blocked": 2,
+  "parity.rows_measured": 21,
+  "parity.functions_compared": 1892,
+  "parity.functions_token_identical": 1796,
+  "parity.functions_fact_attributed": 96,
   "parity.functions_unattributed": 0,
+  "parity.class.data-name-convention": 4,
+  "parity.class.data-type-unknown": 4,
   "parity.class.language-variant": 3,
+  "parity.class.missing-stack-frame": 4,
   "parity.class.name-convention": 11,
   "parity.class.name-rendering": 12,
-  "parity.class.oracle-warning": 19,
-  "parity.class.type-stronger": 58
+  "parity.class.oracle-warning": 23,
+  "parity.class.type-stronger": 66
  },
  "measured": [
   {
@@ -160,6 +164,98 @@
    "evidence": {
     "path": "m4-003-divergences/AARCH64-LE-64-v8A-many_o2.jsonl",
     "sha256": "cd4ef957d41facd0cba6b9c17c0e57bb487ffbf29b4fedea97f768cf59999034"
+   }
+  },
+  {
+   "language": "ARM:LE:32:v4t",
+   "variant": "cartridge",
+   "program": "gba_rom.gba",
+   "shared": 4,
+   "identical": 4,
+   "identical_tokens": 122,
+   "attributed": 0,
+   "classes": [],
+   "evidence": {
+    "path": "m4-003-divergences/ARM-LE-32-v4t-cartridge.jsonl",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+   }
+  },
+  {
+   "language": "MIPS:LE:32:default",
+   "variant": "plain_o0",
+   "program": "mipsel_plain_o0.bin",
+   "shared": 10,
+   "identical": 8,
+   "identical_tokens": 146,
+   "attributed": 2,
+   "classes": [
+    "data-name-convention",
+    "data-type-unknown",
+    "missing-stack-frame",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/MIPS-LE-32-default-plain_o0.jsonl",
+    "sha256": "59277944e121fcd4914a9e6c0b32548e1d556944f385bdb3cb25e85adb4bf414"
+   }
+  },
+  {
+   "language": "MIPS:LE:32:default",
+   "variant": "plain_o2",
+   "program": "mipsel_plain_o2.bin",
+   "shared": 9,
+   "identical": 7,
+   "identical_tokens": 118,
+   "attributed": 2,
+   "classes": [
+    "data-name-convention",
+    "data-type-unknown",
+    "missing-stack-frame",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/MIPS-LE-32-default-plain_o2.jsonl",
+    "sha256": "39f4984ee18c40a2227e790a21b2f6493ee04b0dda0d858b02fb35c736c5a201"
+   }
+  },
+  {
+   "language": "MIPS:LE:32:default",
+   "variant": "cpp_o2",
+   "program": "mipsel_cpp_o2.bin",
+   "shared": 17,
+   "identical": 10,
+   "identical_tokens": 420,
+   "attributed": 7,
+   "classes": [
+    "data-name-convention",
+    "data-type-unknown",
+    "missing-stack-frame",
+    "oracle-warning",
+    "type-stronger"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/MIPS-LE-32-default-cpp_o2.jsonl",
+    "sha256": "ef1dc01e3cf235d698afafb5493d9142809fc456e6489534ca1161270a14a314"
+   }
+  },
+  {
+   "language": "MIPS:LE:32:default",
+   "variant": "many_o2",
+   "program": "mipsel_many_o2.bin",
+   "shared": 7,
+   "identical": 6,
+   "identical_tokens": 101,
+   "attributed": 1,
+   "classes": [
+    "data-name-convention",
+    "data-type-unknown",
+    "missing-stack-frame"
+   ],
+   "evidence": {
+    "path": "m4-003-divergences/MIPS-LE-32-default-many_o2.jsonl",
+    "sha256": "50f741a4e90831c1ab807e26c4501607a52aa64afed73f27d2bf7d98f196a01a"
    }
   },
   {
@@ -306,22 +402,18 @@
    }
   }
  ],
- "blocked": {
-  "ARM:LE:32:v4t": {
-   "reason": "no ARM32 ELF row in the corpus lock; the ARM images that exist are cartridge containers the oracle has no loader for",
-   "oracle_refusal": "error: bridge: bridge error -32005: import failed: No load spec found"
-  },
-  "ARM:LE:32:v5t": {
-   "reason": "same ARM32 gap: the only images are the NDS cartridge's two CPU views"
-  },
+ "unreached": {
   "MIPS:BE:64:64-32addr": {
-   "reason": "no MIPS ELF row in the corpus lock; the Nintendo 64 ROM has no oracle loader"
-  },
-  "MIPS:LE:32:default": {
-   "reason": "no MIPS ELF row in the corpus lock; the PS-EXE container has no oracle loader"
-  },
-  "PowerPC:BE:32:e500": {
-   "reason": "the e500 images are GameCube DOL containers, which the oracle cannot load; the corpus PowerPC row is BE32 default"
+   "reason": "both stores load the ROM -- the install now carries an N64 loader and ours maps the boot segment at the header's boot address -- and 17 of the 116 shared functions are token-identical; the rest differ where the oracle names MIPS coprocessor registers and external thunks we do not, and where its wider variable renaming reorders locals",
+   "program": "perfect_dark_ntsc_final.z64",
+   "shared": 116,
+   "identical": 17,
+   "attributed": 1,
+   "unattributed": 95,
+   "floors": {
+    "shared": 116,
+    "identical": 17
+   }
   }
  }
 }

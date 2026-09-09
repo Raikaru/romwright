@@ -1,14 +1,20 @@
 @ m5-001 gate fixture: the documented Game Boy Advance cartridge header
 @ (gbatek "Cartridge Header"). Only the fields a loader must read are real:
-@ the entry branch at 0x00 and the fixed 0x96 at 0xB2. The Nintendo logo
-@ bytes are not reproduced -- they are the BIOS's check, not the loader's,
-@ and copying them here would put someone else's data in this repository.
+@ the entry branch at 0x00, the first eight logo bytes, and the fixed 0x96 at
+@ 0xB2. The logo *is* a loader check, not only the BIOS's: Ghidra's GBA loader
+@ reads bytes 4..12 and refuses a cartridge that does not carry them
+@ (`GBALoader.findSupportedLoadSpecs`), so with them blank the oracle cannot
+@ load this fixture at all and the language it selects -- ARM:LE:32:v4t --
+@ stays unmeasurable. Eight bytes of format magic are reproduced for that
+@ reason; the remaining 148 bytes of the logo bitmap are not.
     .section .gba_header, "ax"
     .arm
     .global _rom_entry
 _rom_entry:
     b       game_main               @ 0x00: ROM entry point
-    .space  0x9c, 0                 @ 0x04: logo area, deliberately blank
+    .byte   0x24, 0xff, 0xae, 0x51  @ 0x04: logo magic a loader identifies by
+    .byte   0x69, 0x9a, 0xa2, 0x21
+    .space  0x94, 0                 @ 0x0c: rest of the logo area, blank
     .ascii  "VENTRISGATE"           @ 0xa0: game title (12 bytes)
     .byte   0
     .ascii  "VGAT"                  @ 0xac: game code

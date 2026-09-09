@@ -1,6 +1,6 @@
 {
  "id": "parity-baseline",
- "recorded_at": "2026-09-08T20:10:40.504360+00:00",
+ "recorded_at": "2026-09-09T03:56:46.696142+00:00",
  "note": "token identity against the JVM oracle per language, and the fact class each divergence comes from; recorded once and compared against afterwards",
  "counts": {
   "rows": {
@@ -36,6 +36,26 @@
     "identical": 411,
     "attributed": 4
    },
+   "ARM:LE:32:v4t/cartridge": {
+    "identical": 4,
+    "attributed": 0
+   },
+   "MIPS:LE:32:default/plain_o0": {
+    "identical": 8,
+    "attributed": 2
+   },
+   "MIPS:LE:32:default/plain_o2": {
+    "identical": 7,
+    "attributed": 2
+   },
+   "MIPS:LE:32:default/cpp_o2": {
+    "identical": 10,
+    "attributed": 7
+   },
+   "MIPS:LE:32:default/many_o2": {
+    "identical": 6,
+    "attributed": 1
+   },
    "PowerPC:BE:32:default/plain_o0": {
     "identical": 10,
     "attributed": 2
@@ -70,11 +90,14 @@
    }
   },
   "classes": {
+   "data-name-convention": 4,
+   "data-type-unknown": 4,
    "language-variant": 3,
+   "missing-stack-frame": 4,
    "name-convention": 11,
    "name-rendering": 12,
-   "oracle-warning": 19,
-   "type-stronger": 58
+   "oracle-warning": 23,
+   "type-stronger": 66
   }
  }
 }

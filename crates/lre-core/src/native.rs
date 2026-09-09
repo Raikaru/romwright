@@ -1293,6 +1293,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     if let Some(lanes) = lanes {
         let references_started = std::time::Instant::now();
         let mut session = lanes.session;
+        seed_mips_entry_register(imp);
         infer_data_references(imp, &mut session, lanes.shards)?;
         phase(imp, "references", references_started);
     }
@@ -1404,6 +1405,33 @@ pub fn load_native(binary: &Path) -> Result<NativeImport> {
     phase(&mut imp, "parse", parse_started);
     discover(&mut imp)?;
     Ok(imp)
+}
+
+/// MIPS calling code leaves a function's own address in `t9`, and every
+/// position-independent load inside it is written relative to that register.
+/// Ghidra assumes it: `MipsAddressAnalyzer` ships with "Assume T9 set to
+/// Function entry" **on**, and sets `t9` to the entry address the first time
+/// propagation meets it unset (`unknownValue`, 462-504). Without the
+/// assumption a `lw` through `t9` stays symbolic -- stock prints
+/// `PTR___gmon_start___000407a0` where we printed `in_t9 + 0x200d0`.
+fn seed_mips_entry_register(imp: &mut NativeImport) {
+    if !imp.language.starts_with("MIPS:") {
+        return;
+    }
+    let seeds: Vec<NativeRegisterContext> = imp
+        .functions
+        .iter()
+        .filter_map(|function| {
+            let end = function.entry.checked_add(function.size.max(1))?;
+            Some(NativeRegisterContext {
+                start: function.entry,
+                end,
+                register: "t9".into(),
+                value: function.entry,
+            })
+        })
+        .collect();
+    imp.register_contexts.extend(seeds);
 }
 
 /// One console reference query. ConstantPropagationAnalyzer's default trusts

@@ -41,6 +41,55 @@ def extract_deb(data: bytes, dest: Path) -> None:
 
 # Pinned Debian bookworm cross packages.
 SYSROOT_PACKAGES = {
+    "mipsel": {
+        "target": "mipsel-linux-gnu",
+        "prefix": "mipsel-linux-gnu",
+        "lib_dir": "mipsel-linux-gnu",
+        "packages": [
+            {
+                "name": "libc6-dev-mipsel-cross",
+                "version": "2.36-8cross2",
+                "filename": "pool/main/c/cross-toolchain-base-mipsen/libc6-dev-mipsel-cross_2.36-8cross2_all.deb",
+                "sha256": "49ec500c8dd2540f9615881c3a66d3b038c3808e47bd4f0bd97c51cdcda6ffa0",
+            },
+            {
+                "name": "libc6-mipsel-cross",
+                "version": "2.36-8cross2",
+                "filename": "pool/main/c/cross-toolchain-base-mipsen/libc6-mipsel-cross_2.36-8cross2_all.deb",
+                "sha256": "3d122fdb4c759f2ac31feefac76c2a0d957917568c0f7177e57f7ae627bb1c82",
+            },
+            {
+                "name": "linux-libc-dev-mipsel-cross",
+                "version": "6.1.8-1cross2",
+                "filename": "pool/main/c/cross-toolchain-base-mipsen/linux-libc-dev-mipsel-cross_6.1.8-1cross2_all.deb",
+                "sha256": "915e546a5ac2e84220f0890ed5c2c3ce10f2e9ff78b2f4e0ca2a2293fdef6a00",
+            },
+            {
+                "name": "libgcc-12-dev-mipsel-cross",
+                "version": "12.2.0-14cross5",
+                "filename": "pool/main/g/gcc-12-cross-mipsen/libgcc-12-dev-mipsel-cross_12.2.0-14cross5_all.deb",
+                "sha256": "a9fc26d0c98e17262cccd6389e6eb3ca5f70e185ce0e66505845b36315c55b74",
+            },
+            {
+                "name": "libstdc++-12-dev-mipsel-cross",
+                "version": "12.2.0-14cross5",
+                "filename": "pool/main/g/gcc-12-cross-mipsen/libstdc++-12-dev-mipsel-cross_12.2.0-14cross5_all.deb",
+                "sha256": "e308842a90fa4433bd6a0288aaa6e4c2e7658ba8fff1eecbf53d8bc38ec396a9",
+            },
+            {
+                "name": "libgcc-s1-mipsel-cross",
+                "version": "12.2.0-14cross5",
+                "filename": "pool/main/g/gcc-12-cross-mipsen/libgcc-s1-mipsel-cross_12.2.0-14cross5_all.deb",
+                "sha256": "0029200f1f3546649d5b239638770b429f20147bcdcef8cf241795ebe8605388",
+            },
+            {
+                "name": "libstdc++6-mipsel-cross",
+                "version": "12.2.0-14cross5",
+                "filename": "pool/main/g/gcc-12-cross-mipsen/libstdc++6-mipsel-cross_12.2.0-14cross5_all.deb",
+                "sha256": "34d2cb2a50f12605eb70db56c6daf64451b3bac1e2bb2b4f9566a9db48874142",
+            },
+        ],
+    },
     "aarch64": {
         "target": "aarch64-linux-gnu",
         "prefix": "aarch64-linux-gnu",

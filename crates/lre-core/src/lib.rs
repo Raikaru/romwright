@@ -1164,12 +1164,15 @@ impl Core {
         self.db.replace_functions(id, functions)?;
         // One batched round-trip instead of one RPC per function: the per-call
         // overhead after analysis dominated the import time otherwise.
-        let (functions, xrefs, comments, datatypes, signatures) =
+        let (functions, xrefs, comments, datatypes, signatures, stack_variables) =
             bridge.export_facts(session)?;
         self.db.replace_functions(id, &functions)?;
         self.db.replace_xrefs(id, &xrefs)?;
         self.db.replace_comments(id, &comments)?;
         self.db.replace_datatypes(id, &datatypes)?;
+        // Ghidra's recovered stack frame. Its decompiler prints these names,
+        // so a store without them cannot be compared against one with them.
+        self.db.replace_stack_variables(id, &stack_variables)?;
         // What stock says it recovered, recorded as stock's own fact: an
         // oracle store that holds no signature makes every comparison against
         // it measure silence (m4-018).
