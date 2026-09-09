@@ -42,7 +42,16 @@ fn rdram_window(address: u64, size: u64) -> Option<u64> {
         .find(|&base| address >= base && end <= base + RDRAM_SIZE)
 }
 
+/// The cartridge domain, where the whole ROM is visible to the CPU
+/// (n64brew "Memory Map": PI domain 1, cached at 0x10000000 physical).
+const CARTRIDGE_WINDOW: u64 = 0x1000_0000;
+
 /// The boot address of a native-order ROM, when `data` is one.
+///
+/// A retail ROM is far larger than RDRAM -- Perfect Dark is 32 MB against a
+/// console maximum of 8 -- because the boot code copies only its first
+/// segment and the game pages in the rest. So the test is that the boot
+/// address lands in RDRAM, not that the whole image fits there.
 fn boot_address(data: &[u8]) -> Option<u64> {
     if (data.len() as u64) <= CODE_OFFSET {
         return None;
@@ -51,8 +60,7 @@ fn boot_address(data: &[u8]) -> Option<u64> {
         return None;
     }
     let boot = u64::from(word(data, BOOT_ADDRESS_OFFSET)?);
-    let size = data.len() as u64 - CODE_OFFSET;
-    rdram_window(boot, size).map(|_| boot)
+    rdram_window(boot, 1).map(|_| boot)
 }
 
 /// True when `data` is a native-order cartridge ROM.
@@ -84,8 +92,9 @@ fn regions(window: u64) -> Vec<DeclaredRegion> {
     .collect()
 }
 
-/// Loads a cartridge ROM: the game code at the header's boot address, that
-/// address as the seed, and the console's memory map declared.
+/// Loads a cartridge ROM: the boot segment at the header's boot address,
+/// the whole ROM in the cartridge domain, that boot address as the seed, and
+/// the console's memory map declared.
 pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
     if is_swapped_dump(data) {
         return super::err(
@@ -97,19 +106,34 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         return super::err("not a Nintendo 64 cartridge ROM");
     };
     let start = CODE_OFFSET as usize;
-    let size = data.len() as u64 - CODE_OFFSET;
-    let window = rdram_window(boot, size)
+    let carried = data.len() as u64 - CODE_OFFSET;
+    let window = rdram_window(boot, 1)
         .ok_or_else(|| super::ImportError::Bad("boot address is not RDRAM".into()))?;
+    // The boot code copies as much as RDRAM holds; the rest of the ROM stays
+    // in the cartridge domain until the game pages it in, so it is mapped
+    // there rather than run off the end of memory.
+    let resident = carried.min(window + RDRAM_SIZE - boot);
+    let resident_end = start + resident as usize;
     let mut import = NativeImport {
-        mappings: vec![Mapping {
-            vaddr: boot,
-            size,
-            file_off: CODE_OFFSET,
-            // Copied into RDRAM by the boot code, so writable too.
-            flags: 0x7,
-            bytes: data[start..].to_vec(),
-        }],
-        mapping_names: vec!["code".into()],
+        mappings: vec![
+            Mapping {
+                vaddr: boot,
+                size: resident,
+                file_off: CODE_OFFSET,
+                // Copied into RDRAM by the boot code, so writable too.
+                flags: 0x7,
+                bytes: data[start..resident_end].to_vec(),
+            },
+            Mapping {
+                vaddr: CARTRIDGE_WINDOW,
+                size: data.len() as u64,
+                file_off: 0,
+                // The cartridge is read-only and is not executed in place.
+                flags: 0x2,
+                bytes: data.to_vec(),
+            },
+        ],
+        mapping_names: vec!["code".into(), "cartridge".into()],
         declared_regions: regions(window),
         format: "n64".into(),
         // VR4300: 64-bit registers, 32-bit addresses.
@@ -146,6 +170,24 @@ mod tests {
         assert_eq!(import.mappings[0].file_off, CODE_OFFSET);
         assert_eq!(import.mappings[0].size, 0x1000);
         assert_eq!(import.functions[0].entry, 0x8000_0400);
+    }
+
+    #[test]
+    fn a_rom_larger_than_rdram_loads_with_its_boot_segment_resident() {
+        // Every retail cartridge is: Perfect Dark carries 32 MB against a
+        // console maximum of 8, and requiring the image to fit in RDRAM made
+        // the loader refuse it and the file fall through to another format's
+        // parser.
+        let length = (RDRAM_SIZE * 2) as usize;
+        let image = rom(NATIVE, 0x8000_1000, length);
+        assert!(is_rom(&image));
+        let import = import(&image).expect("retail-sized rom");
+        assert_eq!(import.mappings[0].vaddr, 0x8000_1000);
+        assert_eq!(import.mappings[0].size, RDRAM_SIZE - 0x1000);
+        assert_eq!(import.mappings[0].bytes.len() as u64, RDRAM_SIZE - 0x1000);
+        // The rest of the cartridge is still readable where the CPU sees it.
+        assert_eq!(import.mappings[1].vaddr, CARTRIDGE_WINDOW);
+        assert_eq!(import.mappings[1].size, length as u64);
     }
 
     #[test]

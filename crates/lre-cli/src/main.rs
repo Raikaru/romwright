@@ -138,7 +138,7 @@ fn ghidra_dir(args: &[String]) -> PathBuf {
 }
 
 fn jvm_opens() -> Vec<String> {
-    [
+    let mut options: Vec<String> = [
         "--add-opens=java.base/java.lang=ALL-UNNAMED",
         "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
         "--add-opens=java.base/java.lang.ref=ALL-UNNAMED",
@@ -148,7 +148,15 @@ fn jvm_opens() -> Vec<String> {
     ]
     .iter()
     .map(|s| s.to_string())
-    .collect()
+    .collect();
+    // A JVM default heap is not enough for every loader the install carries:
+    // the Game Boy Advance loader maps the console's whole address space, and
+    // stock `analyzeHeadless` needs its heap raised past the 2G default before
+    // a 420-byte cartridge will import. The bridge is the oracle, so it gets
+    // the ceiling that makes the oracle able to answer.
+    let heap = std::env::var("VENTRIS_BRIDGE_MAXMEM").unwrap_or_else(|_| "8g".into());
+    options.push(format!("-Xmx{heap}"));
+    options
 }
 
 /// Builds the classpath from every runtime jar of the install.
@@ -157,10 +165,12 @@ fn find_ghidra_classpath(install: &Path) -> Result<String, String> {
     let mut jars = Vec::new();
     collect_jars(&pattern, &mut jars)
         .map_err(|e| format!("classpath scan failed: {e}"))?;
-    jars.retain(|p| {
-        let name = p.to_string_lossy();
-        !name.contains("src.zip") && !name.contains("/Extension")
-    });
+    // Installed extensions are modules like any other: their jars carry
+    // loaders (a GameCube DOL, a Game Boy Advance cartridge) and languages
+    // (`r5900`) that the install's own opinion data already points at.
+    // Dropping them left the oracle unable to load exactly the containers the
+    // corpus is made of, which then read as "no such loader exists".
+    jars.retain(|p| !p.to_string_lossy().contains("src.zip"));
     if jars.is_empty() {
         return Err(format!("no Ghidra jars under {}", install.display()));
     }

@@ -8,7 +8,15 @@
 namespace ghidra {
 
 class VentrisLinkageEmit : public PcodeEmit {
-  enum Kind { Unknown, Constant, Slot, UnresolvedSlot };
+  // `Mode` is a value derived from a code pointer's ISA-mode bit rather than
+  // from the pointer itself: on a language that selects the instruction set
+  // with the low address bit, `JXWritePC` computes `(addr & 1) != 0`, hands it
+  // to `setISAMode`, and branches to `addr & ~1` (Ghidra's `mips.sinc`,
+  // `JXWritePC`; ARM does the same). Such a value cannot be the pointer, so it
+  // neither resolves a slot nor makes the stub unknowable -- Ghidra tolerates
+  // exactly this, allowing flag-sized registers to be set and never read
+  // (`CreateThunkFunctionCmd.getThunkedAddr`, `allow8bitNonUse`).
+  enum Kind { Unknown, Constant, Slot, UnresolvedSlot, Mode };
   struct Value {
     Kind kind;
     uintb value;
@@ -21,7 +29,8 @@ class VentrisLinkageEmit : public PcodeEmit {
   Architecture &arch;
   std::array<Cell, 64> cells;
   size_t count;
-  bool probing, unknownRead;
+  size_t instructionMark;
+  bool probing, unknownRead, lowBitMode;
 
   bool memory(AddrSpace *space) const {
     return space == arch.getDefaultCodeSpace() ||
@@ -89,9 +98,21 @@ public:
   size_t operations;
   uintb slot, flowTarget;
   explicit VentrisLinkageEmit(Architecture &conf)
-      : arch(conf), count(0), probing(false), unknownRead(false), bad(false),
-        terminal(false), flow(false), call(false), operations(0), slot(0),
-        flowTarget(0) {}
+      : arch(conf), count(0), probing(false), unknownRead(false),
+        lowBitMode(false), bad(false), instructionMark(0), terminal(false),
+        flow(false), call(false), operations(0), slot(0), flowTarget(0) {
+    // Ghidra decides this by the presence of a register with this name
+    // (`PseudoDisassembler.hasLowBitCodeModeInAddrValues`, which reads
+    // `LOW_BIT_CODE_MODE_REGISTER_NAME`); in the pinned specs it is a context
+    // field -- MIPS declares `LowBitCodeMode=(1,1)`, ARM `(0,0)`.
+    if (conf.context != (ContextDatabase *)0) {
+      try {
+        conf.context->getDefaultValue("LowBitCodeMode");
+        lowBitMode = true;
+      } catch (LowlevelError &) {
+      }
+    }
+  }
 
   void beginContext(void) { probing = true; }
   void beginLinkage(void) {
@@ -104,6 +125,10 @@ public:
   void beginInstruction(void) {
     operations = 0;
     flow = call = false;
+    // Where this instruction's own writes start. A delay-slot instruction is
+    // emitted as part of the branch that owns it, so its side effects belong
+    // to the transfer rather than to the stub's data flow.
+    instructionMark = count;
     for (size_t i = 0; i < count;) {
       if (cells[i].var.space->getType() == IPTR_INTERNAL)
         cells[i] = cells[--count];
@@ -114,7 +139,11 @@ public:
   bool shape(bool table) const {
     if (bad || !terminal)
       return false;
-    for (size_t i = 0; !table && i < count; ++i) {
+    for (size_t i = 0; !table && i < instructionMark && i < count; ++i) {
+      // A register the stub computes and never reads means it does more than
+      // reach a pointer slot -- except in the branch's own instruction, whose
+      // delay slot writes the lazy-binding index every MIPS stub writes
+      // (`addiu t8, t7, %lo(slot)`).
       if (cells[i].var.space->getType() != IPTR_INTERNAL &&
           cells[i].var.size > 1 && !cells[i].used)
         return false;
@@ -128,7 +157,15 @@ public:
     ++operations;
     if (bad)
       return;
-    if (terminal || flow || operations > 128) {
+    if (terminal) {
+      // The ops that follow an indirect branch inside the same instruction are
+      // its delay slot's: SLEIGH emits a delay-slot instruction as part of the
+      // branch that owns it, and the walk already stops at the branch. Marking
+      // those ops bad refused every MIPS linkage stub -- `lui/lw/jr t9` -- and
+      // left its callee named `FUN_<addr>` instead of `printf`.
+      return;
+    }
+    if (flow || operations > 128) {
       bad = true;
       return;
     }
@@ -158,6 +195,12 @@ public:
         terminal = true;
         slot = target.value;
       }
+      return;
+    }
+    if (opcode == CPUI_CALLOTHER && out == (VarnodeData *)0) {
+      // A user-defined operation with no output is a processor side effect,
+      // not data flow: MIPS switches ISA mode on an indirect jump, which used
+      // to poison every stub the jump belongs to.
       return;
     }
     if (out == (VarnodeData *)0 || out->size == 0 ||
@@ -204,19 +247,61 @@ public:
     if (bad)
       return;
     // Processor alignment masking does not change the identity of the loaded
-    // pointer slot.
-    uintb alignment = arch.translate->getAlignment();
-    if (opcode == CPUI_INT_AND &&
-        (left.kind == Slot || left.kind == UnresolvedSlot) &&
-        right.kind == Constant && out->size == vars[0].size && alignment != 0 &&
-        (alignment & (alignment - 1)) == 0 &&
-        right.value == (mask(vars[0].size) & ~(alignment - 1))) {
-      put(*out, left);
-      return;
+    // pointer slot, and neither does clearing the ISA-mode bit on a language
+    // that carries the mode in the low address bit. `AND` is commutative and
+    // SLEIGH writes it both ways round -- MIPS spells the mask first
+    // (`tmp = -2; tmp = tmp & addr`, `JXWritePC`) and the mode test second
+    // (`addr & 0x1`) -- so the pointer side is found rather than assumed.
+    if (opcode == CPUI_INT_AND && size == 2) {
+      const Value *pointer = (Value *)0;
+      const Value *constant = (Value *)0;
+      uint4 pointerSize = 0;
+      if (right.kind == Constant && left.kind != Constant) {
+        pointer = &left;
+        constant = &right;
+        pointerSize = vars[0].size;
+      } else if (left.kind == Constant && right.kind != Constant) {
+        pointer = &right;
+        constant = &left;
+        pointerSize = vars[1].size;
+      }
+      if (pointer != (const Value *)0 &&
+          (pointer->kind == Slot || pointer->kind == UnresolvedSlot ||
+           pointer->kind == Mode)) {
+        uintb full = mask(pointerSize);
+        uintb value = constant->value & full;
+        uintb alignment = arch.translate->getAlignment();
+        bool aligning = alignment != 0 && (alignment & (alignment - 1)) == 0 &&
+                        value == (full & ~(alignment - 1));
+        bool demoding = lowBitMode && value == (full & ~uintb(1));
+        if (pointer->kind != Mode && out->size == pointerSize &&
+            (aligning || demoding)) {
+          put(*out, *pointer);
+          return;
+        }
+        // The complement: the mode bit itself, which the branch hands to
+        // `setISAMode` and never to the program counter.
+        if (lowBitMode && value == 1) {
+          put(*out, {Mode, 0});
+          return;
+        }
+      }
     }
     OpBehavior *behavior = arch.inst[opcode]->getBehavior();
     if (behavior->isSpecial() || behavior->isUnary() != (size == 1)) {
       bad = true;
+      return;
+    }
+    if (left.kind == Mode || right.kind == Mode) {
+      // A test or a copy of the mode bit stays a mode bit; nothing derived
+      // from it can name the slot, and its being unread is not a side effect.
+      if ((left.kind == Mode || left.kind == Constant) &&
+          (right.kind == Mode || right.kind == Constant)) {
+        put(*out, {Mode, 0});
+        return;
+      }
+      unknownRead = true;
+      put(*out, {Unknown, 0});
       return;
     }
     if (left.kind != Constant || right.kind != Constant) {

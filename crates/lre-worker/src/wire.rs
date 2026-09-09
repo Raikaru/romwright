@@ -143,6 +143,8 @@ pub const ATTRIBUTE: u8 = 0xc0;
 // marshal.cc:1264-1265 register ELEM_DATA/ELEM_INPUT; the ids below are the
 // ones the protocol paths actually use, each cited to its defining file.
 pub mod elem {
+    /// ELEM_SET (globalcontext.cc:24): one tracked register value.
+    pub const SET: u32 = 124;
     /// ELEM_VOID (marshal.cc:1273).
     pub const VOID: u32 = 10;
     /// ELEM_INJECT (pcodeinject.cc:34).
@@ -193,6 +195,8 @@ pub mod elem {
 }
 
 pub mod attr {
+    /// ATTRIB_VAL (marshal.cc:1255): a tracked register's value.
+    pub const TRACKED_VALUE: u32 = 24;
     /// ATTRIB_CONTENT (marshal.cc:1232).
     pub const CONTENT: u32 = 1;
     /// ATTRIB_ID (marshal.cc:1240).

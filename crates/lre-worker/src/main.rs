@@ -49,6 +49,55 @@ fn main() {
     }
 }
 
+/// The compiler spec, plus the tracked register a processor's ABI defines on
+/// entry to every function the store holds. Unchanged for every language that
+/// defines no such register.
+///
+/// Every entry, not just the one being asked for: the spec is pushed once per
+/// launch and a batch answers many functions from that launch, so a spec
+/// carrying one function's tracked set seeds the batch's first address and
+/// silently leaves the rest unseeded. Ghidra seeds each function the same way
+/// -- its MIPS analyzer writes the value at every function entry it evaluates
+/// (`MipsAddressAnalyzer`, `assumeT9EntryAddress`).
+fn with_entry_register_tracking(
+    cspec: &str,
+    provider: &lre_worker::ProgramProvider,
+    lang_dir: &str,
+) -> String {
+    if !lang_dir.contains("MIPS") {
+        return cspec.to_string();
+    }
+    let Some(&(register_offset, register_size)) = provider.registers.get("t9") else {
+        return cspec.to_string();
+    };
+    if register_size == 0 || register_size > 8 {
+        return cspec.to_string();
+    }
+    let Some(close) = cspec.rfind("</compiler_spec>") else {
+        return cspec.to_string();
+    };
+    let mut entries: Vec<u64> = provider.functions.clone();
+    entries.sort_unstable();
+    entries.dedup();
+    if entries.is_empty() {
+        return cspec.to_string();
+    }
+    let mut tracked = String::from("<context_data>\n");
+    for entry in entries {
+        tracked.push_str(&format!(
+            "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{entry:x}\">\n\
+             <set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{entry:x}\"/>\n\
+             </tracked_set>\n"
+        ));
+    }
+    tracked.push_str("</context_data>\n");
+    let mut out = String::with_capacity(cspec.len() + tracked.len());
+    out.push_str(&cspec[..close]);
+    out.push_str(&tracked);
+    out.push_str(&cspec[close..]);
+    out
+}
+
 fn run(
     ghidra_opt: &str,
     lang_dir: &str,
@@ -299,12 +348,22 @@ fn run(
     };
     let specs = lre_worker::load_specs(Path::new(lang_dir))?;
     provider.core_types = lre_worker::parse_core_types(&specs.3);
+    // MIPS calling code leaves a function's own address in `t9`, and every
+    // position-independent load inside it is written relative to that
+    // register. Ghidra assumes it -- `MipsAddressAnalyzer` ships with "Assume
+    // T9 set to Function entry" on and writes the value into the program
+    // context (`unknownValue`, 462-504) -- and its decompiler reads it back as
+    // a tracked register, injected as a COPY at the entry block
+    // (`ActionConstbase::apply`, coreaction.cc:693-705). Raw-SLEIGH mode uses
+    // ContextInternal, which takes tracked sets from the compiler spec
+    // (`decodeFromSpec`, globalcontext.cc:531-552), so that is where it goes.
+    let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(
         &mut provider,
         &specs.0,
-        &specs.1,
+        &cspec,
         &specs.2,
         &specs.3,
         &function_shell,
@@ -316,9 +375,40 @@ fn run(
         let structured = std::env::var_os("WORKER_STRUCTURED").is_some();
         let mut answers = serde_json::Map::new();
         for offset in offsets {
-            worker.prepare_function(&mut provider, offset)?;
-            worker.set_action(&mut provider, "decompile", "")?;
-            let raw = worker.decompile_at(&mut provider, ram, offset)?;
+            // One function's failure is that function's answer, not the
+            // batch's. A real image branches into memory it never maps -- a
+            // Nintendo 64 boot segment jumps past RDRAM -- and the decompiler
+            // raises for the address it cannot read. Ghidra's client keeps its
+            // session and reports the one function as undecompiled, so the
+            // batch omits the key and every other address still answers.
+            let raw = match worker
+                .prepare_function(&mut provider, offset)
+                .and_then(|()| worker.set_action(&mut provider, "decompile", ""))
+                .and_then(|()| worker.decompile_at(&mut provider, ram, offset))
+            {
+                Ok(raw) => raw,
+                Err(error) => {
+                    eprintln!("warning: {offset:08x}: {error}");
+                    // The exception leaves the session's per-function state
+                    // behind; if it cannot be cleared the process is gone and
+                    // a fresh one takes over the rest of the batch.
+                    if worker.flush_native(&mut provider).is_err() {
+                        worker =
+                            lre_worker::NativeWorker::launch(std::process::Command::new(
+                                ghidra_opt,
+                            ))?;
+                        worker.register_program_with_shell(
+                            &mut provider,
+                            &specs.0,
+                            &cspec,
+                            &specs.2,
+                            &specs.3,
+                            &function_shell,
+                        )?;
+                    }
+                    continue;
+                }
+            };
             // One launch, many functions: the decompiler's per-function
             // caches have to be cleared between them exactly as Ghidra's
             // client clears them.

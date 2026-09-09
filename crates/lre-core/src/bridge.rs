@@ -283,6 +283,7 @@ impl Bridge {
         Vec<CommentRow>,
         Vec<DataTypeRow>,
         Vec<OracleSignature>,
+        Vec<lre_model::StackVariableRow>,
     )> {
         let v = self.call("export_facts", json!({"session": session}))?;
         let functions: Vec<FunctionRow> = Self::parse_rows(
@@ -305,7 +306,18 @@ impl Bridge {
         let datatypes: Vec<DataTypeRow> = Self::parse(
             v.get("types").cloned().unwrap_or(Value::Null),
         )?;
-        Ok((functions, xrefs, comments, datatypes, signatures))
+        // The stack frame Ghidra recovered, whose names its decompiler prints.
+        let stack_variables: Vec<lre_model::StackVariableRow> = Self::parse_rows(
+            v.get("stack_variables").cloned().unwrap_or(Value::Null),
+        )?;
+        Ok((
+            functions,
+            xrefs,
+            comments,
+            datatypes,
+            signatures,
+            stack_variables,
+        ))
     }
 
     /// Applies a function rename.
