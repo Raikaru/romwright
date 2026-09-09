@@ -418,6 +418,31 @@ pub fn decompile_native_batch(
         .map_err(|e| NativeRuntimeError(format!("invalid worker batch: {e}")))
 }
 
+/// Structured documents for several addresses from one worker launch, keyed
+/// like `decompile_native_batch`. A single address still goes through the
+/// batch protocol so the answer shape is one.
+pub fn decompile_native_docs(
+    cfg: &RuntimeConfig,
+    binary: &Path,
+    addresses: &[String],
+    program: &str,
+    project_dir: &Path,
+    base: Option<u64>,
+) -> Result<std::collections::BTreeMap<String, lre_model::DecompDoc>> {
+    if addresses.is_empty() {
+        return Ok(std::collections::BTreeMap::new());
+    }
+    if addresses.len() == 1 {
+        let doc = decompile_native_doc(cfg, binary, &addresses[0], program, project_dir, base)?;
+        return Ok([(format!("{:08x}", doc.address.offset), doc)].into_iter().collect());
+    }
+    let stdout = run_decompiler(cfg, binary, addresses, program, project_dir, base, true)?;
+    let text = String::from_utf8(stdout)
+        .map_err(|e| NativeRuntimeError(format!("worker batch is not UTF-8: {e}")))?;
+    serde_json::from_str(text.trim())
+        .map_err(|e| NativeRuntimeError(format!("invalid structured worker batch: {e}")))
+}
+
 /// Performs the same native decompile but returns the packed document as
 /// structured model data. The worker stamped revision is zero; the Core
 /// facade replaces it with the current durable program revision.

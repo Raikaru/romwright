@@ -428,6 +428,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // (FunctionStartAnalyzer.checkAlreadyInFunctionAbove, 491-530).
     let mut fell_into: HashSet<u64> = HashSet::new();
     let mut flow_endings = Vec::new();
+    let mut indirect_jumps: Vec<u64> = Vec::new();
     let mut context_edges = Vec::new();
     let mut branch_targets = Vec::new();
     // Table metadata supplies boundaries, not functions. Each entry still needs
@@ -653,6 +654,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 if has_linkage_slots && info.kind != FlowKind::Fallthrough {
                     flow_endings.push((addr, info.kind == FlowKind::BranchInd));
                 }
+                if info.kind == FlowKind::BranchInd {
+                    indirect_jumps.push(addr);
+                }
                 if info.conditional {
                     conditional_targets.extend(info.targets.iter().copied());
                 }
@@ -762,9 +766,27 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             }
                         }
                     }
+                    FlowKind::BranchInd => {
+                        // A table the decompiler recovered here: each case is
+                        // the jump's own flow, owned by the function it is in.
+                        if let Some(targets) = imp.switch_tables.get(&addr) {
+                            for &t in targets {
+                                merge_reached_candidate(
+                                    t,
+                                    origin,
+                                    &thunk_candidates,
+                                    &mut addr_origin,
+                                    &mut proven_bodies,
+                                );
+                                if in_code(t) && !visited.contains(&t) {
+                                    addr_origin.insert(t, origin);
+                                    next_active.push(t);
+                                }
+                            }
+                        }
+                    }
                     FlowKind::CallInd
                     | FlowKind::Fallthrough
-                    | FlowKind::BranchInd
                     | FlowKind::Return
                     | FlowKind::Bad
                     | FlowKind::Unimpl => {}
@@ -1011,6 +1033,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                 if info.kind != FlowKind::Fallthrough {
                                     flow_endings.push((addr, info.kind == FlowKind::BranchInd));
                                 }
+                                if info.kind == FlowKind::BranchInd {
+                                    indirect_jumps.push(addr);
+                                }
                             }
                             proven_bodies
                                 .entry(origin)
@@ -1079,6 +1104,23 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                         if in_code(t) && !visited.contains(&t) {
                                             addr_origin.insert(t, origin);
                                             next_active.push(t);
+                                        }
+                                    }
+                                }
+                                FlowKind::BranchInd => {
+                                    if let Some(targets) = imp.switch_tables.get(&addr) {
+                                        for &t in targets {
+                                            merge_reached_candidate(
+                                                t,
+                                                origin,
+                                                &reloc_set,
+                                                &mut addr_origin,
+                                                &mut proven_bodies,
+                                            );
+                                            if in_code(t) && !visited.contains(&t) {
+                                                addr_origin.insert(t, origin);
+                                                next_active.push(t);
+                                            }
                                         }
                                     }
                                 }
@@ -1451,6 +1493,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // Bodies are known now, so a stub's terminal branch can be identified.
     flow_endings.sort_unstable();
     record_stub_transfers(imp, &flow_endings);
+    indirect_jumps.sort_unstable();
+    indirect_jumps.dedup();
+    imp.indirect_jumps = indirect_jumps;
     imp.indirect_transfers = flow_endings
         .iter()
         .filter(|&&(_, indirect)| indirect)
