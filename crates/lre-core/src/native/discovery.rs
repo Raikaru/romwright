@@ -1711,7 +1711,7 @@ fn proven_body_end<P: FlowProvider>(
 
 /// The provenance of a reference recorded from an unconditional branch that
 /// leaves its function.
-const BRANCH_PROVENANCE: &str = "native-import:branch";
+pub(crate) const BRANCH_PROVENANCE: &str = "native-import:branch";
 
 /// Records every unconditional direct branch that leaves its own function.
 ///

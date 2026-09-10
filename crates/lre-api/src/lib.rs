@@ -160,6 +160,17 @@ impl ApiService {
                     "signatures": signatures,
                 }))
             }
+            "analyse_function" => {
+                let binary = path_param(params, "binary")?;
+                let program = string_param(params, "program")?;
+                let address = address_param(params, "address")?;
+                let done = self
+                    .core
+                    .analyse_function(&binary, &program, &address)
+                    .map_err(|error| DispatchError::Request(error.to_string()))?;
+                serde_json::to_value(done)
+                    .map_err(|error| DispatchError::Request(format!("encode result: {error}")))
+            }
             "classes" => {
                 let program = string_param(params, "program")?;
                 value(self.core.classes(&program))
