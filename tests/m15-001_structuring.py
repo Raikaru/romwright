@@ -28,7 +28,12 @@ Three claims:
    The partition is asserted both ways: no disagreement outside that class,
    and every disagreement inside it.
 
-3. **The baseline is recorded.** The number of edges stock's structuring
+3. **Our structuring leaves fewer edges unstructured.** The same graphs go
+   through `structuring::structure` in Rust, and the total it cannot
+   structure is compared with stock's. Both sides count the same category,
+   so neither may score a `break` as structured while the other does not.
+
+4. **The baseline is recorded.** The number of edges stock's structuring
    could not structure, over the scored functions, is written to the report.
    That is what a structuring pass of ours has to beat on the same functions,
    recorded before such a pass exists so it cannot be chosen afterwards.
@@ -59,6 +64,8 @@ LIBC_CANDIDATES = (
     "/lib/x86_64-linux-gnu/libc.so.6",
 )
 # Structuring is defined on the graph, so these hold on any language.
+# Measured 0.788 on libc; the gate holds the claim, not the exact number.
+OURS_OVER_STOCK = 0.90
 SHAPES = (
     ("ifelse", 4, [(0, 1), (0, 2), (1, 3), (2, 3)], 0),
     ("selfloop", 3, [(0, 1), (1, 1), (1, 2)], 0),
@@ -188,6 +195,12 @@ def main():
     disagreeing = [row for row in switchless if row["blocks"] != measured[row["id"]]]
     agreeing_tables = [row for row in with_tables if row["blocks"] == measured[row["id"]]]
     gotos = sum(row["gotos"] for row in comparable)
+    ours = sum(row["ours"]["unstructured"] for row in comparable if "ours" in row)
+    better = sum(1 for row in comparable
+                 if "ours" in row and row["ours"]["unstructured"] < row["gotos"])
+    worse = [row for row in comparable
+             if "ours" in row and row["ours"]["unstructured"] > row["gotos"]]
+    ratio = ours / gotos if gotos else 1.0
     report["metrics"] = {
         "scored": len(measured),
         "answered": len(rows),
@@ -198,6 +211,14 @@ def main():
         "block_disagreements_without_tables": len(disagreeing),
         "table_functions_that_agree": len(agreeing_tables),
         "stock_unstructured_edges": gotos,
+        "our_unstructured_edges": ours,
+        "ours_over_stock": round(ratio, 4),
+        "functions_we_structure_better": better,
+        "functions_we_structure_worse": len(worse),
+        "worst_regression": max(
+            (row["ours"]["unstructured"] - row["gotos"] for row in worse), default=0),
+        "duplicated_tails": sum(row["ours"]["duplicated"] for row in comparable
+                                if "ours" in row),
         "functions_with_gotos": sum(1 for row in comparable if row["gotos"]),
         "examples": [
             {"function": row["id"], "walk_blocks": row["blocks"],
@@ -221,6 +242,10 @@ def main():
             f"{len(agreeing_tables)} functions with recovered jump tables agree on block "
             "count, so the exception no longer describes the difference")
 
+    if ratio > OURS_OVER_STOCK:
+        failures.append(
+            f"our structuring leaves {ours} edges unstructured against stock's {gotos} "
+            f"({ratio:.4f} of it), over the {OURS_OVER_STOCK} requirement")
     report["passed"] = not failures
     report["failures"] = failures
     arguments.report.parent.mkdir(parents=True, exist_ok=True)
@@ -237,7 +262,11 @@ def main():
         f"tables differ as stated; stock leaves {metrics['stock_unstructured_edges']} edges "
         f"unstructured over "
         f"{metrics['comparable']} functions, {metrics['functions_with_gotos']} of them "
-        f"holding at least one)")
+        f"holding at least one; ours leaves {metrics['our_unstructured_edges']} "
+        f"({metrics['ours_over_stock']} of stock), better on "
+        f"{metrics['functions_we_structure_better']} functions, worse on "
+        f"{metrics['functions_we_structure_worse']} by at most "
+        f"{metrics['worst_regression']})")
     return 0
 
 

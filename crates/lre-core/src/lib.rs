@@ -19,6 +19,7 @@ pub mod native;
 pub mod opinion;
 pub mod native_runtime;
 pub mod session;
+pub mod structuring;
 mod prototypes;
 pub mod register_params;
 mod nonreturn;
@@ -963,7 +964,8 @@ impl Core {
         // What the walk proved about each body travels with its answer: a
         // block count is only comparable to another producer's when both
         // attributed the same code to the function.
-        let mut walked: std::collections::HashMap<String, (u64, u64, Vec<u64>, usize)> =
+        type WalkFacts = (u64, u64, Vec<u64>, usize, crate::structuring::Structured);
+        let mut walked: std::collections::HashMap<String, WalkFacts> =
             std::collections::HashMap::new();
         self.live.with(binary, program, |live| {
             for entry in entries {
@@ -972,9 +974,13 @@ impl Core {
                 if blocks.is_empty() {
                     continue;
                 }
+                // Our own structuring of the same graph, so both answers
+                // travel together and no consumer can compare two different
+                // CFGs by accident.
+                let ours = crate::structuring::structure(blocks.len(), &edges);
                 walked.insert(
                     entry.to_string(),
-                    (walk.size(), walk.instructions, blocks.clone(), edges.len()),
+                    (walk.size(), walk.instructions, blocks.clone(), edges.len(), ours),
                 );
                 requests.push(
                     serde_json::json!({
@@ -998,7 +1004,7 @@ impl Core {
             .iter()
             .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
             .map(|mut answer| {
-                if let Some((size, instructions, starts, edges)) = answer
+                if let Some((size, instructions, starts, edges, ours)) = answer
                     .get("id")
                     .and_then(serde_json::Value::as_str)
                     .and_then(|id| walked.get(id))
@@ -1016,6 +1022,13 @@ impl Core {
                             .map(|start| format!("{start:08x}"))
                             .collect::<Vec<_>>()
                             .into(),
+                    );
+                    object.insert(
+                        "ours".into(),
+                        serde_json::json!({
+                            "unstructured": ours.unstructured_edges(),
+                            "duplicated": ours.duplicated.len(),
+                        }),
                     );
                 }
                 answer
