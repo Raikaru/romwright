@@ -846,9 +846,6 @@ fn run_block<I: Image>(
                                     targets.push((origin.clone(), *off));
                                 }
                             }
-                            // The taken edge is the one the comparison holds
-                            // on; our block successors list the taken target
-                            // first (`Block::successors`). Which side of the
                             // branch the bound belongs to depends on how the
                             // flags were combined and negated, and getting
                             // that wrong silently is worse than trying both:
@@ -866,8 +863,12 @@ fn run_block<I: Image>(
                                     Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) =>
                                         Value::Strided { base: 0, stride: 1, lo: lo.max(-off), hi: old_hi.min(high - off), guarded: true },
                                     // A fresh bound on an unknown value.
+                                    // `lea 0x10(%r8),%rax; cmp $0x20,%rax`
+                                    // bounds r8 to [-0x10, 0xf]: the floor
+                                    // went negative, so no guard was ever
+                                    // stated and the read must refuse.
                                     Some(Value::Top) | None =>
-                                        Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: true },
+                                        Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: -off >= 0 },
                                     // A set filters to the members the
                                     // bound admits: sound, and keeps the
                                     // precision the set already had.
@@ -1808,6 +1809,166 @@ mod tests {
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
         // The bound on eax is [0,3]: the four entries at 0x9000 are the
         // table, and a self-link would read the 0x9100-range entries.
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1100, 0x1108, 0x1110, 0x1118]
+        );
+    }
+
+    #[test]
+    fn a_guarded_bound_shifted_below_zero_is_refused() {
+        // `cmp $0x20,%r8; jbe` states only `hi`; the `lo: 0` floor is the
+        // fresh-bound assumption. `sub $0x10,%r8` then shifts it to
+        // [-0x10, 0xf] -- and at 0x190114 that read the tail of the
+        // preceding table as this one's head, one target landing
+        // mid-instruction. A guarded index-space value shifted below zero
+        // drops its guard: no compiler indexes a table negatively.
+        let mut memory = HashMap::new();
+        // The over-read the old code claimed: entries at 0x8fc0..0x907c.
+        for index in -0x10i64..0x10 {
+            memory.insert(
+                (0x9000i64 + index * 4) as u64,
+                (0x1100 + index * 8) as u64,
+            );
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        // r8 < 0x20; jbe dispatch.
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x40, 8), varnode("const", 0x20, 8)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        // r8 -= 0x10 in place: [0,0x1f] -> [-0x10,0xf].
+                        op(
+                            "INT_SUB",
+                            Some(varnode("register", 0x40, 8)),
+                            vec![varnode("register", 0x40, 8), varnode("const", 0x10, 8)],
+                        ),
+                        // jmp *(0x9000 + r8*4).
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x40, 8), varnode("const", 4, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.refusals.unknown_target, 1);
+    }
+
+    #[test]
+    fn a_narrow_negative_immediate_shifts_the_bound_down() {
+        // `add $-0x20,%eax` arrives as `0xffffffe0:4`; the value path must
+        // shift by -0x20 the way the origin arm does, not by +4294967264.
+        // Same shape as the in-place test, through INT_ADD.
+        let mut memory = HashMap::new();
+        for index in 0..4u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        // eax = zext(load): [0,255] unguarded, no origin.
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x100, 1)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xbeef, 8)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("unique", 0x100, 1)],
+                        ),
+                        // eax = eax + 0xffffffe0 (i.e. -0x20), in place.
+                        op(
+                            "INT_ADD",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("register", 0x0, 4), varnode("const", 0xffffffe0, 4)],
+                        ),
+                        // eax < 4; jbe dispatch.
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x0, 4), varnode("const", 4, 4)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x0, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(
             found.tables[0].targets,
