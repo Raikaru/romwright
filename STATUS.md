@@ -5616,6 +5616,42 @@ outside the jump-table class fails, and so does a jump-table function that
 starts agreeing.
 
 
+### m16-001 evidence (types from p-code, scored against DWARF)
+
+Constraint-based inference over p-code (`crates/lre-core/src/types_infer.rs`):
+each operation an operand takes part in is a constraint, constraints join
+over a small lattice, and nothing is claimed where nothing constrained it.
+Scored on a fixture built at `-O0` and `-O2` (`tests/fixtures-src/types_fixture.c`)
+rather than the locked corpus, whose DWARF says `int32` almost everywhere --
+a constant answering `int32` would have scored well on it.
+
+| Measured (68 typed positions) | Value |
+|---|---|
+| Exact | 0.50 |
+| Conservative (a generalisation of the truth, never false) | 0.9559 |
+| Contradicting the compiler | 3 |
+| Silent (`unknown`) | 10 |
+
+Four findings, each measured rather than assumed:
+
+* **A flag nothing branches on is not evidence.** x86 `CMP` emits a signed
+  test *and* an unsigned one; taking both made twelve of thirteen fixture
+  functions report contradictory parameters. Sign evidence is now taken only
+  from comparisons whose result reaches a `CBRANCH`.
+* **The width is the narrowest read, not the widest.** A 32-bit parameter
+  arrives in a 64-bit slot; `max` reported `int64` for every `int32`.
+* **Widening is the machine's, not the type's.** Reading `mov eax, ...`'s
+  zero-extension as unsigned made every `int32` return come back `uint32`.
+* **Spilled parameters keep their identity.** Tracking frame slots
+  (`base + displacement`) took the silent answers from 20 to 10, which is
+  most of what an unoptimised build hid.
+
+The three contradictions share one cause, recorded rather than tuned away:
+the pass tracks registers, not SSA values, so a register the body reuses as
+scratch stops carrying its entry identity. Value numbering is the next
+increment.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now

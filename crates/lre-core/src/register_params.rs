@@ -31,22 +31,53 @@ pub const SOURCE: &str = "native-prototype:register-input";
 /// to its first non-register entry, and the registers it says a call
 /// destroys.
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct RegisterModel {
+pub struct RegisterModel {
     pub name: String,
     pub registers: Vec<String>,
     pub killed: BTreeSet<String>,
+    /// The registers this model passes floating-point parameters in: a
+    /// separate sequence from the integer one, so parameter index `i` names
+    /// a register only once the argument's class is known.
+    pub float_registers: Vec<String>,
+    /// The registers this model returns a value in, in the order the spec
+    /// lists them: the first non-float entry is where an integer or pointer
+    /// result arrives, which is what a return type is read from.
+    pub returns: Vec<String>,
+    /// Where a floating-point result arrives.
+    pub float_returns: Vec<String>,
 }
 
 /// A parsed compiler spec: its models plus its register file.
-pub(crate) struct Conventions {
+pub struct Conventions {
     pub models: Vec<RegisterModel>,
     pub registers: BTreeMap<String, (u64, u64)>,
+    /// The model `<default_proto>` names: the one a compiler uses for
+    /// ordinary functions. Choosing by "most registers" instead picks
+    /// `syscall`, whose first slot is a call number and not a parameter.
+    pub default_model: Option<String>,
 }
 
 impl Conventions {
-    pub(crate) fn parse(cspec: &str, table: &str) -> Self {
+    pub fn parse(cspec: &str, table: &str) -> Self {
         let registers = registers(table);
-        Self { models: models(cspec, &registers), registers }
+        let default_model = elements(cspec, "default_proto")
+            .into_iter()
+            .next()
+            .and_then(|element| {
+                elements(element.body, "prototype")
+                    .into_iter()
+                    .next()
+                    .and_then(|prototype| attribute(prototype.header, "name"))
+            });
+        Self { models: models(cspec, &registers), registers, default_model }
+    }
+
+    /// The model to read an ordinary function's parameters from.
+    pub fn default(&self) -> Option<&RegisterModel> {
+        self.default_model
+            .as_deref()
+            .and_then(|name| self.models.iter().find(|model| model.name == name))
+            .or_else(|| self.models.iter().max_by_key(|model| model.registers.len()))
     }
 
     /// Registers any model says a call destroys. A parameter register must
@@ -164,7 +195,7 @@ pub(crate) fn declares_model(cspec: &str, name: &str) -> bool {
 /// storage as `<addr space="register" offset="..">`; an installed spec uses
 /// `<register name="..">`. Both are accepted, resolved through the register
 /// file.
-pub(crate) fn models(cspec: &str, registers: &BTreeMap<String, (u64, u64)>) -> Vec<RegisterModel> {
+pub fn models(cspec: &str, registers: &BTreeMap<String, (u64, u64)>) -> Vec<RegisterModel> {
     let by_offset: BTreeMap<u64, &str> = registers
         .iter()
         .filter(|(_, (_, size))| *size == 4 || *size == 8)
@@ -174,7 +205,10 @@ pub(crate) fn models(cspec: &str, registers: &BTreeMap<String, (u64, u64)>) -> V
     for element in elements(cspec, "prototype") {
         let Some(name) = attribute(element.header, "name") else { continue };
         let Some(input) = elements(element.body, "input").into_iter().next() else { continue };
-        let registers = register_prefix(input.body, &by_offset);
+        // Integer/pointer parameter slots in spec order. The old prefix
+        // scan stopped at the first multi-register entry, which on x86-64
+        // swept in the interleaved float entries first.
+        let registers = integer_entries(input.body, &by_offset);
         if registers.is_empty() {
             continue;
         }
@@ -182,13 +216,31 @@ pub(crate) fn models(cspec: &str, registers: &BTreeMap<String, (u64, u64)>) -> V
             .into_iter()
             .flat_map(|killed| register_names(killed.body, &by_offset))
             .collect();
-        found.push(RegisterModel { name, registers, killed });
+        let float_registers = float_entries(input.body, &by_offset);
+        let returns = elements(element.body, "output")
+            .into_iter()
+            .next()
+            .map(|output| integer_entries(output.body, &by_offset))
+            .unwrap_or_default();
+        let float_returns = elements(element.body, "output")
+            .into_iter()
+            .next()
+            .map(|output| float_entries(output.body, &by_offset))
+            .unwrap_or_default();
+        found.push(RegisterModel {
+            name,
+            registers,
+            float_registers,
+            killed,
+            returns,
+            float_returns,
+        });
     }
     found
 }
 
 /// Register name to `(offset, size)` from a spec bundle's `registers.txt`.
-pub(crate) fn registers(table: &str) -> BTreeMap<String, (u64, u64)> {
+pub fn registers(table: &str) -> BTreeMap<String, (u64, u64)> {
     table
         .lines()
         .filter_map(|line| {
@@ -249,6 +301,44 @@ fn elements<'a>(text: &'a str, name: &str) -> Vec<Element<'a>> {
 /// Registers of the leading `<pentry>` elements; a non-register entry (a
 /// stack slot) ends the prefix, because a stack parameter is recovered by
 /// the decompiler's own model.
+/// Every single-register entry of an element that carries an integer or
+/// pointer value, in order.
+///
+/// A parameter or return list interleaves float entries with integer ones
+/// (`<pentry ... metatype="float">`), and they are different sequences: on
+/// the x86-64 spec the first six integer entries are RDI..R9 while the
+/// float entries are XMM0..XMM7. Mixing them makes parameter index `i`
+/// name the wrong register, which is how this first read reported fourteen
+/// parameters for a function of one.
+/// The float-classified single-register entries, in order.
+fn float_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
+    let mut registers = Vec::new();
+    for entry in elements(body, "pentry") {
+        if attribute(entry.header, "metatype").as_deref() != Some("float") {
+            continue;
+        }
+        let names = register_names(entry.body, by_offset);
+        if names.len() == 1 {
+            registers.push(names.into_iter().next().expect("one name"));
+        }
+    }
+    registers
+}
+
+fn integer_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
+    let mut registers = Vec::new();
+    for entry in elements(body, "pentry") {
+        if attribute(entry.header, "metatype").as_deref() == Some("float") {
+            continue;
+        }
+        let names = register_names(entry.body, by_offset);
+        if names.len() == 1 {
+            registers.push(names.into_iter().next().expect("one name"));
+        }
+    }
+    registers
+}
+
 fn register_prefix(input: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     let mut registers = Vec::new();
     for entry in elements(input, "pentry") {

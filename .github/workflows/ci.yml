@@ -401,6 +401,12 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Infer parameter and return types from p-code
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m16-001_types.py \
+            --report "$RUNNER_TEMP/reports/m16-001.json"
       - name: Structure our control-flow graphs with stock's structuring
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

@@ -41,6 +41,7 @@ fn usage() {
   lre-cli functions <program> [--offset N] [--limit N] [--filter TEXT] [--project DIR]
   lre-cli analyse-function <binary> <program> <address> [--project DIR] [--json]
   lre-cli structure <binary> <program> <addr[,addr...]> [--project DIR] [--json]
+  lre-cli infer-types <binary> <program> <addr[,addr...]> [--project DIR] [--json]
   lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
                          [--min-score F] [--lambda F] [--candidates N] [--json]
   lre-cli symbols <program> [--project DIR]
@@ -674,6 +675,43 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             if limit == 0 {
                 println!("-- {} functions", rows.len());
+            }
+        }
+        "infer-types" => {
+            let binary = args.get(2).ok_or("infer-types needs a binary")?.clone();
+            let program = args.get(3).ok_or("infer-types needs a program name")?.clone();
+            let entries = args
+                .get(4)
+                .ok_or("infer-types needs one or more addresses")?
+                .split(',')
+                .map(|address| {
+                    u64::from_str_radix(address.trim().trim_start_matches("0x"), 16)
+                        .map(lre_model::Address::ram)
+                        .map_err(|_| format!("not an address: {address}"))
+                })
+                .collect::<Result<Vec<_>, String>>()?;
+            let rows = core
+                .infer_types(Path::new(&binary), &program, &entries)
+                .map_err(|e| e.to_string())?;
+            for row in &rows {
+                if has_flag(args, "--json") {
+                    println!("{row}");
+                } else {
+                    println!(
+                        "{}  {} ({}) -> {}",
+                        row["entry"].as_str().unwrap_or("?"),
+                        row["model"].as_str().unwrap_or("?"),
+                        row["parameters"]
+                            .as_array()
+                            .map(|all| all
+                                .iter()
+                                .filter_map(|value| value.as_str())
+                                .collect::<Vec<_>>()
+                                .join(", "))
+                            .unwrap_or_default(),
+                        row["returns"].as_str().unwrap_or("?")
+                    );
+                }
             }
         }
         "structure" => {
