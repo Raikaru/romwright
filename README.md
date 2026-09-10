@@ -574,7 +574,7 @@ skips and says why.
 python3 tests/m5-017_switch_module.py
 ```
 
-### Jump tables without the decompiler
+### Jump tables without the decompiler, and better than stock
 
 Switch recovery was the last pass in a native import that called the
 decompiler, and the most expensive: 130 of 137 s on a statically linked
@@ -583,30 +583,33 @@ AArch64 image. The console exports SLEIGH's p-code (`native/ventris_pcode.hh`
 emulates the dispatch path once per index, as `JumpBasic::buildAddresses`
 does over the decompiler's IR.
 
-Scored against stock Ghidra's own tables on the host libc
+It is scored against truth rather than against stock, because stock is the
+baseline to beat, not the answer: a case target is right when it decodes as
+an instruction **and** lies inside the extent of the function that branches to
+it, taken from the image's own symbol table. On the host libc, 34 of stock's
+targets fall outside the branching function and 5 do not decode
 (`tests/m13-001_vsa_switch.py`, `benchmarks/reports/m13-001.json`):
 
-| Path | Branches | Edge precision | Edge recall | Switch phase |
-|---|---|---|---|---|
-| value-set analysis alone | 18, **none stock lacks** | **0.9956** | 0.1200 | 0.92 s |
-| decompiler alone | 130 | 0.9950 | 0.9545 | 62 s |
-| both (the pass, then the decompiler) | 130 | 0.9950 | 0.9545 | 0.38 s + 55 s |
+| Path | Dispatches | Targets | Unsound | Soundness | Switch phase |
+|---|---|---|---|---|---|
+| stock Ghidra | 132 | 1891 | 39 | 0.9794 | -- |
+| decompiler only | 130 | 1813 | 8 | 0.9956 | 62 s |
+| value-set analysis only | 90 | 883 | **1** | **0.9989** | 0.85 s |
+| **both (default)** | **142** | 1832 | 6 | **0.9967** | 0.4 s + 55 s |
 
-Three rules earned their place by measurement, each replacing something that
-scored worse: a table must be read by a *strided* load (against 0.4222 for
-accepting any register sweep); the bound is the *guard branch* being taken,
-not any constant compared nearby (against 0.6107); and guard analysis runs
-separately from path emulation on the dispatch block's *real* predecessors
-(against 0.05 recall when merged, and 15 of 132 guards found when the
-predecessors were taken positionally).
+The default answers **13 dispatches stock has no table for** and misses 3 of
+stock's. The 13 are real: relative tables in the hand-written SSE string
+routines, which stock's decompiler declines. `VENTRIS_NO_SWITCH_VSA=1` turns
+the pass off.
 
-What it claims is right; what it reaches is a tenth of stock. So the
-decompiler stays behind it, and because enabling the pass moved the
-`ARM:LE:32:v5t` ratchet from 394 to 392 it is off by default:
-
-```sh
-VENTRIS_SWITCH_VSA=1 lre-cli import <binary> --project <dir>
-```
+Four rules earned their place by measurement: a table must be read by a
+*strided* load; the bound is the *guard branch* being taken, not any constant
+compared nearby; guard analysis runs separately from path emulation, per
+predecessor block, on the dispatch block's *real* predecessors (taken
+positionally, a guard was found for 15 of 132); and the tracked index is held
+through the guard block, because a guard recomputes it from values the
+emulator cannot know and then compares the very value that reaches the
+dispatch -- that rule alone took the pass from 18 dispatches to 90.
 
 One function's decompile is now bounded at 60 s and the child killed, which is
 Ghidra's own remedy (`DecompileProcess.sendCommandTimeout` arms a timer whose

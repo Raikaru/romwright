@@ -31,6 +31,20 @@ use std::collections::HashMap;
 
 use crate::native_runtime::{PcodeInstruction, PcodeOp, PcodeVarnode};
 
+/// Why a dispatch was not answered. Counted per import so the gap between
+/// this pass and the decompiler is attributable rather than guessed at.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Refusals {
+    /// Nothing the window read was a value it did not also write.
+    pub no_live_in: usize,
+    /// No load moved with the index, so nothing here reads a table.
+    pub no_strided_load: usize,
+    /// A table was found but had fewer than two distinct case targets.
+    pub too_few_targets: usize,
+    /// Every candidate hit an operation the emulator does not model.
+    pub unmodelled: usize,
+}
+
 /// A recovered table.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SwitchTable {
@@ -102,9 +116,21 @@ struct Machine<'a, I: Image> {
     /// by one of these, and which one is told apart from the rest by moving
     /// with the index.
     loads: Vec<u64>,
-    /// True once an operation the emulator does not model was reached, which
-    /// invalidates the run rather than the whole recovery.
+    /// The location the index was seeded at. A call clears every other
+    /// register -- this emulator models no ABI -- but not this one: the
+    /// value being tracked reaches the dispatch by construction, so the
+    /// machine itself preserves it across whatever lies between.
+    preserve: Option<(&'a str, u64)>,
+    /// True once a call was reached, which is why the state was cleared.
     gave_up: bool,
+    /// Ignore writes to the preserved location. A guard block often
+    /// recomputes the index -- `mov 0x4(%rbx),%edx; sub $0x3,%edx` -- from
+    /// values this emulator cannot know, and then compares it. The value it
+    /// compares is by definition the one that reaches the dispatch, so
+    /// holding the seeded value through the block makes the comparison read
+    /// exactly what the dispatch will use. Without this the guard reads
+    /// unknown and no table is ever bounded.
+    pinned: bool,
 }
 
 impl<'a, I: Image> Machine<'a, I> {
@@ -116,7 +142,9 @@ impl<'a, I: Image> Machine<'a, I> {
             live_in: Vec::new(),
             branches: Vec::new(),
             loads: Vec::new(),
+            preserve: None,
             gave_up: false,
+            pinned: false,
         }
     }
 
@@ -143,6 +171,11 @@ impl<'a, I: Image> Machine<'a, I> {
     }
 
     fn write(&mut self, varnode: &'a PcodeVarnode, value: Known) {
+        if self.pinned
+            && self.preserve == Some((varnode.space.as_str(), varnode.offset))
+        {
+            return;
+        }
         match value {
             Some(value) => {
                 self.state.insert(
@@ -328,15 +361,33 @@ impl<'a, I: Image> Machine<'a, I> {
                 // transfer computed.
                 return a;
             }
-            // Flags and carries are computed and never read by a dispatch;
-            // modelling them wrongly would be worse than not at all.
-            "INT_CARRY" | "INT_SCARRY" | "INT_SBORROW" => None,
-            // A call, a branch, or anything else in the window means this is
-            // not a straight-line dispatch path.
-            _ => {
+            // A call returns knowing nothing about the caller-saved
+            // registers, and this emulator does not model an ABI, so after
+            // one nothing is known at all. Clearing is the conservative
+            // reading; keeping the old values would let a stale register
+            // produce a target that the machine never computes.
+            "CALL" | "CALLIND" | "CALLOTHER" => {
+                let kept = self
+                    .preserve
+                    .and_then(|key| self.state.get(&key).map(|value| (key, *value)));
+                self.state.clear();
+                if let Some((key, value)) = kept {
+                    self.state.insert(key, value);
+                }
                 self.gave_up = true;
                 None
             }
+            // An unconditional branch is how a guard block reaches the
+            // dispatch: the region is a straight line by construction, so
+            // there is nothing to do here.
+            "BRANCH" => None,
+            // Anything else -- a flag computation, a floating-point
+            // operation, an instruction with no integer model here -- makes
+            // its output unknown and nothing else. Abandoning the whole run
+            // instead cost the guard: on libc the guard region hit one of
+            // these before its comparison every time, so no table was ever
+            // bounded and 109 dispatches ended with too few targets.
+            _ => None
         };
         if let Some(out) = op.output.as_ref() {
             self.write(out, value);
@@ -360,11 +411,22 @@ fn run<I: Image>(
     window: &[PcodeInstruction],
     seed: Option<((&str, u64, u32), u64)>,
 ) -> Run {
+    run_with(image, window, seed, false)
+}
+
+fn run_with<I: Image>(
+    image: &I,
+    window: &[PcodeInstruction],
+    seed: Option<((&str, u64, u32), u64)>,
+    pinned: bool,
+) -> Run {
     let mut machine = Machine::new(image);
     if let Some(((space, offset, size), value)) = seed {
         machine
             .state
             .insert((space, offset), (value & mask(size), size));
+        machine.preserve = Some((space, offset));
+        machine.pinned = pinned;
     }
     let mut destination = None;
     for instruction in window {
@@ -372,12 +434,6 @@ fn run<I: Image>(
             if let Some(address) = machine.step(op) {
                 destination = Some(address);
             }
-            if machine.gave_up {
-                break;
-            }
-        }
-        if machine.gave_up {
-            break;
         }
     }
     let live_in = machine
@@ -407,18 +463,34 @@ const MAX_TABLE: u64 = 4096;
 pub fn recover<I: Image>(
     image: &I,
     branch: u64,
-    guard: &[PcodeInstruction],
+    guard: &[Vec<PcodeInstruction>],
     window: &[PcodeInstruction],
     unguarded: bool,
+    refusals: &mut Refusals,
 ) -> Option<SwitchTable> {
     if window.is_empty() {
         return None;
     }
+
     // One dry run: what does the window read that it never wrote? Those are
     // the only places a switch variable can come from.
     let dry = run(image, window, None);
     if dry.live_in.is_empty() {
+        if dry.gave_up {
+            refusals.unmodelled += 1;
+        } else {
+            refusals.no_live_in += 1;
+        }
         return None;
+    }
+    let mut saw_stride = false;
+    let mut saw_candidate = false;
+    let trace = std::env::var("VENTRIS_TRACE_VSA_AT")
+        .ok()
+        .and_then(|value| u64::from_str_radix(value.trim_start_matches("0x"), 16).ok())
+        == Some(branch);
+    if trace {
+        eprintln!("VSA {branch:#x} live-in {:x?}", dry.live_in);
     }
     // A guard states the range; the code-bounded walk is only what to do
     // when no guard was found. Ghidra keeps these apart the same way: the
@@ -437,7 +509,17 @@ pub fn recover<I: Image>(
         // measured 0.42 edge precision against stock Ghidra on libc.
         let first = run(image, window, Some((candidate, 0)));
         let second = run(image, window, Some((candidate, 1)));
-        if first.gave_up || second.gave_up || first.loads.len() != second.loads.len() {
+        if first.gave_up || second.gave_up {
+            continue;
+        }
+        saw_candidate = true;
+        if trace {
+            eprintln!(
+                "  candidate {}:{:x}:{} loads0 {:x?} loads1 {:x?} dest0 {:x?} dest1 {:x?}",
+                space, offset, size, first.loads, second.loads, first.destination, second.destination
+            );
+        }
+        if first.loads.len() != second.loads.len() {
             continue;
         }
         let Some(slot) = first
@@ -458,6 +540,7 @@ pub fn recover<I: Image>(
             continue;
         }
         let table_base = first.loads[slot];
+        saw_stride = true;
 
         // Guard analysis is separate from path emulation, as it is in
         // Ghidra (`analyzeGuards` against `buildAddresses`): the dispatch
@@ -468,6 +551,7 @@ pub fn recover<I: Image>(
         // once.
         let inside: std::collections::HashSet<u64> = guard
             .iter()
+            .flatten()
             .chain(window.iter())
             .map(|instruction| instruction.address)
             .collect();
@@ -485,11 +569,18 @@ pub fn recover<I: Image>(
             }
             // The guard: a branch taken out of the region means this index
             // never reaches the dispatch at all.
-            let guard_run = (!guard.is_empty()).then(|| run(image, guard, Some((candidate, index))));
+            // Each predecessor is run on its own, with the index seeded at
+            // its start: concatenating them means one block's call clears
+            // the seed before the next block's comparison reads it.
+            let guard_runs: Vec<Run> = guard
+                .iter()
+                .filter(|block| !block.is_empty())
+                .map(|block| run_with(image, block, Some((candidate, index)), true))
+                .collect();
             let escaped = attempt
                 .branches
                 .iter()
-                .chain(guard_run.iter().flat_map(|run| run.branches.iter()))
+                .chain(guard_runs.iter().flat_map(|run| run.branches.iter()))
                 .any(|&(destination, condition)| {
                     condition == Some(1)
                         && destination.is_some_and(|destination| !inside.contains(&destination))
@@ -497,6 +588,16 @@ pub fn recover<I: Image>(
             if escaped {
                 guarded_by_branch = true;
                 break;
+            }
+            if trace {
+                eprintln!(
+                    "    index {index} load {:x?} dest {:x?} exec {:?} guard_gave_up {:?} guard_branches {:x?}",
+                    attempt.loads.get(slot),
+                    attempt.destination,
+                    attempt.destination.map(|a| image.executable(a)),
+                    guard_runs.iter().map(|run| run.gave_up).collect::<Vec<_>>(),
+                    guard_runs.iter().flat_map(|run| run.branches.clone()).collect::<Vec<_>>(),
+                );
             }
             match attempt.destination {
                 Some(address) if image.executable(address) => targets.push(address),
@@ -531,6 +632,15 @@ pub fn recover<I: Image>(
             .is_none_or(|current| current.targets.len() < table.targets.len())
         {
             *slot = Some(table);
+        }
+    }
+    if guarded.is_none() && unguarded.is_none() {
+        if !saw_candidate {
+            refusals.unmodelled += 1;
+        } else if !saw_stride {
+            refusals.no_strided_load += 1;
+        } else {
+            refusals.too_few_targets += 1;
         }
     }
     // Without a guard the table's end is not stated anywhere: the entries
@@ -634,7 +744,7 @@ mod tests {
         // Four code targets, then a word that is not code: the table ends
         // where the targets stop being code, with no guard at all.
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x1400, 0x9999]);
-        let table = recover(&image, 0x1000, &[], &dispatch(), true).expect("table");
+        let table = recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &dispatch(), true, &mut Refusals::default()).expect("table");
         assert_eq!(table.branch, 0x1000);
         assert_eq!(table.targets, vec![0x1100, 0x1200, 0x1300, 0x1400]);
         assert_eq!(table.span, 4);
@@ -675,7 +785,7 @@ mod tests {
         // The memory after the table holds code addresses too; what says the
         // switch has three cases is that at index 3 the guard branches away.
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x1400, 0x1500]);
-        let table = recover(&image, 0x1000, &[], &guarded(2, true), true).expect("table");
+        let table = recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &guarded(2, true), true, &mut Refusals::default()).expect("table");
         assert_eq!(table.targets, vec![0x1100, 0x1200, 0x1300]);
     }
 
@@ -685,20 +795,20 @@ mod tests {
         // against stock Ghidra on libc; the guard has to be the one that
         // moves with this index.
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x1400, 0x9999]);
-        let table = recover(&image, 0x1000, &[], &guarded(2, false), true).expect("table");
+        let table = recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &guarded(2, false), true, &mut Refusals::default()).expect("table");
         assert_eq!(
             table.targets,
             vec![0x1100, 0x1200, 0x1300, 0x1400],
             "the table ends where its targets stop being code"
         );
         // With no unguarded fallback allowed, nothing is claimed at all.
-        assert_eq!(recover(&image, 0x1000, &[], &guarded(2, false), false), None);
+        assert_eq!(recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &guarded(2, false), false, &mut Refusals::default()), None);
     }
 
     #[test]
     fn a_repeated_target_is_kept_as_its_own_case() {
         let image = fixture(&[0x1100, 0x1100, 0x1200, 0x9999]);
-        let table = recover(&image, 0x1000, &[], &dispatch(), true).expect("table");
+        let table = recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &dispatch(), true, &mut Refusals::default()).expect("table");
         assert_eq!(table.targets, vec![0x1100, 0x1100, 0x1200]);
     }
 
@@ -706,11 +816,11 @@ mod tests {
     fn a_single_target_is_not_a_table() {
         // One case is a computed call or a tail jump, not a switch.
         let image = fixture(&[0x1100, 0x9999]);
-        assert_eq!(recover(&image, 0x1000, &[], &dispatch(), true), None);
+        assert_eq!(recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &dispatch(), true, &mut Refusals::default()), None);
         // The same run of targets repeated is also not a switch: nothing
         // distinguishes the cases.
         let image = fixture(&[0x1100, 0x1100, 0x9999]);
-        assert_eq!(recover(&image, 0x1000, &[], &dispatch(), true), None);
+        assert_eq!(recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &dispatch(), true, &mut Refusals::default()), None);
     }
 
     #[test]
@@ -725,7 +835,7 @@ mod tests {
             ),
         );
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x9999]);
-        assert_eq!(recover(&image, 0x1000, &[], &window, true), None);
+        assert_eq!(recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &window, true, &mut Refusals::default()), None);
     }
 
     #[test]
@@ -755,7 +865,7 @@ mod tests {
             ),
         );
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x9999]);
-        let table = recover(&image, 0x1000, &[], &window, true).expect("table");
+        let table = recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &window, true, &mut Refusals::default()).expect("table");
         assert_eq!(table.targets, vec![0x1100, 0x1200, 0x1300]);
     }
 }

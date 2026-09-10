@@ -47,13 +47,12 @@ pub struct RuntimeConfig {
     /// sharding them changes wall time, never facts.
     pub console_shards: usize,
     /// Recover jump tables by value-set analysis over p-code before asking
-    /// the decompiler (m13-001). Off by default, and not because it is
-    /// wrong: measured against stock Ghidra on libc it claims 18 dispatches
-    /// with 0.9956 edge precision and no branch stock does not also have,
-    /// but that is 0.12 of stock's recall, and enabling it moved the
-    /// ARM:LE:32:v5t token-identity ratchet down from 394 to 392. II.1
-    /// reserves enabling a pass that changes user-visible output, so it
-    /// stays opt-in until its recall is worth the change.
+    /// the decompiler (m13-001). On: measured against truth on libc -- every
+    /// case target must decode and lie inside the branching function's own
+    /// extent, taken from the image's symbol table -- the pass plus the
+    /// decompiler answers 142 dispatches at 0.9967 soundness, against stock
+    /// Ghidra's 132 at 0.9794 and the decompiler alone at 130 at 0.9956. The
+    /// pass alone is the soundest of all at 0.9989, and costs under a second.
     pub switch_vsa: bool,
     /// Accept a table whose end no guard states, bounded only by its
     /// targets ceasing to be code. Off by default: measured against stock on
@@ -244,7 +243,7 @@ impl RuntimeConfig {
             promote_tailcalls: std::env::var_os("VENTRIS_PROMOTE_TAILCALLS").is_some(),
             // Both on unless switched off, so the two switch paths can be
             // measured separately without rebuilding.
-            switch_vsa: std::env::var_os("VENTRIS_SWITCH_VSA").is_some(),
+            switch_vsa: std::env::var_os("VENTRIS_NO_SWITCH_VSA").is_none(),
             switch_decompiler: std::env::var_os("VENTRIS_NO_SWITCH_DECOMPILER").is_none(),
             switch_vsa_unguarded: std::env::var_os("VENTRIS_SWITCH_VSA_UNGUARDED").is_some(),
         }

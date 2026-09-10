@@ -1460,7 +1460,12 @@ impl vsa::Image for ImageView<'_> {
 /// blocks that actually branch or fall into it. Taking the two positionally
 /// preceding blocks instead found a guard for 15 of 132 dispatches on libc:
 /// a dispatch block is usually jumped to, not fallen into.
-fn switch_window(imp: &NativeImport, branch: u64, entry: u64, end: u64) -> (Vec<u64>, Vec<u64>) {
+fn switch_window(
+    imp: &NativeImport,
+    branch: u64,
+    entry: u64,
+    end: u64,
+) -> (Vec<u64>, Vec<Vec<u64>>) {
     let shapes: Vec<&FlowShape> = imp
         .flow_shapes
         .iter()
@@ -1523,22 +1528,24 @@ fn switch_window(imp: &NativeImport, branch: u64, entry: u64, end: u64) -> (Vec<
         .filter(|shape| shape.address >= dispatch && shape.address <= branch)
         .map(|shape| shape.address)
         .collect();
-    // Guard region: every predecessor block, in address order. Each is a
-    // straight line ending in the transfer that reaches the dispatch, so
-    // running them in order runs each one's guard.
-    let mut guard: Vec<u64> = Vec::new();
+    // Each predecessor block on its own: a guard is read by running the
+    // block that states it, and one block's call must not clear the index
+    // another block compares.
+    let mut guard: Vec<Vec<u64>> = Vec::new();
     for &block in predecessors.iter().take(4) {
         let block_end = leaders
             .range((std::ops::Bound::Excluded(block), std::ops::Bound::Unbounded))
             .next()
             .copied()
             .unwrap_or(end);
-        guard.extend(
-            shapes
-                .iter()
-                .filter(|shape| shape.address >= block && shape.address < block_end)
-                .map(|shape| shape.address),
-        );
+        let addresses: Vec<u64> = shapes
+            .iter()
+            .filter(|shape| shape.address >= block && shape.address < block_end)
+            .map(|shape| shape.address)
+            .collect();
+        if !addresses.is_empty() {
+            guard.push(addresses);
+        }
     }
     (window, guard)
 }
@@ -1562,16 +1569,20 @@ fn recover_switch_tables_native(
         .is_some_and(|field| field.eq_ignore_ascii_case("BE"));
     let mut resolved = Vec::new();
     let mut unresolved = Vec::new();
+    let mut refusals = vsa::Refusals::default();
+    let mut no_window = 0usize;
+    let mut undecodable = 0usize;
     for &(branch, entry, end) in branches {
         let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
         if window_addresses.is_empty() {
+            no_window += 1;
             unresolved.push(branch);
             continue;
         }
         // One request for both regions: the guard's constants come from the
         // blocks before the dispatch, and only the dispatch block is
         // emulated.
-        let mut addresses = guard_addresses.clone();
+        let mut addresses: Vec<u64> = guard_addresses.iter().flatten().copied().collect();
         addresses.extend(window_addresses.iter().copied());
         let decoded = match session.pcode_batch(&addresses) {
             Ok(decoded) => decoded,
@@ -1581,19 +1592,71 @@ fn recover_switch_tables_native(
             }
         };
         if decoded.iter().any(|instruction| instruction.error.is_some()) {
+            undecodable += 1;
             unresolved.push(branch);
             continue;
         }
-        let split = guard_addresses.len().min(decoded.len());
-        let (guard, window) = decoded.split_at(split);
+        // Split the one answer back into the blocks it was asked for.
+        let mut cursor = 0usize;
+        let mut guard: Vec<Vec<crate::native_runtime::PcodeInstruction>> = Vec::new();
+        for block in &guard_addresses {
+            let end = (cursor + block.len()).min(decoded.len());
+            guard.push(decoded[cursor..end].to_vec());
+            cursor = end;
+        }
+        let window = &decoded[cursor.min(decoded.len())..];
+        if std::env::var("VENTRIS_TRACE_VSA_AT")
+            .ok()
+            .and_then(|value| u64::from_str_radix(value.trim_start_matches("0x"), 16).ok())
+            == Some(branch)
+        {
+            eprintln!(
+                "VSA at {branch:#x}: guard {:x?} window {:x?}",
+                guard.iter().map(|block| block.iter().map(|i| i.address).collect::<Vec<_>>()).collect::<Vec<_>>(),
+                window.iter().map(|i| i.address).collect::<Vec<_>>(),
+            );
+            for instruction in window {
+                for op in &instruction.ops {
+                    eprintln!(
+                        "  {:#x} {} {:?} <- {:?}",
+                        instruction.address,
+                        op.opcode,
+                        op.output.as_ref().map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size)),
+                        op.inputs
+                            .iter()
+                            .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
+                            .collect::<Vec<_>>()
+                    );
+                }
+            }
+        }
         let table = {
             let view = ImageView { imp, big_endian };
-            vsa::recover(&view, branch, guard, window, imp.cfg.switch_vsa_unguarded)
+            vsa::recover(
+                &view,
+                branch,
+                &guard,
+                window,
+                imp.cfg.switch_vsa_unguarded,
+                &mut refusals,
+            )
         };
         match table {
             Some(table) => resolved.push(table),
             None => unresolved.push(branch),
         }
+    }
+    if std::env::var_os("VENTRIS_TRACE_VSA").is_some() {
+        eprintln!(
+            "VSA candidates={} resolved={} no_window={no_window} undecodable={undecodable} \
+             no_live_in={} no_strided_load={} too_few_targets={} unmodelled={}",
+            branches.len(),
+            resolved.len(),
+            refusals.no_live_in,
+            refusals.no_strided_load,
+            refusals.too_few_targets,
+            refusals.unmodelled,
+        );
     }
     let mut added = 0;
     for table in resolved {
