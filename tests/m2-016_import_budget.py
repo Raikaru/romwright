@@ -90,7 +90,14 @@ def run_import(binary: Path, shards: int, work: Path) -> dict:
     """One measured native import at a pinned console-shard count."""
     project = work / f"shards-{shards}"
     project.mkdir(parents=True)
-    environment = dict(os.environ, VENTRIS_CONSOLE_SHARDS=str(shards))
+    # A reused import restores facts without running a phase, so its timings
+    # are empty by construction: this gate measures the analyser's cost, and
+    # reuse is m14-001's claim.
+    environment = dict(
+        os.environ,
+        VENTRIS_CONSOLE_SHARDS=str(shards),
+        VENTRIS_NO_IMPORT_CACHE="1",
+    )
     result = subprocess.run(
         [str(ROOT / "target/release/lre-cli"), "import", str(binary),
          "--name", "libc", "--project", str(project), "--timings"],
