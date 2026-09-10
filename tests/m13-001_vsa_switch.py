@@ -54,6 +54,12 @@ THRESHOLDS = {
     "vsa_soundness": 0.99,
     # The whole phase, seconds, summed over discovery rounds.
     "vsa_seconds": 5.0,
+    # The interpreter is the proven tier the roadmap wants to *replace* the
+    # pattern pass: it must reach the decompiler's own reach at no less than
+    # the proven tier's soundness, and inside the same phase budget, or the
+    # parity number cannot ship as the default.
+    "interpreted_parity_soundness": 0.9989,
+    "interpreted_seconds": 5.0,
     # With the decompiler behind it: more dispatches than stock, and sounder
     # than stock.
     "combined_branches_over_stock": 1.0,
@@ -329,19 +335,46 @@ def main() -> int:
             failures.append(
                 f"vsa phase {measured['vsa']['phase_s']}s > {THRESHOLDS['vsa_seconds']}s"
             )
-        # The interpreter's own claims: never less reach than the pass it
-        # falls back from, and never less sound. Its cost is recorded and
-        # deliberately not budgeted -- it decodes whole functions, which is
-        # why it is opt-in until that cost comes down.
+        # The interpreter is the proven tier the roadmap wants to *replace*
+        # the pattern pass: it must reach the decompiler's own reach at no
+        # less than the proven tier's soundness, and inside the same phase
+        # budget, or the parity number cannot ship as the default.
         if measured["interpreted"]["branches"] < measured["vsa"]["branches"]:
             failures.append(
                 f"the interpreter answered {measured['interpreted']['branches']} dispatches,"
                 f" fewer than the pass alone at {measured['vsa']['branches']}"
             )
-        if measured["interpreted"]["soundness"] < THRESHOLDS["vsa_soundness"]:
+        if measured["interpreted"]["branches"] < measured["decompiler"]["branches"]:
             failures.append(
-                f"interpreter soundness {measured['interpreted']['soundness']} <"
-                f" {THRESHOLDS['vsa_soundness']}"
+                f"the interpreter answered {measured['interpreted']['branches']} dispatches,"
+                f" short of the decompiler's {measured['decompiler']['branches']}"
+            )
+        if measured["interpreted"]["soundness"] < THRESHOLDS["interpreted_parity_soundness"]:
+            failures.append(
+                f"interpreter parity soundness {measured['interpreted']['soundness']} <"
+                f" {THRESHOLDS['interpreted_parity_soundness']}"
+            )
+        if measured["interpreted"]["phase_s"] > THRESHOLDS["interpreted_seconds"]:
+            failures.append(
+                f"interpreter phase {measured['interpreted']['phase_s']}s >"
+                f" {THRESHOLDS['interpreted_seconds']}s"
+            )
+        # The roadmap's criterion: the proven tier reaches the decompiler's
+        # own reach at no less than its soundness, inside the phase budget.
+        if measured["interpreted"]["branches"] < measured["decompiler"]["branches"]:
+            failures.append(
+                f"the interpreter answered {measured['interpreted']['branches']} dispatches,"
+                f" short of the decompiler's {measured['decompiler']['branches']}"
+            )
+        if measured["interpreted"]["soundness"] < THRESHOLDS["interpreted_parity_soundness"]:
+            failures.append(
+                f"interpreter parity soundness {measured['interpreted']['soundness']} <"
+                f" {THRESHOLDS['interpreted_parity_soundness']}"
+            )
+        if measured["interpreted"]["phase_s"] > THRESHOLDS["interpreted_seconds"]:
+            failures.append(
+                f"interpreter phase {measured['interpreted']['phase_s']}s >"
+                f" {THRESHOLDS['interpreted_seconds']}s"
             )
         if measured["combined"]["branches"] <= measured["stock"]["branches"]:
             failures.append(
