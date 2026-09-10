@@ -523,12 +523,14 @@ fn run_block<I: Image>(
     // bound: `cmp idx, n; jbe body` bounds the taken edge, and the far more
     // common `cmp idx, n; ja default` bounds the fallthrough.
     let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool)> = state.predicates.clone();
-    // Where each temporary came from. A machine compares a *copy* of the
-    // switch variable and then dispatches on the original, so a bound
-    // applied only to the compared temporary is discarded the moment the
-    // temporary dies -- which is why the first measurement of this pass
-    // bounded nothing on libc.
-    let mut origins: BTreeMap<Slot, Slot> = BTreeMap::new();
+    // Where each temporary came from, as (origin slot, affine offset): a
+    // machine compares a *copy* of the switch variable and then dispatches
+    // on the original, and the copy is often `x - k` rather than `x`, so a
+    // bound on the temp is a bound on the origin shifted by the offset.
+    // A bound applied only to the compared temporary is discarded the
+    // moment the temporary dies -- which is why the first measurement of
+    // this pass bounded nothing on libc.
+    let mut origins: BTreeMap<Slot, (Slot, i64)> = BTreeMap::new();
     for instruction in &block.instructions {
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
@@ -551,7 +553,8 @@ fn run_block<I: Image>(
                     if let (Some(output), Some(source)) = (&op.output, op.inputs.first())
                         && source.space != "const"
                     {
-                        let origin = origins.get(&slot(source)).cloned().unwrap_or(slot(source));
+                        let origin = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0));
                         origins.insert(slot(output), origin);
                     }
                 }
@@ -560,6 +563,17 @@ fn run_block<I: Image>(
                         (&op.output, inputs.first(), inputs.get(1))
                     {
                         state.set(output, add(left.clone(), right.clone()));
+                    }
+                    // `out = x + k`: the output is the input's origin shifted
+                    // by k, so a bound on the output is a bound on the
+                    // origin shifted back.
+                    if let (Some(output), Some(source), Some(konst)) =
+                        (&op.output, op.inputs.first(), op.inputs.get(1))
+                        && source.space != "const" && konst.space == "const"
+                    {
+                        let (origin, off) = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0));
+                        origins.insert(slot(output), (origin, off + konst.offset as i64));
                     }
                 }
                 "INT_SUB" => {
@@ -571,6 +585,16 @@ fn run_block<I: Image>(
                             _ => Value::Top,
                         };
                         state.set(output, add(left.clone(), negated));
+                    }
+                    // `out = x - k`: the output is the input's origin shifted
+                    // by -k.
+                    if let (Some(output), Some(source), Some(konst)) =
+                        (&op.output, op.inputs.first(), op.inputs.get(1))
+                        && source.space != "const" && konst.space == "const"
+                    {
+                        let (origin, off) = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0));
+                        origins.insert(slot(output), (origin, off - konst.offset as i64));
                     }
                 }
                 "INT_MULT" => {
@@ -693,37 +717,38 @@ fn run_block<I: Image>(
                         if high >= 0 {
                             // The bound belongs to the value, wherever it
                             // lives: the compared slot and whatever it was
-                            // copied from.
-                            let mut targets = vec![operand.clone()];
-                            if let Some(origin) = origins.get(&operand) {
-                                targets.push(origin.clone());
+                            // copied from. A temp `t = origin + off` bounded
+                            // to [0, high] bounds the origin to
+                            // [-off, high - off].
+                            let mut targets = vec![(operand.clone(), 0i64)];
+                            if let Some((origin, off)) = origins.get(&operand) {
+                                targets.push((origin.clone(), *off));
                             }
-                            let bounded = match state.values.get(&operand).cloned() {
-                                Some(Value::Strided { base, stride, lo, .. }) => Value::Strided {
-                                    base,
-                                    stride,
-                                    lo,
-                                    hi: high,
-                                },
-                                _ => Value::Strided {
-                                    base: 0,
-                                    stride: 1,
-                                    lo: 0,
-                                    hi: high,
-                                },
-                            };
                             // The taken edge is the one the comparison holds
                             // on; our block successors list the taken target
-                            // first (`Block::successors`).
-                            // Which side of the branch the bound belongs to
-                            // depends on how the flags were combined and
-                            // negated, and getting that wrong silently is
-                            // worse than trying both: a bound applied to
-                            // the wrong edge produces targets that do not
-                            // decode inside the function, and
-                            // `materialise` refuses those. So both edges
+                            // first (`Block::successors`). Which side of the
+                            // branch the bound belongs to depends on how the
+                            // flags were combined and negated, and getting
+                            // that wrong silently is worse than trying both:
+                            // a bound applied to the wrong edge produces
+                            // targets that do not decode inside the function,
+                            // and `materialise` refuses those. So both edges
                             // get the candidate and the check decides.
-                            for target in targets {
+                            for (target, off) in targets {
+                                let bounded = match state.values.get(&target).cloned() {
+                                    Some(Value::Strided { base, stride, lo, .. }) => Value::Strided {
+                                        base,
+                                        stride,
+                                        lo,
+                                        hi: high - off,
+                                    },
+                                    _ => Value::Strided {
+                                        base: 0,
+                                        stride: 1,
+                                        lo: -off,
+                                        hi: high - off,
+                                    },
+                                };
                                 edges
                                     .entry(edge)
                                     .or_default()
@@ -731,7 +756,7 @@ fn run_block<I: Image>(
                                 edges
                                     .entry(1 - edge)
                                     .or_default()
-                                    .push((target, bounded.clone()));
+                                    .push((target, bounded));
                             }
                         }
                     }
