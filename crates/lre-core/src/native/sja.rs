@@ -549,7 +549,13 @@ fn run_block<I: Image>(
                 comparisons.remove(&key);
                 // A comparison whose *operand* is overwritten is stale too:
                 // `cmp $4,%eax; mov (%rsi),%eax; jbe` bounds the new eax.
-                comparisons.retain(|_, (operand, ..)| *operand != key);
+                // A value-preserving same-slot widening is the exception:
+                // `cmp $0x5a,%al; movzbl %al,%eax; ja` keeps the bound.
+                let preserves = matches!(opcode, "COPY" | "INT_ZEXT" | "INT_SEXT")
+                    && op.inputs.first().is_some_and(|src| slot(src) == key);
+                if !preserves {
+                    comparisons.retain(|_, (operand, ..)| *operand != key);
+                }
                 origins.remove(&key)
             });
             match opcode {
@@ -616,7 +622,15 @@ fn run_block<I: Image>(
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, inputs.first(), inputs.get(1))
                     {
-                        state.set(output, add(left.clone(), right.clone()));
+                        // A narrow immediate is signed: `add $-0x20,%eax`
+                        // arrives as `0xffffffe0:4`, and the value path must
+                        // shift by -0x20 the way the origin arm does.
+                        let right = match (right, op.inputs.get(1)) {
+                            (Value::Const(_), Some(konst)) if konst.space == "const" =>
+                                Value::Const(sign_extend(konst.offset, konst.size)),
+                            _ => right.clone(),
+                        };
+                        state.set(output, add(left.clone(), right));
                     }
                     // `out = x + k`: the output is the input's origin shifted
                     // by k, so a bound on the output is a bound on the
@@ -645,8 +659,13 @@ fn run_block<I: Image>(
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, inputs.first(), inputs.get(1))
                     {
-                        let negated = match right {
-                            Value::Const(value) => Value::Const(0u64.wrapping_sub(*value)),
+                        // The immediate is signed at its own width:
+                        // `sub $-0x20,%eax` is `eax + 0x20`, not a shift by
+                        // 0xffffffe0.
+                        let negated = match (right, op.inputs.get(1)) {
+                            (Value::Const(_), Some(konst)) if konst.space == "const" =>
+                                Value::Const(sign_extend(konst.offset, konst.size).wrapping_neg()),
+                            (Value::Const(value), _) => Value::Const(value.wrapping_neg()),
                             _ => Value::Top,
                         };
                         state.set(output, add(left.clone(), negated));
@@ -967,6 +986,31 @@ fn add(left: Value, right: Value) -> Value {
     }
     match (left, right) {
         (Const(left), Const(right)) => Const(left.wrapping_add(right)),
+        // An index-space value (`i` for `i` in `lo..=hi`, base 0, stride 1)
+        // plus a constant is the same set with the interval shifted:
+        // folding `k` into `lo`/`hi` keeps `base` at 0 so a later compare
+        // can still refine it. `eax - 0x20` on `[0,255]` is `[-0x20, 0xdf]`,
+        // not a value with a wrapped base. A non-zero base is an address,
+        // not an index: `table + i` folds into `base` as before.
+        (
+            Strided { base: 0, stride: 1, lo, hi, guarded },
+            Const(value),
+        )
+        | (
+            Const(value),
+            Strided { base: 0, stride: 1, lo, hi, guarded },
+        ) => {
+            let shift = value as i64;
+            let lo = lo.wrapping_add(shift);
+            let hi = hi.wrapping_add(shift);
+            // A guarded interval whose minimum went negative was never
+            // really stated: no compiler indexes a table negatively, so
+            // the floor the compare assumed (`lo: -off` = 0) was wrong.
+            // The read must refuse rather than reach into the table that
+            // precedes this one.
+            let guarded = guarded && lo >= 0;
+            Strided { base: 0, stride: 1, lo, hi, guarded }
+        }
         (
             Strided { base, stride, lo, hi, guarded },
             Const(value),
@@ -1762,11 +1806,13 @@ mod tests {
             },
         ];
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
-        // The bound on eax cannot reach the table read through the
-        // base-shifted value, so the dispatch refuses rather than resolve
-        // the wrong table.
-        assert!(found.tables.is_empty(), "{found:?}");
-        assert_eq!(found.refusals.unknown_target, 1);
+        // The bound on eax is [0,3]: the four entries at 0x9000 are the
+        // table, and a self-link would read the 0x9100-range entries.
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1100, 0x1108, 0x1110, 0x1118]
+        );
     }
 
     #[test]
