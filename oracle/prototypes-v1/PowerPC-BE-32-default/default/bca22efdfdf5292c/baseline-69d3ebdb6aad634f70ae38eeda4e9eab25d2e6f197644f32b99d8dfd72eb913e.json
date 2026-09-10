@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "sha256": "69d3ebdb6aad634f70ae38eeda4e9eab25d2e6f197644f32b99d8dfd72eb913e",
+  "binary_size": 3192,
+  "producer": "ghidra-headless",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "exporter_sha256": "5f7baf428ee2917b8333d0db6f5c515acb86d04015a2a9a90f56b74b53c9de47",
+  "analysis": {
+    "command": "DecompilerParameterIdCmd",
+    "clear_level": "ANALYSIS",
+    "commit_data_types": true,
+    "commit_void_return": false,
+    "decompiler_timeout_secs": 60,
+    "passes": 1
+  },
+  "language_selection": "explicit",
+  "address_basis": "ghidra",
+  "language": "PowerPC:BE:32:default",
+  "compiler": "default",
+  "image_base": "10000000",
+  "arities": {
+    "100103f0": 0,
+    "10010430": 0,
+    "10010460": 0,
+    "100104a0": 0,
+    "100104e0": 0,
+    "100104e4": 2,
+    "100104ec": 0,
+    "10010520": 0,
+    "10010530": 1,
+    "10010540": 0,
+    "10010584": 0,
+    "10010594": 0,
+    "10031000": 0,
+    "10031004": 0,
+    "10031010": 1
+  }
+}
