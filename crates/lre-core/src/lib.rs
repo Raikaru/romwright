@@ -1037,6 +1037,82 @@ impl Core {
             .collect())
     }
 
+    /// What the store can answer about a program right now, and what it
+    /// cannot yet.
+    ///
+    /// Every query answers immediately from facts already committed; this
+    /// says how complete those facts are, so a consumer can render an
+    /// answer *and* say it is provisional instead of choosing between
+    /// showing nothing and pretending to be finished. `analysed` counts
+    /// bodies somebody walked, `seeded` the entries only the image
+    /// declared, and `stale` is true while any seed remains.
+    pub fn analysis_status(&self, program: &str) -> Result<lre_model::AnalysisStatus> {
+        let id = self.db.program_id(program)?;
+        let states = self.db.analysis_progress(id)?;
+        let mut analysed = 0;
+        let mut seeded = 0;
+        let mut undecodable = 0;
+        for (state, count) in &states {
+            match state.as_str() {
+                "walked" | "batch" => analysed += count,
+                "undecodable" => undecodable += count,
+                _ => seeded += count,
+            }
+        }
+        Ok(lre_model::AnalysisStatus {
+            program: program.to_string(),
+            revision: self.db.revision(id)?,
+            functions: analysed + seeded + undecodable,
+            analysed,
+            seeded,
+            undecodable,
+            stale: seeded > 0,
+        })
+    }
+
+    /// Analyses the seeds of a program one at a time, committing each
+    /// body's facts as it is walked.
+    ///
+    /// This is the background half of the facts-so-far contract: a query
+    /// answers from what is committed, and this commits more. Each function
+    /// is its own transaction and bumps the revision, so a consumer polling
+    /// `events_since` sees the store grow rather than waiting for a whole
+    /// image. `budget` bounds the work in one call, because a caller that
+    /// wants to stay responsive decides when to stop, not this.
+    pub fn analyse_pending(
+        &self,
+        binary: &Path,
+        program: &str,
+        budget: usize,
+    ) -> Result<lre_model::AnalysisStatus> {
+        let id = self.db.program_id(program)?;
+        // Seeds in address order: an analyst reads a listing downwards, so
+        // the facts arrive in the order they are likely to be looked at.
+        let pending: Vec<lre_model::Address> = self
+            .db
+            .functions(id)?
+            .into_iter()
+            .filter(|function| {
+                matches!(
+                    self.db
+                        .function_analysis_state(id, &function.entry.to_string())
+                        .ok()
+                        .flatten()
+                        .map(|(state, _)| state),
+                    Some(state) if state == "seeded"
+                )
+            })
+            .map(|function| function.entry)
+            .take(budget)
+            .collect();
+        for entry in &pending {
+            // One function's failure is that function's: a body the console
+            // cannot decode must not stop the pass over the rest.
+            let _ = self.analyse_function(binary, program, entry);
+        }
+        self.analysis_status(program)
+    }
+
     /// Infers parameter and return types for functions, from p-code alone.
     ///
     /// The constraints come from what the instructions commit to (see
