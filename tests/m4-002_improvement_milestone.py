@@ -204,7 +204,7 @@ def main() -> int:
 
     # Build what is being measured: the behavioural checks below run the
     # debug API binary, and a stale one hides exactly the defect they look for.
-    subprocess.run(["cargo", "build", "-q", "-p", "lre-api", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-api", "-p", "lre-worker"],
                    cwd=ROOT, check=True, env=clean_environment())
 
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())

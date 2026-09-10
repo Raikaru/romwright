@@ -10,8 +10,8 @@ cd "$ROOT"
 WORK="$(mktemp -d /tmp/m1-005-pe.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 
-CLI="target/debug/lre-cli"
-cargo build -q -p lre-cli
+CLI="target/release/lre-cli"
+cargo build -q --release -p lre-cli
 
 TINY_PE_UNSTRIPPED="$ROOT/tests/fixtures-src/tiny_pe.exe"
 if [ ! -f "$TINY_PE_UNSTRIPPED" ]; then
@@ -64,7 +64,7 @@ for line in out_syms.splitlines():
         rva = int(m.group(1), 16)
         oracle.add(0x140001000 + rva)
 
-out_funcs = subprocess.check_output(["target/debug/lre-cli", "functions", "tiny_pe", "--project", proj]).decode()
+out_funcs = subprocess.check_output(["target/release/lre-cli", "functions", "tiny_pe", "--project", proj]).decode()
 funcs = set()
 for line in out_funcs.splitlines():
     p = line.split()
@@ -121,7 +121,7 @@ for line in out_syms.splitlines():
         rva = int(m.group(1), 16)
         oracle.add(0x140001000 + rva)
 
-out_funcs = subprocess.check_output(["target/debug/lre-cli", "functions", "dispatch", "--project", proj]).decode()
+out_funcs = subprocess.check_output(["target/release/lre-cli", "functions", "dispatch", "--project", proj]).decode()
 funcs = set()
 for line in out_funcs.splitlines():
     p = line.split()

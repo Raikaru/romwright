@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """m1-010: exact-entry discovery precision/recall on all 20 locked ELF inputs."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import json
 import os
@@ -51,7 +52,10 @@ def main():
     parser.add_argument("--scoring-dir", type=Path, default=ROOT / "oracle/scoring-v1")
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
-    subprocess.run(["cargo", "build", "-q", "-p", "lre-cli"], cwd=ROOT, check=True)
+    # Release, with overflow checks kept on by the workspace profile: the
+    # gate scores facts, and a debug import spends minutes proving nothing
+    # extra. The twenty imports are independent, so they run concurrently.
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
     matrix = set(lock["oracle_matrix"]["architectures"])
     required = [r for r in lock["entries"]
@@ -75,7 +79,7 @@ def main():
         setup_error = error
     rows = []
     with tempfile.TemporaryDirectory(prefix="discovery-gate-") as temporary:
-        for recipe in required:
+        def score(recipe):
             key = (recipe["architecture"], recipe["variant"])
             row = {"id": "_".join(key), "status": "skipped", "metrics": {},
                    "thresholds": {"fn.precision": 0.98, "fn.recall": 0.98}, "runs": 1}
@@ -105,7 +109,7 @@ def main():
                 row.update(oracle_sha256=digest(reference_path), scoring_view_sha256=digest(view_path),
                            raw_oracle_functions=len(raw["entries"]), excluded_functions=len(view["excluded"]))
                 project = Path(temporary) / row["id"]
-                result = subprocess.run([str(ROOT / "target/debug/lre-cli"), "import", str(binary),
+                result = subprocess.run([str(ROOT / "target/release/lre-cli"), "import", str(binary),
                     "--name", row["id"], "--project", str(project)], capture_output=True, text=True, timeout=180)
                 if result.returncode:
                     raise ValueError(result.stdout + result.stderr)
@@ -122,8 +126,16 @@ def main():
                 row["reason"] = str(error)
             except (ValueError, KeyError, TypeError, sqlite3.Error) as error:
                 row.update(status="fail", reason=str(error))
-            rows.append(row)
-            print(f"{row['status'].upper()} {row['id']}: {row.get('reason', row['metrics'])}", flush=True)
+            return row
+
+        # Each entry writes its own project and reads a distinct oracle, so
+        # the twenty scores are independent; only the report's order is
+        # fixed, and `map` preserves it.
+        jobs = max(1, min(int(os.environ.get("VENTRIS_GATE_JOBS", "4")), len(required)))
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            rows = list(pool.map(score, required))
+    for row in rows:
+        print(f"{row['status'].upper()} {row['id']}: {row.get('reason', row['metrics'])}", flush=True)
     architecture = architecture_check()
     report = {"gate": "discovery", "milestone": "M1", "scoring_policy": POLICY,
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),

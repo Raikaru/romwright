@@ -6,22 +6,22 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${1:-$ROOT/tests/fixtures-src/tiny_bin}"
 PROJECT="${2:-$(mktemp -d /tmp/ventris-workflow.XXXXXX)}"
-CLI="${CLI:-$ROOT/target/debug/lre-cli}"
+CLI="${CLI:-$ROOT/target/release/lre-cli}"
 ADDR="${ADDR:-00400466}"
 
-[ -x "$CLI" ] || { echo "missing $CLI — cargo build -p lre-cli" >&2; exit 1; }
+[ -x "$CLI" ] || { echo "missing $CLI — cargo build --release -p lre-cli" >&2; exit 1; }
 [ -x "${VENTRIS_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}" ] || {
     echo "missing native decompiler — build native/build_ghidra_opt.sh" >&2
     exit 1
 }
-[ -x "${VENTRIS_WORKER:-$ROOT/target/debug/lre-worker}" ] || {
-    echo "missing lre-worker — cargo build -p lre-worker" >&2
+[ -x "${VENTRIS_WORKER:-$ROOT/target/release/lre-worker}" ] || {
+    echo "missing lre-worker — cargo build --release -p lre-worker" >&2
     exit 1
 }
 [ -n "${VENTRIS_SLA:-}" ] || { echo "set VENTRIS_SLA to x86-64.sla" >&2; exit 1; }
 
 export VENTRIS_GHIDRA_OPT="${VENTRIS_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}"
-export VENTRIS_WORKER="${VENTRIS_WORKER:-$ROOT/target/debug/lre-worker}"
+export VENTRIS_WORKER="${VENTRIS_WORKER:-$ROOT/target/release/lre-worker}"
 export VENTRIS_SPECS="${VENTRIS_SPECS:-$ROOT/native/specs}"
 
 rm -rf "$PROJECT"

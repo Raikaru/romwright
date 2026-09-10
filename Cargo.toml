@@ -28,3 +28,8 @@ rusqlite = { version = "0.37", features = ["bundled"] }
 thiserror = "2"
 base64 = "0.22"
 regex = "1"
+
+[profile.release]
+# A wrapped address is a wrong answer, not a fast one: the AArch64 switch
+# crash was only visible because a gate happened to run a checked build.
+overflow-checks = true

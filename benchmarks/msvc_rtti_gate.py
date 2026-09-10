@@ -76,7 +76,7 @@ def main():
     env = dict(os.environ, DEBUGINFOD_URLS='')
     for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
         cwd=ROOT, env=env, check=True)
     rows = []
     with tempfile.TemporaryDirectory(prefix='msvc-rtti-gate-') as temporary:

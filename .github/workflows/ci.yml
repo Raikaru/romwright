@@ -618,7 +618,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: ilammy/msvc-dev-cmd@v1
       - name: Build lre-cli
-        run: cargo build -p lre-cli
+        run: cargo build --release -p lre-cli
       - name: Run MSVC Corpus Gate
         shell: bash
         run: |

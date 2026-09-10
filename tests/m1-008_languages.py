@@ -14,7 +14,7 @@ import tempfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/debug/lre-cli"
+CLI = ROOT / "target/release/lre-cli"
 # Temporary compiler probes do not add entries to the committed corpus matrix.
 # The ARM rows are the install's own answer, not a preference of ours:
 # `ARM.opinion` pins `variant="v8"` for `e_machine` 40 and `v8LEInstruction`
@@ -35,7 +35,7 @@ def main():
     parser.add_argument("--update-report", action="store_true")
     args = parser.parse_args()
     install = Path(os.environ.get("VENTRIS_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC"))
-    subprocess.run(["cargo", "build", "-q", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
     rows = []
     with tempfile.TemporaryDirectory(prefix="m1-008-") as temporary:
         work = Path(temporary)

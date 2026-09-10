@@ -91,7 +91,7 @@ def main():
     env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
     for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
         cwd=ROOT, env=env, check=True)
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     recipes = {row['architecture'] + '_' + row['variant']: row

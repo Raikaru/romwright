@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLI="${LRE_CLI:-$ROOT/target/debug/lre-cli}"
+CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
 APP="${VENTRIS_QT_APP:-/tmp/ventris-qt-build/ventris-qt}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 PROGRAM="${PROGRAM:-largest-target}"

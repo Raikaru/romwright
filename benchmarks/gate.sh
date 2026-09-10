@@ -19,7 +19,7 @@ OUTDIR="${2:-/tmp/lre-gate-run}"
 RUNS="${RUNS:-3}"
 GATE_KB="${GATE_KB:-100000}"
 GATE_WALL_S="${GATE_WALL_S:-120}"
-CLI="$ROOT/target/debug/lre-cli"
+CLI="$ROOT/target/release/lre-cli"
 
 [ -x "$ROOT/native/build/ghidra_opt" ] || {
     echo "missing native/build/ghidra_opt — build: native/build_ghidra_opt.sh" >&2

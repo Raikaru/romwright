@@ -12,12 +12,12 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [ -f "$ROOT/target/debug/lre-cli.exe" ]; then
-    CLI="$ROOT/target/debug/lre-cli.exe"
-elif [ -f "$ROOT/target/debug/lre-cli" ]; then
-    CLI="$ROOT/target/debug/lre-cli"
+if [ -f "$ROOT/target/release/lre-cli.exe" ]; then
+    CLI="$ROOT/target/release/lre-cli.exe"
+elif [ -f "$ROOT/target/release/lre-cli" ]; then
+    CLI="$ROOT/target/release/lre-cli"
 else
-    CLI="$ROOT/target/debug/lre-cli"
+    CLI="$ROOT/target/release/lre-cli"
 fi
 
 CORPUS_SRC="$ROOT/tests/corpus-src"
@@ -43,8 +43,8 @@ fi
 
 # Build current sources, independent of the caller's working directory.
 cargo build --manifest-path "$ROOT/Cargo.toml" -p lre-cli --quiet
-if [ -f "$ROOT/target/debug/lre-cli.exe" ]; then
-    CLI="$ROOT/target/debug/lre-cli.exe"
+if [ -f "$ROOT/target/release/lre-cli.exe" ]; then
+    CLI="$ROOT/target/release/lre-cli.exe"
 fi
 
 # 3. Check committed sources and committed lock exist

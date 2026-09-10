@@ -104,7 +104,7 @@ def main():
     row = dict(status='skipped')
     try:
         binary = (args.binary or default_binary()).resolve()
-        subprocess.run(['cargo', 'build', '-q', '-p', 'lre-api', '-p', 'lre-worker'],
+        subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
             cwd=ROOT, env=env, check=True)
         row.update(binary=str(binary), sha256=digest(binary))
         with tempfile.TemporaryDirectory(prefix='thunk-gate-') as temporary:
