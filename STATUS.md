@@ -5420,10 +5420,89 @@ import already holds, no decompiler and no JVM.
   symbol name. The gate now strips the target and takes the truth from a twin
   the matcher never opens.
 
+### m5-017 evidence (a Nintendo Switch module, no JVM)
+
+`crates/lre-core/src/native/nso.rs` loads an NSO0: three LZ4-block segments
+assembled at their memory offsets, mapped at `0x71_0000_0000` where
+`SwitchLoader.load` puts a 64-bit module, then the `MOD0` header the word at
+text offset 4 names, and through it an ELF64 dynamic table. The symbol table's
+length is `nchain` from `DT_HASH`, which is the same rule
+`ElfCompatibilityProvider.getSymbolTable` (:157-172) uses. `DT_RELA` and
+`DT_JMPREL` are applied before the image is mapped, so every pointer the
+discovery pass reads is the value the console would see. The LZ4 decoder is
+ours, 60 lines against the block-format specification, so no dependency was
+added for it.
+
+Measured on Xenoblade Chronicles: Definitive Edition's `main`
+(`tests/m5-017_switch_module.py`, `benchmarks/reports/m5-017.json`): 43465
+functions in 420 s, **recall 1.0000 over all 42423 `STT_FUNC` symbols the
+module declares**, precision 0.9760 (1042 functions flow found that the
+symbol table does not name), language `AARCH64:LE:64:v8A`. Stock Ghidra with
+the Adubbz `SwitchLoader` extension installed in the pinned install recovers
+45259 functions on the same module, so this is 0.9604 of stock. The gate
+parses the module's symbols itself -- a different LZ4 implementation, a
+different dynamic-table reader -- so the score does not rest on the loader it
+scores. The target is a retail dump; the gate skips with a reason where it is
+absent.
+
+### m13-001 evidence (jump tables without the decompiler)
+
+The switch round was the last pass in a native import that called the
+decompiler, and the most expensive: 130 of 137 s on a statically linked
+AArch64 image, with two bodies hitting the per-function deadline. The console
+now exports SLEIGH's p-code (`native/ventris_pcode.hh`, export only -- no
+analysis was added to the pinned tree), and `native/vsa.rs` emulates the
+dispatch path once per index, as `JumpBasic::buildAddresses`
+(jumptable.cc:1451-1478) does over the decompiler's IR.
+
+Three rules earned their place by measurement against stock Ghidra's own
+tables on the host libc (`tests/m13-001_vsa_switch.py`,
+`benchmarks/reports/m13-001.json`):
+
+- **A table is read by a strided load.** Feeding indices to any live register
+  produces "targets" wherever the arithmetic lands in code: 0.4222 edge
+  precision. Requiring a load whose address advances by a fixed stride, and
+  ending the table when it stops doing so, is what makes the answer a table.
+- **The guard is the branch, not a nearby constant.** Taking any constant
+  compared in the neighbourhood as the case count measured 0.6107. The bound
+  is where the conditional branch starts sending the index to the default
+  case, which the emulator observes by running it.
+- **Guard analysis is separate from path emulation**, as `analyzeGuards` is
+  from `buildAddresses`: emulating both as one window collapsed recall to
+  0.05, because the guard's inputs are unknown that early and it escapes at
+  once. The guard region is the dispatch block's real predecessors, taken
+  from the recorded flow; the two positionally preceding blocks found a guard
+  for 15 of 132 dispatches, because a dispatch block is jumped to, not fallen
+  into.
+
+Measured: value-set analysis claims 18 dispatches at **0.9956 edge precision
+with no branch stock does not also have**, 16 of 18 exactly equal to stock's
+case set, in 0.92 s of phase time. That is 0.12 of stock's recall, so the
+decompiler stays: with it behind the pass the combined answer is precision
+0.9950, recall 0.9545, which is the decompiler's own score. Enabling the pass
+moved the `ARM:LE:32:v5t` token-identity ratchet down from 394 to 392, so it
+is **off by default** (`VENTRIS_SWITCH_VSA=1`), as II.1 requires of a pass
+that changes user-visible output.
+
+Also fixed here: `NativeWorker::decompile_at_within` bounds one function's
+decompile at 60 s and kills the child, which is Ghidra's own remedy
+(`DecompileProcess.sendCommandTimeout`:564-595 arms a timer whose only action
+is `dispose`, and `DecompilerSwitchAnalyzer` sets 60 seconds). The import that
+never finished now takes 137 s, and `m2-012` went from two 900 s timeouts to
+871 of 871 signature matches correct in 237 s.
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
-m11-002, m12-001; evidence above). What the measurements now point at, none
-reserved:
+m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
+point at, none reserved:
+- m13-002: value-set analysis recovers 0.12 of stock's dispatches. Every one
+  it claims is right, so the gap is reach, not correctness: the switch
+  variable is found by seeding the dispatch block's live-in registers, which
+  fails whenever the index is computed further back. A backward slice across
+  real predecessors (`JumpBasic::findDeterminingVarnodes` does it on SSA)
+  is the next step; acceptance is recall above 0.8 with extra branches still
+  0 and the ARM ratchet not moving down, at which point the pass goes on by
+  default and the decompiler leaves the switch round.
 - m12-002: the propagated class is 0.878 on the module pair and 0.469 recall
   on zlib `-O0` against `-O2`. Both matchers see the same content features,
   and the content score is what the alignment's commit rule turns on, so the

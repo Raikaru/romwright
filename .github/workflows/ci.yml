@@ -401,6 +401,18 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Recover jump tables without the decompiler
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+          VENTRIS_GHIDRA: ${{ env.VENTRIS_GHIDRA }}
+        run: |
+          python3 tests/m13-001_vsa_switch.py --report "$RUNNER_TEMP/discovery/vsa-switch.json"
+      - name: Import a Switch module with no JVM
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          # Retail dump; the gate skips with a reason on a runner.
+          python3 tests/m5-017_switch_module.py --report "$RUNNER_TEMP/discovery/switch-module.json"
       - name: Port names across builds and score the diff
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
