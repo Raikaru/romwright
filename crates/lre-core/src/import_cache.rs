@@ -91,14 +91,13 @@ pub fn key(binary: &Path, program: &str, config: &RuntimeConfig) -> Option<Strin
     // Configuration that changes facts. Shard count is not here: it changes
     // wall time, never an answer.
     let settings = format!(
-        "{}|{}|{}|{}|{}|{}|{}|{}",
+        "{}|{}|{}|{}|{}|{}|{}",
         config.language_id,
         config.language_dir.display(),
         config.sla_path.as_ref().map_or_else(String::new, |p| p.display().to_string()),
         config.register_params,
         config.promote_tailcalls,
         config.switch_vsa,
-        config.switch_vsa_unguarded,
         config.switch_decompiler,
     );
     Some(sha256(

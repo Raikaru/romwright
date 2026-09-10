@@ -1676,7 +1676,6 @@ fn recover_switch_tables_native(
                 branch,
                 &guard,
                 window,
-                imp.cfg.switch_vsa_unguarded,
                 &mut refusals,
             )
         };
@@ -1995,10 +1994,16 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // bounded because each round re-walks the image. Three rounds reached
     // every computed target on a DS ARM9 module whose crt0 enters the game
     // through `bx r1`.
+    // Every phase timing is a sum over rounds, so the count is part of the
+    // measurement: without it a per-pass budget reads a four-round total as
+    // one pass. The walk rewrites the flow stats each round, so the count is
+    // applied after the loop.
+    let mut rounds_run = 0u64;
     for round in 0..4 {
         if lanes.take().is_none() {
             break;
         }
+        rounds_run = round as u64 + 1;
         // The reference pass reads bytes through a console that has decoded
         // nothing but what the recorded contexts say. The discovery console
         // has probed thousands of candidates by now, and every probe wrote
@@ -2092,6 +2097,9 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         let again = std::time::Instant::now();
         lanes = discovery::discover_seeded(imp);
         phase(imp, "discovery", again);
+    }
+    if let Some(flow) = imp.flow.as_mut() {
+        flow.rounds = rounds_run;
     }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.

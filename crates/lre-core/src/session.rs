@@ -57,7 +57,6 @@ pub struct RuntimeConfig {
     /// Accept a table whose end no guard states, bounded only by its
     /// targets ceasing to be code. Off by default: measured against stock on
     /// libc these over-run their real end.
-    pub switch_vsa_unguarded: bool,
     /// Let the decompiler answer the dispatches value-set analysis refused.
     /// On by default; off measures the accelerator alone.
     pub switch_decompiler: bool,
@@ -245,7 +244,6 @@ impl RuntimeConfig {
             // measured separately without rebuilding.
             switch_vsa: std::env::var_os("VENTRIS_NO_SWITCH_VSA").is_none(),
             switch_decompiler: std::env::var_os("VENTRIS_NO_SWITCH_DECOMPILER").is_none(),
-            switch_vsa_unguarded: std::env::var_os("VENTRIS_SWITCH_VSA_UNGUARDED").is_some(),
         }
     }
 

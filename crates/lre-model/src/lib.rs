@@ -484,6 +484,11 @@ pub struct FlowStats {
     pub requests: u64,
     /// Instructions the console decoded for the flow walk.
     pub instructions: u64,
+    /// Discovery rounds that ran. Every phase timing is a sum over these,
+    /// because each round re-walks what the previous one grew, so a
+    /// per-pass budget must divide by this.
+    #[serde(default)]
+    pub rounds: u64,
 }
 
 /// What a byte-pattern search proposed and what survived the prerequisites.
