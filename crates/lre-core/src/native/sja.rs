@@ -281,6 +281,12 @@ pub struct Refusals {
 impl Refusals {
     /// Records why one branch was refused, from a whole-function answer.
     pub fn merge_for(&mut self, branch: u64, analysis: &Analysis) {
+        if std::env::var_os("VENTRIS_TRACE_VSA").is_some() {
+            eprintln!(
+                "SJA refused {branch:#x}: {:?}",
+                analysis.reasons.get(&branch)
+            );
+        }
         match analysis.reasons.get(&branch) {
             Some(RefusalKind::Unknown) => self.unknown_target += 1,
             Some(RefusalKind::Unbounded) => self.unbounded += 1,
@@ -476,8 +482,17 @@ fn materialise<I: Image>(
                 if !image.executable(address) {
                     return Err(Reason::Outside);
                 }
+                // Inside this function, or in space no other function has
+                // claimed: a computed goto's case blocks are reachable only
+                // through the dispatch, so they are unclaimed until it is
+                // answered. A target inside a *different* function is a
+                // wrong bound reaching into a neighbour, and is refused.
                 if address < extent.0 || address >= extent.1 {
-                    return Err(Reason::Outside);
+                    match image.owner(address) {
+                        Some(owner) if owner != extent => return Err(Reason::Outside),
+                        Some(_) => {}
+                        None => {}
+                    }
                 }
                 targets.push(address);
             }
@@ -571,6 +586,30 @@ fn run_block<I: Image>(
                     {
                         let factor = 1u64.checked_shl(*shift as u32).unwrap_or(0);
                         state.set(output, multiply(left.clone(), Value::Const(factor)));
+                    }
+                }
+                // A mask *is* a bound, and needs no guard to state it:
+                // `and $0xf, %ecx` says the index is 0..15 outright. Only a
+                // low-bit mask (`m + 1` a power of two) admits exactly
+                // `0..=m`; any other constant -- an alignment such as
+                // `and $0xfffffffffffffff0` -- clears bits without bounding
+                // the value, and stays unknown. This is the whole of the
+                // computed-goto class: `and; shl; add table; jmp *reg`
+                // materialises an arithmetic progression of code addresses
+                // with no table in memory to read.
+                "INT_AND" if op.output.as_ref().is_some_and(|output| output.size > 1) => {
+                    if let Some(output) = &op.output {
+                        let masked = match (inputs.first(), inputs.get(1)) {
+                            (Some(Value::Const(left)), Some(Value::Const(right))) => {
+                                Value::Const(left & right)
+                            }
+                            (Some(value), Some(Value::Const(mask)))
+                            | (Some(Value::Const(mask)), Some(value)) => {
+                                bound_by_mask(value.clone(), *mask)
+                            }
+                            _ => Value::Top,
+                        };
+                        state.set(output, masked);
                     }
                 }
                 "LOAD" => {
@@ -806,6 +845,43 @@ fn add(left: Value, right: Value) -> Value {
     }
 }
 
+/// What `value & mask` is worth, when the mask states a range.
+///
+/// `m + 1` a power of two means the mask keeps the low `k` bits and the
+/// result is exactly `0..=m`, whatever came in. Any other constant clears
+/// scattered bits, which bounds nothing this domain can name, so it is
+/// unknown rather than guessed. A value already known to fit inside the
+/// mask passes through: masking cannot widen it.
+fn bound_by_mask(value: Value, mask: u64) -> Value {
+    if !mask.checked_add(1).is_some_and(u64::is_power_of_two) {
+        return Value::Top;
+    }
+    if let Value::Const(known) = value {
+        return Value::Const(known & mask);
+    }
+    // The interval is signed, so a mask wider than `i64::MAX` states no
+    // bound this domain can hold.
+    let Ok(high) = i64::try_from(mask) else {
+        return Value::Top;
+    };
+    if let Value::Strided {
+        base: 0,
+        stride: 1,
+        lo: 0,
+        hi,
+    } = value
+        && hi <= high
+    {
+        return value;
+    }
+    Value::Strided {
+        base: 0,
+        stride: 1,
+        lo: 0,
+        hi: high,
+    }
+}
+
 fn multiply(left: Value, right: Value) -> Value {
     use Value::*;
     match (&left, &right) {
@@ -950,6 +1026,93 @@ mod tests {
             ops,
             error: None,
         }
+    }
+
+    /// `and $0xf, %ecx; shl $6, %ecx; add %r9, %rcx; jmp *%rcx` -- the
+    /// computed goto libc's `__memcpy_ssse3` dispatches with. There is no
+    /// table in memory: the cases are 16 blocks of 64 bytes and the mask is
+    /// the only thing that says so.
+    fn masked_goto(mask: u64) -> Vec<Block> {
+        vec![Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_AND",
+                        Some(varnode("register", 0x8, 8)),
+                        vec![varnode("register", 0x8, 8), varnode("const", mask, 8)],
+                    ),
+                    op(
+                        "INT_LEFT",
+                        Some(varnode("register", 0x8, 8)),
+                        vec![varnode("register", 0x8, 8), varnode("const", 6, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x8, 8)),
+                        vec![varnode("register", 0x8, 8), varnode("const", 0x1400, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("register", 0x8, 8)]),
+                ],
+            )],
+            successors: Vec::new(),
+        }]
+    }
+
+    #[test]
+    fn a_mask_bounds_a_computed_goto_with_no_table_to_read() {
+        let image = Fixture {
+            memory: HashMap::new(),
+            code: (0x1000, 0x2000),
+        };
+        let analysis = analyse(&image, &masked_goto(0xf), (0x1000, 0x2000));
+        let table = analysis.tables.first().expect("a table");
+        assert_eq!(table.branch, 0x1000);
+        assert_eq!(table.targets.len(), 16);
+        assert_eq!(table.targets.first(), Some(&0x1400));
+        assert_eq!(table.targets.last(), Some(&(0x1400 + 15 * 64)));
+    }
+
+    #[test]
+    fn a_goto_into_another_function_is_refused() {
+        // The same dispatch, but a neighbour owns the case blocks: a bound
+        // that reaches into another function is wrong, whatever it says.
+        struct Owned(Fixture);
+        impl Image for Owned {
+            fn read(&self, address: u64, size: u32) -> Option<u64> {
+                self.0.read(address, size)
+            }
+            fn executable(&self, address: u64) -> bool {
+                self.0.executable(address)
+            }
+            fn big_endian(&self) -> bool {
+                false
+            }
+            fn owner(&self, address: u64) -> Option<(u64, u64)> {
+                (address >= 0x1400).then_some((0x1400, 0x2000))
+            }
+        }
+        let image = Owned(Fixture {
+            memory: HashMap::new(),
+            code: (0x1000, 0x2000),
+        });
+        let analysis = analyse(&image, &masked_goto(0xf), (0x1000, 0x1400));
+        assert!(analysis.tables.is_empty());
+        assert_eq!(analysis.reasons.get(&0x1000), Some(&RefusalKind::Outside));
+    }
+
+    #[test]
+    fn an_alignment_mask_states_no_bound() {
+        // `and $0xfffffffffffffff0` clears low bits instead of keeping
+        // them: it says nothing about how large the value is, and reading
+        // it as a bound would invent a table of everything.
+        let image = Fixture {
+            memory: HashMap::new(),
+            code: (0x1000, 0x2000),
+        };
+        let analysis = analyse(&image, &masked_goto(!0xf), (0x1000, 0x2000));
+        assert!(analysis.tables.is_empty());
+        assert_eq!(analysis.reasons.get(&0x1000), Some(&RefusalKind::Unknown));
     }
 
     /// A guard block that bounds the index, then a dispatch block that

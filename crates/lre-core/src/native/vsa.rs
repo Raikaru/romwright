@@ -90,6 +90,18 @@ pub trait Image {
     fn executable(&self, address: u64) -> bool;
     /// True when the image is big-endian.
     fn big_endian(&self) -> bool;
+    /// The extent of the function that already owns `address`, when one
+    /// does.
+    ///
+    /// A dispatch's own case blocks are frequently reachable *only* through
+    /// the dispatch, so at the moment it is analysed they belong to no
+    /// function yet -- refusing a target for being outside the extent
+    /// recovered so far would refuse exactly the dispatches that discover
+    /// new code. What must not happen is a table reaching into a
+    /// *different* function, which is what this answers.
+    fn owner(&self, _address: u64) -> Option<(u64, u64)> {
+        None
+    }
 }
 
 /// A straight-line p-code emulator: enough of the integer operations to

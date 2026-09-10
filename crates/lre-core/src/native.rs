@@ -1486,6 +1486,17 @@ impl vsa::Image for ImageView<'_> {
     fn big_endian(&self) -> bool {
         self.big_endian
     }
+
+    fn owner(&self, address: u64) -> Option<(u64, u64)> {
+        // Single-instruction entries carry no body, so they claim nothing;
+        // `switch_candidates` sizes extents the same way.
+        self.imp
+            .functions
+            .iter()
+            .filter(|function| function.size > 1)
+            .map(|function| (function.entry, function.entry.saturating_add(function.size)))
+            .find(|&(start, end)| address >= start && address < end)
+    }
 }
 
 /// The straight-line window ending at `branch`, and the blocks that can
