@@ -16,11 +16,12 @@ from xref_gate import CONTEXTS
 
 FILES = ('pspec.xml', 'cspec.xml', 'tspec.xml', 'coretypes.xml', 'registers.txt')
 ARCHITECTURES = ('i386', 'aarch64', 'powerpc')
-# Provenance records which producer built the bundle; it is not a
-# requirement that a later export carry the same producer. The comment at
-# the differs check already says so.
-PROVENANCE = ('upstream_version', 'upstream_revision', 'bridge_sources_sha256',
-              'representative_sha256')
+# The bridge digest records which bridge build exported the bundle; a later
+# export from a different bridge build is not a different bundle. The
+# upstream version/revision ARE requirements -- the gates pass them to
+# validate_bundle to guard that the bundle came from the same Ghidra
+# revision as the reference it is scored against.
+PROVENANCE = ('bridge_sources_sha256', 'representative_sha256')
 
 
 def bundle_paths(root, language):
