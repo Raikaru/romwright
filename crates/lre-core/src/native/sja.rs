@@ -60,12 +60,16 @@ pub enum Value {
     /// to be able to say "one of these" -- a progression is the rare case,
     /// not the general one.
     Set(SetValue),
-    /// `base + stride * index`, with the index in `[lo, hi]`.
+    /// `base + stride * index`, with the index in `[lo, hi]`. `guarded`
+    /// marks a bound a comparison stated; a bound that is only a width
+    /// (a zero-extension's `0..=2^w-1`) is not a guard, and a table read
+    /// from it would read past the table.
     Strided {
         base: u64,
         stride: u64,
         lo: i64,
         hi: i64,
+        guarded: bool,
     },
 }
 
@@ -79,32 +83,12 @@ impl Value {
                 // range they span with a stride that reaches both, which is
                 // exact when they differ by one step.
                 let (low, high) = (left.min(right), left.max(right));
-                Strided {
-                    base: low,
-                    stride: high - low,
-                    lo: 0,
-                    hi: 1,
-                }
+                Strided { base: low, stride: high - low, lo: 0, hi: 1, guarded: true }
             }
             (
-                Strided {
-                    base: left_base,
-                    stride: left_stride,
-                    lo: left_lo,
-                    hi: left_hi,
-                },
-                Strided {
-                    base: right_base,
-                    stride: right_stride,
-                    lo: right_lo,
-                    hi: right_hi,
-                },
-            ) if left_base == right_base && left_stride == right_stride => Strided {
-                base: left_base,
-                stride: left_stride,
-                lo: left_lo.min(right_lo),
-                hi: left_hi.max(right_hi),
-            },
+                Strided { base: left_base, stride: left_stride, lo: left_lo, hi: left_hi, guarded: true },
+                Strided { base: right_base, stride: right_stride, lo: right_lo, hi: right_hi, guarded: true },
+            ) if left_base == right_base && left_stride == right_stride => Strided { base: left_base, stride: left_stride, lo: left_lo.min(right_lo), hi: left_hi.max(right_hi), guarded: true },
             (Set(left), Set(right)) => {
                 let mut all = (*left).clone();
                 all.extend(right.iter().copied());
@@ -127,22 +111,12 @@ impl Value {
             // what reading a table entry at a time produces, and without it
             // the third entry of every table collapsed the value to top.
             (
-                Strided {
-                    base,
-                    stride,
-                    lo,
-                    hi,
-                },
+                Strided { base, stride, lo, hi, guarded },
                 Const(value),
             )
             | (
                 Const(value),
-                Strided {
-                    base,
-                    stride,
-                    lo,
-                    hi,
-                },
+                Strided { base, stride, lo, hi, guarded },
             ) if stride != 0 => {
                 let offset = value.wrapping_sub(base) as i64;
                 let step = stride as i64;
@@ -153,6 +127,7 @@ impl Value {
                         stride,
                         lo: lo.min(index),
                         hi: hi.max(index),
+                        guarded,
                     }
                 } else {
                     Top
@@ -168,12 +143,7 @@ impl Value {
         match self {
             Value::Set(values) => Some((**values).clone()),
             Value::Const(value) => Some(vec![*value]),
-            Value::Strided {
-                base,
-                stride,
-                lo,
-                hi,
-            } => {
+            Value::Strided { base, stride, lo, hi, guarded } => {
                 if hi < lo || hi - lo + 1 > MAX_TABLE {
                     return None;
                 }
@@ -473,6 +443,9 @@ fn materialise<I: Image>(
                 _ => Err(Reason::Unbounded),
             }
         }
+        // A strided target is a table read's answer: it needs the bound a
+        // comparison stated, not a width a zero-extension implies.
+        Value::Strided { guarded: false, .. } => Err(Reason::Unbounded),
         Value::Strided { .. } => {
             let Some(addresses) = target.concrete() else {
                 return Err(Reason::TooWide);
@@ -531,10 +504,22 @@ fn run_block<I: Image>(
     // moment the temporary dies -- which is why the first measurement of
     // this pass bounded nothing on libc.
     let mut origins: BTreeMap<Slot, (Slot, i64)> = BTreeMap::new();
+    let trace_at: Option<u64> = std::env::var("VENTRIS_TRACE_SJA_OPS")
+        .ok()
+        .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok());
     for instruction in &block.instructions {
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
             let inputs: Vec<Value> = op.inputs.iter().map(|input| state.get(input)).collect();
+            if trace_at == Some(instruction.address) {
+                eprintln!(
+                    "SJA-OP {:#x}: {} out={:?} in={:?}",
+                    instruction.address, opcode, op.output, op.inputs
+                );
+                for (key, known) in &state.values {
+                    eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
+                }
+            }
             match opcode {
                 "COPY" | "INT_ZEXT" | "INT_SEXT" | "SUBPIECE" => {
                     if let (Some(output), Some(value)) = (&op.output, inputs.first()) {
@@ -545,6 +530,16 @@ fn run_block<I: Image>(
                         let width = op.inputs.first().map_or(output.size, |input| input.size);
                         let converted = match opcode {
                             "INT_SEXT" => map_values(value, |raw| sign_extend(raw, width)),
+                            // A zero-extension of an unknown w-byte input is
+                            // provably 0..=2^(8w)-1 -- the bound the domain
+                            "INT_ZEXT" if matches!(value, Value::Top) => {
+                                let high = if width >= 8 { i64::MAX }
+                                    else { (1i64 << (width * 8)) - 1 };
+                                // A width, not a guard: `movzbl` says the
+                                // index is a byte, not that the table is
+                                // 256 entries.
+                                Value::Strided { base: 0, stride: 1, lo: 0, hi: high , guarded: false }
+                            }
                             "INT_ZEXT" => map_values(value, |raw| truncate(raw, width)),
                             _ => value.clone(),
                         };
@@ -573,7 +568,8 @@ fn run_block<I: Image>(
                     {
                         let (origin, off) = origins.get(&slot(source)).cloned()
                             .unwrap_or((slot(source), 0));
-                        origins.insert(slot(output), (origin, off + konst.offset as i64));
+                        origins.insert(slot(output),
+                            (origin, off + sign_extend(konst.offset, konst.size) as i64));
                     }
                 }
                 "INT_SUB" => {
@@ -594,7 +590,8 @@ fn run_block<I: Image>(
                     {
                         let (origin, off) = origins.get(&slot(source)).cloned()
                             .unwrap_or((slot(source), 0));
-                        origins.insert(slot(output), (origin, off - konst.offset as i64));
+                        origins.insert(slot(output),
+                            (origin, off - sign_extend(konst.offset, konst.size) as i64));
                     }
                 }
                 "INT_MULT" => {
@@ -736,18 +733,14 @@ fn run_block<I: Image>(
                             // get the candidate and the check decides.
                             for (target, off) in targets {
                                 let bounded = match state.values.get(&target).cloned() {
-                                    Some(Value::Strided { base, stride, lo, .. }) => Value::Strided {
-                                        base,
-                                        stride,
-                                        lo,
-                                        hi: high - off,
-                                    },
-                                    _ => Value::Strided {
-                                        base: 0,
-                                        stride: 1,
-                                        lo: -off,
-                                        hi: high - off,
-                                    },
+                                    // Intersect, not overwrite: a bound on
+                                    // `t = origin + off` narrows the origin
+                                    // to [lo.max(-off), hi.min(high-off)].
+                                    // Only a plain index-space value
+                                    // (base 0, stride 1) shifts this way.
+                                    Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) =>
+                                        Value::Strided { base: 0, stride: 1, lo: lo.max(-off), hi: old_hi.min(high - off), guarded: true },
+                                    _ => Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: true },
                                 };
                                 edges
                                     .entry(edge)
@@ -802,6 +795,10 @@ fn map_values(value: &Value, transform: impl Fn(u64) -> u64) -> Value {
         Value::Set(values) => Value::Set(std::rc::Rc::new(
             values.iter().copied().map(transform).collect(),
         )),
+        // A transform on a width-only bound produces a set that no longer
+        // carries the flag, so it would read past the table it indexes.
+        // Refusing keeps the unsound read from happening.
+        Value::Strided { guarded: false, .. } => Value::Top,
         Value::Strided { .. } => value
             .concrete()
             .map(|all| {
@@ -844,27 +841,18 @@ fn add(left: Value, right: Value) -> Value {
     match (left, right) {
         (Const(left), Const(right)) => Const(left.wrapping_add(right)),
         (
-            Strided {
-                base,
-                stride,
-                lo,
-                hi,
-            },
+            Strided { base, stride, lo, hi, guarded },
             Const(value),
         )
         | (
             Const(value),
-            Strided {
-                base,
-                stride,
-                lo,
-                hi,
-            },
+            Strided { base, stride, lo, hi, guarded },
         ) => Strided {
             base: base.wrapping_add(value),
             stride,
             lo,
             hi,
+            guarded,
         },
         _ => Top,
     }
@@ -894,17 +882,13 @@ fn bound_by_mask(value: Value, mask: u64) -> Value {
         stride: 1,
         lo: 0,
         hi,
+        ..
     } = value
         && hi <= high
     {
         return value;
     }
-    Value::Strided {
-        base: 0,
-        stride: 1,
-        lo: 0,
-        hi: high,
-    }
+    Value::Strided { base: 0, stride: 1, lo: 0, hi: high, guarded: true }
 }
 
 fn multiply(left: Value, right: Value) -> Value {
@@ -923,27 +907,18 @@ fn multiply(left: Value, right: Value) -> Value {
     match (left, right) {
         (Const(left), Const(right)) => Const(left.wrapping_mul(right)),
         (
-            Strided {
-                base,
-                stride,
-                lo,
-                hi,
-            },
+            Strided { base, stride, lo, hi, guarded },
             Const(value),
         )
         | (
             Const(value),
-            Strided {
-                base,
-                stride,
-                lo,
-                hi,
-            },
+            Strided { base, stride, lo, hi, guarded },
         ) => Strided {
             base: base.wrapping_mul(value),
             stride: stride.wrapping_mul(value),
             lo,
             hi,
+            guarded,
         },
         _ => Top,
     }
@@ -957,12 +932,13 @@ fn multiply(left: Value, right: Value) -> Value {
 fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
     match address {
         Value::Const(address) => image.read(address, size).map_or(Value::Top, Value::Const),
-        Value::Strided {
-            base,
-            stride,
-            lo,
-            hi,
-        } if hi >= lo && hi - lo + 1 <= MAX_TABLE => {
+        // A table read needs a bound a comparison stated, not a width a
+        // zero-extension implies: `movzbl` says the index is a byte, not
+        // that the table is 256 entries, and reading on that bound alone
+        // reads past the table into whatever follows it.
+        Value::Strided { base, stride, lo, hi, guarded: true }
+            if hi >= lo && hi - lo + 1 <= MAX_TABLE =>
+        {
             // Read every entry the interval covers and keep them as a set:
             // a jump table holds whatever addresses the compiler emitted,
             // and requiring them to form a progression would refuse almost
@@ -1254,6 +1230,81 @@ mod tests {
         let found = analyse(&image, &switch_blocks(), (0x1000, 0x2000));
         assert!(found.tables.is_empty());
         assert_eq!(found.refusals.too_few_targets, 1);
+    }
+
+    /// `movzbl %cl, %ecx; cmp $4, %ecx; jae default; jmp *table(,%rcx,8)` --
+    /// the index is a zero-extended byte. The compare is what bounds it;
+    /// the byte's width alone only says `0..=255`, which is not a guard.
+    fn zext_switch_blocks(with_guard: bool) -> Vec<Block> {
+        let mut guard_ops = vec![op(
+            "INT_ZEXT",
+            Some(varnode("register", 0x38, 8)),
+            vec![varnode("unique", 0x40, 1)],
+        )];
+        if with_guard {
+            guard_ops.push(op(
+                "INT_LESS",
+                Some(varnode("unique", 0x10, 1)),
+                vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+            ));
+            guard_ops.push(op(
+                "CBRANCH",
+                None,
+                vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+            ));
+        }
+        let guard = Block {
+            instructions: vec![instruction(0x1000, guard_ops)],
+            successors: vec![1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        vec![guard, dispatch]
+    }
+
+    #[test]
+    fn a_zero_extended_index_without_a_guard_is_refused() {
+        // `movzbl` says the index is a byte, not that the table is 256
+        // entries. The table here *has* 256 readable entries, so a read on
+        // the width bound alone would recover a bogus 256-target table --
+        // the refusal is what proves the bound was not treated as a guard.
+        let entries: Vec<u64> = (0..256u64).map(|i| 0x1100 + i * 8).collect();
+        let image = table(&entries);
+        let found = analyse(&image, &zext_switch_blocks(false), (0x1000, 0x2000));
+        assert!(found.tables.is_empty());
+        assert_eq!(found.refusals.unknown_target, 1);
+    }
+
+    #[test]
+    fn a_zero_extended_index_with_a_guard_is_recovered() {
+        // The compare narrows the byte's width bound into a stated range,
+        // which is a guard the table read can stand on.
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
+        let found = analyse(&image, &zext_switch_blocks(true), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
 
     #[test]
