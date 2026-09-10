@@ -25,7 +25,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 18;
+pub const SCHEMA_VERSION: i64 = 19;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -203,6 +203,12 @@ impl ProjectDb {
                  -- seed a walk could not decode at all.
                  analysis_state TEXT NOT NULL DEFAULT 'batch',
                  analysed_revision INTEGER NOT NULL DEFAULT 0,
+                 -- Which producer put this function here: the image's own
+                 -- symbol table, a byte pattern, a call, a linkage stub, a
+                 -- pointer in data, the flow walk, or graph shape. Without
+                 -- it a recall number is one number for six passes and no
+                 -- way to tell which of them is carrying it.
+                 producer TEXT NOT NULL DEFAULT 'unknown',
                  PRIMARY KEY (program_id, entry)
              );
 
@@ -642,6 +648,21 @@ impl ProjectDb {
                     )?;
                 }
             }
+            if v < 19 {
+                let present: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('functions')
+                                   WHERE name = 'producer')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !present {
+                    tx.execute(
+                        "ALTER TABLE functions ADD COLUMN producer TEXT NOT NULL
+                             DEFAULT 'unknown'",
+                        [],
+                    )?;
+                }
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -773,6 +794,32 @@ impl ProjectDb {
             ],
         )?;
         Ok(())
+    }
+
+    /// Records which producer claimed each function entry.
+    pub fn set_producers(&self, program: ProgramId, rows: &[(String, String)]) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        {
+            let mut stmt = tx.prepare(
+                "UPDATE functions SET producer = ?3 WHERE program_id = ?1 AND entry = ?2",
+            )?;
+            for (entry, producer) in rows {
+                stmt.execute(params![program.0, entry, producer])?;
+            }
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Every function entry with the producer that claimed it.
+    pub fn producers(&self, program: ProgramId) -> Result<Vec<(String, String)>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT entry, producer FROM functions WHERE program_id = ?1")?;
+        let rows = stmt
+            .query_map(params![program.0], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     /// How much of a program has actually been analysed, by state.

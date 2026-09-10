@@ -2768,6 +2768,51 @@ pub fn store_import(
     // Say what produced these rows. A loader-only import declares seeds that
     // nobody has walked; demand-driven analysis upgrades them one at a time.
     db.set_all_analysis_states(pid, if imp.analysed { "batch" } else { "seeded" })?;
+    // And say *which pass* claimed each entry. One recall number over six
+    // producers cannot tell you which of them is carrying it, or which one
+    // to fix when it drops; the classes are derived here, in one place,
+    // from the evidence each pass already recorded.
+    let called: std::collections::HashSet<u64> = imp
+        .xrefs
+        .iter()
+        .filter(|xref| xref.kind.contains("CALL"))
+        .map(|xref| xref.to)
+        .collect();
+    let patterned: std::collections::HashSet<u64> =
+        imp.pattern_labels.iter().map(|(address, _)| *address).collect();
+    let thunked: std::collections::HashSet<u64> =
+        imp.thunks.iter().map(|thunk| thunk.entry).collect();
+    let pointed: std::collections::HashSet<u64> = imp
+        .pointer_slots
+        .iter()
+        .chain(imp.initializer_slots.iter())
+        .map(|(_, target)| *target)
+        .collect();
+    let declared: std::collections::HashSet<u64> =
+        imp.symbol_named.iter().copied().collect();
+    let producers: Vec<(String, String)> = rows
+        .iter()
+        .map(|row| {
+            let entry = row.entry.offset;
+            // Most specific evidence first: a linkage stub is a stub even
+            // when something calls it, and a symbol is the image's own word.
+            let producer = if thunked.contains(&entry) {
+                "thunk"
+            } else if declared.contains(&entry) {
+                "symbol"
+            } else if patterned.contains(&entry) {
+                "pattern"
+            } else if pointed.contains(&entry) {
+                "pointer"
+            } else if called.contains(&entry) {
+                "call"
+            } else {
+                "flow"
+            };
+            (row.entry.to_string(), producer.to_string())
+        })
+        .collect();
+    db.set_producers(pid, &producers)?;
     // Structural measurements of each body, taken while it was decoded:
     // instruction and basic-block counts, intra-function edges, and digests
     // of the bytes and of the decoded shape. `lre-diff` matches programs on

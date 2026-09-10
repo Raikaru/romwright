@@ -1,0 +1,173 @@
+{
+  "gate": "m17-002",
+  "milestone": "M17",
+  "commit": "c220fe5e30715b7b09a3e8b442130a8f9c7b9978",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "class.precision": 0.98,
+    "recall": 0.98,
+    "unattributed": 0.02,
+    "invented": 2,
+    "minimum_class": 20
+  },
+  "rows": [
+    {
+      "id": "x86_64_many_o2",
+      "truth": 401,
+      "recovered": 409,
+      "recall": 1.0,
+      "unattributed": 0.0,
+      "invented": [],
+      "invented_count": 0,
+      "classes": {
+        "call": {
+          "claimed": 402,
+          "in_truth": 400,
+          "explained": 402,
+          "precision": 1.0,
+          "coverage": 0.9975,
+          "scored": true
+        },
+        "flow": {
+          "claimed": 6,
+          "in_truth": 1,
+          "explained": 6,
+          "precision": 1.0,
+          "coverage": 0.0025,
+          "scored": false
+        },
+        "thunk": {
+          "claimed": 1,
+          "in_truth": 0,
+          "explained": 1,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
+        }
+      }
+    },
+    {
+      "id": "i386_many_o2",
+      "truth": 401,
+      "recovered": 413,
+      "recall": 1.0,
+      "unattributed": 0.0,
+      "invented": [
+        "00403fc9"
+      ],
+      "invented_count": 1,
+      "classes": {
+        "call": {
+          "claimed": 401,
+          "in_truth": 400,
+          "explained": 401,
+          "precision": 1.0,
+          "coverage": 0.9975,
+          "scored": true
+        },
+        "flow": {
+          "claimed": 8,
+          "in_truth": 1,
+          "explained": 8,
+          "precision": 1.0,
+          "coverage": 0.0025,
+          "scored": false
+        },
+        "pattern": {
+          "claimed": 2,
+          "in_truth": 0,
+          "explained": 1,
+          "precision": 0.5,
+          "coverage": 0.0,
+          "scored": false
+        },
+        "thunk": {
+          "claimed": 2,
+          "in_truth": 0,
+          "explained": 2,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
+        }
+      }
+    },
+    {
+      "id": "aarch64_many_o2",
+      "truth": 401,
+      "recovered": 415,
+      "recall": 1.0,
+      "unattributed": 0.0,
+      "invented": [
+        "002132cc"
+      ],
+      "invented_count": 1,
+      "classes": {
+        "call": {
+          "claimed": 403,
+          "in_truth": 401,
+          "explained": 403,
+          "precision": 1.0,
+          "coverage": 1.0,
+          "scored": true
+        },
+        "flow": {
+          "claimed": 8,
+          "in_truth": 0,
+          "explained": 7,
+          "precision": 0.875,
+          "coverage": 0.0,
+          "scored": false
+        },
+        "thunk": {
+          "claimed": 4,
+          "in_truth": 0,
+          "explained": 4,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
+        }
+      }
+    },
+    {
+      "id": "powerpc_many_o2",
+      "truth": 401,
+      "recovered": 410,
+      "recall": 1.0,
+      "unattributed": 0.0,
+      "invented": [],
+      "invented_count": 0,
+      "classes": {
+        "call": {
+          "claimed": 401,
+          "in_truth": 400,
+          "explained": 401,
+          "precision": 1.0,
+          "coverage": 0.9975,
+          "scored": true
+        },
+        "flow": {
+          "claimed": 6,
+          "in_truth": 1,
+          "explained": 6,
+          "precision": 1.0,
+          "coverage": 0.0025,
+          "scored": false
+        },
+        "thunk": {
+          "claimed": 3,
+          "in_truth": 0,
+          "explained": 3,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
+        }
+      }
+    }
+  ],
+  "passed": true,
+  "failures": []
+}
