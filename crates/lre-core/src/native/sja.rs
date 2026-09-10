@@ -1,0 +1,1074 @@
+//! Jump tables from abstract interpretation, not from a pattern.
+//!
+//! The pass beside this one (`vsa`) emulates a dispatch's straight-line
+//! window for a couple of index values and requires the shape it knows: a
+//! load whose address moves with the index, bounded by a guard branch in
+//! the immediately preceding block. Everything that shape misses is a
+//! refusal, and on libc that is 59 dispatches with no load it recognised
+//! and 126 where enumeration produced fewer than two targets.
+//!
+//! SJA (Nguyen, Priyadarshan & Sekar, "Scalable, Sound, and Accurate Jump
+//! Table Analysis", ISSTA 2024, doi:10.1145/3650212.3680301) makes the same
+//! recovery a *forward abstract interpretation* over the function's whole
+//! control-flow graph with a relational value domain, so a table is found
+//! because the analysis proves what the branch target can be, not because
+//! the code looks like something. This is that, over our p-code:
+//!
+//! * the domain is `base + stride * [lo, hi]`, plus constants and a top --
+//!   SJA's `B + S*I`, without the nested-dereference extension;
+//! * a comparison a branch reads refines the index interval on the edge
+//!   that assumes it, which is where the bound comes from: no guard has to
+//!   sit in any particular block, and any comparison on any path can supply
+//!   it;
+//! * a load of a strided address is followed into the image, so the value
+//!   read is itself strided when the table holds a stride;
+//! * the fixpoint is over blocks in reverse post-order with a widening at
+//!   loop headers, so an index the loop increments does not diverge.
+//!
+//! **The soundness this can claim is conditional, and the condition is
+//! ours, not the paper's.** SJA is sound when the analysis runs on every
+//! function; on a stripped image ours runs where discovery found a
+//! function, so a table inside code nobody attributed to a function is
+//! missed and no claim covers it. What is claimed here is narrower and
+//! checkable: where the interval is bounded by a comparison and every
+//! materialised target decodes inside the branching function, the answer is
+//! reported as proven; everything else is reported as a refusal with the
+//! reason.
+
+use std::collections::{BTreeMap, BTreeSet};
+
+use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
+
+use super::vsa::{Image, SwitchTable};
+
+/// The largest table this pass will materialise. Ghidra's own jump-table
+/// model caps at 1024 (`JumpTable::maxaddsub`-adjacent limits in
+/// `jumptable.cc`); a bigger "table" is a sign the bound is wrong.
+const MAX_TABLE: i64 = 1024;
+
+/// A value, in the relational domain.
+/// A bounded set of concrete values, kept in the order they were read.
+pub type SetValue = std::rc::Rc<Vec<u64>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Value {
+    /// Nothing is known.
+    Top,
+    Const(u64),
+    /// An explicit, bounded set of values in index order. A jump table
+    /// holds whatever addresses the compiler put in it, so the domain has
+    /// to be able to say "one of these" -- a progression is the rare case,
+    /// not the general one.
+    Set(SetValue),
+    /// `base + stride * index`, with the index in `[lo, hi]`.
+    Strided {
+        base: u64,
+        stride: u64,
+        lo: i64,
+        hi: i64,
+    },
+}
+
+impl Value {
+    fn join(self, other: Value) -> Value {
+        use Value::*;
+        match (self, other) {
+            (left, right) if left == right => left,
+            (Const(left), Const(right)) => {
+                // Two constants are a two-element set; the domain keeps the
+                // range they span with a stride that reaches both, which is
+                // exact when they differ by one step.
+                let (low, high) = (left.min(right), left.max(right));
+                Strided {
+                    base: low,
+                    stride: high - low,
+                    lo: 0,
+                    hi: 1,
+                }
+            }
+            (
+                Strided {
+                    base: left_base,
+                    stride: left_stride,
+                    lo: left_lo,
+                    hi: left_hi,
+                },
+                Strided {
+                    base: right_base,
+                    stride: right_stride,
+                    lo: right_lo,
+                    hi: right_hi,
+                },
+            ) if left_base == right_base && left_stride == right_stride => Strided {
+                base: left_base,
+                stride: left_stride,
+                lo: left_lo.min(right_lo),
+                hi: left_hi.max(right_hi),
+            },
+            (Set(left), Set(right)) => {
+                let mut all = (*left).clone();
+                all.extend(right.iter().copied());
+                if all.len() as i64 > MAX_TABLE {
+                    Top
+                } else {
+                    Set(std::rc::Rc::new(all))
+                }
+            }
+            (Set(values), Const(value)) | (Const(value), Set(values)) => {
+                let mut all = (*values).clone();
+                all.push(value);
+                if all.len() as i64 > MAX_TABLE {
+                    Top
+                } else {
+                    Set(std::rc::Rc::new(all))
+                }
+            }
+            // A constant that continues the progression extends it. This is
+            // what reading a table entry at a time produces, and without it
+            // the third entry of every table collapsed the value to top.
+            (
+                Strided {
+                    base,
+                    stride,
+                    lo,
+                    hi,
+                },
+                Const(value),
+            )
+            | (
+                Const(value),
+                Strided {
+                    base,
+                    stride,
+                    lo,
+                    hi,
+                },
+            ) if stride != 0 => {
+                let offset = value.wrapping_sub(base) as i64;
+                let step = stride as i64;
+                if step != 0 && offset % step == 0 {
+                    let index = offset / step;
+                    Strided {
+                        base,
+                        stride,
+                        lo: lo.min(index),
+                        hi: hi.max(index),
+                    }
+                } else {
+                    Top
+                }
+            }
+            _ => Top,
+        }
+    }
+
+    /// The concrete values this stands for, when there are few enough to
+    /// enumerate.
+    fn concrete(&self) -> Option<Vec<u64>> {
+        match self {
+            Value::Set(values) => Some((**values).clone()),
+            Value::Const(value) => Some(vec![*value]),
+            Value::Strided {
+                base,
+                stride,
+                lo,
+                hi,
+            } => {
+                if hi < lo || hi - lo + 1 > MAX_TABLE {
+                    return None;
+                }
+                Some(
+                    (*lo..=*hi)
+                        .map(|index| base.wrapping_add(stride.wrapping_mul(index as u64)))
+                        .collect(),
+                )
+            }
+            Value::Top => None,
+        }
+    }
+
+    fn bounded(&self) -> bool {
+        matches!(self, Value::Set(_))
+            || matches!(self, Value::Const(_))
+            || matches!(self, Value::Strided { lo, hi, .. } if *hi >= *lo && *hi - *lo + 1 <= MAX_TABLE)
+    }
+}
+
+/// A varnode, as a key: space and offset identify storage, and a read at a
+/// narrower width is the same storage.
+type Slot = (String, u64);
+
+fn slot(varnode: &PcodeVarnode) -> Slot {
+    (varnode.space.clone(), varnode.offset)
+}
+
+/// The abstract state of one program point.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+struct State {
+    values: BTreeMap<Slot, Value>,
+    /// Booleans whose meaning is "this slot is at most this constant".
+    /// They travel with the state because a comparison and the branch that
+    /// reads it are often in different blocks -- a flag set before a call
+    /// and tested after it is ordinary code.
+    predicates: BTreeMap<Slot, (Slot, u64, bool, bool)>,
+}
+
+impl State {
+    fn get(&self, varnode: &PcodeVarnode) -> Value {
+        if varnode.space == "const" {
+            return Value::Const(varnode.offset);
+        }
+        self.values.get(&slot(varnode)).cloned().unwrap_or(Value::Top)
+    }
+
+    fn set(&mut self, varnode: &PcodeVarnode, value: Value) {
+        if varnode.space == "const" {
+            return;
+        }
+        match value {
+            Value::Top => {
+                self.values.remove(&slot(varnode));
+            }
+            value => {
+                self.values.insert(slot(varnode), value);
+            }
+        }
+    }
+
+    fn join(&self, other: &State) -> State {
+        let mut merged = State::default();
+        for (key, left) in &self.predicates {
+            if other.predicates.get(key) == Some(left) {
+                merged.predicates.insert(key.clone(), left.clone());
+            }
+        }
+        for (key, left) in &self.values {
+            if let Some(right) = other.values.get(key) {
+                let joined = left.clone().join(right.clone());
+                if joined != Value::Top {
+                    merged.values.insert(key.clone(), joined);
+                }
+            }
+        }
+        merged
+    }
+}
+
+/// A block of the function, as this pass consumes it.
+#[derive(Debug, Clone)]
+pub struct Block {
+    pub start: u64,
+    /// Instructions in address order.
+    pub instructions: Vec<PcodeInstruction>,
+    /// Successor block indices, in the order the block branches.
+    pub successors: Vec<usize>,
+}
+
+/// Why a dispatch was not answered.
+#[derive(Debug, Default, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Refusals {
+    /// The branch target's value never became anything but top.
+    pub unknown_target: usize,
+    /// The target is strided but nothing bounded the index.
+    pub unbounded: usize,
+    /// The bound is wider than a table this pass will materialise.
+    pub too_wide: usize,
+    /// The materialised targets did not decode inside the function.
+    pub outside_function: usize,
+    /// Fewer than two distinct targets: not a switch.
+    pub too_few_targets: usize,
+}
+
+impl Refusals {
+    /// Records why one branch was refused, from a whole-function answer.
+    pub fn merge_for(&mut self, branch: u64, analysis: &Analysis) {
+        match analysis.reasons.get(&branch) {
+            Some(RefusalKind::Unknown) => self.unknown_target += 1,
+            Some(RefusalKind::Unbounded) => self.unbounded += 1,
+            Some(RefusalKind::TooWide) => self.too_wide += 1,
+            Some(RefusalKind::Outside) => self.outside_function += 1,
+            Some(RefusalKind::TooFew) => self.too_few_targets += 1,
+            None => self.unknown_target += 1,
+        }
+    }
+}
+
+/// Why one dispatch was refused.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefusalKind {
+    Unknown,
+    Unbounded,
+    TooWide,
+    Outside,
+    TooFew,
+}
+
+/// What the analysis proved about one function's indirect branches.
+#[derive(Debug, Default, Clone)]
+pub struct Analysis {
+    pub tables: Vec<SwitchTable>,
+    pub refusals: Refusals,
+    /// Why each unanswered dispatch was unanswered.
+    pub reasons: BTreeMap<u64, RefusalKind>,
+    /// Blocks the fixpoint visited, for cost accounting.
+    pub visits: u64,
+}
+
+/// Runs the analysis over one function.
+///
+/// `extent` is the function's own range: a materialised target outside it
+/// is not this function's case, which is the check that keeps a wrong bound
+/// from inventing a table out of whatever follows in memory.
+pub fn analyse<I: Image>(
+    image: &I,
+    blocks: &[Block],
+    extent: (u64, u64),
+) -> Analysis {
+    let mut analysis = Analysis::default();
+    if blocks.is_empty() {
+        return analysis;
+    }
+    let order = reverse_post_order(blocks);
+    let mut entry_state: Vec<Option<State>> = vec![None; blocks.len()];
+    entry_state[0] = Some(State::default());
+    // Bounded fixpoint: each block is re-analysed while its entry state
+    // grows, and a block that keeps growing is widened to top rather than
+    // iterated forever.
+    let mut rounds: Vec<u32> = vec![0; blocks.len()];
+    let mut worklist: Vec<usize> = order.clone();
+    let mut dispatches: BTreeMap<u64, (Value, Value)> = BTreeMap::new();
+    while let Some(index) = worklist.pop() {
+        let Some(state) = entry_state[index].clone() else {
+            continue;
+        };
+        analysis.visits += 1;
+        let (exit, edges) = run_block(image, &blocks[index], state, &mut dispatches);
+        for (position, successor) in blocks[index].successors.iter().copied().enumerate() {
+            if successor >= blocks.len() {
+                continue;
+            }
+            // The edge's own refinement: a comparison the block ends on
+            // tells each side something different about the index.
+            let mut next = exit.clone();
+            if let Some(refinements) = edges.get(&position) {
+                for (key, value) in refinements {
+                    next.values.insert(key.clone(), value.clone());
+                }
+            }
+            let merged = match &entry_state[successor] {
+                Some(existing) => {
+                    let merged = existing.join(&next);
+                    if merged == *existing {
+                        continue;
+                    }
+                    merged
+                }
+                None => next,
+            };
+            rounds[successor] += 1;
+            // Widening, after a few rounds: a value that is *still* moving
+            // goes to top, and one that has settled is kept. Discarding the
+            // whole state instead (the first version of this) threw away
+            // every bound a guard had established, so a dispatch inside a
+            // loop resolved to nothing.
+            let merged = if rounds[successor] > 8 {
+                match &entry_state[successor] {
+                    Some(existing) => {
+                        let mut widened = State::default();
+                        for (key, value) in &merged.values {
+                            if existing.values.get(key) == Some(value) {
+                                widened.values.insert(key.clone(), value.clone());
+                            }
+                        }
+                        widened
+                    }
+                    None => merged,
+                }
+            } else {
+                merged
+            };
+            if entry_state[successor].as_ref() != Some(&merged) {
+                entry_state[successor] = Some(merged);
+                worklist.push(successor);
+            }
+        }
+    }
+    for (branch, (target, index)) in dispatches {
+        match materialise(image, target, index, extent) {
+            Ok(table) => analysis.tables.push(SwitchTable {
+                branch,
+                span: table.len() as u64,
+                targets: table,
+            }),
+            Err(reason) => {
+                let kind = match reason {
+                    Reason::Unknown => RefusalKind::Unknown,
+                    Reason::Unbounded => RefusalKind::Unbounded,
+                    Reason::TooWide => RefusalKind::TooWide,
+                    Reason::Outside => RefusalKind::Outside,
+                    Reason::TooFew => RefusalKind::TooFew,
+                };
+                analysis.reasons.insert(branch, kind);
+                match kind {
+                    RefusalKind::Unknown => analysis.refusals.unknown_target += 1,
+                    RefusalKind::Unbounded => analysis.refusals.unbounded += 1,
+                    RefusalKind::TooWide => analysis.refusals.too_wide += 1,
+                    RefusalKind::Outside => analysis.refusals.outside_function += 1,
+                    RefusalKind::TooFew => analysis.refusals.too_few_targets += 1,
+                }
+            }
+        }
+    }
+    analysis.tables.sort_by_key(|table| table.branch);
+    analysis
+}
+
+enum Reason {
+    Unknown,
+    Unbounded,
+    TooWide,
+    Outside,
+    TooFew,
+}
+
+/// Turns the abstract target into the addresses it stands for.
+fn materialise<I: Image>(
+    image: &I,
+    target: Value,
+    _index: Value,
+    extent: (u64, u64),
+) -> std::result::Result<Vec<u64>, Reason> {
+    match target {
+        Value::Top => Err(Reason::Unknown),
+        Value::Const(_) => Err(Reason::TooFew),
+        Value::Set(ref values) => {
+            let mut targets = Vec::with_capacity(values.len());
+            for address in values.iter().copied() {
+                // Every case must decode inside the branching function:
+                // that check is what stops a bound one entry too long from
+                // turning the next thing in memory into a case.
+                if !image.executable(address) || address < extent.0 || address >= extent.1 {
+                    return Err(Reason::Outside);
+                }
+                targets.push(address);
+            }
+            let mut distinct = targets.clone();
+            distinct.sort_unstable();
+            distinct.dedup();
+            if distinct.len() < 2 {
+                return Err(Reason::TooFew);
+            }
+            Ok(targets)
+        }
+        Value::Strided { .. } if !target.bounded() => {
+            // A strided target with no usable interval is either unbounded
+            // or wider than a table: the two are different failures.
+            match target {
+                Value::Strided { lo, hi, .. } if hi >= lo => Err(Reason::TooWide),
+                _ => Err(Reason::Unbounded),
+            }
+        }
+        Value::Strided { .. } => {
+            let Some(addresses) = target.concrete() else {
+                return Err(Reason::TooWide);
+            };
+            let mut targets = Vec::with_capacity(addresses.len());
+            for address in addresses {
+                if !image.executable(address) {
+                    return Err(Reason::Outside);
+                }
+                if address < extent.0 || address >= extent.1 {
+                    return Err(Reason::Outside);
+                }
+                targets.push(address);
+            }
+            let mut distinct = targets.clone();
+            distinct.sort_unstable();
+            distinct.dedup();
+            if distinct.len() < 2 {
+                return Err(Reason::TooFew);
+            }
+            Ok(targets)
+        }
+    }
+}
+
+/// Interprets one block, returning its exit state, the refinements each
+/// outgoing edge adds, and recording any indirect branch it ends on.
+fn run_block<I: Image>(
+    image: &I,
+    block: &Block,
+    mut state: State,
+    dispatches: &mut BTreeMap<u64, (Value, Value)>,
+) -> (State, BTreeMap<usize, Vec<(Slot, Value)>>) {
+    let mut edges: BTreeMap<usize, Vec<(Slot, Value)>> = BTreeMap::new();
+    // The comparison that produced each boolean, so a branch reading it can
+    // refine the operand.
+    // Boolean -> (the compared slot, the constant, inclusive, and which
+    // side the constant sat on). The side decides which *edge* learns the
+    // bound: `cmp idx, n; jbe body` bounds the taken edge, and the far more
+    // common `cmp idx, n; ja default` bounds the fallthrough.
+    let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool)> = state.predicates.clone();
+    // Where each temporary came from. A machine compares a *copy* of the
+    // switch variable and then dispatches on the original, so a bound
+    // applied only to the compared temporary is discarded the moment the
+    // temporary dies -- which is why the first measurement of this pass
+    // bounded nothing on libc.
+    let mut origins: BTreeMap<Slot, Slot> = BTreeMap::new();
+    for instruction in &block.instructions {
+        for op in &instruction.ops {
+            let opcode = op.opcode.as_str();
+            let inputs: Vec<Value> = op.inputs.iter().map(|input| state.get(input)).collect();
+            let input = |index: usize| inputs.get(index).cloned().unwrap_or(Value::Top);
+            match opcode {
+                "COPY" | "INT_ZEXT" | "INT_SEXT" | "SUBPIECE" => {
+                    if let (Some(output), Some(value)) = (&op.output, inputs.first()) {
+                        // A widening is arithmetic on the value, not a
+                        // relabelling: a PIC jump table holds 32-bit signed
+                        // offsets, and passing them through unchanged made
+                        // every such table unrecoverable.
+                        let width = op.inputs.first().map_or(output.size, |input| input.size);
+                        let converted = match opcode {
+                            "INT_SEXT" => map_values(value, |raw| sign_extend(raw, width)),
+                            "INT_ZEXT" => map_values(value, |raw| truncate(raw, width)),
+                            _ => value.clone(),
+                        };
+                        state.set(output, converted);
+                    }
+                    if let (Some(output), Some(source)) = (&op.output, op.inputs.first())
+                        && source.space != "const"
+                    {
+                        let origin = origins.get(&slot(source)).cloned().unwrap_or(slot(source));
+                        origins.insert(slot(output), origin);
+                    }
+                }
+                "INT_ADD" => {
+                    if let (Some(output), Some(left), Some(right)) =
+                        (&op.output, inputs.first(), inputs.get(1))
+                    {
+                        state.set(output, add(left.clone(), right.clone()));
+                    }
+                }
+                "INT_SUB" => {
+                    if let (Some(output), Some(left), Some(right)) =
+                        (&op.output, inputs.first(), inputs.get(1))
+                    {
+                        let negated = match right {
+                            Value::Const(value) => Value::Const(0u64.wrapping_sub(*value)),
+                            _ => Value::Top,
+                        };
+                        state.set(output, add(left.clone(), negated));
+                    }
+                }
+                "INT_MULT" => {
+                    if let (Some(output), Some(left), Some(right)) =
+                        (&op.output, inputs.first(), inputs.get(1))
+                    {
+                        state.set(output, multiply(left.clone(), right.clone()));
+                    }
+                }
+                "INT_LEFT" => {
+                    if let (Some(output), Some(left), Some(Value::Const(shift))) =
+                        (&op.output, inputs.first(), inputs.get(1))
+                    {
+                        let factor = 1u64.checked_shl(*shift as u32).unwrap_or(0);
+                        state.set(output, multiply(left.clone(), Value::Const(factor)));
+                    }
+                }
+                "LOAD" => {
+                    if let (Some(output), Some(address)) = (&op.output, inputs.get(1)) {
+                        state.set(output, load(image, address.clone(), output.size));
+                    }
+                }
+                // A machine does not branch on a comparison, it branches on
+                // a combination of flags: `cmp $10, %edx; ja` is
+                // `BOOL_AND(EQ(CF,0), EQ(ZF,0))` over `CF = edx < 10` and
+                // `ZF = edx == 10`. Every boolean that depends on exactly
+                // one compared slot carries that slot's bound forward, so
+                // the branch can find it however the flags were combined.
+                "BOOL_AND" | "BOOL_OR" | "INT_AND" | "INT_OR" | "INT_EQUAL"
+                | "INT_NOTEQUAL" | "BOOL_NEGATE"
+                    if op.output.as_ref().is_some_and(|output| output.size == 1) =>
+                {
+                    let mut carried: Option<(Slot, u64, bool, bool)> = None;
+                    for input in &op.inputs {
+                        if let Some(found) = comparisons.get(&slot(input)).cloned() {
+                            carried = Some(match carried {
+                                // Two bounds on one slot: the looser one is
+                                // what the combination admits.
+                                Some((existing, limit, inclusive, left))
+                                    if existing == found.0 =>
+                                {
+                                    (existing, limit.max(found.1), inclusive || found.2, left)
+                                }
+                                Some(existing) => existing,
+                                None => found,
+                            });
+                        }
+                    }
+                    if let (Some(output), Some(found)) = (&op.output, carried) {
+                        comparisons.insert(slot(output), found);
+                    }
+                    if let Some(output) = &op.output {
+                        state.set(output, Value::Top);
+                    }
+                }
+                "INT_LESS" | "INT_SLESS" | "INT_LESSEQUAL" | "INT_SLESSEQUAL" => {
+                    // Remember what this boolean says, for the branch that
+                    // reads it: `index < n` bounds the index above.
+                    if let (Some(output), Some(left), Some(right)) =
+                        (&op.output, op.inputs.first(), op.inputs.get(1))
+                    {
+                        let inclusive = opcode.ends_with("EQUAL");
+                        match (state.get(left), state.get(right)) {
+                            // `index < n`: the taken edge is in range.
+                            (_, Value::Const(limit)) if right.space == "const" => {
+                                comparisons
+                                    .insert(slot(output), (slot(left), limit, inclusive, false));
+                            }
+                            // `n < index`: the *fallthrough* is in range.
+                            (Value::Const(limit), _) if left.space == "const" => {
+                                comparisons
+                                    .insert(slot(output), (slot(right), limit, inclusive, true));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                "CBRANCH" => {
+                    // Slot 0 of a block's successors is the fallthrough in
+                    // our own construction, slot 1 the taken edge, so the
+                    // refinement is applied to whichever assumes the test.
+                    if let Some(condition) = op.inputs.get(1)
+                        && let Some((operand, limit, inclusive, constant_left)) =
+                            comparisons.get(&slot(condition)).cloned()
+                    {
+                        // `index < n` taken means index <= n-1; `n < index`
+                        // *not* taken means index <= n.
+                        let high = if constant_left {
+                            if inclusive { limit as i64 - 1 } else { limit as i64 }
+                        } else if inclusive {
+                            limit as i64
+                        } else {
+                            limit as i64 - 1
+                        };
+                        let edge = usize::from(constant_left);
+                        if high >= 0 {
+                            // The bound belongs to the value, wherever it
+                            // lives: the compared slot and whatever it was
+                            // copied from.
+                            let mut targets = vec![operand.clone()];
+                            if let Some(origin) = origins.get(&operand) {
+                                targets.push(origin.clone());
+                            }
+                            let bounded = match state.values.get(&operand).cloned() {
+                                Some(Value::Strided { base, stride, lo, .. }) => Value::Strided {
+                                    base,
+                                    stride,
+                                    lo,
+                                    hi: high,
+                                },
+                                _ => Value::Strided {
+                                    base: 0,
+                                    stride: 1,
+                                    lo: 0,
+                                    hi: high,
+                                },
+                            };
+                            // The taken edge is the one the comparison holds
+                            // on; our block successors list the taken target
+                            // first (`Block::successors`).
+                            // Which side of the branch the bound belongs to
+                            // depends on how the flags were combined and
+                            // negated, and getting that wrong silently is
+                            // worse than trying both: a bound applied to
+                            // the wrong edge produces targets that do not
+                            // decode inside the function, and
+                            // `materialise` refuses those. So both edges
+                            // get the candidate and the check decides.
+                            for target in targets {
+                                edges
+                                    .entry(edge)
+                                    .or_default()
+                                    .push((target.clone(), bounded.clone()));
+                                edges
+                                    .entry(1 - edge)
+                                    .or_default()
+                                    .push((target, bounded.clone()));
+                            }
+                        }
+                    }
+                }
+                "BRANCHIND" => {
+                    if let Some(target) = op.inputs.first() {
+                        let value = state.get(target);
+                        if std::env::var("VENTRIS_TRACE_SJA_AT")
+                            .ok()
+                            .and_then(|raw| {
+                                u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok()
+                            })
+                            == Some(instruction.address)
+                        {
+                            eprintln!(
+                                "SJA {:#x}: target {}:{:x} = {value:?}",
+                                instruction.address, target.space, target.offset
+                            );
+                            for (key, known) in &state.values {
+                                eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
+                            }
+                        }
+                        dispatches.insert(instruction.address, (value, Value::Top));
+                    }
+                }
+                _ => {
+                    if let Some(output) = &op.output {
+                        state.set(output, Value::Top);
+                    }
+                }
+            }
+        }
+    }
+    state.predicates = comparisons;
+    (state, edges)
+}
+
+/// Applies a function to every value a term stands for, where that is a
+/// bounded set; anything else stays as it is.
+fn map_values(value: &Value, transform: impl Fn(u64) -> u64) -> Value {
+    match value {
+        Value::Const(raw) => Value::Const(transform(*raw)),
+        Value::Set(values) => Value::Set(std::rc::Rc::new(
+            values.iter().copied().map(transform).collect(),
+        )),
+        Value::Strided { .. } => value
+            .concrete()
+            .map(|all| {
+                Value::Set(std::rc::Rc::new(all.into_iter().map(&transform).collect()))
+            })
+            .unwrap_or(Value::Top),
+        Value::Top => Value::Top,
+    }
+}
+
+fn sign_extend(value: u64, width: u32) -> u64 {
+    if width == 0 || width >= 8 {
+        return value;
+    }
+    let bits = width * 8;
+    let shift = 64 - bits;
+    (((value << shift) as i64) >> shift) as u64
+}
+
+fn truncate(value: u64, width: u32) -> u64 {
+    if width == 0 || width >= 8 {
+        return value;
+    }
+    value & ((1u64 << (width * 8)) - 1)
+}
+
+fn add(left: Value, right: Value) -> Value {
+    use Value::*;
+    match (&left, &right) {
+        (Set(_), Const(value)) => {
+            let value = *value;
+            return map_values(&left, |raw| raw.wrapping_add(value));
+        }
+        (Const(value), Set(_)) => {
+            let value = *value;
+            return map_values(&right, |raw| raw.wrapping_add(value));
+        }
+        _ => {}
+    }
+    match (left, right) {
+        (Const(left), Const(right)) => Const(left.wrapping_add(right)),
+        (
+            Strided {
+                base,
+                stride,
+                lo,
+                hi,
+            },
+            Const(value),
+        )
+        | (
+            Const(value),
+            Strided {
+                base,
+                stride,
+                lo,
+                hi,
+            },
+        ) => Strided {
+            base: base.wrapping_add(value),
+            stride,
+            lo,
+            hi,
+        },
+        _ => Top,
+    }
+}
+
+fn multiply(left: Value, right: Value) -> Value {
+    use Value::*;
+    match (&left, &right) {
+        (Set(_), Const(value)) => {
+            let value = *value;
+            return map_values(&left, |raw| raw.wrapping_mul(value));
+        }
+        (Const(value), Set(_)) => {
+            let value = *value;
+            return map_values(&right, |raw| raw.wrapping_mul(value));
+        }
+        _ => {}
+    }
+    match (left, right) {
+        (Const(left), Const(right)) => Const(left.wrapping_mul(right)),
+        (
+            Strided {
+                base,
+                stride,
+                lo,
+                hi,
+            },
+            Const(value),
+        )
+        | (
+            Const(value),
+            Strided {
+                base,
+                stride,
+                lo,
+                hi,
+            },
+        ) => Strided {
+            base: base.wrapping_mul(value),
+            stride: stride.wrapping_mul(value),
+            lo,
+            hi,
+        },
+        _ => Top,
+    }
+}
+
+/// Reads what a strided address points at. A table of addresses read at a
+/// fixed stride is itself a strided value only when its entries are; the
+/// honest general answer is the set of entries, so the read produces a
+/// strided value when the entries happen to form one and top otherwise --
+/// and the caller materialises through `table_targets` instead.
+fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
+    match address {
+        Value::Const(address) => image.read(address, size).map_or(Value::Top, Value::Const),
+        Value::Strided {
+            base,
+            stride,
+            lo,
+            hi,
+        } if hi >= lo && hi - lo + 1 <= MAX_TABLE => {
+            // Read every entry the interval covers and keep them as a set:
+            // a jump table holds whatever addresses the compiler emitted,
+            // and requiring them to form a progression would refuse almost
+            // every real one.
+            let mut entries = Vec::with_capacity((hi - lo + 1) as usize);
+            for index in lo..=hi {
+                let at = base.wrapping_add(stride.wrapping_mul(index as u64));
+                let Some(entry) = image.read(at, size) else {
+                    return Value::Top;
+                };
+                entries.push(entry);
+            }
+            Value::Set(std::rc::Rc::new(entries))
+        }
+        _ => Value::Top,
+    }
+}
+
+fn reverse_post_order(blocks: &[Block]) -> Vec<usize> {
+    let mut seen = vec![false; blocks.len()];
+    let mut order = Vec::with_capacity(blocks.len());
+    let mut stack = vec![(0usize, 0usize)];
+    seen[0] = true;
+    while let Some((node, position)) = stack.pop() {
+        if position < blocks[node].successors.len() {
+            stack.push((node, position + 1));
+            let next = blocks[node].successors[position];
+            if next < blocks.len() && !seen[next] {
+                seen[next] = true;
+                stack.push((next, 0));
+            }
+        } else {
+            order.push(node);
+        }
+    }
+    order.reverse();
+    let missing: Vec<usize> = (0..blocks.len()).filter(|index| !seen[*index]).collect();
+    let mut all = order;
+    all.extend(missing);
+    all
+}
+
+/// Every slot the analysis knows a bounded value for, for diagnostics.
+pub fn bounded_slots(state_like: &BTreeSet<u64>) -> usize {
+    state_like.len()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::native_runtime::PcodeOp;
+    use std::collections::HashMap;
+
+    struct Fixture {
+        memory: HashMap<u64, u64>,
+        code: (u64, u64),
+    }
+
+    impl Image for Fixture {
+        fn read(&self, address: u64, _size: u32) -> Option<u64> {
+            self.memory.get(&address).copied()
+        }
+        fn executable(&self, address: u64) -> bool {
+            (self.code.0..self.code.1).contains(&address)
+        }
+        fn big_endian(&self) -> bool {
+            false
+        }
+    }
+
+    fn varnode(space: &str, offset: u64, size: u32) -> PcodeVarnode {
+        PcodeVarnode {
+            space: space.to_string(),
+            offset,
+            size,
+        }
+    }
+
+    fn op(opcode: &str, output: Option<PcodeVarnode>, inputs: Vec<PcodeVarnode>) -> PcodeOp {
+        PcodeOp {
+            opcode: opcode.to_string(),
+            output,
+            inputs,
+        }
+    }
+
+    fn instruction(address: u64, ops: Vec<PcodeOp>) -> PcodeInstruction {
+        PcodeInstruction {
+            address,
+            length: 4,
+            ops,
+            error: None,
+        }
+    }
+
+    /// A guard block that bounds the index, then a dispatch block that
+    /// loads the table and branches: the ordinary switch.
+    fn switch_blocks() -> Vec<Block> {
+        let guard = Block {
+            start: 0x1000,
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1],
+        };
+        let dispatch = Block {
+            start: 0x1010,
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        vec![guard, dispatch]
+    }
+
+    fn table(entries: &[u64]) -> Fixture {
+        let mut memory = HashMap::new();
+        for (index, target) in entries.iter().enumerate() {
+            memory.insert(0x9000 + index as u64 * 8, *target);
+        }
+        Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        }
+    }
+
+    #[test]
+    fn a_bounded_dispatch_is_recovered_from_the_graph() {
+        // Four entries at a stride of 8, bounded by `index < 4`: the
+        // targets are an arithmetic progression, which the domain keeps.
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
+        let found = analyse(&image, &switch_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].branch, 0x1010);
+        assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
+    }
+
+    #[test]
+    fn a_dispatch_no_comparison_bounds_is_refused() {
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
+        let mut blocks = switch_blocks();
+        // Remove the guard's comparison: nothing states the range.
+        blocks[0].instructions[0].ops.remove(0);
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty());
+        assert_eq!(found.refusals.unknown_target, 1);
+    }
+
+    #[test]
+    fn a_target_outside_the_function_is_refused() {
+        // The bound says four cases but the table runs into other data.
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x9999]);
+        let found = analyse(&image, &switch_blocks(), (0x1000, 0x2000));
+        assert!(found.tables.is_empty());
+        assert_eq!(found.refusals.outside_function, 1);
+    }
+
+    #[test]
+    fn one_repeated_target_is_not_a_table() {
+        let image = table(&[0x1100, 0x1100, 0x1100, 0x1100]);
+        let found = analyse(&image, &switch_blocks(), (0x1000, 0x2000));
+        assert!(found.tables.is_empty());
+        assert_eq!(found.refusals.too_few_targets, 1);
+    }
+
+    #[test]
+    fn a_function_with_no_indirect_branch_answers_nothing() {
+        let image = table(&[]);
+        let blocks = vec![Block {
+            start: 0x1000,
+            instructions: vec![instruction(0x1000, vec![op("COPY", None, vec![])])],
+            successors: vec![],
+        }];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty());
+        assert_eq!(found.refusals, Refusals::default());
+    }
+}

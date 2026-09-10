@@ -2,7 +2,7 @@
   "id": "m13-001",
   "milestone": "M13",
   "criterion": "jump tables recovered from p-code without the decompiler, scored against stock",
-  "recorded_at": "2026-09-10T03:12:44.819721+00:00",
+  "recorded_at": "2026-09-10T14:12:26.240705+00:00",
   "thresholds": {
     "vsa_soundness": 0.99,
     "vsa_seconds": 5.0,
@@ -35,8 +35,22 @@
       "shared_with_stock": 78,
       "beyond_stock": 12,
       "missed_of_stock": 54,
-      "wall_s": 31.7,
-      "phase_s": 0.85
+      "wall_s": 37.9,
+      "phase_s": 1.879
+    },
+    "interpreted": {
+      "branches": 93,
+      "targets": 898,
+      "sound_targets": 897,
+      "outside_function": 1,
+      "undecodable": 0,
+      "soundness": 0.9989,
+      "agree_with_stock": 68,
+      "shared_with_stock": 81,
+      "beyond_stock": 12,
+      "missed_of_stock": 51,
+      "wall_s": 63.5,
+      "phase_s": 12.394
     },
     "decompiler": {
       "branches": 130,
@@ -49,7 +63,7 @@
       "shared_with_stock": 129,
       "beyond_stock": 1,
       "missed_of_stock": 3,
-      "wall_s": 75.6
+      "wall_s": 85.5
     },
     "combined": {
       "branches": 142,
@@ -62,8 +76,8 @@
       "shared_with_stock": 129,
       "beyond_stock": 13,
       "missed_of_stock": 3,
-      "wall_s": 97.3,
-      "phase_s": 0.0
+      "wall_s": 170.6,
+      "phase_s": 0.449
     }
   },
   "status": "pass",

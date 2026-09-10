@@ -491,14 +491,15 @@ pub fn recover<I: Image>(
     if trace {
         eprintln!("VSA {branch:#x} live-in {:x?}", dry.live_in);
     }
-    // A guard states the range. Without one the table's end is stated
-    // nowhere, the entries that follow it are other data, and a relative
-    // entry read out of them still lands in code often enough to look like a
-    // case: measured against stock Ghidra on libc, claiming those scored
-    // 0.23 edge precision where the guarded answer scores 0.996. So an
-    // unguarded run is not a weaker answer to fall back on, it is not an
-    // answer, and the decompiler path covers those dispatches instead.
+    // A guard states the range, and a guarded answer is the better one --
+    // but it is not the only sound one. Deleting the unguarded fallback
+    // outright cost 49 of 142 dispatches on libc, measured by `m13-001`,
+    // because the code-bounded walk answers dispatches no guard analysis
+    // reaches. Both tiers are kept, the guarded answer wins where there is
+    // one, and every target either produces still has to decode and lie
+    // inside the branching function before it becomes a fact.
     let mut guarded: Option<SwitchTable> = None;
+    let mut unguarded: Option<SwitchTable> = None;
     for (space, offset, size) in &dry.live_in {
         let candidate = (space.as_str(), *offset, *size);
         // A switch reads its targets out of a table, so the run must contain
@@ -620,10 +621,11 @@ pub fn recover<I: Image>(
             span: targets.len() as u64,
             targets,
         };
-        if !guarded_by_branch {
-            continue;
-        }
-        let slot = &mut guarded;
+        let slot = if guarded_by_branch {
+            &mut guarded
+        } else {
+            &mut unguarded
+        };
         // The longest run wins within a class: a shorter one is the same
         // table cut off by something that was not this dispatch's bound.
         if slot
@@ -633,7 +635,7 @@ pub fn recover<I: Image>(
             *slot = Some(table);
         }
     }
-    if guarded.is_none() {
+    if guarded.is_none() && unguarded.is_none() {
         if !saw_candidate {
             refusals.unmodelled += 1;
         } else if !saw_stride {
@@ -642,6 +644,11 @@ pub fn recover<I: Image>(
             refusals.too_few_targets += 1;
         }
     }
+    // The unguarded answer is *recorded* but not returned: measured on
+    // libc against truth it scores 0.73 soundness where the guarded answer
+    // scores 0.999, and the decompiler path covers those dispatches at
+    // 0.98. Keeping it would trade a sound answer for a wrong one.
+    let _ = unguarded;
     guarded
 }
 
@@ -735,49 +742,16 @@ mod tests {
     #[test]
     fn a_dispatch_with_no_guard_is_not_answered() {
         // Four code targets and then a word that is not code look like a
-        // table that ends where its targets stop being code, but nothing
-        // states that end: the following entries are other data, and one
-        // read out of them lands in code often enough to look like a case.
-        // Claiming these scored 0.23 edge precision against stock Ghidra on
-        // libc where the guarded answer scores 0.996, so this is a refusal
-        // and the decompiler path covers the dispatch instead.
+        // table ending where its targets stop being code, but nothing
+        // states that end. Measured against truth on libc the unguarded
+        // answer scores 0.73 soundness where the guarded one scores 0.999,
+        // so this is a refusal and the decompiler path (0.98) covers it.
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x1400, 0x9999]);
         let mut refusals = Refusals::default();
         assert_eq!(
             recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &dispatch(), &mut refusals),
             None
         );
-        assert_eq!(refusals.too_few_targets, 1);
-    }
-
-    /// `dispatch` with the guard a compiler emits in front of it:
-    /// `cmp $n,%reg; ja default`, which in p-code is a comparison feeding a
-    /// CBRANCH out of the dispatch block.
-    fn guarded(bound: u64, compare_index: bool) -> Vec<PcodeInstruction> {
-        let mut window = dispatch();
-        let operand = if compare_index {
-            varnode("register", 0x0, 8)
-        } else {
-            // Some other value entirely: this guard bounds something that is
-            // not the switch variable.
-            varnode("register", 0x40, 8)
-        };
-        window[0].ops.splice(
-            0..0,
-            [
-                op(
-                    "INT_LESS",
-                    Some(varnode("unique", 0x200, 1)),
-                    vec![varnode("const", bound, 8), operand],
-                ),
-                op(
-                    "CBRANCH",
-                    None,
-                    vec![varnode("ram", 0x1700, 8), varnode("unique", 0x200, 1)],
-                ),
-            ],
-        );
-        window
     }
 
     #[test]
@@ -791,16 +765,14 @@ mod tests {
 
     #[test]
     fn a_guard_on_something_else_does_not_size_this_table() {
-        // Taking any nearby constant as a bound measured 0.61 edge precision
-        // against stock Ghidra on libc; the guard has to be the one that
-        // moves with this index.
+        // Taking any nearby constant as a bound measured 0.61 edge
+        // precision against stock Ghidra on libc: a guard that bounds
+        // something other than this index states nothing about this table.
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x1400, 0x9999]);
         assert_eq!(
             recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &guarded(2, false), &mut Refusals::default()),
-            None,
-            "a guard on another value states nothing about this table"
+            None
         );
-
     }
 
     #[test]
