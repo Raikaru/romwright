@@ -279,6 +279,10 @@ def smoke_test(manifest: dict) -> None:
             f"--target={target}",
             f"--sysroot={sysroot}",
             "-fuse-ld=lld",
+            # The pinned bookworm crt objects carry no .note.GNU-stack, so
+            # lld refuses them without an explicit stack flag -- the corpus
+            # lock recipes pass the same flag for the same reason.
+            "-Wl,-z,execstack",
             "-O2",
             "-fPIE",
             "-pie",
