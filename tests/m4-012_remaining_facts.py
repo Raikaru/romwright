@@ -171,8 +171,12 @@ def parameters(rendered: str) -> list[str]:
 def declares_model(language: str) -> bool:
     """Whether the language's own compiler spec defines the model."""
     bundle = SPECS / language.replace(":", "-")
-    assert bundle.is_dir(), f"spec bundle missing: {bundle}"
-    cspec = bundle / "cspec.xml"
+    # The root specs are the x86-64 bundle; every other language needs its
+    # own directory, and a missing one is a provisioning failure, not a
+    # semantic fact.
+    if not bundle.is_dir():
+        assert language == "x86:LE:64:default", f"spec bundle missing: {bundle}"
+    cspec = bundle / "cspec.xml" if bundle.is_dir() else SPECS / "cspec.xml"
     return f'prototype name="{MODEL}"' in cspec.read_text()
 
 

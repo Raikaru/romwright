@@ -117,8 +117,12 @@ def facts(project: Path, program: str) -> dict:
 def language_pointer_width(language: str) -> int:
     """The RAM space width the language's own tspec declares."""
     bundle = SPECS / language.replace(":", "-")
-    assert bundle.is_dir(), f"spec bundle missing: {bundle}"
-    tspec = bundle / "tspec.xml"
+    # The root specs are the x86-64 bundle; every other language needs its
+    # own directory, and a missing one is a provisioning failure, not a
+    # semantic fact.
+    if not bundle.is_dir():
+        assert language == "x86:LE:64:default", f"spec bundle missing: {bundle}"
+    tspec = bundle / "tspec.xml" if bundle.is_dir() else SPECS / "tspec.xml"
     match = re.search(r'<space name="ram"[^>]*size="(\d+)"', tspec.read_text())
     assert match, f"{tspec} declares no ram space width"
     return int(match.group(1))
