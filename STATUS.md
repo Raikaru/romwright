@@ -5378,39 +5378,97 @@ evidence:
   identical, 0 unexplained); the eight shell gates, m5-001 and
   `cargo test --workspace` (270) pass.
 
+### m12-001 evidence (carrying names from one build onto another)
+
+The gap the tool had was version diffing: nothing matched the functions of one
+program onto another, which is what makes a decompilation with symbols usable
+as an oracle for a retail image. `crates/lre-diff` does it over facts the
+import already holds, no decompiler and no JVM.
+
+- **The store was missing the primitives.** A diff needs per-body structure,
+  and the store held only entry, size and references. `function_features`
+  (schema v17) now carries instruction, block and edge counts, loops, the
+  largest block, and digests of the body bytes and of the decoded shape.
+  Blocks and edges are Ghidra's basic-block model, checked against
+  `BasicBlockModel.hasEndOfBlockFlow` (:64-78): a jump or a terminal ends a
+  block, a call does not, a branch target starts one. Everything is counted
+  from what the walk already decoded (`native/features.rs`), so no pass
+  re-reads the image.
+- **Two matchers, measured against each other.** `--matcher greedy` is the
+  maximum-common-edge-subgraph strategy of Dullien & Rolles (SSTIC'05) that
+  BinDiff uses; `--matcher nap` is Mengin & Rossi's network-alignment
+  formulation (arXiv:2112.15337), maximised by integer projected fixed point
+  iteration (Leordeanu et al., NIPS'09) with an exact minimum-cost-flow
+  assignment each round. The alignment wins on precision, recall and ported
+  names at once, so it is the default.
+- **Scored against symbol truth the matcher never reads**
+  (`tests/m12-001_diff.py`, `benchmarks/reports/m12-001.json`): 20 corpus rows
+  against their unstripped twins, 1903 pairs, precision and recall 1.0 and all
+  1702 ported names right; 12 cross-optimisation rows (`plain_o0` against
+  `plain_o2` and `plain_pie`, four architectures), 147 pairs, precision 1.0,
+  recall 0.8639, names 0.9535; two Agent Under Fire modules with the target
+  stripped, 1176 pairs, precision 0.9662, recall 0.9473, names 0.9272.
+- **Anchors are gated at 1.0, not floored.** An anchor is a key unique on both
+  sides, so a wrong one means the key does not identify what it claims:
+  measured 1.0 over 2802 judged pairs. Every error is in the propagated class
+  -- 0.878 for the alignment against 0.868 for the greedy strategy on the
+  module pair. On zlib built at `-O0` against `-O2`, target stripped, 147
+  named functions: 0.908 precision, 0.469 recall, 0.825 of ported names right,
+  against 0.879, 0.395 and 0.783 greedy.
+- The earlier version of this measurement scored 1.0 on the module pair and
+  was wrong: both sides were unstripped, so the matcher was matching by
+  symbol name. The gate now strips the target and takes the truth from a twin
+  the matcher never opens.
+
 ## Next task
-- m4-037: native stack-frame recovery. The oracle store now carries Ghidra's
-  recovered stack frames (`stack_variables`), and four MIPS functions are
-  attributed to `missing-stack-frame` because ours carries none. The
-  propagation pass already knows every load and store through the stack
-  pointer (`ventris_constants.hh`, `stackBase`); emitting those as facts,
-  naming them as `SymbolUtilities.getDefaultLocalName` does, and sending them
-  as declared locals in the worker's `<localdb>` turns the class into
-  identity. Acceptance: `missing-stack-frame` 0 on every measured row, the
-  native store holding the same slots the oracle store holds.
-- m4-038: raise the MIPS:BE:64 ratchet. 17 of 116 Perfect Dark boot-segment
-  functions are token-identical; the residue is coprocessor register naming
-  (`uRegister00002050` vs `EntryHi_00`), external thunk naming
-  (`thunk_EXT_FUN_7020126c`) and local ordering. Each is a fact class to name
-  or a store fact to add; the floor moves up as they close.
-- m5-014: switch recovery at discovery time. 1386 of the 1843 functions
-  stock finds on HeartGold's ARM9 and we do not are call targets, and 385 of
-  those are called from inside bodies we hold whose calls we never decoded:
-  Thumb `add pc, rN` tables (`sub_02000F60`) stop our walk where Ghidra's
-  `ARM_switch_patterns.xml` and its jump-table analysis continue. m2-007
-  recovers tables at decompile time only; feeding them back into discovery,
-  as the computed-call round now does for register calls, is the next recall
-  step and raises both DS ratchets.
-- m11-002: a second measured session on the *same* approved target's other
-  modules. `files/Bond.elf` is one of five (`base.elf`, `boot.elf`,
-  `Movie.elf`, `driving.elf`, and the `bond.dol` image `m1-009` already
-  scores), so widening the session needs no new target and no reservation.
-  Score each module the way `m11-001` scores this one, and record which
-  surfaces answer differently on a module that is loaded rather than booted.
+Every task the previous list named has landed (m4-037, m4-038, m5-014,
+m11-002, m12-001; evidence above). What the measurements now point at, none
+reserved:
+- m12-002: the propagated class is 0.878 on the module pair and 0.469 recall
+  on zlib `-O0` against `-O2`. Both matchers see the same content features,
+  and the content score is what the alignment's commit rule turns on, so the
+  next gain is a feature, not a solver: an instruction-class histogram (the
+  34 mnemonic classes of arXiv:2112.15337 Table II, or the interpretable set
+  TIKNIB measured as competitive with learned models, IEEE TSE 2022). The
+  console reports flow kinds but not mnemonics; acceptance is the propagated
+  class above 0.93 on the module pair with anchors still exactly 1.0.
+- m12-003: name a retail image from a decompilation that has symbols -- the
+  case m12-001 was built for. Perfect Dark, Pokemon Emerald and Silent Hill 1
+  are on the workstation with decomps; acceptance is a scored port onto the
+  retail ROM, truth being the decomp's own symbol table.
+- m5-015: the eleven DS entries whose recorded instruction set disagrees with
+  the ELF's mapping symbols (was 116). Each is an ARM function inside a
+  stretch a Thumb pattern painted to the next change point; the console's
+  `context` set paints where Ghidra sets one address and lets flow carry it.
+  Bounding an accepted pattern's paint to the body its `validcode` walk
+  proved, and re-painting the tail with the value it held, closes the class;
+  acceptance is 0 disagreements and no DS ratchet moving down.
+- m5-016: HeartGold ARM9 recall 0.6594 over 11019 symbols. The 3757 functions
+  stock and the symbols hold and we do not: score them by how stock reached
+  each (pattern, switch case, data pointer, call from a body we lack) with
+  the m5-013 scorer's `sample misses`, and take the largest class. The
+  ratchets move up with each.
+- m4-039: the DS parity residue, 118 of 512. The first-token classes are
+  callee prototypes (`longlong`/`int` widths at the callee, 31 before
+  truncation on N64 -- the same fact class on ARM), `thunk_FUN_` naming for
+  a tail-call thunk stock creates and we do not (15), and the oracle's
+  stack-slot merging (`uStack_` vs our `local_`). Each is a fact class to
+  name or a store fact to add.
+- m11-003: the switch round's cost. m11-001's import is 11.5 s -> 45 s and
+  65 -> 229 MB peak because every function with an indirect jump is
+  decompiled, in parallel workers that count in the peak. Ghidra pays the
+  same decompiles; what is ours to reduce is the second walk each round
+  triggers (a walk is 4-18 s on Bond) -- resume the walk from the new case
+  targets instead of re-walking the image.
+- Movie.elf precision 0.7844: case labels named by the module's own data
+  pointers stand as functions where their flow-proven spans do not overlap.
+  Stock creates them too (the shared DS set holds 64 such), so the parity
+  gate holds them; whether to refuse them against the symbols' evidence is a
+  user-visible choice and is recorded here rather than made.
 - Reserved, and the only things left that are: adding a *new* target game,
-  platform or corpus binary (II.1) -- the retail images used tonight (Perfect
-  Dark, Emerald, HeartGold, the Vita and 3DS titles) were approved by the
-  user in conversation and live in the corpus cache, never the repository;
+  platform or corpus binary (II.1) -- the retail images used (Perfect Dark,
+  Emerald, HeartGold, the Vita and 3DS titles, Agent Under Fire) were
+  approved by the user in conversation and live outside the repository;
   tagging a release; and reversing a user-visible naming or typing choice to
   close `name-convention` 11 or `type-stronger` 66.
 

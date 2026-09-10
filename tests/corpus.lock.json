@@ -29,6 +29,16 @@
     "cpp_o2",
     "many_o2"
   ],
+  "oracle_matrix": {
+    "architectures": [
+      "x86_64",
+      "i386",
+      "aarch64",
+      "powerpc"
+    ],
+    "variants": 5,
+    "note": "The 20-row ELF matrix the M1-M3 oracle, scoring, discovery, reference, string, prototype, switch and no-return gates score; mipsel rows are corpus members the parity and platform gates measure by language (m4-036) and join this matrix only with their own oracle references and frozen baselines."
+  },
   "entries": [
     {
       "architecture": "x86_64",

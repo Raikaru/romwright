@@ -4,6 +4,7 @@
 //!   lre-cli import <binary> [--project DIR]
 //!   lre-cli open <program> [--project DIR]
 //!   lre-cli functions <program> [--project DIR]
+//!   lre-cli diff <program> --reference DIR [--apply] [--json]
 //!   lre-cli symbols <program>
 //!   lre-cli xrefs <program> --to|--from <address>
 //!   lre-cli rename <program> <address> <name>
@@ -38,6 +39,8 @@ fn usage() {
   lre-cli architectures [--project DIR]   (uses VENTRIS_GHIDRA)
   lre-cli open <program> [--project DIR]
   lre-cli functions <program> [--offset N] [--limit N] [--filter TEXT] [--project DIR]
+  lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
+                         [--min-score F] [--lambda F] [--candidates N] [--json]
   lre-cli symbols <program> [--project DIR]
   lre-cli xrefs <program> [--to HEX | --from HEX] [--project DIR] [--evidence KIND]
   lre-cli comments <program> [--project DIR]
@@ -571,6 +574,61 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 "reopened {} ({} functions, {})",
                 summary.program, summary.functions, summary.language
             );
+        }
+        "diff" => {
+            // Whole-program structural diff: name the target program in this
+            // project, and the project holding the reference program.
+            let target = args.get(2).ok_or("diff needs a target program name")?.clone();
+            let reference_project = flag(args, "--reference")
+                .ok_or("diff needs --reference <project dir>")?;
+            let reference = flag(args, "--reference-name");
+            let mut options = lre_diff::Options::default();
+            if let Some(value) = flag(args, "--min-score").and_then(|v| v.parse().ok()) {
+                options.min_score = value;
+            }
+            if let Some(value) = flag(args, "--lambda").and_then(|v| v.parse().ok()) {
+                options.lambda = value;
+            }
+            if let Some(value) = flag(args, "--candidates").and_then(|v| v.parse().ok()) {
+                options.candidates = value;
+            }
+            options.matcher = match flag(args, "--matcher").as_deref() {
+                None | Some("nap") => lre_diff::Matcher::Nap,
+                Some("greedy") => lre_diff::Matcher::Greedy,
+                Some(other) => return Err(format!("unknown matcher: {other}")),
+            };
+            let report = core
+                .diff_program(
+                    &target,
+                    Path::new(&reference_project),
+                    reference.as_deref(),
+                    &options,
+                    has_flag(args, "--apply"),
+                )
+                .map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                println!(
+                    "{}",
+                    serde_json::to_string(&report).map_err(|e| e.to_string())?
+                );
+            } else {
+                for row in &report.matches {
+                    println!(
+                        "{}  {}  {:.3}  {:?}  {} -> {}",
+                        row.reference, row.target, row.score, row.evidence,
+                        row.reference_name, row.target_name
+                    );
+                }
+                println!(
+                    "-- matched {} of {} target functions against {} reference functions ({} anchors); {} names {}",
+                    report.matches.len(),
+                    report.target_functions,
+                    report.reference_functions,
+                    report.anchors,
+                    report.names.len(),
+                    if has_flag(args, "--apply") { "applied" } else { "portable" }
+                );
+            }
         }
         "functions" => {
             let program = args.get(2).ok_or("functions needs a program name")?.clone();

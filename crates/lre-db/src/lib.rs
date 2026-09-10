@@ -17,6 +17,7 @@ use rusqlite::{params, Connection, OptionalExtension, Row};
 use std::path::Path;
 
 mod class;
+mod feature;
 mod convention;
 mod return_behavior;
 mod signature;
@@ -24,7 +25,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 15;
+pub const SCHEMA_VERSION: i64 = 17;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -50,7 +51,9 @@ pub enum DbError {
     StaleRevision { expected: u64, actual: u64 },
     #[error("invalid return analysis: {0}")]
     InvalidReturnAnalysis(String),
-
+    /// A structural feature row was missing a measurement it must carry.
+    #[error("invalid function features: {0}")]
+    InvalidFunctionFeatures(String),
 }
 /// Convenience alias with the error defaulted per project convention.
 pub type Result<T, E = DbError> = std::result::Result<T, E>;
@@ -566,6 +569,39 @@ impl ProjectDb {
                 )?;
                 if carried {
                     tx.execute("ALTER TABLE functions DROP COLUMN calling_convention", [])?;
+                }
+            }
+            if v < 16 {
+                // Structural measurements of a body, taken at decode time:
+                // what a whole-program diff matches on (lre-diff).
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS function_features (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         function TEXT NOT NULL,
+                         instructions INTEGER NOT NULL CHECK(instructions >= 0),
+                         blocks INTEGER NOT NULL CHECK(blocks >= 0),
+                         edges INTEGER NOT NULL CHECK(edges >= 0),
+                         body_digest TEXT NOT NULL,
+                         shape_digest TEXT NOT NULL,
+                         PRIMARY KEY(program_id, function)
+                     );",
+                )?;
+            }
+            if v < 17 {
+                // Two more structural measurements: loops and the largest
+                // block. Both survive a change of optimisation level better
+                // than a byte count does, which is what a diff needs.
+                let present: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('function_features')
+                                   WHERE name = 'loops')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !present {
+                    tx.execute_batch(
+                        "ALTER TABLE function_features ADD COLUMN loops INTEGER NOT NULL DEFAULT 0;
+                         ALTER TABLE function_features ADD COLUMN max_block INTEGER NOT NULL DEFAULT 0;",
+                    )?;
                 }
             }
             tx.execute(
@@ -2663,6 +2699,93 @@ impl ProjectDb {
         self.journal_push(&tx, program, "rename", &payload, &undo)?;
         tx.commit()?;
         Ok(())
+    }
+
+    /// Renames many functions as one undoable command (CORE-006). A ported
+    /// name set is one analyst decision, so it is one journal entry and one
+    /// revision bump: undoing a diff should not take thousands of undos, and
+    /// a half-applied port is not a state the store can be left in.
+    pub fn rename_batch_command(
+        &self,
+        program: ProgramId,
+        renames: &[(lre_model::Address, String)],
+        detail: &str,
+    ) -> Result<u64> {
+        if renames.is_empty() {
+            return Ok(0);
+        }
+        let tx = self.conn.unchecked_transaction()?;
+        let mut applied: Vec<(String, String, String)> = Vec::with_capacity(renames.len());
+        {
+            let mut read = tx.prepare(
+                "SELECT name FROM functions WHERE program_id = ?1 AND entry = ?2",
+            )?;
+            let mut write = tx.prepare(
+                "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
+            )?;
+            for (entry, name) in renames {
+                let cell = addr_cell(entry);
+                let old: String = match read.query_row(params![program.0, &cell], |row| row.get(0))
+                {
+                    Ok(old) => old,
+                    Err(rusqlite::Error::QueryReturnedNoRows) => continue,
+                    Err(error) => return Err(error.into()),
+                };
+                if old == *name {
+                    continue;
+                }
+                write.execute(params![program.0, &cell, name])?;
+                applied.push((entry.hex(), name.clone(), old));
+            }
+        }
+        if applied.is_empty() {
+            return Ok(0);
+        }
+        let payload = serde_json::json!({
+            "renames": applied
+                .iter()
+                .map(|(entry, name, _)| serde_json::json!({"entry": entry, "name": name}))
+                .collect::<Vec<_>>(),
+        })
+        .to_string();
+        let undo = serde_json::json!({
+            "renames": applied
+                .iter()
+                .map(|(entry, _, old)| serde_json::json!({"entry": entry, "name": old}))
+                .collect::<Vec<_>>(),
+        })
+        .to_string();
+        self.bump_and_record(&tx, program, "rename-batch", detail)?;
+        self.journal_push(&tx, program, "rename-batch", &payload, &undo)?;
+        tx.commit()?;
+        Ok(applied.len() as u64)
+    }
+
+    /// Undoes a batched rename: every name goes back, one transaction, and
+    /// the journal entry is marked done exactly as a single rename's is.
+    pub fn undo_rename_batch(
+        &self,
+        program: ProgramId,
+        renames: &[(lre_model::Address, String)],
+        seq: u64,
+    ) -> Result<u64> {
+        let tx = self.conn.unchecked_transaction()?;
+        let mut restored = 0u64;
+        {
+            let mut write = tx.prepare(
+                "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
+            )?;
+            for (entry, name) in renames {
+                restored += write.execute(params![program.0, addr_cell(entry), name])? as u64;
+            }
+        }
+        self.bump_and_record(&tx, program, "rename-batch-undo", &restored.to_string())?;
+        tx.execute(
+            "UPDATE command_journal SET done = 1 WHERE program_id = ?1 AND seq = ?2",
+            params![program.0, seq],
+        )?;
+        tx.commit()?;
+        Ok(restored)
     }
 
     /// Applies the undo for a rename (CORE-006): rename back + event +

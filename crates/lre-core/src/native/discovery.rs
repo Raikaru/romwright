@@ -651,6 +651,24 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 if !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) {
                     instruction_extents.push((addr, info.length as u64));
                 }
+                if !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) {
+                    // The shape of what was just decoded, for the structural
+                    // features a whole-program diff matches on. A conditional
+                    // or indirect flow's extra targets are recorded elsewhere
+                    // (`switch_tables`); this carries the single direct one.
+                    imp.flow_shapes.push(crate::native::FlowShape {
+                        address: addr,
+                        length: info.length,
+                        kind: info.kind,
+                        conditional: info.conditional,
+                        target: match info.kind {
+                            FlowKind::Branch | FlowKind::CBranch if info.targets.len() == 1 => {
+                                Some(info.targets[0])
+                            }
+                            _ => None,
+                        },
+                    });
+                }
                 if has_linkage_slots && info.kind != FlowKind::Fallthrough {
                     flow_endings.push((addr, info.kind == FlowKind::BranchInd));
                 }
@@ -1548,6 +1566,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     });
     thunks.sort_unstable_by_key(|thunk| thunk.entry);
     imp.thunks = thunks;
+    // Every function this run kept as an ordinary function is decided: a
+    // later run may find its jump target has become a function, and, as
+    // Ghidra, leaves the function as it was created.
+    imp.thunk_settled.extend(
+        imp.functions
+            .iter()
+            .map(|function| function.entry)
+            .filter(|entry| !imp.thunks.iter().any(|thunk| thunk.entry == *entry)),
+    );
 
     let mut xrefs = imp.xrefs.clone();
     let mut seen_xrefs: HashSet<(u64, u64)> = xrefs.iter().map(|x| (x.from, x.to)).collect();
@@ -1811,6 +1838,13 @@ fn confirmed_thunks<P: FlowProvider>(
     flows: &[crate::native_runtime::FlowResult],
     provider: &mut P,
 ) -> HashMap<u64, u64> {
+    // Ghidra decides whether a function is a thunk when it creates it
+    // (`CreateFunctionCmd` -> `CreateThunkFunctionCmd`): a jump to an address
+    // that is not yet a function makes an ordinary function, and no later
+    // pass revisits it once the target becomes one. A function this import
+    // already proved a body for -- an earlier round created it -- keeps that
+    // decision; only an entry created in this round is a thunk candidate.
+    let settled = &imp.thunk_settled;
     let mut candidates = HashMap::new();
     for (&address, flow) in addresses.iter().zip(flows) {
         if flow.address != address
@@ -1835,6 +1869,9 @@ fn confirmed_thunks<P: FlowProvider>(
         } else {
             continue;
         };
+        if settled.contains(&entry) {
+            continue;
+        }
         let target = flow.targets[0];
         if target == address
             || target == entry
@@ -1955,8 +1992,8 @@ pub(crate) fn record_plt_header_flow(imp: &mut NativeImport) {
 
 /// Records the branch that performs each thunk's transfer.
 ///
-/// A linkage stub loads a slot and branches through it; on AArch64 and PowerPC
-/// those are different instructions, so the override has to name the branch --
+/// A linkage stub loads a slot and branches through it; on languages where
+/// those are different instructions the override has to name the branch --
 /// the indirect ending the same walk proved when it accepted the stub's shape
 /// (`linkage_flow_shape`). A direct thunk's transfer is a direct branch, which
 /// the reference pass records as an edge to the thunked address.

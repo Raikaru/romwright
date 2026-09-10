@@ -16,6 +16,14 @@ Assertions
      one. Relative, so it means the same thing on any machine.
   4. The flow phase stays inside m1-003's 5.0 s budget, measured on the
      phase that m1-003 names instead of on the whole pipeline.
+
+The total ceiling covers the switch round m5-014 added: like Ghidra's
+`DecompilerSwitchAnalyzer`, discovery decompiles every function holding an
+indirect jump nothing resolved, and libc holds 154 of them, several of them
+its largest (`vfprintf`'s 37 KB body alone takes the decompiler ~20 s). That
+work ran 47 s on eight lanes of this host with the rest of the import under
+25 s, so the ceiling is 150 s: room for a two-core runner, not for a second
+pass of that size.
 """
 import argparse
 from datetime import datetime, timezone
@@ -47,10 +55,10 @@ def default_binary() -> Path:
         if Path(candidate).is_file():
             return Path(candidate)
     return Path(LIBC_CANDIDATES[0])
-PHASES = ("parse", "patterns", "flow", "discovery", "references", "store")
+PHASES = ("parse", "patterns", "flow", "discovery", "references", "switch", "store")
 FLOW_BUDGET_SECONDS = 5.0
 REFERENCE_SPEEDUP = 2.0
-TOTAL_CEILING_SECONDS = 60.0
+TOTAL_CEILING_SECONDS = 150.0
 
 FACT_QUERIES = {
     "functions": "SELECT entry, name, size FROM functions ORDER BY entry, name",

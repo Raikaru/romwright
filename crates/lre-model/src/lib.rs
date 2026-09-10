@@ -774,6 +774,38 @@ pub struct ThunkRow {
     pub provenance: FactProvenance,
 }
 
+/// Structural measurements of one function's body, taken while it was
+/// decoded. These are the facts a whole-program diff matches on: they are
+/// invariant to where the code was loaded, unlike an address, and they need
+/// no decompiler, unlike a rendered body.
+///
+/// `blocks` and `edges` follow Ghidra's basic-block model
+/// (`BasicBlockModel.hasEndOfBlockFlow`): a jump or a terminal instruction
+/// ends a block and a branch target starts one, while a call does neither.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct FunctionFeatureRow {
+    pub function: Address,
+    /// Instructions decoded inside the body.
+    pub instructions: u32,
+    /// Basic blocks in the body.
+    pub blocks: u32,
+    /// Intra-function control-flow edges between those blocks.
+    pub edges: u32,
+    /// Back edges: intra-function edges to an address at or before the
+    /// branching instruction. A loop count is one of the few structural
+    /// facts that survives a change of optimisation level.
+    pub loops: u32,
+    /// Instructions in the largest block of the body.
+    pub max_block: u32,
+    /// Digest of the body bytes exactly as the image holds them. Equal
+    /// digests are the same code at the same load address.
+    pub body_digest: String,
+    /// Digest of the body's decoded shape -- the sequence of instruction
+    /// lengths and flow kinds, with no addresses in it. Equal digests are
+    /// the same code, wherever it was loaded and however it was relocated.
+    pub shape_digest: String,
+}
+
 /// A name a signature database claimed for a function, with the evidence.
 /// `confidence` is the share of the pattern that was actually compared.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]

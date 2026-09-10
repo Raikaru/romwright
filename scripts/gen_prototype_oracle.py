@@ -78,7 +78,8 @@ def main():
         help='verify and score immutable references without rerunning stock analysis')
     args = parser.parse_args()
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
-    required = [row for row in lock['entries'] if row['format'] == 'elf']
+    required = [row for row in lock['entries']
+        if row['format'] == 'elf' and row['architecture'] in set(lock['oracle_matrix']['architectures'])]
     actual, setup_error = {}, None
     try:
         manifest = json.loads((args.corpus_dir / 'manifest.json').read_text())

@@ -70,6 +70,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:switch",
+        explanation:         "A case of a switch: the decompiler recovered the jump table an \
+         indirect jump reads, as Ghidra's switch analyzer does, and discovery \
+         walked each case as the jump's own flow.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:known-name",
         explanation:         "A function whose name is on the list Ghidra ships of functions that \
          do not return (`Base/data/ElfFunctionsThatDoNotReturn`), matched the \

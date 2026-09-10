@@ -1,0 +1,1077 @@
+{
+  "id": "m12-001",
+  "milestone": "M12",
+  "criterion": "whole-program structural diff, scored against symbol truth",
+  "recorded_at": "2026-09-10T00:30:05.387366+00:00",
+  "thresholds": {
+    "twins.precision": 1.0,
+    "twins.recall": 1.0,
+    "twins.name_precision": 1.0,
+    "anchor.precision": 1.0,
+    "optimisation.precision": 0.95,
+    "optimisation.recall": 0.75,
+    "optimisation.name_precision": 0.9,
+    "modules.precision": 0.95,
+    "modules.recall": 0.93,
+    "modules.name_precision": 0.9
+  },
+  "measured": {
+    "twins": {
+      "rows": 20,
+      "judged": 1903,
+      "correct": 1903,
+      "truth": 1903,
+      "ported_judged": 1702,
+      "ported_correct": 1702,
+      "precision": 1.0,
+      "recall": 1.0,
+      "name_precision": 1.0
+    },
+    "optimisation": {
+      "rows": 12,
+      "judged": 127,
+      "correct": 127,
+      "truth": 147,
+      "ported_judged": 43,
+      "ported_correct": 41,
+      "precision": 1.0,
+      "recall": 0.8639,
+      "name_precision": 0.9535
+    },
+    "modules": {
+      "rows": 2,
+      "judged": 1153,
+      "correct": 1114,
+      "truth": 1176,
+      "ported_judged": 1208,
+      "ported_correct": 1120,
+      "precision": 0.9662,
+      "recall": 0.9473,
+      "name_precision": 0.9272
+    },
+    "anchor": {
+      "judged": 2802,
+      "correct": 2802,
+      "precision": 1.0
+    },
+    "classes": {
+      "alignment": {
+        "judged": 381,
+        "correct": 342,
+        "precision": 0.8976
+      },
+      "body": {
+        "judged": 1912,
+        "correct": 1912,
+        "precision": 1.0
+      },
+      "import": {
+        "judged": 27,
+        "correct": 27,
+        "precision": 1.0
+      },
+      "name": {
+        "judged": 6,
+        "correct": 6,
+        "precision": 1.0
+      },
+      "profile": {
+        "judged": 23,
+        "correct": 23,
+        "precision": 1.0
+      },
+      "shape": {
+        "judged": 820,
+        "correct": 820,
+        "precision": 1.0
+      },
+      "string": {
+        "judged": 14,
+        "correct": 14,
+        "precision": 1.0
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "kind": "twins",
+      "truth": 20,
+      "matched": 20,
+      "judged": 20,
+      "correct": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 7,
+      "ported_judged": 7,
+      "ported_correct": 7,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 20,
+          "correct": 20
+        }
+      },
+      "anchors": 20,
+      "reference_functions": 20,
+      "target_functions": 20
+    },
+    {
+      "id": "x86_64_many_o2",
+      "kind": "twins",
+      "truth": 409,
+      "matched": 409,
+      "judged": 409,
+      "correct": 409,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 404,
+      "ported_judged": 404,
+      "ported_correct": 404,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 409,
+          "correct": 409
+        }
+      },
+      "anchors": 409,
+      "reference_functions": 409,
+      "target_functions": 409
+    },
+    {
+      "id": "i386_plain_o0",
+      "kind": "twins",
+      "truth": 15,
+      "matched": 15,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 15,
+          "correct": 15
+        }
+      },
+      "anchors": 15,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_o2",
+      "kind": "twins",
+      "truth": 15,
+      "matched": 15,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 15,
+          "correct": 15
+        }
+      },
+      "anchors": 15,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_pie",
+      "kind": "twins",
+      "truth": 16,
+      "matched": 16,
+      "judged": 16,
+      "correct": 16,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 16,
+          "correct": 16
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 16,
+      "target_functions": 16
+    },
+    {
+      "id": "i386_cpp_o2",
+      "kind": "twins",
+      "truth": 23,
+      "matched": 23,
+      "judged": 23,
+      "correct": 23,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 7,
+      "ported_judged": 7,
+      "ported_correct": 7,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 23,
+          "correct": 23
+        }
+      },
+      "anchors": 23,
+      "reference_functions": 23,
+      "target_functions": 23
+    },
+    {
+      "id": "i386_many_o2",
+      "kind": "twins",
+      "truth": 413,
+      "matched": 413,
+      "judged": 413,
+      "correct": 413,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 404,
+      "ported_judged": 404,
+      "ported_correct": 404,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 413,
+          "correct": 413
+        }
+      },
+      "anchors": 413,
+      "reference_functions": 413,
+      "target_functions": 413
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 16,
+          "correct": 16
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 16,
+          "correct": 16
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 16,
+          "correct": 16
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "kind": "twins",
+      "truth": 24,
+      "matched": 24,
+      "judged": 24,
+      "correct": 24,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 8,
+      "ported_judged": 8,
+      "ported_correct": 8,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 23,
+          "correct": 23
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 24,
+      "reference_functions": 24,
+      "target_functions": 24
+    },
+    {
+      "id": "aarch64_many_o2",
+      "kind": "twins",
+      "truth": 415,
+      "matched": 415,
+      "judged": 415,
+      "correct": 415,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 405,
+      "ported_judged": 405,
+      "ported_correct": 405,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 414,
+          "correct": 414
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 415,
+      "reference_functions": 415,
+      "target_functions": 415
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "kind": "twins",
+      "truth": 13,
+      "matched": 13,
+      "judged": 13,
+      "correct": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 13,
+          "correct": 13
+        }
+      },
+      "anchors": 13,
+      "reference_functions": 13,
+      "target_functions": 13
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "kind": "twins",
+      "truth": 19,
+      "matched": 19,
+      "judged": 19,
+      "correct": 19,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 19,
+          "correct": 19
+        }
+      },
+      "anchors": 19,
+      "reference_functions": 19,
+      "target_functions": 19
+    },
+    {
+      "id": "powerpc_many_o2",
+      "kind": "twins",
+      "truth": 410,
+      "matched": 410,
+      "judged": 410,
+      "correct": 410,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 403,
+      "ported_judged": 403,
+      "ported_correct": 403,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 410,
+          "correct": 410
+        }
+      },
+      "anchors": 410,
+      "reference_functions": 410,
+      "target_functions": 410
+    },
+    {
+      "id": "aarch64_plain_o0->aarch64_plain_o2",
+      "kind": "optimisation",
+      "truth": 16,
+      "matched": 16,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 0.9375,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 2,
+          "correct": 2
+        },
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "shape": {
+          "judged": 8,
+          "correct": 8
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_o2->aarch64_plain_o0",
+      "kind": "optimisation",
+      "truth": 16,
+      "matched": 16,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 0.9375,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 2,
+          "correct": 2
+        },
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "shape": {
+          "judged": 8,
+          "correct": 8
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_o0->aarch64_plain_pie",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 14,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 0.8333,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 4,
+          "correct": 4
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 13,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "i386_plain_o0->i386_plain_o2",
+      "kind": "optimisation",
+      "truth": 15,
+      "matched": 14,
+      "judged": 14,
+      "correct": 14,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 4,
+          "correct": 4
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 14,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_o2->i386_plain_o0",
+      "kind": "optimisation",
+      "truth": 15,
+      "matched": 14,
+      "judged": 14,
+      "correct": 14,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 4,
+          "correct": 4
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 14,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_o0->i386_plain_pie",
+      "kind": "optimisation",
+      "truth": 11,
+      "matched": 10,
+      "judged": 7,
+      "correct": 7,
+      "precision": 1.0,
+      "recall": 0.6364,
+      "ported": 1,
+      "ported_judged": 1,
+      "ported_correct": 1,
+      "name_precision": 1.0,
+      "evidence": {
+        "alignment": {
+          "judged": 3,
+          "correct": 3
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 15,
+      "target_functions": 16
+    },
+    {
+      "id": "powerpc_plain_o0->powerpc_plain_o2",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 3,
+          "correct": 3
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_o2->powerpc_plain_o0",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 3,
+          "correct": 3
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_o0->powerpc_plain_pie",
+      "kind": "optimisation",
+      "truth": 6,
+      "matched": 8,
+      "judged": 2,
+      "correct": 2,
+      "precision": 1.0,
+      "recall": 0.3333,
+      "ported": 2,
+      "ported_judged": 2,
+      "ported_correct": 1,
+      "name_precision": 0.5,
+      "evidence": {
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 7,
+      "reference_functions": 12,
+      "target_functions": 13
+    },
+    {
+      "id": "x86_64_plain_o0->x86_64_plain_o2",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_o2->x86_64_plain_o0",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_o0->x86_64_plain_pie",
+      "kind": "optimisation",
+      "truth": 8,
+      "matched": 10,
+      "judged": 6,
+      "correct": 6,
+      "precision": 1.0,
+      "recall": 0.75,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 3,
+      "name_precision": 0.75,
+      "evidence": {
+        "alignment": {
+          "judged": 3,
+          "correct": 3
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "boot->Movie",
+      "kind": "modules",
+      "truth": 588,
+      "matched": 626,
+      "judged": 576,
+      "correct": 553,
+      "precision": 0.9601,
+      "recall": 0.9405,
+      "ported": 624,
+      "ported_judged": 608,
+      "ported_correct": 556,
+      "name_precision": 0.9145,
+      "evidence": {
+        "alignment": {
+          "judged": 188,
+          "correct": 165
+        },
+        "profile": {
+          "judged": 6,
+          "correct": 6
+        },
+        "shape": {
+          "judged": 381,
+          "correct": 381
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 399,
+      "reference_functions": 644,
+      "target_functions": 1678
+    },
+    {
+      "id": "Movie->boot",
+      "kind": "modules",
+      "truth": 588,
+      "matched": 653,
+      "judged": 577,
+      "correct": 561,
+      "precision": 0.9723,
+      "recall": 0.9541,
+      "ported": 649,
+      "ported_judged": 600,
+      "ported_correct": 564,
+      "name_precision": 0.94,
+      "evidence": {
+        "alignment": {
+          "judged": 187,
+          "correct": 171
+        },
+        "profile": {
+          "judged": 6,
+          "correct": 6
+        },
+        "shape": {
+          "judged": 383,
+          "correct": 383
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 401,
+      "reference_functions": 1400,
+      "target_functions": 694
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}

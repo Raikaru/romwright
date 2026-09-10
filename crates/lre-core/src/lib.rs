@@ -116,6 +116,15 @@ pub struct Core {
     config: session::RuntimeConfig,
 }
 
+/// A diff failure, as a Core error: the reference project is an input like
+/// any other, and a bad one is not an internal fault.
+fn diff_error(error: lre_diff::DiffError) -> CoreError {
+    CoreError::Io(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        error.to_string(),
+    ))
+}
+
 impl Core {
     /// Opens (or creates) a project at `project_dir` holding `project.sqlite`.
     pub fn open(project_dir: &Path) -> Result<Self> {
@@ -751,6 +760,50 @@ impl Core {
         Ok(self.db.xrefs_from(id, address)?)
     }
 
+    /// CORE API: matches `target` in this project against a program in
+    /// another project and reports the correspondence.
+    ///
+    /// The reference project is opened read-only; nothing in it changes. With
+    /// `apply`, the names the reference holds are written onto the matched
+    /// target functions as one undoable command, so porting a decompilation's
+    /// names onto a stripped image is a single analyst decision.
+    pub fn diff_program(
+        &self,
+        target: &str,
+        reference_project: &Path,
+        reference: Option<&str>,
+        options: &lre_diff::Options,
+        apply: bool,
+    ) -> Result<lre_diff::DiffReport> {
+        let path = if reference_project.is_file() {
+            reference_project.to_path_buf()
+        } else {
+            reference_project.join("project.sqlite")
+        };
+        let other = ProjectDb::open(&path)?;
+        let reference_name = match reference {
+            Some(name) => name.to_string(),
+            None => lre_diff::Program::only_program(&other).map_err(diff_error)?,
+        };
+        let left = lre_diff::Program::load(&other, &reference_name).map_err(diff_error)?;
+        let right = lre_diff::Program::load(&self.db, target).map_err(diff_error)?;
+        let report = lre_diff::diff(&left, &right, options);
+        if apply && !report.names.is_empty() {
+            let id = self.db.program_id(target)?;
+            let renames: Vec<(lre_model::Address, String)> = report
+                .names
+                .iter()
+                .map(|row| (row.entry.clone(), row.name.clone()))
+                .collect();
+            self.db.rename_batch_command(
+                id,
+                &renames,
+                &format!("diff {reference_name} -> {target}"),
+            )?;
+        }
+        Ok(report)
+    }
+
     /// Applies an analyst rename in the project store and bumps the revision.
     /// (Direct mutation — no journal entry.)
     pub fn rename_function(&self, program: &str, entry: &lre_model::Address, name: &str) -> Result<()> {
@@ -834,6 +887,35 @@ impl Core {
                 Ok(format!(
                     "undid rename seq {} ({} -> {old_name})",
                     entry.seq, entry_addr
+                ))
+            }
+            "rename-batch" => {
+                let undo: serde_json::Value =
+                    serde_json::from_str(&entry.undo_payload).map_err(|e| {
+                        CoreError::Io(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            format!("bad undo payload: {e}"),
+                        ))
+                    })?;
+                let renames: Vec<(lre_model::Address, String)> = undo
+                    .get("renames")
+                    .and_then(|value| value.as_array())
+                    .map(|rows| {
+                        rows.iter()
+                            .filter_map(|row| {
+                                let address = lre_model::Address::parse_ram_hex(
+                                    row.get("entry").and_then(|v| v.as_str())?,
+                                )?;
+                                let name = row.get("name").and_then(|v| v.as_str())?;
+                                Some((address, name.to_string()))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                let restored = self.db.undo_rename_batch(id, &renames, entry.seq)?;
+                Ok(format!(
+                    "undid rename-batch seq {} ({restored} names)",
+                    entry.seq
                 ))
             }
             "comment" => {
