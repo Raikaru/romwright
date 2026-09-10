@@ -41,9 +41,16 @@ fn main() {
         .take_while(|argument| !argument.starts_with("--"))
         .cloned()
         .collect();
-    if let Err(e) = run(
-        &args[1], &args[2], &args[3], &args[4], &addresses, &project, base,
-    ) {
+    // Structuring takes graphs on stdin instead of addresses: it needs the
+    // language and the image, not the store's facts.
+    let outcome = if args.iter().any(|argument| argument == "--structure") {
+        run_structure(&args[1], &args[2], &args[3], base)
+    } else {
+        run(
+            &args[1], &args[2], &args[3], &args[4], &addresses, &project, base,
+        )
+    };
+    if let Err(e) = outcome {
         eprintln!("error: {e}");
         std::process::exit(1);
     }
@@ -114,6 +121,74 @@ fn with_entry_register_tracking(
     out.push_str("</context_data>\n");
     out.push_str(&cspec[close..]);
     out
+}
+
+/// Structures control-flow graphs read from stdin, one JSON object per line:
+/// `{"id":"...","blocks":[<start address>,...],"edges":[[from,to],...]}`.
+///
+/// Answers one JSON object per request with the hierarchy the decompiler's
+/// own `structureGraph` produced, the count of blocks by kind, and the number
+/// of unstructured jumps in it. No decompilation happens: the command takes a
+/// graph and returns its structure, which is what makes our own structuring
+/// comparable on identical input.
+fn run_structure(
+    ghidra_opt: &str,
+    lang_dir: &str,
+    binary: &str,
+    base: u64,
+) -> lre_worker::Result<()> {
+    use std::io::BufRead as _;
+    let mut provider = lre_worker::ProgramProvider::new(
+        lre_worker::BinaryBacking::from_file(Path::new(binary), base)?,
+        Vec::new(),
+    );
+    provider.load_language_info(Path::new(lang_dir))?;
+    let specs = lre_worker::load_specs(Path::new(lang_dir))?;
+    provider.core_types = lre_worker::parse_core_types(&specs.3);
+    let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
+    let function_shell = provider.function_shell()?;
+    worker.register_program_with_shell(
+        &mut provider,
+        &specs.0,
+        &specs.1,
+        &specs.2,
+        &specs.3,
+        &function_shell,
+    )?;
+    let stdin = std::io::stdin();
+    for line in stdin.lock().lines() {
+        let line = line.map_err(|error| lre_worker::WorkerError::Setup(error.to_string()))?;
+        if line.trim().is_empty() {
+            continue;
+        }
+        #[derive(serde::Deserialize)]
+        struct Request {
+            #[serde(default)]
+            id: String,
+            blocks: Vec<u64>,
+            edges: Vec<(usize, usize)>,
+        }
+        let request: Request = serde_json::from_str(&line)
+            .map_err(|error| lre_worker::WorkerError::Setup(error.to_string()))?;
+        let graph = lre_worker::structure::ControlFlow {
+            blocks: request.blocks,
+            edges: request.edges,
+        };
+        let answer = match worker.structure_graph(&mut provider, &graph) {
+            Ok(tree) => serde_json::json!({
+                "id": request.id,
+                "gotos": tree.gotos(),
+                "kinds": tree.kinds(),
+                "tree": tree,
+            }),
+            Err(error) => serde_json::json!({
+                "id": request.id,
+                "error": error.to_string(),
+            }),
+        };
+        println!("{answer}");
+    }
+    Ok(())
 }
 
 fn run(
