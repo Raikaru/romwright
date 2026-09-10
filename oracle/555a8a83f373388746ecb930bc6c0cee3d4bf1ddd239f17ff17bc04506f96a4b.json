@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "sha256": "1fb36ba4a74eef85054eba808fbc12b975a614ee431a9e79a9339cae8c11367d",
+  "sha256": "555a8a83f373388746ecb930bc6c0cee3d4bf1ddd239f17ff17bc04506f96a4b",
   "binary_size": 5728,
   "producer": "ghidra-bridge",
   "upstream_version": "12.1.3",
