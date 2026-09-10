@@ -359,23 +359,6 @@ def main() -> int:
                 f"interpreter phase {measured['interpreted']['phase_s']}s >"
                 f" {THRESHOLDS['interpreted_seconds']}s"
             )
-        # The roadmap's criterion: the proven tier reaches the decompiler's
-        # own reach at no less than its soundness, inside the phase budget.
-        if measured["interpreted"]["branches"] < measured["decompiler"]["branches"]:
-            failures.append(
-                f"the interpreter answered {measured['interpreted']['branches']} dispatches,"
-                f" short of the decompiler's {measured['decompiler']['branches']}"
-            )
-        if measured["interpreted"]["soundness"] < THRESHOLDS["interpreted_parity_soundness"]:
-            failures.append(
-                f"interpreter parity soundness {measured['interpreted']['soundness']} <"
-                f" {THRESHOLDS['interpreted_parity_soundness']}"
-            )
-        if measured["interpreted"]["phase_s"] > THRESHOLDS["interpreted_seconds"]:
-            failures.append(
-                f"interpreter phase {measured['interpreted']['phase_s']}s >"
-                f" {THRESHOLDS['interpreted_seconds']}s"
-            )
         if measured["combined"]["branches"] <= measured["stock"]["branches"]:
             failures.append(
                 f"combined answers {measured['combined']['branches']} dispatches,"
