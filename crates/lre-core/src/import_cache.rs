@@ -50,6 +50,11 @@ fn digest(path: &Path) -> Option<String> {
     Some(sha256(&bytes))
 }
 
+/// SHA-256 of arbitrary bytes, hex-encoded.
+pub fn digest_bytes(bytes: &[u8]) -> String {
+    sha256(bytes)
+}
+
 /// SHA-256, from the same implementation the rest of the crate uses.
 fn sha256(bytes: &[u8]) -> String {
     use std::fmt::Write as _;
@@ -62,6 +67,11 @@ fn sha256(bytes: &[u8]) -> String {
 }
 
 /// The key an import's facts depend on.
+///
+/// `flavour` names everything about the request that changes the stored
+/// facts but is not part of the configuration: whether analysis ran, and
+/// which signature databases were applied, since a matched signature renames
+/// functions in the store.
 pub fn key(binary: &Path, program: &str, config: &RuntimeConfig) -> Option<String> {
     let image = digest(binary)?;
     // The analyser: this executable, plus the two children that produce

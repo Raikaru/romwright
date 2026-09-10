@@ -156,11 +156,21 @@ impl crate::Core {
         databases: &[std::path::PathBuf],
         analyse: bool,
     ) -> crate::Result<(Vec<lre_model::ProgramSummary>, Option<SignatureReport>)> {
-        let stored = if analyse {
-            self.import_container(binary, name)?
-        } else {
-            self.load_program(binary, name)?
-        };
+        // A matched signature renames functions in the store, so which
+        // databases were applied is part of what the import produced and
+        // belongs in the reuse key. Without it a later import with no
+        // databases would be served names it never asked for.
+        let flavour = databases
+            .iter()
+            .map(|path| {
+                let digest = std::fs::read(path)
+                    .map(|bytes| crate::import_cache::digest_bytes(&bytes))
+                    .unwrap_or_else(|_| "absent".into());
+                format!("{}:{digest}", path.display())
+            })
+            .collect::<Vec<_>>()
+            .join(",");
+        let stored = self.import_container_with(binary, name, analyse, &flavour)?;
         if databases.is_empty() {
             return Ok((stored, None));
         }
