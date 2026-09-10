@@ -44,7 +44,20 @@ THRESHOLDS = {
     # functions on this module (analyzeHeadless, `SwitchLoader`,
     # AARCH64:LE:64:v8A, base 0x7100000000).
     "stock_ratio": 0.95,
-    "wall_seconds": 1200.0,
+    # Re-baselined when the switch round started answering this module. At
+    # 420 s (commit 7a14e1e) the round resolved *zero* dispatches here: the
+    # value-set pass found none on AArch64 and the decompiler path was not
+    # yet behind it. It now resolves 690, each one a decompile of a real
+    # body, and the import measures 1452 s on this host -- so the old budget
+    # was pricing an import that did less. The ceiling is what this host
+    # measures plus room for a slower runner; bringing it back down is the
+    # jump-table milestone's job (sound analysis instead of the decompiler),
+    # not a number to relax again.
+    "wall_seconds": 1800.0,
+    # And the extra time has to keep buying those dispatches: a faster
+    # import that stops answering them fails here rather than looking like
+    # an improvement.
+    "switch_dispatches": 690,
 }
 STOCK_FUNCTIONS = 45259
 
@@ -168,12 +181,16 @@ def main() -> int:
     }
     language = connection.execute("SELECT language FROM programs").fetchone()[0]
     recovered = len(ours & set(truth))
+    dispatches = connection.execute(
+        "SELECT COUNT(DISTINCT src) FROM xrefs WHERE provenance = 'native-import:switch'"
+    ).fetchone()[0]
     metrics = {
         "functions": len(ours),
         "symbols": len(truth),
         "symbol_recall": round(recovered / len(truth), 4) if truth else 0.0,
         "symbol_precision": round(recovered / len(ours), 4) if ours else 0.0,
         "stock_ratio": round(len(ours) / STOCK_FUNCTIONS, 4),
+        "switch_dispatches": dispatches,
         "wall_seconds": round(wall, 1),
         "language": language,
     }
@@ -203,7 +220,7 @@ def main() -> int:
         f"m5-017: PASS ({metrics['functions']} functions in {metrics['wall_seconds']}s,"
         f" recall {metrics['symbol_recall']} over {metrics['symbols']} module symbols,"
         f" precision {metrics['symbol_precision']}, {metrics['stock_ratio']} of stock's"
-        f" {STOCK_FUNCTIONS})"
+        f" {STOCK_FUNCTIONS}, {metrics['switch_dispatches']} switch dispatches)"
     )
     return 0
 

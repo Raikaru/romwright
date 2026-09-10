@@ -2,21 +2,23 @@
   "id": "m5-017",
   "milestone": "M5",
   "criterion": "a Switch NSO0 module imported with no JVM and scored against its own symbols",
-  "recorded_at": "2026-09-10T02:17:03.895645+00:00",
+  "recorded_at": "2026-09-10T09:26:21.753316+00:00",
   "thresholds": {
     "symbol_recall": 1.0,
     "symbol_precision": 0.95,
     "stock_ratio": 0.95,
-    "wall_seconds": 1200.0
+    "wall_seconds": 1800.0,
+    "switch_dispatches": 690
   },
   "stock_functions": 45259,
   "metrics": {
-    "functions": 43465,
+    "functions": 43487,
     "symbols": 42423,
     "symbol_recall": 1.0,
-    "symbol_precision": 0.976,
-    "stock_ratio": 0.9604,
-    "wall_seconds": 420.4,
+    "symbol_precision": 0.9755,
+    "stock_ratio": 0.9608,
+    "switch_dispatches": 690,
+    "wall_seconds": 1333.5,
     "language": "AARCH64:LE:64:v8A"
   },
   "status": "pass",

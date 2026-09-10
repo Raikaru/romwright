@@ -1842,7 +1842,11 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         .map(|n| n.get())
         .unwrap_or(1)
         .clamp(1, 8);
-    let chunk_size = addresses.len().div_ceil(lanes).clamp(1, 256);
+    // One chunk per lane, and never more chunks than lanes: `chunks()` with a
+    // capped size produced more pieces than lanes on a large image, and every
+    // piece was spawned at once, so the host ran more decompilers than it has
+    // cores and each got slower.
+    let chunk_size = addresses.len().div_ceil(lanes).max(1);
     let chunks: Vec<&[String]> = addresses.chunks(chunk_size).collect();
     // Each lane reads its own copy of the store: the worker opens it for
     // writing, and two on one file lock each other out.
