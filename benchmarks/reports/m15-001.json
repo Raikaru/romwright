@@ -1,0 +1,122 @@
+{
+  "gate": "m15-001",
+  "milestone": "M15",
+  "commit": "b41231cbbfce03236b34c55d2f7c7db8dfeecf9a",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "binary": "/usr/lib64/libc.so.6",
+  "shapes": [
+    {
+      "id": "ifelse",
+      "gotos": 0,
+      "expected": 0,
+      "kinds": {
+        "copy": 4,
+        "graph": 1,
+        "ifelse": 1,
+        "list": 1
+      }
+    },
+    {
+      "id": "selfloop",
+      "gotos": 0,
+      "expected": 0,
+      "kinds": {
+        "copy": 3,
+        "dowhile": 1,
+        "graph": 1,
+        "list": 1
+      }
+    },
+    {
+      "id": "twoblockloop",
+      "gotos": 0,
+      "expected": 0,
+      "kinds": {
+        "copy": 3,
+        "dowhile": 1,
+        "graph": 1,
+        "list": 2
+      }
+    },
+    {
+      "id": "irreducible",
+      "gotos": 1,
+      "expected": 1,
+      "kinds": {
+        "copy": 4,
+        "graph": 1,
+        "ifgoto": 1,
+        "list": 1,
+        "whiledo": 1
+      }
+    },
+    {
+      "id": "twoexitloop",
+      "gotos": 1,
+      "expected": 1,
+      "kinds": {
+        "copy": 4,
+        "dowhile": 1,
+        "graph": 1,
+        "ifgoto": 1,
+        "list": 2
+      }
+    }
+  ],
+  "metrics": {
+    "scored": 400,
+    "answered": 400,
+    "refused": 0,
+    "comparable": 394,
+    "without_tables": 388,
+    "with_tables": 6,
+    "block_disagreements_without_tables": 0,
+    "table_functions_that_agree": 0,
+    "stock_gotos": 2527,
+    "functions_with_gotos": 198,
+    "examples": [
+      {
+        "function": "00103ac0",
+        "walk_blocks": 18,
+        "batch_blocks": 27,
+        "switch_edges": 6
+      },
+      {
+        "function": "0010f6a0",
+        "walk_blocks": 49,
+        "batch_blocks": 128,
+        "switch_edges": 12
+      },
+      {
+        "function": "00114200",
+        "walk_blocks": 241,
+        "batch_blocks": 261,
+        "switch_edges": 84
+      },
+      {
+        "function": "001169c0",
+        "walk_blocks": 70,
+        "batch_blocks": 146,
+        "switch_edges": 27
+      },
+      {
+        "function": "0011e0c0",
+        "walk_blocks": 16,
+        "batch_blocks": 40,
+        "switch_edges": 7
+      },
+      {
+        "function": "00120f80",
+        "walk_blocks": 657,
+        "batch_blocks": 666,
+        "switch_edges": 6
+      }
+    ]
+  },
+  "passed": true,
+  "failures": []
+}

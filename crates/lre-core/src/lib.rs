@@ -946,6 +946,83 @@ impl Core {
         })
     }
 
+    /// Structures functions' control-flow graphs with the decompiler's own
+    /// structuring pass, over the blocks and edges *our* walk decoded.
+    ///
+    /// The graphs come from the demand-driven walk, so both this answer and
+    /// any structuring of ours see identical input: a difference in goto
+    /// count is then a difference between two structuring algorithms, and
+    /// not between two ways of recovering a CFG.
+    pub fn structure_functions(
+        &self,
+        binary: &Path,
+        program: &str,
+        entries: &[lre_model::Address],
+    ) -> Result<Vec<serde_json::Value>> {
+        let mut requests = Vec::with_capacity(entries.len());
+        // What the walk proved about each body travels with its answer: a
+        // block count is only comparable to another producer's when both
+        // attributed the same code to the function.
+        let mut walked: std::collections::HashMap<String, (u64, u64, Vec<u64>, usize)> =
+            std::collections::HashMap::new();
+        self.live.with(binary, program, |live| {
+            for entry in entries {
+                let walk = live.walk(entry.offset)?;
+                let (blocks, edges) = walk.basic_blocks();
+                if blocks.is_empty() {
+                    continue;
+                }
+                walked.insert(
+                    entry.to_string(),
+                    (walk.size(), walk.instructions, blocks.clone(), edges.len()),
+                );
+                requests.push(
+                    serde_json::json!({
+                        "id": entry.to_string(),
+                        "blocks": blocks,
+                        "edges": edges,
+                    })
+                    .to_string(),
+                );
+            }
+            Ok(())
+        })?;
+        let answers = native_runtime::structure_native(
+            &self.config,
+            binary,
+            program,
+            &self.db_path,
+            &requests,
+        )?;
+        Ok(answers
+            .iter()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .map(|mut answer| {
+                if let Some((size, instructions, starts, edges)) = answer
+                    .get("id")
+                    .and_then(serde_json::Value::as_str)
+                    .and_then(|id| walked.get(id))
+                    .cloned()
+                    && let Some(object) = answer.as_object_mut()
+                {
+                    object.insert("size".into(), size.into());
+                    object.insert("instructions".into(), instructions.into());
+                    object.insert("blocks".into(), starts.len().into());
+                    object.insert("edges".into(), edges.into());
+                    object.insert(
+                        "block_starts".into(),
+                        starts
+                            .iter()
+                            .map(|start| format!("{start:08x}"))
+                            .collect::<Vec<_>>()
+                            .into(),
+                    );
+                }
+                answer
+            })
+            .collect())
+    }
+
     /// Applies an analyst rename in the project store and bumps the revision.
     /// (Direct mutation — no journal entry.)
     pub fn rename_function(&self, program: &str, entry: &lre_model::Address, name: &str) -> Result<()> {
