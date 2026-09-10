@@ -64,7 +64,7 @@ def main():
         assert len(expected) == 1 and len(next(iter(expected.values()))) == 7, oracle
         assert oracle['functions'][f"{symbols['plain']:08x}"] == [], oracle
         project = work / 'project'
-        cli = str(ROOT / 'target/debug/lre-cli')
+        cli = str(ROOT / 'target/release/lre-cli')
         run([cli, 'import', str(binary), '--project', str(project)])
         standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             hex(symbols['dispatch']), '--project', str(project)]).stdout)

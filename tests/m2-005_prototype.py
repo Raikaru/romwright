@@ -26,7 +26,7 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix='ventris-m2-005-') as temporary:
         project = Path(temporary) / 'project'
-        cli = str(root / 'target/debug/lre-cli')
+        cli = str(root / 'target/release/lre-cli')
         run([cli, 'import', str(binary), '--project', str(project)])
         standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             '0x400466', '--project', str(project)]).stdout)
@@ -34,7 +34,7 @@ def main():
             binary=str(binary), program='tiny_bin', address=dict(space='Ram', offset=address)))
             for index, address in enumerate([0x400466, 0x40047a, 0x400466])]
         requests.append(dict(api=2, id=3, method='jobs_page', params={}))
-        response = run([str(root / 'target/debug/lre-api'), '--project', str(project)],
+        response = run([str(root / 'target/release/lre-api'), '--project', str(project)],
             input=''.join(json.dumps(request) + '\n' for request in requests))
         replies = [json.loads(line) for line in response.stdout.splitlines()]
         assert len(replies) == 4, replies

@@ -16,7 +16,7 @@ def main():
         project = Path(temporary) / 'project'
 
         def invoke(requests):
-            response = subprocess.run([str(root / 'target/debug/lre-api'), '--project', str(project)],
+            response = subprocess.run([str(root / 'target/release/lre-api'), '--project', str(project)],
                 cwd=root, env=env, input=''.join(json.dumps(dict(api=2, id=index,
                     method=method, params=params)) + '\n' for index, (method, params) in enumerate(requests)),
                 text=True, capture_output=True, check=True, timeout=120)

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLI="${LRE_CLI:-$ROOT/target/debug/lre-cli}"
+CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
 BINARY="${1:?usage: $0 /path/to/binary}"
 PROGRAM="${PROGRAM:-largest-target}"
 PROJECT="$(mktemp -d /tmp/ventris-largest-graph.XXXXXX)"

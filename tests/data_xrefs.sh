@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLI="${LRE_CLI:-$ROOT/target/debug/lre-cli}"
+CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
 TINY_BIN="$ROOT/tests/fixtures-src/tiny_bin"
 LIBC_BIN="${1:-/usr/lib64/libc.so.6}"
 

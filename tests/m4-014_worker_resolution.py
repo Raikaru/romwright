@@ -2,7 +2,7 @@
 """m4-014: the worker a build drives is the worker it was built with.
 
 `RuntimeConfig::from_env` resolved the decompile worker as the literal path
-`target/debug/lre-worker` unless `VENTRIS_WORKER` said otherwise. So a
+`target/release/lre-worker` unless `VENTRIS_WORKER` said otherwise. So a
 **release** `lre-cli` -- which is what every gate builds -- silently drove
 whatever `cargo build` last left in `target/debug`, and a measurement could
 change with no source change at all.
@@ -95,11 +95,11 @@ def main() -> int:
 
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
                    cwd=ROOT, check=True, env=environment())
-    subprocess.run(["cargo", "build", "-q", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
                    cwd=ROOT, check=True, env=environment())
     release_cli = ROOT / "target/release/lre-cli"
     release_worker = ROOT / "target/release/lre-worker"
-    debug_cli = ROOT / "target/debug/lre-cli"
+    debug_cli = ROOT / "target/release/lre-cli"
     assert FIXTURE.is_file(), f"{FIXTURE} is missing"
 
     findings: dict[str, object] = {}

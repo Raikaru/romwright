@@ -65,7 +65,7 @@ def run_api(root, project, requests, timeout, env):
     import signal
     import subprocess
     process = subprocess.Popen(
-        [str(root / 'target/debug/lre-api'), '--project', str(project)],
+        [str(root / 'target/release/lre-api'), '--project', str(project)],
         cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, text=True, start_new_session=True)
     payload = ''.join(json.dumps(dict(api=2, id=index, method=method, params=params)) + '\n'
@@ -129,7 +129,7 @@ def main():
     env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
     for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
         cwd=root, env=env, check=True)
     lock = json.loads((root / 'tests/corpus.lock.json').read_text())
     recipes = {row['architecture'] + '_' + row['variant']: row

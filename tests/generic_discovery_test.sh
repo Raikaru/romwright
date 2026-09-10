@@ -13,7 +13,7 @@ if [ -z "${LRE_CLI:-}" ]; then
         CLI="$ROOT/target/release/lre-cli"
     else
         cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
-        CLI="$ROOT/target/debug/lre-cli"
+        CLI="$ROOT/target/release/lre-cli"
     fi
 else
     CLI="$LRE_CLI"

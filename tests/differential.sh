@@ -31,7 +31,7 @@ BIN="$ROOT/tests/fixtures-src/tiny_bin"
 # Build what is being tested: a stale binary here once passed a gate for
 # a change that had already altered its output.
 cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
-CLI="$ROOT/target/debug/lre-cli"
+CLI="$ROOT/target/release/lre-cli"
 GHIDRA="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
 export VENTRIS_SERVICE_JAR="$ROOT/service/build/ventris-service.jar"
 
@@ -97,7 +97,7 @@ fi
 WORKER="$ROOT/native/build/ghidra_opt"
 if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ]; then
     step "protocol worker (VENTRIS_SLA=$VENTRIS_SLA)"
-    "$ROOT/target/debug/lre-worker" "$WORKER" "$WORK/specs" \
+    "$ROOT/target/release/lre-worker" "$WORKER" "$WORK/specs" \
         "$BIN" tiny_bin 00400466 --project "$PROJECT" > "$WORK/worker_add.c" 2>/dev/null || \
         fail "protocol worker decompile failed"
     step "exact worker-vs-oracle check"
@@ -117,10 +117,10 @@ fi
 step "native import parity (store-only, no JVM)"
 NPROJ="$WORK/native-project"
 mkdir -p "$NPROJ"
-"$ROOT/target/debug/lre-cli" import "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
-"$ROOT/target/debug/lre-cli" functions tiny_native --project "$NPROJ" \
+"$ROOT/target/release/lre-cli" import "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
+"$ROOT/target/release/lre-cli" functions tiny_native --project "$NPROJ" \
     | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/native_entries.txt"
-"$ROOT/target/debug/lre-cli" functions tiny_bin --project "$PROJECT" \
+"$ROOT/target/release/lre-cli" functions tiny_bin --project "$PROJECT" \
     | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/oracle_entries.txt"
 # Oracle includes external shim functions (0x404000+); the native import
 # models externals via PLT/got naming. Compare the in-image code sets.
@@ -230,9 +230,9 @@ PE_SPECS="$WORK/pe-specs"
 PE_PROJ="$WORK/pe-store"
 if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
     mkdir -p "$PE_PROJ"
-    "$ROOT/target/debug/lre-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
+    "$ROOT/target/release/lre-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
     step "PE protocol worker (add)"
-    "$ROOT/target/debug/lre-worker" "$WORKER" "$PE_SPECS" \
+    "$ROOT/target/release/lre-worker" "$WORKER" "$PE_SPECS" \
         "$PE" tiny_pe.exe 140001450 --project "$WORK/pe-store" \
         --base 0x140000000 > "$WORK/pe_worker_add.c" 2>/dev/null || \
         fail "PE worker decompile failed"

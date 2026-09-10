@@ -18,7 +18,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / 'target/debug/lre-cli'
+CLI = ROOT / 'target/release/lre-cli'
 REMOVED = ('import-native', 'decompile-native', 'decompile-native-doc', 'disasm-native')
 # Repository text that must no longer name a removed verb.
 TRACKED = ('*.rs', '*.py', '*.sh', '*.md', '*.yml', '*.cpp', '*.h')
@@ -68,7 +68,7 @@ def main():
     parser.add_argument('--binary', type=Path, default=ROOT / 'tests/fixtures-src/tiny_bin')
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    subprocess.run(['cargo', 'build', '-q', '-p', 'lre-cli'], cwd=ROOT, check=True)
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-cli'], cwd=ROOT, check=True)
     # No JVM may be reachable on any default path. The native decompiler still
     # reads SLEIGH language data from the Ghidra install, so `store` keeps that
     # install while `bare` removes it too: an import needs neither.
