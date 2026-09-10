@@ -544,11 +544,48 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         addr_origin.insert(s, s);
     }
     let mut visited: HashSet<u64> = HashSet::with_capacity(32768);
+    // Resume: a later round inherits what earlier rounds decoded, so it
+    // walks only what is new. The state is taken, not borrowed, because the
+    // walk owns it until it hands it back at the end.
+    // Resuming is opt-in and provisional. Measured on libc it takes the
+    // import from 111 s to 79 s, but the fact set is not yet byte-identical
+    // to the batch walk: 31991 xrefs against 33050, because the reference
+    // pass reads the ranges this round walked, and a resumed round walks
+    // fewer. Batch stays the truth until that gap closes (m14-001).
+    let resuming = !imp.walk_visited.is_empty()
+        && std::env::var_os("VENTRIS_INCREMENTAL_ROUNDS").is_some();
+    let mut walked_entries: HashSet<u64> = std::mem::take(&mut imp.walk_entries);
     let mut flowed_modes: HashMap<u64, u64> = HashMap::new();
     // Entries a data pointer proposed, as opposed to a seed the loader
     // declared or a call reached: only these are retractable below.
     let mut data_derived: HashSet<u64> = HashSet::new();
-    let mut active: Vec<u64> = entries.clone();
+    let mut active: Vec<u64> = if resuming {
+        visited = std::mem::take(&mut imp.walk_visited);
+        proven_bodies = std::mem::take(&mut imp.walk_proven);
+        addr_origin = std::mem::take(&mut imp.walk_origin);
+        // A new entry may sit inside code an earlier round decoded under
+        // another origin; that body has to be walked again for ownership to
+        // move, so the decoded addresses from the new entry up to the next
+        // known one are released. Everything else stays walked.
+        let fresh: Vec<u64> = entries
+            .iter()
+            .copied()
+            .filter(|entry| !walked_entries.contains(entry))
+            .collect();
+        let mut sorted = entries.clone();
+        sorted.sort_unstable();
+        for &entry in &fresh {
+            let index = sorted.partition_point(|&candidate| candidate <= entry);
+            let end = sorted.get(index).copied().unwrap_or(u64::MAX);
+            visited.retain(|&address| address < entry || address >= end);
+            addr_origin.retain(|&address, _| address < entry || address >= end);
+        }
+        fresh
+    } else {
+        visited.clear();
+        entries.clone()
+    };
+    walked_entries.extend(entries.iter().copied());
     while !active.is_empty() {
         active.sort_unstable();
         active.dedup();
@@ -1481,6 +1518,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         };
     }
     imp.functions = merged;
+    // Hand the walk's state back for the next round to resume from.
+    imp.walk_visited = visited.clone();
+    imp.walk_proven = proven_bodies.clone();
+    imp.walk_origin = addr_origin.clone();
+    imp.walk_entries = walked_entries;
     {
         let entries: HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
         entry_modes.sort_unstable();
@@ -1511,6 +1553,13 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // Bodies are known now, so a stub's terminal branch can be identified.
     flow_endings.sort_unstable();
     record_stub_transfers(imp, &flow_endings);
+    // A resumed round walked only what was new, so what it found is added to
+    // what earlier rounds found rather than replacing it. Replacing was worth
+    // 1059 xrefs and 58 flow overrides on libc -- the facts the skipped
+    // addresses had already produced.
+    if resuming {
+        indirect_jumps.extend(imp.indirect_jumps.iter().copied());
+    }
     indirect_jumps.sort_unstable();
     indirect_jumps.dedup();
     imp.indirect_jumps = indirect_jumps;
@@ -1528,12 +1577,31 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             _ => decoded.push((start, end)),
         }
     }
+    if resuming {
+        // Merge the two range sets, then coalesce.
+        decoded.extend(imp.decoded_ranges.iter().copied());
+        decoded.sort_unstable();
+        let mut merged_ranges: Vec<(u64, u64)> = Vec::with_capacity(decoded.len());
+        for (start, end) in decoded {
+            match merged_ranges.last_mut() {
+                Some(last) if start <= last.1 => last.1 = last.1.max(end),
+                _ => merged_ranges.push((start, end)),
+            }
+        }
+        decoded = merged_ranges;
+    }
     imp.decoded_ranges = decoded;
-    imp.indirect_transfers = flow_endings
+    let mut transfers: Vec<u64> = flow_endings
         .iter()
         .filter(|&&(_, indirect)| indirect)
         .map(|&(address, _)| address)
         .collect();
+    if resuming {
+        transfers.extend(imp.indirect_transfers.iter().copied());
+        transfers.sort_unstable();
+        transfers.dedup();
+    }
+    imp.indirect_transfers = transfers;
     let no_return: HashSet<u64> = imp
         .functions
         .iter()
@@ -1585,6 +1653,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     }
     imp.xrefs = xrefs;
     close_call_targets(imp);
+    if resuming {
+        branch_transfers.extend(imp.branch_transfers.iter().copied());
+        branch_transfers.sort_unstable();
+        branch_transfers.dedup();
+    }
     imp.branch_transfers = branch_transfers;
     imp.branch_transfers.sort_unstable();
     imp.branch_transfers.dedup();
