@@ -94,7 +94,22 @@ fn dispatch(
                         .map(|s| s.to_string_lossy().into_owned())
                         .unwrap_or_else(|| "program".into())
                 });
-            to_value(core.import_native(&binary, &name))
+            // A window that wants to show something immediately asks for
+            // the loader's answer and analyses in the background; one that
+            // wants everything asks for everything. Default is everything,
+            // so no existing caller changes behaviour.
+            let analyse = request
+                .get("analyse")
+                .and_then(Value::as_bool)
+                .unwrap_or(true);
+            if analyse {
+                to_value(core.import_native(&binary, &name))
+            } else {
+                to_value(
+                    core.load_program(&binary, &name)
+                        .map(|images| images.into_iter().next()),
+                )
+            }
         }
         "functions_page" => {
             let program = required_string(request, "program")?;
@@ -365,6 +380,19 @@ fn dispatch(
             let program = required_string(request, "program")?;
             let since = optional_u64(request, "since")?.unwrap_or(0);
             to_value(core.events_since(&program, since))
+        }
+        "analysis_status" => {
+            let program = required_string(request, "program")?;
+            to_value(core.analysis_status(&program))
+        }
+        "analyse_pending" => {
+            let binary = required_path(request, "binary")?;
+            let program = required_string(request, "program")?;
+            // A window asking for more facts decides how long it is willing
+            // to wait, so the budget is the caller's and not this layer's.
+            let budget = optional_u64(request, "budget")?.unwrap_or(16);
+            let budget = usize::try_from(budget).map_err(|_| "budget is too large".to_string())?;
+            to_value(core.analyse_pending(&binary, &program, budget))
         }
         "memory" => {
             let binary = required_path(request, "binary")?;

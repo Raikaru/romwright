@@ -1,0 +1,21 @@
+{
+  "gate": "m14-004",
+  "milestone": "M14",
+  "commit": "f758f8e54c5e1966cb85dfd8f500de8c0d4a8c9f",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "metrics": {
+    "first_shown": "provisional: 0 analysed, 405 to go",
+    "final_shown": "analysed: 405",
+    "analysed": 405,
+    "seeded": 0,
+    "stale": false,
+    "polls_while_filling": 24,
+    "seconds": 4.321
+  },
+  "passed": true,
+  "failures": []
+}

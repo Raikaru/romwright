@@ -24,6 +24,7 @@ class XrefsDock;
 
 class QLabel;
 class QComboBox;
+class QTimer;
 class QLineEdit;
 class QMenu;
 
@@ -65,6 +66,9 @@ signals:
 
 public:
     QString binary() const;
+    /// The first completeness the window showed after opening a program:
+    /// what an analyst saw before any background analysis had run.
+    QString firstAnalysisText() const;
 
 private slots:
     void importNative();
@@ -75,6 +79,10 @@ private slots:
     void listingContextMenu(const QPoint &global_pos, const QString &address);
     void renameFunctionAt(const QString &address, const QString &name);
     void loadProgramPanels();
+    /// Reads how complete the open program's facts are and shows it.
+    void refreshAnalysisStatus();
+    /// Analyses a bounded number of remaining seeds, then refreshes.
+    void analysePending();
     void renameFunction();
     void applyComment();
     void undoCommand();
@@ -107,6 +115,16 @@ private:
     QLineEdit *comment_edit_ = nullptr;
     QLineEdit *comment_kind_edit_ = nullptr;
     QLabel *status_ = nullptr;
+    /// What the open program still has to analyse: an answer built from a
+    /// loader-only import is every function the image names and no body
+    /// anyone walked, and the window has to say so rather than present it
+    /// as finished.
+    QLabel *analysis_label_ = nullptr;
+    /// Drives the background pass while seeds remain; stops when they do
+    /// not, so an idle window does no work.
+    QTimer *analysis_timer_ = nullptr;
+    bool analysis_running_ = false;
+    QString first_analysis_;
     QMenu *recent_menu_ = nullptr;
 
     // Central Listing
