@@ -5578,6 +5578,25 @@ is `dispose`, and `DecompilerSwitchAnalyzer` sets 60 seconds). The import that
 never finished now takes 137 s, and `m2-012` went from two 900 s timeouts to
 871 of 871 signature matches correct in 237 s.
 
+**A width is not a guard.** `movzbl` says the index is a byte, not that the
+table is 256 entries: a bound that is only `0..=2^w-1` reads past the table
+into whatever follows it. `Strided` now carries `guarded` -- set by a
+comparison or a mask, propagated through arithmetic, required for a table
+read -- and a transform on a width-only bound refuses rather than producing
+a set that lost the flag (`sja.rs`, `map_values`). On libc the change turns
+eight dispatches that materialised garbage targets into honest refusals
+(`outside` 15 -> 7, `unknown` 143 -> 151). A regression test pins both
+sides: a zero-extended index with no compare is refused even when 256
+readable entries sit there, and the same index behind a compare still
+recovers the table.
+
+**The remaining gap is value-equality across loads.** The vfprintf
+dispatch's guard bounds `%al` (the char `c`) in a predecessor, but the
+dispatch block re-derives the index from `%r15` -- `c` lives in two slots
+loaded independently, and transferring the bound needs a value-equality
+fact across loads (`%al == %r15b`), which the domain does not track. That
+is the next extension, and it is a domain problem, not a flag.
+
 ### m14-002 evidence (one function, on demand, on a warm image)
 
 `tests/m14-002_demand.py`, `benchmarks/reports/m14-002.json`, cold imports
