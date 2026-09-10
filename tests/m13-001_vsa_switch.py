@@ -267,6 +267,15 @@ def main() -> int:
         decompiler, decompiler_wall, _ = imported(
             arguments.binary, arguments.work / "decompiler", {"VENTRIS_NO_SWITCH_VSA": "1"}
         )
+        # The abstract interpretation (`VENTRIS_SJA=1`) is opt-in, and this
+        # is its gate: it runs only where the pattern-shaped pass refused,
+        # so it can only add dispatches, and what it adds has to be as sound
+        # as what it adds to.
+        interpreted, interpreted_wall, interpreted_phase = imported(
+            arguments.binary,
+            arguments.work / "interpreted",
+            {"VENTRIS_NO_SWITCH_DECOMPILER": "1", "VENTRIS_SJA": "1"},
+        )
         combined, combined_wall, combined_phase = imported(
             arguments.binary, arguments.work / "combined", {}
         )
@@ -276,7 +285,7 @@ def main() -> int:
         base = 0x100000 if base >= 0x100000 else 0
         spans = symbol_extents(arguments.binary, base)
         every: set[int] = set()
-        for tables in (stock, vsa, decompiler, combined):
+        for tables in (stock, vsa, decompiler, combined, interpreted):
             for targets in tables.values():
                 every |= targets
         decoded = decodes(arguments.binary, base, every, arguments.ghidra)
@@ -287,6 +296,11 @@ def main() -> int:
                 **score(vsa, stock, spans, decoded),
                 "wall_s": round(vsa_wall, 1),
                 "phase_s": round(vsa_phase, 3),
+            },
+            "interpreted": {
+                **score(interpreted, stock, spans, decoded),
+                "wall_s": round(interpreted_wall, 1),
+                "phase_s": round(interpreted_phase, 3),
             },
             "decompiler": {
                 **score(decompiler, stock, spans, decoded),
@@ -308,6 +322,20 @@ def main() -> int:
         if measured["vsa"]["phase_s"] > THRESHOLDS["vsa_seconds"]:
             failures.append(
                 f"vsa phase {measured['vsa']['phase_s']}s > {THRESHOLDS['vsa_seconds']}s"
+            )
+        # The interpreter's own claims: never less reach than the pass it
+        # falls back from, and never less sound. Its cost is recorded and
+        # deliberately not budgeted -- it decodes whole functions, which is
+        # why it is opt-in until that cost comes down.
+        if measured["interpreted"]["branches"] < measured["vsa"]["branches"]:
+            failures.append(
+                f"the interpreter answered {measured['interpreted']['branches']} dispatches,"
+                f" fewer than the pass alone at {measured['vsa']['branches']}"
+            )
+        if measured["interpreted"]["soundness"] < THRESHOLDS["vsa_soundness"]:
+            failures.append(
+                f"interpreter soundness {measured['interpreted']['soundness']} <"
+                f" {THRESHOLDS['vsa_soundness']}"
             )
         if measured["combined"]["branches"] <= measured["stock"]["branches"]:
             failures.append(
@@ -335,7 +363,11 @@ def main() -> int:
         print(
             "m13-001: PASS (combined {cb} dispatches at {cs} soundness against stock's"
             " {sb} at {ss}; {beyond} beyond stock, {missed} of stock's missed; the pass"
-            " alone {vb} at {vs} in {phase}s)".format(
+            " alone {vb} at {vs} in {phase}s, with the interpreter {ib} at {is_} in"
+            " {iphase}s)".format(
+                ib=measured["interpreted"]["branches"],
+                is_=measured["interpreted"]["soundness"],
+                iphase=measured["interpreted"]["phase_s"],
                 cb=measured["combined"]["branches"],
                 cs=measured["combined"]["soundness"],
                 sb=measured["stock"]["branches"],

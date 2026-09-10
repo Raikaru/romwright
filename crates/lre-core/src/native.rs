@@ -21,6 +21,7 @@ mod discovery;
 pub(crate) use discovery::BRANCH_PROVENANCE;
 mod features;
 mod nso;
+pub(crate) mod sja;
 pub(crate) mod vsa;
 mod elf_exception;
 mod elf_pointers;
@@ -1499,6 +1500,89 @@ impl vsa::Image for ImageView<'_> {
 /// blocks that actually branch or fall into it. Taking the two positionally
 /// preceding blocks instead found a guard for 15 of 132 dispatches on libc:
 /// a dispatch block is usually jumped to, not fallen into.
+/// The function's basic blocks, as the abstract interpreter consumes them:
+/// instruction addresses per block and successor indices, with a
+/// conditional branch's *taken* edge first so an edge refinement lands on
+/// the side that assumes the test.
+fn function_blocks(
+    imp: &NativeImport,
+    entry: u64,
+    end: u64,
+) -> Vec<(u64, Vec<u64>, Vec<usize>)> {
+    use crate::native_runtime::FlowKind;
+    let mut shapes: Vec<&FlowShape> = imp
+        .flow_shapes
+        .iter()
+        .filter(|shape| shape.address >= entry && shape.address < end)
+        .collect();
+    shapes.sort_by_key(|shape| shape.address);
+    shapes.dedup_by_key(|shape| shape.address);
+    if shapes.is_empty() {
+        return Vec::new();
+    }
+    let inside = |address: u64| address >= entry && address < end;
+    let ends_block = |kind: FlowKind| {
+        matches!(
+            kind,
+            FlowKind::Branch | FlowKind::CBranch | FlowKind::BranchInd | FlowKind::Return
+        )
+    };
+    let mut leaders: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    leaders.insert(shapes[0].address);
+    for shape in &shapes {
+        if let Some(target) = shape.target
+            && inside(target)
+        {
+            leaders.insert(target);
+        }
+        if ends_block(shape.kind) {
+            let next = shape.address.saturating_add(u64::from(shape.length));
+            if inside(next) {
+                leaders.insert(next);
+            }
+        }
+    }
+    let starts: Vec<u64> = leaders.iter().copied().collect();
+    let index_of = |address: u64| starts.binary_search(&address).ok();
+    let mut blocks: Vec<(u64, Vec<u64>, Vec<usize>)> = starts
+        .iter()
+        .map(|start| (*start, Vec::new(), Vec::new()))
+        .collect();
+    let mut current = 0usize;
+    for shape in &shapes {
+        if let Some(found) = index_of(shape.address) {
+            current = found;
+        }
+        blocks[current].1.push(shape.address);
+        let next = shape.address.saturating_add(u64::from(shape.length));
+        match shape.kind {
+            FlowKind::CBranch => {
+                // Taken edge first: `sja` refines the index on successor 0.
+                if let Some(target) = shape.target.filter(|t| inside(*t)).and_then(index_of) {
+                    blocks[current].2.push(target);
+                }
+                if let Some(fall) = index_of(next) {
+                    blocks[current].2.push(fall);
+                }
+            }
+            FlowKind::Branch => {
+                if let Some(target) = shape.target.filter(|t| inside(*t)).and_then(index_of) {
+                    blocks[current].2.push(target);
+                }
+            }
+            FlowKind::BranchInd | FlowKind::Return => {}
+            _ => {
+                if let Some(fall) = index_of(next)
+                    && fall != current
+                {
+                    blocks[current].2.push(fall);
+                }
+            }
+        }
+    }
+    blocks
+}
+
 fn switch_window(
     imp: &NativeImport,
     branch: u64,
@@ -1611,6 +1695,8 @@ fn recover_switch_tables_native(
     let mut refusals = vsa::Refusals::default();
     let mut no_window = 0usize;
     let mut undecodable = 0usize;
+    let mut sja_refusals = sja::Refusals::default();
+    let mut sja_resolved = 0usize;
     for &(branch, entry, end) in branches {
         let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
         if window_addresses.is_empty() {
@@ -1669,15 +1755,72 @@ fn recover_switch_tables_native(
                 }
             }
         }
-        let table = {
+        // The abstract interpretation over the whole function first: it
+        // needs no particular shape, so it answers dispatches the
+        // pattern-shaped pass refuses. The older pass stays as the
+        // fallback, and both are measured (`sja_resolved` below).
+        // The pattern-shaped pass first: it is cheap, and it answers most
+        // dispatches. The abstract interpretation is the fallback, because
+        // it decodes the whole function.
+        let quick = {
             let view = ImageView { imp, big_endian };
-            vsa::recover(
-                &view,
-                branch,
-                &guard,
-                window,
-                &mut refusals,
-            )
+            vsa::recover(&view, branch, &guard, window, &mut refusals)
+        };
+        // The abstract interpretation is opt-in until it is measured to
+        // help: `VENTRIS_SJA=1`. It runs only where the pattern-shaped
+        // pass refused, so it can only add.
+        let proven = if quick.is_some() || std::env::var_os("VENTRIS_SJA").is_none() {
+            None
+        } else {
+            let blocks = function_blocks(imp, entry, end);
+            let mut interpreted: Option<vsa::SwitchTable> = None;
+            if !blocks.is_empty() {
+                let mut wanted: Vec<u64> = blocks
+                    .iter()
+                    .flat_map(|(_, addresses, _)| addresses.iter().copied())
+                    .collect();
+                wanted.sort_unstable();
+                wanted.dedup();
+                if let Ok(decoded) = session.pcode_batch(&wanted) {
+                    let by_address: std::collections::HashMap<u64, _> = decoded
+                        .into_iter()
+                        .map(|instruction| (instruction.address, instruction))
+                        .collect();
+                    let graph: Vec<sja::Block> = blocks
+                        .iter()
+                        .map(|(start, addresses, successors)| sja::Block {
+                            start: *start,
+                            instructions: addresses
+                                .iter()
+                                .filter_map(|address| by_address.get(address).cloned())
+                                .collect(),
+                            successors: successors.clone(),
+                        })
+                        .collect();
+                    let view = ImageView { imp, big_endian };
+                    // Only this candidate's outcome is counted: analysing a
+                    // function answers every indirect branch in it, and
+                    // adding all of them made the refusal totals a multiple
+                    // of the dispatches actually asked about.
+                    let analysis = sja::analyse(&view, &graph, (entry, end));
+                    interpreted = analysis
+                        .tables
+                        .iter()
+                        .find(|table| table.branch == branch)
+                        .cloned();
+                    if interpreted.is_none() {
+                        sja_refusals.merge_for(branch, &analysis);
+                    }
+                }
+            }
+            interpreted
+        };
+        let table = match proven {
+            Some(table) => {
+                sja_resolved += 1;
+                Some(table)
+            }
+            None => quick,
         };
         match table {
             Some(table) => resolved.push(table),
@@ -1694,6 +1837,15 @@ fn recover_switch_tables_native(
             refusals.no_strided_load,
             refusals.too_few_targets,
             refusals.unmodelled,
+        );
+        eprintln!(
+            "SJA resolved={sja_resolved} unknown={} unbounded={} too_wide={} outside={} \
+             too_few={}",
+            sja_refusals.unknown_target,
+            sja_refusals.unbounded,
+            sja_refusals.too_wide,
+            sja_refusals.outside_function,
+            sja_refusals.too_few_targets,
         );
     }
     let mut added = 0;
@@ -2047,6 +2199,15 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         // which is how the two are measured against each other).
         let switch_started = std::time::Instant::now();
         let candidates = switch_candidates(imp);
+        if std::env::var_os("VENTRIS_TRACE_VSA").is_some() {
+            eprintln!(
+                "switch round {round}: candidates={} indirect_jumps={} asked={} known_tables={}",
+                candidates.len(),
+                imp.indirect_jumps.len(),
+                imp.switch_asked.len(),
+                imp.switch_tables.len()
+            );
+        }
         let mut tables = 0;
         let mut remaining = candidates.iter().map(|&(branch, _, _)| branch).count();
         if imp.cfg.switch_vsa && !candidates.is_empty() {
