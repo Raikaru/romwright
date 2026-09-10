@@ -26,6 +26,7 @@ private:
     void startFilteredXrefs();
     void startProgramSwitch();
     void finishProgramSwitch(int functions);
+    void awaitAnalysis(int polls);
     void finish(bool ok, const QString &detail = {});
 
     MainWindow *window_;

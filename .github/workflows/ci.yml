@@ -695,6 +695,13 @@ jobs:
           cmake -S desktop/ventris-qt -B build/ventris-qt -G Ninja -DCMAKE_BUILD_TYPE=Release "${EXTRA_CMAKE_ARGS[@]}"
       - name: Build desktop
         run: cmake --build build/ventris-qt --config Release --target ventris-qt
+      - name: Show facts so far in the window, then fill them in
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m14-004_ui_progress.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/reports/m14-004.json"
       - name: Build installer archive
         run: cmake --build build/ventris-qt --config Release --target package
       - name: Package, install and launch the desktop

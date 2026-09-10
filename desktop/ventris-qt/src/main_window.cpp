@@ -29,6 +29,7 @@
 #include <QInputDialog>
 #include <QJsonArray>
 #include <QLabel>
+#include <QTimer>
 #include <QComboBox>
 #include <QPointer>
 #include <QLineEdit>
@@ -112,6 +113,16 @@ MainWindow::MainWindow(const QString &project, const QString &program,
 
     status_ = new QLabel(this);
     statusBar()->addWidget(status_, 1);
+    // How complete the open program's facts are. A window that shows a
+    // listing built from a loader-only import must say the answer is
+    // provisional; the alternative is showing nothing until analysis ends,
+    // which on a 45k-function module is minutes of an empty window.
+    analysis_label_ = new QLabel(this);
+    analysis_label_->setObjectName(QStringLiteral("analysisStatus"));
+    statusBar()->addPermanentWidget(analysis_label_);
+    analysis_timer_ = new QTimer(this);
+    analysis_timer_->setInterval(50);
+    connect(analysis_timer_, &QTimer::timeout, this, &MainWindow::analysePending);
 
     auto *menu_bar = menuBar();
     auto *file_menu = menu_bar->addMenu(QStringLiteral("&File"));
@@ -240,6 +251,8 @@ void MainWindow::switchProgram(const QString &program) {
     setStatus(QStringLiteral("showing %1").arg(program));
 }
 QString MainWindow::binary() const { return binary_edit_->text(); }
+
+QString MainWindow::firstAnalysisText() const { return first_analysis_; }
 void MainWindow::runGate(bool store_only) { gate_runner_->run(store_only); }
 
 void MainWindow::setStatus(const QString &message, bool error) {
@@ -259,6 +272,72 @@ void MainWindow::loadProgramPanels() {
     graph_dock_->loadGraph(b, a);
     analyst_dock_->loadAnalystData(p);
     types_dock_->loadTypes(p);
+    refreshAnalysisStatus();
+}
+
+void MainWindow::refreshAnalysisStatus() {
+    const QString p = program_edit_->text();
+    if (p.isEmpty()) {
+        analysis_label_->clear();
+        analysis_timer_->stop();
+        return;
+    }
+    bridge_->request(QJsonObject{{"method", "analysis_status"}, {"program", p}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         QString err;
+                         if (!successful(res, &err)) { analysis_label_->clear(); return; }
+                         const QJsonObject row = res.value(QStringLiteral("result")).toObject();
+                         const qint64 analysed = row.value(QStringLiteral("analysed")).toInteger();
+                         const qint64 seeded = row.value(QStringLiteral("seeded")).toInteger();
+                         const bool stale = row.value(QStringLiteral("stale")).toBool();
+                         analysis_label_->setText(
+                             stale ? QStringLiteral("provisional: %1 analysed, %2 to go")
+                                         .arg(analysed).arg(seeded)
+                                   : QStringLiteral("analysed: %1").arg(analysed));
+                         if (first_analysis_.isEmpty()) {
+                             first_analysis_ = analysis_label_->text();
+                         }
+                         // Keep asking for more only while there is more.
+                         if (stale && !analysis_timer_->isActive()) {
+                             analysis_timer_->start();
+                         } else if (!stale) {
+                             analysis_timer_->stop();
+                         }
+                     });
+}
+
+void MainWindow::analysePending() {
+    // One request at a time: the pass is work, and stacking requests would
+    // queue the window behind itself.
+    if (analysis_running_) { return; }
+    const QString p = program_edit_->text(), b = binary_edit_->text();
+    if (p.isEmpty() || b.isEmpty()) { analysis_timer_->stop(); return; }
+    analysis_running_ = true;
+    bridge_->request(QJsonObject{{"method", "analyse_pending"},
+                                 {"binary", b},
+                                 {"program", p},
+                                 {"budget", 16}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         analysis_running_ = false;
+                         QString err;
+                         if (!successful(res, &err)) { analysis_timer_->stop(); return; }
+                         const QJsonObject row = res.value(QStringLiteral("result")).toObject();
+                         const qint64 analysed = row.value(QStringLiteral("analysed")).toInteger();
+                         const qint64 seeded = row.value(QStringLiteral("seeded")).toInteger();
+                         const bool stale = row.value(QStringLiteral("stale")).toBool();
+                         analysis_label_->setText(
+                             stale ? QStringLiteral("provisional: %1 analysed, %2 to go")
+                                         .arg(analysed).arg(seeded)
+                                   : QStringLiteral("analysed: %1").arg(analysed));
+                         if (!stale) {
+                             analysis_timer_->stop();
+                             // The facts changed under every view: refresh
+                             // once, at the end, rather than per function.
+                             functions_dock_->setProgram(program_edit_->text());
+                         }
+                     });
 }
 
 void MainWindow::importNative() {

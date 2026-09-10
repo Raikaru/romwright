@@ -5681,6 +5681,27 @@ is the difference between an interactive tool and one that fails under its
 own background work.
 
 
+### m14-004 evidence (the window shows facts so far, then fills them in)
+
+`tests/m14-004_ui_progress.py`, `benchmarks/reports/m14-004.json`, the real
+window driven offscreen:
+
+| Measured | Value |
+|---|---|
+| First completeness the window rendered | `provisional: 0 analysed, 405 to go` |
+| Polls while it filled in | 24 |
+| Final state | 405 analysed, 0 seeded, no longer provisional |
+| Wall time | 4.3 s |
+
+The window opens a project the way a large image forces you to -- map it,
+show the loader's answer, analyse in the background -- driven by a timer
+that runs bounded `analyse_pending` calls and stops itself when nothing is
+left, so an idle window does no work. `VENTRIS_UI_LOAD_ONLY` selects that
+path in the gate; without it the harness imports everything up front and
+the provisional state never exists, which is why the first version of this
+gate passed while proving nothing.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now

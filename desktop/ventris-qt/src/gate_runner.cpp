@@ -21,6 +21,7 @@
 #include <QJsonDocument>
 #include <QTableView>
 #include <QTextStream>
+#include <QLabel>
 #include <QTimer>
 
 GateRunner::GateRunner(MainWindow *window, CoreBridge *bridge, QObject *parent)
@@ -44,8 +45,16 @@ void GateRunner::run(bool store_only) {
         return;
     }
 
+    // `VENTRIS_UI_LOAD_ONLY` exercises the path an analyst actually takes
+    // on a large image: map it, show the loader's answer, and let the
+    // window analyse in the background. Without it the gate imports
+    // everything up front and the provisional state never exists.
+    const bool load_only = qEnvironmentVariableIsSet("VENTRIS_UI_LOAD_ONLY");
     bridge_->request(
-        QJsonObject{{"method", "import_native"}, {"binary", b}, {"name", p}},
+        QJsonObject{{"method", "import_native"},
+                    {"binary", b},
+                    {"name", p},
+                    {"analyse", !load_only}},
         [this, p](const QJsonObject &res) {
             QString err;
             if (!successful(res, &err)) {
@@ -299,7 +308,49 @@ void GateRunner::finishProgramSwitch(int functions) {
     metrics_.insert(QStringLiteral("ui.programs_switch_functions"), functions);
     const bool install_ok = qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK");
     metrics_.insert(QStringLiteral("ui.install.ok"), install_ok);
-    finish(true);
+    // What the window can tell the analyst about completeness. A listing
+    // built from a loader-only import is every function the image names and
+    // no body anyone walked; the window has to say so, and the gate records
+    // both the store's answer and the words the window displayed.
+    awaitAnalysis(0);
+}
+
+/// Watches the window's own background pass until it has nothing left, so
+/// the gate records the transition an analyst sees -- provisional first,
+/// complete later -- and not just one end of it.
+void GateRunner::awaitAnalysis(int polls) {
+    const bool load_only = qEnvironmentVariableIsSet("VENTRIS_UI_LOAD_ONLY");
+    bridge_->request(QJsonObject{{"method", "analysis_status"},
+                                 {"program", window_->program()}},
+                     [this, load_only, polls](const QJsonObject &res) {
+                         const QJsonObject row =
+                             res.value(QStringLiteral("result")).toObject();
+                         metrics_.insert(QStringLiteral("ui.analysis.stale"),
+                                         row.value(QStringLiteral("stale")).toBool());
+                         metrics_.insert(QStringLiteral("ui.analysis.analysed"),
+                                         row.value(QStringLiteral("analysed")).toInteger());
+                         metrics_.insert(QStringLiteral("ui.analysis.seeded"),
+                                         row.value(QStringLiteral("seeded")).toInteger());
+                         if (auto *label = window_->findChild<QLabel *>(
+                                 QStringLiteral("analysisStatus"))) {
+                             metrics_.insert(QStringLiteral("ui.analysis"), label->text());
+                         }
+                         metrics_.insert(QStringLiteral("ui.analysis.first"),
+                                         window_->firstAnalysisText());
+                         metrics_.insert(QStringLiteral("ui.analysis.polls"), polls);
+                         const bool stale =
+                             row.value(QStringLiteral("stale")).toBool();
+                         // 600 polls at 50 ms is 30 s: long enough for a
+                         // corpus image, short enough that a stuck pass
+                         // fails the gate instead of hanging it.
+                         if (load_only && stale && polls < 600) {
+                             QTimer::singleShot(50, this, [this, polls]() {
+                                 awaitAnalysis(polls + 1);
+                             });
+                             return;
+                         }
+                         finish(true);
+                     });
 }
 
 void GateRunner::finish(bool ok, const QString &detail) {
