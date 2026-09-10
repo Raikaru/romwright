@@ -537,6 +537,18 @@ fn run_block<I: Image>(
                     eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
                 }
             }
+            // A write that is not affine leaves the slot's old origin and
+            // comparison behind: `eax = r15 - 0x20` followed by
+            // `mov (%rsi),%eax` would otherwise push a bound on r15 from a
+            // value that has nothing to do with it, and a stale `cmp`
+            // result would bound an unrelated test. The affine arms
+            // re-insert what they mean; `prior` keeps the entry an
+            // in-place op (`sub $0x20,%eax`) still reads.
+            let prior = op.output.as_ref().and_then(|out| {
+                let key = slot(out);
+                comparisons.remove(&key);
+                origins.remove(&key)
+            });
             match opcode {
                 "COPY" | "INT_ZEXT" | "INT_SEXT" | "SUBPIECE" => {
                     if let (Some(output), Some(value)) = (&op.output, inputs.first()) {
@@ -573,14 +585,18 @@ fn run_block<I: Image>(
                     if let (Some(output), Some(source)) = (&op.output, op.inputs.first())
                         && source.space != "const"
                     {
-                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0, None));
+                        // An in-place op reads the entry the top-of-loop
+                        // clear just removed.
+                        let (origin, off, narrow) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None))
+                        } else {
+                            origins.get(&slot(source)).cloned()
+                                .unwrap_or((slot(source), 0, None))
+                        };
                         // A `unique` temporary is intra-instruction and dead
                         // by the next block, so it is never an origin: the
                         // output has no affine parent at all.
-                        if origin.0 == "unique" {
-                            origins.remove(&slot(output));
-                        } else {
+                        if origin.0 != "unique" {
                             // A bound on a piece says nothing about the
                             // whole: record the narrowest width crossed so
                             // the compare can check the origin already fits.
@@ -606,15 +622,17 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0, None));
+                        let (origin, off, narrow) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None))
+                        } else {
+                            origins.get(&slot(source)).cloned()
+                                .unwrap_or((slot(source), 0, None))
+                        };
                         // A `unique` temporary is dead by the next block:
                         // the output has no affine parent, and recording
                         // `out = out + k` would push a wrongly shifted bound
                         // onto it at the next compare.
-                        if origin.0 == "unique" {
-                            origins.remove(&slot(output));
-                        } else {
+                        if origin.0 != "unique" {
                             origins.insert(slot(output),
                                 (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
                         }
@@ -636,11 +654,13 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0, None));
-                        if origin.0 == "unique" {
-                            origins.remove(&slot(output));
+                        let (origin, off, narrow) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None))
                         } else {
+                            origins.get(&slot(source)).cloned()
+                                .unwrap_or((slot(source), 0, None))
+                        };
+                        if origin.0 != "unique" {
                             origins.insert(slot(output),
                                 (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
                         }
@@ -651,16 +671,19 @@ fn run_block<I: Image>(
                         (&op.output, inputs.first(), inputs.get(1))
                     {
                         state.set(output, multiply(left.clone(), right.clone()));
-                        origins.remove(&slot(output));
                     }
                 }
                 "INT_LEFT" => {
-                    if let (Some(output), Some(left), Some(Value::Const(shift))) =
-                        (&op.output, inputs.first(), inputs.get(1))
-                    {
-                        let factor = 1u64.checked_shl(*shift as u32).unwrap_or(0);
-                        state.set(output, multiply(left.clone(), Value::Const(factor)));
-                        origins.remove(&slot(output));
+                    if let Some(output) = &op.output {
+                        match (inputs.first(), inputs.get(1)) {
+                            (Some(left), Some(Value::Const(shift))) => {
+                                let factor = 1u64.checked_shl(*shift as u32).unwrap_or(0);
+                                state.set(output, multiply(left.clone(), Value::Const(factor)));
+                            }
+                            // A non-constant shift is still a write: the
+                            // output is unknown, not its previous value.
+                            _ => state.set(output, Value::Top),
+                        }
                     }
                 }
                 // A mask *is* a bound, and needs no guard to state it:
@@ -685,13 +708,11 @@ fn run_block<I: Image>(
                             _ => Value::Top,
                         };
                         state.set(output, masked);
-                        origins.remove(&slot(output));
                     }
                 }
                 "LOAD" => {
                     if let (Some(output), Some(address)) = (&op.output, inputs.get(1)) {
                         state.set(output, load(image, address.clone(), output.size));
-                        origins.remove(&slot(output));
                     }
                 }
                 // A machine does not branch on a comparison, it branches on
@@ -725,7 +746,6 @@ fn run_block<I: Image>(
                     }
                     if let Some(output) = &op.output {
                         state.set(output, Value::Top);
-                        origins.remove(&slot(output));
                     }
                 }
                 "INT_LESS" | "INT_SLESS" | "INT_LESSEQUAL" | "INT_SLESSEQUAL" => {
@@ -794,7 +814,13 @@ fn run_block<I: Image>(
                                         _ => false,
                                     }
                                 };
-                                if usable {
+                                // The shifted bound must fit the narrow
+                                // width too: `lea -0xf0(%r15),%eax; cmp
+                                // $0x5a,%al` wraps inside the byte, and the
+                                // interval would drop the wrapped half.
+                                let fits = effective >= 8
+                                    || (high - off) as u64 <= (1u64 << (effective * 8)) - 1;
+                                if usable && fits {
                                     targets.push((origin.clone(), *off));
                                 }
                             }
@@ -876,7 +902,6 @@ fn run_block<I: Image>(
                 _ => {
                     if let Some(output) = &op.output {
                         state.set(output, Value::Top);
-                        origins.remove(&slot(output));
                     }
                 }
             }
@@ -1553,6 +1578,158 @@ mod tests {
             found.tables[0].targets,
             vec![0x1500, 0x1508, 0x1510, 0x1518]
         );
+    }
+
+    #[test]
+    fn an_overwritten_slot_drops_its_origin() {
+        // `eax = r15 - 0x20` links eax to r15; `mov (%rsi),%eax` then
+        // overwrites eax with a value that has nothing to do with r15. A
+        // compare on %al must not push a bound onto r15 through the stale
+        // link -- if it does, the dispatch below resolves a bogus table.
+        let mut memory = HashMap::new();
+        for index in 0..4u64 {
+            memory.insert(0x9000 + (0x20 + index) * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        // eax = r15 - 0x20: origins[eax] = (r15, -0x20).
+                        op(
+                            "INT_SUB",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("register", 0xb8, 4), varnode("const", 0x20, 4)],
+                        ),
+                        // eax = load(...): the stale link must die here.
+                        op(
+                            "LOAD",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xdead, 8)],
+                        ),
+                        // al < 4; jbe dispatch.
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x0, 1), varnode("const", 4, 1)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        // jmp *(0x9000 + r15*8): resolves only if the stale
+                        // bound reached r15.
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0xb8, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.refusals.unknown_target, 1);
+    }
+
+    #[test]
+    fn an_overwritten_flag_drops_its_comparison() {
+        // `cmp $4,%al` records a bound keyed to the flag slot; `add
+        // %rbx,%rax` rewrites that slot without clearing it, so the `jbe`
+        // below would otherwise apply `al < 4` to an unrelated test and
+        // invent a guarded bound.
+        let mut memory = HashMap::new();
+        for index in 0..4u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        // al < 4: comparisons[flag] = (rax, 4, ...).
+                        op(
+                            "INT_LESS",
+                            Some(varnode("register", 0x500, 1)),
+                            vec![varnode("register", 0x0, 1), varnode("const", 4, 1)],
+                        ),
+                        // add %rbx,%rax rewrites the flag slot: the stale
+                        // comparison must die here.
+                        op(
+                            "INT_ADD",
+                            Some(varnode("register", 0x500, 1)),
+                            vec![varnode("register", 0x0, 8), varnode("register", 0x18, 8)],
+                        ),
+                        // jbe dispatch reads the flag slot.
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("register", 0x500, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        // jmp *(0x9000 + rax*8): resolves only if the stale
+                        // bound reached rax.
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x0, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.refusals.unknown_target, 1);
     }
 
     #[test]

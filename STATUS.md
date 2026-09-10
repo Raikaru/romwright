@@ -5598,13 +5598,17 @@ Measured by the same gate (`tests/m13-001_vsa_switch.py`):
 | Path | Dispatches | Unsound targets | Soundness |
 |---|---|---|---|
 | pattern-shaped pass alone | 90 | 1 | 0.9989 |
-| pass + abstract interpreter | **102** | 1 | **0.9992** |
+| pass + abstract interpreter | **103** | 1 | **0.9992** |
 | both plus the decompiler (default) | 142 | 6 | 0.9967 |
 
-Nine more dispatches than the interpreter managed before, one of them the
-vfprintf two-level dispatch whose bound now reaches `r15` through the
-`lea`/`subpiece`/`zext` chain. The parity gate is still not met -- the
-proven tier stands at 102 against the decompiler's 130 -- and the
+Thirteen more dispatches than the interpreter managed before the origin
+work, one of them the vfprintf two-level dispatch whose bound now reaches
+`r15` through the `lea`/`subpiece`/`zext` chain. Attribution, measured on
+the same gate: 59b3bea5's affine origins took the interpreter from 93 to
+98, d4d620dd's guarded flag added none (it only stopped the unguarded
+leak), and e8ec62be's origin propagation plus the stale-origin and
+stale-comparison clears added five. The parity gate is still not met --
+the proven tier stands at 103 against the decompiler's 130 -- and the
 remaining gap is the PIC tables of 32-bit offsets reached through boolean
 guard combinations that the domain still cannot name.
 
@@ -5857,9 +5861,9 @@ more claims where a rate means something.
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
 point at, none reserved:
-- m13-002: the proven tier answers 93 of the 142 dispatches the default
+- m13-002: the proven tier answers 103 of the 142 dispatches the default
   recovers (the abstract interpreter landed opt-in; evidence above), so the
-  decompiler is still needed for 49. The refusal accounting on libc, taken
+  decompiler is still needed for 39. The refusal accounting on libc, taken
   with the interpreter on, names them: 233 dispatches whose index is
   unbounded (no comparison the interpreter reads ever narrows it) and 174
   whose target set stays unknown, dominated by PIC tables of 32-bit offsets
