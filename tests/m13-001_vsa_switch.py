@@ -110,7 +110,9 @@ def imported(binary: Path, project: Path, environment: dict[str, str]) -> tuple[
         [str(CLI), "import", str(binary), "--project", str(project), "--timings"],
         capture_output=True,
         text=True,
-        env={**os.environ, **environment},
+        # Cold: this gate reports the switch round's own cost, and a reused
+        # import restores facts without running the phase that produced them.
+        env={**os.environ, "VENTRIS_NO_IMPORT_CACHE": "1", **environment},
     )
     wall = time.time() - started
     if result.returncode:
