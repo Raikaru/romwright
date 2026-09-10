@@ -609,8 +609,13 @@ def main():
             compiler = arch_cfg["cxx_compiler"] if var_cfg["is_cpp"] else arch_cfg["c_compiler"]
             src_file = CORPUS_SRC / var_cfg["source"]
 
-            # Common base command
+            # Common base command. -ffile-prefix-map keeps the absolute
+            # checkout path out of DW_AT_comp_dir / DW_AT_name, so the same
+            # recipe produces the same bytes -- and the same build-id -- on
+            # any checkout; without it the committed oracles keyed by binary
+            # sha256 can never be found on a fresh clone.
             base_cmd = list(compiler)
+            base_cmd.append(f"-ffile-prefix-map={ROOT}=ventris")
             if arch_cfg["sysroot"]:
                 base_cmd.extend(["--sysroot", str(arch_cfg["sysroot"])])
             base_cmd.extend(arch_cfg["extra_flags"])
@@ -626,7 +631,10 @@ def main():
             # 3. Validate twins and loadable code identity
             sym_count = validate_elf_twin(bin_path, twin_path)
 
-            cmd_display_str = " ".join(cmd_twin).replace(str(ROOT) + "/", "").replace(str(out_dir) + "/", "$OUT/")
+            cmd_display_str = (" ".join(cmd_twin)
+                .replace(f"-ffile-prefix-map={ROOT}=", "-ffile-prefix-map=$ROOT=")
+                .replace(str(ROOT) + "/", "")
+                .replace(str(out_dir) + "/", "$OUT/"))
             full_display = f"{cmd_display_str} && llvm-strip --strip-all $OUT/{bin_path.name}"
 
             manifest_data["entries"].append({
