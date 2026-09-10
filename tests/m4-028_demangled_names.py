@@ -122,7 +122,9 @@ def main() -> int:
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
                    cwd=ROOT, check=True)
     lock = json.loads(LOCK.read_text())
-    wanted = [entry for entry in lock["entries"] if entry.get("format") == "elf"]
+    matrix = set(lock["oracle_matrix"]["architectures"])
+    wanted = [entry for entry in lock["entries"]
+              if entry.get("format") == "elf" and entry["architecture"] in matrix]
 
     def measure(entry: dict) -> dict:
         binary = arguments.corpus_dir / entry["binary"]

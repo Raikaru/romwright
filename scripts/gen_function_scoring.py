@@ -97,7 +97,9 @@ def main():
     args.corpus_dir = args.corpus_dir.resolve()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
-    required = [r for r in lock["entries"] if r["format"] == "elf"]
+    matrix = set(lock["oracle_matrix"]["architectures"])
+    required = [r for r in lock["entries"]
+                if r["format"] == "elf" and r["architecture"] in matrix]
     setup_error = None
     actual = {}
     try:

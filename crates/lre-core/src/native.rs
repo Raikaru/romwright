@@ -18,6 +18,7 @@ mod nds;
 mod psx;
 pub(crate) mod dol;
 mod discovery;
+mod features;
 mod elf_exception;
 mod elf_pointers;
 mod elf_unwind;
@@ -169,6 +170,17 @@ pub struct NativeThunk {
     pub source: &'static str,
 }
 
+/// One instruction as the walk decoded it, addresses aside from its own
+/// direct branch target left out: the shape a diff can compare.
+#[derive(Clone, Copy, Debug)]
+pub struct FlowShape {
+    pub address: u64,
+    pub length: u8,
+    pub kind: crate::native_runtime::FlowKind,
+    pub conditional: bool,
+    pub target: Option<u64>,
+}
+
 /// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
@@ -211,8 +223,18 @@ pub struct NativeImport {
     /// of the function that held each at the time: Ghidra runs its switch
     /// analyzer again on a function whose body changed, and so does this.
     pub switch_asked: std::collections::HashMap<u64, u64>,
+    /// Entries an earlier discovery run created as ordinary functions; a
+    /// later run does not turn one into a thunk, as `CreateFunctionCmd`
+    /// decides thunk-ness only when it creates the function.
+    pub thunk_settled: std::collections::HashSet<u64>,
     /// Address ranges the last walk decoded, merged and sorted.
     pub decoded_ranges: Vec<(u64, u64)>,
+    /// The decoded shape of every instruction the walk read: address, byte
+    /// length, flow kind, whether the flow is conditional, and the single
+    /// direct target when it has one. This is what the structural features
+    /// (`lre_model::FunctionFeatureRow`) are counted from; a switch jump's
+    /// many targets are not here, they are the `switch_tables` fact.
+    pub flow_shapes: Vec<FlowShape>,
     /// Computed-call targets the propagation reached with the low address
     /// bit set, aligned: on a low-bit-mode language each is decoded in the
     /// alternate instruction set from then on.
@@ -1344,6 +1366,7 @@ fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
     targets
 }
 
+
 /// Ghidra's `DecompilerSwitchAnalyzer` runs the decompiler on every function
 /// holding an indirect jump, lays a reference from the jump to each table
 /// entry it recovers, and disassembles them; the case bodies then reach the
@@ -1388,14 +1411,29 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
             .map(|&(start, end)| (start, end - start))
     };
     let started = std::time::Instant::now();
+    // A jump whose transfer the image's structure already proved -- a
+    // linkage stub through an import slot, a thunk -- is not a switch;
+    // `DecompilerSwitchAnalyzer.findLocations` skips an instruction whose
+    // flow is overridden or already referenced (:398-431).
+    let resolved: std::collections::HashSet<u64> = imp
+        .flow_overrides
+        .iter()
+        .map(|&(address, _)| address)
+        .chain(imp.xrefs.iter().filter(|xref| xref.kind == "COMPUTED_JUMP").map(|xref| xref.from))
+        .collect();
+    let thunk_entries: std::collections::HashSet<u64> =
+        imp.thunks.iter().map(|thunk| thunk.entry).collect();
     let mut owners: Vec<u64> = Vec::new();
     for &branch in &imp.indirect_jumps {
-        if imp.switch_tables.contains_key(&branch) {
+        if imp.switch_tables.contains_key(&branch) || resolved.contains(&branch) {
             continue;
         }
         let Some((entry, size)) = owner(branch) else {
             continue;
         };
+        if thunk_entries.contains(&entry) {
+            continue;
+        }
         if imp.switch_asked.insert(branch, size) != Some(size) {
             owners.push(entry);
         }
@@ -1403,6 +1441,7 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
     owners.sort_unstable();
     owners.dedup();
     if owners.is_empty() {
+        phase(imp, "switch", started);
         return 0;
     }
     let scratch = ScratchDir::new("ventris-switch");
@@ -2288,6 +2327,12 @@ pub fn store_import(
         })
         .collect();
     db.replace_functions(pid, &rows)?;
+    // Structural measurements of each body, taken while it was decoded:
+    // instruction and basic-block counts, intra-function edges, and digests
+    // of the bytes and of the decoded shape. `lre-diff` matches programs on
+    // these; nothing else reads them, and nothing re-reads the image to get
+    // them.
+    db.replace_function_features(pid, &features::measure(imp))?;
     // The frame each function's own stack accesses describe, so the worker
     // can hand the decompiler the same declared locals stock's does.
     db.replace_stack_variables(pid, &imp.stack_variables)?;

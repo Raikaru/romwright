@@ -192,7 +192,9 @@ def main() -> int:
 
     parity = parity_module()
     lock = json.loads(LOCK.read_text())
-    wanted = [entry for entry in lock["entries"] if entry.get("format") == "elf"]
+    matrix = set(lock["oracle_matrix"]["architectures"])
+    wanted = [entry for entry in lock["entries"]
+              if entry.get("format") == "elf" and entry["architecture"] in matrix]
 
     def measure(entry: dict) -> dict:
         binary = arguments.corpus_dir / entry["binary"]

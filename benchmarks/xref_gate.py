@@ -113,7 +113,9 @@ def main():
     args = parser.parse_args()
     subprocess.run(["cargo", "build", "-q", "-p", "lre-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
-    required = [row for row in lock["entries"] if row["format"] == "elf"]
+    matrix = set(lock["oracle_matrix"]["architectures"])
+    required = [row for row in lock["entries"]
+                if row["format"] == "elf" and row["architecture"] in matrix]
     actual, setup_error, command = {}, None, None
     try:
         manifest = json.loads((args.corpus_dir / "manifest.json").read_text())

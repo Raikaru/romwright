@@ -11,6 +11,7 @@ members = [
     "crates/lre-api",
     "crates/lre-debug",
     "crates/lre-sig",
+    "crates/lre-diff",
 ]
 
 [workspace.package]

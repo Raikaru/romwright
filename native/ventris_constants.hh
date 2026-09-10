@@ -124,6 +124,13 @@ class Propagation {
   Word first, end;
   int pointerSize, uniqueSpace, spaceCount, stackBase = -1;
   bool bigEndian, trustWritable;
+  // Import slots, sorted. `VarnodeContext.getValue` (:540-544) answers a
+  // read of a word carrying an external reference with the external itself,
+  // so a call through it targets the EXTERNAL block, which no store fact
+  // names; here the word reads as unknown, so no computed target -- the
+  // lazy-binding stub the file holds there -- is ever laid down. The read
+  // of the slot is a fact in its own right and is emitted regardless.
+  std::vector<Word> externalSlots;
   // The instruction being evaluated, for the literal-pool rule in load().
   mutable Word currentPc = ~Word(0);
   std::size_t operations = 0;
@@ -593,6 +600,8 @@ class Propagation {
     Value value = state.memory.get(address.space, address.offset, size);
     if (value.base >= 0 || value.complete(size) || address.space < 0)
       return value;
+    if (std::binary_search(externalSlots.begin(), externalSlots.end(), address.offset))
+      return value;
     // Ghidra reads writable memory without asking the evaluator when it lies
     // within 4096 bytes ahead of the instruction (`VarnodeContext.getValue`:
     // "if the value loaded is too far away, ask the evaluator"), which is
@@ -928,6 +937,11 @@ public:
 
   /// The switch register under the name the language's own spec gives it,
   /// when the pspec only aliases it (ARM's `TB`).
+  void useExternalSlots(std::vector<Word> slots) {
+    std::sort(slots.begin(), slots.end());
+    externalSlots = std::move(slots);
+  }
+
   void useModeRegister(const std::string &name) {
     try {
       modeRegister = arch.translate->getRegister(name);
@@ -1054,6 +1068,7 @@ public:
       throw IfaceParseError("Expected propagation <start> <end-exclusive> <trust-writable:0|1> <start> <end> <flags> ...");
     vector<ventris_constants::Region> regions;
     vector<ventris_constants::RegisterSeed> seeds;
+    vector<ventris_constants::Word> externals;
     const VarnodeData *tracked = nullptr;
     modeRegisterName.clear();
     while (true) {
@@ -1065,8 +1080,17 @@ public:
         uintb value;
         if (!(input >> option >> name) ||
             (option != "--register" && option != "--track-register" &&
-             option != "--mode-register"))
-          throw IfaceParseError("Expected --register <name> <value>, --track-register <name> or --mode-register <name>");
+             option != "--mode-register" && option != "--external"))
+          throw IfaceParseError("Expected --register <name> <value>, --track-register <name>, --mode-register <name> or --external <address>");
+        if (option == "--external") {
+          uintb slot;
+          istringstream text(name);
+          text.unsetf(ios::basefield);
+          if (!(text >> slot))
+            throw IfaceParseError("Invalid external slot address");
+          externals.push_back(slot);
+          continue;
+        }
         const VarnodeData &storage = dcp->conf->translate->getRegister(name);
         if (option == "--mode-register") {
           // The register the pspec aliases as ISAModeSwitch; see
@@ -1137,6 +1161,7 @@ public:
                                                 std::move(seeds), tracked);
     if (!modeRegisterName.empty())
       propagation.useModeRegister(modeRegisterName);
+    propagation.useExternalSlots(std::move(externals));
     vector<ventris_constants::Fact> facts = propagation.run(referenceMode);
     ostream &out = *status->fileoptr;
     out << (referenceMode ? "REFERENCES [" : "CONSTANTS [") << dec;

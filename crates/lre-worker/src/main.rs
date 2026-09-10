@@ -399,6 +399,10 @@ fn run(
     // single address keeps the plain-text answer every existing caller reads.
     if offsets.len() > 1 {
         let structured = std::env::var_os("WORKER_STRUCTURED").is_some();
+        // The simplification style a caller asks for; `decompile` is what a
+        // reader wants, `normalize` is what a switch-recovery pass needs
+        // (jump tables are recovered while flow is built, before either).
+        let action = std::env::var("WORKER_ACTION").unwrap_or_else(|_| "decompile".to_string());
         let mut answers = serde_json::Map::new();
         for offset in offsets {
             // One function's failure is that function's answer, not the
@@ -409,7 +413,7 @@ fn run(
             // batch omits the key and every other address still answers.
             let raw = match worker
                 .prepare_function(&mut provider, offset)
-                .and_then(|()| worker.set_action(&mut provider, "decompile", ""))
+                .and_then(|()| worker.set_action(&mut provider, &action, ""))
                 .and_then(|()| worker.decompile_at(&mut provider, ram, offset))
             {
                 Ok(raw) => raw,
@@ -466,7 +470,8 @@ fn run(
         return Ok(());
     }
     worker.prepare_function(&mut provider, offset)?;
-    worker.set_action(&mut provider, "decompile", "")?;
+    let action = std::env::var("WORKER_ACTION").unwrap_or_else(|_| "decompile".to_string());
+    worker.set_action(&mut provider, &action, "")?;
     let raw = worker.decompile_at(&mut provider, ram, offset)?;
     // The packed response is the source of truth for both structured tokens
     // and rendered compatibility text. `decode_tokens_with_ram_space` follows

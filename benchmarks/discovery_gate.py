@@ -53,7 +53,9 @@ def main():
     args = parser.parse_args()
     subprocess.run(["cargo", "build", "-q", "-p", "lre-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
-    required = [r for r in lock["entries"] if r["format"] == "elf"]
+    matrix = set(lock["oracle_matrix"]["architectures"])
+    required = [r for r in lock["entries"]
+                if r["format"] == "elf" and r["architecture"] in matrix]
     setup_error = None
     actual = {}
     try:

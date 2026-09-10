@@ -401,12 +401,29 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Port names across builds and score the diff
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          # The game modules are not on a runner, so the modules rows are
+          # skipped there; the corpus rows and the cross-optimisation rows
+          # are the part every machine can reproduce.
+          python3 tests/m12-001_diff.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --work "$RUNNER_TEMP/discovery/diff" \
+            --report "$RUNNER_TEMP/discovery/diff.json"
       - name: Measure token identity against the oracle per language
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
+          # The parity rows include the mipsel corpus rows the oracle matrix
+          # does not score; they are built into a corpus of their own so every
+          # other gate keeps the 20-row matrix.
+          python3 scripts/gen_corpus.py \
+            --architectures x86_64,i386,aarch64,powerpc,mipsel \
+            --out-dir "$RUNNER_TEMP/discovery/parity-corpus"
           python3 tests/m4-003_language_parity.py \
-            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --corpus-dir "$RUNNER_TEMP/discovery/parity-corpus" \
             --report "$RUNNER_TEMP/discovery/language-parity.json"
       - name: Publish measured improvement over stock as one milestone
         env:

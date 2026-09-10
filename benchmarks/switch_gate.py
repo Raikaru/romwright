@@ -95,7 +95,8 @@ def main():
         cwd=ROOT, env=env, check=True)
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     recipes = {row['architecture'] + '_' + row['variant']: row
-        for row in lock['entries'] if row['format'] == 'elf'}
+        for row in lock['entries']
+        if row['format'] == 'elf' and row['architecture'] in set(lock['oracle_matrix']['architectures'])}
     rows = []
     with tempfile.TemporaryDirectory(prefix='switch-native-gate-') as temporary:
         work = Path(temporary)

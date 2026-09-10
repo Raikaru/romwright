@@ -913,6 +913,9 @@ pub struct ConsoleSession {
     reference_registers: Vec<crate::native::NativeRegisterContext>,
     active_reference_registers: usize,
     reference_call_register: Option<&'static str>,
+    /// Import slots the loaded image names, sorted: a read of one answers
+    /// the external, as `VarnodeContext.getValue` does (:540-544).
+    external_slots: Vec<u64>,
     /// The register an interworking branch writes the target's instruction
     /// set into, under the name Ghidra's analyzers use for it: the spec
     /// bundle's `<register name="TB" alias="ISAModeSwitch"/>` names ARM's;
@@ -932,6 +935,7 @@ pub(crate) struct ReferenceShardSpec {
     active: usize,
     call_register: Option<&'static str>,
     mode_register: Option<String>,
+    external_slots: Vec<u64>,
 }
 
 impl ConsoleSession {
@@ -967,6 +971,7 @@ impl ConsoleSession {
             reference_registers: Vec::new(),
             active_reference_registers: 0,
             reference_call_register: None,
+            external_slots: Vec::new(),
             reference_mode_register: None,
             new_reference_targets: Vec::new(),
             requests: 0,
@@ -1087,6 +1092,14 @@ impl ConsoleSession {
         self.reference_registers.clone_from(&import.register_contexts);
         self.active_reference_registers = self.reference_registers.len();
         self.reference_call_register = import.reference_call_register;
+        self.external_slots = import
+            .externals
+            .iter()
+            .map(|(slot, _)| *slot)
+            .filter(|slot| *slot != 0)
+            .collect();
+        self.external_slots.sort_unstable();
+        self.external_slots.dedup();
         self.reference_mode_register = mode_register_alias(&import.cfg.spec_root, &import.language);
         self.new_reference_targets.clear();
         if self.reference_labels.is_none() {
@@ -1208,6 +1221,7 @@ impl ConsoleSession {
             active: self.active_reference_registers,
             call_register: self.reference_call_register,
             mode_register: self.reference_mode_register.clone(),
+            external_slots: self.external_slots.clone(),
         }
     }
 
@@ -1249,6 +1263,7 @@ impl ConsoleSession {
         self.active_reference_registers = spec.active;
         self.reference_call_register = spec.call_register;
         self.reference_mode_register = spec.mode_register.clone();
+        self.external_slots.clone_from(&spec.external_slots);
         self.new_reference_targets.clear();
         self.send_reference_fixups(import)
     }
@@ -1326,6 +1341,9 @@ impl ConsoleSession {
                 " 0x{:x} 0x{mapping_end:x} {}",
                 mapping.vaddr, mapping.flags & 7
             );
+        }
+        for slot in &self.external_slots {
+            let _ = write!(script, " --external 0x{slot:x}");
         }
         if command == "references" {
             if let Some(register) = self.reference_call_register {

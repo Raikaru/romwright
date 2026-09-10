@@ -152,8 +152,10 @@ def main():
     args.corpus_dir = args.corpus_dir.resolve()
     args.ghidra = args.ghidra.resolve()
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
+    matrix = set(lock["oracle_matrix"]["architectures"])
     required = {(row["architecture"], row["variant"]): row
-                for row in lock["entries"] if row["format"] == "elf"}
+                for row in lock["entries"]
+                if row["format"] == "elf" and row["architecture"] in matrix}
     if len(required) != 20:
         raise ValueError("m1-007 requires the 20-entry ELF matrix")
     setup_error = None

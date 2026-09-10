@@ -36,5 +36,9 @@ Ghidra (C1), improvements over stock Ghidra measured against ground truth
 - M5 end-to-end game sessions on the human-approved targets.
 - M6 user/analyzer documentation, release infrastructure and contributor
   sustainability. Releases and outside contribution merges remain reserved.
+- M12 version diffing: match the functions of one program onto another and
+  carry names across, so a decompilation with symbols can name a retail
+  image. Scored against symbol truth the matcher never reads; an anchor's
+  precision is 1.0 by construction and gated as such.
 
 `STATUS.md` records the current milestone, exact next task and measured evidence.

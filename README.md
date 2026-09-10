@@ -34,6 +34,7 @@ crates/lre-db      SQLite durable store (WAL, FKs, schema versioning)
 crates/lre-core    CoreService facade: store + native import/worker API
 crates/lre-worker  no-JVM decompiler worker (pinned ghidra_opt protocol)
 crates/lre-api     versioned stdio/HTTP Core API
+crates/lre-diff    whole-program structural diff, name porting across builds
 crates/lre-debug isolated GDB/LLDB read-only debugger backend
 crates/lre-cli     scriptable CLI over the facade
 desktop/ventris-qt Qt 6 Widgets workstation
@@ -1240,6 +1241,50 @@ read ignoring which program asked, a write landing in every program, a new
 undriven arm, a carried gate that stops passing, and an active write excused
 as inert.
 
+## Carrying names from one build onto another
+
+`lre-cli diff <program> --reference DIR` matches the functions of a program in
+another project onto this one and ports the reference's names across
+(`--apply` writes them, as one undoable command). It answers "which function
+in B is this function of A", which is a different question from "what known
+function is this": the second is `lre-cli match`'s signature database, and no
+decompiler or JVM is involved in either.
+
+The matcher works on facts the import already recorded: instruction, block and
+edge counts per body, loops, largest block, digests of the body bytes and of
+the decoded shape (`function_features`, schema v17), plus calls, callers,
+string reads and named imports. Two strategies over exactly those facts:
+
+- `--matcher greedy` expands a set of anchors over the call graph, taking the
+  best local pair each round — the maximum-common-edge-subgraph strategy of
+  Dullien & Rolles, *Graph-based comparison of executable objects* (SSTIC'05).
+- `--matcher nap` (default) solves the whole assignment at once as a network
+  alignment problem, maximising `λ·content + (1−λ)·induced call edges` over
+  one-to-one mappings — the formulation of Mengin & Rossi,
+  *Binary Diffing as a Network Alignment Problem* (arXiv:2112.15337), whose
+  quadratic objective is maximised here by integer projected fixed point
+  iteration (Leordeanu, Hebert & Sukthankar, NIPS'09) over a sparse candidate
+  set, each iteration solving an exact minimum-cost-flow assignment.
+
+Scored against symbol truth the matcher never reads
+(`tests/m12-001_diff.py`, `benchmarks/reports/m12-001.json`):
+
+| Case | Truth | Precision | Recall | Ported names right |
+|---|---|---|---|---|
+| every corpus row against its unstripped twin | address identity, 1903 pairs | **1.0** | **1.0** | **1.0** over 1702 |
+| `plain_o0` against `plain_o2`/`plain_pie`, 4 architectures | name identity, 147 pairs | **1.0** | 0.8639 | 0.9535 |
+| two Agent Under Fire modules, target stripped | name identity, 1176 pairs | 0.9662 | 0.9473 | 0.9272 over 1208 |
+| anchors alone, pooled over every row above | | **1.0** | | over 2802 judged |
+
+An anchor is an identification rather than a guess — a key unique on both
+sides — so its precision is gated at 1.0 and is not a tunable floor. Every
+error is in the propagated class: 0.878 for the network alignment against
+0.868 for the greedy strategy on the module pair. On a harder pair still —
+zlib built at `-O0` and at `-O2`, 147 named functions, target stripped — the
+alignment measures precision 0.908, recall 0.469 and 0.825 of ported names
+right, against 0.879, 0.395 and 0.783 for the greedy strategy, which is why
+the alignment is the default.
+
 ## What a second import must not disturb
 
 Analysing one image and then importing another into the same project is the
@@ -1717,7 +1762,9 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m10-002.json` | `m10-002` | M10 | pass | `images.follow_facts_compared` 8; `images.followed_programs` 2; `images.ui_programs` 2; `images.ui_switch_functions` 112 | `tests/m10-002_image_navigation.py` |
 | `m10-003.json` | `m10-003` | M10 | pass | `edits.reads_compared` 16; `edits.revision_after_second_import` 9; `edits.win_functions` 112 | `tests/m10-003_edit_durability.py` |
 | `m10-004.json` | `m10-004` | M10 | pass | `images.methods_excused` 0; `images.methods_program_scoped` 41; `images.reads_discriminating` 13; `images.reads_isolated` 54; `images.writes_inert` 4; `images.writes_isolated` 14 | `tests/m10-004_multi_image_milestone.py` |
-| `m11-001.json` | `m11-001` | M11 | pass | `session.bounded_analyzed` 1716; `session.decompile_ms` 17.4568; `session.decompiled` 5; `session.edit_survived_reimport` 1.0000; `session.fn_precision` 0.9384; `session.fn_recall` 0.9799; `session.functions_matched` 8351; `session.functions_recovered` 8899; `session.import_peak_kb` 65248; `session.import_wall_s` 11.4900; `session.inference_analyzed` 1744; `session.language_is_powerpc_be32` 1.0000; `session.listing_rows` 16; `session.live_bytes` 16; `session.memory_bytes` 8; `session.oracle_functions` 8522; `session.page_ms` 371.0068; `session.worker_recycles` 8; `session.xrefs_rows` 1 | `tests/m11-001_game_session.py` |
+| `m11-001.json` | `m11-001` | M11 | pass | `session.bounded_analyzed` 1770; `session.decompile_ms` 19.0394; `session.decompiled` 5; `session.edit_survived_reimport` 1.0000; `session.fn_precision` 0.9093; `session.fn_recall` 0.9802; `session.functions_matched` 8353; `session.functions_recovered` 9186; `session.import_peak_kb` 228664; `session.import_wall_s` 45.0100; `session.inference_analyzed` 1770; `session.language_is_powerpc_be32` 1.0000; `session.listing_rows` 16; `session.memory_bytes` 8; `session.oracle_functions` 8522; `session.page_ms` 312.1910; `session.worker_recycles` 10; `session.xrefs_rows` 1 | `tests/m11-001_game_session.py` |
+| `m11-002.json` | `m11-002` | M11 | pass | boot.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 25 ms), 1206 inferred; base.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 22 ms), 1206 inferred; Movie.elf: 1678 functions in 7.1 s, recall 0.9550 precision 0.7849 over 1379 symbols, 5 decompiled (median 21 ms), 2415 inferred; driving.elf: 5954 functions in 25.4 s, recall 0.9669 precision 0.9172 over 5648 symbols, 5 decompiled (median 28 ms), 1498 inferred | `tests/m11-002_game_modules.py` |
+| `m12-001.json` | `m12-001` | M12 | recorded | recorded | `tests/m12-001_diff.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |
@@ -1749,7 +1796,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m3-003.json` | `m3-003` | M3 | pass | 20 pass, 0 fail | `tests/m3-003_regression.py` |
 | `m4-001.json` | `m4-001` | M4 | pass | recorded | `tests/m4-001_register_params.py` |
 | `m4-002.json` | `m4-002` | M4 | pass | `improvement.arity_correct_native_default` 1236; `improvement.arity_correct_native_enabled` 1637; `improvement.arity_correct_stock` 1236; `improvement.arity_truth_functions` 1640; `improvement.passes_default_off` 2; `improvement.passes_gated` 2; `improvement.residual_dead_parameters` 3 | `tests/m4-002_improvement_milestone.py` |
-| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.language-variant` 3; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 19; `parity.class.type-stronger` 58; `parity.functions_compared` 1845; `parity.functions_fact_attributed` 84; `parity.functions_token_identical` 1761; `parity.functions_unattributed` 0; `parity.languages_blocked` 5; `parity.languages_bundled` 9; `parity.languages_measured` 4; `parity.rows_measured` 16 | `tests/m4-003_language_parity.py` |
+| `m4-003.json` | `m4-003` | M4 | pass | `parity.class.data-name-convention` 4; `parity.class.data-type-unknown` 4; `parity.class.language-variant` 3; `parity.class.missing-stack-frame` 4; `parity.class.name-convention` 11; `parity.class.name-rendering` 12; `parity.class.oracle-warning` 23; `parity.class.type-stronger` 66; `parity.functions_compared` 1892; `parity.functions_fact_attributed` 96; `parity.functions_token_identical` 1796; `parity.functions_unattributed` 0; `parity.languages_blocked` 1; `parity.languages_bundled` 9; `parity.languages_measured` 6; `parity.languages_unreached` 2; `parity.rows_measured` 21 | `tests/m4-003_language_parity.py` |
 | `m4-004.json` | `m4-004` | M4 | pass | `data.fallback_names` 0; `data.invented_labels` 0; `data.labels_rendered` 1; `data.slots_rendered` 1; `data.strings_rendered` 1 | `tests/m4-004_data_names.py` |
 | `m4-005.json` | `m4-005` | M4 | pass | `flow.functions_untouched` 6; `flow.jumptable_warnings` 0; `flow.thunks_direct` 1; `flow.thunks_linkage` 1; `flow.unreachable_warnings` 0 | `tests/m4-005_thunk_flow.py` |
 | `m4-006.json` | `m4-006` | M4 | pass | `plt.overrides` 1; `plt.pe_overrides` 0; `plt.resolver_slot` 2111720; `plt.thunks_unchanged` 2 | `tests/m4-006_plt_header.py` |
@@ -1788,6 +1835,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-010.json` | `m5-010` | M5 | pass | `initializer.name.agreement` 0.9553; `initializer.name.equivalent` 74; `initializer.name.missing` 0; `initializer.name.pattern_labels` 11; `initializer.name.unbacked` 0; `initializer.name.unexplained` 0; `initializer.slots` 40 | `tests/m5-010_initializer_names.py` |
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
 | `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 104; `diagnostic_runs` 12; `generated_rows` 103; `published_ids` 87 | `tests/m5-012_evidence_index.py` |
+| `m5-013.json` | `m5-013` | M5 | pass | `arm9.module_bytes` 1122040; `arm9.stored_bytes` 762644; `fn.precision` 0.9914; `fn.recall` 0.6594; `fn.recovered` 7329; `fn.symbols` 11019 | `tests/m5-013_nds.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |

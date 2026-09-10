@@ -1,0 +1,415 @@
+#!/usr/bin/env python3
+"""m12-001: whole-program structural diff, scored against symbol truth.
+
+Three claims, each with its own ground truth and none of them using a fact
+the matcher is allowed to see:
+
+1. `twins` -- every corpus row against its own unstripped twin. Same build,
+   so the true correspondence is address identity. The matcher never reads
+   the target's names (the target is the stripped binary) and never reads an
+   address as evidence, so a perfect score here means the structural facts
+   alone identify identical code.
+
+2. `optimisation` -- each architecture's `plain_o0` against its `plain_o2`
+   (and `plain_pie`): the same source, compiled differently. The true
+   correspondence is name identity, taken from the target's unstripped twin,
+   which the matcher never opens.
+
+3. `modules` -- two programs of the same game that share engine code, each
+   with its own symbol table, when they are present on the machine. Real
+   scale, real divergence, names on both sides.
+
+Every row reports precision and recall of the matching and the share of the
+names it would port that are the name the target's own symbols hold. That
+last number is the one an analyst feels.
+"""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import shutil
+import subprocess
+import sqlite3
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+CLI = ROOT / "target" / "release" / "lre-cli"
+
+# Acceptance. The twin rows are the ceiling and must stay exact; the
+# cross-optimisation rows are the measured floor of the current matcher.
+THRESHOLDS = {
+    # Identical code, identified by structure alone: exact, or a fact the
+    # import records is wrong.
+    "twins.precision": 1.0,
+    "twins.recall": 1.0,
+    "twins.name_precision": 1.0,
+    # An anchor is an identification, not a guess: a key unique on both
+    # sides. One wrong anchor means the key does not identify what it claims
+    # to, so this is 1.0 everywhere and is not a tunable floor.
+    "anchor.precision": 1.0,
+    # Same source, different codegen (measured 1.0 / 0.864 / 0.954).
+    "optimisation.precision": 0.95,
+    "optimisation.recall": 0.75,
+    "optimisation.name_precision": 0.90,
+    # Two programs sharing engine code, target stripped (measured 0.966 /
+    # 0.947 / 0.927). The gap from 1.0 is entirely in the propagated class:
+    # anchors are exact, alignment is 0.878 on this pair.
+    "modules.precision": 0.95,
+    "modules.recall": 0.93,
+    "modules.name_precision": 0.90,
+}
+
+# Evidence classes that identify a function outright rather than scoring it.
+ANCHOR_EVIDENCE = {"body", "shape", "import", "name", "string", "profile", "global"}
+
+GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_")
+
+
+def is_generated(name: str) -> bool:
+    bare = name.removeprefix("thunk_")
+    return any(bare.startswith(prefix) for prefix in GENERATED)
+
+
+def import_program(binary: Path, project: Path, name: str) -> None:
+    if project.exists():
+        shutil.rmtree(project)
+    project.mkdir(parents=True)
+    result = subprocess.run(
+        [str(CLI), "import", str(binary), "--project", str(project), "--name", name],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise ValueError(f"import {binary.name} failed: {result.stderr[-800:]}")
+
+
+def function_names(project: Path, program: str) -> dict[int, str]:
+    connection = sqlite3.connect(project / "project.sqlite")
+    rows = connection.execute(
+        "SELECT f.entry, f.name FROM functions f JOIN programs p ON p.id = f.program_id"
+        " WHERE p.name = ?",
+        (program,),
+    ).fetchall()
+    return {int(entry, 16): name for entry, name in rows}
+
+
+def diff(target_project: Path, target: str, reference_project: Path, reference: str) -> dict:
+    result = subprocess.run(
+        [
+            str(CLI),
+            "diff",
+            target,
+            "--project",
+            str(target_project),
+            "--reference",
+            str(reference_project),
+            "--reference-name",
+            reference,
+            "--json",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise ValueError(f"diff failed: {result.stderr[-800:]}")
+    return json.loads(result.stdout)
+
+
+def score(
+    identifier: str,
+    kind: str,
+    report: dict,
+    truth: dict[int, int],
+    target_names: dict[int, str],
+) -> dict:
+    matched = {
+        (row["reference"]["offset"], row["target"]["offset"]) for row in report["matches"]
+    }
+    judged = [(left, right) for left, right in matched if left in truth]
+    correct = [1 for left, right in judged if truth[left] == right]
+    # Per evidence class, so a regression names the rule that caused it.
+    classes: dict[str, list[int]] = {}
+    for row in report["matches"]:
+        left, right = row["reference"]["offset"], row["target"]["offset"]
+        if left not in truth:
+            continue
+        bucket = classes.setdefault(row["evidence"], [0, 0])
+        bucket[0] += 1
+        bucket[1] += int(truth[left] == right)
+    ported = {row["entry"]["offset"]: row["name"] for row in report["names"]}
+    # Only names the target's own symbols can judge count towards precision:
+    # a name ported onto a function the twin never named is unjudged, not
+    # wrong.
+    judged_names = {
+        address: name
+        for address, name in ported.items()
+        if not is_generated(target_names.get(address, "FUN_0"))
+    }
+    agree = sum(
+        1 for address, name in judged_names.items() if target_names.get(address) == name
+    )
+    return {
+        "id": identifier,
+        "kind": kind,
+        "truth": len(truth),
+        "matched": len(matched),
+        "judged": len(judged),
+        "correct": len(correct),
+        "precision": round(len(correct) / len(judged), 4) if judged else 0.0,
+        "recall": round(len(correct) / len(truth), 4) if truth else 0.0,
+        "ported": len(ported),
+        "ported_judged": len(judged_names),
+        "ported_correct": agree,
+        "name_precision": round(agree / len(judged_names), 4) if judged_names else 0.0,
+        "evidence": {
+            name: {"judged": judged_count, "correct": correct_count}
+            for name, (judged_count, correct_count) in sorted(classes.items())
+        },
+        "anchors": report["anchors"],
+        "reference_functions": report["reference_functions"],
+        "target_functions": report["target_functions"],
+    }
+
+
+def name_truth(
+    reference_names: dict[int, str],
+    target_named: dict[int, str],
+    target_recovered: dict[int, str],
+) -> dict[int, int]:
+    """Reference entry -> target entry, by the name both symbol tables hold.
+
+    A name the target holds at two addresses proves nothing about which one
+    is meant, and a name at an address the stripped import did not recover as
+    a function cannot be matched at all; both are left out.
+    """
+    by_name: dict[str, list[int]] = {}
+    for address, name in target_named.items():
+        by_name.setdefault(name, []).append(address)
+    truth = {}
+    for address, name in reference_names.items():
+        if is_generated(name):
+            continue
+        candidates = [
+            candidate for candidate in by_name.get(name, []) if candidate in target_recovered
+        ]
+        if len(candidates) == 1:
+            truth[address] = candidates[0]
+    return truth
+
+
+def corpus_rows(corpus: Path, work: Path) -> tuple[list[dict], list[dict]]:
+    manifest = json.loads((corpus / "manifest.json").read_text())
+    entries = [entry for entry in manifest["entries"] if entry.get("status") == "ok"]
+    imported: dict[str, tuple[Path, dict[int, str], Path, dict[int, str]]] = {}
+    twins: list[dict] = []
+    for entry in entries:
+        identifier = f"{entry['architecture']}_{entry['variant']}"
+        reference_project = work / f"{identifier}-twin"
+        target_project = work / f"{identifier}-stripped"
+        import_program(corpus / entry["unstripped_twin"], reference_project, "reference")
+        import_program(corpus / entry["binary"], target_project, "target")
+        reference_names = function_names(reference_project, "reference")
+        target_recovered = function_names(target_project, "target")
+        imported[identifier] = (
+            reference_project,
+            reference_names,
+            target_project,
+            target_recovered,
+        )
+        # Same build: address identity, over what both sides recovered.
+        truth = {
+            address: address for address in reference_names if address in target_recovered
+        }
+        report = diff(target_project, "target", reference_project, "reference")
+        row = score(identifier, "twins", report, truth, reference_names)
+        twins.append(row)
+        print(json.dumps(row), flush=True)
+
+    # Cross-optimisation: same source, different codegen.
+    optimisation: list[dict] = []
+    architectures = sorted({entry["architecture"] for entry in entries})
+    for architecture in architectures:
+        pairs = [
+            (f"{architecture}_plain_o0", f"{architecture}_plain_o2"),
+            (f"{architecture}_plain_o2", f"{architecture}_plain_o0"),
+            (f"{architecture}_plain_o0", f"{architecture}_plain_pie"),
+        ]
+        for left, right in pairs:
+            if left not in imported or right not in imported:
+                continue
+            _, reference_names, _, _ = imported[left]
+            reference_project = imported[left][0]
+            target_project, target_named, _, target_recovered = (
+                imported[right][2],
+                imported[right][1],
+                imported[right][2],
+                imported[right][3],
+            )
+            truth = name_truth(reference_names, target_named, target_recovered)
+            if not truth:
+                continue
+            report = diff(target_project, "target", reference_project, "reference")
+            row = score(f"{left}->{right}", "optimisation", report, truth, target_named)
+            optimisation.append(row)
+            print(json.dumps(row), flush=True)
+    return twins, optimisation
+
+
+def module_rows(paths: list[Path], work: Path) -> list[dict]:
+    loaded = {}
+    for path in paths:
+        stripped = work / f"{path.stem}.stripped"
+        strip = shutil.which("llvm-strip") or shutil.which("strip")
+        if strip is None:
+            return []
+        subprocess.run(
+            [strip, "--strip-all", "-o", str(stripped), str(path)],
+            check=True,
+            capture_output=True,
+        )
+        named_project = work / f"{path.stem}-named"
+        stripped_project = work / f"{path.stem}-stripped"
+        import_program(path, named_project, path.stem)
+        import_program(stripped, stripped_project, path.stem)
+        loaded[path.stem] = (
+            named_project,
+            function_names(named_project, path.stem),
+            stripped_project,
+            function_names(stripped_project, path.stem),
+        )
+    rows = []
+    for left in loaded:
+        for right in loaded:
+            if left == right:
+                continue
+            reference_project, reference_names, _, _ = loaded[left]
+            _, target_named, target_project, target_recovered = loaded[right]
+            truth = name_truth(reference_names, target_named, target_recovered)
+            if not truth:
+                continue
+            report = diff(target_project, right, reference_project, left)
+            row = score(f"{left}->{right}", "modules", report, truth, target_named)
+            rows.append(row)
+            print(json.dumps(row), flush=True)
+    return rows
+
+
+def aggregate(rows: list[dict], kind: str) -> dict:
+    subset = [row for row in rows if row["kind"] == kind]
+    if not subset:
+        return {}
+    totals = {
+        "rows": len(subset),
+        "judged": sum(row["judged"] for row in subset),
+        "correct": sum(row["correct"] for row in subset),
+        "truth": sum(row["truth"] for row in subset),
+        "ported_judged": sum(row["ported_judged"] for row in subset),
+        "ported_correct": sum(row["ported_correct"] for row in subset),
+    }
+    # Pooled, not averaged: a row with three functions must not weigh as much
+    # as one with four hundred.
+    totals["precision"] = round(totals["correct"] / max(totals["judged"], 1), 4)
+    totals["recall"] = round(totals["correct"] / max(totals["truth"], 1), 4)
+    totals["name_precision"] = round(
+        totals["ported_correct"] / max(totals["ported_judged"], 1), 4
+    )
+    return totals
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--corpus-dir", type=Path, required=True)
+    parser.add_argument("--modules", type=Path, nargs="*", default=[])
+    parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--report", type=Path)
+    arguments = parser.parse_args()
+    arguments.work.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        ["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True
+    )
+
+    twins, optimisation = corpus_rows(arguments.corpus_dir, arguments.work)
+    present = [path for path in arguments.modules if path.is_file()]
+    modules = module_rows(present, arguments.work) if present else []
+    rows = twins + optimisation + modules
+
+    measured = {}
+    for kind in ("twins", "optimisation", "modules"):
+        totals = aggregate(rows, kind)
+        if totals:
+            measured[kind] = totals
+    # Anchors pooled over every row, and every class named separately.
+    classes: dict[str, list[int]] = {}
+    for row in rows:
+        for name, counts in row["evidence"].items():
+            bucket = classes.setdefault(name, [0, 0])
+            bucket[0] += counts["judged"]
+            bucket[1] += counts["correct"]
+    anchor_judged = sum(
+        counts[0] for name, counts in classes.items() if name in ANCHOR_EVIDENCE
+    )
+    anchor_correct = sum(
+        counts[1] for name, counts in classes.items() if name in ANCHOR_EVIDENCE
+    )
+    measured["anchor"] = {
+        "judged": anchor_judged,
+        "correct": anchor_correct,
+        "precision": round(anchor_correct / max(anchor_judged, 1), 4),
+    }
+    measured["classes"] = {
+        name: {
+            "judged": counts[0],
+            "correct": counts[1],
+            "precision": round(counts[1] / max(counts[0], 1), 4),
+        }
+        for name, counts in sorted(classes.items())
+    }
+
+    failures = []
+    for key, threshold in THRESHOLDS.items():
+        kind, metric = key.split(".")
+        if kind not in measured:
+            if kind == "modules":
+                continue  # scored only where the game modules are present
+            failures.append(f"{kind} rows missing")
+            continue
+        value = measured[kind][metric]
+        if value < threshold:
+            failures.append(f"{key} {value} < {threshold}")
+
+    report = {
+        "id": "m12-001",
+        "milestone": "M12",
+        "criterion": "whole-program structural diff, scored against symbol truth",
+        "recorded_at": datetime.now(timezone.utc).isoformat(),
+        "thresholds": THRESHOLDS,
+        "measured": measured,
+        "rows": rows,
+        "status": "pass" if not failures else "fail",
+        "failures": failures,
+    }
+    if arguments.report:
+        arguments.report.parent.mkdir(parents=True, exist_ok=True)
+        arguments.report.write_text(json.dumps(report, indent=2) + "\n")
+    if failures:
+        print(f"FAIL: {'; '.join(failures)}", file=sys.stderr)
+        return 1
+    summary = "; ".join(
+        f"{kind}: precision {totals['precision']}, recall {totals['recall']},"
+        f" names {totals['name_precision']} over {totals['rows']} rows"
+        for kind, totals in measured.items()
+        if "rows" in totals
+    )
+    summary += (
+        f"; anchors {measured['anchor']['precision']}"
+        f" over {measured['anchor']['judged']}"
+    )
+    print(f"m12-001: PASS ({summary})")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
