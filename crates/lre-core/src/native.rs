@@ -1583,6 +1583,72 @@ fn function_blocks(
     blocks
 }
 
+/// Keeps only the blocks that can reach one of `dispatches`, renumbering the
+/// successor edges.
+///
+/// The interpreter's cost is the p-code it decodes, and a dispatch's answer
+/// depends only on what runs before it: blocks the dispatch cannot be
+/// reached from contribute nothing to its index. Ghidra's own jump-table
+/// analysis works the same way round -- `JumpBasic::findDeterminingVarnodes`
+/// walks *backwards* from the branch rather than forwards from the entry.
+///
+/// The function's entry block is retained whenever a dispatch is reachable
+/// from it, so index 0 remains the block the analysis seeds.
+fn blocks_reaching(
+    blocks: &[(u64, Vec<u64>, Vec<usize>)],
+    dispatches: &[u64],
+) -> Vec<(u64, Vec<u64>, Vec<usize>)> {
+    let mut keep = vec![false; blocks.len()];
+    let mut stack: Vec<usize> = Vec::new();
+    for (index, (_, addresses, _)) in blocks.iter().enumerate() {
+        if addresses.iter().any(|address| dispatches.contains(address)) && !keep[index] {
+            keep[index] = true;
+            stack.push(index);
+        }
+    }
+    if stack.is_empty() {
+        return Vec::new();
+    }
+    while let Some(index) = stack.pop() {
+        for (predecessor, (_, _, successors)) in blocks.iter().enumerate() {
+            if successors.contains(&index) && !keep[predecessor] {
+                keep[predecessor] = true;
+                stack.push(predecessor);
+            }
+        }
+    }
+    // Relative order is preserved, so the entry block keeps index 0 when it
+    // is kept at all.
+    let mut renumbered = vec![usize::MAX; blocks.len()];
+    let mut next = 0usize;
+    for (index, kept) in keep.iter().enumerate() {
+        if *kept {
+            renumbered[index] = next;
+            next += 1;
+        }
+    }
+    blocks
+        .iter()
+        .enumerate()
+        .filter(|(index, _)| keep[*index])
+        .map(|(_, (start, addresses, successors))| {
+            (
+                *start,
+                addresses.clone(),
+                successors
+                    .iter()
+                    .filter_map(|successor| {
+                        renumbered
+                            .get(*successor)
+                            .copied()
+                            .filter(|renumbered| *renumbered != usize::MAX)
+                    })
+                    .collect(),
+            )
+        })
+        .collect()
+}
+
 fn switch_window(
     imp: &NativeImport,
     branch: u64,
@@ -1697,6 +1763,12 @@ fn recover_switch_tables_native(
     let mut undecodable = 0usize;
     let mut sja_refusals = sja::Refusals::default();
     let mut sja_resolved = 0usize;
+    // One analysis per function, not per dispatch: interpreting a function
+    // answers every indirect branch in it at once, and libc has functions
+    // with several. Decoding and interpreting once per candidate did the
+    // same work up to a dozen times over.
+    let mut interpreted_functions: std::collections::HashMap<u64, Option<sja::Analysis>> =
+        std::collections::HashMap::new();
     for &(branch, entry, end) in branches {
         let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
         if window_addresses.is_empty() {
@@ -1755,13 +1827,10 @@ fn recover_switch_tables_native(
                 }
             }
         }
-        // The abstract interpretation over the whole function first: it
-        // needs no particular shape, so it answers dispatches the
-        // pattern-shaped pass refuses. The older pass stays as the
-        // fallback, and both are measured (`sja_resolved` below).
-        // The pattern-shaped pass first: it is cheap, and it answers most
-        // dispatches. The abstract interpretation is the fallback, because
-        // it decodes the whole function.
+        // The pattern-shaped pass first: it decodes a window around the
+        // dispatch, so it is cheap, and it answers most dispatches. The
+        // abstract interpretation is the fallback, because it decodes and
+        // interprets the whole function.
         let quick = {
             let view = ImageView { imp, big_endian };
             vsa::recover(&view, branch, &guard, window, &mut refusals)
@@ -1772,48 +1841,68 @@ fn recover_switch_tables_native(
         let proven = if quick.is_some() || std::env::var_os("VENTRIS_SJA").is_none() {
             None
         } else {
-            let blocks = function_blocks(imp, entry, end);
-            let mut interpreted: Option<vsa::SwitchTable> = None;
-            if !blocks.is_empty() {
+            if !interpreted_functions.contains_key(&entry) {
+                // Every dispatch this round asks about in this function, so
+                // one analysis answers them all and the slice covers them
+                // all.
+                let dispatches: Vec<u64> = branches
+                    .iter()
+                    .filter(|&&(_, candidate_entry, _)| candidate_entry == entry)
+                    .map(|&(candidate, _, _)| candidate)
+                    .collect();
+                let blocks = blocks_reaching(&function_blocks(imp, entry, end), &dispatches);
                 let mut wanted: Vec<u64> = blocks
                     .iter()
                     .flat_map(|(_, addresses, _)| addresses.iter().copied())
                     .collect();
                 wanted.sort_unstable();
                 wanted.dedup();
-                if let Ok(decoded) = session.pcode_batch(&wanted) {
-                    let by_address: std::collections::HashMap<u64, _> = decoded
-                        .into_iter()
-                        .map(|instruction| (instruction.address, instruction))
-                        .collect();
-                    let graph: Vec<sja::Block> = blocks
-                        .iter()
-                        .map(|(start, addresses, successors)| sja::Block {
-                            start: *start,
-                            instructions: addresses
-                                .iter()
-                                .filter_map(|address| by_address.get(address).cloned())
-                                .collect(),
-                            successors: successors.clone(),
-                        })
-                        .collect();
+                let graph: Vec<sja::Block> = match session.pcode_batch(&wanted) {
+                    Ok(decoded) if !wanted.is_empty() => {
+                        let by_address: std::collections::HashMap<u64, _> = decoded
+                            .into_iter()
+                            .map(|instruction| (instruction.address, instruction))
+                            .collect();
+                        blocks
+                            .iter()
+                            .map(|(_, addresses, successors)| sja::Block {
+                                instructions: addresses
+                                    .iter()
+                                    .filter_map(|address| by_address.get(address).cloned())
+                                    .collect(),
+                                successors: successors.clone(),
+                            })
+                            .collect()
+                    }
+                    _ => Vec::new(),
+                };
+                // A function whose blocks or p-code could not be had is
+                // cached as unanalysable, so the next dispatch in it does
+                // not pay for the same failure again.
+                let analysed = (!graph.is_empty()).then(|| {
                     let view = ImageView { imp, big_endian };
-                    // Only this candidate's outcome is counted: analysing a
-                    // function answers every indirect branch in it, and
-                    // adding all of them made the refusal totals a multiple
-                    // of the dispatches actually asked about.
-                    let analysis = sja::analyse(&view, &graph, (entry, end));
-                    interpreted = analysis
+                    sja::analyse(&view, &graph, (entry, end))
+                });
+                interpreted_functions.insert(entry, analysed);
+            }
+            // Only this candidate's outcome is counted: analysing a function
+            // answers every indirect branch in it, and adding all of them
+            // made the refusal totals a multiple of the dispatches actually
+            // asked about.
+            interpreted_functions
+                .get(&entry)
+                .and_then(|analysis| analysis.as_ref())
+                .and_then(|analysis| {
+                    let table = analysis
                         .tables
                         .iter()
                         .find(|table| table.branch == branch)
                         .cloned();
-                    if interpreted.is_none() {
-                        sja_refusals.merge_for(branch, &analysis);
+                    if table.is_none() {
+                        sja_refusals.merge_for(branch, analysis);
                     }
-                }
-            }
-            interpreted
+                    table
+                })
         };
         let table = match proven {
             Some(table) => {
@@ -2045,6 +2134,13 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         let docs = match outcome {
             Ok(docs) => docs,
             Err(error) => {
+                // A worker that cannot run degrades this round to no
+                // answers at all, which reads exactly like a body nothing
+                // could follow. Recording it only in `discovery_note` made
+                // a stale worker binary (one refusing a newer store schema)
+                // look like a regression in the analysis twice over, so it
+                // is said out loud as well.
+                eprintln!("switch recovery decompile failed: {error}");
                 imp.discovery_note = Some(format!("switch recovery decompile failed: {error}"));
                 continue;
             }
@@ -3443,6 +3539,53 @@ pub fn candidate_flow_is_valid(
 mod tests {
     use super::*;
     use super::discovery::flow_discover_with_provider;
+
+    #[test]
+    fn a_slice_keeps_what_reaches_the_dispatch_and_drops_what_follows_it() {
+        // 0 -> {1, 2}, 1 -> 3 (the dispatch), 2 -> 4 (a sibling path), and
+        // 3 -> 5 (what the cases run). Only 0, 1 and 3 decide the index.
+        let blocks = vec![
+            (0x1000, vec![0x1000], vec![1, 2]),
+            (0x1010, vec![0x1010], vec![3]),
+            (0x1020, vec![0x1020], vec![4]),
+            (0x1030, vec![0x1030, 0x1034], vec![5]),
+            (0x1040, vec![0x1040], vec![]),
+            (0x1050, vec![0x1050], vec![]),
+        ];
+        let sliced = blocks_reaching(&blocks, &[0x1034]);
+        assert_eq!(
+            sliced
+                .iter()
+                .map(|(start, _, _)| *start)
+                .collect::<Vec<_>>(),
+            vec![0x1000, 0x1010, 0x1030]
+        );
+        // The entry keeps index 0, its edge to the dropped sibling is gone,
+        // and the dispatch block's successor renumbers or disappears.
+        assert_eq!(sliced[0].2, vec![1]);
+        assert_eq!(sliced[1].2, vec![2]);
+        assert_eq!(sliced[2].2, Vec::<usize>::new());
+    }
+
+    #[test]
+    fn a_slice_keeps_a_loop_that_reaches_the_dispatch() {
+        // A dispatch inside a loop: the back edge is part of what sets the
+        // index, so both blocks stay and the back edge survives.
+        let blocks = vec![
+            (0x1000, vec![0x1000], vec![1]),
+            (0x1010, vec![0x1010], vec![2, 0]),
+            (0x1020, vec![0x1020], vec![]),
+        ];
+        let sliced = blocks_reaching(&blocks, &[0x1010]);
+        assert_eq!(sliced.len(), 2);
+        assert_eq!(sliced[1].2, vec![0]);
+    }
+
+    #[test]
+    fn a_slice_of_a_function_with_no_dispatch_is_empty() {
+        let blocks = vec![(0x1000, vec![0x1000], vec![])];
+        assert!(blocks_reaching(&blocks, &[0x2000]).is_empty());
+    }
     #[test]
     fn elf_data_pointer_waits_for_flow_and_walks_indirect_call_fallthrough() {
         use crate::native_runtime::{FlowKind, FlowResult};

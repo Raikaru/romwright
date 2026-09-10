@@ -739,6 +739,34 @@ mod tests {
         }
     }
 
+    /// The same dispatch with a guard in front of it: `index < bound`, then
+    /// a conditional branch away. `compare_index` false bounds an unrelated
+    /// register instead, which is the case that must not size this table.
+    fn guarded(bound: u64, compare_index: bool) -> Vec<PcodeInstruction> {
+        let mut window = dispatch();
+        let operand = if compare_index {
+            varnode("register", 0x0, 8)
+        } else {
+            varnode("register", 0x40, 8)
+        };
+        window[0].ops.splice(
+            0..0,
+            [
+                op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("const", bound, 8), operand],
+                ),
+                op(
+                    "CBRANCH",
+                    None,
+                    vec![varnode("ram", 0x1700, 8), varnode("unique", 0x200, 1)],
+                ),
+            ],
+        );
+        window
+    }
+
     #[test]
     fn a_dispatch_with_no_guard_is_not_answered() {
         // Four code targets and then a word that is not code look like a
