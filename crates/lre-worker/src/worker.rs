@@ -414,6 +414,34 @@ impl NativeWorker {
         self.run_command(provider, "decompileAt", &[arch_id.as_bytes(), &addr])
     }
 
+    /// Structures a control-flow graph through the decompiler's own
+    /// `structureGraph` command (`ghidra_process.cc:503`): no function, no
+    /// p-code and no decompilation, just `structureLoops`,
+    /// `calcForwardDominator` and `CollapseStructure` over the graph given.
+    ///
+    /// This is what makes our own structuring measurable: both algorithms see
+    /// the same blocks and the same edges, so a difference in goto count is a
+    /// difference in structuring and not in anything upstream of it.
+    pub fn structure_graph(
+        &mut self,
+        provider: &mut ProgramProvider,
+        graph: &crate::structure::ControlFlow,
+    ) -> Result<crate::structure::StructuredBlock> {
+        let arch_id = self.arch_id.to_string();
+        let encoded = graph.encode();
+        let response = self.run_command(
+            provider,
+            "structureGraph",
+            &[arch_id.as_bytes(), &encoded],
+        )?;
+        crate::structure::decode(&response).ok_or_else(|| {
+            WorkerError::Process(format!(
+                "structureGraph answered {} bytes this side cannot decode",
+                response.len()
+            ))
+        })
+    }
+
     /// Decompiles one address, killing the decompiler if it does not answer
     /// within `timeout`.
     ///

@@ -19,8 +19,11 @@
 //! * a graph is `<block index=N>` (`ELEM_BLOCK` 103, `ATTRIB_INDEX` 10)
 //!   whose body is one `<bhead index=i type=NAME>` (`ELEM_BHEAD` 102,
 //!   `ATTRIB_TYPE` 22) per component, then each component's own `<block>`;
-//! * a component of a raw CFG is a `copy` block, which carries
-//!   `ATTRIB_ALTINDEX` (75) -- `BlockCopy::encodeHeader`;
+//! * a component is a `plain` block. Not `copy`: `BlockMap::resolveBlock`
+//!   decodes `t_copy` as `BlockCopy(nullptr)`, and `CollapseStructure` asks a
+//!   block for its split point when it structures a loop
+//!   (`BlockCopy::getSplitPoint` forwards to that null pointer), which kills
+//!   the process on any cyclic graph. `t_plain` answers for itself;
 //! * edges are recorded on the *destination*: `<edge end=SRC rev=POS>`
 //!   (`ELEM_EDGE` 105, `ATTRIB_END` 77, `ATTRIB_REV` 79), where `end` is the
 //!   source block's index and `rev` is that edge's position in the source's
@@ -144,13 +147,12 @@ impl ControlFlow {
         for index in 0..self.blocks.len() {
             open(&mut doc, ELEM_BHEAD);
             signed_attribute(&mut doc, ATTRIB_INDEX, index as i64);
-            string_attribute(&mut doc, ATTRIB_TYPE, "copy");
+            string_attribute(&mut doc, ATTRIB_TYPE, "plain");
             close(&mut doc, ELEM_BHEAD);
         }
         for (index, _) in self.blocks.iter().enumerate() {
             open(&mut doc, ELEM_BLOCK);
             signed_attribute(&mut doc, ATTRIB_INDEX, index as i64);
-            signed_attribute(&mut doc, ATTRIB_ALTINDEX, index as i64);
             for (position, (source, destination)) in self.edges.iter().enumerate() {
                 if *destination != index {
                     continue;
@@ -258,28 +260,12 @@ fn read_block(packed: &[u8], position: &mut usize, kind: String) -> Option<Struc
                         let child = read_block(packed, position, kind)?;
                         block.children.push(child);
                     }
-                    ELEM_EDGE => {
-                        *position = lookahead;
-                        // Edges carry no structuring result: skip attributes
-                        // to the element end and continue.
-                        loop {
-                            let header = *packed.get(*position)?;
-                            if header & 0xc0 == 0xc0 {
-                                *position += 1;
-                                read_id(packed, position, header)?;
-                                read_value(packed, position)?;
-                            } else {
-                                break;
-                            }
-                        }
-                        let header = *packed.get(*position)?;
-                        if header & 0xc0 != 0x80 {
-                            return None;
-                        }
-                        *position += 1;
-                        read_id(packed, position, header)?;
-                    }
-                    _ => return None,
+                    // Anything else is a leaf element this side does not
+                    // model -- `<edge>`, and `<target>` on a goto block,
+                    // which names where the unstructured jump goes. Skipped
+                    // whole, so an upstream addition cannot make a result
+                    // undecodable: the kinds and the shape are what is read.
+                    _ => skip_element(packed, position)?,
                 }
             }
             0x80 => {
@@ -297,6 +283,33 @@ enum Value {
     Unsigned(u64),
     String(String),
     Other,
+}
+
+/// Consumes one element and everything inside it.
+fn skip_element(packed: &[u8], position: &mut usize) -> Option<()> {
+    let mut depth = 0usize;
+    loop {
+        let header = *packed.get(*position)?;
+        *position += 1;
+        match header & 0xc0 {
+            0x40 => {
+                read_id(packed, position, header)?;
+                depth += 1;
+            }
+            0x80 => {
+                read_id(packed, position, header)?;
+                depth -= 1;
+                if depth == 0 {
+                    return Some(());
+                }
+            }
+            0xc0 => {
+                read_id(packed, position, header)?;
+                read_value(packed, position)?;
+            }
+            _ => return None,
+        }
+    }
 }
 
 fn read_id(packed: &[u8], position: &mut usize, header: u8) -> Option<u32> {

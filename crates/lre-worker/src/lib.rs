@@ -5,6 +5,7 @@
 pub mod doc;
 mod prototype;
 pub mod provider;
+pub mod structure;
 pub mod wire;
 pub mod worker;
 
