@@ -453,7 +453,6 @@ jobs:
       - name: Recover jump tables without the decompiler
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
-          VENTRIS_GHIDRA: ${{ env.VENTRIS_GHIDRA }}
         run: |
           python3 tests/m13-001_vsa_switch.py --report "$RUNNER_TEMP/discovery/vsa-switch.json"
       - name: Import a Switch module with no JVM
