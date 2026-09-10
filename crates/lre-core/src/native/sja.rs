@@ -35,7 +35,7 @@
 //! reported as proven; everything else is reported as a refusal with the
 //! reason.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
 
@@ -257,7 +257,6 @@ impl State {
 /// A block of the function, as this pass consumes it.
 #[derive(Debug, Clone)]
 pub struct Block {
-    pub start: u64,
     /// Instructions in address order.
     pub instructions: Vec<PcodeInstruction>,
     /// Successor block indices, in the order the block branches.
@@ -519,7 +518,6 @@ fn run_block<I: Image>(
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
             let inputs: Vec<Value> = op.inputs.iter().map(|input| state.get(input)).collect();
-            let input = |index: usize| inputs.get(index).cloned().unwrap_or(Value::Top);
             match opcode {
                 "COPY" | "INT_ZEXT" | "INT_SEXT" | "SUBPIECE" => {
                     if let (Some(output), Some(value)) = (&op.output, inputs.first()) {
@@ -906,11 +904,6 @@ fn reverse_post_order(blocks: &[Block]) -> Vec<usize> {
     all
 }
 
-/// Every slot the analysis knows a bounded value for, for diagnostics.
-pub fn bounded_slots(state_like: &BTreeSet<u64>) -> usize {
-    state_like.len()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -963,7 +956,6 @@ mod tests {
     /// loads the table and branches: the ordinary switch.
     fn switch_blocks() -> Vec<Block> {
         let guard = Block {
-            start: 0x1000,
             instructions: vec![instruction(
                 0x1000,
                 vec![
@@ -982,7 +974,6 @@ mod tests {
             successors: vec![1],
         };
         let dispatch = Block {
-            start: 0x1010,
             instructions: vec![instruction(
                 0x1010,
                 vec![
@@ -1063,7 +1054,6 @@ mod tests {
     fn a_function_with_no_indirect_branch_answers_nothing() {
         let image = table(&[]);
         let blocks = vec![Block {
-            start: 0x1000,
             instructions: vec![instruction(0x1000, vec![op("COPY", None, vec![])])],
             successors: vec![],
         }];

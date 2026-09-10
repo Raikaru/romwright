@@ -255,8 +255,14 @@ def main() -> int:
         report["reason"] = f"{arguments.binary} is not on this machine"
         print(f"m13-001: SKIPPED ({report['reason']})")
     else:
+        # The switch round spawns `lre-worker`, which refuses a store whose
+        # schema is newer than the one it was built against. Building only
+        # the CLI made a stale worker look like the decompiler path
+        # answering zero dispatches; build both.
         subprocess.run(
-            ["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True
+            ["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+            cwd=ROOT,
+            check=True,
         )
         stock = stock_tables(arguments.binary, arguments.ghidra, arguments.work / "stock")
         vsa, vsa_wall, vsa_phase = imported(
