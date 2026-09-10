@@ -1,0 +1,33 @@
+{
+  "gate": "m14-003",
+  "milestone": "M14",
+  "commit": "345b62ed3282b3d4ed96c268ac08131c74cf1c73",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "query_seconds": 0.25
+  },
+  "metrics": {
+    "load_seconds": 1.377,
+    "libc_functions": 3898,
+    "libc_seeded_at_load": 3898,
+    "budgeted_pass_seconds": 4.074,
+    "analysed_in_pass": 100,
+    "revision_moved": 100,
+    "worst_query_seconds": {
+      "functions": 0.0629,
+      "status": 0.0509,
+      "symbols": 0.0417
+    },
+    "small_functions": 405,
+    "small_rounds_to_finish": 3,
+    "small_finish_seconds": 4.663,
+    "small_analysed": 405,
+    "small_undecodable": 0
+  },
+  "passed": true,
+  "failures": []
+}

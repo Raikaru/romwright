@@ -42,6 +42,8 @@ fn usage() {
   lre-cli analyse-function <binary> <program> <address> [--project DIR] [--json]
   lre-cli structure <binary> <program> <addr[,addr...]> [--project DIR] [--json]
   lre-cli infer-types <binary> <program> <addr[,addr...]> [--project DIR] [--json]
+  lre-cli status <program> [--project DIR] [--json]
+  lre-cli analyse-pending <binary> <program> [--budget N] [--project DIR] [--json]
   lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
                          [--min-score F] [--lambda F] [--candidates N] [--json]
   lre-cli symbols <program> [--project DIR]
@@ -675,6 +677,51 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             if limit == 0 {
                 println!("-- {} functions", rows.len());
+            }
+        }
+        "status" => {
+            let program = args.get(2).ok_or("status needs a program name")?.clone();
+            let status = core.analysis_status(&program).map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                println!(
+                    "{}",
+                    serde_json::to_string(&status).map_err(|e| e.to_string())?
+                );
+            } else {
+                println!(
+                    "{}  rev {}  {} functions: {} analysed, {} seeded, {} undecodable{}",
+                    status.program,
+                    status.revision,
+                    status.functions,
+                    status.analysed,
+                    status.seeded,
+                    status.undecodable,
+                    if status.stale { " (provisional)" } else { "" }
+                );
+            }
+        }
+        "analyse-pending" => {
+            let binary = args.get(2).ok_or("analyse-pending needs a binary")?.clone();
+            let program = args
+                .get(3)
+                .ok_or("analyse-pending needs a program name")?
+                .clone();
+            let budget: usize = flag(args, "--budget")
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(64);
+            let status = core
+                .analyse_pending(Path::new(&binary), &program, budget)
+                .map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                println!(
+                    "{}",
+                    serde_json::to_string(&status).map_err(|e| e.to_string())?
+                );
+            } else {
+                println!(
+                    "{}  rev {}  {} analysed, {} seeded left",
+                    status.program, status.revision, status.analysed, status.seeded
+                );
             }
         }
         "infer-types" => {

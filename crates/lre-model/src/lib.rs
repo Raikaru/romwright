@@ -466,6 +466,27 @@ pub struct Page<T> {
     pub revision: u64,
 }
 
+/// How complete a program's facts are, at one revision.
+///
+/// The contract a consumer needs is "answer now, and say what is missing":
+/// a query never waits for analysis, and this rides alongside it so the
+/// answer can be marked provisional rather than presented as final.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct AnalysisStatus {
+    pub program: String,
+    /// Store revision these counts were read at.
+    pub revision: u64,
+    pub functions: u64,
+    /// Bodies somebody walked, whether by whole-image analysis or on demand.
+    pub analysed: u64,
+    /// Entries the image declared that nobody has walked yet.
+    pub seeded: u64,
+    /// Entries a walk could not decode at all.
+    pub undecodable: u64,
+    /// True while any seed remains: the answer is what is known so far.
+    pub stale: bool,
+}
+
 /// Wall time of one import phase, in seconds. Phases are measured, never
 /// estimated: a consumer that reports a budget must report these numbers.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

@@ -5652,6 +5652,35 @@ scratch stops carrying its entry identity. Value numbering is the next
 increment.
 
 
+### m14-003 evidence (facts so far: answer now, say what is missing)
+
+`tests/m14-003_facts_so_far.py`, `benchmarks/reports/m14-003.json`, cold
+imports:
+
+| Measured | Value |
+|---|---|
+| libc loaded without analysis | 1.38 s, 3898 seeds, status `provisional` |
+| 100 bodies analysed one at a time | 4.07 s; store revision moved exactly 100 |
+| Worst query *while* the pass committed | 0.063 s (`functions`, `symbols`, `status`) |
+| 405 functions analysed to completion | 4.66 s, and the answer stopped being provisional |
+
+`Core::analysis_status` reports what the store can answer and what it cannot
+(`analysed` / `seeded` / `undecodable`, plus `stale`), so a consumer renders
+an answer *and* marks it provisional instead of choosing between showing
+nothing and pretending to be finished. `Core::analyse_pending` is the other
+half: it walks seeds in address order under a caller-chosen budget, commits
+each body on its own, and bumps the revision per function, so
+`events_since` shows the store growing.
+
+The gate found a real defect on its first run: a listing query *failed*
+(`database is locked`) while the pass committed beside it. WAL lets readers
+run during a write, but the brief exclusive lock a commit takes returns
+`SQLITE_BUSY` immediately without a timeout. Store connections now set
+`busy_timeout`, so a reader waits microseconds instead of erroring -- which
+is the difference between an interactive tool and one that fails under its
+own background work.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now

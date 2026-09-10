@@ -146,6 +146,12 @@ impl ProjectDb {
         // reproducible from the image, so the trade is a store that keeps
         // up with an interactive session: 45687 rows took 2.76 s at FULL.
         conn.pragma_update(None, "synchronous", "NORMAL")?;
+        // A reader must never fail because a background pass is committing.
+        // WAL lets readers run during a write, but the brief exclusive lock
+        // a commit takes still returns SQLITE_BUSY immediately without a
+        // timeout: a listing query failed outright while per-function
+        // analysis was committing beside it.
+        conn.busy_timeout(std::time::Duration::from_secs(15))?;
         let db = Self { conn };
         db.migrate()?;
         Ok(db)
@@ -767,6 +773,26 @@ impl ProjectDb {
             ],
         )?;
         Ok(())
+    }
+
+    /// How much of a program has actually been analysed, by state.
+    ///
+    /// A consumer that answers from the store needs to say what the answer
+    /// is missing: a listing built from a loader-only import is every
+    /// function the image names and no body anyone walked, and a caller
+    /// that cannot tell the two apart will present a seed as a finished
+    /// answer.
+    pub fn analysis_progress(&self, program: ProgramId) -> Result<Vec<(String, u64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT analysis_state, COUNT(*) FROM functions WHERE program_id = ?1
+             GROUP BY analysis_state ORDER BY analysis_state",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
     }
 
     /// What has been done to one function, and when.
