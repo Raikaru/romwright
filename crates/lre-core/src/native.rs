@@ -18,6 +18,7 @@ mod nds;
 mod psx;
 pub(crate) mod dol;
 mod discovery;
+pub(crate) use discovery::BRANCH_PROVENANCE;
 mod features;
 mod nso;
 pub(crate) mod vsa;
@@ -361,6 +362,9 @@ pub struct NativeImport {
     /// fallback to pointer-only seeds is how a MIPS image came back with a
     /// third of its functions and no complaint (m11-002).
     pub discovery_note: Option<String>,
+    /// True when discovery walked this image, as opposed to the loader
+    /// simply declaring what the file says about itself.
+    pub analysed: bool,
 }
 /// One platform-defined region with no bytes in the image.
 #[derive(Debug, Clone)]
@@ -1352,6 +1356,7 @@ pub fn load_container_with(binary: &Path, analyse: bool) -> Result<Vec<(String, 
         select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
         phase(&mut imp, "parse", parse_started);
+        imp.analysed = analyse;
         if analyse {
             discover(&mut imp)?;
         } else {
@@ -1371,7 +1376,7 @@ pub fn load_container_with(binary: &Path, analyse: bool) -> Result<Vec<(String, 
 /// keys the rule on a register of exactly this name
 /// (`PseudoDisassembler.setTargetContextForDisassembly`,
 /// `LOW_BIT_CODE_MODE_REGISTER_NAME`); no other pinned language declares it.
-fn low_bit_code_mode(language: &str) -> bool {
+pub(crate) fn low_bit_code_mode(language: &str) -> bool {
     language.starts_with("ARM:") || language.starts_with("MIPS:")
 }
 
@@ -2748,6 +2753,9 @@ pub fn store_import(
         })
         .collect();
     db.replace_functions(pid, &rows)?;
+    // Say what produced these rows. A loader-only import declares seeds that
+    // nobody has walked; demand-driven analysis upgrades them one at a time.
+    db.set_all_analysis_states(pid, if imp.analysed { "batch" } else { "seeded" })?;
     // Structural measurements of each body, taken while it was decoded:
     // instruction and basic-block counts, intra-function edges, and digests
     // of the bytes and of the decoded shape. `lre-diff` matches programs on

@@ -4,6 +4,7 @@
 //! imported fact is exported into the project database with provenance, so
 //! reopening and browsing never needs the JVM (spec 14.4, Phase 3 exit).
 
+pub mod demand;
 pub mod import_cache;
 pub(crate) mod sha256;
 pub mod library_types;
@@ -116,6 +117,9 @@ pub struct Core {
     live_memory: std::cell::RefCell<Option<LiveMemoryConnection>>,
     /// Immutable runtime configuration (env-derived by default).
     config: session::RuntimeConfig,
+    /// Images kept parsed and loaded in a console between requests, so
+    /// demand-driven analysis costs a walk and not a reload.
+    live: demand::LiveImages,
 }
 
 /// A diff failure, as a Core error: the reference project is an input like
@@ -138,6 +142,7 @@ impl Core {
             native_cache: std::cell::RefCell::new(None),
             live_memory: std::cell::RefCell::new(None),
             config: session::RuntimeConfig::from_env(),
+            live: demand::LiveImages::default(),
         })
     }
 
@@ -151,6 +156,7 @@ impl Core {
             native_cache: std::cell::RefCell::new(None),
             live_memory: std::cell::RefCell::new(None),
             config,
+            live: demand::LiveImages::default(),
         })
     }
 
@@ -805,6 +811,139 @@ impl Core {
             )?;
         }
         Ok(report)
+    }
+
+    /// Analyses one function on demand and commits its facts.
+    ///
+    /// A loader-only import leaves every declared entry as a seed: a name
+    /// and an address with no proven body. This walks exactly one of them
+    /// on a warm image, records the body size, the references inside it,
+    /// and the direct call targets it reaches, and marks the row `walked`
+    /// at the revision it was analysed. A function already walked at the
+    /// current revision is returned unchanged rather than re-walked.
+    pub fn analyse_function(
+        &self,
+        binary: &Path,
+        program: &str,
+        entry: &lre_model::Address,
+    ) -> Result<demand::FunctionAnalysis> {
+        let started = std::time::Instant::now();
+        let id = self.db.program_id(program)?;
+        let revision = self.db.revision(id)?;
+        let key = entry.to_string();
+        let known = self.db.function_analysis_state(id, &key)?;
+        if let Some((state, analysed)) = &known
+            && matches!(state.as_str(), "walked" | "batch")
+            && *analysed == revision
+        {
+            let row = self
+                .db
+                .functions(id)?
+                .into_iter()
+                .find(|function| function.entry == *entry);
+            return Ok(demand::FunctionAnalysis {
+                program: program.to_string(),
+                entry: key,
+                size: row.as_ref().map(|row| row.size).unwrap_or(0),
+                instructions: 0,
+                calls: Vec::new(),
+                xrefs: 0,
+                state: state.clone(),
+                reused: true,
+                seconds: started.elapsed().as_secs_f64(),
+                phases: Vec::new(),
+            });
+        }
+        let name = self
+            .db
+            .functions(id)?
+            .into_iter()
+            .find(|function| function.entry == *entry)
+            .map(|function| function.name)
+            .unwrap_or_else(|| format!("FUN_{:08x}", entry.offset));
+        let address = entry.offset;
+        let mut phases = Vec::new();
+        let opening = std::time::Instant::now();
+        let (walk, xrefs, transfers) = self.live.with(binary, program, |live| {
+            phases.push(("open".to_string(), opening.elapsed().as_secs_f64()));
+            let walking = std::time::Instant::now();
+            let walk = live.walk(address)?;
+            phases.push(("walk".to_string(), walking.elapsed().as_secs_f64()));
+            let referencing = std::time::Instant::now();
+            // Nothing decoded means nothing to ask about: an entry outside
+            // every mapping, or bytes the console refuses. The empty range
+            // is reported as such rather than sent to the console.
+            let xrefs = if walk.end > walk.entry {
+                live.references(walk.entry, walk.end)?
+            } else {
+                Vec::new()
+            };
+            phases.push(("references".to_string(), referencing.elapsed().as_secs_f64()));
+            let transfers = walk.transfer_facts(&live.declared_entries());
+            Ok((walk, xrefs, transfers))
+        })?;
+        let row = walk.row(name);
+        // A walk that decoded nothing proves nothing: the row stays a seed
+        // so a later attempt -- with the image based differently, or with
+        // the switch pass run -- is free to try again.
+        let state = if walk.instructions == 0 {
+            "undecodable"
+        } else {
+            "walked"
+        };
+        self.db.upsert_analysed_function(id, &row, state)?;
+        // The walk's own control flow is a fact too: the whole-image pass
+        // writes one `UNCONDITIONAL_CALL` per direct call site, and a body
+        // analysed on demand has exactly the same edges.
+        let mut facts = xrefs.clone();
+        facts.extend(transfers);
+        for (from, to) in &walk.call_sites {
+            if !facts.iter().any(|xref| xref.from == *from && xref.to == *to) {
+                facts.push(native::NativeXref::new(*from, *to, "UNCONDITIONAL_CALL"));
+            }
+        }
+        // The body's own references replace whatever a previous walk of the
+        // same range asserted; references from elsewhere into it are other
+        // functions' facts and are left alone.
+        self.db.replace_xrefs_from_range(
+            id,
+            &lre_model::Address::ram(walk.entry),
+            &lre_model::Address::ram(walk.end),
+            &facts
+                .iter()
+                .map(|xref| lre_model::XrefRow {
+                    from: lre_model::Address::ram(xref.from),
+                    to: lre_model::Address::ram(xref.to),
+                    kind: xref.kind.clone(),
+                    function: None,
+                    provenance: lre_model::FactProvenance {
+                        kind: lre_model::FactKind::Inferred,
+                        source: if xref.provenance.is_empty() {
+                            "native-import".into()
+                        } else {
+                            xref.provenance.clone()
+                        },
+                        confidence: None,
+                    },
+                })
+                .collect::<Vec<_>>(),
+        )?;
+        Ok(demand::FunctionAnalysis {
+            program: program.to_string(),
+            entry: key,
+            size: walk.size(),
+            instructions: walk.instructions,
+            calls: walk
+                .calls
+                .iter()
+                .map(|target| lre_model::Address::ram(*target).to_string())
+                .collect(),
+            xrefs: facts.len() as u64,
+            state: state.into(),
+            reused: false,
+            seconds: started.elapsed().as_secs_f64(),
+            phases,
+        })
     }
 
     /// Applies an analyst rename in the project store and bumps the revision.

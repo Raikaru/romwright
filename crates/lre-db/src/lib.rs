@@ -25,7 +25,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 17;
+pub const SCHEMA_VERSION: i64 = 18;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -190,6 +190,13 @@ impl ProjectDb {
                  name TEXT NOT NULL,
                  size INTEGER NOT NULL,
                  signature TEXT,
+                 -- What has actually been done to this function, as opposed
+                 -- to what the loader asserted: 'seeded' is a declared entry
+                 -- nobody has walked, 'walked' carries a decoded body, and
+                 -- 'batch' is whole-image analysis, and 'undecodable' is a
+                 -- seed a walk could not decode at all.
+                 analysis_state TEXT NOT NULL DEFAULT 'batch',
+                 analysed_revision INTEGER NOT NULL DEFAULT 0,
                  PRIMARY KEY (program_id, entry)
              );
 
@@ -610,6 +617,25 @@ impl ProjectDb {
                     )?;
                 }
             }
+            if v < 18 {
+                // Demand-driven analysis needs to say what has been done to
+                // each function, and at which revision: a listing row from a
+                // loader-only import is a seed, not a walked body.
+                let present: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('functions')
+                                   WHERE name = 'analysis_state')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !present {
+                    tx.execute_batch(
+                        "ALTER TABLE functions ADD COLUMN analysis_state TEXT NOT NULL
+                             DEFAULT 'batch';
+                         ALTER TABLE functions ADD COLUMN analysed_revision INTEGER NOT NULL
+                             DEFAULT 0;",
+                    )?;
+                }
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -699,6 +725,67 @@ impl ProjectDb {
     }
 
     /// Replaces the function set of a program inside one transaction.
+    /// Marks every function of a program with how it was produced. A
+    /// loader-only import declares seeds; whole-image analysis declares
+    /// walked bodies. Demand-driven work then upgrades single rows.
+    pub fn set_all_analysis_states(&self, program: ProgramId, state: &str) -> Result<()> {
+        let revision = self.revision(program)?;
+        self.conn.execute(
+            "UPDATE functions SET analysis_state = ?2, analysed_revision = ?3
+             WHERE program_id = ?1",
+            params![program.0, state, revision as i64],
+        )?;
+        Ok(())
+    }
+
+    /// Records one function's body as analysed at the current revision,
+    /// inserting it when demand-driven analysis found a function the loader
+    /// never declared.
+    pub fn upsert_analysed_function(
+        &self,
+        program: ProgramId,
+        row: &FunctionRow,
+        state: &str,
+    ) -> Result<()> {
+        let revision = self.revision(program)?;
+        self.conn.execute(
+            "INSERT INTO functions(program_id, entry, name, size, signature,
+                                   analysis_state, analysed_revision)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(program_id, entry) DO UPDATE SET
+                 size = excluded.size,
+                 analysis_state = excluded.analysis_state,
+                 analysed_revision = excluded.analysed_revision",
+            params![
+                program.0,
+                row.entry.to_string(),
+                row.name,
+                row.size as i64,
+                row.signature,
+                state,
+                revision as i64
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// What has been done to one function, and when.
+    pub fn function_analysis_state(
+        &self,
+        program: ProgramId,
+        entry: &str,
+    ) -> Result<Option<(String, u64)>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT analysis_state, analysed_revision FROM functions
+             WHERE program_id = ?1 AND entry = ?2",
+        )?;
+        let mut rows = stmt.query(params![program.0, entry])?;
+        match rows.next()? {
+            Some(row) => Ok(Some((row.get(0)?, row.get::<_, i64>(1)? as u64))),
+            None => Ok(None),
+        }
+    }
+
     pub fn replace_functions(&self, program: ProgramId, rows: &[FunctionRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute("DELETE FROM functions WHERE program_id = ?1", params![program.0])?;
@@ -803,6 +890,28 @@ impl ProjectDb {
         )?;
         Self::insert_xrefs(&tx, program, rows, None)?;
         self.bump_and_record(&tx, program, "replace-xrefs", &rows.len().to_string())?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    /// Replaces the inferred references whose *source* lies in one address
+    /// range: what demand-driven analysis of a single body may overwrite.
+    /// References into the range are other functions' facts and survive.
+    pub fn replace_xrefs_from_range(
+        &self,
+        program: ProgramId,
+        start: &lre_model::Address,
+        end: &lre_model::Address,
+        rows: &[XrefRow],
+    ) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "DELETE FROM xrefs WHERE program_id = ?1 AND provenance_kind = 'inferred'
+                 AND src >= ?2 AND src < ?3",
+            params![program.0, start.to_string(), end.to_string()],
+        )?;
+        Self::insert_xrefs(&tx, program, rows, None)?;
+        self.bump_and_record(&tx, program, "analyse-function", &start.to_string())?;
         tx.commit()?;
         Ok(())
     }

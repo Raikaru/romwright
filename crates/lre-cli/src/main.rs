@@ -39,6 +39,7 @@ fn usage() {
   lre-cli architectures [--project DIR]   (uses VENTRIS_GHIDRA)
   lre-cli open <program> [--project DIR]
   lre-cli functions <program> [--offset N] [--limit N] [--filter TEXT] [--project DIR]
+  lre-cli analyse-function <binary> <program> <address> [--project DIR] [--json]
   lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
                          [--min-score F] [--lambda F] [--candidates N] [--json]
   lre-cli symbols <program> [--project DIR]
@@ -670,6 +671,41 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             if limit == 0 {
                 println!("-- {} functions", rows.len());
+            }
+        }
+        "analyse-function" => {
+            let binary = args.get(2).ok_or("analyse-function needs a binary")?.clone();
+            let program = args
+                .get(3)
+                .ok_or("analyse-function needs a program name")?
+                .clone();
+            let address = args
+                .get(4)
+                .ok_or("analyse-function needs an address")?
+                .clone();
+            let entry = lre_model::Address::ram(
+                u64::from_str_radix(address.trim_start_matches("0x"), 16)
+                    .map_err(|_| format!("not an address: {address}"))?,
+            );
+            let done = core
+                .analyse_function(Path::new(&binary), &program, &entry)
+                .map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                println!(
+                    "{}",
+                    serde_json::to_string(&done).map_err(|e| e.to_string())?
+                );
+            } else {
+                println!(
+                    "{} {} bytes, {} instructions, {} xrefs, {} calls ({}, {:.3}s)",
+                    done.entry,
+                    done.size,
+                    done.instructions,
+                    done.xrefs,
+                    done.calls.len(),
+                    if done.reused { "reused" } else { &done.state },
+                    done.seconds
+                );
             }
         }
         "comments" => {

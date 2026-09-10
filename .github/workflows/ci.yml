@@ -401,6 +401,13 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Analyse one function on demand
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+          VENTRIS_SERVICE_JAR: ${{ github.workspace }}/service/build/ventris-service.jar
+        run: |
+          python3 tests/m14-002_demand.py \
+            --report "$RUNNER_TEMP/reports/m14-002.json"
       - name: Load without analysing, and reuse an unchanged import
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

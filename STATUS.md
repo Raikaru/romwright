@@ -5515,6 +5515,34 @@ is `dispose`, and `DecompilerSwitchAnalyzer` sets 60 seconds). The import that
 never finished now takes 137 s, and `m2-012` went from two 900 s timeouts to
 871 of 871 signature matches correct in 237 s.
 
+### m14-002 evidence (one function, on demand, on a warm image)
+
+`tests/m14-002_demand.py`, `benchmarks/reports/m14-002.json`, cold imports
+(`VENTRIS_NO_IMPORT_CACHE=1`), libc.so.6, 20 sampled bodies:
+
+| Measured | Value |
+|---|---|
+| Loader-only import | 1.85 s |
+| Whole-image analysis of the same bytes | 185.25 s |
+| First request (parse + console load, paid once) | 0.364 s |
+| Median function, analyse + decompile | 0.199 s |
+| ... of which the walk | 0.015 s |
+| ... of which the vendored decompiler | 0.182 s |
+| Worst sampled body | 1.164 s |
+| Bodies whose extent equals whole-image analysis | 20/20 |
+| Bodies whose reference set equals whole-image analysis | 20/20 |
+| Bodies inventing a reference batch does not have | 0 |
+
+So the incremental fact set is identical to the batch one for everything a
+single body can prove on its own: extent, references, call edges, and the
+branches that leave it, including Ghidra's shared-return promotion of a tail
+call. Facts that exist only because another function was analysed stay the
+batch pass's and remain separable by provenance. Rows carry
+`analysis_state` (`seeded`, `walked`, `undecodable`, `batch`) and
+`analysed_revision`, so a loader's declaration is never mistaken for a
+decoded body (store schema 18).
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
@@ -5608,6 +5636,24 @@ The ten platforms recorded in "Reserved decisions" split by what can be
 - m1-010 gate amendment: architecture-specific code is permitted only in a
   clearly separated accelerator module with an equivalence test, never in the
   discovery core. (Recorded per user direction; do not re-argue.)
+- Rewriting the vendored C++ decompiler is **not** the next milestone, and
+  never a transliteration. The old repo's partial port reached 79% of rules
+  and 44% of actions and still did not converge on real functions, and no
+  oracle can score it: stock Ghidra *is* the oracle. Instead take ownership
+  of the layers where published work beats it and where ground truth already
+  exists here -- structuring (SAILR, goto count against stock on the same
+  functions), types (TIE/Retypd against the DWARF we hold for 1,640
+  functions), indirect flow (SJA; the combined switch path already answers
+  142 dispatches to stock's 132 at 0.9967 soundness, without the
+  decompiler), and variable/stack recovery against DWARF. Its entry
+  criterion is ownership, not a date: **we own more of the decompiled output
+  than the vendored tree does**, measured by those gates, at which point the
+  remaining core is the simplifier and it can be replaced against a known
+  interface, known metrics, and a regression corpus that reports the day it
+  gets worse. Corollary: the first work under this plan is an *export* from
+  the pinned tree (block graph, varnode facts), and that export is a
+  documented stable surface, because it is the seam the eventual replacement
+  plugs into. (Recorded per user direction; do not re-argue.)
 - Console platform targets (recorded per user direction, 2026-09-06; not
   scheduled yet): PS1, PS2, N64, Game Boy Advance, NDS, 3DS, PS3, Xbox 360,
   PSP, PS Vita. What the pinned Ghidra 12.1.3 install already supplies, from
