@@ -5543,6 +5543,33 @@ batch pass's and remain separable by provenance. Rows carry
 decoded body (store schema 18).
 
 
+### Why the Switch import went from 420 s to 1333 s (attributed, not guessed)
+
+Two suspects were eliminated on libc rather than by re-importing a 45k-symbol
+module:
+
+| Suspect | Instrument | Result |
+|---|---|---|
+| Release `overflow-checks = true` | libc import, `-C overflow-checks=off` A/B | 95.3 s vs 93.4 s -- 2%, inside noise, and it caught the AArch64 wrap bug, so it stays |
+| Refusing switch tables no guard bounds | switch facts in two libc stores | byte-identical: 142 dispatches, 1832 edges either way (the unguarded path was opt-in, so the default never used it) |
+
+The cause is in the stores already on disk, not in a new measurement: the
+420 s run (`nxnative`, commit 7a14e1e) resolved **0** switch dispatches on
+this module, and the current one resolves **690** (4,684 edges), each a
+decompile of a real body. The old budget priced an import that did less
+work. So `m5-017` now pins both sides: a 1800 s ceiling *and* a floor of 690
+dispatches, so a faster import that stops answering them fails instead of
+looking like an improvement.
+
+One real defect fell out of the attribution: the switch round sized its
+chunks with `div_ceil(lanes).clamp(1, 256)` and spawned one worker per
+*chunk*, so a large image produced more chunks than lanes and ran more
+decompilers than the host has cores. Bounding chunks to lanes took the module
+from 1452 s to 1333.5 s. Bringing it down further is the jump-table
+milestone's work -- sound analysis instead of the decompiler -- not a budget
+to relax again.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
