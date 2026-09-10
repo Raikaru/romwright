@@ -5578,24 +5578,35 @@ is `dispose`, and `DecompilerSwitchAnalyzer` sets 60 seconds). The import that
 never finished now takes 137 s, and `m2-012` went from two 900 s timeouts to
 871 of 871 signature matches correct in 237 s.
 
-**A width is not a guard.** `movzbl` says the index is a byte, not that the
-table is 256 entries: a bound that is only `0..=2^w-1` reads past the table
-into whatever follows it. `Strided` now carries `guarded` -- set by a
-comparison or a mask, propagated through arithmetic, required for a table
-read -- and a transform on a width-only bound refuses rather than producing
-a set that lost the flag (`sja.rs`, `map_values`). On libc the change turns
-eight dispatches that materialised garbage targets into honest refusals
-(`outside` 15 -> 7, `unknown` 143 -> 151). A regression test pins both
-sides: a zero-extended index with no compare is refused even when 256
-readable entries sit there, and the same index behind a compare still
-recovers the table.
+**A width is not a guard, and a bound must reach its origin.** `movzbl`
+says the index is a byte, not that the table is 256 entries: a bound that
+is only `0..=2^w-1` reads past the table into whatever follows it.
+`Strided` now carries `guarded` -- set by a comparison or a mask,
+propagated through arithmetic, required for a table read -- and a
+transform on a width-only bound refuses rather than producing a set that
+lost the flag (`sja.rs`, `map_values`). A bound also has to reach the
+value it constrains: `origins` now carries the narrowest width crossed,
+a `unique` temporary is never an origin (it is dead by the next block),
+and a compare only propagates a bound to an origin that already fits the
+narrowest width -- which is also the operand's own width, since a bound
+on `%al` is a bound on one byte whatever wider slot it came from. A
+zero-extension of a value that already fits is a no-op, so the bound
+carries through with its flag.
 
-**The remaining gap is value-equality across loads.** The vfprintf
-dispatch's guard bounds `%al` (the char `c`) in a predecessor, but the
-dispatch block re-derives the index from `%r15` -- `c` lives in two slots
-loaded independently, and transferring the bound needs a value-equality
-fact across loads (`%al == %r15b`), which the domain does not track. That
-is the next extension, and it is a domain problem, not a flag.
+Measured by the same gate (`tests/m13-001_vsa_switch.py`):
+
+| Path | Dispatches | Unsound targets | Soundness |
+|---|---|---|---|
+| pattern-shaped pass alone | 90 | 1 | 0.9989 |
+| pass + abstract interpreter | **102** | 1 | **0.9992** |
+| both plus the decompiler (default) | 142 | 6 | 0.9967 |
+
+Nine more dispatches than the interpreter managed before, one of them the
+vfprintf two-level dispatch whose bound now reaches `r15` through the
+`lea`/`subpiece`/`zext` chain. The parity gate is still not met -- the
+proven tier stands at 102 against the decompiler's 130 -- and the
+remaining gap is the PIC tables of 32-bit offsets reached through boolean
+guard combinations that the domain still cannot name.
 
 ### m14-002 evidence (one function, on demand, on a warm image)
 
