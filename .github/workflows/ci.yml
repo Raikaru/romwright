@@ -214,6 +214,15 @@ jobs:
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --output-dir "$RUNNER_TEMP/discovery/scoring" \
             --report "$RUNNER_TEMP/discovery/scoring-report.json"
+      - name: Provision the native spec bundles the corpus languages need
+        run: |
+          # The i386/AArch64/PowerPC spec bundles are gitignored build inputs
+          # (native/specs/<lang>/), generated once through the JVM bridge from
+          # the corpus's own plain_o0 rows. Without them every non-x86-64
+          # decompile fails closed, which is what the mirror caught.
+          python3 scripts/gen_native_specs.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --ghidra "$VENTRIS_GHIDRA"
       - name: Enforce complete M1 discovery gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
