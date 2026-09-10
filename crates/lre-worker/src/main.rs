@@ -178,6 +178,7 @@ fn run_structure(
             Ok(tree) => serde_json::json!({
                 "id": request.id,
                 "gotos": tree.gotos(),
+                "breaks_and_continues": tree.breaks_and_continues(),
                 "kinds": tree.kinds(),
                 "tree": tree,
             }),

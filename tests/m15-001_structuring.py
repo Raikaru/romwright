@@ -28,10 +28,15 @@ Three claims:
    The partition is asserted both ways: no disagreement outside that class,
    and every disagreement inside it.
 
-3. **The baseline is recorded.** Stock's goto count over the scored functions
-   is written to the report. That is what a structuring pass of ours has to
-   beat on the same functions -- SAILR's own metric -- recorded before such a
-   pass exists so it cannot be chosen afterwards.
+3. **The baseline is recorded.** The number of edges stock's structuring
+   could not structure, over the scored functions, is written to the report.
+   That is what a structuring pass of ours has to beat on the same functions,
+   recorded before such a pass exists so it cannot be chosen afterwards.
+   Note the measure: `structureGraph` stops after `CollapseStructure`, before
+   the printing pass that decides which unstructured edges become `break` or
+   `continue`, so every one of them is reported as `f_goto_goto` here. It is
+   a comparison of structurings on identical graphs, not a count of `goto`
+   keywords in emitted C.
 """
 import argparse
 from datetime import datetime, timezone
@@ -192,7 +197,7 @@ def main():
         "with_tables": len(with_tables),
         "block_disagreements_without_tables": len(disagreeing),
         "table_functions_that_agree": len(agreeing_tables),
-        "stock_gotos": gotos,
+        "stock_unstructured_edges": gotos,
         "functions_with_gotos": sum(1 for row in comparable if row["gotos"]),
         "examples": [
             {"function": row["id"], "walk_blocks": row["blocks"],
@@ -229,7 +234,8 @@ def main():
         f"m15-001: PASS ({len(SHAPES)} canonical shapes structured as defined; "
         f"{metrics['without_tables']} functions without recovered tables agree exactly "
         f"with whole-image analysis on block count, all {metrics['with_tables']} with "
-        f"tables differ as stated; stock needs {metrics['stock_gotos']} gotos over "
+        f"tables differ as stated; stock leaves {metrics['stock_unstructured_edges']} edges "
+        f"unstructured over "
         f"{metrics['comparable']} functions, {metrics['functions_with_gotos']} of them "
         f"holding at least one)")
     return 0
