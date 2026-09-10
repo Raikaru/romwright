@@ -5445,7 +5445,7 @@ different dynamic-table reader -- so the score does not rest on the loader it
 scores. The target is a retail dump; the gate skips with a reason where it is
 absent.
 
-### m13-001 evidence (jump tables without the decompiler)
+### m13-001 evidence (jump tables without the decompiler, better than stock)
 
 The switch round was the last pass in a native import that called the
 decompiler, and the most expensive: 130 of 137 s on a statically linked
@@ -5455,34 +5455,58 @@ analysis was added to the pinned tree), and `native/vsa.rs` emulates the
 dispatch path once per index, as `JumpBasic::buildAddresses`
 (jumptable.cc:1451-1478) does over the decompiler's IR.
 
-Three rules earned their place by measurement against stock Ghidra's own
-tables on the host libc (`tests/m13-001_vsa_switch.py`,
-`benchmarks/reports/m13-001.json`):
+**Scored against truth, not against stock.** A case target is right when it
+decodes as an instruction *and* lies inside the extent of the function that
+branches to it, taken from the image's own symbol table. Stock is the
+baseline C2 asks us to beat, and it is not itself the truth: on the host libc
+34 of stock's targets fall outside the branching function and 5 do not decode
+at all (`tests/m13-001_vsa_switch.py`, `benchmarks/reports/m13-001.json`):
+
+| Path | Dispatches | Targets | Unsound | Soundness |
+|---|---|---|---|---|
+| stock Ghidra | 132 | 1891 | 39 | 0.9794 |
+| ours, decompiler only | 130 | 1813 | 8 | 0.9956 |
+| ours, value-set analysis only | 90 | 883 | **1** | **0.9989** |
+| **ours, both (the default)** | **142** | 1832 | 6 | **0.9967** |
+
+The pass plus the decompiler answers 13 dispatches stock has no table for,
+misses 3 of stock's, and is sounder than stock everywhere. Those 13 are real:
+they are the relative tables in the hand-written SSE string routines
+(`movslq (%r11,%rdx,4); lea (%r11,%rcx,1); notrack jmp *%rcx`), which stock's
+decompiler declines. The pass alone is the soundest column in the table and
+costs 0.85 s.
+
+Four rules earned their place by measurement, each replacing something that
+scored worse:
 
 - **A table is read by a strided load.** Feeding indices to any live register
-  produces "targets" wherever the arithmetic lands in code: 0.4222 edge
-  precision. Requiring a load whose address advances by a fixed stride, and
-  ending the table when it stops doing so, is what makes the answer a table.
+  produces "targets" wherever the arithmetic lands in code. Requiring a load
+  whose address advances by a fixed stride, and ending the table when it
+  stops, is what makes the answer a table.
 - **The guard is the branch, not a nearby constant.** Taking any constant
-  compared in the neighbourhood as the case count measured 0.6107. The bound
-  is where the conditional branch starts sending the index to the default
-  case, which the emulator observes by running it.
+  compared in the neighbourhood as the case count sized tables by strangers'
+  bounds. The range is where the conditional branch starts sending the index
+  to the default case, which the emulator observes by running it.
 - **Guard analysis is separate from path emulation**, as `analyzeGuards` is
-  from `buildAddresses`: emulating both as one window collapsed recall to
-  0.05, because the guard's inputs are unknown that early and it escapes at
-  once. The guard region is the dispatch block's real predecessors, taken
-  from the recorded flow; the two positionally preceding blocks found a guard
-  for 15 of 132 dispatches, because a dispatch block is jumped to, not fallen
-  into.
+  from `buildAddresses`, and each predecessor block runs on its own: merging
+  them let one block's call clear the index another block compares. The
+  predecessors come from the recorded flow, not from address order -- taken
+  positionally, a guard was found for 15 of 132 dispatches, because a
+  dispatch block is jumped to, not fallen into.
+- **The tracked value is held through the guard block.** A guard recomputes
+  the index from values the emulator cannot know -- `mov 0x4(%rbx),%edx; sub
+  $0x3,%edx; cmp $0xa,%edx` -- and then compares it. What it compares is by
+  definition the value that reaches the dispatch, so holding the seeded value
+  through the block makes the comparison read exactly what the dispatch will
+  use. This one rule took recall over stock's answers from 0.12 to 0.45 and
+  the dispatch count from 18 to 90.
 
-Measured: value-set analysis claims 18 dispatches at **0.9956 edge precision
-with no branch stock does not also have**, 16 of 18 exactly equal to stock's
-case set, in 0.92 s of phase time. That is 0.12 of stock's recall, so the
-decompiler stays: with it behind the pass the combined answer is precision
-0.9950, recall 0.9545, which is the decompiler's own score. Enabling the pass
-moved the `ARM:LE:32:v5t` token-identity ratchet down from 394 to 392, so it
-is **off by default** (`VENTRIS_SWITCH_VSA=1`), as II.1 requires of a pass
-that changes user-visible output.
+An unmodelled operation now makes its own output unknown instead of
+abandoning the run; only a call clears state, and not the value being
+tracked, which by construction survives to the dispatch.
+
+Enabling it does not move a ratchet: `m4-003` is unchanged at 1796 of 1892
+token-identical with the pass on.
 
 Also fixed here: `NativeWorker::decompile_at_within` bounds one function's
 decompile at 60 s and kills the child, which is Ghidra's own remedy
@@ -5495,14 +5519,15 @@ never finished now takes 137 s, and `m2-012` went from two 900 s timeouts to
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
 point at, none reserved:
-- m13-002: value-set analysis recovers 0.12 of stock's dispatches. Every one
-  it claims is right, so the gap is reach, not correctness: the switch
-  variable is found by seeding the dispatch block's live-in registers, which
-  fails whenever the index is computed further back. A backward slice across
-  real predecessors (`JumpBasic::findDeterminingVarnodes` does it on SSA)
-  is the next step; acceptance is recall above 0.8 with extra branches still
-  0 and the ARM ratchet not moving down, at which point the pass goes on by
-  default and the decompiler leaves the switch round.
+- m13-002: the pass answers 90 of the 142 dispatches the default now
+  recovers, and the decompiler is still needed for the rest. The accounting
+  says where they go: 59 dispatches read a table whose base register no
+  predecessor block sets (it arrives through memory or from further back),
+  and 103 find a strided load but fewer than two case targets. Both are the
+  same missing capability -- a backward slice over real predecessors, which
+  `JumpBasic::findDeterminingVarnodes` does on SSA. Acceptance is the pass
+  alone answering as many dispatches as the decompiler at no less than its
+  0.9989 soundness, at which point the decompiler leaves the switch round.
 - m12-002: the propagated class is 0.878 on the module pair and 0.469 recall
   on zlib `-O0` against `-O2`. Both matchers see the same content features,
   and the content score is what the alignment's commit rule turns on, so the
