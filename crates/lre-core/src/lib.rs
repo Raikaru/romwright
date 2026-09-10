@@ -4,6 +4,8 @@
 //! imported fact is exported into the project database with provenance, so
 //! reopening and browsing never needs the JVM (spec 14.4, Phase 3 exit).
 
+pub mod import_cache;
+pub(crate) mod sha256;
 pub mod library_types;
 pub mod demangle;
 pub mod bridge;
@@ -1001,6 +1003,35 @@ impl Core {
     /// named `<name>.<image>`, because a program holds one language and its
     /// processors do not share one.
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
+        // Reuse first: the same bytes analysed by the same analyser produce
+        // the same facts, and gates re-import the same corpus constantly.
+        // Only a project this import would be the sole occupant of can be
+        // restored wholesale, which is every gate's shape and no analyst's
+        // multi-image project.
+        let cache_key = (self.db.programs()?.is_empty())
+            .then(|| import_cache::key(binary, name, &self.config))
+            .flatten();
+        if std::env::var_os("VENTRIS_TRACE_CACHE").is_some() {
+            eprintln!("import cache key {cache_key:?} hit {:?}",
+                cache_key.as_deref().and_then(import_cache::hit));
+        }
+        if let Some(key) = cache_key.as_deref() {
+            if self.restore_cached_import(key)? {
+                let names: Vec<String> = self
+                    .db
+                    .programs()?
+                    .into_iter()
+                    .map(|row| row.program)
+                    .collect();
+                let mut stored = Vec::with_capacity(names.len());
+                for program in names {
+                    stored.push(self.open_program(&program)?);
+                }
+                if !stored.is_empty() {
+                    return Ok(stored);
+                }
+            }
+        }
         let images = native::load_container(binary)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
@@ -1018,7 +1049,34 @@ impl Core {
             });
             stored.push(summary);
         }
+        if let Some(key) = cache_key.as_deref() {
+            // Snapshot through the connection, then publish it under the key.
+            let staging = self.db_path.join("project.cache-staging.sqlite");
+            if self.db.export_to(&staging).is_ok() {
+                import_cache::publish(key, &staging);
+            }
+            let _ = std::fs::remove_file(&staging);
+        }
         Ok(stored)
+    }
+
+    /// Fills this project's store from the cached one, through the open
+    /// connection: the file is never swapped underneath it.
+    fn restore_cached_import(&self, key: &str) -> Result<bool> {
+        let Some(cached) = import_cache::hit(key) else {
+            return Ok(false);
+        };
+        match self.db.import_from(&cached) {
+            Ok(()) => Ok(true),
+            // A cache that cannot be read is a miss, never a failure: the
+            // import that follows produces the same facts.
+            Err(error) => {
+                if std::env::var_os("VENTRIS_TRACE_CACHE").is_some() {
+                    eprintln!("import cache restore failed: {error}");
+                }
+                Ok(false)
+            }
+        }
     }
 
     /// Native disassembly of `count` instructions at `address`.

@@ -613,6 +613,57 @@ impl ProjectDb {
         Ok(())
     }
 
+    /// Writes a compact copy of this store to `path`, replacing whatever is
+    /// there. `VACUUM INTO` takes a consistent snapshot through the open
+    /// connection, so no handle has to be closed to make a durable copy.
+    pub fn export_to(&self, path: &Path) -> Result<()> {
+        let _ = std::fs::remove_file(path);
+        self.conn.execute(
+            "VACUUM INTO ?1",
+            params![path.to_string_lossy().as_ref()],
+        )?;
+        Ok(())
+    }
+
+    /// Replaces this store's contents with those of the database at `path`.
+    ///
+    /// Every table is copied through an attached database rather than by
+    /// swapping files, because the connection stays open across the
+    /// operation. The schemas match by construction: a caller reaches this
+    /// only through a key that names `SCHEMA_VERSION`.
+    pub fn import_from(&self, path: &Path) -> Result<()> {
+        // ATTACH is refused inside a transaction, so the attach brackets the
+        // transaction rather than sitting in it.
+        self.conn.execute(
+            "ATTACH DATABASE ?1 AS restore",
+            params![path.to_string_lossy().as_ref()],
+        )?;
+        let result = (|| -> Result<()> {
+            let tables: Vec<String> = {
+                let mut stmt = self.conn.prepare(
+                    "SELECT name FROM restore.sqlite_master
+                     WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+                )?;
+                stmt.query_map([], |row| row.get::<_, String>(0))?
+                    .collect::<rusqlite::Result<Vec<_>>>()?
+            };
+            let tx = self.conn.unchecked_transaction()?;
+            tx.execute_batch("PRAGMA defer_foreign_keys = ON")?;
+            for table in tables.iter().rev() {
+                tx.execute_batch(&format!("DELETE FROM main.\"{table}\""))?;
+            }
+            for table in &tables {
+                tx.execute_batch(&format!(
+                    "INSERT INTO main.\"{table}\" SELECT * FROM restore.\"{table}\""
+                ))?;
+            }
+            tx.commit()?;
+            Ok(())
+        })();
+        self.conn.execute_batch("DETACH DATABASE restore")?;
+        result
+    }
+
     /// Inserts or replaces a program summary and its provenance. Returns the ID.
     pub fn upsert_program(
         &self,
