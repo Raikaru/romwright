@@ -523,6 +523,17 @@ pub struct ProgramSummary {
     /// fallback to pointer-only seeds hides a whole architecture's flow.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub discovery_note: Option<String>,
+    /// Switch-recovery accounting: dispatches value-set analysis resolved,
+    /// and dispatches it refused and handed to the decompiler.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub switch: Option<SwitchStats>,
+}
+
+/// What each switch path answered.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct SwitchStats {
+    pub vsa_resolved: u64,
+    pub vsa_refused: u64,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

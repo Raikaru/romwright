@@ -46,6 +46,22 @@ pub struct RuntimeConfig {
     /// rounds). Requests inside one batch or round are independent, so
     /// sharding them changes wall time, never facts.
     pub console_shards: usize,
+    /// Recover jump tables by value-set analysis over p-code before asking
+    /// the decompiler (m13-001). Off by default, and not because it is
+    /// wrong: measured against stock Ghidra on libc it claims 18 dispatches
+    /// with 0.9956 edge precision and no branch stock does not also have,
+    /// but that is 0.12 of stock's recall, and enabling it moved the
+    /// ARM:LE:32:v5t token-identity ratchet down from 394 to 392. II.1
+    /// reserves enabling a pass that changes user-visible output, so it
+    /// stays opt-in until its recall is worth the change.
+    pub switch_vsa: bool,
+    /// Accept a table whose end no guard states, bounded only by its
+    /// targets ceasing to be code. Off by default: measured against stock on
+    /// libc these over-run their real end.
+    pub switch_vsa_unguarded: bool,
+    /// Let the decompiler answer the dispatches value-set analysis refused.
+    /// On by default; off measures the accelerator alone.
+    pub switch_decompiler: bool,
     /// Recover parameters passed in registers that no shipped prototype
     /// model claims (m4-001). Off by default: II.1 reserves enabling an M4
     /// pass, so it changes user-visible output only when asked.
@@ -226,6 +242,11 @@ impl RuntimeConfig {
             console_shards,
             register_params: std::env::var_os("VENTRIS_REGISTER_PARAMS").is_some(),
             promote_tailcalls: std::env::var_os("VENTRIS_PROMOTE_TAILCALLS").is_some(),
+            // Both on unless switched off, so the two switch paths can be
+            // measured separately without rebuilding.
+            switch_vsa: std::env::var_os("VENTRIS_SWITCH_VSA").is_some(),
+            switch_decompiler: std::env::var_os("VENTRIS_NO_SWITCH_DECOMPILER").is_none(),
+            switch_vsa_unguarded: std::env::var_os("VENTRIS_SWITCH_VSA_UNGUARDED").is_some(),
         }
     }
 

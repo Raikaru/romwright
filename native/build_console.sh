@@ -37,7 +37,7 @@ BUILD=$(mktemp -d /tmp/ghidra-console-build.XXXXXX)
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
 cp "$ROOT/native/ventris_linkage.hh" "$ROOT/native/ventris_patterns.hh" \
-   "$ROOT/native/ventris_flow.hh" "$ROOT/native/ventris_constant_state.hh" \
+   "$ROOT/native/ventris_flow.hh" "$ROOT/native/ventris_pcode.hh" "$ROOT/native/ventris_constant_state.hh" \
    "$ROOT/native/ventris_operand_refs.hh" \
    "$ROOT/native/ventris_x86_references.hh" \
    "$ROOT/native/ventris_callfixups.hh" \
