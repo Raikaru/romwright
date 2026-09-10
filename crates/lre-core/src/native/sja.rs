@@ -86,9 +86,17 @@ impl Value {
                 Strided { base: low, stride: high - low, lo: 0, hi: 1, guarded: true }
             }
             (
-                Strided { base: left_base, stride: left_stride, lo: left_lo, hi: left_hi, guarded: true },
-                Strided { base: right_base, stride: right_stride, lo: right_lo, hi: right_hi, guarded: true },
-            ) if left_base == right_base && left_stride == right_stride => Strided { base: left_base, stride: left_stride, lo: left_lo.min(right_lo), hi: left_hi.max(right_hi), guarded: true },
+                Strided { base: left_base, stride: left_stride, lo: left_lo, hi: left_hi, guarded: left_guarded },
+                Strided { base: right_base, stride: right_stride, lo: right_lo, hi: right_hi, guarded: right_guarded },
+            ) if left_base == right_base && left_stride == right_stride => Strided {
+                base: left_base,
+                stride: left_stride,
+                lo: left_lo.min(right_lo),
+                hi: left_hi.max(right_hi),
+                // The union interval is still true; it just cannot drive a
+                // table read unless both sides were guarded.
+                guarded: left_guarded && right_guarded,
+            },
             (Set(left), Set(right)) => {
                 let mut all = (*left).clone();
                 all.extend(right.iter().copied());
@@ -179,8 +187,10 @@ struct State {
     /// Booleans whose meaning is "this slot is at most this constant".
     /// They travel with the state because a comparison and the branch that
     /// reads it are often in different blocks -- a flag set before a call
-    /// and tested after it is ordinary code.
-    predicates: BTreeMap<Slot, (Slot, u64, bool, bool)>,
+    /// and tested after it is ordinary code. The trailing `u32` is the
+    /// compared operand's width: a bound on `al` is a bound on one byte,
+    /// whatever wider slot it was copied from.
+    predicates: BTreeMap<Slot, (Slot, u64, bool, bool, u32)>,
 }
 
 impl State {
@@ -491,11 +501,12 @@ fn run_block<I: Image>(
     let mut edges: BTreeMap<usize, Vec<(Slot, Value)>> = BTreeMap::new();
     // The comparison that produced each boolean, so a branch reading it can
     // refine the operand.
-    // Boolean -> (the compared slot, the constant, inclusive, and which
-    // side the constant sat on). The side decides which *edge* learns the
-    // bound: `cmp idx, n; jbe body` bounds the taken edge, and the far more
-    // common `cmp idx, n; ja default` bounds the fallthrough.
-    let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool)> = state.predicates.clone();
+    // Boolean -> (the compared slot, the constant, inclusive, which side
+    // the constant sat on, and the operand's width). The side decides which
+    // *edge* learns the bound: `cmp idx, n; jbe body` bounds the taken
+    // edge, and the far more common `cmp idx, n; ja default` bounds the
+    // fallthrough.
+    let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool, u32)> = state.predicates.clone();
     // Where each temporary came from, as (origin slot, affine offset): a
     // machine compares a *copy* of the switch variable and then dispatches
     // on the original, and the copy is often `x - k` rather than `x`, so a
@@ -503,7 +514,13 @@ fn run_block<I: Image>(
     // A bound applied only to the compared temporary is discarded the
     // moment the temporary dies -- which is why the first measurement of
     // this pass bounded nothing on libc.
-    let mut origins: BTreeMap<Slot, (Slot, i64)> = BTreeMap::new();
+    // (origin slot, affine offset, narrowest width crossed). A SUBPIECE
+    // narrows the value: a bound on the piece says nothing about the
+    // origin's upper bytes unless the origin already fits the width, so the
+    // width rides along and the compare checks it. A `unique` temporary is
+    // intra-instruction and dead by the next block, so it is never an
+    // origin -- the output is its own origin instead.
+    let mut origins: BTreeMap<Slot, (Slot, i64, Option<u32>)> = BTreeMap::new();
     let trace_at: Option<u64> = std::env::var("VENTRIS_TRACE_SJA_OPS")
         .ok()
         .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok());
@@ -530,11 +547,18 @@ fn run_block<I: Image>(
                         let width = op.inputs.first().map_or(output.size, |input| input.size);
                         let converted = match opcode {
                             "INT_SEXT" => map_values(value, |raw| sign_extend(raw, width)),
+                            // A zero-extension of a value that already fits
+                            // is a no-op: the bound carries through, flag
+                            // and all, rather than laundering into a set.
+                            "INT_ZEXT" if matches!(value, Value::Strided { base: 0, stride: 1, lo, hi, .. } if *lo >= 0 && (output.size >= 8 || (*hi as u64) < (1u64 << (output.size * 8)))) => value.clone(),
                             // A zero-extension of an unknown w-byte input is
                             // provably 0..=2^(8w)-1 -- the bound the domain
-                            "INT_ZEXT" if matches!(value, Value::Top) => {
-                                let high = if width >= 8 { i64::MAX }
-                                    else { (1i64 << (width * 8)) - 1 };
+                            // can state without knowing the value. Only a
+                            // byte or a word is worth stating: a 4-byte
+                            // bound turns every unknown 32-bit register into
+                            // a live Strided entry the join loop carries.
+                            "INT_ZEXT" if matches!(value, Value::Top) && width <= 2 => {
+                                let high = (1i64 << (width * 8)) - 1;
                                 // A width, not a guard: `movzbl` says the
                                 // index is a byte, not that the table is
                                 // 256 entries.
@@ -548,9 +572,25 @@ fn run_block<I: Image>(
                     if let (Some(output), Some(source)) = (&op.output, op.inputs.first())
                         && source.space != "const"
                     {
-                        let origin = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0));
-                        origins.insert(slot(output), origin);
+                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0, None));
+                        // A `unique` temporary is intra-instruction and dead
+                        // by the next block, so it is never an origin: the
+                        // output is its own origin instead.
+                        let (origin, off, narrow) = if origin.0 == "unique" {
+                            (slot(output), 0, None)
+                        } else {
+                            (origin, off, narrow)
+                        };
+                        // A bound on a piece says nothing about the whole:
+                        // record the narrowest width crossed so the compare
+                        // can check the origin already fits it.
+                        let narrow = if opcode == "SUBPIECE" {
+                            Some(narrow.map_or(output.size, |w| w.min(output.size)))
+                        } else {
+                            narrow
+                        };
+                        origins.insert(slot(output), (origin, off, narrow));
                     }
                 }
                 "INT_ADD" => {
@@ -566,10 +606,15 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off) = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0));
+                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0, None));
+                        let (origin, off, narrow) = if origin.0 == "unique" {
+                            (slot(output), 0, None)
+                        } else {
+                            (origin, off, narrow)
+                        };
                         origins.insert(slot(output),
-                            (origin, off + sign_extend(konst.offset, konst.size) as i64));
+                            (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
                     }
                 }
                 "INT_SUB" => {
@@ -588,10 +633,15 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off) = origins.get(&slot(source)).cloned()
-                            .unwrap_or((slot(source), 0));
+                        let (origin, off, narrow) = origins.get(&slot(source)).cloned()
+                            .unwrap_or((slot(source), 0, None));
+                        let (origin, off, narrow) = if origin.0 == "unique" {
+                            (slot(output), 0, None)
+                        } else {
+                            (origin, off, narrow)
+                        };
                         origins.insert(slot(output),
-                            (origin, off - sign_extend(konst.offset, konst.size) as i64));
+                            (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
                     }
                 }
                 "INT_MULT" => {
@@ -648,16 +698,16 @@ fn run_block<I: Image>(
                 | "INT_NOTEQUAL" | "BOOL_NEGATE"
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
-                    let mut carried: Option<(Slot, u64, bool, bool)> = None;
+                    let mut carried: Option<(Slot, u64, bool, bool, u32)> = None;
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)).cloned() {
                             carried = Some(match carried {
                                 // Two bounds on one slot: the looser one is
                                 // what the combination admits.
-                                Some((existing, limit, inclusive, left))
+                                Some((existing, limit, inclusive, left, width))
                                     if existing == found.0 =>
                                 {
-                                    (existing, limit.max(found.1), inclusive || found.2, left)
+                                    (existing, limit.max(found.1), inclusive || found.2, left, width)
                                 }
                                 Some(existing) => existing,
                                 None => found,
@@ -682,12 +732,12 @@ fn run_block<I: Image>(
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), (slot(left), limit, inclusive, false));
+                                    .insert(slot(output), (slot(left), limit, inclusive, false, left.size));
                             }
                             // `n < index`: the *fallthrough* is in range.
                             (Value::Const(limit), _) if left.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), (slot(right), limit, inclusive, true));
+                                    .insert(slot(output), (slot(right), limit, inclusive, true, right.size));
                             }
                             _ => {}
                         }
@@ -698,7 +748,7 @@ fn run_block<I: Image>(
                     // our own construction, slot 1 the taken edge, so the
                     // refinement is applied to whichever assumes the test.
                     if let Some(condition) = op.inputs.get(1)
-                        && let Some((operand, limit, inclusive, constant_left)) =
+                        && let Some((operand, limit, inclusive, constant_left, operand_size)) =
                             comparisons.get(&slot(condition)).cloned()
                     {
                         // `index < n` taken means index <= n-1; `n < index`
@@ -718,8 +768,28 @@ fn run_block<I: Image>(
                             // to [0, high] bounds the origin to
                             // [-off, high - off].
                             let mut targets = vec![(operand.clone(), 0i64)];
-                            if let Some((origin, off)) = origins.get(&operand) {
-                                targets.push((origin.clone(), *off));
+                            if let Some((origin, off, narrow)) = origins.get(&operand) {
+                                // A bound on a piece says nothing about the
+                                // whole unless the origin already fits the
+                                // narrowest width crossed. The bound's own
+                                // width is the operand's, so the effective
+                                // narrow is the smaller of the two.
+                                let effective = narrow.map_or(operand_size, |w| w.min(operand_size));
+                                let usable = if effective >= 8 {
+                                    true
+                                } else {
+                                    let mask = (1u64 << (effective * 8)) - 1;
+                                    match state.values.get(origin) {
+                                        Some(Value::Top) | None => false,
+                                        Some(Value::Const(c)) => *c <= mask,
+                                        Some(Value::Strided { base: 0, stride: 1, lo: 0, hi, .. }) =>
+                                            *hi >= 0 && (*hi as u64) <= mask,
+                                        _ => false,
+                                    }
+                                };
+                                if usable {
+                                    targets.push((origin.clone(), *off));
+                                }
                             }
                             // The taken edge is the one the comparison holds
                             // on; our block successors list the taken target
@@ -740,7 +810,14 @@ fn run_block<I: Image>(
                                     // (base 0, stride 1) shifts this way.
                                     Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) =>
                                         Value::Strided { base: 0, stride: 1, lo: lo.max(-off), hi: old_hi.min(high - off), guarded: true },
-                                    _ => Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: true },
+                                    // A fresh bound on an unknown value.
+                                    Some(Value::Top) | None =>
+                                        Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: true },
+                                    // A Set, a Const, or a Strided with a
+                                    // different base/stride is a different
+                                    // value set entirely: refining it into
+                                    // an index-space bound is unsound.
+                                    _ => continue,
                                 };
                                 edges
                                     .entry(edge)
