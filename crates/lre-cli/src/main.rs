@@ -408,9 +408,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 let flow = summary.flow.map_or_else(
                     || "null".to_string(),
                     |flow| {
+                        // `rounds` is part of the measurement: every phase
+                        // timing above is a sum over them.
                         format!(
-                            "{{\"requests\":{},\"instructions\":{}}}",
-                            flow.requests, flow.instructions
+                            "{{\"requests\":{},\"instructions\":{},\"rounds\":{}}}",
+                            flow.requests, flow.instructions, flow.rounds
                         )
                     },
                 );

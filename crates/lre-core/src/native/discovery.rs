@@ -97,6 +97,8 @@ impl ConsoleProvider {
             requests: self.session.requests()
                 + self.shards.iter().map(ConsoleSession::requests).sum::<u64>(),
             instructions: self.instructions,
+            // Set by the caller, which owns the round loop.
+            rounds: 0,
         }
     }
 }
