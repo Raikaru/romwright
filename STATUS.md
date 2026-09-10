@@ -5702,6 +5702,34 @@ the provisional state never exists, which is why the first version of this
 gate passed while proving nothing.
 
 
+### m17-001 evidence (functions from the shape of the graph)
+
+A producer that needs nothing pointing at a function: sweep a range,
+cluster what decodes into connected components over intraprocedural edges
+(calls excluded -- they are the edges that leave a function), and call each
+component a function. Nucleus's observation, over our console's decode
+(`crates/lre-core/src/cfg_functions.rs`).
+
+Scored standalone -- the sweep covers the whole executable range with
+nothing claimed in advance, so it cannot be handed the answers -- against
+DWARF, on four architectures:
+
+| Row | Called components (recall / precision) | Every component (recall / precision) |
+|---|---|---|
+| x86_64_many_o2 | 0.9975 / 0.9975 | 0.9975 / 0.4932 |
+| i386_many_o2 | 0.9975 / 0.9901 | 0.9975 / 0.4908 |
+| aarch64_many_o2 | 0.9975 / 0.9901 | 0.9975 / 0.9615 |
+| powerpc_many_o2 | 0.9975 / 0.9950 | 1.0000 / 0.9663 |
+
+The two tiers are reported separately because they are not equally
+trustworthy, and one number would hide it: a component something *calls* is
+a function almost every time, while a component nothing calls is either the
+code no other producer can see or a run of padding that happened to decode.
+On the variable-length machines the untrusted tier is half noise; on the
+fixed-width ones it is not, which is exactly what stepping one byte at a
+time through x86 padding predicts.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
