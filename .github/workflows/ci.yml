@@ -401,6 +401,13 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Find functions by the shape of the graph
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m17-001_cfg_functions.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/reports/m17-001.json"
       - name: Answer every query now, and say what is missing
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

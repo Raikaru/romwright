@@ -4,6 +4,7 @@
 //! imported fact is exported into the project database with provenance, so
 //! reopening and browsing never needs the JVM (spec 14.4, Phase 3 exit).
 
+pub mod cfg_functions;
 pub mod demand;
 pub mod import_cache;
 pub(crate) mod sha256;
@@ -1111,6 +1112,101 @@ impl Core {
             let _ = self.analyse_function(binary, program, entry);
         }
         self.analysis_status(program)
+    }
+
+    /// Finds functions by the shape of the control-flow graph, in the code
+    /// no other producer claimed.
+    ///
+    /// Every other producer needs something pointing at a function: a
+    /// symbol, a relocation, a call, a byte pattern. This one needs only
+    /// that the code *is* code -- it sweeps the gaps between known bodies,
+    /// clusters what decodes into connected components, and calls each
+    /// component a function (`cfg_functions`, after Nucleus). The result is
+    /// returned rather than committed, so a caller can score this producer
+    /// on its own before anything believes it.
+    pub fn detect_functions_cfg(
+        &self,
+        binary: &Path,
+        program: &str,
+        unit: u64,
+        whole_range: bool,
+    ) -> Result<serde_json::Value> {
+        let id = self.db.program_id(program)?;
+        // What is already claimed: a body somebody walked, with its extent.
+        // Scoring this producer on its own means sweeping everything, not
+        // only what nothing else claimed: a pass that is handed the answers
+        // cannot be measured against them.
+        let mut claimed: Vec<(u64, u64)> = if whole_range { Vec::new() } else { self
+            .db
+            .functions(id)?
+            .into_iter()
+            .map(|function| {
+                (
+                    function.entry.offset,
+                    function.entry.offset.saturating_add(function.size.max(1)),
+                )
+            })
+            .collect() };
+        claimed.sort_unstable();
+        let started = std::time::Instant::now();
+        let mut found = crate::cfg_functions::Clustered::default();
+        let mut swept_bytes = 0u64;
+        self.live.with(binary, program, |live| {
+            for (start, end) in live.code_ranges() {
+                // The gaps between claimed bodies inside this range.
+                let mut cursor = start;
+                let mut gaps: Vec<(u64, u64)> = Vec::new();
+                for (claim_start, claim_end) in claimed
+                    .iter()
+                    .copied()
+                    .filter(|(claim_start, _)| *claim_start >= start && *claim_start < end)
+                {
+                    if claim_start > cursor {
+                        gaps.push((cursor, claim_start));
+                    }
+                    cursor = cursor.max(claim_end);
+                }
+                if cursor < end {
+                    gaps.push((cursor, end));
+                }
+                for (gap_start, gap_end) in gaps {
+                    if gap_end <= gap_start {
+                        continue;
+                    }
+                    swept_bytes += gap_end - gap_start;
+                    let steps = live.sweep(gap_start, gap_end, unit)?;
+                    let clustered = crate::cfg_functions::cluster(&steps);
+                    found.entries.extend(clustered.entries);
+                    found.called.extend(clustered.called);
+                    found.blocks += clustered.blocks;
+                    found.components += clustered.components;
+                }
+            }
+            Ok(())
+        })?;
+        found.entries.sort_unstable();
+        found.entries.dedup();
+        found.called.sort_unstable();
+        found.called.dedup();
+        Ok(serde_json::json!({
+            "program": program,
+            "provenance": "native-analysis:cfg-cluster",
+            "claimed_functions": claimed.len(),
+            "swept_bytes": swept_bytes,
+            "blocks": found.blocks,
+            "components": found.components,
+            "entries": found
+                .entries
+                .iter()
+                .map(|entry| format!("{entry:08x}"))
+                .collect::<Vec<_>>(),
+            "called_entries": found
+                .called
+                .iter()
+                .map(|entry| format!("{entry:08x}"))
+                .collect::<Vec<_>>(),
+            "seconds": started.elapsed().as_secs_f64(),
+        }))
     }
 
     /// Infers parameter and return types for functions, from p-code alone.

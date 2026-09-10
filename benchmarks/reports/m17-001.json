@@ -1,0 +1,103 @@
+{
+  "gate": "m17-001",
+  "milestone": "M17",
+  "commit": "bd22cdd77b5468191ef8f764a0eaefb8a12db5c7",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "called.recall": 0.95,
+    "called.precision": 0.95,
+    "all.recall": 0.95
+  },
+  "rows": [
+    {
+      "id": "x86_64_many_o2",
+      "unit": 1,
+      "truth": 401,
+      "swept_bytes": 11089,
+      "blocks": 825,
+      "components": 811,
+      "seconds": 0.621,
+      "called": {
+        "found": 401,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.9975
+      },
+      "all": {
+        "found": 811,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.4932
+      }
+    },
+    {
+      "id": "i386_many_o2",
+      "unit": 1,
+      "truth": 401,
+      "swept_bytes": 11168,
+      "blocks": 831,
+      "components": 815,
+      "seconds": 1.032,
+      "called": {
+        "found": 404,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.9901
+      },
+      "all": {
+        "found": 815,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.4908
+      }
+    },
+    {
+      "id": "aarch64_many_o2",
+      "unit": 4,
+      "truth": 401,
+      "swept_bytes": 8416,
+      "blocks": 428,
+      "components": 416,
+      "seconds": 0.421,
+      "called": {
+        "found": 404,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.9901
+      },
+      "all": {
+        "found": 416,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.9615
+      }
+    },
+    {
+      "id": "powerpc_many_o2",
+      "unit": 4,
+      "truth": 401,
+      "swept_bytes": 8496,
+      "blocks": 426,
+      "components": 415,
+      "seconds": 0.452,
+      "called": {
+        "found": 402,
+        "hit": 400,
+        "recall": 0.9975,
+        "precision": 0.995
+      },
+      "all": {
+        "found": 415,
+        "hit": 401,
+        "recall": 1.0,
+        "precision": 0.9663
+      }
+    }
+  ],
+  "passed": true,
+  "failures": []
+}

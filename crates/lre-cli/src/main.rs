@@ -42,6 +42,7 @@ fn usage() {
   lre-cli analyse-function <binary> <program> <address> [--project DIR] [--json]
   lre-cli structure <binary> <program> <addr[,addr...]> [--project DIR] [--json]
   lre-cli infer-types <binary> <program> <addr[,addr...]> [--project DIR] [--json]
+  lre-cli detect-functions <binary> <program> [--unit N] [--whole-range] [--project DIR] [--json]
   lre-cli status <program> [--project DIR] [--json]
   lre-cli analyse-pending <binary> <program> [--budget N] [--project DIR] [--json]
   lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
@@ -721,6 +722,36 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!(
                     "{}  rev {}  {} analysed, {} seeded left",
                     status.program, status.revision, status.analysed, status.seeded
+                );
+            }
+        }
+        "detect-functions" => {
+            let binary = args.get(2).ok_or("detect-functions needs a binary")?.clone();
+            let program = args
+                .get(3)
+                .ok_or("detect-functions needs a program name")?
+                .clone();
+            let unit: u64 = flag(args, "--unit")
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(1);
+            let found = core
+                .detect_functions_cfg(
+                    Path::new(&binary),
+                    &program,
+                    unit,
+                    has_flag(args, "--whole-range"),
+                )
+                .map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                println!("{found}");
+            } else {
+                println!(
+                    "{} candidates from {} blocks in {} components ({} bytes swept, {:.2}s)",
+                    found["entries"].as_array().map(Vec::len).unwrap_or(0),
+                    found["blocks"],
+                    found["components"],
+                    found["swept_bytes"],
+                    found["seconds"].as_f64().unwrap_or(0.0)
                 );
             }
         }

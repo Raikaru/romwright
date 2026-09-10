@@ -277,6 +277,79 @@ impl LiveProgram {
         Ok(walk)
     }
 
+    /// Executable ranges of the image, as the loader mapped them.
+    pub fn code_ranges(&self) -> Vec<(u64, u64)> {
+        native::code_ranges(&self.import)
+    }
+
+    /// Decodes forward through an address range, one instruction at a
+    /// time, and reports what each one does.
+    ///
+    /// This is a sweep, not a walk: it does not follow flow, it asks the
+    /// console about every address in turn and steps by whatever decoded.
+    /// A byte run that decodes to nothing is skipped one unit at a time,
+    /// because a stripped image's padding and data are inside the same
+    /// mapping as its code.
+    pub fn sweep(&mut self, start: u64, end: u64, unit: u64) -> Result<Vec<crate::cfg_functions::Step>> {
+        use crate::cfg_functions::Step;
+        let mut steps = Vec::new();
+        let mut address = start;
+        let unit = unit.max(1);
+        while address < end {
+            // One console request per batch of addresses, because a
+            // request per instruction is a syscall per instruction.
+            let batch: Vec<u64> = (0..512)
+                .map(|index| address + index * unit)
+                .take_while(|candidate| *candidate < end)
+                .collect();
+            if batch.is_empty() {
+                break;
+            }
+            let flows = self
+                .flow
+                .flow_batch(&batch)
+                .map_err(CoreError::NativeRuntime)?;
+            let mut next = address;
+            for (candidate, flow) in batch.iter().copied().zip(flows) {
+                if candidate < next {
+                    continue; // covered by a longer instruction already
+                }
+                if matches!(flow.kind, FlowKind::Bad | FlowKind::Unimpl) || flow.length == 0 {
+                    next = candidate + unit;
+                    continue;
+                }
+                let fall = candidate.saturating_add(u64::from(flow.length));
+                let (successors, calls, terminal) = match flow.kind {
+                    FlowKind::Call => (vec![fall], flow.targets.clone(), false),
+                    FlowKind::CallInd => (vec![fall], Vec::new(), false),
+                    FlowKind::Branch => (flow.targets.clone(), Vec::new(), true),
+                    FlowKind::CBranch => {
+                        let mut all = flow.targets.clone();
+                        all.push(fall);
+                        (all, Vec::new(), true)
+                    }
+                    FlowKind::BranchInd => (flow.targets.clone(), Vec::new(), true),
+                    FlowKind::Return => (Vec::new(), Vec::new(), true),
+                    FlowKind::Fallthrough => (vec![fall], Vec::new(), false),
+                    FlowKind::Bad | FlowKind::Unimpl => unreachable!("handled above"),
+                };
+                steps.push(Step {
+                    address: candidate,
+                    length: flow.length,
+                    successors,
+                    calls,
+                    terminal,
+                });
+                next = fall;
+            }
+            if next <= address {
+                break;
+            }
+            address = next;
+        }
+        Ok(steps)
+    }
+
     /// The p-code of the given instructions, from the same console the walk
     /// used, so the operations are the ones it decoded.
     pub fn pcode(
