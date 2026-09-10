@@ -238,13 +238,6 @@ jobs:
         run: |
           python3 tests/m2-016_import_budget.py \
             --report "$RUNNER_TEMP/discovery/import-budget.json"
-      - name: Enforce the tail-call reference gate
-        env:
-          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
-        run: |
-          python3 tests/m5-006_tailcall.py \
-            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
-            --report "$RUNNER_TEMP/discovery/tailcall.json"
       - name: Check the committed library declarations against the archive
         run: python3 scripts/gen_library_prototypes.py --check
       - name: Apply declared prototypes to the imports an image names
@@ -625,6 +618,17 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
             --report "$RUNNER_TEMP/discovery/data-xref-report.json"
+      - name: Enforce the tail-call reference gate
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          # Scores against the xref oracle the data-reference gate just
+          # generated; the default oracle dir is a gitignored cache that a
+          # fresh checkout does not have.
+          python3 tests/m5-006_tailcall.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
+            --report "$RUNNER_TEMP/discovery/tailcall.json"
       - name: Enforce complete M2 string gate
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
