@@ -548,9 +548,10 @@ fn run_block<I: Image>(
                         let converted = match opcode {
                             "INT_SEXT" => map_values(value, |raw| sign_extend(raw, width)),
                             // A zero-extension of a value that already fits
-                            // is a no-op: the bound carries through, flag
-                            // and all, rather than laundering into a set.
-                            "INT_ZEXT" if matches!(value, Value::Strided { base: 0, stride: 1, lo, hi, .. } if *lo >= 0 && (output.size >= 8 || (*hi as u64) < (1u64 << (output.size * 8)))) => value.clone(),
+                            // the *input* width is a no-op: the bound
+                            // carries through, flag and all, rather than
+                            // laundering into a set.
+                            "INT_ZEXT" if matches!(value, Value::Strided { base: 0, stride: 1, lo, hi, .. } if *lo >= 0 && *hi >= *lo && (width >= 8 || (*hi as u64) < (1u64 << (width * 8)))) => value.clone(),
                             // A zero-extension of an unknown w-byte input is
                             // provably 0..=2^(8w)-1 -- the bound the domain
                             // can state without knowing the value. Only a
@@ -576,21 +577,20 @@ fn run_block<I: Image>(
                             .unwrap_or((slot(source), 0, None));
                         // A `unique` temporary is intra-instruction and dead
                         // by the next block, so it is never an origin: the
-                        // output is its own origin instead.
-                        let (origin, off, narrow) = if origin.0 == "unique" {
-                            (slot(output), 0, None)
+                        // output has no affine parent at all.
+                        if origin.0 == "unique" {
+                            origins.remove(&slot(output));
                         } else {
-                            (origin, off, narrow)
-                        };
-                        // A bound on a piece says nothing about the whole:
-                        // record the narrowest width crossed so the compare
-                        // can check the origin already fits it.
-                        let narrow = if opcode == "SUBPIECE" {
-                            Some(narrow.map_or(output.size, |w| w.min(output.size)))
-                        } else {
-                            narrow
-                        };
-                        origins.insert(slot(output), (origin, off, narrow));
+                            // A bound on a piece says nothing about the
+                            // whole: record the narrowest width crossed so
+                            // the compare can check the origin already fits.
+                            let narrow = if opcode == "SUBPIECE" {
+                                Some(narrow.map_or(output.size, |w| w.min(output.size)))
+                            } else {
+                                narrow
+                            };
+                            origins.insert(slot(output), (origin, off, narrow));
+                        }
                     }
                 }
                 "INT_ADD" => {
@@ -608,13 +608,16 @@ fn run_block<I: Image>(
                     {
                         let (origin, off, narrow) = origins.get(&slot(source)).cloned()
                             .unwrap_or((slot(source), 0, None));
-                        let (origin, off, narrow) = if origin.0 == "unique" {
-                            (slot(output), 0, None)
+                        // A `unique` temporary is dead by the next block:
+                        // the output has no affine parent, and recording
+                        // `out = out + k` would push a wrongly shifted bound
+                        // onto it at the next compare.
+                        if origin.0 == "unique" {
+                            origins.remove(&slot(output));
                         } else {
-                            (origin, off, narrow)
-                        };
-                        origins.insert(slot(output),
-                            (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
+                            origins.insert(slot(output),
+                                (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
+                        }
                     }
                 }
                 "INT_SUB" => {
@@ -635,13 +638,12 @@ fn run_block<I: Image>(
                     {
                         let (origin, off, narrow) = origins.get(&slot(source)).cloned()
                             .unwrap_or((slot(source), 0, None));
-                        let (origin, off, narrow) = if origin.0 == "unique" {
-                            (slot(output), 0, None)
+                        if origin.0 == "unique" {
+                            origins.remove(&slot(output));
                         } else {
-                            (origin, off, narrow)
-                        };
-                        origins.insert(slot(output),
-                            (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
+                            origins.insert(slot(output),
+                                (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
+                        }
                     }
                 }
                 "INT_MULT" => {
@@ -649,6 +651,7 @@ fn run_block<I: Image>(
                         (&op.output, inputs.first(), inputs.get(1))
                     {
                         state.set(output, multiply(left.clone(), right.clone()));
+                        origins.remove(&slot(output));
                     }
                 }
                 "INT_LEFT" => {
@@ -657,6 +660,7 @@ fn run_block<I: Image>(
                     {
                         let factor = 1u64.checked_shl(*shift as u32).unwrap_or(0);
                         state.set(output, multiply(left.clone(), Value::Const(factor)));
+                        origins.remove(&slot(output));
                     }
                 }
                 // A mask *is* a bound, and needs no guard to state it:
@@ -681,11 +685,13 @@ fn run_block<I: Image>(
                             _ => Value::Top,
                         };
                         state.set(output, masked);
+                        origins.remove(&slot(output));
                     }
                 }
                 "LOAD" => {
                     if let (Some(output), Some(address)) = (&op.output, inputs.get(1)) {
                         state.set(output, load(image, address.clone(), output.size));
+                        origins.remove(&slot(output));
                     }
                 }
                 // A machine does not branch on a comparison, it branches on
@@ -719,6 +725,7 @@ fn run_block<I: Image>(
                     }
                     if let Some(output) = &op.output {
                         state.set(output, Value::Top);
+                        origins.remove(&slot(output));
                     }
                 }
                 "INT_LESS" | "INT_SLESS" | "INT_LESSEQUAL" | "INT_SLESSEQUAL" => {
@@ -782,8 +789,8 @@ fn run_block<I: Image>(
                                     match state.values.get(origin) {
                                         Some(Value::Top) | None => false,
                                         Some(Value::Const(c)) => *c <= mask,
-                                        Some(Value::Strided { base: 0, stride: 1, lo: 0, hi, .. }) =>
-                                            *hi >= 0 && (*hi as u64) <= mask,
+                                        Some(Value::Strided { base: 0, stride: 1, lo, hi, .. }) =>
+                                            *lo >= 0 && *hi >= *lo && (*hi as u64) <= mask,
                                         _ => false,
                                     }
                                 };
@@ -813,10 +820,24 @@ fn run_block<I: Image>(
                                     // A fresh bound on an unknown value.
                                     Some(Value::Top) | None =>
                                         Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: true },
-                                    // A Set, a Const, or a Strided with a
-                                    // different base/stride is a different
-                                    // value set entirely: refining it into
-                                    // an index-space bound is unsound.
+                                    // A set filters to the members the
+                                    // bound admits: sound, and keeps the
+                                    // precision the set already had.
+                                    Some(Value::Set(values)) => {
+                                        let kept: Vec<u64> = values.iter().copied()
+                                            .filter(|v| (*v as i64) >= -off && (*v as i64) <= high - off)
+                                            .collect();
+                                        if kept.is_empty() {
+                                            continue;
+                                        }
+                                        Value::Set(std::rc::Rc::new(kept))
+                                    }
+                                    // A constant outside the bound means
+                                    // this edge is infeasible; a Strided
+                                    // with a different base or stride is a
+                                    // different value set entirely. Both
+                                    // are left alone rather than refined
+                                    // into an index-space bound.
                                     _ => continue,
                                 };
                                 edges
@@ -855,6 +876,7 @@ fn run_block<I: Image>(
                 _ => {
                     if let Some(output) = &op.output {
                         state.set(output, Value::Top);
+                        origins.remove(&slot(output));
                     }
                 }
             }
@@ -1382,6 +1404,155 @@ mod tests {
         let found = analyse(&image, &zext_switch_blocks(true), (0x1000, 0x2000));
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
+    }
+
+    /// `movzbl 0x1(%r12),%r15d; lea -0x20(%r15),%eax; cmp $0x5a,%al; jbe
+    /// dispatch` then `movzbl %r15b,%eax; sub $0x20; movzbl jt(,%rax),%eax;
+    /// movslq step(,%rax,4),%rdx; add base,%rdx; jmp *%rdx` -- vfprintf's
+    /// two-level dispatch. The bound is on `%al`, three p-code ops and a
+    /// `unique` temporary away from `r15`, and the dispatch re-derives the
+    /// index from `r15b` in a different block.
+    fn vfprintf_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![
+                // r15d = zext(load) -- the byte is unknown, so r15 is the
+                // width bound [0,255] unguarded.
+                instruction(
+                    0x1000,
+                    vec![
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x100, 1)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xdead, 8)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0xb8, 4)),
+                            vec![varnode("unique", 0x100, 1)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0xb8, 8)),
+                            vec![varnode("register", 0xb8, 4)],
+                        ),
+                    ],
+                ),
+                // eax = subpiece(r15 - 0x20, 4); al < 4; jbe dispatch.
+                instruction(
+                    0x1010,
+                    vec![
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x200, 8)),
+                            vec![varnode("register", 0xb8, 8), varnode("const", 0xffffffffffffffe0, 8)],
+                        ),
+                        op(
+                            "SUBPIECE",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("unique", 0x200, 8), varnode("const", 0, 4)],
+                        ),
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x0, 1), varnode("const", 4, 1)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1020, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                ),
+            ],
+            successors: vec![1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    // eax = zext(r15b); eax = eax - 0x20.
+                    op(
+                        "INT_ZEXT",
+                        Some(varnode("register", 0x0, 4)),
+                        vec![varnode("register", 0xb8, 1)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x0, 4)),
+                        vec![varnode("register", 0x0, 4), varnode("const", 0x20, 4)],
+                    ),
+                    // eax = zext(jt[eax]) -- the class byte.
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x300, 8)),
+                        vec![varnode("const", 0x9000, 8), varnode("register", 0x0, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x310, 1)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x300, 8)],
+                    ),
+                    op(
+                        "INT_ZEXT",
+                        Some(varnode("register", 0x0, 4)),
+                        vec![varnode("unique", 0x310, 1)],
+                    ),
+                    // rdx = sext(step[eax*4]); rdx += base; jmp *rdx.
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x400, 8)),
+                        vec![varnode("register", 0x0, 4), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x408, 8)),
+                        vec![varnode("const", 0x9100, 8), varnode("unique", 0x400, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x410, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x408, 8)],
+                    ),
+                    op(
+                        "INT_SEXT",
+                        Some(varnode("register", 0x10, 8)),
+                        vec![varnode("unique", 0x410, 4)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x10, 8)),
+                        vec![varnode("register", 0x10, 8), varnode("const", 0x1400, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("register", 0x10, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        vec![guard, dispatch]
+    }
+
+    #[test]
+    fn a_bound_reaches_the_origin_through_a_unique_temporary() {
+        // The class bytes 0,1,2,3 index a four-entry offset table; the
+        // bound on %al has to reach r15 through the lea's unique temporary
+        // and the subpiece, or the first table read is unguarded.
+        let mut memory = HashMap::new();
+        for (index, class) in [0u64, 1, 2, 3].iter().enumerate() {
+            memory.insert(0x9000 + index as u64, *class);
+        }
+        for (index, offset) in [0x100u64, 0x108, 0x110, 0x118].iter().enumerate() {
+            memory.insert(0x9100 + index as u64 * 4, *offset);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &vfprintf_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1500, 0x1508, 0x1510, 0x1518]
+        );
     }
 
     #[test]
