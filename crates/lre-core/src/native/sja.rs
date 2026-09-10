@@ -846,6 +846,9 @@ fn run_block<I: Image>(
                                     targets.push((origin.clone(), *off));
                                 }
                             }
+                            // The taken edge is the one the comparison holds
+                            // on; our block successors list the taken target
+                            // first (`Block::successors`). Which side of the
                             // branch the bound belongs to depends on how the
                             // flags were combined and negated, and getting
                             // that wrong silently is worse than trying both:
@@ -860,8 +863,16 @@ fn run_block<I: Image>(
                                     // to [lo.max(-off), hi.min(high-off)].
                                     // Only a plain index-space value
                                     // (base 0, stride 1) shifts this way.
-                                    Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) =>
-                                        Value::Strided { base: 0, stride: 1, lo: lo.max(-off), hi: old_hi.min(high - off), guarded: true },
+                                    // The refined floor can still go
+                                    // negative: `lea 0x10(%rax),%rdx;
+                                    // cmp $0x20,%rdx` bounds eax to
+                                    // [-0x10, 3-0x10]. No compiler indexes
+                                    // a table negatively, so the guard was
+                                    // never stated.
+                                    Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
+                                        let floor = lo.max(-off);
+                                        Value::Strided { base: 0, stride: 1, lo: floor, hi: old_hi.min(high - off), guarded: floor >= 0 }
+                                    }
                                     // A fresh bound on an unknown value.
                                     // `lea 0x10(%r8),%rax; cmp $0x20,%rax`
                                     // bounds r8 to [-0x10, 0xf]: the floor
