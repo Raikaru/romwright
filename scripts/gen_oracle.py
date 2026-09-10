@@ -5,6 +5,7 @@ Addresses remain in Ghidra's coordinate system; image_base is recorded explicitl
 This is an oracle-generation gate, not a discovery precision/recall score.
 """
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -138,6 +139,20 @@ def write_reference(path, reference):
             pending.unlink(missing_ok=True)
 
 
+def record_reference(row, reference, cache, source):
+    row.update(status="pass", functions=len(reference["entries"]), cache=source,
+               oracle=f"oracle/{cache.name}", oracle_sha256=digest(cache))
+
+
+def produce_reference(command, binary, sha, expected, cache, timeout):
+    reference = generate_reference(command, binary, expected, timeout)
+    if digest(binary) != sha:
+        raise ValueError("Primary changed during analysis")
+    write_reference(cache, reference)
+    return reference
+
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
@@ -178,11 +193,15 @@ def main():
     except (OSError, ValueError, KeyError) as error:
         setup_error = str(error)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    rows, command = [], None
+    # Twenty independent JVM analyses: the only ordering that matters is the
+    # report's, so plan first, then run the misses concurrently. Serial
+    # generation cost 728 s of a mirror run, nearly all of it idle waiting.
+    rows, plan = [], []
     hits = generated = 0
     for key, recipe in required.items():
         row = {"id": "_".join(key), "sha256": None, "status": "skipped",
                "metrics": {}, "thresholds": {}, "runs": 1}
+        rows.append(row)
         try:
             if setup_error:
                 raise ValueError(setup_error)
@@ -204,26 +223,37 @@ def main():
             try:
                 reference = json.loads(cache.read_text())
                 validate_reference(reference, expected)
-                hits += 1
-                source = "hit"
             except (OSError, ValueError, KeyError, TypeError) as error:
                 if args.check:
                     raise ValueError(f"Missing or invalid oracle cache: {error}") from error
-                if command is None:
-                    command = bridge_command(args.ghidra, args.java)
-                reference = generate_reference(command, binary, expected, args.timeout)
-                if digest(binary) != sha:
-                    raise ValueError("Primary changed during analysis")
-                write_reference(cache, reference)
-                generated += 1
-                source = "generated"
-            row.update(status="pass", functions=len(reference["entries"]), cache=source,
-                       oracle=f"oracle/{cache.name}", oracle_sha256=digest(cache))
-            print(f"PASS {row['id']}: {len(reference['entries'])} functions ({source})", flush=True)
+                plan.append((row, binary, sha, expected, cache))
+                continue
+            hits += 1
+            record_reference(row, reference, cache, "hit")
         except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
             row["reason"] = str(error)
-            print(f"SKIPPED {row['id']}: {error}", flush=True)
-        rows.append(row)
+
+    if plan:
+        command = bridge_command(args.ghidra, args.java)
+        jobs = max(1, min(int(os.environ.get("VENTRIS_ORACLE_JOBS", "4")), len(plan)))
+        with ThreadPoolExecutor(max_workers=jobs) as pool:
+            futures = {pool.submit(produce_reference, command, binary, sha, expected,
+                                   cache, args.timeout): (row, cache)
+                       for row, binary, sha, expected, cache in plan}
+            for future in futures:
+                row, cache = futures[future]
+                try:
+                    record_reference(row, future.result(), cache, "generated")
+                    generated += 1
+                except (OSError, ValueError, KeyError, TypeError,
+                        subprocess.SubprocessError) as error:
+                    row["reason"] = str(error)
+
+    for row in rows:
+        if row["status"] == "pass":
+            print(f"PASS {row['id']}: {row['functions']} functions ({row['cache']})", flush=True)
+        else:
+            print(f"SKIPPED {row['id']}: {row.get('reason')}", flush=True)
     summary = {status: sum(row["status"] == status for row in rows)
                for status in ("pass", "fail", "skipped")}
     report = {"gate": "m1-007", "milestone": "M1",
