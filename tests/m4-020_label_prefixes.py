@@ -153,8 +153,8 @@ def main() -> int:
             for entry, _ in sorted(held["functions"].items()):
                 text = cli("decompile", str(binary), f"{entry:08x}", "--project",
                            str(project), timeout=arguments.timeout)
-                if text.returncode != 0:
-                    continue
+                assert text.returncode == 0, \
+                    f"decompile failed for {name}:{entry:08x}: {text.stderr.strip()}"
                 for prefix, address in LABEL.findall(text.stdout):
                     where = executable(held["regions"], int(address, 16))
                     if where is None:
