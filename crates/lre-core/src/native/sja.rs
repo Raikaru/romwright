@@ -952,6 +952,23 @@ fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
             }
             Value::Set(std::rc::Rc::new(entries))
         }
+        // A two-level dispatch reads the second table at an address the
+        // first table's entries produced: `LOAD(step + LOAD8(jt + i) * 8)`.
+        // The address is a set of table entries, so the read is the set of
+        // what each points at. Any member that does not read is a wrong
+        // bound reaching outside the table, and the whole read is unknown.
+        Value::Set(ref addresses) if addresses.len() <= MAX_TABLE as usize => {
+            let mut entries = Vec::with_capacity(addresses.len());
+            for at in addresses.iter().copied() {
+                let Some(entry) = image.read(at, size) else {
+                    return Value::Top;
+                };
+                entries.push(entry);
+            }
+            entries.sort_unstable();
+            entries.dedup();
+            Value::Set(std::rc::Rc::new(entries))
+        }
         _ => Value::Top,
     }
 }
