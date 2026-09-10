@@ -16,17 +16,21 @@ from xref_gate import CONTEXTS
 
 FILES = ('pspec.xml', 'cspec.xml', 'tspec.xml', 'coretypes.xml', 'registers.txt')
 ARCHITECTURES = ('i386', 'aarch64', 'powerpc')
+# Provenance records which producer built the bundle; it is not a
+# requirement that a later export carry the same producer. The comment at
+# the differs check already says so.
+PROVENANCE = ('upstream_version', 'upstream_revision', 'bridge_sources_sha256',
+              'representative_sha256')
 
 
 def bundle_paths(root, language):
     name = language.replace(':', '-')
     return root / name, root / (name + '.manifest.json')
-
-
 def validate_bundle(root, expected):
     directory, manifest_path = bundle_paths(root, expected['language'])
     manifest = json.loads(manifest_path.read_text())
-    if any(manifest.get(key) != value for key, value in expected.items()):
+    if any(manifest.get(key) != value for key, value in expected.items()
+           if key not in PROVENANCE):
         raise ValueError(f'Bundle context mismatch: {manifest_path}')
     if set(manifest['files']) != set(FILES):
         raise ValueError(f'Incomplete bundle manifest: {manifest_path}')
@@ -94,7 +98,9 @@ def platform_bundle(args, producer, command):
             directory, destination = bundle_paths(args.out_dir, context['language'])
             if destination.exists():
                 recorded = json.loads(destination.read_text())
-                required = dict(**expected, files=result['files'])
+                required = {key: value for key, value in
+                    dict(**expected, files=result['files']).items()
+                    if key not in PROVENANCE}
                 if any(recorded.get(key) != value for key, value in required.items()):
                     raise ValueError(f'Fresh export differs from recorded manifest: {destination}')
             directory.mkdir(parents=True, exist_ok=True)
@@ -178,7 +184,9 @@ def main():
                     recorded = json.loads(destination.read_text())
                     # The first producer input remains provenance, not a
                     # requirement that equivalent corpus rebuilds be identical.
-                    required = dict(**expected, files=result['files'])
+                    required = {key: value for key, value in
+                    dict(**expected, files=result['files']).items()
+                    if key not in PROVENANCE}
                     if any(recorded.get(key) != value for key, value in required.items()):
                         raise ValueError(f'Fresh export differs from recorded manifest: {destination}')
                 directory.mkdir(parents=True, exist_ok=True)
