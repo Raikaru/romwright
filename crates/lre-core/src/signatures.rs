@@ -154,8 +154,13 @@ impl crate::Core {
         binary: &Path,
         name: &str,
         databases: &[std::path::PathBuf],
+        analyse: bool,
     ) -> crate::Result<(Vec<lre_model::ProgramSummary>, Option<SignatureReport>)> {
-        let stored = self.import_container(binary, name)?;
+        let stored = if analyse {
+            self.import_container(binary, name)?
+        } else {
+            self.load_program(binary, name)?
+        };
         if databases.is_empty() {
             return Ok((stored, None));
         }

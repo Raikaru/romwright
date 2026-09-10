@@ -135,9 +135,16 @@ impl ApiService {
                     .into_iter()
                     .map(std::path::PathBuf::from)
                     .collect::<Vec<_>>();
+                // `analyse: false` loads the image and its own symbols and
+                // returns: what an interactive consumer opens with, before
+                // any walk has run (m14-001).
+                let analyse = params
+                    .get("analyse")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(true);
                 let (stored, signatures) = self
                     .core
-                    .import_native_with_signatures(&binary, name, &databases)
+                    .import_native_with_signatures(&binary, name, &databases, analyse)
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
                 // The primary program stays at the top level so existing
                 // consumers keep working; a container's other processors

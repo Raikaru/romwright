@@ -1,0 +1,34 @@
+{
+  "id": "m14-001",
+  "milestone": "M14",
+  "criterion": "loading is not analysing; an unchanged image is not re-analysed",
+  "recorded_at": "2026-09-10T04:51:31.200446+00:00",
+  "budgets": {
+    "load_small_seconds": 4.0,
+    "load_large_seconds": 8.0,
+    "second_import_seconds": 5.0
+  },
+  "measured": {
+    "load": {
+      "seconds": 1.01,
+      "list_seconds": 0.06,
+      "functions": 3898,
+      "invented": 0
+    },
+    "load_large": {
+      "seconds": 3.96,
+      "functions": 42423
+    },
+    "reuse": {
+      "first_seconds": 130.8,
+      "second_seconds": 0.41,
+      "tables": 32,
+      "differing": []
+    },
+    "invalidation": {
+      "seconds": 76.1
+    }
+  },
+  "status": "pass",
+  "failures": []
+}

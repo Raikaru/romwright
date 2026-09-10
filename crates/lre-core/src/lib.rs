@@ -1002,14 +1002,36 @@ impl Core {
     /// one program under `name`; a container stores one per processor,
     /// named `<name>.<image>`, because a program holds one language and its
     /// processors do not share one.
+    /// Loads a binary's own facts without analysing it: mappings, declared
+    /// regions, relocations and the image's symbol table, stored and
+    /// returned. An interactive session opens with this and analyses after.
+    pub fn load_program(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
+        self.import_container_with(binary, name, false)
+    }
+
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
+        self.import_container_with(binary, name, true)
+    }
+
+    fn import_container_with(
+        &self,
+        binary: &Path,
+        name: &str,
+        analyse: bool,
+    ) -> Result<Vec<ProgramSummary>> {
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
         // Only a project this import would be the sole occupant of can be
         // restored wholesale, which is every gate's shape and no analyst's
         // multi-image project.
         let cache_key = (self.db.programs()?.is_empty())
-            .then(|| import_cache::key(binary, name, &self.config))
+            .then(|| {
+                import_cache::key(
+                    binary,
+                    &format!("{name}|{}", if analyse { "analysed" } else { "loaded" }),
+                    &self.config,
+                )
+            })
             .flatten();
         if std::env::var_os("VENTRIS_TRACE_CACHE").is_some() {
             eprintln!("import cache key {cache_key:?} hit {:?}",
@@ -1032,7 +1054,7 @@ impl Core {
                 }
             }
         }
-        let images = native::load_container(binary)?;
+        let images = native::load_container_with(binary, analyse)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {

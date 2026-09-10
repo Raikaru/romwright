@@ -401,6 +401,12 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Load without analysing, and reuse an unchanged import
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m14-001_interactive_import.py \
+            --report "$RUNNER_TEMP/discovery/interactive-import.json"
       - name: Recover jump tables without the decompiler
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

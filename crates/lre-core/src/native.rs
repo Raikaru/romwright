@@ -1328,6 +1328,17 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
+    load_container_with(binary, true)
+}
+
+/// Loads every image a container carries, running discovery only when asked.
+///
+/// Without discovery this is the loader's own answer: mapped bytes, declared
+/// regions, relocations, and whatever the image says about itself -- its
+/// symbol table above all. That is a parse, not a walk, so it returns in
+/// seconds on an image whose full analysis takes minutes, which is what an
+/// interactive session needs before it can show anything at all.
+pub fn load_container_with(binary: &Path, analyse: bool) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
@@ -1341,7 +1352,13 @@ pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
         select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
         phase(&mut imp, "parse", parse_started);
-        discover(&mut imp)?;
+        if analyse {
+            discover(&mut imp)?;
+        } else {
+            imp.discovery_note = Some(
+                "loaded without analysis: functions are the image's own symbols".into(),
+            );
+        }
         loaded.push((suffix, imp));
     }
     Ok(loaded)
