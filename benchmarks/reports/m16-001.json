@@ -1,0 +1,630 @@
+{
+  "gate": "m16-001",
+  "milestone": "M16",
+  "commit": "ae534389fabea02a3a1724e8baa591f3b792cee4",
+  "date": "2026-09-10",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "exact": 0.45,
+    "conservative": 0.9,
+    "wrong": 0.05
+  },
+  "levels": [
+    {
+      "level": "O0",
+      "functions": 13,
+      "rows": [
+        {
+          "function": "signed_compare",
+          "entry": "00400446",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "unsigned_compare",
+          "entry": "00400466",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint32",
+              "ours": "num32",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "uint32",
+              "ours": "uint32",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "signed_wide",
+          "entry": "00400491",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int64",
+              "ours": "int64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int64",
+              "ours": "int64",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "unsigned_wide",
+          "entry": "004004d0",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint64",
+              "ours": "uint64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "uint64",
+              "ours": "num64",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "through_pointer",
+          "entry": "0040051e",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "top",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "uint64",
+              "ours": "uint32",
+              "distance": null
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "floating",
+          "entry": "00400567",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "float64",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "float64",
+              "ours": "float64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "float64",
+              "ours": "float64",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "floating_narrow",
+          "entry": "0040059f",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "float32",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "float32",
+              "ours": "float32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "float32",
+              "ours": "float32",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "indirect",
+          "entry": "004005d0",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "code",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "narrow_unsigned",
+          "entry": "004005ef",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint8",
+              "ours": "num8",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "uint8",
+              "ours": "uint8",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "narrow_signed",
+          "entry": "00400612",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int16",
+              "ours": "num16",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "int16",
+              "ours": "int16",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "store_through_pointer",
+          "entry": "0040063e",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "ptr",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "mixed",
+          "entry": "00400661",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "uint64",
+              "distance": null
+            },
+            {
+              "index": 1,
+              "truth": "uint64",
+              "ours": "top",
+              "distance": 2
+            },
+            {
+              "index": 2,
+              "truth": "int32",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": "return",
+              "truth": "uint64",
+              "ours": "num64",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "main",
+          "entry": "004006c1",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            },
+            {
+              "index": 1,
+              "truth": "ptr",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "level": "O2",
+      "functions": 13,
+      "rows": [
+        {
+          "function": "main",
+          "entry": "00400360",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "ptr",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "signed_compare",
+          "entry": "00400530",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "unsigned_compare",
+          "entry": "00400540",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint32",
+              "ours": "uint32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "uint32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "signed_wide",
+          "entry": "00400560",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int64",
+              "ours": "int64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int64",
+              "ours": "int64",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "unsigned_wide",
+          "entry": "00400590",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint64",
+              "ours": "uint64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "uint64",
+              "ours": "uint64",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "through_pointer",
+          "entry": "004005d0",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "ptr",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "uint64",
+              "ours": "num64",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "floating",
+          "entry": "00400600",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "float64",
+              "ours": "float64",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "float64",
+              "ours": "float64",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "float64",
+              "ours": "float64",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "floating_narrow",
+          "entry": "00400620",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "float32",
+              "ours": "float32",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "float32",
+              "ours": "float32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "float32",
+              "ours": "float32",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "indirect",
+          "entry": "00400640",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "code",
+              "ours": "unknown",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "narrow_unsigned",
+          "entry": "00400660",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "uint8",
+              "ours": "uint8",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "uint8",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "narrow_signed",
+          "entry": "00400670",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "int16",
+              "ours": "int16",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int16",
+              "ours": "int16",
+              "distance": 0
+            }
+          ]
+        },
+        {
+          "function": "store_through_pointer",
+          "entry": "00400690",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "ptr",
+              "distance": 0
+            },
+            {
+              "index": 1,
+              "truth": "int32",
+              "ours": "int32",
+              "distance": 0
+            },
+            {
+              "index": "return",
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            }
+          ]
+        },
+        {
+          "function": "mixed",
+          "entry": "004006a0",
+          "scored": [
+            {
+              "index": 0,
+              "truth": "ptr",
+              "ours": "top",
+              "distance": 2
+            },
+            {
+              "index": 1,
+              "truth": "uint64",
+              "ours": "uint64",
+              "distance": 0
+            },
+            {
+              "index": 2,
+              "truth": "int32",
+              "ours": "num32",
+              "distance": 1
+            },
+            {
+              "index": "return",
+              "truth": "uint64",
+              "ours": "num32",
+              "distance": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metrics": {
+    "scored": 68,
+    "exact": 34,
+    "exact_rate": 0.5,
+    "conservative_rate": 0.9559,
+    "wrong": 3,
+    "wrong_rate": 0.0441,
+    "silent": 10,
+    "wrong_examples": [
+      {
+        "level": "O0",
+        "function": "through_pointer",
+        "index": 1,
+        "truth": "uint64",
+        "ours": "uint32",
+        "distance": null
+      },
+      {
+        "level": "O0",
+        "function": "mixed",
+        "index": 0,
+        "truth": "ptr",
+        "ours": "uint64",
+        "distance": null
+      },
+      {
+        "level": "O2",
+        "function": "mixed",
+        "index": "return",
+        "truth": "uint64",
+        "ours": "num32",
+        "distance": null
+      }
+    ]
+  },
+  "passed": true,
+  "failures": []
+}

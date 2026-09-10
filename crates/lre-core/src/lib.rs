@@ -20,6 +20,7 @@ pub mod opinion;
 pub mod native_runtime;
 pub mod session;
 pub mod structuring;
+pub mod types_infer;
 mod prototypes;
 pub mod register_params;
 mod nonreturn;
@@ -1034,6 +1035,112 @@ impl Core {
                 answer
             })
             .collect())
+    }
+
+    /// Infers parameter and return types for functions, from p-code alone.
+    ///
+    /// The constraints come from what the instructions commit to (see
+    /// `types_infer`); the mapping from a constraint on a register to a
+    /// parameter index comes from the compiler spec's own prototype model,
+    /// so the answer is in the same terms DWARF states its truth in.
+    pub fn infer_types(
+        &self,
+        binary: &Path,
+        program: &str,
+        entries: &[lre_model::Address],
+    ) -> Result<Vec<serde_json::Value>> {
+        let language = session::program_language(&self.config, program, &self.db_path)
+            .unwrap_or_else(|_| self.config.language_id.clone());
+        let (_, specs, _, _) =
+            native_runtime::language_decompile_config(&self.config, &language)?;
+        let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
+        let table = std::fs::read_to_string(specs.join("registers.txt"))?;
+        let conventions = register_params::Conventions::parse(&cspec, &table);
+        // The model with the longest register parameter list is the one a
+        // compiler uses for ordinary functions; a spec that names none
+        // leaves nothing to map a constraint onto.
+        let Some(model) = conventions.default() else {
+            return Ok(Vec::new());
+        };
+        let slot = |name: &str| conventions.registers.get(name).map(|(offset, _)| *offset);
+        let parameter_slots: Vec<(String, u64)> = model
+            .registers
+            .iter()
+            .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
+            .collect();
+        let float_slots: Vec<(String, u64)> = model
+            .float_registers
+            .iter()
+            .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
+            .collect();
+        // A float result arrives in a float register and an integer one in
+        // an integer register, but the integer register is written on the
+        // way out of almost every function, so the float slot is consulted
+        // first and only accepted when it holds float evidence.
+        let float_return_slots: Vec<u64> = model
+            .float_returns
+            .iter()
+            .filter_map(|name| slot(name))
+            .collect();
+        let return_slots: Vec<(String, u64)> = model
+            .returns
+            .iter()
+            .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
+            .collect();
+        let mut rows = Vec::with_capacity(entries.len());
+        self.live.with(binary, program, |live| {
+            for entry in entries {
+                let walk = live.walk(entry.offset)?;
+                if walk.instructions == 0 {
+                    continue;
+                }
+                let addresses: Vec<u64> = {
+                    let mut all: Vec<u64> = walk
+                        .instruction_extents
+                        .iter()
+                        .map(|(address, _)| *address)
+                        .collect();
+                    all.sort_unstable();
+                    all.dedup();
+                    all
+                };
+                let pcode = live.pcode(&addresses)?;
+                let facts = crate::types_infer::infer(&pcode);
+                let parameters: Vec<String> = parameter_slots
+                    .iter()
+                    .map(|(_, offset)| facts.get(*offset).name())
+                    .collect();
+                // The return value is whatever the result register was last
+                // constrained to; a register the body never touches says
+                // nothing, which is `unknown` rather than `void`.
+                let returns = float_return_slots
+                    .iter()
+                    .map(|offset| facts.written(*offset))
+                    .find(|class| matches!(class, crate::types_infer::Class::Float(_)))
+                    .or_else(|| {
+                        return_slots
+                            .iter()
+                            .map(|(_, offset)| facts.written(*offset))
+                            .find(|class| *class != crate::types_infer::Class::Unknown)
+                    })
+                    .unwrap_or(crate::types_infer::Class::Unknown)
+                    .name();
+                let float_parameters: Vec<String> = float_slots
+                    .iter()
+                    .map(|(_, offset)| facts.get(*offset).name())
+                    .collect();
+                rows.push(serde_json::json!({
+                    "entry": entry.to_string(),
+                    "model": model.name,
+                    "parameters": parameters,
+                    "float_parameters": float_parameters,
+                    "returns": returns,
+                    "instructions": walk.instructions,
+                }));
+            }
+            Ok(())
+        })?;
+        Ok(rows)
     }
 
     /// Applies an analyst rename in the project store and bumps the revision.

@@ -277,6 +277,17 @@ impl LiveProgram {
         Ok(walk)
     }
 
+    /// The p-code of the given instructions, from the same console the walk
+    /// used, so the operations are the ones it decoded.
+    pub fn pcode(
+        &mut self,
+        addresses: &[u64],
+    ) -> Result<Vec<crate::native_runtime::PcodeInstruction>> {
+        self.flow
+            .pcode_batch(addresses)
+            .map_err(CoreError::NativeRuntime)
+    }
+
     /// The references the console sees in one address range, converted the
     /// same way the whole-image pass converts them so a demand-driven fact
     /// and a batch fact are the same row.
