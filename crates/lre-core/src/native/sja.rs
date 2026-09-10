@@ -547,6 +547,9 @@ fn run_block<I: Image>(
             let prior = op.output.as_ref().and_then(|out| {
                 let key = slot(out);
                 comparisons.remove(&key);
+                // A comparison whose *operand* is overwritten is stale too:
+                // `cmp $4,%eax; mov (%rsi),%eax; jbe` bounds the new eax.
+                comparisons.retain(|_, (operand, ..)| *operand != key);
                 origins.remove(&key)
             });
             match opcode {
@@ -596,7 +599,7 @@ fn run_block<I: Image>(
                         // A `unique` temporary is intra-instruction and dead
                         // by the next block, so it is never an origin: the
                         // output has no affine parent at all.
-                        if origin.0 != "unique" {
+                        if origin.0 != "unique" && origin != slot(output) {
                             // A bound on a piece says nothing about the
                             // whole: record the narrowest width crossed so
                             // the compare can check the origin already fits.
@@ -632,7 +635,7 @@ fn run_block<I: Image>(
                         // the output has no affine parent, and recording
                         // `out = out + k` would push a wrongly shifted bound
                         // onto it at the next compare.
-                        if origin.0 != "unique" {
+                        if origin.0 != "unique" && origin != slot(output) {
                             origins.insert(slot(output),
                                 (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
                         }
@@ -660,7 +663,7 @@ fn run_block<I: Image>(
                             origins.get(&slot(source)).cloned()
                                 .unwrap_or((slot(source), 0, None))
                         };
-                        if origin.0 != "unique" {
+                        if origin.0 != "unique" && origin != slot(output) {
                             origins.insert(slot(output),
                                 (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
                         }
@@ -1599,6 +1602,18 @@ mod tests {
                 instructions: vec![instruction(
                     0x1000,
                     vec![
+                        // r15 = zext(load): [0,255] unguarded, so the
+                        // usable check accepts it as an origin target.
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x100, 1)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xbeef, 8)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0xb8, 4)),
+                            vec![varnode("unique", 0x100, 1)],
+                        ),
                         // eax = r15 - 0x20: origins[eax] = (r15, -0x20).
                         op(
                             "INT_SUB",
@@ -1654,6 +1669,102 @@ mod tests {
             },
         ];
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.refusals.unknown_target, 1);
+    }
+
+    #[test]
+    fn an_in_place_op_with_no_prior_origin_is_not_its_own_origin() {
+        // `movzbl (%rdi),%eax; sub $0x20,%eax; cmp $3,%eax` -- the zext
+        // leaves eax with no origin, so the in-place sub must not record
+        // `eax = eax - 0x20`: a bound on the compared eax is a bound on
+        // eax, not on eax shifted back. With the self-link the compare
+        // pushes [0x20,0x23] and the table reads 0x20 entries too deep;
+        // without it the bound stays on eax and the dispatch resolves the
+        // four real entries.
+        let mut memory = HashMap::new();
+        for index in 0..4u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        // The wrong bound reads here: entries the self-link would claim.
+        for index in 0..4u64 {
+            memory.insert(0x9000 + (0x20 + index) * 8, 0x1200 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        // eax = zext(load): [0,255] unguarded, no origin.
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x100, 1)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xbeef, 8)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("unique", 0x100, 1)],
+                        ),
+                        // eax = eax - 0x20, in place: no origin must be
+                        // recorded.
+                        op(
+                            "INT_SUB",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("register", 0x0, 4), varnode("const", 0x20, 4)],
+                        ),
+                        // eax < 4; jbe dispatch.
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x0, 4), varnode("const", 4, 4)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        // jmp *(0x9000 + eax*8): the bound on eax is [0,3],
+                        // so the four entries at 0x9000 are the table. A
+                        // self-link would read the 0x9100-range entries
+                        // instead.
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x0, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        // The bound on eax cannot reach the table read through the
+        // base-shifted value, so the dispatch refuses rather than resolve
+        // the wrong table.
         assert!(found.tables.is_empty(), "{found:?}");
         assert_eq!(found.refusals.unknown_target, 1);
     }

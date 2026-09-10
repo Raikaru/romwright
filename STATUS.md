@@ -5601,7 +5601,7 @@ Measured by the same gate (`tests/m13-001_vsa_switch.py`):
 | pass + abstract interpreter | **103** | 1 | **0.9992** |
 | both plus the decompiler (default) | 142 | 6 | 0.9967 |
 
-Thirteen more dispatches than the interpreter managed before the origin
+Ten more dispatches than the interpreter managed before the origin
 work, one of them the vfprintf two-level dispatch whose bound now reaches
 `r15` through the `lea`/`subpiece`/`zext` chain. Attribution, measured on
 the same gate: 59b3bea5's affine origins took the interpreter from 93 to
