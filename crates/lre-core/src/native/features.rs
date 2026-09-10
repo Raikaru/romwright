@@ -80,7 +80,7 @@ pub(crate) fn measure(imp: &NativeImport) -> Vec<FunctionFeatureRow> {
         let mut edges = 0u32;
         let mut loops = 0u32;
         for shape in body {
-            let next = shape.address + u64::from(shape.length);
+            let next = shape.address.saturating_add(u64::from(shape.length));
             let mut targets: Vec<u64> = Vec::new();
             if let Some(target) = shape.target {
                 targets.push(target);

@@ -1006,18 +1006,19 @@ impl Core {
     /// regions, relocations and the image's symbol table, stored and
     /// returned. An interactive session opens with this and analyses after.
     pub fn load_program(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, false)
+        self.import_container_with(binary, name, false, "")
     }
 
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, true)
+        self.import_container_with(binary, name, true, "")
     }
 
-    fn import_container_with(
+    pub(crate) fn import_container_with(
         &self,
         binary: &Path,
         name: &str,
         analyse: bool,
+        flavour: &str,
     ) -> Result<Vec<ProgramSummary>> {
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
@@ -1028,7 +1029,10 @@ impl Core {
             .then(|| {
                 import_cache::key(
                     binary,
-                    &format!("{name}|{}", if analyse { "analysed" } else { "loaded" }),
+                    &format!(
+                        "{name}|{}|{flavour}",
+                        if analyse { "analysed" } else { "loaded" }
+                    ),
                     &self.config,
                 )
             })

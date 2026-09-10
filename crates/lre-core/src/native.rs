@@ -1446,8 +1446,13 @@ impl vsa::Image for ImageView<'_> {
         if size == 0 || size > 8 {
             return None;
         }
+        // The emulator asks about any address the code computes, including
+        // ones near the top of the space: a read that would overflow the
+        // address arithmetic is simply not mapped.
+        let last = address.checked_add(u64::from(size) - 1)?;
         let mapping = self.imp.mappings.iter().find(|mapping| {
-            address >= mapping.vaddr && address + u64::from(size) <= mapping.vaddr + mapping.size
+            let end = mapping.vaddr.saturating_add(mapping.size);
+            address >= mapping.vaddr && last < end
         })?;
         let offset = usize::try_from(address - mapping.vaddr).ok()?;
         let bytes = mapping.bytes.get(offset..offset + size as usize)?;
@@ -1521,7 +1526,7 @@ fn switch_window(
             }
         }
         if ends_block(shape.kind) {
-            let next = shape.address + u64::from(shape.length);
+            let next = shape.address.saturating_add(u64::from(shape.length));
             if next < end {
                 leaders.insert(next);
             }
@@ -1541,9 +1546,9 @@ fn switch_window(
     for shape in &shapes {
         let reaches = shape.target == Some(dispatch)
             || (!ends_block(shape.kind)
-                && shape.address + u64::from(shape.length) == dispatch)
+                && shape.address.saturating_add(u64::from(shape.length)) == dispatch)
             || (matches!(shape.kind, crate::native_runtime::FlowKind::CBranch)
-                && shape.address + u64::from(shape.length) == dispatch);
+                && shape.address.saturating_add(u64::from(shape.length)) == dispatch);
         if reaches {
             let block = leader_of(shape.address);
             if block != dispatch && !predecessors.contains(&block) {
@@ -1725,7 +1730,7 @@ fn switch_candidates(imp: &mut NativeImport) -> Vec<(u64, u64, u64)> {
         .functions
         .iter()
         .filter(|function| function.size > 1)
-        .map(|function| (function.entry, function.entry + function.size))
+        .map(|function| (function.entry, function.entry.saturating_add(function.size)))
         .collect();
     let resolved: std::collections::HashSet<u64> = imp
         .flow_overrides
@@ -1768,7 +1773,7 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         .functions
         .iter()
         .filter(|function| function.size > 1)
-        .map(|function| (function.entry, function.entry + function.size))
+        .map(|function| (function.entry, function.entry.saturating_add(function.size)))
         .collect();
     let owner = |address: u64| {
         extents
