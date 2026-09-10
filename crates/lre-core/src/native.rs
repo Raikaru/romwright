@@ -236,6 +236,18 @@ pub struct NativeImport {
     /// needed in the switch round at all.
     pub switch_vsa_resolved: usize,
     pub switch_vsa_refused: usize,
+    /// What the flow walk already did, kept so a later round resumes
+    /// instead of re-walking the image. A round exists because a computed
+    /// target found late creates a function whose body has to be walked;
+    /// only that body is new, and on a 43000-function module re-walking
+    /// everything to find a few hundred addresses is most of the wall time.
+    pub walk_visited: std::collections::HashSet<u64>,
+    /// Furthest instruction attributed to each origin, accumulated.
+    pub walk_proven: std::collections::HashMap<u64, u64>,
+    /// Which origin owns each decoded address, accumulated.
+    pub walk_origin: std::collections::HashMap<u64, u64>,
+    /// Entries the walk has already started from.
+    pub walk_entries: std::collections::HashSet<u64>,
     /// The decoded shape of every instruction the walk read: address, byte
     /// length, flow kind, whether the flow is conditional, and the single
     /// direct target when it has one. This is what the structural features
@@ -1819,6 +1831,8 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         }
         lane_dirs.push(lane);
     }
+    let setup = started.elapsed().as_secs_f64();
+    let lanes_started = std::time::Instant::now();
     let outcomes: Vec<Result<std::collections::BTreeMap<String, lre_model::DecompDoc>>> =
         std::thread::scope(|scope| {
             let handles: Vec<_> = chunks
@@ -1899,6 +1913,15 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
     if added > 0 {
         demote_case_blocks(imp);
     }
+    if std::env::var_os("VENTRIS_TRACE_SWITCH").is_some() {
+        eprintln!(
+            "switch-decompiler: {} owners, {} lanes, {added} tables, setup {setup:.1}s, lanes {:.1}s, total {:.1}s",
+            owners.len(),
+            chunks.len(),
+            lanes_started.elapsed().as_secs_f64(),
+            started.elapsed().as_secs_f64()
+        );
+    }
     phase(imp, "switch", started);
     added
 }
@@ -1955,6 +1978,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         // the mode switches its bytes carried into that console's one
         // context database (SLEIGH `globalset`), so crt0 of a DS ROM read as
         // Thumb there and yielded no references at all.
+        let console_started = std::time::Instant::now();
         let references_started = std::time::Instant::now();
         let mut session = match crate::native_runtime::ConsoleSession::new(&imp.cfg) {
             Ok(session) => session,
@@ -1971,8 +1995,11 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             imp,
             imp.cfg.console_shards.max(1) - 1,
         );
+        phase(imp, "console", console_started);
+        let references_only = std::time::Instant::now();
         seed_mips_entry_register(imp);
         infer_data_references(imp, &mut session, shards)?;
+        phase(imp, "references-only", references_only);
         phase(imp, "references", references_started);
         if round == 3 {
             break;
@@ -2041,6 +2068,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
+    let tail_started = std::time::Instant::now();
     discovery::record_branch_transfers(imp);
     // The instruction that reads the resolver slot only exists once reference
     // inference has run, so this rule reads its facts, not discovery's seeds.
@@ -2056,6 +2084,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
     // references have to exist first, which is why this is not a loader pass
     // (m4-027).
     elf_pointers::confirm_referenced_pointers(imp);
+    phase(imp, "settle", tail_started);
     Ok(())
 }
 

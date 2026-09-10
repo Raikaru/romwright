@@ -385,10 +385,18 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             // Measured phases, for budget gates. Reporting a budget without
             // these numbers is how a threshold stops meaning anything.
             if has_flag(args, "--timings") {
-                let phases = summary
-                    .phases
+                // One key per phase, summed over the rounds that ran it: a
+                // phase measured four times used to print four identical
+                // keys, and every JSON reader kept only the last, which is
+                // how a 57 s switch round was read as 5.6 s.
+                let mut totals: std::collections::BTreeMap<&str, f64> =
+                    std::collections::BTreeMap::new();
+                for phase in &summary.phases {
+                    *totals.entry(phase.phase.as_str()).or_default() += phase.seconds;
+                }
+                let phases = totals
                     .iter()
-                    .map(|phase| format!("\"{}\":{:.6}", phase.phase, phase.seconds))
+                    .map(|(name, seconds)| format!("\"{name}\":{seconds:.6}"))
                     .collect::<Vec<_>>()
                     .join(",");
                 let flow = summary.flow.map_or_else(
