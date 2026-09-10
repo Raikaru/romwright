@@ -401,6 +401,13 @@ jobs:
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
+      - name: Structure our control-flow graphs with stock's structuring
+        env:
+          VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+          VENTRIS_SERVICE_JAR: ${{ github.workspace }}/service/build/ventris-service.jar
+        run: |
+          python3 tests/m15-001_structuring.py \
+            --report "$RUNNER_TEMP/reports/m15-001.json"
       - name: Analyse one function on demand
         env:
           VENTRIS_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

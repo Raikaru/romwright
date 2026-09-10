@@ -373,6 +373,83 @@ fn run_decompiler(
     Ok(out.stdout)
 }
 
+/// Structures control-flow graphs through the decompiler's own
+/// `structureGraph` command, one JSON request per graph, answered in order.
+///
+/// Nothing is decompiled: the command runs `structureLoops`,
+/// `calcForwardDominator` and `CollapseStructure` over the graph given, which
+/// is what lets our own structuring be scored on identical input.
+pub fn structure_native(
+    cfg: &RuntimeConfig,
+    binary: &Path,
+    program: &str,
+    project_dir: &Path,
+    requests: &[String],
+) -> Result<Vec<String>> {
+    if requests.is_empty() {
+        return Ok(Vec::new());
+    }
+    let language = crate::session::program_language(cfg, program, project_dir)
+        .unwrap_or_else(|_| cfg.language_id.clone());
+    let (sla, specs, lang_dir, language_id) = language_decompile_config(cfg, &language)?;
+    let mut command = Command::new(&cfg.worker_path);
+    command
+        .arg(&cfg.decompiler_path)
+        .arg(&specs)
+        .arg(binary)
+        .arg(program)
+        .arg("--structure")
+        .arg("--project")
+        .arg(project_dir)
+        .env("VENTRIS_LANGUAGE", &language_id)
+        .env("VENTRIS_LANGUAGE_DIR", &lang_dir)
+        .env("VENTRIS_SLA", &sla)
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped());
+    let mut child = command
+        .spawn()
+        .map_err(|error| NativeRuntimeError(format!("worker spawn: {error}")))?;
+    // The requests go out on their own thread: the worker answers each one
+    // as it arrives, and writing a whole batch before reading a byte fills
+    // both pipes and deadlocks -- 100 graphs was enough to do it.
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| NativeRuntimeError("worker has no stdin".into()))?;
+    let payload: String = requests
+        .iter()
+        .map(|request| format!("{request}\n"))
+        .collect();
+    let writer = std::thread::spawn(move || {
+        use std::io::Write as _;
+        let outcome = stdin.write_all(payload.as_bytes()).and_then(|_| stdin.flush());
+        // Dropping stdin closes it, which is how the worker learns the batch
+        // is over.
+        drop(stdin);
+        outcome
+    });
+    let out = child
+        .wait_with_output()
+        .map_err(|error| NativeRuntimeError(format!("worker wait: {error}")))?;
+    match writer.join() {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => return err(format!("worker write: {error}")),
+        Err(_) => return err("structuring request writer panicked".to_string()),
+    }
+    if !out.status.success() {
+        return err(format!(
+            "structuring worker failed ({}): {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    Ok(String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter(|line| line.trim_start().starts_with('{'))
+        .map(str::to_string)
+        .collect())
+}
+
 /// Perform `decompile`: one address decompiled by the patched
 /// `ghidra_opt` through `lre-worker` (raw-SLEIGH, no JVM).
 pub fn decompile_native(

@@ -5570,6 +5570,38 @@ milestone's work -- sound analysis instead of the decompiler -- not a budget
 to relax again.
 
 
+### m15-001 evidence (stock structuring, over our own CFGs)
+
+The decompiler already exposes structuring as a service: `structureGraph`
+(`ghidra_process.cc:503`) takes an encoded `BlockGraph`, runs
+`structureLoops`, `calcForwardDominator` and `CollapseStructure` over a copy
+of it, and returns the collapsed hierarchy. No function, no p-code, no
+decompilation -- so it runs on *our* blocks and *our* edges, and **no patch to
+the pinned tree was needed**. Two details cost a day if rediscovered:
+`BlockMap::resolveBlock` decodes `t_copy` as `BlockCopy(nullptr)` and
+`CollapseStructure` asks a block for its split point when it structures a
+loop, so a graph of `copy` blocks kills the process on anything cyclic --
+`plain` blocks answer for themselves; and writing a whole batch of requests
+before reading any answer deadlocks both pipes at about 100 graphs.
+
+`tests/m15-001_structuring.py`, `benchmarks/reports/m15-001.json`, libc,
+cold imports:
+
+| Measured | Value |
+|---|---|
+| Canonical shapes structured as defined | 5/5 (if/else, self-loop, two-block loop: 0 gotos; irreducible, two-exit loop: 1 each) |
+| Functions scored | 400 multi-block, 394 comparable (same extent both producers) |
+| Block counts equal to whole-image analysis, functions with no recovered jump table | 388/388 |
+| Functions with a recovered jump table | 6, all differing -- the case edges come from the switch round, which one walk does not run |
+| **Stock goto baseline** | **2527 gotos over 394 functions; 198 hold at least one** |
+
+That last row is the number a structuring pass of ours has to beat on the
+same functions, recorded before any such pass exists. The partition is
+asserted both ways, so the exception cannot quietly grow: a disagreement
+outside the jump-table class fails, and so does a jump-table function that
+starts agreeing.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now

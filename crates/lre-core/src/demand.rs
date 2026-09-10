@@ -172,6 +172,10 @@ impl LiveProgram {
             calls: Vec::new(),
             call_sites: Vec::new(),
             transfers: Vec::new(),
+            flow_edges: Vec::new(),
+            instruction_extents: Vec::new(),
+            target_edges: Vec::new(),
+            conditional_sites: Vec::new(),
             undecodable: 0,
         };
         while !active.is_empty() {
@@ -196,6 +200,7 @@ impl LiveProgram {
                     continue;
                 }
                 walk.instructions += 1;
+                walk.instruction_extents.push((address, flow.length));
                 walk.end = walk.end.max(address.saturating_add(u64::from(flow.length)));
                 let fall = flow
                     .fallthrough
@@ -207,9 +212,16 @@ impl LiveProgram {
                         walk.calls.extend(flow.targets.iter().copied());
                         walk.call_sites
                             .extend(flow.targets.iter().map(|target| (address, *target)));
+                        // A call returns to its fallthrough, so the body's
+                        // own control flow continues there; the callee is not
+                        // an edge of this graph.
+                        walk.flow_edges.push((address, fall));
                         active.push(fall);
                     }
-                    FlowKind::CallInd => active.push(fall),
+                    FlowKind::CallInd => {
+                        walk.flow_edges.push((address, fall));
+                        active.push(fall);
+                    }
                     FlowKind::Branch => {
                         // A branch out of this body is a transfer, and the
                         // walk stops there; one inside it is control flow.
@@ -218,17 +230,39 @@ impl LiveProgram {
                                 walk.transfers.push((address, *target));
                             }
                         }
+                        walk.flow_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
+                        walk.target_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
                         active.extend(flow.targets.iter().copied());
                     }
                     FlowKind::CBranch => {
+                        // The taken edge first, then the fallthrough: the
+                        // decompiler expects a conditional's false edge in
+                        // slot 0, and `ControlFlow::encode` preserves order.
+                        walk.flow_edges.push((address, fall));
+                        walk.flow_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
+                        walk.target_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
+                        walk.conditional_sites.push(address);
                         active.extend(flow.targets.iter().copied());
                         active.push(fall);
                     }
                     // An indirect jump without recovered targets ends this
                     // path; recovering them is the switch pass's job, not a
                     // guess this walk is allowed to make.
-                    FlowKind::BranchInd => active.extend(flow.targets.iter().copied()),
-                    FlowKind::Fallthrough => active.push(fall),
+                    FlowKind::BranchInd => {
+                        walk.flow_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
+                        walk.target_edges
+                            .extend(flow.targets.iter().map(|target| (address, *target)));
+                        active.extend(flow.targets.iter().copied());
+                    }
+                    FlowKind::Fallthrough => {
+                        walk.flow_edges.push((address, fall));
+                        active.push(fall);
+                    }
                     FlowKind::Return => {}
                     FlowKind::Bad | FlowKind::Unimpl => unreachable!("handled above"),
                 }
@@ -344,6 +378,16 @@ pub struct BodyWalk {
     /// Every direct call this body makes, as (call site, target): the same
     /// edges the whole-image walk turns into `UNCONDITIONAL_CALL` rows.
     pub call_sites: Vec<(u64, u64)>,
+    /// Control-flow edges inside the body, as (from instruction, to
+    /// instruction): what a basic-block graph is built from.
+    pub flow_edges: Vec<(u64, u64)>,
+    /// Instruction start addresses the walk decoded, with their lengths.
+    pub instruction_extents: Vec<(u64, u8)>,
+    /// Branch targets, as (branch, target): a block starts at each one.
+    pub target_edges: Vec<(u64, u64)>,
+    /// Conditional branches: the address after one starts a block too,
+    /// because flow reaches it without being branched to.
+    pub conditional_sites: Vec<u64>,
     /// Unconditional branches that leave this body, as (branch, target).
     /// Ghidra's `SharedReturnAnalysisCmd` turns one that lands on another
     /// function's entry into a call and leaves the rest a jump; the store
@@ -373,6 +417,87 @@ impl BodyWalk {
                 NativeXref::with_provenance(*from, *to, kind, native::BRANCH_PROVENANCE)
             })
             .collect()
+    }
+
+    /// The body's basic-block graph: block start addresses in address order,
+    /// and edges between block indices.
+    ///
+    /// The leaders are exactly the ones the whole-image feature pass uses
+    /// (`native::features`): the entry, every branch target inside the body,
+    /// and the address after a conditional branch -- flow reaches that one
+    /// without being branched to. Nothing after an *unconditional* branch is
+    /// a leader unless something targets it, and a call does not end a
+    /// block. Two constructions that disagree would make a structuring
+    /// comparison meaningless, so this is the same one, and the gate
+    /// measures that they still agree.
+    pub fn basic_blocks(&self) -> (Vec<u64>, Vec<(usize, usize)>) {
+        let mut extents: Vec<(u64, u8)> = self.instruction_extents.clone();
+        extents.sort_unstable();
+        extents.dedup_by_key(|(address, _)| *address);
+        if extents.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+        // The graph is *this function's*: an instruction the walk decoded
+        // behind a tail jump into a linkage stub is that stub's, not a block
+        // here, and the whole-image pass draws the same line (`inside`).
+        let end = extents
+            .iter()
+            .map(|(address, length)| address.saturating_add(u64::from(*length)))
+            .filter(|reach| *reach > self.entry)
+            .max()
+            .unwrap_or(self.entry);
+        let decoded: HashSet<u64> = extents
+            .iter()
+            .map(|(address, _)| *address)
+            .filter(|address| *address >= self.entry && *address < end)
+            .collect();
+        let mut leaders: HashSet<u64> = HashSet::new();
+        leaders.insert(self.entry);
+        for (_, target) in &self.target_edges {
+            if decoded.contains(target) {
+                leaders.insert(*target);
+            }
+        }
+        for address in &self.conditional_sites {
+            if !decoded.contains(address) {
+                continue;
+            }
+            if let Ok(index) = extents.binary_search_by_key(address, |(at, _)| *at) {
+                let (at, length) = extents[index];
+                let next = at.saturating_add(u64::from(length));
+                if decoded.contains(&next) {
+                    leaders.insert(next);
+                }
+            }
+        }
+        let mut blocks: Vec<u64> = leaders.into_iter().collect();
+        blocks.sort_unstable();
+        let block_of = |address: u64| -> Option<usize> {
+            match blocks.binary_search(&address) {
+                Ok(index) => Some(index),
+                Err(0) => None,
+                Err(index) => Some(index - 1),
+            }
+        };
+        // Every real transfer becomes an edge between blocks; flow that stays
+        // inside one block is not an edge.
+        let mut seen: HashSet<(usize, usize)> = HashSet::new();
+        let mut edges: Vec<(usize, usize)> = Vec::new();
+        for (from, to) in &self.flow_edges {
+            if !decoded.contains(to) || !decoded.contains(from) {
+                continue;
+            }
+            let (Some(source), Some(destination)) = (block_of(*from), block_of(*to)) else {
+                continue;
+            };
+            if source == destination && blocks.get(destination) != Some(to) {
+                continue;
+            }
+            if seen.insert((source, destination)) {
+                edges.push((source, destination));
+            }
+        }
+        (blocks, edges)
     }
 
     /// The function row this walk proves.
