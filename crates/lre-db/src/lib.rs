@@ -140,6 +140,12 @@ impl ProjectDb {
         // WAL: durable enough for crash tests, allows concurrent readers while
         // the CLI writes (spec 13.1 leaves WAL vs rollback to measurement).
         conn.pragma_update(None, "journal_mode", "WAL")?;
+        // Under WAL, NORMAL fsyncs at checkpoints rather than at every
+        // commit. A crash can lose the most recent commits, never corrupt
+        // the database (SQLite "PRAGMA synchronous"), and an import is
+        // reproducible from the image, so the trade is a store that keeps
+        // up with an interactive session: 45687 rows took 2.76 s at FULL.
+        conn.pragma_update(None, "synchronous", "NORMAL")?;
         let db = Self { conn };
         db.migrate()?;
         Ok(db)

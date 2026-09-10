@@ -574,6 +574,40 @@ skips and says why.
 python3 tests/m5-017_switch_module.py
 ```
 
+### Loading is not analysing
+
+An import used to answer nothing until the whole image had been walked: 849 s
+on a 60 MB Switch module, 92 s on the host libc. Loading is a parse -- mapped
+bytes, declared regions, relocations, and the image's own symbol table -- and
+that is what an analyst needs before anything else can be shown.
+
+`lre-cli import <binary> --no-analysis` does exactly that, and analysis is a
+separate pass over the same store. Measured (`tests/m14-001_interactive_import.py`,
+`benchmarks/reports/m14-001.json`):
+
+| | Loaded | Analysed | Reused from cache |
+|---|---|---|---|
+| host libc (3898 named functions) | **1.01 s** | 130.8 s | **0.41 s** |
+| Switch module (42423 named functions) | **3.96 s** | 849 s | -- |
+
+Every function the fast path lists is one the image itself names: the gate
+fails if a single name is not a symbol, a linkage stub named after its
+import, or a generated name at an address the loader declared.
+
+Reuse is keyed on the image's bytes together with the digests of the analyser
+that reads them -- this executable, the SLEIGH console, the decompiler worker
+-- the configuration that changes facts, and the store schema. A second
+import of an unchanged image restores 32 byte-identical tables in 0.41 s;
+changing any fact-affecting switch misses the key and re-analyses, which the
+gate also checks. `VENTRIS_NO_IMPORT_CACHE=1` switches it off, as a gate that
+measures import cost must.
+
+A resumable walk -- later rounds walking only new seeds instead of the whole
+image -- is implemented and **off by default** (`VENTRIS_INCREMENTAL_ROUNDS=1`):
+it takes libc from 111 s to 79 s, but its fact set is not yet byte-identical
+to the batch walk (31991 xrefs against 33050), and a second analyser that
+disagrees with the first is not worth the seconds.
+
 ### Jump tables without the decompiler, and better than stock
 
 Switch recovery was the last pass in a native import that called the
@@ -1836,6 +1870,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m11-002.json` | `m11-002` | M11 | pass | boot.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 25 ms), 1206 inferred; base.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 22 ms), 1206 inferred; Movie.elf: 1678 functions in 7.1 s, recall 0.9550 precision 0.7849 over 1379 symbols, 5 decompiled (median 21 ms), 2415 inferred; driving.elf: 5954 functions in 25.4 s, recall 0.9669 precision 0.9172 over 5648 symbols, 5 decompiled (median 28 ms), 1498 inferred | `tests/m11-002_game_modules.py` |
 | `m12-001.json` | `m12-001` | M12 | recorded | recorded | `tests/m12-001_diff.py` |
 | `m13-001.json` | `m13-001` | M13 | recorded | recorded | `tests/m13-001_vsa_switch.py` |
+| `m14-001.json` | `m14-001` | M14 | recorded | recorded | `tests/m14-001_interactive_import.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |

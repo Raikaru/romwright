@@ -1,7 +1,7 @@
 //! lre-cli: scriptable automation over the Core API (spec 17.1).
 //!
 //! End-to-end sequence proven by this binary:
-//!   lre-cli import <binary> [--project DIR]
+//!   lre-cli import <binary> [--project DIR] [--no-analysis] [--no-analysis]
 //!   lre-cli open <program> [--project DIR]
 //!   lre-cli functions <program> [--project DIR]
 //!   lre-cli diff <program> --reference DIR [--apply] [--json]
@@ -362,7 +362,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .collect();
             let started = std::time::Instant::now();
             let (stored, signatures) = core
-                .import_native_with_signatures(Path::new(&binary), &program, &databases)
+                .import_native_with_signatures(
+                    Path::new(&binary),
+                    &program,
+                    &databases,
+                    !has_flag(args, "--no-analysis"),
+                )
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();
             // A container stores one program per processor; print each, so
