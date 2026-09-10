@@ -5508,6 +5508,54 @@ tracked, which by construction survives to the dispatch.
 Enabling it does not move a ratchet: `m4-003` is unchanged at 1796 of 1892
 token-identical with the pass on.
 
+**The abstract interpreter (`VENTRIS_SJA=1`), and why it is opt-in.** Emulating
+one straight-line window per index is the wrong instrument for a dispatch
+whose index is bounded in a *different* block than the one that loads it, so
+`crates/lre-core/src/native/sja.rs` adds SJA-style relational abstract
+interpretation over the whole function CFG: a lattice of `Top`, `Const`,
+`Strided {lo, hi, stride}` and explicit target `Set`s, joined at merges,
+widened only on the values that keep changing, with comparison predicates
+carried across blocks so a guard in a predecessor sizes a table read further
+down. It runs only where the pattern-shaped pass refused, so it can only add.
+
+Measured on the host libc by the same truth scorer, both settings in one gate
+run (`tests/m13-001_vsa_switch.py`, which now scores five paths):
+
+| Path | Dispatches | Unsound targets | Soundness |
+|---|---|---|---|
+| pattern-shaped pass alone | 90 | 1 | 0.9989 |
+| pass + abstract interpreter | **93** | 1 | **0.9989** |
+| both plus the decompiler (default) | 142 | 6 | 0.9967 |
+
+Three more dispatches, no loss of soundness, and the three it adds are three
+of the 54 that stock answers and the pass alone does not. It is **opt-in**
+because of what it costs: the switch phase goes from 1.9 s to 12.4 s on libc,
+since it decodes and interprets whole function bodies where the pass decoded a
+window. That breaches `m2-016`'s 5 s import-phase budget, so making it the
+default would trade a measured budget for three dispatches.
+
+**The parity gate is not met, and this says by how much.** "Reach at
+decompiler parity with the proven tier still sound" wants the proven tier at
+142; it stands at 93. The remaining refusals on libc are dominated by 233
+unbounded targets and 174 unknown-target dispatches -- indices whose bound
+never appears as a comparison the interpreter can read, mostly PIC tables of
+32-bit offsets reached through boolean guard combinations. That is the next
+piece of work, not a threshold to relax.
+
+Two defects found here were mine, and both were found by reading the gate's
+own report rather than the code:
+
+- The unguarded tier `m13-001` had been silently carrying: deleting it cost
+  49 dispatches. Restored and measured on its own, it scores 0.73 soundness
+  against 0.999 for the guarded answer, so it stays recorded and unreturned
+  (`vsa.rs`, the `let _ = unguarded` with the numbers beside it).
+- A "regression" where the decompiler path answered zero dispatches was a
+  stale `lre-worker` binary refusing store schema 19 -- exactly the guard
+  `m4-014` added. The switch round now reports that refusal in its
+  `discovery_note`, and `VENTRIS_TRACE_VSA` prints the round's inputs
+  (candidates, indirect jumps, asked, known tables) so an empty round is
+  distinguishable from a failing one.
+
 Also fixed here: `NativeWorker::decompile_at_within` bounds one function's
 decompile at 60 s and kills the child, which is Ghidra's own remedy
 (`DecompileProcess.sendCommandTimeout`:564-595 arms a timer whose only action
@@ -5764,15 +5812,19 @@ more claims where a rate means something.
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
 point at, none reserved:
-- m13-002: the pass answers 90 of the 142 dispatches the default now
-  recovers, and the decompiler is still needed for the rest. The accounting
-  says where they go: 59 dispatches read a table whose base register no
-  predecessor block sets (it arrives through memory or from further back),
-  and 103 find a strided load but fewer than two case targets. Both are the
-  same missing capability -- a backward slice over real predecessors, which
-  `JumpBasic::findDeterminingVarnodes` does on SSA. Acceptance is the pass
-  alone answering as many dispatches as the decompiler at no less than its
-  0.9989 soundness, at which point the decompiler leaves the switch round.
+- m13-002: the proven tier answers 93 of the 142 dispatches the default
+  recovers (the abstract interpreter landed opt-in; evidence above), so the
+  decompiler is still needed for 49. The refusal accounting on libc, taken
+  with the interpreter on, names them: 233 dispatches whose index is
+  unbounded (no comparison the interpreter reads ever narrows it) and 174
+  whose target set stays unknown, dominated by PIC tables of 32-bit offsets
+  reached through boolean guard combinations. Both are one missing
+  capability -- a backward slice over real predecessors on SSA, which
+  `JumpBasic::findDeterminingVarnodes` does. Acceptance is unchanged and not
+  to be relaxed: the proven tier answering as many dispatches as the
+  decompiler at no less than its 0.9989 soundness, at which point the
+  decompiler leaves the switch round. The interpreter also has to come inside
+  `m2-016`'s 5 s phase budget before it can be the default; it is at 12.4 s.
 - m12-002: the propagated class is 0.878 on the module pair and 0.469 recall
   on zlib `-O0` against `-O2`. Both matchers see the same content features,
   and the content score is what the alignment's commit rule turns on, so the
@@ -5814,6 +5866,48 @@ point at, none reserved:
   Stock creates them too (the shared DS set holds 64 such), so the parity
   gate holds them; whether to refuse them against the symbols' evidence is a
   user-visible choice and is recorded here rather than made.
+- Coverage research, verified by a read-only scout (2026-09-10) so the three
+  items below start from sources rather than recollection:
+  - **Disassembly failure classes as support-matrix rows.** Pang et al.,
+    "SoK: All You Ever Wanted to Know About x86/x64 Binary Disassembly But
+    Were Afraid to Ask", S&P 2021, doi 10.1109/SP40001.2021.00012 (PDF
+    arXiv:2007.14266). Its corpus is 3,788 binaries and **x86/x64 only**, so
+    it cannot supply rows for our ARM/MIPS/PowerPC platforms. It does not
+    publish one exhaustive failure-class table: §III-D names three
+    indirect-jump subclasses (jump tables, indirect tail calls, hand-written
+    indirect jumps such as `longjmp`) and treats indirect calls, tail calls
+    and non-returning functions separately, while data-in-code, overlapping
+    instructions, PIC constructs, invalid opcodes, padding, code gaps and
+    xref/function-entry errors appear as constructs and error modes in
+    §III-A and the introduction. A support-matrix row therefore has to state
+    which section it comes from; claiming "Pang's taxonomy" as a closed list
+    would be an invented citation. Each row needs a detectable observable,
+    which for us means: bytes decoded inside a ground-truth non-instruction
+    region (data-in-code), recovered instruction ranges that overlap or a
+    target landing mid-instruction (overlapping), and a bounded target set at
+    an indirect branch (jump table) -- all three of which our store already
+    holds the inputs for.
+  - **Pre-disassembly byte analysis.** Nguyen, Priyadarshan, Jiang and Sekar,
+    "Analyzing Bytes: Pre-Disassembly Static Binary Analysis", PACMPL 2026,
+    doi 10.1145/3808292: exhaustive disassembly at every offset gives a
+    superset CFG, and backward analyses prune it without polluting the
+    intended instructions, in O(n) with a result for every n-byte offset.
+    Inputs are raw bytes plus architecture semantics -- no symbols. The
+    reference implementation is <https://github.com/nhuhuan/sba> under
+    **GPL-3.0**, which is incompatible with vendoring into this Apache-2.0
+    tree; a port must be clean-room from the paper, as the decompiler port
+    was. A gate can assert only per-offset agreement with symbol-table truth
+    on the offsets that truth covers, and must refuse claims beyond them.
+  - **FFXV PE against its MAP.** `~/ventris-corpus/extracted/win-ffxv/ffxv_s.map`
+    is an MSVC LINK map: preferred load address `0000000140000000`, section
+    contributions as `Start Length Name Class` (e.g. `0001:00000000
+    000092a0H .text CODE`), publics as `Address Publics by Value Rva+Base
+    Lib:Object` (e.g. `0001:00000000 HCAMixer_Initialize 0000000140001000 f
+    seadr64:HCAMixer.obj`). `Address` is segment:offset with the offset
+    section-relative; the oracle is RVA = PE section VirtualAddress + offset,
+    VA = image base + RVA, cross-checked against the `Rva+Base` column rather
+    than trusted from it. Keep rows marked `f`, exclude `<absolute>` and
+    linker-defined rows.
 - Reserved, and the only things left that are: adding a *new* target game,
   platform or corpus binary (II.1) -- the retail images used (Perfect Dark,
   Emerald, HeartGold, the Vita and 3DS titles, Agent Under Fire) were
