@@ -168,15 +168,23 @@ def parameters(rendered: str) -> list[str]:
     return [] if inner in ("", "void") else [item.strip() for item in inner.split(",")]
 
 
+def spec_bundle(root: Path, language: str) -> Path:
+    """The directory holding a language's spec files.
+
+    The root specs are the x86-64 bundle; every other language needs its
+    own directory, and a missing one is a provisioning failure, not a
+    semantic fact.
+    """
+    bundle = root / language.replace(":", "-")
+    if bundle.is_dir():
+        return bundle
+    assert language == "x86:LE:64:default", f"spec bundle missing: {bundle}"
+    return root
+
+
 def declares_model(language: str) -> bool:
     """Whether the language's own compiler spec defines the model."""
-    bundle = SPECS / language.replace(":", "-")
-    # The root specs are the x86-64 bundle; every other language needs its
-    # own directory, and a missing one is a provisioning failure, not a
-    # semantic fact.
-    if not bundle.is_dir():
-        assert language == "x86:LE:64:default", f"spec bundle missing: {bundle}"
-    cspec = bundle / "cspec.xml" if bundle.is_dir() else SPECS / "cspec.xml"
+    cspec = spec_bundle(SPECS, language) / "cspec.xml"
     return f'prototype name="{MODEL}"' in cspec.read_text()
 
 
@@ -322,8 +330,7 @@ def spec_bundle_without_fixups(language: str, work: Path) -> Path:
     """A copy of `native/specs` whose language bundle declares no fixups."""
     root = work / "specs-no-fixups"
     shutil.copytree(SPECS, root)
-    bundle = root / language.replace(":", "-")
-    cspec = bundle / "cspec.xml" if bundle.is_dir() else root / "cspec.xml"
+    cspec = spec_bundle(root, language) / "cspec.xml"
     text = cspec.read_text()
     stripped = re.sub(r"<callfixup\b.*?</callfixup>", "", text, flags=re.S)
     assert stripped != text, f"{cspec} declares no call fixup to remove"
