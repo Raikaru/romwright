@@ -5536,11 +5536,26 @@ default would trade a measured budget for three dispatches.
 
 **The parity gate is not met, and this says by how much.** "Reach at
 decompiler parity with the proven tier still sound" wants the proven tier at
-142; it stands at 93. The remaining refusals on libc are dominated by 233
-unbounded targets and 174 unknown-target dispatches -- indices whose bound
-never appears as a comparison the interpreter can read, mostly PIC tables of
-32-bit offsets reached through boolean guard combinations. That is the next
-piece of work, not a threshold to relax.
+142; it stands at 93. The interpreter's refusals on libc are now dominated by
+492 unknown-target dispatches and 96 too-few-target ones. The unknowns are
+mostly not switches at all: the largest single class is PLT stubs
+(`jmp *GOT[n]`), whose target is one pointer, not a table of code addresses,
+and which the interpreter rightly refuses. The genuine remaining gap is PIC
+tables of 32-bit offsets reached through boolean guard combinations, plus
+the computed-goto class the mask rule below now covers.
+
+**A mask is a bound.** `and $0xf, %ecx` states `index in 0..=15` outright,
+with no guard needed -- but only when `mask + 1` is a power of two, since any
+other constant clears scattered bits and the result is not a contiguous
+range. That rule (`sja.rs`, `mask_bound`) is what converts the computed-goto
+dispatches: `and $0xf; shl $6; add base; jmp *reg` materialises a strided
+target set of 16 case blocks. It is also what exposed the next defect: those
+case blocks are reachable *only* through the dispatch, so at analysis time
+they belong to no function, and the old "target must lie inside the
+branching function's extent" check refused them as `Outside`. The check is
+now "not inside a *different* function's extent" (`Image::owner`), which is
+the same rule the gate's truth scorer applies. A target that does land in a
+neighbour is still refused, and a test pins that.
 
 Two defects found here were mine, and both were found by reading the gate's
 own report rather than the code:
