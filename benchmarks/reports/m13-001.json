@@ -1,0 +1,50 @@
+{
+  "id": "m13-001",
+  "milestone": "M13",
+  "criterion": "jump tables recovered from p-code without the decompiler, scored against stock",
+  "recorded_at": "2026-09-10T02:25:22.147480+00:00",
+  "thresholds": {
+    "vsa_extra_branches": 0,
+    "vsa_edge_precision": 0.95,
+    "vsa_seconds": 5.0,
+    "combined_edge_recall_floor": 1.0,
+    "combined_edge_precision_floor": 1.0
+  },
+  "binary": "/usr/lib64/libc.so.6",
+  "measured": {
+    "vsa": {
+      "branches": 18,
+      "stock_branches": 132,
+      "exact_branches": 16,
+      "extra_branches": 0,
+      "missed_branches": 114,
+      "edge_precision": 0.9956,
+      "edge_recall": 0.12,
+      "wall_s": 24.9,
+      "phase_s": 0.922
+    },
+    "decompiler": {
+      "branches": 130,
+      "stock_branches": 132,
+      "exact_branches": 129,
+      "extra_branches": 1,
+      "missed_branches": 3,
+      "edge_precision": 0.9956,
+      "edge_recall": 0.9545,
+      "wall_s": 85.6
+    },
+    "combined": {
+      "branches": 130,
+      "stock_branches": 132,
+      "exact_branches": 128,
+      "extra_branches": 1,
+      "missed_branches": 3,
+      "edge_precision": 0.995,
+      "edge_recall": 0.9545,
+      "wall_s": 85.9,
+      "phase_s": 0.009
+    }
+  },
+  "status": "pass",
+  "failures": []
+}

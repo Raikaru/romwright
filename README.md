@@ -547,6 +547,73 @@ rather than mapped: the JVM-free worker reads the file's own bytes, so a
 swapped dump would decompile reordered instructions. Converting to native
 order is the user's step, not a silent guess by the loader.
 
+#### Nintendo Switch
+
+An NSO0 module is three LZ4-block-compressed segments and a header that says
+where each goes in memory; the module carries ELF machinery inside it, reached
+through the `MOD0` header that the word at text offset 4 names. The loader
+assembles the image, maps it at `0x71_0000_0000` -- where a 64-bit module goes
+-- applies `DT_RELA` and `DT_JMPREL` before mapping, and reads the module's own
+`.dynsym`, whose length comes from `nchain` in `DT_HASH`. The LZ4 decoder is
+60 lines against the block-format specification; no dependency was added.
+
+| Xenoblade Chronicles: Definitive Edition `main` | Value |
+|---|---|
+| functions recovered, no JVM | 43465 in 420 s |
+| `symbol.recall` over the module's 42423 `STT_FUNC` symbols | **1.0000** |
+| `symbol.precision` (1042 found that no symbol names) | 0.9760 |
+| share of stock Ghidra's 45259 (Adubbz `SwitchLoader` in the pinned install) | 0.9604 |
+
+The gate parses the module's symbols itself, with a different LZ4
+implementation and a different dynamic-table reader, so the score does not
+rest on the loader it scores. The image is a retail dump: absent it, the gate
+skips and says why.
+
+<!-- not gated: needs a retail dump that is not in the repository -->
+```sh
+python3 tests/m5-017_switch_module.py
+```
+
+### Jump tables without the decompiler
+
+Switch recovery was the last pass in a native import that called the
+decompiler, and the most expensive: 130 of 137 s on a statically linked
+AArch64 image. The console exports SLEIGH's p-code (`native/ventris_pcode.hh`
+-- a printer, no analysis added to the pinned tree) and `native/vsa.rs`
+emulates the dispatch path once per index, as `JumpBasic::buildAddresses`
+does over the decompiler's IR.
+
+Scored against stock Ghidra's own tables on the host libc
+(`tests/m13-001_vsa_switch.py`, `benchmarks/reports/m13-001.json`):
+
+| Path | Branches | Edge precision | Edge recall | Switch phase |
+|---|---|---|---|---|
+| value-set analysis alone | 18, **none stock lacks** | **0.9956** | 0.1200 | 0.92 s |
+| decompiler alone | 130 | 0.9950 | 0.9545 | 62 s |
+| both (the pass, then the decompiler) | 130 | 0.9950 | 0.9545 | 0.38 s + 55 s |
+
+Three rules earned their place by measurement, each replacing something that
+scored worse: a table must be read by a *strided* load (against 0.4222 for
+accepting any register sweep); the bound is the *guard branch* being taken,
+not any constant compared nearby (against 0.6107); and guard analysis runs
+separately from path emulation on the dispatch block's *real* predecessors
+(against 0.05 recall when merged, and 15 of 132 guards found when the
+predecessors were taken positionally).
+
+What it claims is right; what it reaches is a tenth of stock. So the
+decompiler stays behind it, and because enabling the pass moved the
+`ARM:LE:32:v5t` ratchet from 394 to 392 it is off by default:
+
+```sh
+VENTRIS_SWITCH_VSA=1 lre-cli import <binary> --project <dir>
+```
+
+One function's decompile is now bounded at 60 s and the child killed, which is
+Ghidra's own remedy (`DecompileProcess.sendCommandTimeout` arms a timer whose
+only action is `dispose`; `DecompilerSwitchAnalyzer` sets 60 seconds). An
+import that never finished now takes 137 s, and the signature gate went from
+two 900 s timeouts to 871 of 871 matches correct in 237 s.
+
 ### The ground-truth regression gate (M3)
 
 `benchmarks/regression_gate.py` joins the two: native against DWARF from
@@ -1765,6 +1832,7 @@ report carrying its id -- a measured result cannot live only in a transcript.
 | `m11-001.json` | `m11-001` | M11 | pass | `session.bounded_analyzed` 1770; `session.decompile_ms` 19.0394; `session.decompiled` 5; `session.edit_survived_reimport` 1.0000; `session.fn_precision` 0.9093; `session.fn_recall` 0.9802; `session.functions_matched` 8353; `session.functions_recovered` 9186; `session.import_peak_kb` 228664; `session.import_wall_s` 45.0100; `session.inference_analyzed` 1770; `session.language_is_powerpc_be32` 1.0000; `session.listing_rows` 16; `session.memory_bytes` 8; `session.oracle_functions` 8522; `session.page_ms` 312.1910; `session.worker_recycles` 10; `session.xrefs_rows` 1 | `tests/m11-001_game_session.py` |
 | `m11-002.json` | `m11-002` | M11 | pass | boot.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 25 ms), 1206 inferred; base.elf: 694 functions in 2.8 s, recall 0.9472 precision 0.8790 over 644 symbols, 5 decompiled (median 22 ms), 1206 inferred; Movie.elf: 1678 functions in 7.1 s, recall 0.9550 precision 0.7849 over 1379 symbols, 5 decompiled (median 21 ms), 2415 inferred; driving.elf: 5954 functions in 25.4 s, recall 0.9669 precision 0.9172 over 5648 symbols, 5 decompiled (median 28 ms), 1498 inferred | `tests/m11-002_game_modules.py` |
 | `m12-001.json` | `m12-001` | M12 | recorded | recorded | `tests/m12-001_diff.py` |
+| `m13-001.json` | `m13-001` | M13 | recorded | recorded | `tests/m13-001_vsa_switch.py` |
 | `m2-002-g8.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-002-h.json` | `m2-002` | M2 | pass | 20 pass, 0 fail, 0 skipped | `tests/m2-002_context.py` |
 | `m2-003.json` | `m2-003` | M2 | pass | 20 pass, 0 fail, 0 skipped | - |
@@ -1836,6 +1904,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | `m5-011.json` | `m5-011` | M5 | pass | `pattern.label.applied` 11; `pattern.label.disagreed` 0; `pattern.label.missing` 0; `pattern.label.spurious` 0 | `tests/m5-011_pattern_labels.py` |
 | `m5-012.json` | `m5-012` | M5 | pass | `current_reports` 104; `diagnostic_runs` 12; `generated_rows` 103; `published_ids` 87 | `tests/m5-012_evidence_index.py` |
 | `m5-013.json` | `m5-013` | M5 | pass | `arm9.module_bytes` 1122040; `arm9.stored_bytes` 762644; `fn.precision` 0.9914; `fn.recall` 0.6594; `fn.recovered` 7329; `fn.symbols` 11019 | `tests/m5-013_nds.py` |
+| `m5-017.json` | `m5-017` | M5 | recorded | `functions` 43465; `language` AARCH64:LE:64:v8A; `stock_ratio` 0.9604; `symbol_precision` 0.9760; `symbol_recall` 1.0000; `symbols` 42423; `wall_seconds` 420.4000 | `tests/m5-017_switch_module.py` |
 | `m6-001.json` | `m6-001` | M6 | pass | `commands` 18; `output_lines` 22; `skipped_blocks` 0; `verbs` 24 | `tests/m6-001_documented_workflow.py` |
 | `m6-002.json` | `m6-002` | M6 | pass | `exchanges` 10; `skipped_blocks` 0 | `tests/m6-002_documented_api.py` |
 | `m6-003.json` | `m6-003` | M6 | pass | `ui.install.prefix_ok` True; `ui.install.store_only_ok` True; `ui.list.filter_ms` 2.0256; `ui.list.load_ms` 1.9565 | `tests/m6-003_desktop_package.py` |
