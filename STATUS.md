@@ -5730,6 +5730,36 @@ fixed-width ones it is not, which is exactly what stepping one byte at a
 time through x86 padding predicts.
 
 
+### m17-002 evidence (each producer scored on its own)
+
+Function recall was one number over six passes. The store now records which
+producer claimed each entry (`functions.producer`, schema 19, derived in
+one place from evidence each pass already recorded: linkage stub, the
+image's own symbol, byte pattern, pointer in data, a call, or the flow
+walk), and the gate scores them separately against DWARF on four
+architectures:
+
+| Row | recall | call | flow | thunk | pattern | entries nothing explains |
+|---|---|---|---|---|---|---|
+| x86_64_many_o2 | 1.0000 | 402 @ 1.00 | 6 @ 1.00 | 1 @ 1.00 | -- | 0 |
+| i386_many_o2 | 1.0000 | 401 @ 1.00 | 8 @ 1.00 | 2 @ 1.00 | 2 @ 0.50 | 1 |
+| aarch64_many_o2 | 1.0000 | 403 @ 1.00 | 8 @ 0.875 | 4 @ 1.00 | -- | 1 |
+| powerpc_many_o2 | 1.0000 | 401 @ 1.00 | 6 @ 1.00 | 3 @ 1.00 | -- | 0 |
+
+An entry DWARF is silent about is not automatically wrong -- `_start`, the
+PLT header and linker stubs are code the compiler emits without debug
+information -- so precision here uses `m3-001`'s allowance: a symbol in the
+unstripped twin or an address inside a `.plt*` section is explained.
+
+Two entries across the four rows are explained by nothing, and both are the
+same shape: a four-byte "function" at the address immediately after a real
+one ends, with no reference to it (`aarch64 002132cc`, right after
+`FUN_00213290`+60). That is a real defect and it is recorded rather than
+absorbed: the gate holds the count at no more than two per row, so it
+cannot grow quietly, and precision floors apply to classes of twenty or
+more claims where a rate means something.
+
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now
