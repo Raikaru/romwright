@@ -5594,9 +5594,16 @@ cold imports:
 | Block counts equal to whole-image analysis, functions with no recovered jump table | 388/388 |
 | Functions with a recovered jump table | 6, all differing -- the case edges come from the switch round, which one walk does not run |
 | **Stock baseline** | **2527 edges left unstructured over 394 functions; 198 hold at least one** |
+| **Ours (`structuring::structure`)** | **1998 — 0.7907 of stock; better on 121 functions, worse on 58 by at most 6** |
 
-That last row is the number a structuring pass of ours has to beat on the
-same functions, recorded before any such pass exists. The measure is named
+The Rust pass collapses regions in the order that commits to the least:
+sequences, short-circuit conditions (`BlockCondition`'s shape -- without it a
+`&&` costs a jump, and adding it alone took 2529 to 2199), two-way and
+multi-way branches, then natural loops whose bodies are structured
+recursively with their back edges removed (2199 to 1998). A terminal tail
+shared by several paths is duplicated rather than jumped to. Only when
+nothing matches is an edge virtualised, choosing the one a structured shape
+is least likely to want, deterministically. The measure is named
 carefully: `structureGraph` stops after `CollapseStructure`, before the
 printing pass (`finalizePrinting` -> `scopeBreak`) that decides which
 unstructured edges print as `break` or `continue`, so every one is reported
