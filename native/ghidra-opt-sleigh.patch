@@ -434,23 +434,25 @@ diff --git a/decompiler/ifacedecomp.cc b/decompiler/ifacedecomp.cc
 index e62ab6a..1486693 100644
 --- a/decompiler/ifacedecomp.cc
 +++ b/decompiler/ifacedecomp.cc
-@@ -14,6 +14,11 @@
+@@ -14,6 +14,12 @@
   * limitations under the License.
   */
  #include "ifacedecomp.hh"
 +#include "ventris_linkage.hh"
 +#include "ventris_patterns.hh"
 +#include "ventris_flow.hh"
++#include "ventris_pcode.hh"
 +#include "ventris_constants.hh"
 +#include "ventris_callfixups.hh"
  extern "C" {
  #include <time.h>
  }
-@@ -63,6 +68,13 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
+@@ -63,6 +68,14 @@ void IfaceDecompCapability::registerCommands(IfaceStatus *status)
    status->registerCom(new IfcMapconvert(),"map","convert");
    status->registerCom(new IfcMapunionfacet(), "map", "unionfacet");
    status->registerCom(new IfcPrintdisasm(),"disassemble");
 +  status->registerCom(new IfcFlow(),"flow");
++  status->registerCom(new IfcPcode(),"pcode");
 +  status->registerCom(new IfcContext(),"context");
 +  status->registerCom(new IfcLinkage(),"linkage");
 +  status->registerCom(new IfcFunctionStarts(),"functionstarts");
@@ -479,7 +481,7 @@ index e62ab6a..1486693 100644
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
      addr = addr + sz;
-@@ -836,6 +860,143 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +860,191 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
@@ -511,6 +513,54 @@ index e62ab6a..1486693 100644
 +    const_cast<Sleigh *>(sleigh)->invalidateContextCache();
 +  *status->fileoptr << "CONTEXT " << name << ' ' << addr.getShortcut() << "0x" << hex
 +                    << addr.getOffset() << " = " << dec << value << '\n';
++  status->fileoptr->flush();
++}
++
++void IfcPcode::execute(istream &s)
++
++{
++  if (dcp->conf == (Architecture *)0)
++    throw IfaceExecutionError("No architecture loaded");
++
++  const Sleigh *sleigh = dynamic_cast<const Sleigh *>(dcp->conf->translate);
++  if (sleigh == nullptr)
++    throw IfaceExecutionError("Pcode requires a SLEIGH translator");
++
++  while (true) {
++    s >> ws;
++    if (s.eof() || s.peek() == -1) break;
++    Address addr;
++    int4 size;
++    try {
++      addr = parse_machaddr(s,size,*dcp->conf->types);
++    } catch(...) {
++      break;
++    }
++    if (addr.isInvalid()) break;
++
++    ostringstream body;
++    PcodePrinter printer(body);
++    int4 length = 0;
++    const char *failure = (const char *)0;
++    try {
++      length = sleigh->oneInstruction(printer,addr);
++    } catch(BadDataError &err) {
++      failure = "BAD";
++    } catch(UnimplError &err) {
++      failure = "UNIMPL";
++    } catch(LowlevelError &err) {
++      failure = "BAD";
++    }
++    if (failure != (const char *)0) {
++      *status->fileoptr << "PCODE " << addr.getShortcut() << "0x" << hex << addr.getOffset()
++                        << " len=1 ops=0 error=" << failure << '\n';
++      continue;
++    }
++    *status->fileoptr << "PCODE " << addr.getShortcut() << "0x" << hex << addr.getOffset()
++                      << " len=" << dec << length << " ops=" << printer.count() << '\n';
++    *status->fileoptr << body.str();
++  }
++  *status->fileoptr << "PCODE end\n";
 +  status->fileoptr->flush();
 +}
 +
@@ -627,7 +677,7 @@ diff --git a/decompiler/ifacedecomp.hh b/decompiler/ifacedecomp.hh
 index 5958f67..954e2de 100644
 --- a/decompiler/ifacedecomp.hh
 +++ b/decompiler/ifacedecomp.hh
-@@ -203,6 +203,16 @@ public:
+@@ -203,6 +203,21 @@ public:
    virtual void execute(istream &s);
  };
  
@@ -637,6 +687,11 @@ index 5958f67..954e2de 100644
 +};
 +
 +class IfcFlow : public IfaceDecompCommand {
++public:
++  virtual void execute(istream &s);
++};
++
++class IfcPcode : public IfaceDecompCommand {
 +public:
 +  virtual void execute(istream &s);
 +};

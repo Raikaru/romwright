@@ -206,6 +206,7 @@ impl Core {
             patterns: None,
             references_refused: 0,
             discovery_note: None,
+            switch: None,
         })
     }
 
@@ -1201,6 +1202,7 @@ impl Core {
             patterns: None,
             references_refused: 0,
             discovery_note: None,
+            switch: None,
         })
     }
 

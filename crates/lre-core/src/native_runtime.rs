@@ -594,6 +594,56 @@ pub struct ConstantVarnode {
     pub size: u32,
 }
 
+
+/// One p-code varnode as the console prints it: `<space>:<offset>:<size>`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PcodeVarnode {
+    pub space: String,
+    pub offset: u64,
+    pub size: u32,
+}
+
+impl PcodeVarnode {
+    pub fn is_const(&self) -> bool {
+        self.space == "const"
+    }
+    /// True for a varnode that holds machine state between instructions --
+    /// a register or a stack slot -- as opposed to a within-instruction
+    /// temporary or a constant.
+    pub fn is_persistent(&self) -> bool {
+        self.space == "register" || self.space == "stack"
+    }
+    fn parse(text: &str) -> Option<Self> {
+        let mut parts = text.rsplitn(3, ':');
+        let size = parts.next()?.parse().ok()?;
+        let offset = u64::from_str_radix(parts.next()?.trim_start_matches("0x"), 16).ok()?;
+        let space = parts.next()?.to_string();
+        Some(Self {
+            space,
+            offset,
+            size,
+        })
+    }
+}
+
+/// One p-code operation, opcode named as the translator names it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PcodeOp {
+    pub opcode: String,
+    pub output: Option<PcodeVarnode>,
+    pub inputs: Vec<PcodeVarnode>,
+}
+
+/// The p-code of one machine instruction.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PcodeInstruction {
+    pub address: u64,
+    pub length: u8,
+    pub ops: Vec<PcodeOp>,
+    /// `BAD` or `UNIMPL` when SLEIGH could not decode the address.
+    pub error: Option<String>,
+}
+
 /// An inferred mapped-memory reference at its instruction address.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ReferenceFact {
@@ -1551,6 +1601,118 @@ impl ConsoleSession {
         // The trailing prompt, which every answered request ends with.
         match read_line_or_prompt(&mut self.reader)? {
             ConsoleOutput::Prompt(_) => Ok(results),
+            ConsoleOutput::Line(line) => err(format!(
+                "console said more than it was asked for: {}",
+                line.trim()
+            )),
+        }
+    }
+
+    /// Reads the p-code of each address in one batch request.
+    ///
+    /// This is the console's `pcode` command: SLEIGH's own operations for the
+    /// instruction, in emission order, with no analysis applied. The reasoning
+    /// over them happens in Rust (`native::vsa`).
+    pub fn pcode_batch(&mut self, addresses: &[u64]) -> Result<Vec<PcodeInstruction>> {
+        if addresses.is_empty() {
+            return Ok(Vec::new());
+        }
+        use std::fmt::Write as _;
+        let mut script = String::with_capacity(addresses.len() * 12 + 8);
+        script.push_str("pcode");
+        for addr in addresses {
+            let _ = write!(script, " 0x{addr:x}");
+        }
+        script.push('\n');
+        self.send(&script)?;
+        // The echo of the command itself.
+        match read_line_or_prompt(&mut self.reader)? {
+            ConsoleOutput::Line(_) => {}
+            ConsoleOutput::Prompt(text) => {
+                return err(format!("console answered no p-code: {}", text.trim()));
+            }
+        }
+        let mut out: Vec<PcodeInstruction> = Vec::with_capacity(addresses.len());
+        loop {
+            let line = match read_line_or_prompt(&mut self.reader)? {
+                ConsoleOutput::Line(line) => line,
+                ConsoleOutput::Prompt(text) => {
+                    return err(format!(
+                        "console stopped after {} of {} p-code answers: {}",
+                        out.len(),
+                        addresses.len(),
+                        text.trim()
+                    ));
+                }
+            };
+            let line = line.trim();
+            if line == "PCODE end" {
+                break;
+            }
+            if line.contains("Execution error") || line.contains("Command parsing error") {
+                return err(format!("console refused the p-code request: {line}"));
+            }
+            if let Some(rest) = line.strip_prefix("PCODE ") {
+                let mut fields = rest.split_whitespace();
+                let address = fields
+                    .next()
+                    .and_then(|text| {
+                        u64::from_str_radix(
+                            text.trim_start_matches(|c: char| !c.is_ascii_hexdigit())
+                                .trim_start_matches("0x"),
+                            16,
+                        )
+                        .ok()
+                    })
+                    .unwrap_or(0);
+                let mut length = 1u8;
+                let mut error = None;
+                for field in fields {
+                    if let Some(value) = field.strip_prefix("len=") {
+                        length = value.parse().unwrap_or(1);
+                    } else if let Some(value) = field.strip_prefix("error=") {
+                        error = Some(value.to_string());
+                    }
+                }
+                out.push(PcodeInstruction {
+                    address,
+                    length,
+                    ops: Vec::new(),
+                    error,
+                });
+                continue;
+            }
+            if let Some(rest) = line.strip_prefix("OP ") {
+                let Some(instruction) = out.last_mut() else {
+                    continue;
+                };
+                let mut fields = rest.split_whitespace();
+                let _index = fields.next();
+                let Some(opcode) = fields.next() else { continue };
+                let mut op = PcodeOp {
+                    opcode: opcode.to_string(),
+                    output: None,
+                    inputs: Vec::new(),
+                };
+                for field in fields {
+                    let Some((label, value)) = field.split_once('=') else {
+                        continue;
+                    };
+                    let Some(varnode) = PcodeVarnode::parse(value) else {
+                        continue;
+                    };
+                    if label == "out" {
+                        op.output = Some(varnode);
+                    } else {
+                        op.inputs.push(varnode);
+                    }
+                }
+                instruction.ops.push(op);
+            }
+        }
+        // The trailing prompt every answered request ends with.
+        match read_line_or_prompt(&mut self.reader)? {
+            ConsoleOutput::Prompt(_) => Ok(out),
             ConsoleOutput::Line(line) => err(format!(
                 "console said more than it was asked for: {}",
                 line.trim()

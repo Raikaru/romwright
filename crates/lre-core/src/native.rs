@@ -19,6 +19,8 @@ mod psx;
 pub(crate) mod dol;
 mod discovery;
 mod features;
+mod nso;
+pub(crate) mod vsa;
 mod elf_exception;
 mod elf_pointers;
 mod elf_unwind;
@@ -229,6 +231,11 @@ pub struct NativeImport {
     pub thunk_settled: std::collections::HashSet<u64>,
     /// Address ranges the last walk decoded, merged and sorted.
     pub decoded_ranges: Vec<(u64, u64)>,
+    /// Dispatches value-set analysis resolved, and refused, over every
+    /// round: the measurement that says whether the decompiler is still
+    /// needed in the switch round at all.
+    pub switch_vsa_resolved: usize,
+    pub switch_vsa_refused: usize,
     /// The decoded shape of every instruction the walk read: address, byte
     /// length, flow kind, whether the flow is conditional, and the single
     /// direct target when it has one. This is what the structural features
@@ -1244,6 +1251,8 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
     } else if n64::is_rom(data) || n64::is_swapped_dump(data) {
         // A swapped dump is recognised only to refuse it by name.
         n64::import(data)
+    } else if nso::is_module(data) {
+        nso::import(data)
     } else if psx::is_executable(data) {
         psx::import(data)
     } else if gba::is_cartridge(data) {
@@ -1395,6 +1404,271 @@ impl Drop for ScratchDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.path);
     }
+}
+
+/// The image, as the value-set analysis reads it.
+struct ImageView<'a> {
+    imp: &'a NativeImport,
+    big_endian: bool,
+}
+
+impl vsa::Image for ImageView<'_> {
+    fn read(&self, address: u64, size: u32) -> Option<u64> {
+        if size == 0 || size > 8 {
+            return None;
+        }
+        let mapping = self.imp.mappings.iter().find(|mapping| {
+            address >= mapping.vaddr && address + u64::from(size) <= mapping.vaddr + mapping.size
+        })?;
+        let offset = usize::try_from(address - mapping.vaddr).ok()?;
+        let bytes = mapping.bytes.get(offset..offset + size as usize)?;
+        let mut value = 0u64;
+        if self.big_endian {
+            for byte in bytes {
+                value = (value << 8) | u64::from(*byte);
+            }
+        } else {
+            for (index, byte) in bytes.iter().enumerate() {
+                value |= u64::from(*byte) << (index * 8);
+            }
+        }
+        Some(value)
+    }
+
+    fn executable(&self, address: u64) -> bool {
+        self.imp.mappings.iter().any(|mapping| {
+            mapping.flags & 4 != 0
+                && address >= mapping.vaddr
+                && address < mapping.vaddr + mapping.size
+        })
+    }
+
+    fn big_endian(&self) -> bool {
+        self.big_endian
+    }
+}
+
+/// The straight-line window ending at `branch`, and the blocks that can
+/// reach it, which is where a guard lives.
+///
+/// Ghidra takes the path out of the SSA form it has already built
+/// (`JumpBasic::findDeterminingVarnodes`) and the range out of the blocks
+/// that dominate the dispatch (`JumpBasic::analyzeGuards`). There is no SSA
+/// here, so the window is the branch's own basic block -- Ghidra's own
+/// definition, a run of instructions nothing jumps into
+/// (`BasicBlockModel.hasEndOfBlockFlow`) -- and the guard region is the
+/// blocks that actually branch or fall into it. Taking the two positionally
+/// preceding blocks instead found a guard for 15 of 132 dispatches on libc:
+/// a dispatch block is usually jumped to, not fallen into.
+fn switch_window(imp: &NativeImport, branch: u64, entry: u64, end: u64) -> (Vec<u64>, Vec<u64>) {
+    let shapes: Vec<&FlowShape> = imp
+        .flow_shapes
+        .iter()
+        .filter(|shape| shape.address >= entry && shape.address < end)
+        .collect();
+    if shapes.is_empty() || !shapes.iter().any(|shape| shape.address == branch) {
+        return (Vec::new(), Vec::new());
+    }
+    let ends_block = |kind: crate::native_runtime::FlowKind| {
+        matches!(
+            kind,
+            crate::native_runtime::FlowKind::Branch
+                | crate::native_runtime::FlowKind::CBranch
+                | crate::native_runtime::FlowKind::BranchInd
+                | crate::native_runtime::FlowKind::Return
+        )
+    };
+    let mut leaders: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
+    leaders.insert(entry);
+    for shape in &shapes {
+        if let Some(target) = shape.target {
+            if target >= entry && target < end {
+                leaders.insert(target);
+            }
+        }
+        if ends_block(shape.kind) {
+            let next = shape.address + u64::from(shape.length);
+            if next < end {
+                leaders.insert(next);
+            }
+        }
+    }
+    let leader_of = |address: u64| {
+        leaders
+            .range(..=address)
+            .next_back()
+            .copied()
+            .unwrap_or(entry)
+    };
+    let dispatch = leader_of(branch);
+    // Predecessors: a block whose last instruction branches to the dispatch,
+    // and the block that falls into it.
+    let mut predecessors: Vec<u64> = Vec::new();
+    for shape in &shapes {
+        let reaches = shape.target == Some(dispatch)
+            || (!ends_block(shape.kind)
+                && shape.address + u64::from(shape.length) == dispatch)
+            || (matches!(shape.kind, crate::native_runtime::FlowKind::CBranch)
+                && shape.address + u64::from(shape.length) == dispatch);
+        if reaches {
+            let block = leader_of(shape.address);
+            if block != dispatch && !predecessors.contains(&block) {
+                predecessors.push(block);
+            }
+        }
+    }
+    predecessors.sort_unstable();
+    let window: Vec<u64> = shapes
+        .iter()
+        .filter(|shape| shape.address >= dispatch && shape.address <= branch)
+        .map(|shape| shape.address)
+        .collect();
+    // Guard region: every predecessor block, in address order. Each is a
+    // straight line ending in the transfer that reaches the dispatch, so
+    // running them in order runs each one's guard.
+    let mut guard: Vec<u64> = Vec::new();
+    for &block in predecessors.iter().take(4) {
+        let block_end = leaders
+            .range((std::ops::Bound::Excluded(block), std::ops::Bound::Unbounded))
+            .next()
+            .copied()
+            .unwrap_or(end);
+        guard.extend(
+            shapes
+                .iter()
+                .filter(|shape| shape.address >= block && shape.address < block_end)
+                .map(|shape| shape.address),
+        );
+    }
+    (window, guard)
+}
+
+/// Recovers tables with value-set analysis over p-code, no decompiler.
+///
+/// Returns the branches it could not resolve, which the decompiler path then
+/// gets, so a body this cannot follow is still recovered.
+fn recover_switch_tables_native(
+    imp: &mut NativeImport,
+    session: &mut crate::native_runtime::ConsoleSession,
+    branches: &[(u64, u64, u64)],
+) -> (usize, Vec<u64>) {
+    // The language id names the endianness in its second field
+    // (`PowerPC:BE:32:default`), which is how every other reader here takes
+    // it.
+    let big_endian = imp
+        .language
+        .split(':')
+        .nth(1)
+        .is_some_and(|field| field.eq_ignore_ascii_case("BE"));
+    let mut resolved = Vec::new();
+    let mut unresolved = Vec::new();
+    for &(branch, entry, end) in branches {
+        let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
+        if window_addresses.is_empty() {
+            unresolved.push(branch);
+            continue;
+        }
+        // One request for both regions: the guard's constants come from the
+        // blocks before the dispatch, and only the dispatch block is
+        // emulated.
+        let mut addresses = guard_addresses.clone();
+        addresses.extend(window_addresses.iter().copied());
+        let decoded = match session.pcode_batch(&addresses) {
+            Ok(decoded) => decoded,
+            Err(_) => {
+                unresolved.push(branch);
+                continue;
+            }
+        };
+        if decoded.iter().any(|instruction| instruction.error.is_some()) {
+            unresolved.push(branch);
+            continue;
+        }
+        let split = guard_addresses.len().min(decoded.len());
+        let (guard, window) = decoded.split_at(split);
+        let table = {
+            let view = ImageView { imp, big_endian };
+            vsa::recover(&view, branch, guard, window, imp.cfg.switch_vsa_unguarded)
+        };
+        match table {
+            Some(table) => resolved.push(table),
+            None => unresolved.push(branch),
+        }
+    }
+    let mut added = 0;
+    for table in resolved {
+        let mut targets = table.targets;
+        targets.sort_unstable();
+        targets.dedup();
+        for &target in &targets {
+            imp.xrefs.push(NativeXref::with_provenance(
+                table.branch,
+                target,
+                "COMPUTED_JUMP",
+                SWITCH_PROVENANCE,
+            ));
+        }
+        let reaches_new = targets.iter().any(|&target| {
+            let index = imp.decoded_ranges.partition_point(|&(start, _)| start <= target);
+            !index
+                .checked_sub(1)
+                .is_some_and(|i| target < imp.decoded_ranges[i].1)
+        });
+        if imp.switch_tables.insert(table.branch, targets).is_none() && reaches_new {
+            added += 1;
+        }
+    }
+    (added, unresolved)
+}
+
+/// Indirect jumps whose table is not known yet, with the extent of the
+/// function that owns each: the candidates both switch paths work from.
+///
+/// A jump whose transfer the image's structure already proved -- a linkage
+/// stub through an import slot, a thunk -- is not a switch;
+/// `DecompilerSwitchAnalyzer.findLocations` skips an instruction whose flow
+/// is overridden or already referenced (:398-431).
+fn switch_candidates(imp: &mut NativeImport) -> Vec<(u64, u64, u64)> {
+    let extents: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| (function.entry, function.entry + function.size))
+        .collect();
+    let resolved: std::collections::HashSet<u64> = imp
+        .flow_overrides
+        .iter()
+        .map(|&(address, _)| address)
+        .chain(
+            imp.xrefs
+                .iter()
+                .filter(|xref| xref.kind == "COMPUTED_JUMP")
+                .map(|xref| xref.from),
+        )
+        .collect();
+    let thunk_entries: std::collections::HashSet<u64> =
+        imp.thunks.iter().map(|thunk| thunk.entry).collect();
+    let mut out = Vec::new();
+    for &branch in &imp.indirect_jumps {
+        if imp.switch_tables.contains_key(&branch) || resolved.contains(&branch) {
+            continue;
+        }
+        let Some(&(entry, end)) = extents
+            .iter()
+            .find(|&&(start, end)| start <= branch && branch < end)
+        else {
+            continue;
+        };
+        if thunk_entries.contains(&entry) {
+            continue;
+        }
+        if imp.switch_asked.insert(branch, end - entry) != Some(end - entry) {
+            out.push((branch, entry, end));
+        }
+    }
+    out.sort_unstable();
+    out.dedup();
+    out
 }
 
 fn recover_switch_tables(imp: &mut NativeImport) -> usize {
@@ -1641,7 +1915,40 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         let targets = computed_flow_targets(imp);
-        let tables = recover_switch_tables(imp);
+        // Value-set analysis over p-code answers most dispatches without the
+        // decompiler; the decompiler path is what a body this cannot follow
+        // falls back to (and the accelerator can be switched off entirely,
+        // which is how the two are measured against each other).
+        let switch_started = std::time::Instant::now();
+        let candidates = switch_candidates(imp);
+        let mut tables = 0;
+        let mut remaining = candidates.iter().map(|&(branch, _, _)| branch).count();
+        if imp.cfg.switch_vsa && !candidates.is_empty() {
+            let (added, unresolved) = recover_switch_tables_native(imp, &mut session, &candidates);
+            tables += added;
+            remaining = unresolved.len();
+            // Only the branches value-set analysis could not follow are
+            // asked again, so the decompiler sees the residue and nothing
+            // more.
+            for &(branch, _, _) in &candidates {
+                if !unresolved.contains(&branch) {
+                    continue;
+                }
+                imp.switch_asked.remove(&branch);
+            }
+            imp.switch_vsa_resolved += added;
+            imp.switch_vsa_refused += unresolved.len();
+        } else {
+            for &(branch, _, _) in &candidates {
+                imp.switch_asked.remove(&branch);
+            }
+        }
+        phase(imp, "switch-vsa", switch_started);
+        if remaining > 0 && imp.cfg.switch_decompiler {
+            tables += recover_switch_tables(imp);
+        } else if tables > 0 {
+            demote_case_blocks(imp);
+        }
         if targets.is_empty() && tables == 0 {
             break;
         }
@@ -2740,6 +3047,10 @@ pub fn store_import(
         patterns: imp.patterns_seen.clone(),
         references_refused: imp.references_refused,
         discovery_note: imp.discovery_note.clone(),
+        switch: Some(lre_model::SwitchStats {
+            vsa_resolved: imp.switch_vsa_resolved as u64,
+            vsa_refused: imp.switch_vsa_refused as u64,
+        }),
     })
 }
 
