@@ -395,6 +395,15 @@ fn run(
         &function_shell,
     )?;
     let ram = provider.ram_space_index as u32;
+    // Ghidra's switch analyzer allows a function 60 seconds before it
+    // disposes of the decompiler; the same bound applies here, and a caller
+    // that wants none sets 0.
+    let decompile_timeout = std::env::var("WORKER_DECOMPILE_TIMEOUT_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(60);
+    let decompile_timeout = (decompile_timeout > 0)
+        .then(|| std::time::Duration::from_secs(decompile_timeout));
     // A batch answers every address from one launch, in one JSON object; a
     // single address keeps the plain-text answer every existing caller reads.
     if offsets.len() > 1 {
@@ -414,7 +423,9 @@ fn run(
             let raw = match worker
                 .prepare_function(&mut provider, offset)
                 .and_then(|()| worker.set_action(&mut provider, &action, ""))
-                .and_then(|()| worker.decompile_at(&mut provider, ram, offset))
+                .and_then(|()| {
+                    worker.decompile_at_within(&mut provider, ram, offset, decompile_timeout)
+                })
             {
                 Ok(raw) => raw,
                 Err(error) => {
@@ -472,7 +483,7 @@ fn run(
     worker.prepare_function(&mut provider, offset)?;
     let action = std::env::var("WORKER_ACTION").unwrap_or_else(|_| "decompile".to_string());
     worker.set_action(&mut provider, &action, "")?;
-    let raw = worker.decompile_at(&mut provider, ram, offset)?;
+    let raw = worker.decompile_at_within(&mut provider, ram, offset, decompile_timeout)?;
     // The packed response is the source of truth for both structured tokens
     // and rendered compatibility text. `decode_tokens_with_ram_space` follows
     // PackedDecode.java and preserves token metadata; concatenation is only
