@@ -1,7 +1,7 @@
 {
   "gate": "m15-001",
   "milestone": "M15",
-  "commit": "b41231cbbfce03236b34c55d2f7c7db8dfeecf9a",
+  "commit": "69a59491b7105633b62a0965560c60951442e389",
   "date": "2026-09-10",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
@@ -76,7 +76,7 @@
     "with_tables": 6,
     "block_disagreements_without_tables": 0,
     "table_functions_that_agree": 0,
-    "stock_gotos": 2527,
+    "stock_unstructured_edges": 2527,
     "functions_with_gotos": 198,
     "examples": [
       {

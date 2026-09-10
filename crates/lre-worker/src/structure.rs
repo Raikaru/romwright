@@ -35,6 +35,8 @@ use crate::wire;
 const ELEM_BHEAD: u32 = 102;
 const ELEM_BLOCK: u32 = 103;
 const ELEM_EDGE: u32 = 105;
+/// `marshal.cc:1270`: the unstructured edge a goto-ish block carries.
+const ELEM_TARGET: u32 = 7;
 const ATTRIB_INDEX: u32 = 10;
 const ATTRIB_TYPE: u32 = 22;
 const ATTRIB_ALTINDEX: u32 = 75;
@@ -60,6 +62,11 @@ pub struct StructuredBlock {
     pub index: i64,
     /// Present on `copy` blocks: the index of the input block it came from.
     pub altindex: Option<i64>,
+    /// `FlowBlock::block_flags` of each unstructured edge this block carries:
+    /// 1 is `f_goto_goto` (a printed `goto`), 2 is `f_break_goto`, 4 is
+    /// `f_continue_goto`. A `multigoto` target carries no type and is a
+    /// plain unstructured jump by construction.
+    pub goto_types: Vec<u64>,
     pub children: Vec<StructuredBlock>,
 }
 
@@ -72,19 +79,41 @@ impl StructuredBlock {
         }
     }
 
-    /// Blocks that print an unstructured jump.
+    /// Edges `CollapseStructure` could not structure.
     ///
-    /// `BlockGoto` (`goto`) and `BlockMultiGoto` (`multigoto`) are exactly
-    /// the shapes `CollapseStructure` produces when it cannot structure an
-    /// edge; `ifgoto` is a conditional whose body is a single goto
-    /// (`BlockGraph::encodeBody` names a `t_if` of size 1 that way), and it
-    /// prints one too.
+    /// `BlockGoto`, `BlockMultiGoto` and a `t_if` of size one (`ifgoto`) are
+    /// the shapes it produces for such an edge, and each carries the edge's
+    /// type. Some of those become `break` and `continue` rather than `goto`
+    /// in printed C, but that decision belongs to a later pass
+    /// (`BlockGraph::finalizePrinting` -> `scopeBreak`) which the
+    /// `structureGraph` command does not run, so everything here is type
+    /// `f_goto_goto` and the honest name for the measure is *unstructured
+    /// edges*, not gotos in the output. It is the measure both structurings
+    /// are scored on, over identical graphs.
     pub fn gotos(&self) -> usize {
         let mut count = 0;
         self.walk(&mut |block| {
-            if matches!(block.kind.as_str(), "goto" | "multigoto" | "ifgoto") {
-                count += 1;
-            }
+            count += block
+                .goto_types
+                .iter()
+                .filter(|kind| **kind == 0 || **kind == 1)
+                .count();
+        });
+        count
+    }
+
+    /// Edges already classified as `break` or `continue`. Zero through this
+    /// command, which stops before the pass that classifies them; counted so
+    /// that if a future upstream ever does classify here, the two measures
+    /// stay separable instead of one silently absorbing the other.
+    pub fn breaks_and_continues(&self) -> usize {
+        let mut count = 0;
+        self.walk(&mut |block| {
+            count += block
+                .goto_types
+                .iter()
+                .filter(|kind| **kind == 2 || **kind == 4)
+                .count();
         });
         count
     }
@@ -201,6 +230,7 @@ fn read_block(packed: &[u8], position: &mut usize, kind: String) -> Option<Struc
         kind,
         index: 0,
         altindex: None,
+        goto_types: Vec::new(),
         children: Vec::new(),
     };
     // Attributes of this block, then its body: a list of `bhead` children,
@@ -260,11 +290,39 @@ fn read_block(packed: &[u8], position: &mut usize, kind: String) -> Option<Struc
                         let child = read_block(packed, position, kind)?;
                         block.children.push(child);
                     }
+                    // `<target>` names an unstructured edge and how it
+                    // prints: `goto`, `break` or `continue` are all encoded
+                    // as goto-ish blocks, and only the first is a goto.
+                    ELEM_TARGET => {
+                        *position = lookahead;
+                        let mut kind = 0u64;
+                        loop {
+                            let header = *packed.get(*position)?;
+                            if header & 0xc0 != 0xc0 {
+                                break;
+                            }
+                            *position += 1;
+                            let attribute = read_id(packed, position, header)?;
+                            let value = read_value(packed, position)?;
+                            if attribute == ATTRIB_TYPE {
+                                kind = match value {
+                                    Value::Unsigned(value) => value,
+                                    Value::Signed(value) => value.max(0) as u64,
+                                    _ => 0,
+                                };
+                            }
+                        }
+                        let header = *packed.get(*position)?;
+                        if header & 0xc0 != 0x80 {
+                            return None;
+                        }
+                        *position += 1;
+                        read_id(packed, position, header)?;
+                        block.goto_types.push(kind);
+                    }
                     // Anything else is a leaf element this side does not
-                    // model -- `<edge>`, and `<target>` on a goto block,
-                    // which names where the unstructured jump goes. Skipped
-                    // whole, so an upstream addition cannot make a result
-                    // undecodable: the kinds and the shape are what is read.
+                    // model, such as `<edge>`. Skipped whole, so an upstream
+                    // addition cannot make a result undecodable.
                     _ => skip_element(packed, position)?,
                 }
             }

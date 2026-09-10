@@ -5593,10 +5593,17 @@ cold imports:
 | Functions scored | 400 multi-block, 394 comparable (same extent both producers) |
 | Block counts equal to whole-image analysis, functions with no recovered jump table | 388/388 |
 | Functions with a recovered jump table | 6, all differing -- the case edges come from the switch round, which one walk does not run |
-| **Stock goto baseline** | **2527 gotos over 394 functions; 198 hold at least one** |
+| **Stock baseline** | **2527 edges left unstructured over 394 functions; 198 hold at least one** |
 
 That last row is the number a structuring pass of ours has to beat on the
-same functions, recorded before any such pass exists. The partition is
+same functions, recorded before any such pass exists. The measure is named
+carefully: `structureGraph` stops after `CollapseStructure`, before the
+printing pass (`finalizePrinting` -> `scopeBreak`) that decides which
+unstructured edges print as `break` or `continue`, so every one is reported
+as `f_goto_goto` here. It is a comparison of structurings over identical
+graphs, not a count of `goto` keywords in emitted C -- and our own pass will
+be scored on the same category, so neither side may count a `break` as
+structured while the other does not. The partition is
 asserted both ways, so the exception cannot quietly grow: a disagreement
 outside the jump-table class fails, and so does a jump-table function that
 starts agreeing.
