@@ -39,6 +39,11 @@ pub enum WorkerError {
     /// Store failure while serving callbacks.
     #[error("store: {0}")]
     Store(#[from] lre_db::DbError),
+    /// The decompiler did not answer within the deadline and was killed, as
+    /// Ghidra's client kills it (`DecompileProcess.timeoutRunnable`:100-106,
+    /// armed by `sendCommandTimeout`:564-595).
+    #[error("decompiler timed out after {0}s")]
+    Timeout(u64),
 }
 
 /// Convenience alias with the error defaulted per project convention.
@@ -407,6 +412,64 @@ impl NativeWorker {
         encode_addr_element(&mut addr, space_index, offset);
         let arch_id = self.arch_id.to_string();
         self.run_command(provider, "decompileAt", &[arch_id.as_bytes(), &addr])
+    }
+
+    /// Decompiles one address, killing the decompiler if it does not answer
+    /// within `timeout`.
+    ///
+    /// This is Ghidra's own remedy, not a new policy: `sendCommandTimeout`
+    /// (:564-595) arms a timer whose only action is to dispose of the process
+    /// (:100-106), and the analyzer that needs it most sets 60 seconds
+    /// (`DecompilerSwitchAnalyzer.OPTION_DEFAULT_DECOMPILER_TIMEOUT_SECS`;
+    /// `DecompileOptions.SUGGESTED_DECOMPILE_TIMEOUT_SECS` is 30 for a
+    /// reader). Without it one function that never converges blocks the whole
+    /// batch: a statically linked image took the switch round past fifteen
+    /// minutes on one body.
+    pub fn decompile_at_within(
+        &mut self,
+        provider: &mut ProgramProvider,
+        space_index: u32,
+        offset: u64,
+        timeout: Option<std::time::Duration>,
+    ) -> Result<Vec<u8>> {
+        let Some(timeout) = timeout else {
+            return self.decompile_at(provider, space_index, offset);
+        };
+        use std::sync::atomic::{AtomicBool, Ordering};
+        let handle = self.kill_handle();
+        let fired = std::sync::Arc::new(AtomicBool::new(false));
+        let answered = std::sync::Arc::new(AtomicBool::new(false));
+        let watchdog = std::thread::spawn({
+            let fired = fired.clone();
+            let answered = answered.clone();
+            move || {
+                let deadline = std::time::Instant::now() + timeout;
+                while std::time::Instant::now() < deadline {
+                    if answered.load(Ordering::Relaxed) {
+                        return;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(25));
+                }
+                if answered.load(Ordering::Relaxed) {
+                    return;
+                }
+                fired.store(true, Ordering::Relaxed);
+                // The read is blocked in the protocol, which is why the child
+                // is behind its own mutex.
+                if let Ok(mut slot) = handle.lock() {
+                    if let Some(child) = slot.as_mut() {
+                        let _ = child.kill();
+                    }
+                }
+            }
+        });
+        let result = self.decompile_at(provider, space_index, offset);
+        answered.store(true, Ordering::Relaxed);
+        let _ = watchdog.join();
+        match result {
+            Err(_) if fired.load(Ordering::Relaxed) => Err(WorkerError::Timeout(timeout.as_secs())),
+            other => other,
+        }
     }
 
     /// Clears the caches the decompiler keeps between functions, as Ghidra's
