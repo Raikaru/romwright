@@ -86,12 +86,22 @@ def stock_key(binary: Path, install: Path, **extra: str) -> dict:
 
 
 def native_key(binary: Path, **extra: str) -> dict:
-    """What a native artifact depends on: the bytes and the build that read them."""
+    """What a native artifact depends on: the bytes and the build that read them.
+
+    The spec bundles are part of the build: a store imported while a bundle
+    was absent carries no inferred prototypes, and a key that omitted the
+    bundle would serve that degraded store forever. The bundle manifests are
+    committed, so their digests name the input exactly.
+    """
+    specs = hashlib.sha256()
+    for manifest in sorted((ROOT / "native/specs").glob("*.manifest.json")):
+        specs.update(manifest.name.encode() + b"\0" + manifest.read_bytes())
     return {
         "kind": "native",
         "binary_sha256": digest(Path(binary)),
         "cli_sha256": digest(ROOT / "target/release/lre-cli"),
         "worker_sha256": digest(ROOT / "target/release/lre-worker"),
+        "spec_bundles_sha256": specs.hexdigest(),
         **extra,
     }
 
