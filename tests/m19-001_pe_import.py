@@ -11,12 +11,10 @@ table (`mingw-nm`, never our parser): unique text-symbol names mapped
 to addresses with no base adjustment (our loader keeps link VAs).
 Runs in seconds.
 
-Deliberately not gated here: the retail FFXV PE. A 91MB import costs
-tens of minutes per run for no additional signal over this pair --
-same metrics, same code paths -- so it stays out of the test loop
-entirely (and out of the corpus). The MAP oracle tooling lives on at
-`scripts/msvc_map.py`, and the one full measurement is recorded in
-STATUS.md deficits; re-running it is a manual exercise, not a gate.
+Deliberately not gated here: retail PE images. Large retail imports
+cost tens of minutes per run for no additional signal over this pair
+-- same metrics, same code paths -- so they stay out of the test
+loop entirely, and out of the corpus by user direction.
 
 Metrics (per pair):
 
