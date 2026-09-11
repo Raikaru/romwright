@@ -23,6 +23,8 @@ What the gate asserts, and refuses to assert beyond:
 * agreement: hand length equals console flow length on a sample of
   symtab function entries and mid-body offsets (the only per-offset
   truth a symbol table covers);
+* scale: the system libc .text sweeps end to end (time recorded, no
+  retail dependency);
 The gate never claims the sweep distinguishes code from data: a
 length array alone cannot, and the report says so.
 """
@@ -92,6 +94,52 @@ def console_length(binary: Path, address: int, environment: dict[str, str]) -> i
     return int(found[1], 16) - int(found[0], 16)
 
 
+LIBC = Path("/usr/lib64/libc.so.6")
+
+
+def elf_slide(data: bytes, endian: str) -> int:
+    # Mirrors `elf_bases` in crates/lre-core/src/native.rs: ET_EXEC maps
+    # at its link VAs; ET_DYN slides to its minimum PT_LOAD vaddr, or to
+    # the Ghidra-default base when that is zero.
+    e_type = int.from_bytes(data[0x10:0x12], endian)
+    if e_type != 3:
+        return 0
+    phoff = int.from_bytes(data[0x20:0x28], endian)
+    phentsize = int.from_bytes(data[0x36:0x38], endian)
+    phnum = int.from_bytes(data[0x38:0x3A], endian)
+    minima = []
+    for index in range(phnum):
+        hdr = phoff + index * phentsize
+        if data[hdr:hdr + 4] != (b"\0\0\0\1" if endian == "big" else b"\1\0\0\0"):
+            continue
+        minima.append(int.from_bytes(data[hdr + 16:hdr + 24], endian))
+    low = min(minima, default=0)
+    return low if low else 0x100000
+
+
+def elf_text_range(binary: Path) -> tuple[int, int]:
+    data = binary.read_bytes()
+    if data[:4] != b"\x7fELF" or data[4] != 2:
+        raise SystemExit(f"not a 64-bit ELF: {binary}")
+    endian = "little" if data[5] == 1 else "big"
+    slide = elf_slide(bytes(data), endian)
+    shoff = int.from_bytes(data[0x28:0x30], endian)
+    shentsize = int.from_bytes(data[0x3A:0x3C], endian)
+    shnum = int.from_bytes(data[0x3C:0x3E], endian)
+    shstrndx = int.from_bytes(data[0x3E:0x40], endian)
+    strtab = shoff + shstrndx * shentsize
+    stroff = int.from_bytes(data[strtab + 0x18:strtab + 0x20], endian)
+    for index in range(shnum):
+        entry = shoff + index * shentsize
+        name = int.from_bytes(data[entry:entry + 4], endian)
+        end = data.index(b"\0", stroff + name)
+        if data[stroff + name:end] == b".text":
+            vaddr = int.from_bytes(data[entry + 0x10:entry + 0x18], endian)
+            size = int.from_bytes(data[entry + 0x20:entry + 0x28], endian)
+            return slide + vaddr, size
+    raise SystemExit(f"no .text in {binary}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work", type=Path, required=True)
@@ -143,6 +191,20 @@ def main() -> int:
         print(json.dumps(row), flush=True)
         if not deterministic:
             failures.append(f"{identifier}: sweep not deterministic")
+
+    # Scale row: system libc .text end to end, timed. No threshold --
+    # it records cost, not correctness; the digest is machine-specific.
+    if LIBC.is_file():
+        vaddr, size = elf_text_range(LIBC)
+        started = time.monotonic()
+        full = sweep(LIBC, vaddr, size, [], environment)
+        wall_s = round(time.monotonic() - started, 1)
+        rows.append({"id": "libc_text", "span": size, "sweep_ms": full["ms"],
+                     "wall_s": wall_s, "digest": full["digest"][:16],
+                     "flows": full["flows"]})
+        print(json.dumps(rows[-1]), flush=True)
+    else:
+        rows.append({"id": "libc_text", "skipped": "no system libc"})
 
     measured = [row for row in rows if "skipped" not in row and "agreement" in row]
     for row in measured:
