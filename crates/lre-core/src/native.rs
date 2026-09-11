@@ -1426,7 +1426,7 @@ fn const_data_use_denied(ops: &[String]) -> bool {
 }
 fn const_data_targets(
     import: &NativeImport,
-    uses: &std::collections::HashMap<u64, Vec<String>>,
+    session: &mut crate::native_runtime::ConsoleSession,
 ) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> =
         import.functions.iter().map(|function| function.entry).collect();
@@ -1437,6 +1437,30 @@ fn const_data_targets(
                 && address - mapping.vaddr < mapping.size
         })
     };
+    // Lift only what can become a seed: most const facts point at data.
+    // One batch per round; facts the console cannot lift stay allowed
+    // (recall-preserving: an unknown use seeds, the spurious floors judge).
+    let mut froms: Vec<u64> = import
+        .xrefs
+        .iter()
+        .filter(|xref| {
+            xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
+        })
+        .filter(|xref| !entries.contains(&xref.to) && in_code(xref.to))
+        .map(|xref| xref.from)
+        .collect();
+    froms.sort_unstable();
+    froms.dedup();
+    let mut uses: std::collections::HashMap<u64, Vec<String>> =
+        std::collections::HashMap::new();
+    if let Ok(lifted) = session.pcode_batch(&froms) {
+        for instruction in lifted {
+            uses.insert(
+                instruction.address,
+                instruction.ops.iter().map(|op| op.opcode.clone()).collect(),
+            );
+        }
+    }
     let mut targets: Vec<u64> = import
         .xrefs
         .iter()
@@ -1444,9 +1468,6 @@ fn const_data_targets(
             xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
         })
         .filter(|xref| {
-            // No lifted shape: decode failed or the console never lifted
-            // it. Recall-preserving: an unknown use seeds, the spurious
-            // floors judge.
             uses.get(&xref.from)
                 .is_none_or(|ops| !const_data_use_denied(ops))
         })
@@ -2432,31 +2453,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         let targets = computed_flow_targets(imp);
-        // Lifted shapes for the const-data rule, one batch per round: the
-        // use at each fact address says materialize or compare. A fact the
-        // console cannot lift stays allowed (recall-preserving).
-        let mut const_froms: Vec<u64> = imp
-            .xrefs
-            .iter()
-            .filter(|xref| {
-                xref.kind == "DATA"
-                    && xref.provenance == "native-analysis:constant-propagation"
-            })
-            .map(|xref| xref.from)
-            .collect();
-        const_froms.sort_unstable();
-        const_froms.dedup();
-        let mut const_uses: std::collections::HashMap<u64, Vec<String>> =
-            std::collections::HashMap::new();
-        if let Ok(lifted) = session.pcode_batch(&const_froms) {
-            for instruction in lifted {
-                const_uses.insert(
-                    instruction.address,
-                    instruction.ops.iter().map(|op| op.opcode.clone()).collect(),
-                );
-            }
-        }
-        let callbacks = const_data_targets(imp, &const_uses);
+        let callbacks = const_data_targets(imp, &mut session);
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -5093,7 +5090,6 @@ mod tests {
         assert!(!denied(&[]));
     }
 
-    #[test]
     #[test]
     fn pattern_labels_need_a_body_and_a_generated_name() {
         let mut imp = NativeImport {

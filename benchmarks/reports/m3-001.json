@@ -1,6 +1,6 @@
 {
   "id": "m3-001",
-  "recorded_at": "2026-09-11T14:17:51.986156+00:00",
+  "recorded_at": "2026-09-11T14:35:11.937373+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98,
     "dwarf.fn.unattributed": 0

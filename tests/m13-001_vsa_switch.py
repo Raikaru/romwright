@@ -36,6 +36,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -247,6 +248,15 @@ def main() -> int:
     parser.add_argument("--work", type=Path, default=Path.home() / "ventris-cache/tmp/m13-001")
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
+    # Disk preflight: tmpfs pressure once made this gate report 90
+    # dispatches instead of 142 with no error (the analysis degraded
+    # rather than failing). Refuse to run starved.
+    for place in (arguments.work, Path(tempfile.gettempdir())):
+        anchor = place if place.exists() else place.parent
+        free = os.statvfs(anchor).f_bavail * os.statvfs(anchor).f_frsize
+        if free < 2 << 30:
+            raise SystemExit(
+                f"m13-001 refuses: {anchor} filesystem has {free >> 20}MB free (<2GB)")
 
     report = {
         "id": "m13-001",
