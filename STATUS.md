@@ -6004,6 +6004,11 @@ point at, none reserved:
   call target), and nothing seeds argument-held function addresses on
   any architecture (x86_64_many_o2 misses `main` the same way). Both are
   seeding gaps, not walk gaps: every explicitly walked body decodes.
+  `mipsel_cpp_o2` is 17/18 for a different reason: `_Z7do_worki` walks
+  to 64 bytes stripped but 108 unstripped (a `bltz` at entry plus TLS
+  `rdhwr` shape), so its body digest misses its twin. Same bytes,
+  seed-dependent walk outcome; imports are deterministic run to run
+  (verified by double import).
 
 ## Console sequencing decision (agent judgement, 2026-09-07)
 The ten platforms recorded in "Reserved decisions" split by what can be
