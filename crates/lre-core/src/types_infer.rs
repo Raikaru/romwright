@@ -23,8 +23,7 @@
 //! `Top` where two irreconcilable facts meet -- an operand read as both a
 //! pointer and a float is a union in the source or a defect here, and
 //! either way the honest answer is that the evidence disagrees.
-
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
 
@@ -130,6 +129,15 @@ pub struct Facts {
     /// type is read from, since the value a function returns is produced in
     /// the body rather than arriving in it.
     writes: BTreeMap<u64, Class>,
+    /// Registers read before any write defines them: the function's actual
+    /// parameters, since a register the body only ever stores is not one.
+    read_before_write: BTreeSet<u64>,
+    /// Registers currently holding another varnode's value: register offset
+    /// to the parameter register it was carried from and the carried width.
+    /// A register holding its *own* entry value reloaded itself (a spill
+    /// shuffle); one holding another register, or nothing, computed or
+    /// carries the call's argument.
+    aliases: BTreeMap<u64, (u64, u32)>,
 }
 
 impl Facts {
@@ -153,6 +161,18 @@ impl Facts {
     /// The class last written to the register at `offset`.
     pub fn written(&self, offset: u64) -> Class {
         self.writes.get(&offset).copied().unwrap_or(Class::Unknown)
+    }
+
+    /// Whether the register at `offset` was read before any write defined
+    /// it: a function's actual parameter, not a caller-saved leftover.
+    pub fn read_before_write(&self, offset: u64) -> bool {
+        self.read_before_write.contains(&offset)
+    }
+
+    /// The parameter register whose value the register at `offset`
+    /// currently holds, if any: a spill reload or a carried copy.
+    pub fn alias_origin(&self, offset: u64) -> Option<(u64, u32)> {
+        self.aliases.get(&offset).copied()
     }
 }
 
@@ -222,7 +242,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     // A unique or register holding a value copied from a parameter carries
     // that parameter's constraints; one level of copy covers the prologue
     // moves every ABI makes.
-    let mut alias: BTreeMap<(String, u64), u64> = BTreeMap::new();
+    let mut alias: BTreeMap<(String, u64), (u64, u32)> = BTreeMap::new();
     // An unoptimised build spills every parameter to its frame before using
     // it, so the entry register is only ever stored and the uses are loads
     // from the slot. Addresses computed as `base + displacement` are
@@ -238,13 +258,21 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     for instruction in instructions {
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
+            let mut spill_alias: Option<(u64, u32)> = None;
             let mut live = |facts: &mut Facts, input: &PcodeVarnode, class: Class| {
                 if input.space == "register" && !defined.contains(&input.offset) {
+                    facts.read_before_write.insert(input.offset);
                     facts.constrain(input, class);
-                } else if let Some(origin) =
+                } else if let Some((origin, size)) =
                     alias.get(&(input.space.clone(), input.offset)).copied()
-                    && !defined.contains(&origin)
+                    && input.size >= size
                 {
+                    // A spill or copy origin is only ever recorded from an
+                    // entry value, so it is always a parameter -- even when
+                    // the register itself has been redefined since. The
+                    // size guard keeps a narrower read from claiming the
+                    // whole register.
+                    facts.read_before_write.insert(origin);
                     facts.constrain(
                         &PcodeVarnode {
                             space: "register".into(),
@@ -264,15 +292,15 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
             {
                 let mut sources: Vec<u64> = Vec::new();
                 for input in &op.inputs {
-                    if input.space == "register" && input.size == 8 {
-                        sources.push(input.offset);
-                    } else if let Some(origin) =
+                    if let Some((origin, _)) =
                         alias.get(&(input.space.clone(), input.offset)).copied()
                     {
                         // A parameter reloaded from its frame slot is still
                         // that parameter: without this an unoptimised build
                         // hides every pointer behind its own spill.
                         sources.push(origin);
+                    } else if input.space == "register" && input.size == 8 {
+                        sources.push(input.offset);
                     } else if let Some(more) =
                         built_from.get(&(input.space.clone(), input.offset))
                     {
@@ -308,12 +336,11 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                             Some(origin) => {
                                 // The loaded value is the parameter that was
                                 // spilled here: later uses of the temporary
-                                // constrain the parameter.
+                                // constrain the parameter. The insert is
+                                // deferred to the tail block so the output's
+                                // clear runs first.
                                 if let Some(output) = &op.output {
-                                    alias.insert(
-                                        (output.space.clone(), output.offset),
-                                        origin,
-                                    );
+                                    spill_alias = Some((origin, output.size));
                                 }
                             }
                             None if slot.is_none() => {
@@ -352,7 +379,9 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                     {
                                         Some(value.offset)
                                     } else {
-                                        alias.get(&(value.space.clone(), value.offset)).copied()
+                                        alias
+                                            .get(&(value.space.clone(), value.offset))
+                                            .map(|(origin, _)| *origin)
                                     };
                                     match origin {
                                         Some(origin) => {
@@ -531,20 +560,42 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
             // A copy carries the source's identity forward, then the output
             // counts as defined: its later uses are not the entry value.
             if let Some(output) = &op.output {
-                if opcode == "COPY"
+                // Consult the input's alias *before* the output's write
+                // clears it: `add rax,rdx` reads rax's alias to record rdx
+                // as a source, and `INT_ZEXT RCX←ECX` reads ECX's alias to
+                // carry the parameter's identity.
+                let carried = if opcode == "COPY"
                     && let Some(input) = op.inputs.first()
                 {
-                    let origin = if input.space == "register" && !defined.contains(&input.offset) {
-                        Some(input.offset)
+                    if input.space == "register" && !defined.contains(&input.offset) {
+                        Some((input.offset, input.size))
                     } else {
                         alias.get(&(input.space.clone(), input.offset)).copied()
-                    };
-                    if let Some(origin) = origin {
-                        alias.insert((output.space.clone(), output.offset), origin);
                     }
+                } else if opcode == "INT_ZEXT"
+                    && let Some(input) = op.inputs.first()
+                    && output.space == input.space
+                    && output.offset == input.offset
+                {
+                    // The x86 `mov ecx,[m]` idiom emits `RCX = zext(ECX)`:
+                    // the extension is the machine's, and the value is the
+                    // parameter's.
+                    alias.get(&(input.space.clone(), input.offset)).copied()
+                } else {
+                    None
+                };
+                let held = spill_alias.or(carried);
+                let key = (output.space.clone(), output.offset);
+                alias.remove(&key);
+                if let Some(a) = held {
+                    alias.insert(key, a);
                 }
                 if output.space == "register" {
                     defined.insert(output.offset);
+                    facts.aliases.remove(&output.offset);
+                    if let Some(a) = held {
+                        facts.aliases.insert(output.offset, a);
+                    }
                 }
             }
         }
@@ -748,5 +799,57 @@ mod tests {
             vec![varnode("register", 0x38, 8)],
         )])]);
         assert_eq!(facts.get(0x38), Class::Code);
+    }
+
+    #[test]
+    fn a_float_parameter_spilled_and_reloaded_is_still_a_float() {
+        // `movsd %xmm0, -0x8(%rbp)` stores the parameter; `movsd
+        // -0x8(%rbp), %xmm0` loads it back into the same register; the
+        // comparison reads it. The constraint must reach the entry value
+        // even though the register was redefined in between.
+        let facts = infer(&[instruction(vec![
+            // The frame slot's address: rbp + (-8).
+            op(
+                "INT_ADD",
+                Some(varnode("unique", 0x300, 8)),
+                vec![varnode("register", 0x28, 8), varnode("const", 0xfffffff8, 8)],
+            ),
+            // Store xmm0 to the slot.
+            op(
+                "STORE",
+                None,
+                vec![
+                    varnode("const", 0x1b1, 4),
+                    varnode("unique", 0x300, 8),
+                    varnode("register", 0x200, 8),
+                ],
+            ),
+            // Redefine xmm0 before the reload -- the register is defined,
+            // but the entry value is still the parameter.
+            op(
+                "COPY",
+                Some(varnode("register", 0x200, 8)),
+                vec![varnode("const", 0, 8)],
+            ),
+            // Load the spill back into xmm0.
+            op(
+                "LOAD",
+                Some(varnode("register", 0x200, 8)),
+                vec![varnode("const", 0x1b1, 4), varnode("unique", 0x300, 8)],
+            ),
+            // Compare it as a float.
+            op(
+                "FLOAT_LESS",
+                Some(varnode("unique", 0x500, 1)),
+                vec![varnode("register", 0x200, 8), varnode("const", 0, 8)],
+            ),
+            op(
+                "CBRANCH",
+                None,
+                vec![varnode("ram", 0x1100, 8), varnode("unique", 0x500, 1)],
+            ),
+        ])]);
+        assert_eq!(facts.get(0x200), Class::Float(64));
+        assert!(facts.read_before_write(0x200));
     }
 }
