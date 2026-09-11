@@ -6001,13 +6001,16 @@ point at, none reserved:
   (m12 twins exemption, staleness-guarded).
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
-  approval as new corpus binaries under II.1): (1) exception-handling
-  funclets reachable only through `.xdata`/unwind data are never
-  seeded -- nothing walks unwind records to function starts, so that
-  whole class is near-zero recall by construction; (2) delay-load
-  import thunks split mid-stub, producing spurious entries. Both are
-  format properties, not image properties: any SEH or delay-load PE
-  should reproduce them.
+  approval as new corpus binaries under II.1): (1) linker MAPs list
+  chained SEH fragments (`UNW_FLAG_CHAININFO` records) as functions,
+  but the unwind pass deliberately skips them per Ghidra's rule -- a
+  chained record continues a function that already has a start
+  (`pe_unwind.rs`, unit-tested; m8-001 promotes the 192 plain
+  records). Low recall against that denominator is a truth-set
+  mismatch with a deliberate promotion rule, not an unimplemented
+  pass; (2) delay-load import thunks split mid-stub, producing
+  spurious entries. Both are format properties, not image
+  properties: any SEH or delay-load PE should reproduce them.
   (verified by double import).
 
 ## Console sequencing decision (agent judgement, 2026-09-07)
