@@ -1985,6 +1985,34 @@ impl Core {
         Ok(native_runtime::disasm_native(&self.config, binary, address, count)?)
     }
 
+    /// Exhaustive length sweep over a mapped range plus point queries
+    /// answered from it: pre-disassembly byte analysis in the SBA shape
+    /// (clean-room; every offset decoded, truth checked only where the
+    /// gate holds ground truth). Returns the sweep digest, the
+    /// flow-class histogram, the sweep milliseconds, and one
+    /// (address, length, flow-class) triple per asked offset.
+    pub fn byte_scan(
+        &self,
+        binary: &Path,
+        vaddr: u64,
+        size: usize,
+        ask: &[u64],
+    ) -> Result<(String, [u64; 8], u64, u64, Vec<(u64, u8, u8)>)> {
+        let bytes = self.mem_native(binary, vaddr, size)?;
+        let started = std::time::Instant::now();
+        let (digest, flows, decoded) = crate::disasm::sweep_digest(&bytes, vaddr);
+        let ms = started.elapsed().as_millis();
+        let mut answered = Vec::with_capacity(ask.len());
+        for &address in ask {
+            let index = address.wrapping_sub(vaddr) as usize;
+            if index < bytes.len() {
+                let info = crate::disasm::decode(&bytes[index..], address);
+                answered.push((address, info.len, crate::disasm::flow_code(&info.flow)));
+            }
+        }
+        Ok((digest, flows, ms as u64, decoded, answered))
+    }
+
     /// Native decompilation of one function at `address` (program must be in
     /// `project_dir`'s store; `base` defaults to the PE image base or
     /// 0x400000).

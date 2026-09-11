@@ -469,6 +469,60 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             println!();
         }
+        "byte-scan" => {
+            let binary = args.get(2).ok_or("byte-scan needs a binary path")?.clone();
+            let vaddr = u64::from_str_radix(
+                args.get(3)
+                    .ok_or("byte-scan needs a vaddr (hex)")?
+                    .trim()
+                    .trim_start_matches("0x"),
+                16,
+            )
+            .map_err(|e| e.to_string())?;
+            let size: usize = args
+                .get(4)
+                .and_then(|s| s.parse().ok())
+                .ok_or("byte-scan needs a byte size")?;
+            let ask: Vec<u64> = args
+                .iter()
+                .find_map(|a| a.strip_prefix("--ask="))
+                .map(|list| {
+                    list.split(',')
+                        .filter_map(|h| u64::from_str_radix(h.trim().trim_start_matches("0x"), 16).ok())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let (digest, flows, ms, decoded, answered) = core
+                .byte_scan(Path::new(&binary), vaddr, size, &ask)
+                .map_err(|e| e.to_string())?;
+            if has_flag(args, "--json") {
+                let asked: Vec<serde_json::Value> = answered
+                    .iter()
+                    .map(|(a, l, f)| {
+                        serde_json::json!({"address": a, "len": l, "flow": f})
+                    })
+                    .collect();
+                println!(
+                    "{}",
+                    serde_json::json!({
+                        "vaddr": vaddr,
+                        "size": size,
+                        "ms": ms,
+                        "digest": digest,
+                        "flows": flows.to_vec(),
+                        "decoded": decoded,
+                        "asked": asked,
+                    })
+                );
+            } else {
+                println!("sweep {size} bytes at {vaddr:#x}: {ms}ms digest {digest} decoded {decoded}");
+                println!("flows: Next={} Call={} Jump={} Jcc={} IndCall={} Ind={} Stop={} Bad={}",
+                    flows[0], flows[1], flows[2], flows[3], flows[4], flows[5], flows[6], flows[7]);
+                for (address, len, flow) in &answered {
+                    println!("{address:#x}: len {len} flow {flow}");
+                }
+            }
+        }
         "disasm" if !has_flag(args, "--oracle") => {
             let binary = args.get(2).ok_or("disasm needs a binary path")?.clone();
             let addr = args.get(3).ok_or("disasm needs a vaddr (hex)")?.clone();

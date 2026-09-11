@@ -1,0 +1,61 @@
+{
+  "id": "m19-003",
+  "milestone": "M19",
+  "criterion": "Pre-disassembly byte analysis (clean-room SBA shape)",
+  "recorded_at": "2026-09-11T08:46:50.064345+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "citations": {
+    "method": "Nguyen et al., Analyzing Bytes (SBA), PACMPL 2026, doi 10.1145/3808292"
+  },
+  "thresholds": {
+    "agreement": 0.95
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "span": 329,
+      "sweep_ms": 0,
+      "deterministic": true,
+      "agreement": 1.0,
+      "compared": 6
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "span": 278,
+      "sweep_ms": 0,
+      "deterministic": true,
+      "agreement": 1.0,
+      "compared": 6
+    },
+    {
+      "id": "x86_64_many_o2",
+      "span": 11047,
+      "sweep_ms": 0,
+      "deterministic": true,
+      "agreement": 1.0,
+      "compared": 13
+    },
+    {
+      "id": "ffxv_text",
+      "span": 56629852,
+      "sweep_ms": 1351,
+      "wall_s": 32.1,
+      "digest": "5e11872dbeec3a54",
+      "flows": [
+        48400449,
+        952735,
+        721431,
+        2043662,
+        232998,
+        21310,
+        4257267,
+        0
+      ]
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}

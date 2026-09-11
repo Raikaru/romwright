@@ -27,6 +27,41 @@ pub struct InstrInfo {
     pub rip_data: Option<u64>,
 }
 
+/// Stable numeric class per control-flow kind, for sweep histograms.
+pub fn flow_code(flow: &Flow) -> u8 {
+    match flow {
+        Flow::Next => 0,
+        Flow::Call(_) => 1,
+        Flow::Jump(_) => 2,
+        Flow::JumpCond(_) => 3,
+        Flow::IndirectCall => 4,
+        Flow::Indirect => 5,
+        Flow::Stop => 6,
+        Flow::Bad => 7,
+    }
+}
+
+/// FNV-1a over a per-offset (length, flow-class) stream: a deterministic
+/// digest proving an exhaustive sweep ran, without storing it. Also folds
+/// the flow-class histogram and the total decoded length, which pin the
+/// sweep's shape.
+pub fn sweep_digest(bytes: &[u8], base_vaddr: u64) -> (String, [u64; 8], u64) {
+    let mut hash: u64 = 0xcbf29ce484222325;
+    let mut flows = [0u64; 8];
+    let mut decoded: u64 = 0;
+    for (index, _) in bytes.iter().enumerate() {
+        let info = decode(&bytes[index..], base_vaddr + index as u64);
+        let code = flow_code(&info.flow);
+        hash ^= info.len as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+        hash ^= code as u64;
+        hash = hash.wrapping_mul(0x100000001b3);
+        flows[code as usize] += 1;
+        decoded += 1;
+    }
+    (format!("{hash:016x}"), flows, decoded)
+}
+
 /// Opcodes with an immediate following the memory/operand encoding.
 #[derive(Clone, Copy, PartialEq)]
 enum ImmKind {
