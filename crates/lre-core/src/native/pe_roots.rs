@@ -242,6 +242,88 @@ pub(super) fn collect_imports(
     }
 }
 
+/// Import-stub entries: MinGW/GCC emits one `jmp` per import in executable
+/// code (`ff 25 disp32`: RIP-relative on 64-bit, absolute on 32-bit), each
+/// naming its IAT slot. The toolchain declares them as text symbols, so
+/// they become named entries plus linkage-thunk rows -- the PE analog of
+/// ELF PLT slots. The slot match must be exact: a chance `ff 25` inside
+/// data pointing precisely at an IAT slot is not a shape to worry about.
+pub(super) fn collect_import_stubs(
+    data: &[u8],
+    spans: &[Span],
+    import: &mut NativeImport,
+    image_base: u64,
+    is_64: bool,
+) {
+    use std::collections::HashMap;
+    if import.externals.is_empty() {
+        return;
+    }
+    let slots: HashMap<u64, String> = import
+        .externals
+        .iter()
+        .map(|(address, name)| (*address, name.clone()))
+        .collect();
+    for span in spans {
+        let Some(bytes) = span
+            .raw_off
+            .checked_add(span.vsize as usize)
+            .and_then(|end| data.get(span.raw_off..end))
+        else {
+            continue;
+        };
+        let mut index = 0usize;
+        while index + 6 <= bytes.len() {
+            if bytes[index] != 0xff || bytes[index + 1] != 0x25 {
+                index += 1;
+                continue;
+            }
+            // An `ff 25` preceded by a prefix byte is the tail of a longer
+            // instruction (`REX.W ff 25 ...` promotes an entry one byte in
+            // otherwise). REX exists only on 64-bit; on 32-bit those bytes
+            // are INC/DEC opcodes and must not filter. A real stub after
+            // an immediate ending in a prefix byte is the known residual;
+            // the recall floors catch it if it ever fires.
+            let prefix = if index > 0 { bytes[index - 1] } else { 0 };
+            let prefixed = matches!(prefix, 0x66 | 0x67 | 0x26 | 0x2E | 0x36 | 0x3E
+                | 0x64 | 0x65 | 0xF0 | 0xF2 | 0xF3)
+                || (is_64 && (0x40..=0x4F).contains(&prefix));
+            if prefixed {
+                index += 1;
+                continue;
+            }
+            let disp = i32::from_le_bytes(
+                bytes[index + 2..index + 6].try_into().unwrap_or([0; 4]),
+            ) as i64;
+            // Spans carry RVAs; mappings (and slots) are image-based.
+            let stub = image_base + span.vaddr + index as u64;
+            let target = if is_64 {
+                stub.wrapping_add(6).wrapping_add(disp as u64)
+            } else {
+                // Absolute link VA; the loader keeps link VAs unslid.
+
+                disp as u64
+            };
+            index += 1;
+            let Some(name) = slots.get(&target) else {
+                continue;
+            };
+            if !in_code(import, stub) {
+                continue;
+            }
+            promote(import, stub, target, Some(name.clone()), "native-import:pe-import");
+            if !import.thunks.iter().any(|thunk| thunk.entry == stub) {
+                import.thunks.push(crate::native::NativeThunk {
+                    entry: stub,
+                    destination: target,
+                    kind: lre_model::ThunkKind::Linkage,
+                    source: crate::native::THUNK_SOURCE,
+                });
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -265,6 +347,41 @@ mod tests {
             ..Default::default()
         };
         (data, spans, import)
+    }
+
+    #[test]
+    fn import_stubs_become_named_entries_with_linkage_rows() {
+        let (mut data, spans, mut import) = image();
+        import.externals.push((0x402000, "Kernel32Sleep".into()));
+        // `jmp [rip+0xffa]` at VA 0x401000 lands exactly on the slot.
+        data[0x200..0x206].copy_from_slice(&[0xff, 0x25, 0xfa, 0x0f, 0x00, 0x00]);
+        // Same shape in .rdata: not code, ignored.
+        data[0x300..0x306].copy_from_slice(&[0xff, 0x25, 0xfa, 0x1f, 0x00, 0x00]);
+        // Same shape in .text missing every slot: ignored.
+        data[0x210..0x216].copy_from_slice(&[0xff, 0x25, 0x00, 0x00, 0x00, 0x00]);
+        // REX-prefixed `ff 25` resolving at the ff offset: mid-instruction,
+        // ignored even though the arithmetic lands on the slot.
+        data[0x220..0x227].copy_from_slice(&[0x48, 0xff, 0x25, 0xd9, 0x0f, 0x00, 0x00]);
+        collect_import_stubs(&data, &spans, &mut import, 0x400000, true);
+        assert_eq!(
+            import.functions.iter().map(|f| (f.entry, f.name.clone())).collect::<Vec<_>>(),
+            vec![(0x401000, "Kernel32Sleep".into())]
+        );
+        assert!(import.thunks.iter().any(|thunk| thunk.entry == 0x401000
+            && thunk.destination == 0x402000));
+    }
+
+    #[test]
+    fn import_stubs_use_absolute_targets_on_32_bit() {
+        let (mut data, spans, mut import) = image();
+        import.externals.push((0x402000, "Kernel32Sleep".into()));
+        // `jmp [0x402000]` absolute: no image base added to the target.
+        data[0x200..0x206].copy_from_slice(&[0xff, 0x25, 0x00, 0x20, 0x40, 0x00]);
+        collect_import_stubs(&data, &spans, &mut import, 0x400000, false);
+        assert!(import
+            .functions
+            .iter()
+            .any(|f| f.entry == 0x401000 && f.name == "Kernel32Sleep"));
     }
 
     fn put32(data: &mut [u8], rva: u64, spans: &[Span], value: u32) {

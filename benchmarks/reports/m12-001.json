@@ -2,7 +2,7 @@
   "id": "m12-001",
   "milestone": "M12",
   "criterion": "whole-program structural diff, scored against symbol truth",
-  "recorded_at": "2026-09-11T15:23:14.557362+00:00",
+  "recorded_at": "2026-09-11T15:51:09.343170+00:00",
   "thresholds": {
     "twins.precision": 1.0,
     "twins.recall": 1.0,
@@ -18,9 +18,9 @@
   "measured": {
     "twins": {
       "rows": 33,
-      "judged": 3960,
-      "correct": 3960,
-      "truth": 3960,
+      "judged": 4018,
+      "correct": 4018,
+      "truth": 4018,
       "ported_judged": 2120,
       "ported_correct": 2120,
       "precision": 1.0,
@@ -29,18 +29,18 @@
     },
     "optimisation": {
       "rows": 21,
-      "judged": 315,
-      "correct": 315,
-      "truth": 339,
+      "judged": 361,
+      "correct": 361,
+      "truth": 385,
       "ported_judged": 52,
       "ported_correct": 49,
       "precision": 1.0,
-      "recall": 0.9292,
+      "recall": 0.9377,
       "name_precision": 0.9423
     },
     "anchor": {
-      "judged": 4267,
-      "correct": 4267,
+      "judged": 4371,
+      "correct": 4371,
       "precision": 1.0
     },
     "classes": {
@@ -50,13 +50,13 @@
         "precision": 1.0
       },
       "body": {
-        "judged": 3980,
-        "correct": 3980,
+        "judged": 4038,
+        "correct": 4038,
         "precision": 1.0
       },
       "import": {
-        "judged": 185,
-        "correct": 185,
+        "judged": 231,
+        "correct": 231,
         "precision": 1.0
       },
       "name": {
@@ -712,10 +712,10 @@
     {
       "id": "pe64_plain_o0",
       "kind": "twins",
-      "truth": 124,
-      "matched": 124,
-      "judged": 124,
-      "correct": 124,
+      "truth": 138,
+      "matched": 138,
+      "judged": 138,
+      "correct": 138,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -724,23 +724,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 124,
-          "correct": 124
+          "judged": 138,
+          "correct": 138
         }
       },
-      "anchors": 124,
-      "reference_functions": 124,
-      "target_functions": 124,
+      "anchors": 138,
+      "reference_functions": 138,
+      "target_functions": 138,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe64_plain_o2",
       "kind": "twins",
-      "truth": 124,
-      "matched": 124,
-      "judged": 124,
-      "correct": 124,
+      "truth": 138,
+      "matched": 138,
+      "judged": 138,
+      "correct": 138,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -749,23 +749,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 124,
-          "correct": 124
+          "judged": 138,
+          "correct": 138
         }
       },
-      "anchors": 124,
-      "reference_functions": 124,
-      "target_functions": 124,
+      "anchors": 138,
+      "reference_functions": 138,
+      "target_functions": 138,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe64_plain_pie",
       "kind": "twins",
-      "truth": 109,
-      "matched": 109,
-      "judged": 109,
-      "correct": 109,
+      "truth": 121,
+      "matched": 121,
+      "judged": 121,
+      "correct": 121,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -774,23 +774,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 109,
-          "correct": 109
+          "judged": 121,
+          "correct": 121
         }
       },
-      "anchors": 109,
-      "reference_functions": 109,
-      "target_functions": 109,
+      "anchors": 121,
+      "reference_functions": 121,
+      "target_functions": 121,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe64_many_o2",
       "kind": "twins",
-      "truth": 465,
-      "matched": 465,
-      "judged": 465,
-      "correct": 465,
+      "truth": 476,
+      "matched": 476,
+      "judged": 476,
+      "correct": 476,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -799,23 +799,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 465,
-          "correct": 465
+          "judged": 476,
+          "correct": 476
         }
       },
-      "anchors": 465,
-      "reference_functions": 465,
-      "target_functions": 465,
+      "anchors": 476,
+      "reference_functions": 476,
+      "target_functions": 476,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe32_many_o2",
       "kind": "twins",
-      "truth": 453,
-      "matched": 453,
-      "judged": 453,
-      "correct": 453,
+      "truth": 455,
+      "matched": 455,
+      "judged": 455,
+      "correct": 455,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -824,23 +824,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 453,
-          "correct": 453
+          "judged": 455,
+          "correct": 455
         }
       },
-      "anchors": 453,
-      "reference_functions": 453,
-      "target_functions": 453,
+      "anchors": 455,
+      "reference_functions": 455,
+      "target_functions": 455,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe32_plain_o0",
       "kind": "twins",
-      "truth": 114,
-      "matched": 114,
-      "judged": 114,
-      "correct": 114,
+      "truth": 116,
+      "matched": 116,
+      "judged": 116,
+      "correct": 116,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -849,23 +849,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 114,
-          "correct": 114
+          "judged": 116,
+          "correct": 116
         }
       },
-      "anchors": 114,
-      "reference_functions": 114,
-      "target_functions": 114,
+      "anchors": 116,
+      "reference_functions": 116,
+      "target_functions": 116,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe32_plain_o2",
       "kind": "twins",
-      "truth": 113,
-      "matched": 113,
-      "judged": 113,
-      "correct": 113,
+      "truth": 115,
+      "matched": 115,
+      "judged": 115,
+      "correct": 115,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -874,23 +874,23 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 113,
-          "correct": 113
+          "judged": 115,
+          "correct": 115
         }
       },
-      "anchors": 113,
-      "reference_functions": 113,
-      "target_functions": 113,
+      "anchors": 115,
+      "reference_functions": 115,
+      "target_functions": 115,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "pe32_plain_pie",
       "kind": "twins",
-      "truth": 101,
-      "matched": 101,
-      "judged": 101,
-      "correct": 101,
+      "truth": 102,
+      "matched": 102,
+      "judged": 102,
+      "correct": 102,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -899,13 +899,13 @@
       "name_precision": 0.0,
       "evidence": {
         "body": {
-          "judged": 101,
-          "correct": 101
+          "judged": 102,
+          "correct": 102
         }
       },
-      "anchors": 101,
-      "reference_functions": 101,
-      "target_functions": 101,
+      "anchors": 102,
+      "reference_functions": 102,
+      "target_functions": 102,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -1223,10 +1223,10 @@
     {
       "id": "pe32_plain_o0->pe32_plain_o2",
       "kind": "optimisation",
-      "truth": 32,
-      "matched": 113,
-      "judged": 32,
-      "correct": 32,
+      "truth": 34,
+      "matched": 115,
+      "judged": 34,
+      "correct": 34,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -1239,25 +1239,25 @@
           "correct": 1
         },
         "import": {
-          "judged": 30,
-          "correct": 30
+          "judged": 32,
+          "correct": 32
         },
         "name": {
           "judged": 1,
           "correct": 1
         }
       },
-      "anchors": 108,
-      "reference_functions": 114,
-      "target_functions": 113
+      "anchors": 110,
+      "reference_functions": 116,
+      "target_functions": 115
     },
     {
       "id": "pe32_plain_o2->pe32_plain_o0",
       "kind": "optimisation",
-      "truth": 32,
-      "matched": 113,
-      "judged": 32,
-      "correct": 32,
+      "truth": 34,
+      "matched": 115,
+      "judged": 34,
+      "correct": 34,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 0,
@@ -1270,8 +1270,124 @@
           "correct": 1
         },
         "import": {
-          "judged": 30,
-          "correct": 30
+          "judged": 32,
+          "correct": 32
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 110,
+      "reference_functions": 115,
+      "target_functions": 116
+    },
+    {
+      "id": "pe32_plain_o0->pe32_plain_pie",
+      "kind": "optimisation",
+      "truth": 24,
+      "matched": 99,
+      "judged": 24,
+      "correct": 24,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "import": {
+          "judged": 23,
+          "correct": 23
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 90,
+      "reference_functions": 116,
+      "target_functions": 102
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_o2",
+      "kind": "optimisation",
+      "truth": 43,
+      "matched": 137,
+      "judged": 43,
+      "correct": 43,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 41,
+          "correct": 41
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 129,
+      "reference_functions": 138,
+      "target_functions": 138
+    },
+    {
+      "id": "pe64_plain_o2->pe64_plain_o0",
+      "kind": "optimisation",
+      "truth": 43,
+      "matched": 137,
+      "judged": 43,
+      "correct": 43,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 41,
+          "correct": 41
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 129,
+      "reference_functions": 138,
+      "target_functions": 138
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_pie",
+      "kind": "optimisation",
+      "truth": 34,
+      "matched": 119,
+      "judged": 34,
+      "correct": 34,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "import": {
+          "judged": 33,
+          "correct": 33
         },
         "name": {
           "judged": 1,
@@ -1279,124 +1395,8 @@
         }
       },
       "anchors": 108,
-      "reference_functions": 113,
-      "target_functions": 114
-    },
-    {
-      "id": "pe32_plain_o0->pe32_plain_pie",
-      "kind": "optimisation",
-      "truth": 22,
-      "matched": 98,
-      "judged": 22,
-      "correct": 22,
-      "precision": 1.0,
-      "recall": 1.0,
-      "ported": 0,
-      "ported_judged": 0,
-      "ported_correct": 0,
-      "name_precision": 0.0,
-      "evidence": {
-        "import": {
-          "judged": 21,
-          "correct": 21
-        },
-        "name": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 88,
-      "reference_functions": 114,
-      "target_functions": 101
-    },
-    {
-      "id": "pe64_plain_o0->pe64_plain_o2",
-      "kind": "optimisation",
-      "truth": 29,
-      "matched": 123,
-      "judged": 29,
-      "correct": 29,
-      "precision": 1.0,
-      "recall": 1.0,
-      "ported": 0,
-      "ported_judged": 0,
-      "ported_correct": 0,
-      "name_precision": 0.0,
-      "evidence": {
-        "body": {
-          "judged": 1,
-          "correct": 1
-        },
-        "import": {
-          "judged": 27,
-          "correct": 27
-        },
-        "name": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 115,
-      "reference_functions": 124,
-      "target_functions": 124
-    },
-    {
-      "id": "pe64_plain_o2->pe64_plain_o0",
-      "kind": "optimisation",
-      "truth": 29,
-      "matched": 123,
-      "judged": 29,
-      "correct": 29,
-      "precision": 1.0,
-      "recall": 1.0,
-      "ported": 0,
-      "ported_judged": 0,
-      "ported_correct": 0,
-      "name_precision": 0.0,
-      "evidence": {
-        "body": {
-          "judged": 1,
-          "correct": 1
-        },
-        "import": {
-          "judged": 27,
-          "correct": 27
-        },
-        "name": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 115,
-      "reference_functions": 124,
-      "target_functions": 124
-    },
-    {
-      "id": "pe64_plain_o0->pe64_plain_pie",
-      "kind": "optimisation",
-      "truth": 22,
-      "matched": 107,
-      "judged": 22,
-      "correct": 22,
-      "precision": 1.0,
-      "recall": 1.0,
-      "ported": 0,
-      "ported_judged": 0,
-      "ported_correct": 0,
-      "name_precision": 0.0,
-      "evidence": {
-        "import": {
-          "judged": 21,
-          "correct": 21
-        },
-        "name": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 96,
-      "reference_functions": 124,
-      "target_functions": 109
+      "reference_functions": 138,
+      "target_functions": 121
     },
     {
       "id": "powerpc_plain_o0->powerpc_plain_o2",
