@@ -2,7 +2,7 @@
   "id": "m19-001",
   "milestone": "M19",
   "criterion": "PE import measured against external truth",
-  "recorded_at": "2026-09-11T15:49:55.852597+00:00",
+  "recorded_at": "2026-09-11T15:54:54.130334+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
@@ -22,7 +22,7 @@
       "spurious": 0,
       "id": "pe64_plain_o0",
       "binary_sha256": "faeeecd25420ed292ae41b97e74ce89a5f62744cdcb768b1fdc18785f304fd1b",
-      "import_wall_s": 2.1
+      "import_wall_s": 2.2
     },
     {
       "truth": 138,
@@ -40,7 +40,7 @@
       "spurious": 0,
       "id": "pe64_plain_pie",
       "binary_sha256": "169e13480f4b5a94933ab56270d1a7fe1f81cd050fd63ed929d12d819c131c5c",
-      "import_wall_s": 2.3
+      "import_wall_s": 2.0
     },
     {
       "truth": 476,
@@ -49,7 +49,7 @@
       "spurious": 0,
       "id": "pe64_many_o2",
       "binary_sha256": "3266eb9b7a19bd79663178d92aea90ae5e37d802ef5dd75d7a60d3c9366282ac",
-      "import_wall_s": 2.0
+      "import_wall_s": 1.9
     }
   ],
   "status": "pass",
