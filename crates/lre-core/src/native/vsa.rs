@@ -313,7 +313,10 @@ impl<'a, I: Image> Machine<'a, I> {
                 a.map(|a| sign_extend(a, width))
             }
             "SUBPIECE" => match (a, b) {
-                (Some(a), Some(shift)) => Some(a >> (shift * 8)),
+                (Some(a), Some(shift)) => {
+                    let bits = shift.saturating_mul(8);
+                    if bits >= 64 { Some(0) } else { Some(a >> bits) }
+                }
                 _ => None,
             },
             "PIECE" => match (a, b) {

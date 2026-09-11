@@ -1,8 +1,8 @@
 {
   "gate": "m16-001",
   "milestone": "M16",
-  "commit": "ae534389fabea02a3a1724e8baa591f3b792cee4",
-  "date": "2026-09-10",
+  "commit": "61dda7365d895172fe8c7a8f0a6c95dbc65d5753",
+  "date": "2026-09-11",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
@@ -96,14 +96,14 @@
             {
               "index": 0,
               "truth": "ptr",
-              "ours": "top",
-              "distance": 2
+              "ours": "ptr",
+              "distance": 0
             },
             {
               "index": 1,
               "truth": "uint64",
-              "ours": "uint32",
-              "distance": null
+              "ours": "uint64",
+              "distance": 0
             },
             {
               "index": "return",
@@ -120,8 +120,8 @@
             {
               "index": 0,
               "truth": "float64",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "float64",
+              "distance": 0
             },
             {
               "index": 1,
@@ -144,8 +144,8 @@
             {
               "index": 0,
               "truth": "float32",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "float32",
+              "distance": 0
             },
             {
               "index": 1,
@@ -168,8 +168,8 @@
             {
               "index": 0,
               "truth": "code",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "code",
+              "distance": 0
             },
             {
               "index": 1,
@@ -234,8 +234,8 @@
             {
               "index": 1,
               "truth": "int32",
-              "ours": "int32",
-              "distance": 0
+              "ours": "num32",
+              "distance": 1
             },
             {
               "index": "return",
@@ -252,20 +252,20 @@
             {
               "index": 0,
               "truth": "ptr",
-              "ours": "uint64",
-              "distance": null
+              "ours": "ptr",
+              "distance": 0
             },
             {
               "index": 1,
               "truth": "uint64",
-              "ours": "top",
-              "distance": 2
+              "ours": "uint64",
+              "distance": 0
             },
             {
               "index": 2,
               "truth": "int32",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "num32",
+              "distance": 1
             },
             {
               "index": "return",
@@ -282,14 +282,14 @@
             {
               "index": 0,
               "truth": "int32",
-              "ours": "num32",
-              "distance": 1
+              "ours": "int32",
+              "distance": 0
             },
             {
               "index": 1,
               "truth": "ptr",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "ptr",
+              "distance": 0
             },
             {
               "index": "return",
@@ -318,8 +318,8 @@
             {
               "index": 1,
               "truth": "ptr",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "ptr",
+              "distance": 0
             },
             {
               "index": "return",
@@ -480,8 +480,8 @@
             {
               "index": 0,
               "truth": "code",
-              "ours": "unknown",
-              "distance": 2
+              "ours": "code",
+              "distance": 0
             },
             {
               "index": 1,
@@ -522,8 +522,8 @@
             {
               "index": 0,
               "truth": "int16",
-              "ours": "int16",
-              "distance": 0
+              "ours": "uint16",
+              "distance": null
             },
             {
               "index": "return",
@@ -546,8 +546,8 @@
             {
               "index": 1,
               "truth": "int32",
-              "ours": "int32",
-              "distance": 0
+              "ours": "num32",
+              "distance": 1
             },
             {
               "index": "return",
@@ -564,8 +564,8 @@
             {
               "index": 0,
               "truth": "ptr",
-              "ours": "top",
-              "distance": 2
+              "ours": "ptr",
+              "distance": 0
             },
             {
               "index": 1,
@@ -576,8 +576,8 @@
             {
               "index": 2,
               "truth": "int32",
-              "ours": "num32",
-              "distance": 1
+              "ours": "uint32",
+              "distance": null
             },
             {
               "index": "return",
@@ -592,27 +592,27 @@
   ],
   "metrics": {
     "scored": 68,
-    "exact": 34,
-    "exact_rate": 0.5,
+    "exact": 43,
+    "exact_rate": 0.6324,
     "conservative_rate": 0.9559,
     "wrong": 3,
     "wrong_rate": 0.0441,
-    "silent": 10,
+    "silent": 0,
     "wrong_examples": [
       {
-        "level": "O0",
-        "function": "through_pointer",
-        "index": 1,
-        "truth": "uint64",
-        "ours": "uint32",
+        "level": "O2",
+        "function": "narrow_signed",
+        "index": 0,
+        "truth": "int16",
+        "ours": "uint16",
         "distance": null
       },
       {
-        "level": "O0",
+        "level": "O2",
         "function": "mixed",
-        "index": 0,
-        "truth": "ptr",
-        "ours": "uint64",
+        "index": 2,
+        "truth": "int32",
+        "ours": "uint32",
         "distance": null
       },
       {

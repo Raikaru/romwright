@@ -1,0 +1,45 @@
+{
+  "gate": "m16-002",
+  "milestone": "M16",
+  "commit": "61dda7365d895172fe8c7a8f0a6c95dbc65d5753",
+  "date": "2026-09-11",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "levels": [
+    {
+      "level": "O0",
+      "caller": "call_one",
+      "site": "0x400527",
+      "pool": 7,
+      "kept": 5,
+      "dropped_compatible": []
+    },
+    {
+      "level": "O0",
+      "caller": "call_two",
+      "site": "0x40059c",
+      "pool": 7,
+      "kept": 1,
+      "dropped_compatible": []
+    },
+    {
+      "level": "O2",
+      "caller": "call_one",
+      "site": "0x40051f",
+      "pool": 7,
+      "kept": 5,
+      "dropped_compatible": []
+    },
+    {
+      "level": "O2",
+      "caller": "call_two",
+      "site": "0x40056b",
+      "pool": 7,
+      "kept": 1,
+      "dropped_compatible": []
+    }
+  ],
+  "failures": []
+}

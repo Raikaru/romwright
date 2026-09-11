@@ -792,6 +792,33 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 }
             }
         }
+        "prune-indirect-calls" => {
+            let binary = args.get(2).ok_or("prune-indirect-calls needs a binary")?.clone();
+            let program = args.get(3).ok_or("prune-indirect-calls needs a program name")?.clone();
+            let entry = args
+                .get(4)
+                .ok_or("prune-indirect-calls needs a function entry")?
+                .trim()
+                .trim_start_matches("0x");
+            let entry = u64::from_str_radix(entry, 16)
+                .map(lre_model::Address::ram)
+                .map_err(|_| format!("not an address: {entry}"))?;
+            let rows = core
+                .prune_indirect_calls(Path::new(&binary), &program, &entry)
+                .map_err(|e| e.to_string())?;
+            for row in &rows {
+                if has_flag(args, "--json") {
+                    println!("{row}");
+                } else {
+                    println!(
+                        "{}  kept {} of {}",
+                        row["site"].as_str().unwrap_or("?"),
+                        row["kept"].as_array().map(|a| a.len()).unwrap_or(0),
+                        row["candidates"].as_array().map(|a| a.len()).unwrap_or(0),
+                    );
+                }
+            }
+        }
         "structure" => {
             let binary = args.get(2).ok_or("structure needs a binary")?.clone();
             let program = args.get(3).ok_or("structure needs a program name")?.clone();

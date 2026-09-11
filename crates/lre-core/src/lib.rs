@@ -1315,6 +1315,304 @@ impl Core {
         Ok(rows)
     }
 
+    /// Prunes the candidate set at one function's indirect-call sites by
+    /// signature compatibility: a callee whose recovered signature does
+    /// not match the argument registers the site sets cannot be the call's
+    /// target. The pool is every address-taken function the image names --
+    /// an initializer slot, a pointer slot, or a code-immediate reference
+    /// to a function entry.
+    ///
+    /// Returns one row per `CallInd` site in the function: the site's
+    /// address, the pool, and the pool members the site's signature admits.
+    pub fn prune_indirect_calls(
+        &self,
+        binary: &Path,
+        program: &str,
+        entry: &lre_model::Address,
+    ) -> Result<Vec<serde_json::Value>> {
+        let language = session::program_language(&self.config, program, &self.db_path)
+            .unwrap_or_else(|_| self.config.language_id.clone());
+        let (_, specs, _, _) =
+            native_runtime::language_decompile_config(&self.config, &language)?;
+        let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
+        let table = std::fs::read_to_string(specs.join("registers.txt"))?;
+        let conventions = register_params::Conventions::parse(&cspec, &table);
+        let Some(model) = conventions.default() else {
+            return Ok(Vec::new());
+        };
+        let slot = |name: &str| conventions.registers.get(name).map(|(offset, _)| *offset);
+        let parameter_slots: Vec<u64> = model
+            .registers
+            .iter()
+            .filter_map(|name| slot(name))
+            .collect();
+        let float_slots: Vec<u64> = model
+            .float_registers
+            .iter()
+            .filter_map(|name| slot(name))
+            .collect();
+        let id = self.db.program_id(program)?;
+        // The pool: every function entry the image's own structure takes
+        // the address of. Initializer and pointer slots name them; a
+        // code-immediate reference (a `lea`/`mov` of a function entry) does
+        // too, since the callee of a `call *reg` is always an address the
+        // image carries somewhere.
+        let functions = self.db.functions(id)?;
+        let entries: std::collections::HashSet<u64> =
+            functions.iter().map(|f| f.entry.offset).collect();
+        let mut pool: std::collections::BTreeSet<u64> = self
+            .db
+            .xrefs(id)?
+            .into_iter()
+            .filter(|xref| {
+                // An unwind entry names every function for the stack
+                // walker; it is not the image taking the function's
+                // address. Only a data reference -- an initializer slot,
+                // a pointer slot, or a code immediate -- is.
+                xref.kind == "DATA"
+                    && !xref.provenance.source.contains("elf-unwind")
+                    && entries.contains(&xref.to.offset)
+            })
+            .map(|xref| xref.to.offset)
+            .collect();
+        // A switch's computed jump is a BRANCHIND whose target the store
+        // recorded as COMPUTED_JUMP; a tail call through a register is not.
+        let switch_branches: std::collections::HashSet<u64> = self
+            .db
+            .xrefs(id)?
+            .into_iter()
+            .filter(|xref| xref.kind == "COMPUTED_JUMP")
+            .map(|xref| xref.from.offset)
+            .collect();
+        let mut rows = Vec::new();
+        self.live.with(binary, program, |live| {
+            let walk = live.walk(entry.offset)?;
+            if walk.instructions == 0 {
+                return Ok(());
+            }
+            let addresses: Vec<u64> = {
+                let mut all: Vec<u64> = walk
+                    .instruction_extents
+                    .iter()
+                    .map(|(address, _)| *address)
+                    .collect();
+                all.sort_unstable();
+                all.dedup();
+                all
+            };
+            let pcode = live.pcode(&addresses)?;
+            // The call sites are the CALLIND instructions; the signature
+            // the site states is the class of each argument register at
+            // the call.
+            for instruction in &pcode {
+                // A `call *reg` is a CALLIND; a tail call through a
+                // register is a BRANCHIND that is not a switch's computed
+                // jump. The store's xrefs name the switch branches.
+                let is_call = instruction.ops.iter().any(|op| {
+                    op.opcode == "CALLIND"
+                        || (op.opcode == "BRANCHIND"
+                            && !switch_branches.contains(&instruction.address))
+                });
+                if !is_call {
+                    continue;
+                }
+                // The classes the site sets: run the caller's p-code up to
+                // this instruction and read the argument registers' last
+                // written class.
+                let prefix: Vec<crate::native_runtime::PcodeInstruction> = pcode
+                    .iter()
+                    .take_while(|i| i.address <= instruction.address)
+                    .cloned()
+                    .collect();
+                let facts = crate::types_infer::infer(&prefix);
+                // The site's signature is the class of the value last
+                // written to each argument register before the call.
+                let site_ints: Vec<crate::types_infer::Class> = parameter_slots
+                    .iter()
+                    .map(|offset| facts.written(*offset))
+                    .collect();
+                let site_floats: Vec<crate::types_infer::Class> = float_slots
+                    .iter()
+                    .map(|offset| facts.written(*offset))
+                    .collect();
+                // The site's arity is the contiguous prefix of argument
+                // registers whose last write before the call sets an
+                // argument. The target register itself is excluded -- it
+                // holds the callee address, not an argument.
+                let target = instruction
+                    .ops
+                    .iter()
+                    .find(|op| op.opcode == "CALLIND" || op.opcode == "BRANCHIND")
+                    .and_then(|op| op.inputs.first());
+                let target_register = target.and_then(|target| {
+                    if target.space == "register" {
+                        Some(target.offset)
+                    } else {
+                        instruction
+                            .ops
+                            .iter()
+                            .find(|op| {
+                                op.output.as_ref().is_some_and(|output| {
+                                    output.space == target.space
+                                        && output.offset == target.offset
+                                })
+                            })
+                            .and_then(|op| op.inputs.first())
+                            .filter(|input| input.space == "register")
+                            .map(|input| input.offset)
+                    }
+                });
+                let site_facts = crate::types_infer::infer(&prefix);
+                let mut spilled_write: std::collections::BTreeSet<u64> =
+                    std::collections::BTreeSet::new();
+                let mut last_write: std::collections::BTreeSet<u64> =
+                    std::collections::BTreeSet::new();
+                for instruction in prefix.iter() {
+                    for op in &instruction.ops {
+                        if let Some(output) = &op.output
+                            && output.space == "register"
+                            && Some(output.offset) != target_register
+                        {
+                            // A register holding its own entry value
+                            // reloaded itself from its frame slot: the
+                            // function shuffling a parameter it never
+                            // passes. Anything else -- a computed value,
+                            // or another register's value moved into
+                            // place -- is an argument the call sets.
+                            if site_facts
+                                .alias_origin(output.offset)
+                                .is_some_and(|(origin, _)| origin == output.offset)
+                            {
+                                spilled_write.insert(output.offset);
+                            } else {
+                                spilled_write.remove(&output.offset);
+                            }
+                            last_write.insert(output.offset);
+                        }
+                    }
+                }
+                let arity = parameter_slots
+                    .iter()
+                    .take_while(|offset| {
+                        last_write.contains(*offset) && !spilled_write.contains(*offset)
+                    })
+                    .count();
+                let float_arity = float_slots
+                    .iter()
+                    .take_while(|offset| {
+                        last_write.contains(*offset) && !spilled_write.contains(*offset)
+                    })
+                    .count();
+                let kept: Vec<u64> = pool
+                    .iter()
+                    .copied()
+                    .filter(|candidate| {
+                        // A candidate is compatible when its signature does
+                        // not contradict the site's: it needs no more
+                        // parameters than the site sets, and no parameter
+                        // class contradicts the site's.
+                        let candidate_facts = live
+                            .walk(*candidate)
+                            .ok()
+                            .and_then(|walk| {
+                                if walk.instructions == 0 {
+                                    return None;
+                                }
+                                let addresses: Vec<u64> = walk
+                                    .instruction_extents
+                                    .iter()
+                                    .map(|(address, _)| *address)
+                                    .collect();
+                                live.pcode(&addresses).ok()
+                            })
+                            .map(|pcode| crate::types_infer::infer(&pcode));
+                        let Some(candidate_facts) = candidate_facts else {
+                            return true; // undecodable: nothing to contradict
+                        };
+                        let candidate_ints: Vec<crate::types_infer::Class> =
+                            parameter_slots
+                                .iter()
+                                .map(|offset| candidate_facts.get(*offset))
+                                .collect();
+                        let candidate_floats: Vec<crate::types_infer::Class> =
+                            float_slots
+                                .iter()
+                                .map(|offset| candidate_facts.get(*offset))
+                                .collect();
+                        // Arity: a candidate that reads a parameter register
+                        // before writing it is taking an argument; one that
+                        // reads a register the site never set is
+                        // incompatible -- it would read a caller-saved
+                        // leftover as an argument.
+                        let candidate_arity = parameter_slots
+                            .iter()
+                            .rposition(|offset| candidate_facts.read_before_write(*offset))
+                            .map(|index| index + 1)
+                            .unwrap_or(0);
+                        let candidate_float_arity = float_slots
+                            .iter()
+                            .rposition(|offset| candidate_facts.read_before_write(*offset))
+                            .map(|index| index + 1)
+                            .unwrap_or(0);
+                        // Arity: the candidate must take exactly the
+                        // arguments the site sets, or none at all when the
+                        // site sets at most one -- a single written
+                        // register may be a coincidence, but two or more
+                        // state a signature the callee must match.
+                        if std::env::var("VENTRIS_DEBUG_PRUNE").is_ok() {
+                            eprintln!(
+                                "candidate {candidate:#x}: int_arity={candidate_arity} site={arity} float_arity={candidate_float_arity} site={float_arity}"
+                            );
+                        }
+                        if candidate_arity != arity && !(candidate_arity == 0 && arity <= 1) {
+                            return false;
+                        }
+                        if candidate_float_arity != float_arity
+                            && !(candidate_float_arity == 0 && float_arity <= 1)
+                        {
+                            return false;
+                        }
+                        // Class: a candidate that reads a parameter as a
+                        // float where the site sets an integer, or the
+                        // reverse, is incompatible. `unknown` on either side
+                        // is no evidence and never contradicts.
+                        for (site_class, candidate_class) in site_ints
+                            .iter()
+                            .zip(candidate_ints.iter())
+                            .chain(site_floats.iter().zip(candidate_floats.iter()))
+                        {
+                            use crate::types_infer::Class;
+                            let contradicts = matches!(
+                                (site_class, candidate_class),
+                                (Class::Float(_), Class::Int(_))
+                                    | (Class::Float(_), Class::Uint(_))
+                                    | (Class::Float(_), Class::Num(_))
+                                    | (Class::Int(_), Class::Float(_))
+                                    | (Class::Uint(_), Class::Float(_))
+                                    | (Class::Num(_), Class::Float(_))
+                                    | (Class::Ptr, Class::Float(_))
+                                    | (Class::Float(_), Class::Ptr)
+                                    | (Class::Code, Class::Float(_))
+                                    | (Class::Float(_), Class::Code)
+                            );
+                            if contradicts {
+                                return false;
+                            }
+                        }
+                        true
+                    })
+                    .collect();
+                rows.push(serde_json::json!({
+                    "site": format!("{:#x}", instruction.address),
+                    "candidates": pool.iter().map(|a| format!("{a:#x}")).collect::<Vec<_>>(),
+                    "kept": kept.iter().map(|a| format!("{a:#x}")).collect::<Vec<_>>(),
+                }));
+            }
+            Ok(())
+        })?;
+        Ok(rows)
+    }
+
     /// Applies an analyst rename in the project store and bumps the revision.
     /// (Direct mutation — no journal entry.)
     pub fn rename_function(&self, program: &str, entry: &lre_model::Address, name: &str) -> Result<()> {
