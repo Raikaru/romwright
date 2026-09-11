@@ -5998,6 +5998,16 @@ point at, none reserved:
   to 64 bytes stripped but 108 unstripped (a `bltz` at entry plus TLS
   `rdhwr` shape), so its body digest misses its twin. Same bytes,
   seed-dependent walk outcome; imports are deterministic run to run
+  (m12 twins exemption, staleness-guarded).
+- Recorded deficits (PE format, observed once on a large MSVC image now
+  out of the corpus; need small-format reproducers, which need user
+  approval as new corpus binaries under II.1): (1) exception-handling
+  funclets reachable only through `.xdata`/unwind data are never
+  seeded -- nothing walks unwind records to function starts, so that
+  whole class is near-zero recall by construction; (2) delay-load
+  import thunks split mid-stub, producing spurious entries. Both are
+  format properties, not image properties: any SEH or delay-load PE
+  should reproduce them.
   (verified by double import).
 
 ## Console sequencing decision (agent judgement, 2026-09-07)
