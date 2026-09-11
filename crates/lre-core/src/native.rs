@@ -1140,6 +1140,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         import_size,
         if is_64 { 8 } else { 4 },
     );
+    pe_roots::collect_import_stubs(data, &raw_sections, &mut import, image_base, is_64);
     let (tls_rva, tls_size) = directory(tls_dir_offset);
     pe_roots::collect_tls(
         data,

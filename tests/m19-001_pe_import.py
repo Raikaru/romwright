@@ -4,12 +4,14 @@
 Claim: importing a Windows PE recovers the functions its own toolchain
 declares -- no more, no fewer than the floors allow.
 
-One pair: `tests/corpus-src/many.c` built with mingw-w64 as PE32+
-DLLs, `-O0` and `-O2 -fno-inline`, stripped for the measured import
-with unstripped twins for truth. Ground truth is the toolchain symbol
-table (`mingw-nm`, never our parser): unique text-symbol names mapped
-to addresses with no base adjustment (our loader keeps link VAs).
-Runs in seconds.
+The locked pe64 corpus rows (plain_o0, plain_o2, plain_pie DLL,
+many_o2 EXE): stripped primaries are imported, unstripped twins supply
+truth. Ground truth is the toolchain symbol table (`mingw-nm`, never
+our parser): unique text-symbol names mapped to addresses with no base
+adjustment (our loader keeps link VAs). No gate-time build: earlier
+revisions compiled their own pair here, an unlocked second build path
+for the same artifacts. Runs in seconds; pe32 lives in m3-001 under
+its tied exemptions.
 
 Deliberately not gated here: retail PE images. Large retail imports
 cost tens of minutes per run for no additional signal over this pair
@@ -87,34 +89,19 @@ def nm_text_symbols(binary: Path) -> dict[str, list[int]]:
     for line in out.splitlines():
         match = re.match(r"^([0-9a-f]+) ([a-zA-Z]) (\S+)$", line.strip())
         if match and match.group(2) in "tT":
-            symbols.setdefault(match.group(3), []).append(int(match.group(1), 16))
+            name = match.group(3)
+            # Assembler locals (`.l_start`, loop labels) and section
+            # symbols (`.text`) are addresses, not toolchain-declared
+            # functions; no real function name starts with a dot.
+            if name.startswith("."):
+                continue
+            symbols.setdefault(name, []).append(int(match.group(1), 16))
     return symbols
 
 
-def build_many(work: Path) -> tuple[Path, Path, Path, Path]:
-    """Compiles the many.c PE pair plus unstripped twins for truth."""
-    cc = os.environ.get("MINGW_CC", "x86_64-w64-mingw32-gcc")
-    if not shutil.which(cc):
-        raise SystemExit(f"mingw compiler not found: {cc}")
-    source = ROOT / "tests/corpus-src/many.c"
-    flags = ["-shared", "-fPIC", "-Wno-error=implicit-function-declaration"]
-    outputs = [work / name for name in
-               ("many_o0.dll", "many_o2.dll",
-                "many_o0.unstripped.dll", "many_o2.unstripped.dll")]
-    reference, target, reference_named, target_named = outputs
-    if not (reference.is_file() and target.is_file()):
-        subprocess.run(
-            [cc] + flags + ["-O0", "-o", str(reference), str(source)],
-            check=True, capture_output=True, text=True, timeout=600)
-        subprocess.run(
-            [cc] + flags + ["-O2", "-fno-inline", "-o", str(target), str(source)],
-            check=True, capture_output=True, text=True, timeout=600)
-    shutil.copy(reference, reference_named)
-    shutil.copy(target, target_named)
-    for path in (reference, target):
-        subprocess.run(["x86_64-w64-mingw32-strip", "-s", str(path)],
-                       check=True, timeout=120)
-    return reference, target, reference_named, target_named
+def sha256_file(path: Path) -> str:
+    import hashlib
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def score_truth(truth: dict[int, int], recovered: dict[int, str],
@@ -131,23 +118,36 @@ def score_truth(truth: dict[int, int], recovered: dict[int, str],
     }
 
 
-def many_rows(work: Path, environment: dict[str, str]) -> list[dict]:
-    reference, target, reference_named, target_named = build_many(work)
+def locked_rows(corpus: Path, work: Path, environment: dict[str, str]) -> list[dict]:
+    """Score the locked pe64 rows: pinned bytes in, toolchain truth out."""
+    manifest = json.loads((corpus / "manifest.json").read_text())
+    entries = [entry for entry in manifest["entries"]
+               if entry["architecture"] == "pe64" and entry.get("status") == "ok"]
+    if not entries:
+        raise SystemExit(f"no locked pe64 rows in {corpus / 'manifest.json'}")
     rows = []
-    for level, binary, program in (("O0", reference, "many_o0"), ("O2", target, "many_o2")):
-        project = work / f"many-{level}"
+    for entry in entries:
+        identifier = f"{entry['architecture']}_{entry['variant']}"
+        binary = corpus / entry["binary"]
+        twin = corpus / entry["unstripped_twin"]
+        digest = sha256_file(binary)
+        if digest != entry["binary_sha256"]:
+            raise SystemExit(f"{binary.name}: digest mismatch, corpus is not the lock")
+        if sha256_file(twin) != entry["unstripped_twin_sha256"]:
+            raise SystemExit(f"{twin.name}: twin digest mismatch, corpus is not the lock")
+        project = work / identifier
         if project.exists():
             shutil.rmtree(project)
         started = time.monotonic()
         print(run(["import", str(binary), "--project", str(project),
-                   "--name", program], environment).strip(), flush=True)
+                   "--name", identifier], environment).strip(), flush=True)
         wall_s = round(time.monotonic() - started, 1)
-        symbols = nm_text_symbols(
-            reference_named if level == "O0" else target_named)
+        symbols = nm_text_symbols(twin)
         truth = {names[0]: names[0] for names in symbols.values() if len(names) == 1}
         known = {address for names in symbols.values() for address in names}
-        row = score_truth(truth, stored_functions(project, program), known)
-        row.update({"id": f"many-{level}", "import_wall_s": wall_s})
+        row = score_truth(truth, stored_functions(project, identifier), known)
+        row.update({"id": identifier, "binary_sha256": digest,
+                    "import_wall_s": wall_s})
         rows.append(row)
         print(json.dumps(row), flush=True)
     return rows
@@ -158,6 +158,7 @@ def many_rows(work: Path, environment: dict[str, str]) -> list[dict]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
@@ -169,7 +170,7 @@ def main() -> int:
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
 
     failures: list[str] = []
-    rows = many_rows(arguments.work, environment)
+    rows = locked_rows(arguments.corpus_dir, arguments.work, environment)
     for row in rows:
         if row["recall"] < THRESHOLDS["recall"]:
             failures.append(f"{row['id']}: recall {row['recall']} < {THRESHOLDS['recall']}")
@@ -181,8 +182,7 @@ def main() -> int:
         "criterion": "PE import measured against external truth",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "machine": {"os": platform.platform(), "cpu": platform.machine()},
-        "inputs": {"many_src": "tests/corpus-src/many.c",
-                   "many_cc_flags": {"O0": "-O0", "O2": "-O2 -fno-inline"}},
+        "inputs": {"corpus": "locked pe64 rows from tests/corpus.lock.json"},
         "thresholds": THRESHOLDS,
         "rows": rows,
         "status": "pass" if not failures else "fail",

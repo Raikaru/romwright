@@ -3277,7 +3277,10 @@ m3-003, all three wired into continuous integration)
   buildable. **Approved 2026-09-11; landed partially:** `pe64` (x86_64) is
   locked with 4 rows (no `cpp_o2`: no mingw cc1plus on this host, no
   sudo to install `mingw64-gcc-c++`, so C++ stays unbuildable here) and
-  scores 1.0 native / >=0.989 stock under m3 with 0 unattributed; `pe32`
+  scores 1.0 native / >=0.989 stock under m3 with 0 unattributed, and
+  1.0 under the folded m19-001 (locked rows, no gate-time build) after
+  PE import-stub recovery (IAT `jmp` stubs as named linkage entries;
+  REX-prefixed matches rejected as mid-instruction); `pe32`
   builds but sits below m3's floor (0.80-0.97, a jmp-only-reached CRT
   chain with no unwind tables on SJLJ 32-bit -- same tail-call rule
   family as m5-007) and stays out of the lock and default build until
