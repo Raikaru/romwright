@@ -1,0 +1,395 @@
+{
+  "id": "head-to-head-libc",
+  "recorded_at": "2026-09-11T23:18:03.303145+00:00",
+  "inputs": {
+    "path": "/usr/lib64/libc.so.6",
+    "sha256": "01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db",
+    "package": "glibc-2.43-8.fc44.x86_64",
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43"
+  },
+  "axis_functions": {
+    "truth_functions": 3890,
+    "load_bias": "00100000",
+    "native": {
+      "recovered": 4004,
+      "recall": 1.0,
+      "unexplained": [
+        "0x100000",
+        "0x1000fc",
+        "0x100108",
+        "0x100133",
+        "0x100149",
+        "0x10016c",
+        "0x100220",
+        "0x1002bc",
+        "0x1002cb",
+        "0x100380",
+        "0x100488",
+        "0x10048d",
+        "0x100510",
+        "0x100533",
+        "0x1005f3",
+        "0x100611",
+        "0x100638",
+        "0x100640",
+        "0x100650",
+        "0x100668"
+      ],
+      "unexplained_count": 114,
+      "wall_s": 79.7
+    },
+    "stock": {
+      "recovered": 3987,
+      "recall": 1.0,
+      "unexplained": [
+        "0x100380",
+        "0x100770",
+        "0x100780",
+        "0x100790",
+        "0x1007a0",
+        "0x1007b0",
+        "0x1007c0",
+        "0x1007d0",
+        "0x1007e0",
+        "0x1007f0",
+        "0x100800",
+        "0x100810",
+        "0x100820",
+        "0x100830",
+        "0x100840",
+        "0x100850",
+        "0x100860",
+        "0x100870",
+        "0x100880",
+        "0x100890"
+      ],
+      "unexplained_count": 97,
+      "wall_s": 100.9
+    }
+  },
+  "axis_prototypes": {
+    "sampled": 30,
+    "decompiled": 30,
+    "compared": 28,
+    "arity_agreement": 0.9643,
+    "full_agreement": 0.6429,
+    "details": [
+      {
+        "address": "0x112160",
+        "native": [
+          "ushort",
+          2
+        ],
+        "stock": [
+          "int",
+          2
+        ]
+      },
+      {
+        "address": "0x119d20",
+        "native": [
+          "void",
+          1
+        ],
+        "stock": [
+          "void",
+          1
+        ]
+      },
+      {
+        "address": "0x11c770",
+        "native": [
+          "undefined8",
+          1
+        ],
+        "stock": [
+          "void",
+          1
+        ]
+      },
+      {
+        "address": "0x13d650",
+        "native": [
+          "void",
+          0
+        ],
+        "stock": [
+          "int",
+          3
+        ]
+      },
+      {
+        "address": "0x162dd0",
+        "native": [
+          "undefined4",
+          1
+        ],
+        "stock": [
+          "undefined4",
+          1
+        ]
+      },
+      {
+        "address": "0x16e170",
+        "native": [
+          "void",
+          4
+        ],
+        "stock": [
+          "void",
+          4
+        ]
+      },
+      {
+        "address": "0x16e210",
+        "native": [
+          "void",
+          3
+        ],
+        "stock": [
+          "void",
+          3
+        ]
+      },
+      {
+        "address": "0x175890",
+        "native": [
+          "void",
+          1
+        ],
+        "stock": [
+          "void",
+          1
+        ]
+      },
+      {
+        "address": "0x17e900",
+        "native": [
+          "int",
+          3
+        ],
+        "stock": [
+          "int",
+          3
+        ]
+      },
+      {
+        "address": "0x17f820",
+        "native": [
+          "ulong",
+          5
+        ],
+        "stock": [
+          "void",
+          5
+        ]
+      },
+      {
+        "address": "0x182e10",
+        "native": [
+          "void",
+          0
+        ],
+        "stock": [
+          "void",
+          0
+        ]
+      },
+      {
+        "address": "0x184c70",
+        "native": [
+          "undefined8",
+          0
+        ],
+        "stock": [
+          "undefined8",
+          0
+        ]
+      },
+      {
+        "address": "0x19c310",
+        "native": [
+          "undefined8",
+          0
+        ],
+        "stock": [
+          "undefined8",
+          0
+        ]
+      },
+      {
+        "address": "0x1a3a40",
+        "native": [
+          "Removing unreachable",
+          4
+        ],
+        "stock": [
+          "Removing unreachable",
+          4
+        ]
+      },
+      {
+        "address": "0x1b1a90",
+        "native": [
+          "void",
+          1
+        ],
+        "stock": [
+          "char *",
+          1
+        ]
+      },
+      {
+        "address": "0x1cb880",
+        "native": [
+          "void",
+          0
+        ],
+        "stock": [
+          "int",
+          0
+        ]
+      },
+      {
+        "address": "0x1dd290",
+        "native": [
+          "Removing unreachable",
+          4
+        ],
+        "stock": [
+          "Removing unreachable",
+          4
+        ]
+      },
+      {
+        "address": "0x1edd40",
+        "native": [
+          "undefined8",
+          0
+        ],
+        "stock": [
+          "undefined8",
+          0
+        ]
+      },
+      {
+        "address": "0x1f8620",
+        "native": [
+          "uint",
+          2
+        ],
+        "stock": [
+          "key_t",
+          2
+        ]
+      },
+      {
+        "address": "0x1fc000",
+        "native": [
+          "void",
+          2
+        ],
+        "stock": [
+          "void",
+          2
+        ]
+      },
+      {
+        "address": "0x219580",
+        "native": [
+          "int",
+          1
+        ],
+        "stock": [
+          "int",
+          1
+        ]
+      },
+      {
+        "address": "0x2292e0",
+        "native": [
+          "void",
+          2
+        ],
+        "stock": [
+          "void",
+          2
+        ]
+      },
+      {
+        "address": "0x233620",
+        "native": [
+          "int",
+          6
+        ],
+        "stock": [
+          "int",
+          6
+        ]
+      },
+      {
+        "address": "0x236ad0",
+        "native": [
+          "undefined8",
+          2
+        ],
+        "stock": [
+          "bool",
+          2
+        ]
+      },
+      {
+        "address": "0x239ec0",
+        "native": [
+          "void",
+          3
+        ],
+        "stock": [
+          "void",
+          3
+        ]
+      },
+      {
+        "address": "0x2408c0",
+        "native": [
+          "undefined8",
+          3
+        ],
+        "stock": [
+          "ssize_t",
+          3
+        ]
+      },
+      {
+        "address": "0x242bd0",
+        "native": [
+          "undefined8",
+          2
+        ],
+        "stock": [
+          "bool_t",
+          2
+        ]
+      },
+      {
+        "address": "0x260c00",
+        "native": [
+          "ulong",
+          3
+        ],
+        "stock": [
+          "ulong",
+          3
+        ]
+      }
+    ],
+    "failures": [],
+    "failed": 0
+  },
+  "axis_gotos": {
+    "functions": 30,
+    "native": 20,
+    "stock": 14
+  },
+  "note": "no DWARF on this host: function axis is symtab truth, not DWARF recall; prototype headline is arity agreement (structural on both sides), return-type pairs recorded per function, never parameter names"
+}
