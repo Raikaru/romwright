@@ -5986,9 +5986,11 @@ point at, none reserved:
   user discretion 2026-09-11: `type-stronger` stays ours (the class is a
   symmetric cast difference and stock's cast, e.g. `(code *)`, is absent
   from our output because the slot is already typed per m4-030 --
-  matching stock would delete information); `name-convention` goes
-  stock's way (`_plt` says stub where `FUN_` says nothing) but the
-  rename plus equivalence re-baseline is still to implement.
+  matching stock would delete information); `name-convention` also
+  stays ours, and the premise was checked rather than assumed: WE coin
+  `_plt`, stock leaves `FUN_<address>` (m4-031 documents and bounds the
+  coinage, green 2026-09-11), so there is nothing to adopt and no
+  re-baseline to do.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The
