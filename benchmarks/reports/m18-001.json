@@ -2,7 +2,7 @@
   "id": "m18-001",
   "milestone": "M18",
   "criterion": "BSim-style semantic matching over p-code data-flow",
-  "recorded_at": "2026-09-11T05:06:08.778146+00:00",
+  "recorded_at": "2026-09-11T05:25:04.880961+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
@@ -15,8 +15,8 @@
   },
   "measured": {
     "semantic": {
-      "judged": 3,
-      "correct": 3,
+      "judged": 1,
+      "correct": 1,
       "precision": 1.0
     }
   },
@@ -173,8 +173,8 @@
       "recall": 0.875,
       "evidence": {
         "alignment": {
-          "judged": 1,
-          "correct": 1
+          "judged": 3,
+          "correct": 3
         },
         "import": {
           "judged": 1,
@@ -185,8 +185,8 @@
           "correct": 1
         },
         "semantic": {
-          "judged": 3,
-          "correct": 3
+          "judged": 1,
+          "correct": 1
         },
         "string": {
           "judged": 1,

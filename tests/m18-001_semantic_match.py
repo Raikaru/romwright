@@ -41,8 +41,11 @@ Pairs, both same-source:
   the class abstains on the duplicates and must lose nothing.
 * `pie`: corpus `x86_64_plain_o0` against `x86_64_plain_pie`. Same
   source, different link; relocation churn breaks the shape anchors (3
-  anchors where the o2 pair has 11) and the semantic class fires: 3/3
+  anchors where the o2 pair has 11) and the semantic class fires: 1/1
   correct, gaining `__do_global_dtors_aux` the structural run misses.
+  (Two further pairs the class used to take now match structurally in
+  round one, since the reorder lets the alignment see anchor seeds
+  first; the class keeps the one pair nothing else can.)
 
 Ground truth: symbol tables the matcher never opens -- the unstripped
 o2 twin for both pairs. A reference entry maps to the target entry

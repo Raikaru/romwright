@@ -132,6 +132,11 @@ pub enum Evidence {
     /// The network alignment assigned it: content similarity and induced
     /// call edges weighed together.
     Alignment,
+    /// Relevance decoding moved it there: the pairing as a whole preserves
+    /// more call edges with the pair here than where the matchers put it.
+    /// Raw similarity inverts among near-duplicate functions; context does
+    /// not.
+    Context,
 }
 
 /// One matched pair.
@@ -648,27 +653,50 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
             }
         }
     }
-    // 1b. Semantic pairs: what is still unmatched but computes the same
+    // 1b. Structural round one, from the anchors alone. Raw data-flow
+    // similarity inverts among near-duplicate functions, so the semantic
+    // seeds must not commit before the call graph has said its piece.
+    if options.matcher == Matcher::Nap {
+        align(reference, target, &mut pairs, options, &mut matches);
+    } else {
+        propagate(reference, target, &mut pairs, options, &mut matches);
+    }
+
+    // 1c. Semantic pairs: what is still unmatched but computes the same
     // thing on both sides. Each open function names its best partner by
     // data-flow similarity; a pair is taken only when both sides name
     // each other, uniquely, at or above the floor. Mutual-best is the
     // one-to-one condition for free: two functions cannot both be the
-    // unique best partner of the same function. They join the anchors as
-    // seeds, so propagation and the alignment both build on them.
+    // unique best partner of the same function. They join the anchors
+    // and round one as seeds, so round two builds on all three.
     if options.semantic {
         semantic_pass(reference, target, &mut pairs, &mut matches);
     }
 
+    // 1d. Structural round two: the neighbourhoods the semantic seeds
+    // open were unreachable before, and the alignment's second run
+    // measures its topology term against them.
     if options.matcher == Matcher::Nap {
         align(reference, target, &mut pairs, options, &mut matches);
+    } else {
+        propagate(reference, target, &mut pairs, options, &mut matches);
     }
 
-    // 2. Propagation: only the neighbours of matched pairs are considered, so
-    // the candidate set stays small and the evidence stays local.
+/// 2. Propagation: only the neighbours of matched pairs are considered, so
+/// the candidate set stays small and the evidence stays local. Runs to
+/// fixpoint; calling it again after new seeds land extends the reached
+/// neighbourhoods.
+fn propagate(
+    reference: &Program,
+    target: &Program,
+    pairs: &mut Pairing,
+    options: &Options,
+    matches: &mut Vec<MatchRow>,
+) {
+    if options.matcher != Matcher::Greedy {
+        return;
+    }
     for _ in 0..options.max_rounds {
-        if options.matcher != Matcher::Greedy {
-            break;
-        }
         let mut candidates: HashSet<(usize, usize)> = HashSet::new();
         for left in 0..reference.funcs.len() {
             let Some(right) = pairs.reference[left] else {
@@ -739,6 +767,7 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
             break;
         }
     }
+}
 
     // 3. What the call graph never reached: leaf functions nobody calls in
     // either build. Only a profile unique on both sides is taken.
@@ -760,6 +789,13 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
             }
         }
     }
+
+    // 4. Relevance decoding over everything committed: raw similarity
+    // inverts among near-duplicates, so each matcher-committed pair
+    // reconsiders its target in call-graph context. Strict improvement
+    // only, so this pass can only raise the alignment objective, never
+    // scatter what the matchers found.
+    decode(reference, target, &mut pairs, options, &mut matches);
 
     matches.sort_by_key(|row| (row.target.offset, row.reference.offset));
     let names = matches
@@ -799,10 +835,19 @@ fn note_best(best: &mut Option<(usize, f64, bool)>, partner: usize, value: f64) 
 
 /// Mutual-best semantic matches over the pairs still unmatched. Each open
 /// function with a signature names its highest-similarity partner; a pair
-/// is taken only when both sides name each other, the best is unique on
+/// is a hit only when both sides name each other, the best is unique on
 /// both sides, and the similarity reaches the semantic floor. The score a
 /// row carries is the similarity itself, so a gate can threshold the class
 /// further.
+///
+/// Hits commit strongest-first, and each must survive the call graph: a
+/// hit that contradicts it -- paired neighbours on either side with none
+/// preserved -- is deferred, because data-flow similarity inverts among
+/// near-duplicate functions (measured on zlib, where false pairs score
+/// 0.93-0.97 and steal targets from the true ones). A hit a preserved
+/// call edge confirms, or one with no paired neighbours to judge it, is
+/// taken. This is the relevance-decoding step: inter-function context
+/// ranks candidates that raw similarity cannot separate.
 fn semantic_pass(
     reference: &Program,
     target: &Program,
@@ -843,8 +888,43 @@ fn semantic_pass(
             hits.push((left, *right, *value));
         }
     }
-    hits.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+    // Strongest first, indices breaking ties: acceptance order is the
+    // decoding order, so it must be deterministic, which the gates need.
+    hits.sort_by(|a, b| {
+        b.2.partial_cmp(&a.2)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then((a.0, a.1).cmp(&(b.0, b.1)))
+    });
     for (left, right, value) in hits {
+        if pairs.reference[left].is_some() || pairs.target[right].is_some() {
+            continue;
+        }
+        // Call-graph support among the pairs already taken: neighbours
+        // matched on both sides, and how many of those pairings this hit
+        // would preserve.
+        let a = &reference.funcs[left];
+        let b = &target.funcs[right];
+        let mut judged = 0u32;
+        let mut preserved = 0u32;
+        for &callee in &a.callees {
+            if let Some(mapped) = pairs.reference[callee] {
+                judged += 1;
+                if b.callees.contains(&mapped) {
+                    preserved += 1;
+                }
+            }
+        }
+        for &caller in &a.callers {
+            if let Some(mapped) = pairs.reference[caller] {
+                judged += 1;
+                if b.callers.contains(&mapped) {
+                    preserved += 1;
+                }
+            }
+        }
+        if judged > 0 && preserved == 0 {
+            continue;
+        }
         if pairs.accept(left, right) {
             matches.push(row(reference, target, left, right, value, Evidence::Semantic));
         }
@@ -1005,6 +1085,245 @@ fn align(
                 content,
                 Evidence::Alignment,
             ));
+        }
+    }
+}
+
+/// Preserved call edges of the pair under the pairing: callees and
+/// callers of the reference already mapped onto callees and callers of
+/// the target, with the pair itself left out so a mutual recursion can
+/// never vote for itself.
+fn preserved(
+    reference: &Program,
+    target: &Program,
+    left: usize,
+    right: usize,
+    pairs: &Pairing,
+) -> u32 {
+    let mut squares = 0u32;
+    for &callee in &reference.funcs[left].callees {
+        if callee != left
+            && let Some(mapped) = pairs.reference[callee]
+            && target.funcs[right].callees.contains(&mapped)
+        {
+            squares += 1;
+        }
+    }
+    for &caller in &reference.funcs[left].callers {
+        if caller != left
+            && let Some(mapped) = pairs.reference[caller]
+            && target.funcs[right].callers.contains(&mapped)
+        {
+            squares += 1;
+        }
+    }
+    squares
+}
+
+/// The relevance-decoding objective of one committed pair: the
+/// alignment's own blend of content similarity and degree-normalised
+/// preserved edges.
+fn pair_weight(
+    reference: &Program,
+    target: &Program,
+    left: usize,
+    right: usize,
+    pairs: &Pairing,
+    options: &Options,
+) -> f64 {
+    let a = &reference.funcs[left];
+    let b = &target.funcs[right];
+    let degree = (a.callees.len() + a.callers.len())
+        .max(b.callees.len() + b.callers.len())
+        .max(1) as f64;
+    options.lambda * content_score(a, b, options)
+        + (1.0 - options.lambda) * f64::from(preserved(reference, target, left, right, pairs))
+            / degree
+}
+
+/// The whole pairing's objective: every committed pair weighed as above.
+fn objective(
+    reference: &Program,
+    target: &Program,
+    pairs: &Pairing,
+    options: &Options,
+) -> f64 {
+    pairs
+        .reference
+        .iter()
+        .enumerate()
+        .filter_map(|(left, &right)| right.map(|right| (left, right)))
+        .map(|(left, right)| pair_weight(reference, target, left, right, pairs, options))
+        .sum()
+}
+
+/// Relevance decoding over the committed pairing: coordinate ascent on
+/// the alignment objective. Raw similarity inverts among near-duplicate
+/// functions -- measured on zlib, where false pairs score up to 0.97 and
+/// steal targets from the true ones -- so each committed reference
+/// reconsiders its target in call-graph context: an open shortlist
+/// candidate, or a swap with another committed pair. A move lands only
+/// on a strict improvement of the whole pairing's objective, which is
+/// what makes the iteration terminate; index order makes it
+/// deterministic. Anchors and global leaves never move: a unique key is
+/// not a choice between candidates.
+fn decode(
+    reference: &Program,
+    target: &Program,
+    pairs: &mut Pairing,
+    options: &Options,
+    matches: &mut Vec<MatchRow>,
+) {
+    const ROUNDS: usize = 8;
+    // Rows a move must rewrite, by reference index: anchors and global
+    // leaves are absent, so they can neither move nor be blamed.
+    let movable = |evidence: Evidence| {
+        matches!(
+            evidence,
+            Evidence::Alignment | Evidence::CallGraph | Evidence::Semantic
+        )
+    };
+    let mut row_of: Vec<Option<usize>> = vec![None; reference.funcs.len()];
+    for (index, row) in matches.iter().enumerate() {
+        if !movable(row.evidence) {
+            continue;
+        }
+        if let Some(left) = reference
+            .funcs
+            .iter()
+            .position(|func| func.entry == row.reference.offset)
+        {
+            row_of[left] = Some(index);
+        }
+    }
+    // Content shortlist per movable reference, over every target: only
+    // pairs that clear the commit floor are eligible destinations.
+    // Context breaks ties between plausible pairs; it never installs a
+    // pairing the content score would not take on its own (measured: an
+    // unfloored pass moved a correct 0.87-content pair to a 0.62 one for
+    // two shared neighbours). The current partner rides along even when
+    // its content is low, since leaving is always an option the search
+    // must price, not a destination it can choose.
+    let mut shortlist: Vec<Vec<usize>> = vec![Vec::new(); reference.funcs.len()];
+    for left in 0..reference.funcs.len() {
+        if row_of[left].is_none() {
+            continue;
+        }
+        let mut scored: Vec<(f64, usize)> = (0..target.funcs.len())
+            .map(|right| {
+                (
+                    content_score(&reference.funcs[left], &target.funcs[right], options),
+                    right,
+                )
+            })
+            .filter(|(value, _)| *value >= options.min_score)
+            .collect();
+        scored.sort_by(|a, b| {
+            b.0.partial_cmp(&a.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.1.cmp(&b.1))
+        });
+        shortlist[left] = scored
+            .into_iter()
+            .take(options.candidates)
+            .map(|(_, right)| right)
+            .collect();
+        if let Some(held) = pairs.reference[left]
+            && !shortlist[left].contains(&held)
+        {
+            shortlist[left].push(held);
+        }
+    }
+    let retarget = |pairs: &mut Pairing, matches: &mut Vec<MatchRow>, left: usize, right: usize| {
+        pairs.reference[left] = Some(right);
+        pairs.target[right] = Some(left);
+        if let Some(index) = row_of[left] {
+            let content = content_score(&reference.funcs[left], &target.funcs[right], options);
+            matches[index].target = Address::ram(target.funcs[right].entry);
+            matches[index].target_name = target.funcs[right].name.clone();
+            matches[index].score = content;
+            matches[index].evidence = Evidence::Context;
+        }
+    };
+    for _ in 0..ROUNDS {
+        let mut moved = false;
+        for left in 0..reference.funcs.len() {
+            if row_of[left].is_none() {
+                continue;
+            }
+            let base = objective(reference, target, pairs, options);
+            let mut best: Option<(usize, Option<usize>, f64)> = None;
+            // Moves to an open target first (target index order), then
+            // swaps with committed pairs (reference index order): a
+            // free target never pays for a displacement it never caused.
+            for &right in &shortlist[left].clone() {
+                if pairs.reference[left] == Some(right) {
+                    continue;
+                }
+                if pairs.target[right].is_some() {
+                    continue;
+                }
+                let held = pairs.reference[left].expect("movable is committed");
+                pairs.reference[left] = Some(right);
+                pairs.target[held] = None;
+                pairs.target[right] = Some(left);
+                let gain = objective(reference, target, pairs, options) - base;
+                pairs.reference[left] = Some(held);
+                pairs.target[held] = Some(left);
+                pairs.target[right] = None;
+                if gain > 0.0 && best.is_none_or(|(_, _, top)| gain > top) {
+                    best = Some((right, None, gain));
+                }
+            }
+            for other in 0..reference.funcs.len() {
+                if other == left || row_of[other].is_none() {
+                    continue;
+                }
+                let held = pairs.reference[left].expect("movable is committed");
+                let other_held = pairs.reference[other].expect("movable is committed");
+                if held == other_held {
+                    continue;
+                }
+                // Both installed pairs must clear the floor, like any
+                // other destination the search can choose.
+                if content_score(&reference.funcs[left], &target.funcs[other_held], options)
+                    < options.min_score
+                    || content_score(&reference.funcs[other], &target.funcs[held], options)
+                        < options.min_score
+                {
+                    continue;
+                }
+                pairs.reference[left] = Some(other_held);
+                pairs.reference[other] = Some(held);
+                pairs.target[held] = Some(other);
+                pairs.target[other_held] = Some(left);
+                let gain = objective(reference, target, pairs, options) - base;
+                pairs.reference[left] = Some(held);
+                pairs.reference[other] = Some(other_held);
+                pairs.target[held] = Some(left);
+                pairs.target[other_held] = Some(other);
+                if gain > 0.0 && best.is_none_or(|(_, _, top)| gain > top) {
+                    best = Some((other_held, Some(other), gain));
+                }
+            }
+            match best {
+                Some((right, None, _)) => {
+                    let held = pairs.reference[left].expect("movable is committed");
+                    pairs.target[held] = None;
+                    retarget(pairs, matches, left, right);
+                    moved = true;
+                }
+                Some((right, Some(other), _)) => {
+                    let held = pairs.reference[left].expect("movable is committed");
+                    retarget(pairs, matches, other, held);
+                    retarget(pairs, matches, left, right);
+                    moved = true;
+                }
+                None => {}
+            }
+        }
+        if !moved {
+            break;
         }
     }
 }
@@ -1364,7 +1683,16 @@ mod tests {
     #[test]
     fn semantic_pass_matches_same_computation_across_builds() {
         let (reference, target) = semantic_programs();
-        let report = diff(&reference, &target, &Options::default());
+        // Greedy: with no anchor seeds the propagation rounds take
+        // nothing, so the pair can only match in the semantic pass.
+        // Under the default network alignment the pair's content (with
+        // its 1.0 data-flow term) already clears the floor and commits
+        // as alignment evidence before the semantic pass runs.
+        let options = Options {
+            matcher: Matcher::Greedy,
+            ..Options::default()
+        };
+        let report = diff(&reference, &target, &options);
         let calc = report
             .matches
             .iter()
