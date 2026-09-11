@@ -10,10 +10,13 @@
   },
   "axis_functions": {
     "truth_functions": 3890,
+    "exposed_symbols": 2269,
+    "must_discover": 1621,
     "load_bias": "00100000",
     "native": {
       "recovered": 4090,
       "recall": 1.0,
+      "discovered_recall": 1.0,
       "unexplained": [
         "0x100000",
         "0x1000fc",
@@ -37,12 +40,12 @@
         "0x100668"
       ],
       "unexplained_count": 200,
-      "wall_s": 103.3,
-      "discovered_recall": 1.0
+      "wall_s": 103.3
     },
     "stock": {
       "recovered": 3987,
       "recall": 1.0,
+      "discovered_recall": 1.0,
       "unexplained": [
         "0x100380",
         "0x100770",
@@ -66,11 +69,8 @@
         "0x100890"
       ],
       "unexplained_count": 97,
-      "wall_s": 105.8,
-      "discovered_recall": 1.0
-    },
-    "exposed_symbols": 2269,
-    "must_discover": 1621
+      "wall_s": 105.8
+    }
   },
   "axis_prototypes": {
     "sampled": 30,
