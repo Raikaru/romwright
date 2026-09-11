@@ -6025,7 +6025,14 @@ point at, none reserved:
   scale is 0.1%, isolated and non-swallowing; a store-time containment
   guard retracts any const seed that would swallow better-evidenced
   entries, and emitted features are filtered to stored rows (retracted
-  seeds left 4 orphan feature rows at libc scale). A wiring
+  seeds left 4 orphan feature rows at libc scale).
+- Reliability incident 2026-09-11: a disk-pressured m12 run published
+  partial analyses to the shared import cache, which read back fine
+  and silently served 95 functions for a 124-function twin (twins
+  recall 0.77). Cache keys bumped v1 -> v2 (old files linger
+  inertly); operational rule is TMPDIR/SQLITE_TMPDIR plus gate work
+  dirs on disk-backed storage, and m13 refuses under 2GB free. A
+  publish-time disk guard needs statvfs (no such dep); skipped. A wiring
   gap is ruled out: the console loads 582 MIPS rules and returns 4
   matches here (7 on plain_o2); x86_64 patterns are equally sparse by
   design (20 rules, 6 matches on a 400-function image). Stock's 411

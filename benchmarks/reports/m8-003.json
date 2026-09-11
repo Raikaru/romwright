@@ -1,9 +1,9 @@
 {
  "id": "m8-003",
- "recorded_at": "2026-09-11T14:30:46.883029+00:00",
+ "recorded_at": "2026-09-11T15:09:01.472064+00:00",
  "status": "pass",
  "passed": true,
- "summary": "32 images, 3012 bodies matched to a DWARF range: 0 crossing another entry, 0.9890 ending exactly where the compiler says, 27 ending inside one alignment slot past it, 1 running into a function nobody discovered (worst 84 bytes), 0 unexplained, 4 stopping short at tails nothing claims (worst 131 bytes)",
+ "summary": "36 images, 3674 bodies matched to a DWARF range: 0 crossing another entry, 0.9872 ending exactly where the compiler says, 37 ending inside one alignment slot past it, 8 running into a function nobody discovered (worst 84 bytes), 0 unexplained, 1 stopping short at tails nothing claims (worst 44 bytes)",
  "thresholds": {
   "body.crossing": 0,
   "body.unexplained_overshoot": 0,
@@ -12,12 +12,12 @@
  },
  "totals": {
   "body.crossing": 0,
-  "body.matched": 3012,
-  "body.exact": 0.9890438247011952,
-  "body.padding_overshoot": 27,
-  "body.overshoot_into_missed": 1,
-  "body.undershoot": 4,
-  "body.undershoot_bytes.max": 131,
+  "body.matched": 3674,
+  "body.exact": 0.9872074033750681,
+  "body.padding_overshoot": 37,
+  "body.overshoot_into_missed": 8,
+  "body.undershoot": 1,
+  "body.undershoot_bytes.max": 44,
   "body.overshoot_bytes.max": 84
  },
  "images": [
@@ -675,6 +675,139 @@
    "claimed_tail": []
   },
   {
+   "id": "pe32_many_o2",
+   "functions": 453,
+   "truth_ranges": 440,
+   "matched": 429,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9906759906759907,
+    "body.padding_overshoot": 2,
+    "body.overshoot_into_missed": 2,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 84
+   },
+   "crossing": [],
+   "into_missed": [
+    {
+     "entry": "00401010",
+     "truth_end": "004013ee",
+     "body_end": "004013ff",
+     "overshoot": 17,
+     "into": "004013f0"
+    },
+    {
+     "entry": "00403020",
+     "truth_end": "0040332e",
+     "body_end": "00403382",
+     "overshoot": 84,
+     "into": "00403330"
+    }
+   ],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe32_plain_o0",
+   "functions": 114,
+   "truth_ranges": 95,
+   "matched": 79,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9493670886075949,
+    "body.padding_overshoot": 2,
+    "body.overshoot_into_missed": 2,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 84
+   },
+   "crossing": [],
+   "into_missed": [
+    {
+     "entry": "00401010",
+     "truth_end": "004013ee",
+     "body_end": "004013ff",
+     "overshoot": 17,
+     "into": "004013f0"
+    },
+    {
+     "entry": "00401940",
+     "truth_end": "00401c4e",
+     "body_end": "00401ca2",
+     "overshoot": 84,
+     "into": "00401c50"
+    }
+   ],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe32_plain_o2",
+   "functions": 113,
+   "truth_ranges": 95,
+   "matched": 78,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9487179487179487,
+    "body.padding_overshoot": 2,
+    "body.overshoot_into_missed": 2,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 84
+   },
+   "crossing": [],
+   "into_missed": [
+    {
+     "entry": "00401010",
+     "truth_end": "004013ee",
+     "body_end": "004013ff",
+     "overshoot": 17,
+     "into": "004013f0"
+    },
+    {
+     "entry": "00401900",
+     "truth_end": "00401c0e",
+     "body_end": "00401c62",
+     "overshoot": 84,
+     "into": "00401c10"
+    }
+   ],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe32_plain_pie",
+   "functions": 101,
+   "truth_ranges": 88,
+   "matched": 74,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9459459459459459,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 9
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
    "id": "tiny_pe.exe",
    "functions": 124,
    "truth_ranges": 90,
@@ -720,22 +853,29 @@
   },
   {
    "id": "tiny_pe32.exe",
-   "functions": 113,
+   "functions": 115,
    "truth_ranges": 93,
-   "matched": 75,
+   "matched": 77,
    "metrics": {
     "body.crossing": 0,
-    "body.exact": 0.92,
+    "body.exact": 0.948051948051948,
     "body.padding_overshoot": 2,
-    "body.overshoot_into_missed": 1,
+    "body.overshoot_into_missed": 2,
     "body.unexplained_overshoot": 0,
-    "body.undershoot": 3,
+    "body.undershoot": 0,
     "body.claimed_tail": 0,
-    "body.undershoot_bytes.max": 131,
+    "body.undershoot_bytes.max": 0,
     "body.overshoot_bytes.max": 84
    },
    "crossing": [],
    "into_missed": [
+    {
+     "entry": "00401010",
+     "truth_end": "004013ee",
+     "body_end": "004013ff",
+     "overshoot": 17,
+     "into": "004013f0"
+    },
     {
      "entry": "00401910",
      "truth_end": "00401c1e",
@@ -745,26 +885,7 @@
     }
    ],
    "unexplained": [],
-   "undershoot": [
-    {
-     "entry": "00404480",
-     "truth_end": "0040505c",
-     "body_end": "00405055",
-     "short": 7
-    },
-    {
-     "entry": "004050c0",
-     "truth_end": "00405144",
-     "body_end": "004050c1",
-     "short": 131
-    },
-    {
-     "entry": "004071e0",
-     "truth_end": "00407242",
-     "body_end": "004071e3",
-     "short": 95
-    }
-   ],
+   "undershoot": [],
    "claimed_tail": []
   }
  ]

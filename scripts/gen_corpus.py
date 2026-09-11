@@ -676,7 +676,7 @@ def main():
     parser.add_argument("--update-lock", action="store_true",
                         help="Refresh source digests only, preserving matrix and recipes; do not build.")
     parser.add_argument("--architectures", type=str,
-                        default="x86_64,i386,aarch64,powerpc,mipsel,pe64,msvc",
+                        default="x86_64,i386,aarch64,powerpc,mipsel,pe64,pe32,msvc",
                         help="Comma-separated list of architectures to build (or 'msvc').")
     parser.add_argument("--msvc-only", action="store_true",
                         help="Shorthand for --architectures msvc.")
