@@ -1,8 +1,8 @@
 {
   "id": "m19-004",
   "milestone": "M19",
-  "criterion": "Cross-architecture breadth for import, VSA and features",
-  "recorded_at": "2026-09-11T09:49:51.512204+00:00",
+  "criterion": "Cross-architecture breadth for import and features",
+  "recorded_at": "2026-09-11T11:59:44.027480+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
