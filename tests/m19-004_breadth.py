@@ -76,7 +76,8 @@ THRESHOLDS = {"recall": 1.0, "spurious": 0, "features": 1.0}
 # Expected failures, each tied to a STATUS.md recorded deficit -- visible
 # here so the gate stays green only for everything else. 0x20980 is the
 # false entry that truncates `_Z7do_worki` (bltz-at-entry plus TLS shape
-# walks seed-dependently; m12 twins 17/18 on the same recovery).
+# walks seed-dependently; m12 twins 17/18 on the same recovery; live
+# suspect for its origin is the prologue pattern pass, not the walk).
 EXPECTED_SPURIOUS = {"mipsel_cpp_o2": {"0x20980"}}
 
 GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_", "thunk_")

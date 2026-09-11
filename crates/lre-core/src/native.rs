@@ -311,6 +311,10 @@ pub struct NativeImport {
     pub initializer_labels: Vec<(u64, String)>,
     /// Names the pinned patterns give the starts they proved.
     pub pattern_labels: Vec<(u64, String)>,
+    /// Every pinned-pattern match address, labelled or not: only a subset
+    /// of rules carry a `<funcstart label=>`, so the labels alone cannot
+    /// say which entries the pattern search found.
+    pub pattern_starts: Vec<u64>,
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
@@ -3109,8 +3113,12 @@ pub fn store_import(
         .filter(|xref| xref.kind.contains("CALL"))
         .map(|xref| xref.to)
         .collect();
-    let patterned: std::collections::HashSet<u64> =
-        imp.pattern_labels.iter().map(|(address, _)| *address).collect();
+    let patterned: std::collections::HashSet<u64> = imp
+        .pattern_labels
+        .iter()
+        .map(|(address, _)| *address)
+        .chain(imp.pattern_starts.iter().copied())
+        .collect();
     let thunked: std::collections::HashSet<u64> =
         imp.thunks.iter().map(|thunk| thunk.entry).collect();
     let pointed: std::collections::HashSet<u64> = imp

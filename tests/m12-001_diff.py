@@ -72,6 +72,9 @@ ANCHOR_EVIDENCE = {"body", "shape", "import", "name", "string", "profile", "glob
 # mipsel_cpp_o2 0x20940 (_Z7do_worki): a false entry at 0x20980 truncates
 # the stripped body (64B vs 108B), so no body anchor fires. Seed-order
 # dependent walk outcome, deterministic run to run.
+# Live suspect for the false entry's origin: the prologue pattern pass
+# (`addiu sp,sp,-0x18` is a MIPS prologue match), not the flow walk --
+# unlabelled pattern starts used to report as `flow`, hiding this.
 EXPECTED_TWINS_MISSES = {"mipsel_cpp_o2": {"0x20940"}}
 
 GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_")
