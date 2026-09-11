@@ -93,8 +93,13 @@ def main() -> int:
     parser.add_argument("--binary", type=Path, default=Path("/usr/lib64/libc.so.6"))
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--twin", type=Path, default=None,
+                        help="unstripped twin for symbol truth (defaults to --binary itself)")
     parser.add_argument("--ghidra", type=Path, default=Path(
         os.environ.get("VENTRIS_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC")))
+    parser.add_argument("--sample", type=int, default=SAMPLE)
+    parser.add_argument("--reuse", action="store_true",
+                        help="reuse existing projects and C artifacts instead of re-running")
     arguments = parser.parse_args()
     work = arguments.work
     binary = arguments.binary
@@ -113,19 +118,30 @@ def main() -> int:
             "package": package, "os": platform.platform()}
     print(json.dumps({"inputs": info}), flush=True)
 
+    # Mirror the corpus twin shape: strip a copy, import that, score it
+    # against the unstripped original's symbols. Scoring an import that
+    # still carries its symtab measures nothing (both tools ingest it).
+    target = work / "stripped.bin"
+    if not arguments.reuse or not target.is_file():
+        shutil.copy2(binary, target)
+        subprocess.run(["strip", "-s", str(target)], check=True, timeout=300)
+    info["stripped_sha256"] = sha256_file(target)
     native_project = work / "native"
     stock_project = work / "stock"
-    started = time.monotonic()
-    run(["import", str(binary), "--project", str(native_project),
-         "--name", "libc"], environment, 1200)
-    native_wall_s = round(time.monotonic() - started, 1)
+    native_wall_s = stock_wall_s = None
+    if not arguments.reuse or not (native_project / "project.sqlite").is_file():
+        started = time.monotonic()
+        run(["import", str(target), "--project", str(native_project),
+             "--name", "h2h"], environment, 1200)
+        native_wall_s = round(time.monotonic() - started, 1)
     store = sqlite3.connect(native_project / "project.sqlite")
     native = {int(row[0], 16) for row in store.execute("SELECT entry FROM functions")}
-    started = time.monotonic()
-    run(["import", str(binary), "--project", str(stock_project),
-         "--name", "libc", "--oracle", "--ghidra", str(arguments.ghidra)],
-        environment, 1200)
-    stock_wall_s = round(time.monotonic() - started, 1)
+    if not arguments.reuse or not (stock_project / "project.sqlite").is_file():
+        started = time.monotonic()
+        run(["import", str(target), "--project", str(stock_project),
+             "--name", "h2h", "--oracle", "--ghidra", str(arguments.ghidra)],
+            environment, 1200)
+        stock_wall_s = round(time.monotonic() - started, 1)
     stock_store = sqlite3.connect(stock_project / "project.sqlite")
     stock = {int(row[0], 16) for row in stock_store.execute("SELECT entry FROM functions")}
     # Both tools store image-based addresses; readelf prints link VAs.
@@ -133,7 +149,7 @@ def main() -> int:
     e_type = int.from_bytes(binary.read_bytes()[16:18], "little")
     base = min(int(row[0], 16) for row in store.execute("SELECT start FROM memory_regions"))
     bias = base if e_type == 3 else 0
-    truth_set = {address + bias for address in symtab_funcs(binary)}
+    truth_set = {address + bias for address in symtab_funcs(arguments.twin or binary)}
     axis_functions = {
         "truth_functions": len(truth_set),
         "load_bias": f"{bias:08x}",
@@ -152,26 +168,37 @@ def main() -> int:
         {kk: vv for kk, vv in v.items() if kk != "unexplained"})
         for k, v in axis_functions.items()}}), flush=True)
 
-    # Axes 2+3: same sampled functions decompiled both ways.
+    # Axes 2+3: same sampled functions decompiled both ways. C artifacts
+    # persist per address so metric iterations re-read files in seconds.
+    cdir = work / "c"
+    cdir.mkdir(exist_ok=True)
     both = sorted(native & stock & truth_set)
-    sample = sorted(random.Random(0xC10C).sample(both, min(SAMPLE, len(both))))
+    sample = sorted(random.Random(0xC10C).sample(both, min(arguments.sample, len(both))))
     proto_agree = proto_total = 0
     arity_agree = arity_total = 0
     details = []
     goto_native = goto_stock = 0
     decompiled = failed = 0
     failures = []
-    program = binary.name
+    stock_program = target.name
     for address in sample:
         arg = f"{address:x}"
+        native_c_path = cdir / f"{arg}.native.c"
+        stock_c_path = cdir / f"{arg}.stock.c"
         try:
-            native_c = run(["decompile", str(binary), arg, "--project",
-                            str(native_project), "--name", "libc"],
-                           environment, DECOMPILE_TIMEOUT)
-            stock_c = run(["decompile", program, arg, "--project",
-                           str(stock_project), "--oracle",
-                           "--ghidra", str(arguments.ghidra)],
-                          environment, DECOMPILE_TIMEOUT)
+            if arguments.reuse and native_c_path.is_file() and stock_c_path.is_file():
+                native_c = native_c_path.read_text()
+                stock_c = stock_c_path.read_text()
+            else:
+                native_c = run(["decompile", str(target), arg, "--project",
+                                str(native_project), "--name", "h2h"],
+                               environment, DECOMPILE_TIMEOUT)
+                stock_c = run(["decompile", stock_program, arg, "--project",
+                               str(stock_project), "--oracle",
+                               "--ghidra", str(arguments.ghidra)],
+                              environment, DECOMPILE_TIMEOUT)
+                native_c_path.write_text(native_c)
+                stock_c_path.write_text(stock_c)
         except (RuntimeError, subprocess.TimeoutExpired) as error:
             failed += 1
             failures.append(f"{address:#x}: {str(error)[:100]}")
