@@ -311,7 +311,20 @@ pub(super) fn collect_import_stubs(
             if !in_code(import, stub) {
                 continue;
             }
-            promote(import, stub, target, Some(name.clone()), "native-import:pe-import");
+            // No xref: the Linkage row below already says stub -> slot, and
+            // promote()'s slot -> stub DATA fact reads backwards (the loader
+            // writes the imported address there, not the stub's).
+            match import.functions.iter_mut().find(|f| f.entry == stub) {
+                Some(existing) if existing.name.starts_with("FUN_") => {
+                    existing.name = name.clone();
+                }
+                Some(_) => {}
+                None => import.functions.push(NativeFunction {
+                    entry: stub,
+                    name: name.clone(),
+                    size: 1,
+                }),
+            }
             if !import.thunks.iter().any(|thunk| thunk.entry == stub) {
                 import.thunks.push(crate::native::NativeThunk {
                     entry: stub,
