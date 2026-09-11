@@ -3274,10 +3274,13 @@ m3-003, all three wired into continuous integration)
   MinGW-w64 16.1.1 for `x86_64-w64-mingw32` and `i686-w64-mingw32`, which
   emits PE carrying DWARF, so ten locked PE entries (5 variants x 2
   architectures, with a DLL standing in for the ELF `plain_pie` slot) are
-  buildable. That would score PE the way `m3-001` scores ELF, across
-  optimisation levels and C++, instead of on two committed fixtures. It also
-  requires `expected_variants` to stop being one cross product for every
-  architecture. **Not done: waiting on your decision.**
+  buildable. **Approved 2026-09-11; landed partially:** `pe64` (x86_64) is
+  locked with 4 rows (no `cpp_o2`: no mingw cc1plus on this host) and
+  scores 1.0 native / >=0.989 stock under m3 with 0 unattributed; `pe32`
+  builds but sits below m3's floor (0.80-0.97, a jmp-only-reached CRT
+  chain with no unwind tables on SJLJ 32-bit -- same tail-call rule
+  family as m5-007) and stays out of the lock and default build until
+  that rule lands. `expected_variants` is now a per-arch matrix.
 
 ### m8-002 evidence
 - `c9a1201` commits the failing acceptance (`tests/m8-002_pe32_roots.py`):
@@ -5975,7 +5978,13 @@ point at, none reserved:
   Emerald, HeartGold, the Vita and 3DS titles, Agent Under Fire) were
   approved by the user in conversation and live outside the repository;
   tagging a release; and reversing a user-visible naming or typing choice to
-  close `name-convention` 11 or `type-stronger` 66.
+  close `name-convention` 11 or `type-stronger` 66 -- both now decided at
+  user discretion 2026-09-11: `type-stronger` stays ours (the class is a
+  symmetric cast difference and stock's cast, e.g. `(code *)`, is absent
+  from our output because the slot is already typed per m4-030 --
+  matching stock would delete information); `name-convention` goes
+  stock's way (`_plt` says stub where `FUN_` says nothing) but the
+  rename plus equivalence re-baseline is still to implement.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
   invisible to flow analysis in both Ventris and stock Ghidra. **The

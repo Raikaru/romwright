@@ -91,6 +91,30 @@ ARCHITECTURES = {
             "-L", str(SYSROOTS_DIR / "powerpc" / "usr" / "lib" / "gcc-cross" / "powerpc-linux-gnu" / "12"),
         ],
     },
+    "pe64": {
+        "target": "x86_64-w64-mingw32",
+        "endian": "little",
+        "format": "pe",
+        "sysroot": None,
+        "c_compiler": ["x86_64-w64-mingw32-gcc"],
+        "cxx_compiler": None,
+        "extra_flags": [],
+        "expected_language": "x86:LE:64:default",
+        "nm": "x86_64-w64-mingw32-nm",
+        "strip": "x86_64-w64-mingw32-strip",
+    },
+    "pe32": {
+        "target": "i686-w64-mingw32",
+        "endian": "little",
+        "format": "pe",
+        "sysroot": None,
+        "c_compiler": ["i686-w64-mingw32-gcc"],
+        "cxx_compiler": None,
+        "extra_flags": [],
+        "expected_language": "x86:LE:32:default",
+        "nm": "i686-w64-mingw32-nm",
+        "strip": "i686-w64-mingw32-strip",
+    },
 }
 
 VARIANTS = {
@@ -249,6 +273,19 @@ def parse_elf_sections(data: bytes):
 
 def get_load_segments(data: bytes):
     """Return PT_LOAD (vaddr, memsz, flags, file offset, filesz) records."""
+    if len(data) >= 2 and data[:2] == b"MZ":
+        info = parse_pe_info(data)
+        # Section vaddrs are image-base-relative RVAs; every consumer
+        # (loader, DWARF truth, oracle budgets) works in absolute VAs.
+        base = info["image_base"]
+        segments = []
+        for section in info["sections"]:
+            flags = ((0x4 if section["chars"] & 0x40000000 else 0)
+                     | (0x2 if section["chars"] & 0x80000000 else 0)
+                     | (0x1 if section["exec"] else 0))
+            segments.append((base + section["vaddr"], section["vsize"], flags,
+                             section["raw_off"], section["raw_size"]))
+        return segments
     if len(data) < 6 or data[:4] != b"\x7fELF" or data[4] not in (1, 2) or data[5] not in (1, 2):
         raise ValueError("Unsupported ELF header")
     is_64 = data[4] == 2
@@ -358,6 +395,7 @@ def parse_pe_info(data: bytes):
     magic = struct.unpack("<H", data[opt:opt+2])[0]
     assert (machine, magic) in ((0x8664, 0x20b), (0x14c, 0x10b)), "Unsupported PE machine/magic"
     is_64 = (magic == 0x20b)
+    image_base = struct.unpack("<Q" if is_64 else "<I", data[opt+(24 if is_64 else 28):opt+(32 if is_64 else 32)])[0]
     
     if is_64:
         num_rva = struct.unpack("<I", data[opt+108:opt+112])[0]
@@ -394,6 +432,7 @@ def parse_pe_info(data: bytes):
     return {
         "machine": machine,
         "is_64": is_64,
+        "image_base": image_base,
         "dbg_rva": dbg_rva,
         "dbg_size": dbg_size,
         "sections": sections,
@@ -470,6 +509,101 @@ def validate_pdb(pdb_path: Path, guid: bytes, age: int, machine: int) -> int:
     return functions
 
 
+def nm_pe_text_symbols(twin_path: Path, nm_tool: str) -> dict[str, list[int]]:
+    """Unique DWARF-era text symbols from a MinGW twin (link VAs, no base adjustment)."""
+    result = subprocess.run([nm_tool, str(twin_path)], capture_output=True,
+                            text=True, timeout=120)
+    if result.returncode:
+        raise AssertionError(f"{nm_tool} failed on {twin_path.name}: {result.stderr[-500:]}")
+    symbols: dict[str, list[int]] = {}
+    for line in result.stdout.splitlines():
+        parts = line.strip().split()
+        if len(parts) == 3 and len(parts[0]) >= 4 and parts[1] in "tT":
+            try:
+                symbols.setdefault(parts[2], []).append(int(parts[0], 16))
+            except ValueError:
+                continue
+    return symbols
+
+
+def validate_pe_dwarf_twin(bin_path: Path, twin_path: Path, nm_tool: str) -> int:
+    """MinGW twin check: unstripped twin carries text symbols; strip keeps code identical."""
+    with open(bin_path, "rb") as f:
+        bin_info = parse_pe_info(f.read())
+    with open(twin_path, "rb") as f:
+        twin_data = f.read()
+    twin_info = parse_pe_info(twin_data)
+    assert shutil.which(nm_tool), f"MinGW nm not found: {nm_tool}"
+    truth = nm_pe_text_symbols(twin_path, nm_tool)
+    assert truth, f"Unstripped PE {twin_path.name} carries no text symbols"
+
+    def exec_code(info):
+        # Stripping shifts file offsets, so identity is link address and
+        # size here; byte equality follows section by section below.
+        return sorted((s["vaddr"], s["vsize"])
+                      for s in info["sections"] if s["exec"])
+    assert exec_code(bin_info) == exec_code(twin_info), (
+        f"Executable sections differ between {bin_path.name} and its twin")
+    bin_bytes = bin_path.read_bytes()
+    for section in bin_info["sections"]:
+        if not section["exec"]:
+            continue
+        twin_section = next(s for s in twin_info["sections"] if s["name"] == section["name"])
+        assert bin_bytes[section["raw_off"]:section["raw_off"] + section["raw_size"]] == \
+            twin_data[twin_section["raw_off"]:twin_section["raw_off"] + twin_section["raw_size"]], (
+            f"Code bytes differ in {section['name']} between {bin_path.name} and its twin")
+    return len(truth)
+
+
+def fix_pe_timestamp(twin_path: Path):
+    """Pin the COFF TimeDateStamp and CheckSum so one recipe builds one stream.
+
+    ELF entries get determinism from -ffile-prefix-map plus the build-id
+    regime; a PE link stamps the current time into the COFF header and
+    folds it into the optional-header CheckSum, so two builds of one
+    recipe would never share a sha256 -- and the lock, the oracle cache,
+    and every provenance digest key off binary bytes. The strip tool
+    re-stamps both, so the stripped primary is pinned again after strip.
+    CheckSum lives at optional-header +64 in both PE32 and PE32+.
+    """
+    with open(twin_path, "r+b") as handle:
+        data = bytearray(handle.read())
+        pe_off = struct.unpack("<I", data[0x3c:0x40])[0]
+        data[pe_off + 8:pe_off + 12] = b"\0\0\0\0"
+        opt_hdr = pe_off + 24
+        data[opt_hdr + 64:opt_hdr + 68] = b"\0\0\0\0"
+        magic = struct.unpack("<H", data[opt_hdr:opt_hdr + 2])[0]
+        is_64 = magic == 0x20b
+        exp_rva = struct.unpack("<I", data[opt_hdr + (112 if is_64 else 96):
+                                           opt_hdr + (116 if is_64 else 100)])[0]
+        if exp_rva:
+            for section in parse_pe_info(bytes(data))["sections"]:
+                delta = exp_rva - section["vaddr"]
+                if 0 <= delta and delta + 40 <= section["raw_size"]:
+                    raw = section["raw_off"] + delta
+                    data[raw + 4:raw + 8] = b"\0\0\0\0"
+                    break
+        handle.seek(0)
+        handle.write(data)
+
+
+def assert_pe_stripped(bin_path: Path):
+    """A MinGW 'stripped' binary must hold no COFF symtab and no DWARF.
+
+    strip_pe_debug only zeroes the debug-directory entry, which is enough
+    for MSVC (symbols live in the PDB) but leaves MinGW's in-image COFF
+    symbol table and .debug_* sections intact -- and every recall number
+    scored on such a binary would be silently inflated.
+    """
+    data = bin_path.read_bytes()
+    pe_off = struct.unpack("<I", data[0x3c:0x40])[0]
+    num_syms = struct.unpack("<I", data[pe_off + 16:pe_off + 20])[0]
+    assert num_syms == 0, f"{bin_path.name} still has a COFF symbol table ({num_syms} symbols)"
+    names = [s["name"] for s in parse_pe_info(data)["sections"]]
+    leftovers = [n for n in names if n.startswith(".debug")]
+    assert not leftovers, f"{bin_path.name} still carries debug sections: {leftovers}"
+
+
 def validate_pe_twin(bin_path: Path, twin_path: Path, pdb_path: Path):
     with open(bin_path, "rb") as f:
         bin_data = f.read()
@@ -542,7 +676,7 @@ def main():
     parser.add_argument("--update-lock", action="store_true",
                         help="Refresh source digests only, preserving matrix and recipes; do not build.")
     parser.add_argument("--architectures", type=str,
-                        default="x86_64,i386,aarch64,powerpc,mipsel,msvc",
+                        default="x86_64,i386,aarch64,powerpc,mipsel,pe64,msvc",
                         help="Comma-separated list of architectures to build (or 'msvc').")
     parser.add_argument("--msvc-only", action="store_true",
                         help="Shorthand for --architectures msvc.")
@@ -601,6 +735,8 @@ def main():
             sys.stderr.write(f"Unknown architecture: {arch_name}\n")
             sys.exit(1)
         arch_cfg = ARCHITECTURES[arch_name]
+        if arch_cfg["format"] != "elf":
+            continue
         for var_name, var_cfg in VARIANTS.items():
             base_name = f"{arch_name}_{var_name}"
             bin_path = out_dir / f"{base_name}{var_cfg['ext']}"
@@ -649,6 +785,64 @@ def main():
                 "unstripped_twin_sha256": sha256_file(twin_path),
                 "symbol_count": sym_count,
                 "command": full_display,
+            })
+            print(f"Generated {bin_path.name} (stripped) and {twin_path.name} (unstripped, {sym_count} symbols)")
+
+    # MinGW PE pair. Same variant names as ELF minus cpp_o2 (this host has
+    # no mingw cc1plus, so C++ is unbuildable); plain_pie builds a DLL with
+    # -shared standing in for the ELF PIE slot. Stripping uses the target
+    # strip tool and asserts strippedness: strip_pe_debug's
+    # debug-directory zeroing would leave full symbols behind.
+    PE_VARIANTS = ("plain_o0", "plain_o2", "plain_pie", "many_o2")
+    for arch_name in selected_archs:
+        if arch_name not in ARCHITECTURES or ARCHITECTURES[arch_name]["format"] != "pe":
+            continue
+        arch_cfg = ARCHITECTURES[arch_name]
+        for tool in list(arch_cfg["c_compiler"]) + [arch_cfg["nm"], arch_cfg["strip"]]:
+            assert shutil.which(tool), f"MinGW tool not found: {tool}"
+        for var_name in PE_VARIANTS:
+            var_cfg = VARIANTS[var_name]
+            is_dll = var_name == "plain_pie"
+            ext = ".dll" if is_dll else ".exe"
+            base_name = f"{arch_name}_{var_name}"
+            bin_path = out_dir / f"{base_name}{ext}"
+            twin_path = out_dir / f"{base_name}.unstripped{ext}"
+            src_file = CORPUS_SRC / var_cfg["source"]
+            flags = [f for f in var_cfg["flags"] if f not in ("-fPIE", "-pie")]
+            if is_dll:
+                # ld randomises DLL image bases by default
+                # (--enable-auto-image-base); a locked corpus needs one.
+                flags += ["-fPIC", "-shared", "-Wl,--disable-auto-image-base"]
+            base_cmd = list(arch_cfg["c_compiler"])
+            base_cmd.append(f"-ffile-prefix-map={ROOT}=ventris")
+            base_cmd.extend(arch_cfg["extra_flags"])
+            cmd_twin = (base_cmd + flags
+                        + ["-Wno-error=implicit-function-declaration",
+                           str(src_file), "-o", str(twin_path)])
+            build_binary(cmd_twin, twin_path)
+            fix_pe_timestamp(twin_path)
+            shutil.copy2(twin_path, bin_path)
+            subprocess.run([arch_cfg["strip"], "-s", str(bin_path)], check=True)
+            # The strip tool re-stamps the COFF TimeDateStamp, so pin again.
+            fix_pe_timestamp(bin_path)
+            assert_pe_stripped(bin_path)
+            sym_count = validate_pe_dwarf_twin(bin_path, twin_path, arch_cfg["nm"])
+            cmd_display_str = (" ".join(cmd_twin)
+                .replace(f"-ffile-prefix-map={ROOT}=", "-ffile-prefix-map=$ROOT=")
+                .replace(str(ROOT) + "/", "")
+                .replace(str(out_dir) + "/", "$OUT/"))
+            manifest_data["entries"].append({
+                "architecture": arch_name,
+                "endian": arch_cfg["endian"],
+                "format": "pe",
+                "variant": var_name,
+                "status": "ok",
+                "binary": bin_path.name,
+                "binary_sha256": sha256_file(bin_path),
+                "unstripped_twin": twin_path.name,
+                "unstripped_twin_sha256": sha256_file(twin_path),
+                "symbol_count": sym_count,
+                "command": f"{cmd_display_str} && {arch_cfg['strip']} -s $OUT/{bin_path.name}",
             })
             print(f"Generated {bin_path.name} (stripped) and {twin_path.name} (unstripped, {sym_count} symbols)")
 

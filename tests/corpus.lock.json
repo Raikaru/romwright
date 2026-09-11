@@ -20,15 +20,59 @@
     "aarch64",
     "powerpc",
     "mipsel",
+    "pe64",
     "msvc"
   ],
-  "expected_variants": [
-    "plain_o0",
-    "plain_o2",
-    "plain_pie",
-    "cpp_o2",
-    "many_o2"
-  ],
+  "expected_variants": {
+    "x86_64": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ],
+    "i386": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ],
+    "aarch64": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ],
+    "powerpc": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ],
+    "mipsel": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ],
+    "pe64": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "many_o2"
+    ],
+    "msvc": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
+      "cpp_o2",
+      "many_o2"
+    ]
+  },
   "oracle_matrix": {
     "architectures": [
       "x86_64",
@@ -314,6 +358,50 @@
       "unstripped_twin": "mipsel_many_o2.unstripped",
       "min_symbols": 400,
       "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/mipsel_many_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_many_o2.bin"
+    },
+    {
+      "architecture": "pe64",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_o0",
+      "expected_language": "x86:LE:64:default",
+      "binary": "pe64_plain_o0.exe",
+      "unstripped_twin": "pe64_plain_o0.unstripped.exe",
+      "min_symbols": 100,
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o0.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o0.exe"
+    },
+    {
+      "architecture": "pe64",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_o2",
+      "expected_language": "x86:LE:64:default",
+      "binary": "pe64_plain_o2.exe",
+      "unstripped_twin": "pe64_plain_o2.unstripped.exe",
+      "min_symbols": 100,
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o2.exe"
+    },
+    {
+      "architecture": "pe64",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_pie",
+      "expected_language": "x86:LE:64:default",
+      "binary": "pe64_plain_pie.dll",
+      "unstripped_twin": "pe64_plain_pie.unstripped.dll",
+      "min_symbols": 100,
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_pie.unstripped.dll && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_pie.dll"
+    },
+    {
+      "architecture": "pe64",
+      "endian": "little",
+      "format": "pe",
+      "variant": "many_o2",
+      "expected_language": "x86:LE:64:default",
+      "binary": "pe64_many_o2.exe",
+      "unstripped_twin": "pe64_many_o2.unstripped.exe",
+      "min_symbols": 400,
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe64_many_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_many_o2.exe"
     },
     {
       "architecture": "msvc",
