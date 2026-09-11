@@ -5598,19 +5598,42 @@ Measured by the same gate (`tests/m13-001_vsa_switch.py`):
 | Path | Dispatches | Unsound targets | Soundness |
 |---|---|---|---|
 | pattern-shaped pass alone | 90 | 1 | 0.9989 |
-| pass + abstract interpreter | **103** | 1 | **0.9992** |
+| pass + abstract interpreter | **131** | 1 | **0.9994** |
 | both plus the decompiler (default) | 142 | 6 | 0.9967 |
 
-Ten more dispatches than the interpreter managed before the origin
-work, one of them the vfprintf two-level dispatch whose bound now reaches
-`r15` through the `lea`/`subpiece`/`zext` chain. Attribution, measured on
-the same gate: 59b3bea5's affine origins took the interpreter from 93 to
-98, d4d620dd's guarded flag added none (it only stopped the unguarded
-leak), and e8ec62be's origin propagation plus the stale-origin and
-stale-comparison clears added five. The parity gate is still not met --
-the proven tier stands at 103 against the decompiler's 130 -- and the
-remaining gap is the PIC tables of 32-bit offsets reached through boolean
-guard combinations that the domain still cannot name.
+The interpreter now answers one more dispatch than the decompiler (131 to
+130) in 4.5 s, inside the 5 s budget, so the parity gate is met. The
+remaining gap to the combined 142 is the PIC tables of 32-bit offsets
+reached through boolean guard combinations that the domain still cannot
+name. Five defects found and fixed in this round, each measured on the
+same gate:
+
+- A leader with no instruction at its own address (dead bytes after a
+  branch) was not a block start: `index_of` mapped an address to a block
+  only by exact leader hit, so the next real instruction was absorbed into
+  the branch's block and the block ended up holding two branches. It now
+  maps to the last leader at or before the address. (117 -> 118.)
+- An analysis answers every indirect branch in the function, but only the
+  asked branch's table was recorded; a dispatch asked in an earlier round
+  -- when the CFG was still missing the case blocks an unresolved jump hid
+  -- is not asked again, so its table was dropped. Every table the analysis
+  produces is now kept for the recording loop. (Measured earlier in the
+  round; the Set-arm fix below is what took 118 to 120.)
+- The `Set` arm of `materialise` refused every case outside the branching
+  function's extent, where the `Strided` arm already allowed a case in
+  space no other function has claimed. The same `Image::owner` rule now
+  applies to both. (118 -> 120: the two gained were the `__memcpy_ssse3`
+  shared-tail cases at 0x265f94 and 0x265fcd.)
+- A bound on a compared slot did not reach a slot that was a truncation
+  of the same origin: `rax = zext(eax)` is a 4-byte piece of `r14 - 0x20`,
+  and `eax <= 0x5a` bounds `rax` to `0x5a` because `0x5a` fits the piece.
+  The origin walk skipped any slot whose link crossed a narrowing; it now
+  applies the bound when it fits the truncated width. (120 -> 131.)
+- A function whose entry block is a loop header was never analysed: its
+  back-edge gave it a predecessor, so in-degree seeding left it unvisited.
+  Seeding is now by reachability -- any block not yet reached is seeded
+  and its reachable set marked. (No count change on libc; the fix is for
+  the class, not this image.)
 
 ### m14-002 evidence (one function, on demand, on a warm image)
 
