@@ -5986,19 +5986,19 @@ point at, none reserved:
 
 - Recorded deficit (mipsel follow-ups, 2026-09-11): the PIE twins gap is
   closed (ET_DYN slide on pointer words, GOT slots as candidates, reloc
-  shapes recorded), but two rows remain. `mipsel_cpp_o2` misses
-  `_Z7do_worki`, referenced only from `.eh_frame` with a present
-  `.eh_frame_hdr` -- unwind-to-function seeding for that shape is
-  unimplemented. `mipsel_many_o2` recovers 7 of 408: `main` arrives only
-  as a `__libc_start_main` argument (a const-prop DATA xref, never a
-  call target), and nothing seeds argument-held function addresses on
-  any architecture (x86_64_many_o2 misses `main` the same way). Both are
-  seeding gaps, not walk gaps: every explicitly walked body decodes.
-  `mipsel_cpp_o2` is 17/18 for a different reason: `_Z7do_worki` walks
-  to 64 bytes stripped but 108 unstripped (a `bltz` at entry plus TLS
-  `rdhwr` shape), so its body digest misses its twin. Same bytes,
+  shapes recorded), but two rows remain. `mipsel_cpp_o2` is 17/18:
+  `_Z7do_worki`'s entry *is* recovered, unwind-seeded from the
+  `.eh_frame_hdr` index (proven: index xref `0x10738 -> 0x20940`,
+  stored as `FUN_00020940`) -- the twins miss is walk-divergence only,
+  64 bytes stripped versus 108 unstripped (a `bltz` at entry plus TLS
+  `rdhwr` shape), so no body anchor fires. Same bytes,
   seed-dependent walk outcome; imports are deterministic run to run
-  (m12 twins exemption, staleness-guarded).
+  (m12 twins exemption, staleness-guarded). `mipsel_many_o2` recovers
+  7 of 408: `main` arrives only as a `__libc_start_main` argument (a
+  const-prop DATA xref, never a call target), and nothing seeds
+  argument-held function addresses on any architecture
+  (x86_64_many_o2 misses `main` the same way) -- that one is a
+  seeding gap, not a walk gap.
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list
