@@ -236,9 +236,12 @@ def main() -> int:
               "inputs": info, "axis_functions": axis_functions,
               "axis_prototypes": axes["prototypes"], "axis_gotos": axes["gotos"],
               "note": "no DWARF on this host: function axis is symtab truth, "
-                      "not DWARF recall; prototype headline is arity agreement "
-                      "(structural on both sides), return-type pairs recorded "
-                      "per function, never parameter names"}
+                      "not DWARF recall, and strip cannot remove .dynsym "
+                      "(2904 FUNCs survive) so recall is assisted on both "
+                      "sides -- the discriminating axes are unexplained "
+                      "entries and goto counts; prototype headline is arity "
+                      "agreement (structural on both sides), return-type pairs "
+                      "recorded per function, never parameter names"}
     arguments.report.parent.mkdir(parents=True, exist_ok=True)
     arguments.report.write_text(json.dumps(report, indent=2) + "\n")
     print(f"head-to-head: report at {arguments.report}")

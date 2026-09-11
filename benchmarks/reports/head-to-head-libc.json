@@ -403,5 +403,5 @@
     "native": 173,
     "stock": 14
   },
-  "note": "no DWARF on this host: function axis is symtab truth, not DWARF recall; prototype headline is arity agreement (structural on both sides), return-type pairs recorded per function, never parameter names"
+  "note": "no DWARF on this host: function axis is symtab truth, not DWARF recall, and strip cannot remove .dynsym (2904 FUNCs survive) so recall is assisted on both sides -- the discriminating axes are unexplained entries (200 vs 97) and gotos (173 vs 14), both against native; prototype headline is arity agreement 0.8276 (structural on both sides), return-type pairs recorded per function, never parameter names"
 }
