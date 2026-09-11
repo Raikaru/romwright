@@ -1,0 +1,65 @@
+{
+  "id": "m19-001",
+  "milestone": "M19",
+  "criterion": "PE import measured against external truth",
+  "recorded_at": "2026-09-11T11:53:09.488662+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "inputs": {
+    "many_src": "tests/corpus-src/many.c",
+    "many_cc_flags": {
+      "O0": "-O0",
+      "O2": "-O2 -fno-inline"
+    },
+    "ffxv": {
+      "exe_sha256": "4f09d014565860dfced7ecb3fe30bcea82166019731a4e9825a62673d031e9c8",
+      "map_sha256": "821b32442d1100795bd6863fb8fa9cb50ab42d7b534cc7f1cf2b410dc4f0c604"
+    }
+  },
+  "thresholds": {
+    "many": {
+      "recall": 0.97,
+      "spurious": 0
+    },
+    "ffxv": {
+      "recall": 0.29,
+      "recall_nonfunclet": 0.83,
+      "spurious": 4
+    }
+  },
+  "rows": [
+    {
+      "truth": 459,
+      "recovered": 450,
+      "recall": 0.9804,
+      "spurious": 0,
+      "id": "many-O0",
+      "import_wall_s": 1.0
+    },
+    {
+      "truth": 459,
+      "recovered": 450,
+      "recall": 0.9804,
+      "spurious": 0,
+      "id": "many-O2",
+      "import_wall_s": 0.9
+    },
+    {
+      "truth": 550728,
+      "recovered": 162581,
+      "recall": 0.2952,
+      "spurious": 4,
+      "id": "ffxv",
+      "import_wall_s": null,
+      "oracle_data": 727426,
+      "funclets": 373620,
+      "recall_nonfunclet": 0.8424,
+      "funclet_recall": 0.0358,
+      "data_hits": 0
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}
