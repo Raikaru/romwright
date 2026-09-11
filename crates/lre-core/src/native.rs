@@ -3598,6 +3598,13 @@ impl ExtentIndex {
         }
         ExtentIndex { starts, max_len }
     }
+    pub fn insert(&mut self, start: u64, size: u64) {
+        self.starts
+            .entry(start)
+            .and_modify(|kept: &mut u64| *kept = (*kept).max(size))
+            .or_insert(size);
+        self.max_len = self.max_len.max(size);
+    }
 
     pub fn contains(&self, address: u64) -> bool {
         let from = address.saturating_sub(self.max_len);

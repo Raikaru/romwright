@@ -1,7 +1,8 @@
 //! Ghidra FunctionStartAnalyzer/PseudoDisassembler prerequisites (Apache-2.0).
 //! A byte-pattern match is evidence to check, never an instruction or function.
 use super::{FlowKind, FlowProvider, NativeImport};
-use std::collections::HashSet;
+use crate::native::ExtentIndex;
+use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 pub(super) struct CodeRequirement {
     pub minimum: usize,
@@ -56,13 +57,92 @@ fn nearby_instructions(
 
 /// Follows the source validator's bounded control-flow walk. Delay slots belong
 /// to the body but do not contribute to its contiguous instruction count.
+/// Per-round indexes over the whole image for pattern validation: every
+/// check below used to scan functions, relocations or xrefs per match.
+/// Built once per pattern round; the round's accepts only add entries,
+/// which the walk re-derives next round.
+pub(super) struct PatternIndexes {
+    pub entries: HashSet<u64>,
+    pub funcs: ExtentIndex,
+    pub data_targets: HashSet<u64>,
+    pub nondata_targets: HashSet<u64>,
+    pub all_targets: BTreeSet<u64>,
+    pub data: BTreeMap<u64, u64>,
+    pub max_data_width: u64,
+}
+
+impl PatternIndexes {
+    pub fn build(import: &NativeImport, entries: &HashSet<u64>) -> Self {
+        let mut data_targets = HashSet::new();
+        let mut nondata_targets = HashSet::new();
+        let mut all_targets = BTreeSet::new();
+        for xref in &import.xrefs {
+            // `to` names code the reference reaches (owned-by-reference,
+            // body-range checks); `from` names the referencing site, which
+            // is what a relocation address matches for the data ranges.
+            all_targets.insert(xref.to);
+            if xref.kind == "DATA" {
+                data_targets.insert(xref.from);
+            } else {
+                nondata_targets.insert(xref.to);
+            }
+        }
+        let mut data = BTreeMap::new();
+        let mut max_data_width = 0u64;
+        for relocation in &import.relocations {
+            if !data_targets.contains(&relocation.address) {
+                continue;
+            }
+            if let Some(end) = relocation.address.checked_add(relocation.width as u64) {
+                // Same start twice keeps the widest end.
+                data.entry(relocation.address)
+                    .and_modify(|kept: &mut u64| *kept = (*kept).max(end))
+                    .or_insert(end);
+                max_data_width = max_data_width.max(relocation.width as u64);
+            }
+        }
+        let funcs = ExtentIndex::build(
+            &import
+                .functions
+                .iter()
+                .map(|f| (f.entry, f.size))
+                .collect::<Vec<_>>(),
+        );
+        PatternIndexes {
+            entries: entries.clone(),
+            funcs,
+            data_targets,
+            nondata_targets,
+            all_targets,
+            data,
+            max_data_width,
+        }
+    }
+
+    /// A relocation data range covering the address (inclusive start).
+    pub fn data_contains(&self, address: u64) -> bool {
+        self.data
+            .range(..=address)
+            .next_back()
+            .is_some_and(|(&start, &end)| address - start < end - start)
+    }
+
+    /// A relocation data range overlapping [start, end).
+    pub fn data_overlaps(&self, start: u64, end: u64) -> bool {
+        // Any overlapping range starts within max_data_width before start.
+        let from = start.saturating_sub(self.max_data_width);
+        self.data
+            .range(from..end)
+            .any(|(&range_start, &range_end)| range_start < end && start < range_end)
+    }
+}
+
 pub(super) fn valid_code<P: FlowProvider>(
     import: &NativeImport,
     entry: u64,
     requirement: &CodeRequirement,
-    functions: &[u64],
+    indexes: &PatternIndexes,
     instructions: &[(u64, u64)],
-    data: &[(u64, u64)],
     provider: &mut P,
 ) -> Option<Vec<(u64, u64)>> {
     let mut nonzero = false;
@@ -200,7 +280,7 @@ pub(super) fn valid_code<P: FlowProvider>(
                 if flow.fallthrough == Some(to) && flow.delay_slots.is_empty() {
                     return None;
                 }
-                if functions.contains(&to) {
+                if indexes.entries.contains(&to) {
                     valid_call = true;
                     target = None;
                 } else {
@@ -213,7 +293,7 @@ pub(super) fn valid_code<P: FlowProvider>(
             }
         }
         if call || flow.kind == FlowKind::BranchInd {
-            valid_call |= flow.targets.iter().any(|to| functions.contains(to));
+            valid_call |= flow.targets.iter().any(|to| indexes.entries.contains(to));
         }
         if target.is_none() {
             while let Some(next) = pending.pop() {
@@ -229,15 +309,19 @@ pub(super) fn valid_code<P: FlowProvider>(
         && targets
             .iter()
             .all(|&to| !contains(&body, to) || starts.contains(&to))
-        && import
-            .xrefs
-            .iter()
-            .all(|xref| !contains(&body, xref.to) || starts.contains(&xref.to))
         && body.iter().all(|&(start, end)| {
-            !data
-                .iter()
-                .any(|&(data_start, data_end)| start < data_end && data_start < end)
-        });
+            // An xref target strictly inside the segment must be one of
+            // the walk's own starts: body starts are all in `starts`, so
+            // excluding segment starts here changes no verdict, and
+            // anything else owns those bytes.
+            indexes
+                .all_targets
+                .range((start + 1)..end)
+                .all(|to| starts.contains(to))
+        })
+        && body
+            .iter()
+            .all(|&(start, end)| !indexes.data_overlaps(start, end));
     valid.then_some(body)
 }
 
@@ -250,7 +334,7 @@ pub(super) struct Candidate {
 pub(super) fn collect<P: FlowProvider>(
     import: &NativeImport,
     patterns: &crate::native_runtime::FunctionPatterns,
-    functions: &[u64],
+    indexes: &PatternIndexes,
     instructions: &[(u64, u64)],
     conditional_targets: &HashSet<u64>,
     fell_into: &HashSet<u64>,
@@ -261,40 +345,20 @@ pub(super) fn collect<P: FlowProvider>(
     let mut refuse = |reason: &str, refused: &mut std::collections::BTreeMap<String, u64>| {
         *refused.entry(reason.to_string()).or_default() += 1;
     };
-    let data_references: HashSet<_> = import
-        .xrefs
-        .iter()
-        .filter(|xref| xref.kind == "DATA")
-        .map(|xref| xref.from)
-        .collect();
-    let data: Vec<_> = import
-        .relocations
-        .iter()
-        .filter(|relocation| data_references.contains(&relocation.address))
-        .filter_map(|relocation| {
-            relocation
-                .address
-                .checked_add(relocation.width as u64)
-                .map(|end| (relocation.address, end))
-        })
-        .collect();
     let mut candidates = Vec::new();
     // Bodies the round's earlier accepted matches decoded, in address order.
     // Ghidra disassembles every match of a pass in that order and a later
     // start landing inside an instruction is a conflict it skips; its
     // delayed creator then finds a function already containing the address
     // (PossibleDelayedFunctionCreator, 1001-1012).
-    let mut round_bodies: Vec<(u64, u64)> = Vec::new();
+    let mut round_bodies = ExtentIndex::build(&[]);
     for hit in &patterns.matches {
         let address = hit.address;
-        if contains(&data, address) {
+        if indexes.data_contains(address) {
             refuse("data-slot", refused);
             continue;
         }
-        if round_bodies
-            .iter()
-            .any(|&(start, end)| start < address && address < end)
-        {
+        if round_bodies.contains(address) {
             refuse("offcut", refused);
             continue;
         }
@@ -302,19 +366,14 @@ pub(super) fn collect<P: FlowProvider>(
             refuse("alignment", refused);
             continue;
         }
-        if functions.contains(&address) {
+        if indexes.entries.contains(&address) {
             refuse("known-entry", refused);
             continue;
         }
-        if import.functions.iter().any(|function| {
-            function.entry < address && address - function.entry < function.size
-        }) {
+        if indexes.funcs.contains(address) {
             refuse("in-known-body", refused);
             continue;
         }
-        // A match on an address that already holds an instruction is still a
-        // function start unless the code above owns it: Ghidra creates the
-        // function whenever the instruction is in no function body and
         // nothing above flows into it (FunctionStartAnalyzer.applyActionToSet,
         // 289-324). Offcut inside an instruction is never a start.
         if nearby_instructions(instructions, address, address.saturating_add(1))
@@ -333,10 +392,7 @@ pub(super) fn collect<P: FlowProvider>(
             // Any reference other than a plain data reference means some other
             // flow already created this location (checkAlreadyInFunctionAbove,
             // 514-527).
-            if import
-                .xrefs
-                .iter()
-                .any(|xref| xref.to == address && xref.kind != "DATA")
+            if indexes.nondata_targets.contains(&address)
             {
                 refuse("owned-by-reference", refused);
                 continue;
@@ -442,14 +498,13 @@ pub(super) fn collect<P: FlowProvider>(
                         .any(|&(start, length)| start < address && address - start <= length);
                 let data_before = address
                     .checked_sub(1)
-                    .is_some_and(|previous| contains(&data, previous));
-                let mut references = import
-                    .xrefs
-                    .iter()
-                    .filter(|xref| xref.to == address)
-                    .peekable();
+                    .is_some_and(|previous| indexes.data_contains(previous));
+                let has_references = indexes.data_targets.contains(&address)
+                    || indexes.nondata_targets.contains(&address);
                 let pure_data =
-                    references.peek().is_some() && references.all(|xref| xref.kind == "DATA");
+                    has_references
+                        && indexes.data_targets.contains(&address)
+                        && !indexes.nondata_targets.contains(&address);
                 let satisfied = if after.starts_with("func") || after.starts_with("inst") {
                     // Input instructions have already been reached from functions.
                     instruction_before
@@ -498,15 +553,16 @@ pub(super) fn collect<P: FlowProvider>(
                     import,
                     address,
                     &requirement,
-                    functions,
+                    indexes,
                     instructions,
-                    &data,
                     provider,
                 ) else {
                     refuse("valid-code", refused);
                     continue;
                 };
-                round_bodies.extend(body);
+                for (start, end) in body {
+                    round_bodies.insert(start, end - start);
+                }
             } else {
                 let flows = provider.flow(&[address]);
                 if flows.len() != 1
@@ -517,7 +573,7 @@ pub(super) fn collect<P: FlowProvider>(
                     refuse("undecodable", refused);
                     continue;
                 }
-                round_bodies.push((address, address + flows[0].length as u64));
+                round_bodies.insert(address, flows[0].length as u64);
             }
             let candidate = Candidate {
                 address,

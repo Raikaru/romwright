@@ -938,10 +938,12 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 {
                     let mut refused = std::collections::BTreeMap::new();
                     let mut applied = Vec::new();
+                    let pattern_indexes =
+                        patterns::PatternIndexes::build(imp, &entries_set);
                     let collected = patterns::collect(
                         imp,
                         patterns,
-                        &entries,
+                        &pattern_indexes,
                         &extents[instruction_start..],
                         &conditional_targets,
                         &fell_into,
@@ -1245,9 +1247,21 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             }
         }
         if pattern_round {
-            let called = |address| calls.iter().any(|&(_, target)| target == address);
+            // Per-round precomputes: the inner fixpoint below used to scan
+            // every call edge, the entry prefix and all pattern edges per
+            // candidate per iteration.
+            let call_targets: std::collections::HashSet<u64> =
+                calls.iter().map(|&(_, target)| target).collect();
+            let existing: std::collections::HashSet<u64> =
+                entries[..existing_entry_count].iter().copied().collect();
+            let mut edges_by_target: std::collections::HashMap<u64, Vec<u64>> =
+                std::collections::HashMap::new();
+            for &(target, source) in &pattern_edges {
+                edges_by_target.entry(target).or_default().push(source);
+            }
+            let called = |address| call_targets.contains(&address);
             let established = |address| {
-                entries[..existing_entry_count].contains(&address)
+                existing.contains(&address)
                     || called(address)
                     || pattern_candidates
                         .binary_search_by_key(&address, |candidate| candidate.address)
@@ -1263,10 +1277,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     {
                         continue;
                     }
-                    let owner = pattern_edges
-                        .iter()
-                        .filter(|&&(target, _)| target == candidate.address)
-                        .map(|&(_, source)| get_canonical_origin(source, &addr_origin))
+                    let owner = edges_by_target
+                        .get(&candidate.address)
+                        .into_iter()
+                        .flatten()
+                        .map(|&source| get_canonical_origin(source, &addr_origin))
                         .filter(|&origin| {
                             origin != candidate.address && !rejected.contains(&origin)
                         })
