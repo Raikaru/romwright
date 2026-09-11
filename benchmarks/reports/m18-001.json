@@ -1,0 +1,275 @@
+{
+  "id": "m18-001",
+  "milestone": "M18",
+  "criterion": "BSim-style semantic matching over p-code data-flow",
+  "recorded_at": "2026-09-11T05:06:08.778146+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "many.precision": 1.0,
+    "many.recall": 0.02,
+    "pie.precision": 1.0,
+    "pie.recall": 0.8
+  },
+  "measured": {
+    "semantic": {
+      "judged": 3,
+      "correct": 3,
+      "precision": 1.0
+    }
+  },
+  "rows": [
+    {
+      "id": "many",
+      "kind": "many",
+      "setting": "with",
+      "truth": 409,
+      "matched": 9,
+      "judged": 9,
+      "correct": 9,
+      "correct_names": [
+        "__do_global_dtors_aux",
+        "_dl_relocate_static_pie",
+        "_fini",
+        "_init",
+        "_start",
+        "deregister_tm_clones",
+        "frame_dummy",
+        "main",
+        "register_tm_clones"
+      ],
+      "correct_refs": [
+        "0040033c",
+        "00400360",
+        "00400390",
+        "004003a0",
+        "004003d0",
+        "00400410",
+        "00400440",
+        "00401e82",
+        "004032ec"
+      ],
+      "precision": 1.0,
+      "recall": 0.022,
+      "evidence": {
+        "alignment": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        }
+      },
+      "anchors": 8,
+      "reference_functions": 409,
+      "target_functions": 409,
+      "indexed_reference": 409,
+      "indexed_target": 409,
+      "coverage_reference": [
+        409,
+        409
+      ],
+      "coverage_target": [
+        409,
+        409
+      ],
+      "gained_refs": []
+    },
+    {
+      "id": "many",
+      "kind": "many",
+      "setting": "without",
+      "truth": 409,
+      "matched": 9,
+      "judged": 9,
+      "correct": 9,
+      "correct_names": [
+        "__do_global_dtors_aux",
+        "_dl_relocate_static_pie",
+        "_fini",
+        "_init",
+        "_start",
+        "deregister_tm_clones",
+        "frame_dummy",
+        "main",
+        "register_tm_clones"
+      ],
+      "correct_refs": [
+        "0040033c",
+        "00400360",
+        "00400390",
+        "004003a0",
+        "004003d0",
+        "00400410",
+        "00400440",
+        "00401e82",
+        "004032ec"
+      ],
+      "precision": 1.0,
+      "recall": 0.022,
+      "evidence": {
+        "alignment": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        }
+      },
+      "anchors": 8,
+      "reference_functions": 409,
+      "target_functions": 409,
+      "indexed_reference": 409,
+      "indexed_target": 409,
+      "coverage_reference": [
+        409,
+        409
+      ],
+      "coverage_target": [
+        409,
+        409
+      ],
+      "lost_refs": []
+    },
+    {
+      "id": "pie",
+      "kind": "pie",
+      "setting": "with",
+      "truth": 8,
+      "matched": 11,
+      "judged": 7,
+      "correct": 7,
+      "correct_names": [
+        "__do_global_dtors_aux",
+        "_plt",
+        "deregister_tm_clones",
+        "frame_dummy",
+        "main",
+        "printf",
+        "register_tm_clones"
+      ],
+      "correct_refs": [
+        "002015d0",
+        "00201600",
+        "00201640",
+        "00201670",
+        "002016a0",
+        "00201710",
+        "00201720"
+      ],
+      "precision": 1.0,
+      "recall": 0.875,
+      "evidence": {
+        "alignment": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "semantic": {
+          "judged": 3,
+          "correct": 3
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "indexed_reference": 12,
+      "indexed_target": 12,
+      "coverage_reference": [
+        12,
+        12
+      ],
+      "coverage_target": [
+        12,
+        12
+      ],
+      "gained_refs": [
+        "00201640"
+      ]
+    },
+    {
+      "id": "pie",
+      "kind": "pie",
+      "setting": "without",
+      "truth": 8,
+      "matched": 10,
+      "judged": 6,
+      "correct": 6,
+      "correct_names": [
+        "_plt",
+        "deregister_tm_clones",
+        "frame_dummy",
+        "main",
+        "printf",
+        "register_tm_clones"
+      ],
+      "correct_refs": [
+        "002015d0",
+        "00201600",
+        "00201670",
+        "002016a0",
+        "00201710",
+        "00201720"
+      ],
+      "precision": 1.0,
+      "recall": 0.75,
+      "evidence": {
+        "alignment": {
+          "judged": 3,
+          "correct": 3
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "indexed_reference": 12,
+      "indexed_target": 12,
+      "coverage_reference": [
+        12,
+        12
+      ],
+      "coverage_target": [
+        12,
+        12
+      ],
+      "lost_refs": []
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}

@@ -45,8 +45,8 @@ fn usage() {
   lre-cli detect-functions <binary> <program> [--unit N] [--whole-range] [--project DIR] [--json]
   lre-cli status <program> [--project DIR] [--json]
   lre-cli analyse-pending <binary> <program> [--budget N] [--project DIR] [--json]
-  lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy]
-                         [--min-score F] [--lambda F] [--candidates N] [--json]
+  lre-cli diff <program> --reference DIR [--reference-name N] [--apply] [--matcher nap|greedy] [--no-semantic]
+  lre-cli index-semantics <binary> <program> [--project DIR]
   lre-cli symbols <program> [--project DIR]
   lre-cli xrefs <program> [--to HEX | --from HEX] [--project DIR] [--evidence KIND]
   lre-cli comments <program> [--project DIR]
@@ -618,6 +618,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 Some("greedy") => lre_diff::Matcher::Greedy,
                 Some(other) => return Err(format!("unknown matcher: {other}")),
             };
+            if has_flag(args, "--no-semantic") {
+                options.semantic = false;
+            }
             let report = core
                 .diff_program(
                     &target,
@@ -650,6 +653,21 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     if has_flag(args, "--apply") { "applied" } else { "portable" }
                 );
             }
+        }
+        "index-semantics" => {
+            // BSim-style data-flow signatures for one program, from the
+            // binary it was imported from: p-code needs a loaded console,
+            // which the store does not keep. The diff reads these when the
+            // semantic class is on and ignores them with --no-semantic.
+            let binary = args.get(2).ok_or("index-semantics needs a binary")?.clone();
+            let program = args
+                .get(3)
+                .ok_or("index-semantics needs a program name")?
+                .clone();
+            let indexed = core
+                .index_semantics(Path::new(&binary), &program)
+                .map_err(|e| e.to_string())?;
+            println!("indexed {indexed} semantic signatures for {program}");
         }
         "functions" => {
             let program = args.get(2).ok_or("functions needs a program name")?.clone();

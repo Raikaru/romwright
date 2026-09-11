@@ -843,6 +843,21 @@ pub struct FunctionFeatureRow {
     pub shape_digest: String,
 }
 
+/// A BSim-style semantic signature of one function's p-code data-flow,
+/// taken at demand time rather than at import: p-code needs a loaded
+/// console, which the whole-image import does not keep open per function.
+/// `signature` is the hex of the fixed-size hashed feature-count vector
+/// (`lre_diff::semantic`), so two builds of the same source compare by
+/// what they compute rather than how they encode it. `ops` is how many
+/// p-code operations were hashed; a function nobody decoded gets no row,
+/// for the same reason an unmeasured body gets no feature row.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct SemanticSignatureRow {
+    pub function: Address,
+    pub signature: String,
+    pub ops: u32,
+}
+
 /// A name a signature database claimed for a function, with the evidence.
 /// `confidence` is the share of the pattern that was actually compared.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]

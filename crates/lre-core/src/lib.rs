@@ -816,6 +816,75 @@ impl Core {
         Ok(report)
     }
 
+    /// Indexes BSim-style semantic signatures for every function of
+    /// `program`: each body is walked on a warm image of `binary`, its
+    /// p-code hashed into a data-flow signature, and one row per decoded
+    /// function stored for the diff to match on.
+    ///
+    /// The binary is needed because p-code comes from a loaded console,
+    /// which the store does not keep. A function the walk cannot decode
+    /// gets no row -- absence of evidence, never evidence of difference.
+    /// Replaces whatever the last pass wrote, so re-indexing after an
+    /// edit cannot leave stale signatures beside fresh ones.
+    pub fn index_semantics(&self, binary: &Path, program: &str) -> Result<usize> {
+        let id = self.db.program_id(program)?;
+        let entries: Vec<lre_model::Address> =
+            self.db.functions(id)?.into_iter().map(|row| row.entry).collect();
+        let mut rows: Vec<lre_model::SemanticSignatureRow> = Vec::new();
+        self.live.with(binary, program, |live| {
+            for entry in &entries {
+                let walk = live.walk(entry.offset)?;
+                if walk.instructions == 0 {
+                    continue;
+                }
+                let mut addresses: Vec<u64> = walk
+                    .instruction_extents
+                    .iter()
+                    .map(|(address, _)| *address)
+                    .collect();
+                addresses.sort_unstable();
+                addresses.dedup();
+                let pcode = live.pcode(&addresses)?;
+                let ops: Vec<lre_diff::semantic::SemOp> = pcode
+                    .iter()
+                    .flat_map(|instruction| instruction.ops.iter())
+                    .map(|op| lre_diff::semantic::SemOp {
+                        opcode: op.opcode.clone(),
+                        output: op.output.as_ref().map(|varnode| {
+                            lre_diff::semantic::SemVar {
+                                space: varnode.space.clone(),
+                                offset: varnode.offset,
+                                size: varnode.size,
+                            }
+                        }),
+                        inputs: op
+                            .inputs
+                            .iter()
+                            .map(|varnode| lre_diff::semantic::SemVar {
+                                space: varnode.space.clone(),
+                                offset: varnode.offset,
+                                size: varnode.size,
+                            })
+                            .collect(),
+                    })
+                    .collect();
+                if ops.is_empty() {
+                    continue;
+                }
+                let signature = lre_diff::semantic::signature(&ops);
+                rows.push(lre_model::SemanticSignatureRow {
+                    function: entry.clone(),
+                    signature: signature.to_hex(),
+                    ops: ops.len() as u32,
+                });
+            }
+            Ok(())
+        })?;
+        let indexed = rows.len();
+        self.db.replace_semantic_signatures(id, &rows)?;
+        Ok(indexed)
+    }
+
     /// Analyses one function on demand and commits its facts.
     ///
     /// A loader-only import leaves every declared entry as a seed: a name
