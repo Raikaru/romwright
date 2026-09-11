@@ -2,7 +2,7 @@
   "id": "m19-003",
   "milestone": "M19",
   "criterion": "Pre-disassembly byte analysis (clean-room SBA shape)",
-  "recorded_at": "2026-09-11T12:12:39.429595+00:00",
+  "recorded_at": "2026-09-11T12:24:46.165719+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
@@ -37,6 +37,23 @@
       "deterministic": true,
       "agreement": 1.0,
       "compared": 13
+    },
+    {
+      "id": "libc_text",
+      "span": 1512109,
+      "sweep_ms": 74,
+      "wall_s": 0.1,
+      "digest": "4b5815e54f43a1b2",
+      "flows": [
+        1326008,
+        19938,
+        17554,
+        71772,
+        1314,
+        3595,
+        71928,
+        0
+      ]
     }
   ],
   "status": "pass",
