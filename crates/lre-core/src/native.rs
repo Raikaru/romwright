@@ -614,8 +614,9 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
-    elf_pointers::collect(data, &sections, &mut import, 4, be)?;
-    elf_pointers::collect_got(data, &sections, &mut import, 4, be)?;
+    let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
+    elf_pointers::collect(data, &sections, &mut import, 4, be, bias)?;
+    elf_pointers::collect_got(data, &sections, &mut import, 4, be, bias)?;
     elf_unwind::collect(data, &sections, &mut import, 4, be);
     elf_exception::collect(data, &sections, &mut import, 4, be);
     Ok(import)
@@ -866,8 +867,9 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
-    elf_pointers::collect(data, &sections, &mut import, 8, false)?;
-    elf_pointers::collect_got(data, &sections, &mut import, 8, false)?;
+    let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
+    elf_pointers::collect(data, &sections, &mut import, 8, false, bias)?;
+    elf_pointers::collect_got(data, &sections, &mut import, 8, false, bias)?;
     elf_unwind::collect(data, &sections, &mut import, 8, false);
     elf_exception::collect(data, &sections, &mut import, 8, false);
     Ok(import)
