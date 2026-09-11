@@ -3285,7 +3285,14 @@ pub fn store_import(
     // of the bytes and of the decoded shape. `lre-diff` matches programs on
     // these; nothing else reads them, and nothing re-reads the image to get
     // them.
-    db.replace_function_features(pid, &features::measure(imp))?;
+    // Features must reference stored functions: retracted const seeds stay
+    // in `imp` (one function set feeds the rest of the pipeline) but their
+    // rows never reach the table, so their measurements must not either.
+    let stored: std::collections::HashSet<u64> =
+        rows.iter().map(|row| row.entry.offset).collect();
+    let mut measured = features::measure(imp);
+    measured.retain(|feature| stored.contains(&feature.function.offset));
+    db.replace_function_features(pid, &measured)?;
     // The frame each function's own stack accesses describe, so the worker
     // can hand the decompiler the same declared locals stock's does.
     db.replace_stack_variables(pid, &imp.stack_variables)?;
