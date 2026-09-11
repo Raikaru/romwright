@@ -19,6 +19,7 @@
 //! image, or diffing two builds, actually needs.
 
 mod assign;
+pub mod semantic;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
 
@@ -76,6 +77,11 @@ pub struct Options {
     /// `Matcher::Nap`. The quadratic problem is built over the candidate
     /// set, so this is what bounds its size (the paper's sparsity ratio).
     pub candidates: usize,
+    /// Whether the BSim-style p-code evidence class contributes: the
+    /// semantic term in content scoring and the mutual-best semantic pass.
+    /// Off restores the purely structural matcher, which is what lets a
+    /// gate measure the class with and without it.
+    pub semantic: bool,
 }
 
 impl Default for Options {
@@ -91,6 +97,7 @@ impl Default for Options {
             matcher: Matcher::Nap,
             lambda: 0.35,
             candidates: 12,
+            semantic: true,
         }
     }
 }
@@ -117,6 +124,11 @@ pub enum Evidence {
     CallGraph,
     /// Unique profile among what the call graph never reached.
     Global,
+    /// Mutually-best p-code data-flow similarity at or above the semantic
+    /// floor: the two bodies compute the same thing under different
+    /// encodings. Unique on both sides by construction, like an anchor,
+    /// but the evidence is similarity rather than identity.
+    Semantic,
     /// The network alignment assigned it: content similarity and induced
     /// call edges weighed together.
     Alignment,
@@ -201,6 +213,10 @@ struct Func {
     /// Digest of the decoded shape; equal digests are the same code wherever
     /// it was loaded.
     shape_digest: String,
+    /// BSim-style data-flow signature, when the semantic index ran over
+    /// this program. `None` is absence of evidence, never difference: the
+    /// scorer drops the term rather than scoring it zero.
+    semantic: Option<semantic::Signature>,
 }
 
 /// One side of the diff.
@@ -292,6 +308,17 @@ impl Program {
                 funcs[index].max_block = row.max_block;
                 funcs[index].body_digest = row.body_digest;
                 funcs[index].shape_digest = row.shape_digest;
+            }
+        }
+        // Semantic signatures come from the explicit indexing pass, not
+        // the import, so a program without them simply has none: every
+        // term the scorer would build from one is dropped, and matching
+        // falls back to the structural evidence alone.
+        for row in db.semantic_signatures(id)? {
+            if let Some(&index) = by_entry.get(&row.function.offset) {
+                if row.ops > 0 {
+                    funcs[index].semantic = semantic::Signature::parse_hex(&row.signature);
+                }
             }
         }
 
@@ -406,11 +433,22 @@ impl Pairing {
     }
 }
 
+/// Data-flow similarity of two functions, or `None` when either side has
+/// no signature. Missing signatures drop the term rather than scoring it:
+/// an unindexed program must match exactly as it did before indexing
+/// existed.
+fn semantic_similarity(a: &Func, b: &Func) -> Option<f64> {
+    let (Some(left), Some(right)) = (a.semantic.as_ref(), b.semantic.as_ref()) else {
+        return None;
+    };
+    left.similarity(right)
+}
+
 /// Similarity of two functions from their content alone -- everything that
 /// does not depend on what else is matched. The network-alignment matcher
 /// needs exactly this: its topology term is the induced-edge count, so a
 /// content score that already folded neighbours in would count them twice.
-fn content_score(a: &Func, b: &Func) -> f64 {
+fn content_score(a: &Func, b: &Func, options: &Options) -> f64 {
     // Weighted mean over the components that apply. A component with no
     // evidence on either side (neither reads a string, say) is dropped
     // rather than scored 1.0, which would reward having no features.
@@ -445,16 +483,33 @@ fn content_score(a: &Func, b: &Func) -> f64 {
     if let Some(value) = jaccard(&a.imports, &b.imports) {
         add(value, 0.2);
     }
+    // Data-flow over p-code: what the body computes, not how it encodes
+    // it. Dropped outright when the switch is off or either side has no
+    // signature, so unindexed programs score exactly as before. And it
+    // only ever raises: a low similarity is the expected state of two
+    // builds the optimiser rewrote differently (measured median 0.56 for
+    // true O0/O2 pairs on a 400-function corpus, where the true partner
+    // routinely scores below a sibling that differs by one constant), so
+    // blending it in would dilute a structural score that already clears
+    // the floor. Only a similarity at or above the match floor joins the
+    // mean; anything below leaves the structural score untouched.
+    if options.semantic {
+        if let Some(value) = semantic_similarity(a, b) {
+            if value >= semantic::MATCH_FLOOR {
+                add(value, semantic::SCORE_WEIGHT);
+            }
+        }
+    }
     if weight == 0.0 { 0.0 } else { total / weight }
 }
 
 /// Similarity of two functions, given what is matched so far: content plus
 /// the share of their matched neighbours that agree. This is the greedy
 /// matcher's score; it is what makes propagation converge rather than drift.
-fn score(reference: &Program, target: &Program, left: usize, right: usize, pairs: &Pairing) -> f64 {
+fn score(reference: &Program, target: &Program, left: usize, right: usize, pairs: &Pairing, options: &Options) -> f64 {
     let a = &reference.funcs[left];
     let b = &target.funcs[right];
-    let content = content_score(a, b);
+    let content = content_score(a, b, options);
     let mut total = content;
     let mut weight = 1.0;
     let mut add = |value: f64, w: f64| {
@@ -593,6 +648,16 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
             }
         }
     }
+    // 1b. Semantic pairs: what is still unmatched but computes the same
+    // thing on both sides. Each open function names its best partner by
+    // data-flow similarity; a pair is taken only when both sides name
+    // each other, uniquely, at or above the floor. Mutual-best is the
+    // one-to-one condition for free: two functions cannot both be the
+    // unique best partner of the same function. They join the anchors as
+    // seeds, so propagation and the alignment both build on them.
+    if options.semantic {
+        semantic_pass(reference, target, &mut pairs, &mut matches);
+    }
 
     if options.matcher == Matcher::Nap {
         align(reference, target, &mut pairs, options, &mut matches);
@@ -629,7 +694,7 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
         }
         let mut scored: Vec<(f64, usize, usize)> = candidates
             .into_iter()
-            .map(|(l, r)| (score(reference, target, l, r, &pairs), l, r))
+            .map(|(l, r)| (score(reference, target, l, r, &pairs, options), l, r))
             .filter(|&(value, _, _)| value >= options.min_score)
             .collect();
         // Best first; a stable order over equal scores keeps the result
@@ -720,6 +785,72 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
     }
 }
 
+/// Records one similarity observation for a function's best partner.
+/// A strictly better value replaces; an equal one marks the tie, which
+/// disqualifies the function from the mutual-best pass outright.
+fn note_best(best: &mut Option<(usize, f64, bool)>, partner: usize, value: f64) {
+    match best {
+        Some((_, top, _)) if value > *top => *best = Some((partner, value, false)),
+        Some((_, top, tied)) if (value - *top).abs() <= f64::EPSILON => *tied = true,
+        None => *best = Some((partner, value, false)),
+        _ => {}
+    }
+}
+
+/// Mutual-best semantic matches over the pairs still unmatched. Each open
+/// function with a signature names its highest-similarity partner; a pair
+/// is taken only when both sides name each other, the best is unique on
+/// both sides, and the similarity reaches the semantic floor. The score a
+/// row carries is the similarity itself, so a gate can threshold the class
+/// further.
+fn semantic_pass(
+    reference: &Program,
+    target: &Program,
+    pairs: &mut Pairing,
+    matches: &mut Vec<MatchRow>,
+) {
+    // Best partner per side, in index order so ties resolve
+    // deterministically: the first index keeps a tied best, and a tie is
+    // recorded by the strict comparison below.
+    let mut left_best: Vec<Option<(usize, f64, bool)>> = vec![None; reference.funcs.len()];
+    let mut right_best: Vec<Option<(usize, f64, bool)>> = vec![None; target.funcs.len()];
+    for left in 0..reference.funcs.len() {
+        if pairs.reference[left].is_some() || reference.funcs[left].semantic.is_none() {
+            continue;
+        }
+        for right in 0..target.funcs.len() {
+            if pairs.target[right].is_some() || target.funcs[right].semantic.is_none() {
+                continue;
+            }
+            let Some(value) = semantic_similarity(&reference.funcs[left], &target.funcs[right])
+            else {
+                continue;
+            };
+            note_best(&mut left_best[left], right, value);
+            note_best(&mut right_best[right], left, value);
+        }
+    }
+    let mut hits: Vec<(usize, usize, f64)> = Vec::new();
+    for (left, best) in left_best.iter().enumerate() {
+        let Some((right, value, tied)) = best else {
+            continue;
+        };
+        if *tied || *value < semantic::MATCH_FLOOR {
+            continue;
+        }
+        let mutual = matches!(right_best[*right], Some((partner, _, false)) if partner == left);
+        if mutual {
+            hits.push((left, *right, *value));
+        }
+    }
+    hits.sort_by(|a, b| (a.0, a.1).cmp(&(b.0, b.1)));
+    for (left, right, value) in hits {
+        if pairs.accept(left, right) {
+            matches.push(row(reference, target, left, right, value, Evidence::Semantic));
+        }
+    }
+}
+
 /// One round of network alignment over the pairs still unmatched.
 ///
 /// Maximises `lambda * content + (1 - lambda) * induced-call-edges` by
@@ -759,7 +890,7 @@ fn align(
     for (slot, &left) in open_left.iter().enumerate() {
         scratch.clear();
         for &right in &open_right {
-            let value = content_score(&reference.funcs[left], &target.funcs[right]);
+            let value = content_score(&reference.funcs[left], &target.funcs[right], options);
             if value > 0.0 {
                 scratch.push((value, right));
             }
@@ -845,7 +976,7 @@ fn align(
         };
         let left = open_left[slot];
         let right = open_right[*right_slot_index as usize];
-        let content = content_score(&reference.funcs[left], &target.funcs[right]);
+        let content = content_score(&reference.funcs[left], &target.funcs[right], options);
         // How much the call graph vouches for the pair: every call it would
         // preserve. One shared neighbour is weak evidence -- in a program
         // where everything calls the allocator, every function has it -- so
@@ -1099,6 +1230,215 @@ mod tests {
         let target = Program::load(&right, "tgt").unwrap();
         let report = diff(&reference, &target, &Options::default());
         assert!(report.names.is_empty(), "ported: {:?}", report.names);
+    }
+
+    /// Two programs, each with the same computation under different
+    /// register allocation plus one unrelated function: the structural
+    /// counts differ across builds (as -O0 and -O2 do), so only the
+    /// data-flow signature identifies the pair.
+    fn semantic_programs() -> (Program, Program) {
+        use semantic::{SemOp, SemVar};
+        // Same computation, two allocations: every register moved, widths
+        // kept. Normalisation makes the two op streams identical.
+        fn computation(base: u64) -> Vec<SemOp> {
+            let reg = |index: u64| SemVar {
+                space: "register".into(),
+                offset: base + index,
+                size: 8,
+            };
+            let tmp = |index: u64| SemVar {
+                space: "unique".into(),
+                offset: index,
+                size: 8,
+            };
+            vec![
+                SemOp {
+                    opcode: "COPY".into(),
+                    output: Some(tmp(1)),
+                    inputs: vec![reg(0)],
+                },
+                SemOp {
+                    opcode: "INT_ADD".into(),
+                    output: Some(tmp(2)),
+                    inputs: vec![
+                        tmp(1),
+                        SemVar {
+                            space: "const".into(),
+                            offset: 16,
+                            size: 8,
+                        },
+                    ],
+                },
+                SemOp {
+                    opcode: "INT_MULT".into(),
+                    output: Some(tmp(3)),
+                    inputs: vec![tmp(2), reg(1)],
+                },
+            ]
+        }
+        fn other() -> Vec<SemOp> {
+            vec![
+                SemOp::plain("INT_SLESS", &[("register", 4, 8), ("const", 0, 8)]),
+                SemOp::plain("CBRANCH", &[("ram", 0x402000, 8), ("unique", 9, 1)]),
+                SemOp::plain("RETURN", &[("unique", 10, 8)]),
+            ]
+        }
+        // A third computation, sharing nothing with `other` but its
+        // widths: different opcodes, different constants.
+        fn other_build() -> Vec<SemOp> {
+            vec![
+                SemOp::plain("LOAD", &[("ram", 0x500000, 8), ("unique", 20, 8)]),
+                SemOp::plain("INT_XOR", &[("unique", 20, 8), ("const", 7, 8)]),
+                SemOp::plain("INT_ZEXT", &[("unique", 20, 2)]),
+            ]
+        }
+        let reference = Program {
+            name: "ref".into(),
+            funcs: vec![
+                Func {
+                    entry: 0x400100,
+                    size: 64,
+                    name: "calc".into(),
+                    instructions: 20,
+                    blocks: 4,
+                    edges: 5,
+                    loops: 1,
+                    max_block: 8,
+                    calls: 1,
+                    data_refs: 2,
+                    semantic: Some(semantic::signature(&computation(0x10))),
+                    ..Func::default()
+                },
+                Func {
+                    entry: 0x400200,
+                    size: 200,
+                    name: "other".into(),
+                    instructions: 80,
+                    blocks: 9,
+                    edges: 12,
+                    loops: 0,
+                    max_block: 30,
+                    calls: 4,
+                    data_refs: 9,
+                    semantic: Some(semantic::signature(&other())),
+                    ..Func::default()
+                },
+            ],
+        };
+        let target = Program {
+            name: "tgt".into(),
+            funcs: vec![
+                Func {
+                    entry: 0x800100,
+                    size: 40,
+                    name: "FUN_00800100".into(),
+                    instructions: 12,
+                    blocks: 3,
+                    edges: 3,
+                    loops: 1,
+                    max_block: 6,
+                    calls: 1,
+                    data_refs: 2,
+                    semantic: Some(semantic::signature(&computation(0x28))),
+                    ..Func::default()
+                },
+                Func {
+                    entry: 0x800200,
+                    size: 30,
+                    name: "FUN_00800200".into(),
+                    instructions: 6,
+                    blocks: 2,
+                    edges: 1,
+                    loops: 2,
+                    max_block: 3,
+                    calls: 0,
+                    data_refs: 1,
+                    semantic: Some(semantic::signature(&other_build())),
+                    ..Func::default()
+                },
+            ],
+        };
+        (reference, target)
+    }
+
+    #[test]
+    fn semantic_pass_matches_same_computation_across_builds() {
+        let (reference, target) = semantic_programs();
+        let report = diff(&reference, &target, &Options::default());
+        let calc = report
+            .matches
+            .iter()
+            .find(|row| row.reference.offset == 0x400100)
+            .expect("same computation must match");
+        assert_eq!(calc.target.offset, 0x800100);
+        assert_eq!(calc.evidence, Evidence::Semantic);
+        assert!(
+            (calc.score - 1.0).abs() < 1e-9,
+            "identical data-flow must score 1.0, got {}",
+            calc.score
+        );
+        // The unrelated pair shares no computation and differs
+        // structurally: nothing may claim it.
+        assert!(
+            report
+                .matches
+                .iter()
+                .all(|row| row.reference.offset != 0x400200),
+            "unrelated function matched: {:?}",
+            report.matches
+        );
+    }
+
+    #[test]
+    fn semantic_off_leaves_restructured_pair_unmatched() {
+        let (reference, target) = semantic_programs();
+        let options = Options {
+            semantic: false,
+            ..Options::default()
+        };
+        let report = diff(&reference, &target, &options);
+        // Structural content alone sits below the floor (0.80 < 0.85)
+        // with no call graph to vouch: the pair needs the data-flow
+        // term, so switching the class off must lose it rather than
+        // match it worse.
+        assert!(
+            report
+                .matches
+                .iter()
+                .all(|row| row.reference.offset != 0x400100),
+            "pair matched without its evidence: {:?}",
+            report.matches
+        );
+        assert!(
+            report
+                .matches
+                .iter()
+                .all(|evidence| evidence.evidence != Evidence::Semantic),
+            "semantic evidence with the class off: {:?}",
+            report.matches
+        );
+    }
+
+    #[test]
+    fn low_similarity_leaves_the_structural_score_untouched() {
+        // Same structure, unrelated data-flow: the similarity sits far
+        // below the floor, so the semantic term must drop out and the
+        // score must equal the semantic-off score exactly. This is the
+        // regression test for the many.c `main` loss, where a 0.53
+        // similarity diluted a 0.9052 structural score below the commit
+        // floor and cost a correct alignment match.
+        let (reference, target) = semantic_programs();
+        let left = reference.funcs.iter().position(|f| f.entry == 0x400200).unwrap();
+        let right = target.funcs.iter().position(|f| f.entry == 0x800100).unwrap();
+        let on = Options::default();
+        let off = Options { semantic: false, ..Options::default() };
+        let similarity =
+            semantic_similarity(&reference.funcs[left], &target.funcs[right]).unwrap();
+        assert!(
+            similarity < semantic::MATCH_FLOOR,
+            "test needs a below-floor pair, got {similarity}"
+        );
+        assert_eq!(content_score(&reference.funcs[left], &target.funcs[right], &on), content_score(&reference.funcs[left], &target.funcs[right], &off));
     }
 
     #[test]

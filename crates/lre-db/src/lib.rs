@@ -20,12 +20,13 @@ mod class;
 mod feature;
 mod convention;
 mod return_behavior;
+mod semantic;
 mod signature;
 mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 19;
+pub const SCHEMA_VERSION: i64 = 20;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -662,6 +663,22 @@ impl ProjectDb {
                         [],
                     )?;
                 }
+            }
+            if v < 20 {
+                // Semantic p-code signatures, taken by an explicit indexing
+                // pass rather than at import: hashing a body's data-flow
+                // needs its p-code, which needs a loaded console per body.
+                // One row per decoded function; a function nobody decoded
+                // gets no row, so absence never counts as difference.
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS semantic_signatures (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         function TEXT NOT NULL,
+                         signature TEXT NOT NULL,
+                         ops INTEGER NOT NULL CHECK(ops >= 0),
+                         PRIMARY KEY(program_id, function)
+                     );",
+                )?;
             }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
