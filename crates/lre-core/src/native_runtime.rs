@@ -1602,11 +1602,24 @@ impl ConsoleSession {
             kind: FlowKind::Bad,
         })
     }
-    /// Queries control-flow for multiple addresses in a single batch request.
+    /// Queries control-flow for multiple addresses, one bounded request
+    /// per chunk. A single write of the whole list would fill the
+    /// console's stdin pipe while it fills our stdout pipe answering,
+    /// and both sides would block (seen on a relocation round with
+    /// hundreds of thousands of candidates); every chunk's replies are
+    /// read before the next chunk is sent.
     pub fn flow_batch(&mut self, addresses: &[u64]) -> Result<Vec<FlowResult>> {
         if addresses.is_empty() {
             return Ok(Vec::new());
         }
+        let mut results = Vec::with_capacity(addresses.len());
+        for chunk in addresses.chunks(1024) {
+            results.extend(self.flow_chunk(chunk)?);
+        }
+        Ok(results)
+    }
+
+    fn flow_chunk(&mut self, addresses: &[u64]) -> Result<Vec<FlowResult>> {
         use std::fmt::Write as _;
         let mut script = String::with_capacity(addresses.len() * 12 + 8);
         script.push_str("flow");
@@ -1694,6 +1707,16 @@ impl ConsoleSession {
         if addresses.is_empty() {
             return Ok(Vec::new());
         }
+        // Bounded requests like flow_batch: one write of a huge list
+        // would deadlock against the console's answers in the pipes.
+        let mut out = Vec::with_capacity(addresses.len());
+        for chunk in addresses.chunks(1024) {
+            out.extend(self.pcode_chunk(chunk)?);
+        }
+        Ok(out)
+    }
+
+    fn pcode_chunk(&mut self, addresses: &[u64]) -> Result<Vec<PcodeInstruction>> {
         use std::fmt::Write as _;
         let mut script = String::with_capacity(addresses.len() * 12 + 8);
         script.push_str("pcode");
