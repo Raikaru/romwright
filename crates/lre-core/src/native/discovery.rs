@@ -514,6 +514,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         .collect();
     entries.sort_unstable();
     entries.dedup();
+    // Membership mirror: the walk tests entryhood per decoded target,
+    // which is O(n) over this Vec at 590k entries. The Vec keeps iteration
+    // order; the set answers membership.
+    let mut entries_set: std::collections::HashSet<u64> =
+        entries.iter().copied().collect();
 
     let mut calls: Vec<(u64, u64)> = Vec::new();
     // Every unconditional direct branch, kept until function extents are
@@ -521,6 +526,13 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // loop inside one.
     let mut branch_transfers: Vec<(u64, u64)> = Vec::new();
     let mut instruction_extents = Vec::new();
+    // Index over the same extents for the mid-instruction test below: a
+    // linear scan per branch target is O(decoded) each, which never
+    // converges on a 56MB text. Any extent covering a target starts
+    // within max_extent bytes before it, so the window query is exact.
+    let mut extent_index: std::collections::BTreeMap<u64, u64> =
+        std::collections::BTreeMap::new();
+    let mut max_extent: u64 = 0;
     let mut thunk_candidates = HashSet::new();
     let mut thunk_jumps = Vec::new();
     let mut thunk_roots = HashMap::new();
@@ -620,12 +632,23 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     if linkage_candidates.contains(&target)
                         || visited.contains(&target)
                         || !in_code(target)
-                        || entries.contains(&target)
-                        || instruction_extents
-                            .iter()
-                            .any(|&(start, size)| target > start && target - start < size)
+                        || entries_set.contains(&target)
+                        || {
+                            // Mid-instruction test through the index: any
+                            // extent covering `target` starts within
+                            // max_extent bytes before it, and starts are
+                            // strict (`target > start`, as before).
+                            let from = target.saturating_sub(max_extent);
+                            extent_index
+                                .range(from..target)
+                                .any(|(&start, &size)| target - start < size)
+                        }
                         || flows.iter().any(|flow| {
-                            target > flow.address && target - flow.address < flow.length as u64
+                            // The current chunk is indexed only after this
+                            // loop, so its fresh instructions need their
+                            // own bounded check (1024 entries at most).
+                            target > flow.address
+                                && target - flow.address < flow.length as u64
                         })
                     {
                         continue;
@@ -655,7 +678,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     && info.kind == FlowKind::Fallthrough
                     && info.targets.is_empty()
                     && info.fallthrough == addr.checked_add(info.length as u64)
-                    && entries.contains(&addr)
+                    && entries_set.contains(&addr)
                     && imp.mappings.iter().any(|m| {
                         m.flags & 4 != 0
                             && addr >= m.vaddr
@@ -689,6 +712,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 let span = addr + info.length as u64;
                 if !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) {
                     instruction_extents.push((addr, info.length as u64));
+                    // Same start decoded twice (shared code reached from two
+                    // entries, or two modes): the scan matched any of them,
+                    // so the index keeps the widest -- same start means the
+                    // widest covers the union exactly.
+                    extent_index
+                        .entry(addr)
+                        .and_modify(|size| *size = (*size).max(info.length as u64))
+                        .or_insert(info.length as u64);
+                    max_extent = max_extent.max(info.length as u64);
                 }
                 if !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) {
                     // The shape of what was just decoded, for the structural
@@ -731,8 +763,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             if has_linkage_slots && in_code(*t) {
                                 linkage_candidates.insert(*t);
                             }
-                            if in_code(*t) && !entries.contains(t) {
+                            if in_code(*t) && !entries_set.contains(t) {
                                 entries.push(*t);
+                                entries_set.insert(*t);
                                 addr_origin.insert(*t, *t);
                                 next_active.push(*t);
                             }
@@ -765,8 +798,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                 context_edges.push((t, addr));
                             }
                             if thunks.get(&addr) == Some(&t) {
-                                if !entries.contains(&t) {
+                                if !entries_set.contains(&t) {
                                     entries.push(t);
+                                    entries_set.insert(t);
                                     thunk_candidates.insert(t);
                                     let root = thunk_roots.get(&origin).copied().unwrap_or(origin);
                                     thunk_roots.insert(t, root);
@@ -777,7 +811,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                 // address: one leading no-op may precede it.
                                 if let Some(&entry) = landing_entries
                                     .get(&addr)
-                                    .or(Some(&addr).filter(|_| entries.contains(&addr)))
+                                    .or(Some(&addr).filter(|_| entries_set.contains(&addr)))
                                 {
                                     imp.thunks.push(crate::native::NativeThunk {
                                         entry,
@@ -941,7 +975,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         let mut pattern_edges = Vec::new();
         let filter_ctx = CandidateFilterContext {
             mappings: &imp.mappings,
-            known_extents: &extents,
+            known_extents: crate::native::ExtentIndex::build(&extents),
             initial_seeds: &entries.iter().copied().collect(),
         };
 
@@ -1005,8 +1039,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
 
             if !confirmed_relocs.is_empty() {
                 for &r in &confirmed_relocs {
-                    if !entries.contains(&r) {
+                    if !entries_set.contains(&r) {
                         entries.push(r);
+                        entries_set.insert(r);
                         addr_origin.insert(r, r);
                         round_accepted = true;
                         // Where this entry came from, for the containment
@@ -1108,8 +1143,9 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                                         if has_linkage_slots && in_code(*t) {
                                             linkage_candidates.insert(*t);
                                         }
-                                        if in_code(*t) && !entries.contains(t) {
+                                        if in_code(*t) && !entries_set.contains(t) {
                                             entries.push(*t);
+                                            entries_set.insert(*t);
                                             addr_origin.insert(*t, *t);
                                             next_active.push(*t);
                                         }
@@ -1253,6 +1289,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 }
             }
             entries.retain(|entry| !rejected.contains(entry));
+            entries_set.retain(|entry| !rejected.contains(entry));
         }
         round += 1;
         // The first pattern round always runs; a later one runs only while the
@@ -1302,7 +1339,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // validated caller has been walked; no first-caller/global-register assumption.
     if !context_targets.is_empty() {
         context_edges
-            .retain(|(target, _)| context_targets.contains(target) && !entries.contains(target));
+            .retain(|(target, _)| context_targets.contains(target) && !entries_set.contains(target));
         context_edges.sort_unstable();
         context_edges.dedup();
         branch_targets.sort_unstable();
@@ -1402,6 +1439,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // Reconcile batched relocation candidates after discovering their bodies:
     // an entry plus an internal relocation target cannot both become functions.
     entries.retain(|&e| get_canonical_origin(e, &addr_origin) == e);
+    entries_set.retain(|&e| get_canonical_origin(e, &addr_origin) == e);
 
     // Two functions cannot share code. A PE32 switch table holds absolute
     // addresses, so every case label carries a base relocation and reaches
@@ -1432,6 +1470,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             }
         }
         entries.retain(|entry| !sharing.contains(entry));
+        entries_set.retain(|entry| !sharing.contains(entry));
     }
 
     entries.sort_unstable();
@@ -1442,7 +1481,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             .iter()
             .any(|x| x.from == from && x.to == to && x.kind == "UNCONDITIONAL_JUMP")
         {
-            let provenance = if entries.contains(&to) {
+            let provenance = if entries_set.contains(&to) {
                 crate::native::THUNK_SOURCE
             } else {
                 "native-import"
@@ -1479,6 +1518,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         for candidate in candidates {
             if let Some(end) = proven_body_end(candidate, flow_provider, &known, &in_code) {
                 entries.push(candidate);
+                entries_set.insert(candidate);
                 addr_origin.insert(candidate, candidate);
                 proven_bodies.insert(candidate, end);
             }
@@ -1544,7 +1584,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         imp.contexts.extend(
             entry_modes
                 .iter()
-                .filter(|(entry, _)| entries.contains(entry))
+                .filter(|(entry, _)| entries_set.contains(entry))
                 .map(|&(entry, mode)| crate::native::NativeContext {
                     name: "LowBitCodeMode".into(),
                     address: entry,

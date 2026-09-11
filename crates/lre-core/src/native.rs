@@ -3567,10 +3567,44 @@ fn mapping_permissions(flags: u64) -> String {
 }
 
 
+/// Decoded/function extents indexed for containment tests: a linear scan
+/// per candidate is O(extents) each, which never converges when both
+/// number in the hundreds of thousands. Any extent covering an address
+/// starts within the widest extent before it, so the window query answers
+/// exactly what the scan did.
+pub struct ExtentIndex {
+    starts: std::collections::BTreeMap<u64, u64>,
+    max_len: u64,
+}
+
+impl ExtentIndex {
+    pub fn build(extents: &[(u64, u64)]) -> Self {
+        let mut starts = std::collections::BTreeMap::new();
+        let mut max_len = 0u64;
+        for &(start, size) in extents {
+            // Same start decoded twice keeps the widest: one start means
+            // the widest covers the union exactly.
+            starts
+                .entry(start)
+                .and_modify(|kept: &mut u64| *kept = (*kept).max(size))
+                .or_insert(size);
+            max_len = max_len.max(size);
+        }
+        ExtentIndex { starts, max_len }
+    }
+
+    pub fn contains(&self, address: u64) -> bool {
+        let from = address.saturating_sub(self.max_len);
+        self.starts
+            .range(from..address)
+            .any(|(&start, &size)| address - start < size)
+    }
+}
+
 /// Context for candidate pre-pass confirmation.
 pub struct CandidateFilterContext<'a> {
     pub mappings: &'a [Mapping],
-    pub known_extents: &'a [(u64, u64)],
+    pub known_extents: ExtentIndex,
     pub initial_seeds: &'a HashSet<u64>,
 }
 
@@ -3578,10 +3612,7 @@ pub struct CandidateFilterContext<'a> {
 pub fn candidate_address_is_valid(cand: u64, ctx: &CandidateFilterContext) -> bool {
     ctx.mappings.iter().any(|mapping| {
         mapping.flags & 0x4 != 0 && cand >= mapping.vaddr && cand - mapping.vaddr < mapping.size
-    }) && !ctx
-        .known_extents
-        .iter()
-        .any(|&(entry, size)| cand > entry && cand - entry < size)
+    }) && !ctx.known_extents.contains(cand)
 }
 
 /// Confirms an address-qualified candidate without copying its flow response.
@@ -4131,7 +4162,7 @@ mod tests {
         let initial_seeds = HashSet::from([0x1000]);
         let ctx = CandidateFilterContext {
             mappings: &mappings,
-            known_extents: &extents,
+            known_extents: ExtentIndex::build(&extents),
             initial_seeds: &initial_seeds,
         };
 
@@ -4184,7 +4215,7 @@ mod tests {
         let initial_seeds = HashSet::from([0x1000]);
         let ctx = CandidateFilterContext {
             mappings: &mappings,
-            known_extents: &extents,
+            known_extents: ExtentIndex::build(&extents),
             initial_seeds: &initial_seeds,
         };
 
