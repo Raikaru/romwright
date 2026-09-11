@@ -5994,6 +5994,17 @@ point at, none reserved:
   does stock Ghidra create it. Promoting it is m5-007 and needs evidence,
   not a rule that happens to fit one fixture.
 
+- Recorded deficit (mipsel follow-ups, 2026-09-11): the PIE twins gap is
+  closed (ET_DYN slide on pointer words, GOT slots as candidates, reloc
+  shapes recorded), but two rows remain. `mipsel_cpp_o2` misses
+  `_Z7do_worki`, referenced only from `.eh_frame` with a present
+  `.eh_frame_hdr` -- unwind-to-function seeding for that shape is
+  unimplemented. `mipsel_many_o2` recovers 7 of 408: `main` arrives only
+  as a `__libc_start_main` argument (a const-prop DATA xref, never a
+  call target), and nothing seeds argument-held function addresses on
+  any architecture (x86_64_many_o2 misses `main` the same way). Both are
+  seeding gaps, not walk gaps: every explicitly walked body decodes.
+
 ## Console sequencing decision (agent judgement, 2026-09-07)
 The ten platforms recorded in "Reserved decisions" split by what can be
 *proved* with the machinery that exists, not by appeal:
