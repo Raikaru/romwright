@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""m19-004: cross-architecture breadth for import, VSA and features.
+"""m19-004: cross-architecture breadth for import and features.
 
 Claim: every supported ELF architecture imports, recovers its
 functions, extracts features and runs switch analysis -- measured per
@@ -277,7 +277,12 @@ def main() -> int:
         if "skipped" in row:
             continue
         expected = EXPECTED_SPURIOUS.get(row["id"], set())
-        unexpected = [e for e in row.pop("spurious_addrs", []) if e not in expected]
+        produced = row.pop("spurious_addrs", [])
+        unexpected = [e for e in produced if e not in expected]
+        stale = sorted(expected - set(produced))
+        if stale:
+            failures.append(f"{row['id']}: expected spurious {stale} no longer"
+                            " produced -- remove the exemption")
         row["spurious"] = len(unexpected)
         row["spurious_unexpected"] = unexpected
         row["expected_spurious"] = sorted(expected)
@@ -290,7 +295,7 @@ def main() -> int:
     report = {
         "id": "m19-004",
         "milestone": "M19",
-        "criterion": "Cross-architecture breadth for import, VSA and features",
+        "criterion": "Cross-architecture breadth for import and features",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "machine": {"os": platform.platform(), "cpu": platform.machine()},
         "thresholds": THRESHOLDS,
@@ -304,7 +309,7 @@ def main() -> int:
     if failures:
         print(f"FAIL: {'; '.join(failures)}", file=sys.stderr)
         return 1
-    print("m19-004: PASS (per-arch import, VSA and feature breadth holds)")
+    print("m19-004: PASS (per-arch import and feature breadth holds)")
     return 0
 
 
