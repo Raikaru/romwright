@@ -2958,6 +2958,11 @@ fn infer_data_references(
 /// Adds FUN_<hex> functions for every xref target inside a code mapping
 /// (the direct-call closure; mirrors Ghidra's FUN_ naming).
 pub fn close_call_targets(imp: &mut NativeImport) {
+    // Membership mirror: one linear scan per call xref is O(xrefs) over
+    // the function list, which never converges past a few hundred
+    // thousand functions.
+    let mut known: std::collections::HashSet<u64> =
+        imp.functions.iter().map(|f| f.entry).collect();
     for x in &imp.xrefs {
         if !x.kind.contains("CALL") {
             continue;
@@ -2966,9 +2971,10 @@ pub fn close_call_targets(imp: &mut NativeImport) {
             .mappings
             .iter()
             .any(|m| m.flags & 0x4 != 0 && x.to >= m.vaddr && x.to < m.vaddr + m.size);
-        if !in_code || imp.functions.iter().any(|f| f.entry == x.to) {
+        if !in_code || known.contains(&x.to) {
             continue;
         }
+        known.insert(x.to);
         imp.functions.push(NativeFunction {
             entry: x.to,
             name: format!("FUN_{:08x}", x.to),
