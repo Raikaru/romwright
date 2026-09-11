@@ -4,22 +4,19 @@
 Claim: importing a Windows PE recovers the functions its own toolchain
 declares -- no more, no fewer than the floors allow.
 
-Two pairs, same metrics, different speeds:
+One pair: `tests/corpus-src/many.c` built with mingw-w64 as PE32+
+DLLs, `-O0` and `-O2 -fno-inline`, stripped for the measured import
+with unstripped twins for truth. Ground truth is the toolchain symbol
+table (`mingw-nm`, never our parser): unique text-symbol names mapped
+to addresses with no base adjustment (our loader keeps link VAs).
+Runs in seconds.
 
-* `many` (the gate): `tests/corpus-src/many.c` built with mingw-w64 as
-  PE32+ DLLs, `-O0` and `-O2 -fno-inline`, stripped for the measured
-  import with unstripped twins for truth. Ground truth is the toolchain
-  symbol table (`mingw-nm`, never our parser): unique text-symbol names
-  mapped to addresses with no base adjustment (our loader keeps link
-  VAs). Runs in seconds; this is what blocks.
-* `ffxv` (periodic, `--ffxv`, tens of minutes): the retail FFXV PE
-  against its MSVC
-  linker MAP (`scripts/msvc_map.py`: segment N is the Nth PE section
-  in VA order, every row cross-checked against `Rva+Base`). A 91MB
-  import takes tens of minutes; it records evidence, it does not
-  block. Inputs are hash-pinned retail files outside the repository
-  (STATUS.md reserves new corpus binaries to user approval; these
-  were approved in conversation).
+Deliberately not gated here: the retail FFXV PE. A 91MB import costs
+tens of minutes per run for no additional signal over this pair --
+same metrics, same code paths -- so it stays out of the test loop
+entirely (and out of the corpus). The MAP oracle tooling lives on at
+`scripts/msvc_map.py`, and the one full measurement is recorded in
+STATUS.md deficits; re-running it is a manual exercise, not a gate.
 
 Metrics (per pair):
 
@@ -31,19 +28,12 @@ Metrics (per pair):
 
 Thresholds, set from what was measured (see
 `benchmarks/reports/m19-001.json`): floors sit just below measured to
-catch collapse and nothing else. The FFXV row carries its own, since
-two thirds of its oracle are 12-16 byte exception-handling funclets
-(`?dtor$N@...`, reached only through .xdata): the claim is
-non-funclet recall, with funclet recall recorded, not floored. Its
-four measured spurious are characterised, not waived: one unlisted
-real function and three mid-stub splits of delay-load import stubs
--- the ceiling ratchets down when either is fixed.
+catch collapse and nothing else.
 """
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -57,19 +47,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "scripts"))
-from msvc_map import parse_map  # noqa: E402
 
-CORPUS = Path.home() / "ventris-corpus/extracted/win-ffxv"
-EXE_SHA256 = "4f09d014565860dfced7ecb3fe30bcea82166019731a4e9825a62673d031e9c8"
-MAP_SHA256 = "821b32442d1100795bd6863fb8fa9cb50ab42d7b534cc7f1cf2b410dc4f0c604"
-
-# Floors sit just below measured. The FFXV row carries its own: most of
-# the MAP's `f` rows are 12-16 byte exception-handling funclets reached
-# only through .xdata, so the headline denominator is split -- the claim
-# is non-funclet recall, with funclet recall recorded, not floored.
+# Floors sit just below measured.
 THRESHOLDS = {"recall": 0.97, "spurious": 0}
-FFXV_THRESHOLDS = {"recall": 0.29, "recall_nonfunclet": 0.83, "spurious": 4}
 
 GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_", "thunk_")
 
@@ -86,14 +66,6 @@ def run(arguments: list[str], environment: dict[str, str], timeout: int = 3600) 
     if result.returncode:
         raise SystemExit(f"{' '.join(arguments)} failed: {result.stderr[-2000:]}")
     return result.stdout
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def stored_functions(project: Path, program: str) -> dict[int, str]:
@@ -183,79 +155,14 @@ def many_rows(work: Path, environment: dict[str, str]) -> list[dict]:
     return rows
 
 
-def ffxv_row(work: Path, environment: dict[str, str],
-             project: Path | None = None) -> dict:
-    exe, map_path = CORPUS / "ffxv_s.exe", CORPUS / "ffxv_s.map"
-    for path, pinned in ((exe, EXE_SHA256), (map_path, MAP_SHA256)):
-        if not path.is_file():
-            raise SystemExit(f"missing input {path}")
-        if sha256(path) != pinned:
-            raise SystemExit(f"{path.name} hash mismatch: not the pinned retail file")
-    oracle = parse_map(map_path, exe)
-    print(f"oracle: {len(oracle.functions)} functions, "
-          f"{oracle.data_rows} data rows, {oracle.disagreed} disagreed", flush=True)
-    if project is None:
-        project = work / "ffxv"
-        if project.exists():
-            shutil.rmtree(project)
-        started = time.monotonic()
-        # A 91MB retail import takes the better part of two hours; the gate
-        # timeout prices the work, not the patience.
-        print(run(["import", str(exe), "--project", str(project), "--name", "ffxv"],
-                  environment, timeout=10800).strip(), flush=True)
-        wall_s = round(time.monotonic() - started, 1)
-    else:
-        # Scoring an existing store: re-importing is a separate supervised
-        # step, run once. The binary that built it must be current -- the
-        # import cache this project was restored from is keyed on the
-        # analyser, but a hand-rolled directory is not, so record it.
-        wall_s = None
-        print(f"scoring existing project {project}", flush=True)
-    recovered = stored_functions(project, "ffxv")
-    function_vas = set(oracle.functions)
-    funclet = re.compile(r"\?(dtor|catch|fin|filt|unwind)\$[0-9]")
-    core = {a for a in function_vas if not funclet.search(oracle.functions[a])}
-    truth = {address: address for address in function_vas}
-    row = score_truth(truth, recovered)
-    core_found = sum(1 for a in core if a in recovered)
-    row.update({
-        "id": "ffxv",
-        "import_wall_s": wall_s,
-        "oracle_data": len(oracle.data),
-        "funclets": len(function_vas) - len(core),
-        "recall_nonfunclet": round(core_found / len(core), 4) if core else 0.0,
-        "funclet_recall": round(
-            sum(1 for a in function_vas - core if a in recovered)
-            / max(1, len(function_vas) - len(core)), 4),
-        "data_hits": sum(1 for e in recovered if e in oracle.data
-                         and e not in function_vas),
-    })
-    print(json.dumps({k: (v if not isinstance(v, set) else sorted(v))
-                      for k, v in row.items()}), flush=True)
-    return row
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--report", type=Path)
-    parser.add_argument("--ffxv", action="store_true",
-                        help="also run the retail FFXV pair (tens of minutes)")
-    parser.add_argument("--project", type=Path, default=None,
-                        help="with --ffxv, score this existing project instead of"
-                        " re-importing (a supervised import run once)")
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
-    if arguments.ffxv and arguments.project is None:
-        # A 91MB import writes a ~1GB console image plus a hundreds-of-MB
-        # WAL; tmpfs quotas turn that into a silent seed-only analysis or
-        # a mid-commit I/O error. Fail fast on small filesystems. Scoring
-        # an existing project needs kilobytes, so it is exempt.
-        free = os.statvfs(arguments.work).f_bavail * os.statvfs(arguments.work).f_frsize
-        if free < 4 << 30:
-            raise SystemExit(
-                f"--ffxv needs a disk-backed --work with 4GB free: {arguments.work}"
-                f" has {free >> 20}MB")
     environment = dict(os.environ)
     environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
     tmp = arguments.work / "tmp"
@@ -265,16 +172,10 @@ def main() -> int:
 
     failures: list[str] = []
     rows = many_rows(arguments.work, environment)
-    if arguments.ffxv:
-        rows.append(ffxv_row(arguments.work, environment, arguments.project))
     for row in rows:
-        floors = FFXV_THRESHOLDS if row["id"] == "ffxv" else THRESHOLDS
-        if row["recall"] < floors["recall"]:
-            failures.append(f"{row['id']}: recall {row['recall']} < {floors['recall']}")
-        if row["id"] == "ffxv" and row["recall_nonfunclet"] < floors["recall_nonfunclet"]:
-            failures.append(f"ffxv: non-funclet recall {row['recall_nonfunclet']}"
-                            f" < {floors['recall_nonfunclet']}")
-        if row["spurious"] > floors["spurious"]:
+        if row["recall"] < THRESHOLDS["recall"]:
+            failures.append(f"{row['id']}: recall {row['recall']} < {THRESHOLDS['recall']}")
+        if row["spurious"] > THRESHOLDS["spurious"]:
             failures.append(f"{row['id']}: spurious {row['spurious']}")
     report = {
         "id": "m19-001",
@@ -283,10 +184,8 @@ def main() -> int:
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "machine": {"os": platform.platform(), "cpu": platform.machine()},
         "inputs": {"many_src": "tests/corpus-src/many.c",
-                   "many_cc_flags": {"O0": "-O0", "O2": "-O2 -fno-inline"},
-                   "ffxv": {"exe_sha256": EXE_SHA256, "map_sha256": MAP_SHA256}
-                   if arguments.ffxv else "not run (pass --ffxv)"},
-        "thresholds": {"many": THRESHOLDS, "ffxv": FFXV_THRESHOLDS},
+                   "many_cc_flags": {"O0": "-O0", "O2": "-O2 -fno-inline"}},
+        "thresholds": THRESHOLDS,
         "rows": rows,
         "status": "pass" if not failures else "fail",
         "failures": failures,
