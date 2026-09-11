@@ -1,0 +1,141 @@
+{
+  "id": "m19-004",
+  "milestone": "M19",
+  "criterion": "Cross-architecture breadth for import, VSA and features",
+  "recorded_at": "2026-09-11T09:49:51.512204+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "thresholds": {
+    "recall": 1.0,
+    "spurious": 0,
+    "features": 1.0
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "arch": "x86_64",
+      "truth": 4,
+      "recovered": 12,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "arch": "x86_64",
+      "truth": 6,
+      "recovered": 20,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "i386_plain_o0",
+      "arch": "i386",
+      "truth": 5,
+      "recovered": 15,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "i386_cpp_o2",
+      "arch": "i386",
+      "truth": 7,
+      "recovered": 23,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "arch": "aarch64",
+      "truth": 5,
+      "recovered": 17,
+      "recall": 1.0,
+      "padding": 1,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "arch": "aarch64",
+      "truth": 7,
+      "recovered": 24,
+      "recall": 1.0,
+      "padding": 1,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "mipsel_plain_o0",
+      "arch": "mipsel",
+      "truth": 2,
+      "recovered": 11,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "mipsel_cpp_o2",
+      "arch": "mipsel",
+      "truth": 4,
+      "recovered": 19,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": [
+        "0x20980"
+      ]
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "arch": "powerpc",
+      "truth": 6,
+      "recovered": 12,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "arch": "powerpc",
+      "truth": 13,
+      "recovered": 19,
+      "recall": 1.0,
+      "padding": 0,
+      "features": 1.0,
+      "spurious": 0,
+      "spurious_unexpected": [],
+      "expected_spurious": []
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}
