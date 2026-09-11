@@ -1496,14 +1496,19 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
     };
     // One from-ordered index: a linear scan per function is O(F*X), the
     // shape that never converged at FFXV scale. Range queries per body.
+    // Thunk membership and entryhood likewise come from sets, not scans.
     let mut by_from: Vec<usize> = (0..import.xrefs.len()).collect();
     by_from.sort_unstable_by_key(|&index| import.xrefs[index].from);
+    let thunked: std::collections::HashSet<u64> =
+        import.thunks.iter().map(|thunk| thunk.entry).collect();
+    let known: std::collections::HashSet<u64> =
+        import.functions.iter().map(|function| function.entry).collect();
     let mut out = Vec::new();
     for function in import.functions.iter() {
         if function.size > STUB_BODY_MAX {
             continue;
         }
-        if import.thunks.iter().any(|thunk| thunk.entry == function.entry) {
+        if thunked.contains(&function.entry) {
             continue;
         }
         let end = function.entry + function.size.max(1);
@@ -1523,9 +1528,7 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
             continue;
         }
         let destination = jumps[0];
-        if !in_code(destination)
-            || import.functions.iter().any(|f| f.entry == destination)
-        {
+        if !in_code(destination) || known.contains(&destination) {
             continue;
         }
         out.push((function.entry, destination));
