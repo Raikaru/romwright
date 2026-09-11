@@ -1,7 +1,7 @@
 {
   "gate": "m17-002",
   "milestone": "M17",
-  "commit": "5968a630f2577452481d4646147dda11056e86bc",
+  "commit": "cbecc64e88175c940a3d08bbcd24a14dcad54c14",
   "date": "2026-09-11",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
@@ -33,19 +33,11 @@
           "scored": true
         },
         "flow": {
-          "claimed": 4,
+          "claimed": 6,
           "in_truth": 1,
-          "explained": 4,
+          "explained": 6,
           "precision": 1.0,
           "coverage": 0.0025,
-          "scored": false
-        },
-        "pattern": {
-          "claimed": 2,
-          "in_truth": 0,
-          "explained": 2,
-          "precision": 1.0,
-          "coverage": 0.0,
           "scored": false
         },
         "thunk": {
@@ -115,27 +107,27 @@
       "invented_count": 1,
       "classes": {
         "call": {
-          "claimed": 402,
-          "in_truth": 400,
-          "explained": 402,
+          "claimed": 403,
+          "in_truth": 401,
+          "explained": 403,
           "precision": 1.0,
-          "coverage": 0.9975,
+          "coverage": 1.0,
           "scored": true
         },
         "flow": {
-          "claimed": 3,
+          "claimed": 7,
           "in_truth": 0,
-          "explained": 3,
+          "explained": 7,
           "precision": 1.0,
           "coverage": 0.0,
           "scored": false
         },
         "pattern": {
-          "claimed": 6,
-          "in_truth": 1,
-          "explained": 5,
-          "precision": 0.8333,
-          "coverage": 0.0025,
+          "claimed": 1,
+          "in_truth": 0,
+          "explained": 0,
+          "precision": 0.0,
+          "coverage": 0.0,
           "scored": false
         },
         "thunk": {
@@ -166,17 +158,9 @@
           "scored": true
         },
         "flow": {
-          "claimed": 3,
-          "in_truth": 0,
-          "explained": 3,
-          "precision": 1.0,
-          "coverage": 0.0,
-          "scored": false
-        },
-        "pattern": {
-          "claimed": 3,
+          "claimed": 6,
           "in_truth": 1,
-          "explained": 3,
+          "explained": 6,
           "precision": 1.0,
           "coverage": 0.0025,
           "scored": false

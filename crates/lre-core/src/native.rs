@@ -311,9 +311,10 @@ pub struct NativeImport {
     pub initializer_labels: Vec<(u64, String)>,
     /// Names the pinned patterns give the starts they proved.
     pub pattern_labels: Vec<(u64, String)>,
-    /// Every pinned-pattern match address, labelled or not: only a subset
-    /// of rules carry a `<funcstart label=>`, so the labels alone cannot
-    /// say which entries the pattern search found.
+    /// Starts the pattern search produced: addresses its `collect` accepted
+    /// as candidates, not every rule match (most matches are refused on
+    /// prerequisites). Labels alone cannot say this -- only a subset of
+    /// rules carry a `<funcstart label=>`.
     pub pattern_starts: Vec<u64>,
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,

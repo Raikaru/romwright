@@ -237,7 +237,6 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
         }
     };
     import.pattern_labels = session.pattern_labels().to_vec();
-    import.pattern_starts = patterns.matches.iter().map(|hit| hit.address).collect();
     super::phase(import, "patterns", patterns_started);
     let flow_started = std::time::Instant::now();
     let mut provider = ConsoleProvider {
@@ -325,7 +324,6 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
         .function_patterns(&ranges)
         .map_err(|error| ImportError::Bad(error.to_string()))?;
     import.pattern_labels = session.pattern_labels().to_vec();
-    import.pattern_starts = patterns.matches.iter().map(|hit| hit.address).collect();
     let mut provider = ConsoleProvider {
         session,
         shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),
@@ -965,6 +963,8 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         }
                     }
                     pattern_accepted += collected.len() as u64;
+                    imp.pattern_starts
+                        .extend(collected.iter().map(|candidate| candidate.address));
                     imp.patterns_seen = Some(lre_model::PatternStats {
                         hits: patterns.matches.len() as u64,
                         accepted: pattern_accepted,
