@@ -79,6 +79,11 @@ def main() -> int:
     failures = []
     for row in report["rows"]:
         if row["status"] == "skipped":
+            # Only msvc off-Windows may skip (mirrors the m1-006 verifier
+            # rule); anything else skipped is a coverage hole, not a pass.
+            if sys.platform == "win32" or not row["id"].startswith("msvc_"):
+                failures.append(
+                    f"{row['id']}: unexpected skip ({row.get('reason', 'no reason')})")
             continue
         # The scorer's status is informational: rows tripping only tied
         # exemptions are expected-fails, not gate failures. A row that
@@ -120,7 +125,12 @@ def main() -> int:
 
     # Aggregates exclude exempted rows' contributions, computed exactly
     # from each row's missing-address lists (never from rounded recall).
-    adj_truth = dict.fromkeys(("native", "ghidra"), report["totals"]["truth_functions"])
+    # A row exempt for either producer leaves both aggregates, so the two
+    # headline recalls are scored on the same set and stay comparable.
+    # The excluded rows are named in the PASS line, not hidden in a total.
+    recall_excluded = {row["id"] for row in report["rows"]
+                       if EXPECTED_RECALL_EXEMPT.get(row["id"])}
+    adj_truth = report["totals"]["truth_functions"]
     adj_matched = {producer: report["totals"][f"{producer}_matched"]
                    for producer in ("native", "ghidra")}
     adj_unattributed = report["totals"]["native.dwarf.fn.unattributed"]
@@ -128,16 +138,16 @@ def main() -> int:
         if row["status"] == "skipped" or not row.get("metrics") or "truth" not in row:
             continue
         missing = row.get("missing", {})
-        for producer in ("native", "ghidra"):
-            if producer in EXPECTED_RECALL_EXEMPT.get(row["id"], set()):
-                truth = row["truth"]["functions"]
-                adj_truth[producer] -= truth
+        if row["id"] in recall_excluded:
+            truth = row["truth"]["functions"]
+            adj_truth -= truth
+            for producer in ("native", "ghidra"):
                 adj_matched[producer] -= truth - len(missing.get(producer, []))
         if row["id"] in EXPECTED_UNATTRIBUTED:
             adj_unattributed -= len(EXPECTED_UNATTRIBUTED[row["id"]])
     recalls = {}
     for producer in ("native", "ghidra"):
-        recalls[producer] = adj_matched[producer] / adj_truth[producer]
+        recalls[producer] = adj_matched[producer] / adj_truth
         if recalls[producer] < RECALL_THRESHOLD:
             raise AssertionError(
                 f"aggregate {producer} dwarf.fn.recall {recalls[producer]:.4f} "
@@ -147,8 +157,9 @@ def main() -> int:
             f"aggregate {adj_unattributed} unattributed outside exemptions")
 
     exempt = sum(len(v) for v in EXPECTED_RECALL_EXEMPT.values()) + len(EXPECTED_UNATTRIBUTED)
-    print(f"m3-001: PASS ({adj_truth['native']} DWARF functions over "
-          f"{len(report['rows'])} corpus entries net of {exempt} tied exemptions; "
+    print(f"m3-001: PASS ({adj_truth} DWARF functions over "
+          f"{len(report['rows'])} corpus entries; recall-exempt rows excluded "
+          f"from both aggregates: {sorted(recall_excluded)}; "
           f"native recall {recalls['native']:.4f}, "
           f"stock Ghidra {recalls['ghidra']:.4f})")
     return 0

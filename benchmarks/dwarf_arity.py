@@ -141,13 +141,19 @@ def parse_info(text):
     return functions
 
 
+def dwarf_dump_tool(data: bytes) -> list[str]:
+    """DWARF info dumper for either container: system readelf cannot parse PE."""
+    if data[:2] == b"MZ":
+        return ["objdump", "--dwarf=info", "--wide"]
+    return ["readelf", "--debug-dump=info", "--wide"]
+
+
 def extract(binary, load_bias=0):
     data = Path(binary).read_bytes()
     executable = [(address, size) for address, size, flags, _, _ in get_load_segments(data) if flags & 1]
     env = dict(os.environ, LC_ALL='C', DEBUGINFOD_URLS='')
     # System readelf is ELF-only; BFD objdump reads PE DWARF identically.
-    tool = ['objdump', '--dwarf=info', '--wide'] if data[:2] == b'MZ' \
-        else ['readelf', '--debug-dump=info', '--wide']
+    tool = dwarf_dump_tool(data)
     result = subprocess.run([*tool, str(binary)],
         text=True, capture_output=True, check=True, timeout=60, env=env)
     if result.stderr.strip():

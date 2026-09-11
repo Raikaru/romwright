@@ -1,7 +1,7 @@
 {
   "gate": "m17-002",
   "milestone": "M17",
-  "commit": "719ba78c530f03da882b6cf63cc40138642ce8f3",
+  "commit": "ab7aeffab24bda2ca0da0d8a7f64530b36e84ce8",
   "date": "2026-09-11",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",

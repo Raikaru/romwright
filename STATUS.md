@@ -3275,7 +3275,8 @@ m3-003, all three wired into continuous integration)
   emits PE carrying DWARF, so ten locked PE entries (5 variants x 2
   architectures, with a DLL standing in for the ELF `plain_pie` slot) are
   buildable. **Approved 2026-09-11; landed partially:** `pe64` (x86_64) is
-  locked with 4 rows (no `cpp_o2`: no mingw cc1plus on this host) and
+  locked with 4 rows (no `cpp_o2`: no mingw cc1plus on this host, no
+  sudo to install `mingw64-gcc-c++`, so C++ stays unbuildable here) and
   scores 1.0 native / >=0.989 stock under m3 with 0 unattributed; `pe32`
   builds but sits below m3's floor (0.80-0.97, a jmp-only-reached CRT
   chain with no unwind tables on SJLJ 32-bit -- same tail-call rule
@@ -6007,7 +6008,9 @@ point at, none reserved:
   const-prop DATA xref, never a call target), and nothing seeds
   argument-held function addresses on any architecture
   (x86_64_many_o2 misses `main` the same way) -- that one is a
-  seeding gap, not a walk gap.
+  seeding gap, not a walk gap (producer pinpoint: the 7 recovered are
+  flow 5 / call 1 / thunk 1; pattern, pointer and unwind claim nothing
+  on this image, so the walk starts from entry+calls alone).
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list

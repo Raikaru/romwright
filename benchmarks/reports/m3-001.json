@@ -1,13 +1,13 @@
 {
   "id": "m3-001",
-  "recorded_at": "2026-09-11T13:12:30.942229+00:00",
+  "recorded_at": "2026-09-11T13:23:11.308016+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98,
     "dwarf.fn.unattributed": 0
   },
   "sources": {
     "dwarf_gate_sha256": "a5d5ee199d7d03caa24869a322ed20eaa79b01b4cee58d2280fd2ddde5d7ee32",
-    "dwarf_reader_sha256": "0c6e2478155d5818e5e566e0995b76aef582361553ea5f12032a034dc24e1bd5"
+    "dwarf_reader_sha256": "28e367a150d63a64aba464ecd3e1bb21af8905067afe5b07313bd98427a84eee"
   },
   "rows": [
     {
