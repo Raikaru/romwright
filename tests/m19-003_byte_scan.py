@@ -162,6 +162,9 @@ def main() -> int:
             rows.append({"id": identifier, "skipped": "missing"})
             continue
         funcs = symtab_funcs(named)
+        # Symtab addresses are usable here only because every corpus row is
+        # ET_EXEC (loader base 0): on an ET_DYN row these same addresses
+        # would need the elf_slide() treatment the libc scale row gets.
         entry = min(address for address, _ in funcs)
         span = max(addr + length for addr, length in funcs) - entry
         first = sweep(binary, entry, span, [], environment)
