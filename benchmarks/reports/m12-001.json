@@ -2,7 +2,7 @@
   "id": "m12-001",
   "milestone": "M12",
   "criterion": "whole-program structural diff, scored against symbol truth",
-  "recorded_at": "2026-09-10T00:30:05.387366+00:00",
+  "recorded_at": "2026-09-11T13:14:39.967054+00:00",
   "thresholds": {
     "twins.precision": 1.0,
     "twins.recall": 1.0,
@@ -17,72 +17,61 @@
   },
   "measured": {
     "twins": {
-      "rows": 20,
-      "judged": 1903,
-      "correct": 1903,
-      "truth": 1903,
-      "ported_judged": 1702,
-      "ported_correct": 1702,
+      "rows": 29,
+      "judged": 2778,
+      "correct": 2778,
+      "truth": 2778,
+      "ported_judged": 1719,
+      "ported_correct": 1719,
       "precision": 1.0,
       "recall": 1.0,
       "name_precision": 1.0
     },
     "optimisation": {
-      "rows": 12,
-      "judged": 127,
-      "correct": 127,
-      "truth": 147,
-      "ported_judged": 43,
-      "ported_correct": 41,
+      "rows": 18,
+      "judged": 229,
+      "correct": 229,
+      "truth": 253,
+      "ported_judged": 52,
+      "ported_correct": 49,
       "precision": 1.0,
-      "recall": 0.8639,
-      "name_precision": 0.9535
-    },
-    "modules": {
-      "rows": 2,
-      "judged": 1153,
-      "correct": 1114,
-      "truth": 1176,
-      "ported_judged": 1208,
-      "ported_correct": 1120,
-      "precision": 0.9662,
-      "recall": 0.9473,
-      "name_precision": 0.9272
+      "recall": 0.9051,
+      "name_precision": 0.9423
     },
     "anchor": {
-      "judged": 2802,
-      "correct": 2802,
+      "judged": 2999,
+      "correct": 2999,
       "precision": 1.0
     },
     "classes": {
       "alignment": {
-        "judged": 381,
-        "correct": 342,
-        "precision": 0.8976
+        "judged": 8,
+        "correct": 8,
+        "precision": 1.0
       },
       "body": {
-        "judged": 1912,
-        "correct": 1912,
+        "judged": 2796,
+        "correct": 2796,
         "precision": 1.0
       },
       "import": {
-        "judged": 27,
-        "correct": 27,
+        "judged": 104,
+        "correct": 104,
         "precision": 1.0
       },
       "name": {
+        "judged": 9,
+        "correct": 9,
+        "precision": 1.0
+      },
+      "profile": {
         "judged": 6,
         "correct": 6,
         "precision": 1.0
       },
-      "profile": {
-        "judged": 23,
-        "correct": 23,
-        "precision": 1.0
-      },
       "shape": {
-        "judged": 820,
-        "correct": 820,
+        "judged": 70,
+        "correct": 70,
         "precision": 1.0
       },
       "string": {
@@ -114,7 +103,9 @@
       },
       "anchors": 12,
       "reference_functions": 12,
-      "target_functions": 12
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "x86_64_plain_o2",
@@ -137,7 +128,9 @@
       },
       "anchors": 12,
       "reference_functions": 12,
-      "target_functions": 12
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "x86_64_plain_pie",
@@ -160,7 +153,9 @@
       },
       "anchors": 12,
       "reference_functions": 12,
-      "target_functions": 12
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "x86_64_cpp_o2",
@@ -183,7 +178,9 @@
       },
       "anchors": 20,
       "reference_functions": 20,
-      "target_functions": 20
+      "target_functions": 20,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "x86_64_many_o2",
@@ -206,7 +203,9 @@
       },
       "anchors": 409,
       "reference_functions": 409,
-      "target_functions": 409
+      "target_functions": 409,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "i386_plain_o0",
@@ -229,7 +228,9 @@
       },
       "anchors": 15,
       "reference_functions": 15,
-      "target_functions": 15
+      "target_functions": 15,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "i386_plain_o2",
@@ -252,7 +253,9 @@
       },
       "anchors": 15,
       "reference_functions": 15,
-      "target_functions": 15
+      "target_functions": 15,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "i386_plain_pie",
@@ -275,7 +278,9 @@
       },
       "anchors": 16,
       "reference_functions": 16,
-      "target_functions": 16
+      "target_functions": 16,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "i386_cpp_o2",
@@ -298,7 +303,9 @@
       },
       "anchors": 23,
       "reference_functions": 23,
-      "target_functions": 23
+      "target_functions": 23,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "i386_many_o2",
@@ -321,7 +328,9 @@
       },
       "anchors": 413,
       "reference_functions": 413,
-      "target_functions": 413
+      "target_functions": 413,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_o0",
@@ -338,17 +347,15 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 16,
-          "correct": 16
-        },
-        "profile": {
-          "judged": 1,
-          "correct": 1
+          "judged": 17,
+          "correct": 17
         }
       },
       "anchors": 17,
       "reference_functions": 17,
-      "target_functions": 17
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_o2",
@@ -365,17 +372,15 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 16,
-          "correct": 16
-        },
-        "profile": {
-          "judged": 1,
-          "correct": 1
+          "judged": 17,
+          "correct": 17
         }
       },
       "anchors": 17,
       "reference_functions": 17,
-      "target_functions": 17
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_pie",
@@ -392,17 +397,15 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 16,
-          "correct": 16
-        },
-        "profile": {
-          "judged": 1,
-          "correct": 1
+          "judged": 17,
+          "correct": 17
         }
       },
       "anchors": 17,
       "reference_functions": 17,
-      "target_functions": 17
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_cpp_o2",
@@ -419,17 +422,15 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 23,
-          "correct": 23
-        },
-        "profile": {
-          "judged": 1,
-          "correct": 1
+          "judged": 24,
+          "correct": 24
         }
       },
       "anchors": 24,
       "reference_functions": 24,
-      "target_functions": 24
+      "target_functions": 24,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_many_o2",
@@ -446,17 +447,15 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 414,
-          "correct": 414
-        },
-        "profile": {
-          "judged": 1,
-          "correct": 1
+          "judged": 415,
+          "correct": 415
         }
       },
       "anchors": 415,
       "reference_functions": 415,
-      "target_functions": 415
+      "target_functions": 415,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "powerpc_plain_o0",
@@ -479,7 +478,9 @@
       },
       "anchors": 12,
       "reference_functions": 12,
-      "target_functions": 12
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "powerpc_plain_o2",
@@ -502,7 +503,9 @@
       },
       "anchors": 12,
       "reference_functions": 12,
-      "target_functions": 12
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "powerpc_plain_pie",
@@ -525,7 +528,9 @@
       },
       "anchors": 13,
       "reference_functions": 13,
-      "target_functions": 13
+      "target_functions": 13,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "powerpc_cpp_o2",
@@ -548,7 +553,9 @@
       },
       "anchors": 19,
       "reference_functions": 19,
-      "target_functions": 19
+      "target_functions": 19,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "powerpc_many_o2",
@@ -571,7 +578,236 @@
       },
       "anchors": 410,
       "reference_functions": 410,
-      "target_functions": 410
+      "target_functions": 410,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_o0",
+      "kind": "twins",
+      "truth": 11,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 11,
+          "correct": 11
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 11,
+      "target_functions": 11,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_o2",
+      "kind": "twins",
+      "truth": 10,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 10,
+          "correct": 10
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 10,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_pie",
+      "kind": "twins",
+      "truth": 8,
+      "matched": 8,
+      "judged": 8,
+      "correct": 8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 8,
+          "correct": 8
+        }
+      },
+      "anchors": 8,
+      "reference_functions": 9,
+      "target_functions": 8,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_cpp_o2",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 17,
+          "correct": 17
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 18,
+      "target_functions": 19,
+      "expected_misses": [
+        "0x20940"
+      ],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_many_o2",
+      "kind": "twins",
+      "truth": 7,
+      "matched": 7,
+      "judged": 7,
+      "correct": 7,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 2,
+      "ported_judged": 2,
+      "ported_correct": 2,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 7,
+          "correct": 7
+        }
+      },
+      "anchors": 7,
+      "reference_functions": 408,
+      "target_functions": 7,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_o0",
+      "kind": "twins",
+      "truth": 124,
+      "matched": 124,
+      "judged": 124,
+      "correct": 124,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 124,
+          "correct": 124
+        }
+      },
+      "anchors": 124,
+      "reference_functions": 124,
+      "target_functions": 124,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_o2",
+      "kind": "twins",
+      "truth": 124,
+      "matched": 124,
+      "judged": 124,
+      "correct": 124,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 124,
+          "correct": 124
+        }
+      },
+      "anchors": 124,
+      "reference_functions": 124,
+      "target_functions": 124,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_pie",
+      "kind": "twins",
+      "truth": 109,
+      "matched": 109,
+      "judged": 109,
+      "correct": 109,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 109,
+          "correct": 109
+        }
+      },
+      "anchors": 109,
+      "reference_functions": 109,
+      "target_functions": 109,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_many_o2",
+      "kind": "twins",
+      "truth": 465,
+      "matched": 465,
+      "judged": 465,
+      "correct": 465,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 465,
+          "correct": 465
+        }
+      },
+      "anchors": 465,
+      "reference_functions": 465,
+      "target_functions": 465,
+      "expected_misses": [],
+      "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_o0->aarch64_plain_o2",
@@ -792,6 +1028,188 @@
       "target_functions": 16
     },
     {
+      "id": "mipsel_plain_o0->mipsel_plain_o2",
+      "kind": "optimisation",
+      "truth": 10,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 7,
+          "correct": 7
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 10
+    },
+    {
+      "id": "mipsel_plain_o2->mipsel_plain_o0",
+      "kind": "optimisation",
+      "truth": 11,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 0.9091,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 7,
+          "correct": 7
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 11
+    },
+    {
+      "id": "mipsel_plain_o0->mipsel_plain_pie",
+      "kind": "optimisation",
+      "truth": 5,
+      "matched": 7,
+      "judged": 2,
+      "correct": 2,
+      "precision": 1.0,
+      "recall": 0.4,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 2,
+      "name_precision": 0.6667,
+      "evidence": {
+        "alignment": {
+          "judged": 2,
+          "correct": 2
+        }
+      },
+      "anchors": 3,
+      "reference_functions": 11,
+      "target_functions": 8
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_o2",
+      "kind": "optimisation",
+      "truth": 29,
+      "matched": 123,
+      "judged": 29,
+      "correct": 29,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 27,
+          "correct": 27
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 115,
+      "reference_functions": 124,
+      "target_functions": 124
+    },
+    {
+      "id": "pe64_plain_o2->pe64_plain_o0",
+      "kind": "optimisation",
+      "truth": 29,
+      "matched": 123,
+      "judged": 29,
+      "correct": 29,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 27,
+          "correct": 27
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 115,
+      "reference_functions": 124,
+      "target_functions": 124
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_pie",
+      "kind": "optimisation",
+      "truth": 22,
+      "matched": 107,
+      "judged": 22,
+      "correct": 22,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "import": {
+          "judged": 21,
+          "correct": 21
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 96,
+      "reference_functions": 124,
+      "target_functions": 109
+    },
+    {
       "id": "powerpc_plain_o0->powerpc_plain_o2",
       "kind": "optimisation",
       "truth": 12,
@@ -1000,76 +1418,6 @@
       "anchors": 6,
       "reference_functions": 12,
       "target_functions": 12
-    },
-    {
-      "id": "boot->Movie",
-      "kind": "modules",
-      "truth": 588,
-      "matched": 626,
-      "judged": 576,
-      "correct": 553,
-      "precision": 0.9601,
-      "recall": 0.9405,
-      "ported": 624,
-      "ported_judged": 608,
-      "ported_correct": 556,
-      "name_precision": 0.9145,
-      "evidence": {
-        "alignment": {
-          "judged": 188,
-          "correct": 165
-        },
-        "profile": {
-          "judged": 6,
-          "correct": 6
-        },
-        "shape": {
-          "judged": 381,
-          "correct": 381
-        },
-        "string": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 399,
-      "reference_functions": 644,
-      "target_functions": 1678
-    },
-    {
-      "id": "Movie->boot",
-      "kind": "modules",
-      "truth": 588,
-      "matched": 653,
-      "judged": 577,
-      "correct": 561,
-      "precision": 0.9723,
-      "recall": 0.9541,
-      "ported": 649,
-      "ported_judged": 600,
-      "ported_correct": 564,
-      "name_precision": 0.94,
-      "evidence": {
-        "alignment": {
-          "judged": 187,
-          "correct": 171
-        },
-        "profile": {
-          "judged": 6,
-          "correct": 6
-        },
-        "shape": {
-          "judged": 383,
-          "correct": 383
-        },
-        "string": {
-          "judged": 1,
-          "correct": 1
-        }
-      },
-      "anchors": 401,
-      "reference_functions": 1400,
-      "target_functions": 694
     }
   ],
   "status": "pass",

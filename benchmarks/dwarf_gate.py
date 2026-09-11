@@ -49,8 +49,31 @@ def readelf(*arguments: str) -> str:
                           check=True, timeout=120, env=environment).stdout
 
 
-def symbol_addresses(binary: Path) -> set[int]:
+MINGW_NM = {"pe64": "x86_64-w64-mingw32-nm", "pe32": "i686-w64-mingw32-nm"}
+
+
+def is_pe(binary: Path) -> bool:
+    with open(binary, "rb") as handle:
+        return handle.read(2) == b"MZ"
+
+
+def symbol_addresses(binary: Path, architecture: str = "") -> set[int]:
     """Every defined symbol address in the unstripped twin, any symbol type."""
+    if is_pe(binary):
+        tool = MINGW_NM[architecture]
+        result = subprocess.run([tool, str(binary)], capture_output=True,
+                                text=True, timeout=120)
+        if result.returncode:
+            raise ValueError(f"{tool} failed on {binary.name}")
+        addresses = set()
+        for line in result.stdout.splitlines():
+            parts = line.strip().split()
+            if len(parts) >= 3 and parts[1] != "U":
+                try:
+                    addresses.add(int(parts[0], 16))
+                except ValueError:
+                    continue
+        return addresses
     addresses = set()
     for line in readelf("-sW", str(binary)).splitlines():
         parts = line.split()
@@ -64,6 +87,8 @@ def symbol_addresses(binary: Path) -> set[int]:
 
 def stub_ranges(binary: Path) -> list[tuple[int, int]]:
     """Linker stub sections: PLT slots are code neither tool invents."""
+    if is_pe(binary):
+        return []
     ranges = []
     for line in readelf("-SW", str(binary)).splitlines():
         match = SECTION.match(line)
@@ -76,6 +101,10 @@ def stub_ranges(binary: Path) -> list[tuple[int, int]]:
 
 def is_shared_object(binary: Path, big_endian: bool) -> bool:
     """ET_DYN images are mapped at the loader's base, not at link time."""
+    if is_pe(binary):
+        # Our PE loader keeps link VAs, DLLs included (m19-001 scores its
+        # DLL rows with no base adjustment).
+        return False
     header = binary.read_bytes()[16:18]
     return int.from_bytes(header, "big" if big_endian else "little") == 3
 
@@ -161,7 +190,7 @@ def main() -> int:
                 truth_export = extract(twin, bias)
                 truth = {int(address, 16) for address in truth_export["functions"]}
                 ghidra = {int(address, 16) for address in reference["entries"]}
-                symbols = {address + bias for address in symbol_addresses(twin)}
+                symbols = {address + bias for address in symbol_addresses(twin, entry["architecture"])}
                 stubs = [(start + bias, size) for start, size in stub_ranges(twin)]
 
                 undescribed = observed - truth

@@ -133,14 +133,17 @@ for e in authoritative_lock["entries"]:
     key = (e["architecture"], e["variant"])
     assert key not in auth_entries, f"Duplicate lock entry: {key}"
     auth_entries[key] = e
+matrix = authoritative_lock["expected_variants"]
+if isinstance(matrix, list):
+    matrix = {a: matrix for a in authoritative_lock["expected_architectures"]}
 lock_keys = {(a, v) for a in authoritative_lock["expected_architectures"]
-             for v in authoritative_lock["expected_variants"]}
+             for v in matrix[a]}
 assert set(auth_entries) == lock_keys, "Lock matrix is incomplete"
 
 # Gate mode comes from the invocation, never from untrusted manifest metadata.
 selected_archs = ["msvc"] if mode == "msvc" else authoritative_lock["expected_architectures"]
 assert run_manifest["selected_architectures"] == selected_archs, "Selected architecture mismatch"
-expected_keys = {(a, v) for a in selected_archs for v in authoritative_lock["expected_variants"]}
+expected_keys = {(a, v) for a in selected_archs for v in matrix[a]}
 actual_keys = [(e["architecture"], e["variant"]) for e in run_manifest["entries"]]
 assert len(actual_keys) == len(set(actual_keys)), "Duplicate manifest entry"
 assert set(actual_keys) == expected_keys, "Entry coverage mismatch"
@@ -290,9 +293,31 @@ for entry in run_manifest["entries"]:
             assert v1 == v2, f"Executable vaddr mismatch {v1:#x} != {v2:#x}"
             assert b1 == b2, f"Loadable code at {v1:#x} must be bit-for-bit identical between stripped and unstripped twin"
 
-    elif auth["format"] == "pe":
+    elif auth["format"] == "pe" and "symbol_artifact" in auth:
         sym_count = validate_pe_twin(bin_path, twin_path, out_dir / auth["symbol_artifact"])
         assert sym_count == entry["symbol_count"], f"Incorrect PDB symbol count for {twin_path.name}"
+    elif auth["format"] == "pe":
+        import shutil, subprocess, sys
+        sys.path.insert(0, str(committed_lock_path.parent.parent / "scripts"))
+        from gen_corpus import parse_pe_info
+        b_data = bin_path.read_bytes()
+        t_data = twin_path.read_bytes()
+        nm_tool = {"pe64": "x86_64-w64-mingw32-nm", "pe32": "i686-w64-mingw32-nm"}[arch]
+        assert shutil.which(nm_tool), f"MinGW nm not found: {nm_tool}"
+        out = subprocess.run([nm_tool, str(twin_path)], capture_output=True,
+                             text=True, timeout=120).stdout
+        names = set()
+        for line in out.splitlines():
+            parts = line.strip().split()
+            if len(parts) == 3 and parts[1] in "tT":
+                names.add(parts[2])
+        sym_count = len(names)
+        assert sym_count == entry["symbol_count"], f"Incorrect PE symbol count for {twin_path.name}"
+        min_sym = auth.get("min_symbols", 1)
+        assert sym_count >= min_sym, f"Symbol count {sym_count} < expected minimum {min_sym} in {twin_path.name}"
+        b_text = [(s["vaddr"], s["vsize"]) for s in parse_pe_info(b_data)["sections"] if s["exec"]]
+        t_text = [(s["vaddr"], s["vsize"]) for s in parse_pe_info(t_data)["sections"] if s["exec"]]
+        assert b_text and b_text == t_text, f"Executable sections differ for {bin_path.name}"
 
     runtime_check = None
     if var == "cpp_o2":

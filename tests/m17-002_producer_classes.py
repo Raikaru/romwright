@@ -45,7 +45,8 @@ from dwarf_types import extract  # noqa: E402
 from dwarf_gate import stub_ranges, symbol_addresses  # noqa: E402
 
 CLI = ROOT / "target/release/lre-cli"
-VARIANTS = ("x86_64_many_o2", "i386_many_o2", "aarch64_many_o2", "powerpc_many_o2")
+VARIANTS = ("x86_64_many_o2", "i386_many_o2", "aarch64_many_o2", "powerpc_many_o2",
+            "pe64_many_o2")
 # Measured: `call` carries this corpus at 1.0 precision on every row, and
 # nothing is left unattributed. The gate holds those claims.
 PRECISION_FLOOR = 0.98
@@ -93,14 +94,16 @@ def main():
                 failures.append(f"{key}: corpus row missing")
                 continue
             binary = (arguments.corpus_dir / row["binary"]).resolve()
-            unstripped = binary.with_suffix(".unstripped")
+            # PE twins keep their extension (`.unstripped.exe`); ELF twins
+            # drop it. The manifest names both exactly.
+            unstripped = (arguments.corpus_dir / row["unstripped_twin"]).resolve()
             if not unstripped.is_file():
                 failures.append(f"{key}: no unstripped twin to take truth from")
                 continue
             truth = set(extract(unstripped)["functions"])
             # Code the compiler emits without debug information is explained
             # rather than invented (`m3-001`'s rule).
-            named = symbol_addresses(unstripped)
+            named = symbol_addresses(unstripped, row["architecture"])
             stubs = stub_ranges(unstripped)
 
             def explained(entry: str) -> bool:

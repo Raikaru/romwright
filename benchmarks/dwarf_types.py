@@ -170,8 +170,11 @@ def extract(binary, load_bias=0):
     executable = [(address, size) for address, size, flags, _, _ in get_load_segments(data)
                   if flags & 1]
     environment = dict(os.environ, LC_ALL="C", DEBUGINFOD_URLS="")
+    # System readelf is ELF-only; BFD objdump reads PE DWARF identically.
+    tool = ["objdump", "--dwarf=info", "--wide"] if data[:2] == b"MZ" \
+        else ["readelf", "--debug-dump=info", "--wide"]
     result = subprocess.run(
-        ["readelf", "--debug-dump=info", "--wide", str(binary)],
+        [*tool, str(binary)],
         text=True, capture_output=True, check=True, timeout=120, env=environment)
     if result.stderr.strip():
         raise ValueError(f"readelf did not provide a clean truth export: {result.stderr.strip()}")
