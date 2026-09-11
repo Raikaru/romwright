@@ -2,7 +2,7 @@
   "id": "m12-001",
   "milestone": "M12",
   "criterion": "whole-program structural diff, scored against symbol truth",
-  "recorded_at": "2026-09-11T15:05:10.415338+00:00",
+  "recorded_at": "2026-09-11T15:23:14.557362+00:00",
   "thresholds": {
     "twins.precision": 1.0,
     "twins.recall": 1.0,

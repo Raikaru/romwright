@@ -1494,6 +1494,10 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
                 && address - mapping.vaddr < mapping.size
         })
     };
+    // One from-ordered index: a linear scan per function is O(F*X), the
+    // shape that never converged at FFXV scale. Range queries per body.
+    let mut by_from: Vec<usize> = (0..import.xrefs.len()).collect();
+    by_from.sort_unstable_by_key(|&index| import.xrefs[index].from);
     let mut out = Vec::new();
     for function in import.functions.iter() {
         if function.size > STUB_BODY_MAX {
@@ -1502,14 +1506,13 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
         if import.thunks.iter().any(|thunk| thunk.entry == function.entry) {
             continue;
         }
+        let end = function.entry + function.size.max(1);
+        let lo = by_from.partition_point(|&index| import.xrefs[index].from < function.entry);
+        let hi = by_from.partition_point(|&index| import.xrefs[index].from < end);
         let mut jumps = Vec::new();
         let mut calls = 0u32;
-        for xref in import.xrefs.iter() {
-            if xref.from < function.entry
-                || xref.from >= function.entry + function.size.max(1)
-            {
-                continue;
-            }
+        for &index in &by_from[lo..hi] {
+            let xref = &import.xrefs[index];
             if xref.kind == "UNCONDITIONAL_JUMP" {
                 jumps.push(xref.to);
             } else if xref.kind.contains("CALL") {
@@ -5122,6 +5125,55 @@ mod tests {
         let strict = session.constants(0x1000, 0x100e, &import.mappings, false).unwrap();
         assert!(strict.iter().all(|fact| fact.value != 0x4000),
             "strict constant queries must not inherit reference-inference heuristics: {strict:?}");
+    }
+
+    #[test]
+    fn stub_jump_seeds_promotes_only_bare_jump_stubs() {
+        use super::{stub_jump_seeds, Mapping, NativeFunction, NativeImport, NativeXref};
+        fn imp(functions: Vec<(u64, u64)>, xrefs: Vec<(u64, u64, &str)>) -> NativeImport {
+            NativeImport {
+                mappings: vec![Mapping {
+                    vaddr: 0x1000,
+                    size: 0x1000,
+                    file_off: 0,
+                    flags: 5,
+                    bytes: vec![],
+                }],
+                functions: functions
+                    .into_iter()
+                    .map(|(entry, size)| NativeFunction {
+                        entry,
+                        size,
+                        name: format!("FUN_{entry:08x}"),
+                    })
+                    .collect(),
+                xrefs: xrefs
+                    .into_iter()
+                    .map(|(from, to, kind)| NativeXref::new(from, to, kind))
+                    .collect(),
+                ..Default::default()
+            }
+        }
+        let code = |from: u64, to: u64| (from, to, "UNCONDITIONAL_JUMP");
+        let call = |from: u64, to: u64| (from, to, "UNCONDITIONAL_CALL");
+        // Bare jump stub seeds its destination.
+        let import = imp(vec![(0x1000, 10)], vec![code(0x1004, 0x1100)]);
+        assert_eq!(stub_jump_seeds(&import), vec![(0x1000, 0x1100)]);
+        // Substantial body: tail call, stays parked.
+        let import = imp(vec![(0x1000, 64)], vec![code(0x1030, 0x1100)]);
+        assert!(stub_jump_seeds(&import).is_empty());
+        // A call inside disqualifies the stub shape.
+        let import =
+            imp(vec![(0x1000, 10)], vec![code(0x1004, 0x1100), call(0x1008, 0x1200)]);
+        assert!(stub_jump_seeds(&import).is_empty());
+        // Destination already an entry, or outside code: nothing to do.
+        let import = imp(
+            vec![(0x1000, 10), (0x1100, 20)],
+            vec![code(0x1004, 0x1100)],
+        );
+        assert!(stub_jump_seeds(&import).is_empty());
+        let import = imp(vec![(0x1000, 10)], vec![code(0x1004, 0x9000)]);
+        assert!(stub_jump_seeds(&import).is_empty());
     }
 
     #[test]

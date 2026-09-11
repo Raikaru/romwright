@@ -55,6 +55,23 @@ EXPECTED_RECALL_EXEMPT = {
     "pe32_many_o2": {"native", "ghidra"},
 }
 EXPECTED_UNATTRIBUTED = {"mipsel_cpp_o2": ["00020980"]}
+# Measured floors: an exempt row can also REGRESS (the stale guard only
+# fires upward), so each exempted producer carries the floor its last
+# green run measured, set just below. pe32_many_o2 at 0.975 is one
+# function above its floor; the stub rule's +2 lives inside these.
+EXEMPT_FLOORS = {
+    ("mipsel_plain_o2", "native"): 0.4,
+    ("mipsel_plain_o2", "ghidra"): 0.4,
+    ("mipsel_plain_pie", "native"): 0.4,
+    ("pe32_plain_o0", "native"): 0.82,
+    ("pe32_plain_o0", "ghidra"): 0.75,
+    ("pe32_plain_o2", "native"): 0.81,
+    ("pe32_plain_o2", "ghidra"): 0.74,
+    ("pe32_plain_pie", "native"): 0.83,
+    ("pe32_plain_pie", "ghidra"): 0.80,
+    ("pe32_many_o2", "native"): 0.97,
+    ("pe32_many_o2", "ghidra"): 0.95,
+}
 
 ROOT = Path(__file__).resolve().parents[1]
 RECALL_THRESHOLD = 0.98
@@ -109,6 +126,10 @@ def main() -> int:
                 if producer not in exempt_producers:
                     failures.append(
                         f"{row['id']}: {producer} dwarf.fn.recall {recall:.4f} < {RECALL_THRESHOLD}")
+                elif recall < EXEMPT_FLOORS.get((row["id"], producer), 0.0):
+                    failures.append(
+                        f"{row['id']}: {producer} recall {recall:.4f} below exempt floor "
+                        f"{EXEMPT_FLOORS[(row['id'], producer)]}")
             elif producer in exempt_producers:
                 failures.append(f"{row['id']}: {producer} recall exemption stale (now {recall:.4f})")
         expected_unattr = EXPECTED_UNATTRIBUTED.get(row["id"])
