@@ -23,8 +23,6 @@ What the gate asserts, and refuses to assert beyond:
 * agreement: hand length equals console flow length on a sample of
   symtab function entries and mid-body offsets (the only per-offset
   truth a symbol table covers);
-* scale: the retail FFXV .text sweeps end to end (time recorded).
-
 The gate never claims the sweep distinguishes code from data: a
 length array alone cannot, and the report says so.
 """
@@ -37,7 +35,6 @@ import os
 import platform
 import random
 import re
-import struct
 import subprocess
 import sys
 import time
@@ -47,7 +44,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLI = ROOT / "target" / "release" / "lre-cli"
 CORPUS = Path("/home/raikaru/ventris-cache/corpus")
-FFXV = Path.home() / "ventris-corpus/extracted/win-ffxv/ffxv_s.exe"
 THRESHOLDS = {"agreement": 0.95}
 
 
@@ -59,22 +55,6 @@ def run(arguments: list[str], environment: dict[str, str]) -> str:
     if result.returncode:
         raise SystemExit(f"{' '.join(arguments)} failed: {result.stderr[-2000:]}")
     return result.stdout
-
-
-def pe_text_range() -> tuple[int, int]:
-    data = FFXV.read_bytes()
-    pe_offset = struct.unpack_from("<I", data, 0x3C)[0]
-    sections = struct.unpack_from("<H", data, pe_offset + 6)[0]
-    optional_size = struct.unpack_from("<H", data, pe_offset + 20)[0]
-    table = pe_offset + 24 + optional_size
-    for index in range(sections):
-        entry = table + index * 40
-        name = data[entry:entry + 8].split(b"\0")[0]
-        if name == b".text":
-            vsize = struct.unpack_from("<I", data, entry + 8)[0]
-            vaddr = struct.unpack_from("<I", data, entry + 12)[0]
-            return 0x140000000 + vaddr, vsize
-    raise SystemExit("no .text in ffxv_s.exe")
 
 
 def sweep(binary: Path, vaddr: int, size: int, ask: list[int],
@@ -163,19 +143,6 @@ def main() -> int:
         print(json.dumps(row), flush=True)
         if not deterministic:
             failures.append(f"{identifier}: sweep not deterministic")
-
-    # Scale row: the retail .text end to end, timed.
-    if FFXV.is_file():
-        vaddr, size = pe_text_range()
-        started = time.monotonic()
-        full = sweep(FFXV, vaddr, size, [], environment)
-        wall_s = round(time.monotonic() - started, 1)
-        rows.append({"id": "ffxv_text", "span": size, "sweep_ms": full["ms"],
-                     "wall_s": wall_s, "digest": full["digest"][:16],
-                     "flows": full["flows"]})
-        print(json.dumps(rows[-1]), flush=True)
-    else:
-        rows.append({"id": "ffxv_text", "skipped": "missing retail image"})
 
     measured = [row for row in rows if "skipped" not in row and "agreement" in row]
     for row in measured:

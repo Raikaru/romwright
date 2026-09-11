@@ -5970,27 +5970,6 @@ point at, none reserved:
     tree; a port must be clean-room from the paper, as the decompiler port
     was. A gate can assert only per-offset agreement with symbol-table truth
     on the offsets that truth covers, and must refuse claims beyond them.
-  - **FFXV PE against its MAP.** `~/ventris-corpus/extracted/win-ffxv/ffxv_s.map`
-    is an MSVC LINK map: preferred load address `0000000140000000`, section
-    contributions as `Start Length Name Class` (e.g. `0001:00000000
-    000092a0H .text CODE`), publics as `Address Publics by Value Rva+Base
-    Lib:Object` (e.g. `0001:00000000 HCAMixer_Initialize 0000000140001000 f
-    seadr64:HCAMixer.obj`). `Address` is segment:offset with the offset
-    section-relative; the oracle is RVA = PE section VirtualAddress + offset,
-    VA = image base + RVA, cross-checked against the `Rva+Base` column rather
-    than trusted from it. Keep rows marked `f`, exclude `<absolute>` and
-    linker-defined rows.
-  - One full measurement, 2026-09-11, deliberately not a gate (a 91MB
-    import costs ~90 minutes per run for no additional signal over the
-    mingw pair m19-001 runs in seconds): 162,581 functions recovered
-    against 550,728 unique MAP `f` starts -- recall 0.2952 overall,
-    0.8424 over the 177,108 non-funclets, 0.0358 over the 373,620
-    `?dtor/catch/fin/filt/unwind` funclets reached only through .xdata;
-    4 spurious (1 unlisted real function, 3 mid-stub splits of
-    delay-load import stubs), 0 data hits. Store at
-    `~/ffxv-work/ffxv-probe/project.sqlite`; oracle tooling at
-    `scripts/msvc_map.py`. Not in the corpus and never to be: retail
-    files stay outside the repository by user direction.
 - Reserved, and the only things left that are: adding a *new* target game,
   platform or corpus binary (II.1) -- the retail images used (Perfect Dark,
   Emerald, HeartGold, the Vita and 3DS titles, Agent Under Fire) were
