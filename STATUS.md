@@ -6024,7 +6024,8 @@ point at, none reserved:
   none) plus 22 pre-existing flow/call orphans. Cost of the rule at
   scale is 0.1%, isolated and non-swallowing; a store-time containment
   guard retracts any const seed that would swallow better-evidenced
-  entries. A wiring
+  entries, and emitted features are filtered to stored rows (retracted
+  seeds left 4 orphan feature rows at libc scale). A wiring
   gap is ruled out: the console loads 582 MIPS rules and returns 4
   matches here (7 on plain_o2); x86_64 patterns are equally sparse by
   design (20 rules, 6 matches on a 400-function image). Stock's 411
