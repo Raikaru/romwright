@@ -2,7 +2,7 @@
   "id": "m12-001",
   "milestone": "M12",
   "criterion": "whole-program structural diff, scored against symbol truth",
-  "recorded_at": "2026-09-11T13:41:20.938915+00:00",
+  "recorded_at": "2026-09-11T14:19:16.093219+00:00",
   "thresholds": {
     "twins.precision": 1.0,
     "twins.recall": 1.0,
@@ -18,9 +18,9 @@
   "measured": {
     "twins": {
       "rows": 29,
-      "judged": 3183,
-      "correct": 3183,
-      "truth": 3183,
+      "judged": 3179,
+      "correct": 3179,
+      "truth": 3179,
       "ported_judged": 2120,
       "ported_correct": 2120,
       "precision": 1.0,
@@ -39,8 +39,8 @@
       "name_precision": 0.9423
     },
     "anchor": {
-      "judged": 3404,
-      "correct": 3404,
+      "judged": 3400,
+      "correct": 3400,
       "precision": 1.0
     },
     "classes": {
@@ -50,8 +50,8 @@
         "precision": 1.0
       },
       "body": {
-        "judged": 3201,
-        "correct": 3201,
+        "judged": 3197,
+        "correct": 3197,
         "precision": 1.0
       },
       "import": {
@@ -335,10 +335,10 @@
     {
       "id": "aarch64_plain_o0",
       "kind": "twins",
-      "truth": 18,
-      "matched": 18,
-      "judged": 18,
-      "correct": 18,
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 6,
@@ -347,23 +347,23 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 18,
-          "correct": 18
+          "judged": 17,
+          "correct": 17
         }
       },
-      "anchors": 18,
-      "reference_functions": 18,
-      "target_functions": 18,
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_o2",
       "kind": "twins",
-      "truth": 18,
-      "matched": 18,
-      "judged": 18,
-      "correct": 18,
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 6,
@@ -372,13 +372,13 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 18,
-          "correct": 18
+          "judged": 17,
+          "correct": 17
         }
       },
-      "anchors": 18,
-      "reference_functions": 18,
-      "target_functions": 18,
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -410,10 +410,10 @@
     {
       "id": "aarch64_cpp_o2",
       "kind": "twins",
-      "truth": 25,
-      "matched": 25,
-      "judged": 25,
-      "correct": 25,
+      "truth": 24,
+      "matched": 24,
+      "judged": 24,
+      "correct": 24,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 8,
@@ -422,23 +422,23 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 25,
-          "correct": 25
+          "judged": 24,
+          "correct": 24
         }
       },
-      "anchors": 25,
-      "reference_functions": 25,
-      "target_functions": 25,
+      "anchors": 24,
+      "reference_functions": 24,
+      "target_functions": 24,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "aarch64_many_o2",
       "kind": "twins",
-      "truth": 416,
-      "matched": 416,
-      "judged": 416,
-      "correct": 416,
+      "truth": 415,
+      "matched": 415,
+      "judged": 415,
+      "correct": 415,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 405,
@@ -447,13 +447,13 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 416,
-          "correct": 416
+          "judged": 415,
+          "correct": 415
         }
       },
-      "anchors": 416,
-      "reference_functions": 416,
-      "target_functions": 416,
+      "anchors": 415,
+      "reference_functions": 415,
+      "target_functions": 415,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -813,7 +813,7 @@
       "id": "aarch64_plain_o0->aarch64_plain_o2",
       "kind": "optimisation",
       "truth": 16,
-      "matched": 17,
+      "matched": 16,
       "judged": 15,
       "correct": 15,
       "precision": 1.0,
@@ -840,15 +840,15 @@
           "correct": 1
         }
       },
-      "anchors": 17,
-      "reference_functions": 18,
-      "target_functions": 18
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
     },
     {
       "id": "aarch64_plain_o2->aarch64_plain_o0",
       "kind": "optimisation",
       "truth": 16,
-      "matched": 17,
+      "matched": 16,
       "judged": 15,
       "correct": 15,
       "precision": 1.0,
@@ -875,15 +875,15 @@
           "correct": 1
         }
       },
-      "anchors": 17,
-      "reference_functions": 18,
-      "target_functions": 18
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
     },
     {
       "id": "aarch64_plain_o0->aarch64_plain_pie",
       "kind": "optimisation",
       "truth": 12,
-      "matched": 15,
+      "matched": 14,
       "judged": 10,
       "correct": 10,
       "precision": 1.0,
@@ -910,8 +910,8 @@
           "correct": 1
         }
       },
-      "anchors": 14,
-      "reference_functions": 18,
+      "anchors": 13,
+      "reference_functions": 17,
       "target_functions": 17
     },
     {

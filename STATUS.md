@@ -6017,7 +6017,14 @@ point at, none reserved:
   7/401 -> 401/401 (m3 exemption retired by its own stale guard);
   x86_64_many_o2 `main` recovered the same way. A call-site window was
   tried first and dropped: MIPS calls through registers leave no call
-  fact to window around. A wiring
+  fact to window around. Scale residue, measured on libc (3987
+  recovered): the p-code use filter (denies comparisons, bool/float
+  shapes) killed 12 CMP-seeded orphans; 4 LEA-materialized stubs remain
+  (table bases/segment bounds, no symbols, no callers, stock creates
+  none) plus 22 pre-existing flow/call orphans. Cost of the rule at
+  scale is 0.1%, isolated and non-swallowing; a store-time containment
+  guard retracts any const seed that would swallow better-evidenced
+  entries. A wiring
   gap is ruled out: the console loads 582 MIPS rules and returns 4
   matches here (7 on plain_o2); x86_64 patterns are equally sparse by
   design (20 rules, 6 matches on a 400-function image). Stock's 411

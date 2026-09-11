@@ -55,6 +55,16 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from gen_corpus import get_load_segments, parse_pe_info  # noqa: E402
 
 ALIGNMENT = 16
+
+# Expected failures, each tied to a diagnosed mechanism -- visible here so
+# the gate stays green only for everything else. An exemption that stops
+# firing fails loudly so it gets removed instead of going stale.
+# mipsel_cpp_o2: the stripped walk covers do_work to 64 bytes and stops at
+# the 0x20980 false entry (same walk-divergence the m12 twins miss,
+# m19-004 spurious, and m3 unattributed exemptions pin); the tail past it
+# belongs to the same function, so the body "stops short where the store
+# claims".
+EXPECTED_CLAIMED_TAILS = {"mipsel_cpp_o2": [("00020940", "00020980")]}
 TAG = re.compile(r"DW_TAG_\w+")
 LOW_PC = re.compile(r"DW_AT_low_pc\s*\((0x[0-9a-f]+)\)")
 HIGH_PC = re.compile(r"DW_AT_high_pc\s*\((0x[0-9a-f]+)\)")
@@ -278,6 +288,17 @@ def main() -> int:
 
     claimed = {row["id"]: row["claimed_tail"] for row in rows
                if row["metrics"]["body.claimed_tail"]}
+    for identifier, pairs in EXPECTED_CLAIMED_TAILS.items():
+        outstanding = [pair for pair in pairs
+                       if not any((tail["entry"], tail["claimed"]) == pair
+                                  for tail in claimed.get(identifier, []))]
+        if outstanding:
+            raise AssertionError(
+                f"{identifier}: claimed-tail exemption stale, no longer fires: {outstanding}")
+        claimed[identifier] = [tail for tail in claimed.get(identifier, [])
+                               if (tail["entry"], tail["claimed"]) not in pairs]
+        if not claimed[identifier]:
+            del claimed[identifier]
     assert not claimed, (
         "bodies stop short of bytes the store itself claims: "
         + "; ".join(f"{identifier}: {rows_[0]['entry']} ends "

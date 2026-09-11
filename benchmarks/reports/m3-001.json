@@ -1,6 +1,6 @@
 {
   "id": "m3-001",
-  "recorded_at": "2026-09-11T13:40:11.863434+00:00",
+  "recorded_at": "2026-09-11T14:17:51.986156+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98,
     "dwarf.fn.unattributed": 0
@@ -257,9 +257,9 @@
         "native.dwarf.fn.recall": 1.0,
         "ghidra.dwarf.fn.recall": 1.0,
         "native.dwarf.fn.unattributed": 0,
-        "native.functions": 18,
+        "native.functions": 17,
         "ghidra.functions": 23,
-        "native.undescribed": 16
+        "native.undescribed": 15
       },
       "runs": 1,
       "truth": {
@@ -281,9 +281,9 @@
         "native.dwarf.fn.recall": 1.0,
         "ghidra.dwarf.fn.recall": 1.0,
         "native.dwarf.fn.unattributed": 0,
-        "native.functions": 18,
+        "native.functions": 17,
         "ghidra.functions": 23,
-        "native.undescribed": 16
+        "native.undescribed": 15
       },
       "runs": 1,
       "truth": {
@@ -329,9 +329,9 @@
         "native.dwarf.fn.recall": 1.0,
         "ghidra.dwarf.fn.recall": 1.0,
         "native.dwarf.fn.unattributed": 0,
-        "native.functions": 25,
+        "native.functions": 24,
         "ghidra.functions": 36,
-        "native.undescribed": 22
+        "native.undescribed": 21
       },
       "runs": 1,
       "truth": {
@@ -353,9 +353,9 @@
         "native.dwarf.fn.recall": 1.0,
         "ghidra.dwarf.fn.recall": 1.0,
         "native.dwarf.fn.unattributed": 0,
-        "native.functions": 416,
+        "native.functions": 415,
         "ghidra.functions": 420,
-        "native.undescribed": 15
+        "native.undescribed": 14
       },
       "runs": 1,
       "truth": {
@@ -790,9 +790,9 @@
     "truth_functions": 2759,
     "native_matched": 2757,
     "ghidra_matched": 2752,
-    "native_observed": 3185,
+    "native_observed": 3181,
     "native.dwarf.fn.unattributed": 1,
-    "undescribed": 428,
+    "undescribed": 424,
     "native.dwarf.fn.recall": 0.9992750996737948,
     "ghidra.dwarf.fn.recall": 0.997462848858282
   },

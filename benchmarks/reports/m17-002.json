@@ -1,7 +1,7 @@
 {
   "gate": "m17-002",
   "milestone": "M17",
-  "commit": "a3f4aaa48619e19ed650c347136981b209c08fae",
+  "commit": "83fac980a599fdc34408b6c9a38046ec0293ce35",
   "date": "2026-09-11",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
@@ -98,7 +98,7 @@
     {
       "id": "aarch64_many_o2",
       "truth": 401,
-      "recovered": 416,
+      "recovered": 415,
       "recall": 1.0,
       "unattributed": 0.0,
       "invented": [
@@ -131,9 +131,9 @@
           "scored": false
         },
         "thunk": {
-          "claimed": 5,
+          "claimed": 4,
           "in_truth": 0,
-          "explained": 5,
+          "explained": 4,
           "precision": 1.0,
           "coverage": 0.0,
           "scored": false
@@ -207,6 +207,49 @@
           "precision": 1.0,
           "coverage": 0.0023,
           "scored": true
+        }
+      }
+    },
+    {
+      "id": "mipsel_many_o2",
+      "truth": 401,
+      "recovered": 408,
+      "recall": 1.0,
+      "unattributed": 0.0,
+      "invented": [],
+      "invented_count": 0,
+      "classes": {
+        "call": {
+          "claimed": 401,
+          "in_truth": 400,
+          "explained": 401,
+          "precision": 1.0,
+          "coverage": 0.9975,
+          "scored": true
+        },
+        "const": {
+          "claimed": 1,
+          "in_truth": 1,
+          "explained": 1,
+          "precision": 1.0,
+          "coverage": 0.0025,
+          "scored": false
+        },
+        "flow": {
+          "claimed": 5,
+          "in_truth": 0,
+          "explained": 5,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
+        },
+        "thunk": {
+          "claimed": 1,
+          "in_truth": 0,
+          "explained": 1,
+          "precision": 1.0,
+          "coverage": 0.0,
+          "scored": false
         }
       }
     }
