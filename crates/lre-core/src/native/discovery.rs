@@ -1125,6 +1125,24 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                             }
                             if !matches!(info.kind, FlowKind::Bad | FlowKind::Unimpl) {
                                 extents.push((addr, info.length as u64));
+                                // Same shape record as the main walk: bodies
+                                // the reloc round confirms are decoded here,
+                                // and without shapes they get no features and
+                                // no body digest downstream.
+                                imp.flow_shapes.push(crate::native::FlowShape {
+                                    address: addr,
+                                    length: info.length,
+                                    kind: info.kind,
+                                    conditional: info.conditional,
+                                    target: match info.kind {
+                                        FlowKind::Branch | FlowKind::CBranch
+                                            if info.targets.len() == 1 =>
+                                        {
+                                            Some(info.targets[0])
+                                        }
+                                        _ => None,
+                                    },
+                                });
                             }
                             if has_linkage_slots {
                                 if info.kind != FlowKind::Fallthrough {

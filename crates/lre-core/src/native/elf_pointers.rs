@@ -2,7 +2,14 @@
 use super::{err, ElfSection, NativeImport, NativeXref, Result};
 use std::collections::HashMap;
 
-pub(super) fn collect(data: &[u8], sections: &[ElfSection], import: &mut NativeImport, width: usize, be: bool) -> Result<()> {
+pub(super) fn collect(
+    data: &[u8],
+    sections: &[ElfSection],
+    import: &mut NativeImport,
+    width: usize,
+    be: bool,
+    bias: u64,
+) -> Result<()> {
     let relocated: HashMap<_, _> = import.xrefs.iter()
         .filter(|x| x.provenance == "native-import:elf-reloc")
         .map(|x| (x.from, x.to)).collect();
@@ -26,14 +33,41 @@ pub(super) fn collect(data: &[u8], sections: &[ElfSection], import: &mut NativeI
             let Some(source) = section.addr.checked_add((skip + index * width) as u64) else {
                 return err("ELF pointer section address overflow");
             };
-            let target = relocated.get(&source).copied().unwrap_or_else(|| match (width, be) {
-                (4, false) => u32::from_le_bytes(chunk.try_into().unwrap()) as u64,
-                (4, true) => u32::from_be_bytes(chunk.try_into().unwrap()) as u64,
-                (8, false) => u64::from_le_bytes(chunk.try_into().unwrap()),
-                (8, true) => u64::from_be_bytes(chunk.try_into().unwrap()),
-                _ => unreachable!("ELF pointer width"),
-            });
-            if !import.mappings.iter().any(|m| m.flags & 4 != 0 && target >= m.vaddr && target - m.vaddr < m.size) {
+            let in_code = |target: u64| {
+                import.mappings.iter().any(|m| {
+                    m.flags & 4 != 0 && target >= m.vaddr && target - m.vaddr < m.size
+                })
+            };
+            // A relocated word already names loaded space. A raw word on a
+            // slid (ET_DYN) image names link space: without the loader's
+            // own bias its target falls outside every mapping and a
+            // real callee (mipsel PIE `main` via its GOT slot) is lost.
+            // The candidate still faces flow evidence downstream.
+            let target = match relocated.get(&source).copied() {
+                Some(adjusted) => adjusted,
+                None => {
+                    let raw = match (width, be) {
+                        (4, false) => u32::from_le_bytes(chunk.try_into().unwrap()) as u64,
+                        (4, true) => u32::from_be_bytes(chunk.try_into().unwrap()) as u64,
+                        (8, false) => u64::from_le_bytes(chunk.try_into().unwrap()),
+                        (8, true) => u64::from_be_bytes(chunk.try_into().unwrap()),
+                        _ => unreachable!("ELF pointer width"),
+                    };
+                    if in_code(raw) {
+                        raw
+                    } else if bias != 0 {
+                        let slid = raw.wrapping_add(bias);
+                        if in_code(slid) {
+                            slid
+                        } else {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+            };
+            if !in_code(target) {
                 continue;
             }
             if matches!(section.typ, 14 | 15) {
@@ -74,6 +108,7 @@ pub(super) fn collect_got(
     import: &mut NativeImport,
     width: usize,
     be: bool,
+    bias: u64,
 ) -> Result<()> {
     let relocated: HashMap<_, _> = import
         .xrefs
@@ -113,13 +148,32 @@ pub(super) fn collect_got(
                 continue;
             }
             slots.push((slot, width as u64));
-            let target = relocated.get(&slot).copied().unwrap_or_else(|| match (width, be) {
-                (4, false) => u32::from_le_bytes(chunk.try_into().unwrap()) as u64,
-                (4, true) => u32::from_be_bytes(chunk.try_into().unwrap()) as u64,
-                (8, false) => u64::from_le_bytes(chunk.try_into().unwrap()),
-                (8, true) => u64::from_be_bytes(chunk.try_into().unwrap()),
-                _ => unreachable!("ELF got pointer width"),
-            });
+            // Same ET_DYN slide as collect: an unrelocated GOT word names
+            // link space, and the reference it produces must name the
+            // loaded address the slot resolves to at runtime.
+            let target = match relocated.get(&slot).copied() {
+                Some(adjusted) => adjusted,
+                None => {
+                    let raw = match (width, be) {
+                        (4, false) => u32::from_le_bytes(chunk.try_into().unwrap()) as u64,
+                        (4, true) => u32::from_be_bytes(chunk.try_into().unwrap()) as u64,
+                        (8, false) => u64::from_le_bytes(chunk.try_into().unwrap()),
+                        (8, true) => u64::from_be_bytes(chunk.try_into().unwrap()),
+                        _ => unreachable!("ELF got pointer width"),
+                    };
+                    // A word the loader already maps stays as read;
+                    // only an unmapped word on a slid image is reinterpreted.
+                    let raw_mapped = import
+                        .mappings
+                        .iter()
+                        .any(|m| raw >= m.vaddr && raw - m.vaddr < m.size);
+                    if raw_mapped || bias == 0 {
+                        raw
+                    } else {
+                        raw.wrapping_add(bias)
+                    }
+                }
+            };
             let mapped = import
                 .mappings
                 .iter()
@@ -127,6 +181,17 @@ pub(super) fn collect_got(
             let named = import.externals.iter().any(|(address, _)| *address == target);
             if mapped || named {
                 references.push((slot, target));
+            }
+            // A GOT slot resolving into code is a callee the image takes
+            // the address of: on MIPS PIE the primary function is only
+            // reachable this way ($gp-relative GOT load, no direct call,
+            // no dynamic relocation on the slot). Like every candidate it
+            // still faces flow evidence downstream.
+            let in_code = import.mappings.iter().any(|m| {
+                m.flags & 4 != 0 && target >= m.vaddr && target - m.vaddr < m.size
+            });
+            if in_code {
+                import.pointer_candidates.push(target);
             }
         }
     }
