@@ -1478,6 +1478,57 @@ fn const_data_targets(
     targets.dedup();
     targets
 }
+// Destinations of stub-shaped unconditional jumps. A body that is only a
+// jump is a thunk even when its destination returns normally (Ghidra's
+// getSimpleFlow makes no noreturn distinction); the destination becomes a
+// seed and flow confirmation decides it. A jump terminating a substantial
+// body is a tail call, not a stub, and stays parked (m5-007: neither tool
+// promotes the stock-missing leaf). Stub means tiny with exactly one jump
+// and no calls; the bound is arbitrary and the spurious floors judge it.
+fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
+    const STUB_BODY_MAX: u64 = 32;
+    let in_code = |address: u64| {
+        import.mappings.iter().any(|mapping| {
+            mapping.flags & 4 != 0
+                && address >= mapping.vaddr
+                && address - mapping.vaddr < mapping.size
+        })
+    };
+    let mut out = Vec::new();
+    for function in import.functions.iter() {
+        if function.size > STUB_BODY_MAX {
+            continue;
+        }
+        if import.thunks.iter().any(|thunk| thunk.entry == function.entry) {
+            continue;
+        }
+        let mut jumps = Vec::new();
+        let mut calls = 0u32;
+        for xref in import.xrefs.iter() {
+            if xref.from < function.entry
+                || xref.from >= function.entry + function.size.max(1)
+            {
+                continue;
+            }
+            if xref.kind == "UNCONDITIONAL_JUMP" {
+                jumps.push(xref.to);
+            } else if xref.kind.contains("CALL") {
+                calls += 1;
+            }
+        }
+        if jumps.len() != 1 || calls != 0 {
+            continue;
+        }
+        let destination = jumps[0];
+        if !in_code(destination)
+            || import.functions.iter().any(|f| f.entry == destination)
+        {
+            continue;
+        }
+        out.push((function.entry, destination));
+    }
+    out
+}
 
 /// Function starts the propagation proved by resolving a call or branch
 /// through a register, that no pass has created yet. Ghidra creates these
@@ -2454,6 +2505,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         }
         let targets = computed_flow_targets(imp);
         let callbacks = const_data_targets(imp, &mut session);
+        let stubs = stub_jump_seeds(imp);
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -2497,7 +2549,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         } else if tables > 0 {
             demote_case_blocks(imp);
         }
-        if targets.is_empty() && tables == 0 && callbacks.is_empty() {
+        if targets.is_empty() && tables == 0 && callbacks.is_empty() && stubs.is_empty() {
             break;
         }
         let mode = low_bit_code_mode(&imp.language);
@@ -2517,6 +2569,19 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             imp.functions.push(NativeFunction {
                 entry: target,
                 name: format!("FUN_{target:08x}"),
+                size: 1,
+            });
+        }
+        for &(entry, destination) in &stubs {
+            imp.thunks.push(NativeThunk {
+                entry,
+                destination,
+                kind: lre_model::ThunkKind::Direct,
+                source: crate::native::THUNK_SOURCE,
+            });
+            imp.functions.push(NativeFunction {
+                entry: destination,
+                name: format!("FUN_{destination:08x}"),
                 size: 1,
             });
         }

@@ -39,9 +39,20 @@ import sys
 # - mipsel_many_o2 native recall (RETIRED 2026-09-11): the 7/401 collapse
 #   was the unseeded-`main` rule; const-prop DATA-to-code seeding now
 #   recovers 401/401 and the stale guard fired on schedule.
+# - pe32 plain/pie recall, both producers: SJLJ 32-bit CRT leaves
+#   (startup, TLS/thread helpers, libmingwex internals) neither tool
+#   seeds -- no unwind tables exist to seed from and nothing references
+#   them. Parity holds throughout (stock 0.76-0.82 vs native 0.80-0.84,
+#   native-missed - stock-missed is empty after stub promotion).
+# - pe32_many_o2 recall, both producers: same leaf class at 0.9750 vs
+#   stock 0.9636.
 EXPECTED_RECALL_EXEMPT = {
     "mipsel_plain_o2": {"native", "ghidra"},
     "mipsel_plain_pie": {"native", "ghidra"},
+    "pe32_plain_o0": {"native", "ghidra"},
+    "pe32_plain_o2": {"native", "ghidra"},
+    "pe32_plain_pie": {"native", "ghidra"},
+    "pe32_many_o2": {"native", "ghidra"},
 }
 EXPECTED_UNATTRIBUTED = {"mipsel_cpp_o2": ["00020980"]}
 

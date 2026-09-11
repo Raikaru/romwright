@@ -21,7 +21,8 @@
     "powerpc",
     "mipsel",
     "pe64",
-    "msvc"
+    "msvc",
+    "pe32"
   ],
   "expected_variants": {
     "x86_64": [
@@ -70,6 +71,12 @@
       "plain_o2",
       "plain_pie",
       "cpp_o2",
+      "many_o2"
+    ],
+    "pe32": [
+      "plain_o0",
+      "plain_o2",
+      "plain_pie",
       "many_o2"
     ]
   },
@@ -457,6 +464,50 @@
       "unstripped_twin": "msvc_many_o2.unstripped.exe",
       "symbol_artifact": "msvc_many_o2.pdb",
       "command": "cl /nologo /O1 /Zi /FS tests/corpus-src/many.c /Fo$OUT/msvc_many_o2.obj /Fe$OUT/msvc_many_o2.unstripped.exe /Fd$OUT/msvc_many_o2.compiler.pdb /link /DEBUG:FULL /INCREMENTAL:NO /PDB:$OUT/msvc_many_o2.pdb"
+    },
+    {
+      "architecture": "pe32",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_o0",
+      "expected_language": "x86:LE:32:default",
+      "binary": "pe32_plain_o0.exe",
+      "unstripped_twin": "pe32_plain_o0.unstripped.exe",
+      "min_symbols": 100,
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o0.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o0.exe"
+    },
+    {
+      "architecture": "pe32",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_o2",
+      "expected_language": "x86:LE:32:default",
+      "binary": "pe32_plain_o2.exe",
+      "unstripped_twin": "pe32_plain_o2.unstripped.exe",
+      "min_symbols": 100,
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o2.exe"
+    },
+    {
+      "architecture": "pe32",
+      "endian": "little",
+      "format": "pe",
+      "variant": "plain_pie",
+      "expected_language": "x86:LE:32:default",
+      "binary": "pe32_plain_pie.dll",
+      "unstripped_twin": "pe32_plain_pie.unstripped.dll",
+      "min_symbols": 100,
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_pie.unstripped.dll && i686-w64-mingw32-strip -s $OUT/pe32_plain_pie.dll"
+    },
+    {
+      "architecture": "pe32",
+      "endian": "little",
+      "format": "pe",
+      "variant": "many_o2",
+      "expected_language": "x86:LE:32:default",
+      "binary": "pe32_many_o2.exe",
+      "unstripped_twin": "pe32_many_o2.unstripped.exe",
+      "min_symbols": 400,
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe32_many_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_many_o2.exe"
     }
   ]
 }

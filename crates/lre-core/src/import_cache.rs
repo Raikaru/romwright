@@ -100,9 +100,13 @@ pub fn key(binary: &Path, program: &str, config: &RuntimeConfig) -> Option<Strin
         config.switch_vsa,
         config.switch_decompiler,
     );
+    // v2: v1 entries published under tmpfs pressure held degraded facts
+    // (a disk-starved run stored partial analyses that read back fine),
+    // so every v1 entry is suspect. Old files linger inertly; only v2
+    // keys are ever queried.
     Some(sha256(
         format!(
-            "v1|{image}|{program}|{analyser}|{settings}|schema{}",
+            "v2|{image}|{program}|{analyser}|{settings}|schema{}",
             lre_db::SCHEMA_VERSION
         )
         .as_bytes(),

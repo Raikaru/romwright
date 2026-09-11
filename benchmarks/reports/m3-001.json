@@ -1,6 +1,6 @@
 {
   "id": "m3-001",
-  "recorded_at": "2026-09-11T14:35:11.937373+00:00",
+  "recorded_at": "2026-09-11T15:05:16.769478+00:00",
   "thresholds": {
     "dwarf.fn.recall": 0.98,
     "dwarf.fn.unattributed": 0
@@ -784,21 +784,276 @@
       "metrics": {},
       "runs": 1,
       "reason": "corpus entry status 'skipped'"
+    },
+    {
+      "id": "pe32_many_o2",
+      "status": "fail",
+      "metrics": {
+        "native.dwarf.fn.recall": 0.975,
+        "ghidra.dwarf.fn.recall": 0.9636363636363636,
+        "native.dwarf.fn.unattributed": 0,
+        "native.functions": 453,
+        "ghidra.functions": 447,
+        "native.undescribed": 24
+      },
+      "runs": 1,
+      "truth": {
+        "functions": 440,
+        "load_bias": "00000000",
+        "unmapped": 0
+      },
+      "provenance": {
+        "binary_sha256": "4836dbcb336f3940fd7c3baad714998c4cce88566f40b624b641b3c0c321c5c8",
+        "twin_sha256": "5edeb6f996b410bbd4c8f19c6594bd79dc2a6d2160cc774f30d30a05bcccadcc",
+        "oracle_sha256": "ff0a80070d42b029b2b8b37cafdd176bd512affe6e6580f02defcb914f77567b",
+        "bridge_sources_sha256": "cf84d8d73ffb0bf87b41eddef29dbb8b4ba3cd8bddd4e5e04a7309c5f6a3519b"
+      },
+      "missing": {
+        "native": [
+          "004013f0",
+          "00402de0",
+          "00403330",
+          "004035d0",
+          "00403650",
+          "00403810",
+          "00403840",
+          "00403880",
+          "004039e0",
+          "00403aa0",
+          "00403b30"
+        ],
+        "ghidra": [
+          "00401000",
+          "004013f0",
+          "00402c30",
+          "00402de0",
+          "00402df0",
+          "00403330",
+          "004033b0",
+          "004035d0",
+          "00403650",
+          "00403810",
+          "00403840",
+          "00403880",
+          "004039e0",
+          "00403aa0",
+          "00403b30",
+          "00403d00"
+        ]
+      }
+    },
+    {
+      "id": "pe32_plain_o0",
+      "status": "fail",
+      "metrics": {
+        "native.dwarf.fn.recall": 0.8315789473684211,
+        "ghidra.dwarf.fn.recall": 0.7684210526315789,
+        "native.dwarf.fn.unattributed": 0,
+        "native.functions": 114,
+        "ghidra.functions": 107,
+        "native.undescribed": 35
+      },
+      "runs": 1,
+      "truth": {
+        "functions": 95,
+        "load_bias": "00000000",
+        "unmapped": 0
+      },
+      "provenance": {
+        "binary_sha256": "45f1f4997c940b9f2f26dad5d6da6330a327c587fed99b10cd8246dfc2ab98dc",
+        "twin_sha256": "c9fc17c2df468736cd2c5fd109550e24b731528d07d3ca071dd411411444c0ba",
+        "oracle_sha256": "98d3faa50f08306bbefac13d9944a3027876a6843b45b4ed090264aa65d96809",
+        "bridge_sources_sha256": "cf84d8d73ffb0bf87b41eddef29dbb8b4ba3cd8bddd4e5e04a7309c5f6a3519b"
+      },
+      "missing": {
+        "native": [
+          "004013f0",
+          "00401700",
+          "00401c50",
+          "00401ef0",
+          "00401f70",
+          "00402130",
+          "00402160",
+          "004021a0",
+          "00402300",
+          "004023c0",
+          "00402450",
+          "00407c90",
+          "00407e40",
+          "00407fa0",
+          "00408300",
+          "00408440"
+        ],
+        "ghidra": [
+          "00401000",
+          "004013f0",
+          "00401550",
+          "00401700",
+          "00401710",
+          "00401c50",
+          "00401cd0",
+          "00401ef0",
+          "00401f70",
+          "00402130",
+          "00402160",
+          "004021a0",
+          "00402300",
+          "004023c0",
+          "00402450",
+          "00407100",
+          "00407c90",
+          "00407e40",
+          "00407fa0",
+          "00408300",
+          "00408440",
+          "00408740"
+        ]
+      }
+    },
+    {
+      "id": "pe32_plain_o2",
+      "status": "fail",
+      "metrics": {
+        "native.dwarf.fn.recall": 0.8210526315789474,
+        "ghidra.dwarf.fn.recall": 0.7578947368421053,
+        "native.dwarf.fn.unattributed": 0,
+        "native.functions": 113,
+        "ghidra.functions": 106,
+        "native.undescribed": 35
+      },
+      "runs": 1,
+      "truth": {
+        "functions": 95,
+        "load_bias": "00000000",
+        "unmapped": 0
+      },
+      "provenance": {
+        "binary_sha256": "14cc5ffe1d46d0cf1d2353b4b24b561a8e62d9f563a7ea9673f950263a7c52f5",
+        "twin_sha256": "b080d0ef6ee96e4601a1a69e47cddda61b300dc39d665f1bf3529c52a8d25e30",
+        "oracle_sha256": "6aaf5a602f27ca442146da16a77d5531e98fae15473fdce43d6ae40bcdfe018a",
+        "bridge_sources_sha256": "cf84d8d73ffb0bf87b41eddef29dbb8b4ba3cd8bddd4e5e04a7309c5f6a3519b"
+      },
+      "missing": {
+        "native": [
+          "004013f0",
+          "00401500",
+          "004016c0",
+          "00401c10",
+          "00401eb0",
+          "00401f30",
+          "004020f0",
+          "00402120",
+          "00402160",
+          "004022c0",
+          "00402380",
+          "00402410",
+          "00407c50",
+          "00407e00",
+          "00407f60",
+          "004082c0",
+          "00408400"
+        ],
+        "ghidra": [
+          "00401000",
+          "004013f0",
+          "00401500",
+          "00401510",
+          "004016c0",
+          "004016d0",
+          "00401c10",
+          "00401c90",
+          "00401eb0",
+          "00401f30",
+          "004020f0",
+          "00402120",
+          "00402160",
+          "004022c0",
+          "00402380",
+          "00402410",
+          "004070c0",
+          "00407c50",
+          "00407e00",
+          "00407f60",
+          "004082c0",
+          "00408400",
+          "00408700"
+        ]
+      }
+    },
+    {
+      "id": "pe32_plain_pie",
+      "status": "fail",
+      "metrics": {
+        "native.dwarf.fn.recall": 0.8409090909090909,
+        "ghidra.dwarf.fn.recall": 0.8181818181818182,
+        "native.dwarf.fn.unattributed": 0,
+        "native.functions": 101,
+        "ghidra.functions": 98,
+        "native.undescribed": 27
+      },
+      "runs": 1,
+      "truth": {
+        "functions": 88,
+        "load_bias": "00000000",
+        "unmapped": 0
+      },
+      "provenance": {
+        "binary_sha256": "cf69d9ac824df5fda5f822954f1b660be83b00ad3d8ce8af0204829c74b085de",
+        "twin_sha256": "488f8712c9d3b42e15825c0ee527f2275fd0c7dc639ae7ed1cdc9135548a71d6",
+        "oracle_sha256": "eb882f8211807710e743fb98a7a4a4d446f3ea7eb05b58af7496e18498644802",
+        "bridge_sources_sha256": "cf84d8d73ffb0bf87b41eddef29dbb8b4ba3cd8bddd4e5e04a7309c5f6a3519b"
+      },
+      "missing": {
+        "native": [
+          "100015d0",
+          "10001b10",
+          "10001b90",
+          "10001d50",
+          "10001d80",
+          "10001dc0",
+          "10001f20",
+          "10001fe0",
+          "10002070",
+          "100078d0",
+          "10007a80",
+          "10007be0",
+          "10007f40",
+          "10008080"
+        ],
+        "ghidra": [
+          "10001430",
+          "100015d0",
+          "10001b10",
+          "10001b90",
+          "10001d50",
+          "10001d80",
+          "10001dc0",
+          "10001f20",
+          "10001fe0",
+          "10002070",
+          "10006d40",
+          "100078d0",
+          "10007a80",
+          "10007be0",
+          "10007f40",
+          "10008080"
+        ]
+      }
     }
   ],
   "totals": {
-    "truth_functions": 2759,
-    "native_matched": 2757,
-    "ghidra_matched": 2752,
-    "native_observed": 3181,
+    "truth_functions": 3477,
+    "native_matched": 3417,
+    "ghidra_matched": 3393,
+    "native_observed": 3962,
     "native.dwarf.fn.unattributed": 1,
-    "undescribed": 424,
-    "native.dwarf.fn.recall": 0.9992750996737948,
-    "ghidra.dwarf.fn.recall": 0.997462848858282
+    "undescribed": 545,
+    "native.dwarf.fn.recall": 0.9827437446074202,
+    "ghidra.dwarf.fn.recall": 0.9758412424503883
   },
   "summary": {
     "pass": 26,
-    "fail": 3,
+    "fail": 7,
     "skipped": 5
   },
   "passed": false
