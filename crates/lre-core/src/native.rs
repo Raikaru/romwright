@@ -316,6 +316,10 @@ pub struct NativeImport {
     /// prerequisites). Labels alone cannot say this -- only a subset of
     /// rules carry a `<funcstart label=>`.
     pub pattern_starts: Vec<u64>,
+    /// Starts this rule seeded from constant-propagated DATA facts: the
+    /// only evidence that names the seeding pass, so the producer column
+    /// credits discovery's source instead of the walk that followed it.
+    pub const_data_starts: Vec<u64>,
     /// Untrusted PLT entries: loaded address and maximum entry width.
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
@@ -1388,25 +1392,42 @@ pub(crate) fn low_bit_code_mode(language: &str) -> bool {
     language.starts_with("ARM:") || language.starts_with("MIPS:")
 }
 
-/// Function starts the propagation proved by resolving a call or branch
-/// through a register, that no pass has created yet. Ghidra creates these
-/// from the reference the constant-propagation analyzer lays down
-/// (`ConstantPropagationContextEvaluator.evaluateDestination`, then
-/// disassembly and function creation follow the reference); a target with
-/// the low bit set on a low-bit-mode language is decoded in that mode from
-/// then on (`setTargetContextForDisassembly`: clear the bit, set the mode).
 // Code addresses the propagation proved hold constants.
 //
 // A constant-propagated DATA value into executable code is usually a
 // callback -- or `main` handed to `__libc_start_main`, which arrives no
 // other way (mipsel_many_o2: 7 of 401 without this rule, all 401 with
 // `main` seeded). No other pass proposes these, so without this rule
-// they stay invisible no matter how long the walk runs. The call-site
-// window was tried first and dropped: on MIPS the call itself is a
-// `jalr` through a register that leaves no call fact, so windowing
-// around calls misses exactly the shape that motivated the rule. Flow
+// they stay invisible no matter how long the walk runs. Flow
 // confirmation still applies downstream; this only seeds.
-fn const_data_targets(import: &NativeImport) -> Vec<u64> {
+//
+// The use must materialize the address, not compare against it: on libc
+// the unfiltered rule seeded 20 uncalled orphans from comparison
+// immediates (`CMP EDI, <code>`, padding decoding past the target).
+// The p-code of the using instruction says which (opcodes, not
+// mnemonics, so one predicate covers every language); unknown shapes
+// stay allowed and the spurious floors judge.
+fn const_data_use_denied(ops: &[String]) -> bool {
+    ops.iter().any(|op| {
+        matches!(
+            op.as_str(),
+            "INT_EQUAL"
+                | "INT_NOTEQUAL"
+                | "INT_LESS"
+                | "INT_SLESS"
+                | "INT_LESSEQUAL"
+                | "INT_SLESSEQUAL"
+                | "INT_CARRY"
+                | "INT_SCARRY"
+                | "INT_SBORROW"
+        ) || op.starts_with("BOOL_")
+            || op.starts_with("FLOAT_")
+    })
+}
+fn const_data_targets(
+    import: &NativeImport,
+    uses: &std::collections::HashMap<u64, Vec<String>>,
+) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> =
         import.functions.iter().map(|function| function.entry).collect();
     let in_code = |address: u64| {
@@ -1422,6 +1443,13 @@ fn const_data_targets(import: &NativeImport) -> Vec<u64> {
         .filter(|xref| {
             xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
         })
+        .filter(|xref| {
+            // No lifted shape: decode failed or the console never lifted
+            // it. Recall-preserving: an unknown use seeds, the spurious
+            // floors judge.
+            uses.get(&xref.from)
+                .is_none_or(|ops| !const_data_use_denied(ops))
+        })
         .map(|xref| xref.to)
         .filter(|&target| !entries.contains(&target) && in_code(target))
         .collect();
@@ -1430,6 +1458,13 @@ fn const_data_targets(import: &NativeImport) -> Vec<u64> {
     targets
 }
 
+/// Function starts the propagation proved by resolving a call or branch
+/// through a register, that no pass has created yet. Ghidra creates these
+/// from the reference the constant-propagation analyzer lays down
+/// (`ConstantPropagationContextEvaluator.evaluateDestination`, then
+/// disassembly and function creation follow the reference); a target with
+/// the low bit set on a low-bit-mode language is decoded in that mode from
+/// then on (`setTargetContextForDisassembly`: clear the bit, set the mode).
 fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> =
         import.functions.iter().map(|function| function.entry).collect();
@@ -2397,7 +2432,31 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         let targets = computed_flow_targets(imp);
-        let callbacks = const_data_targets(imp);
+        // Lifted shapes for the const-data rule, one batch per round: the
+        // use at each fact address says materialize or compare. A fact the
+        // console cannot lift stays allowed (recall-preserving).
+        let mut const_froms: Vec<u64> = imp
+            .xrefs
+            .iter()
+            .filter(|xref| {
+                xref.kind == "DATA"
+                    && xref.provenance == "native-analysis:constant-propagation"
+            })
+            .map(|xref| xref.from)
+            .collect();
+        const_froms.sort_unstable();
+        const_froms.dedup();
+        let mut const_uses: std::collections::HashMap<u64, Vec<String>> =
+            std::collections::HashMap::new();
+        if let Ok(lifted) = session.pcode_batch(&const_froms) {
+            for instruction in lifted {
+                const_uses.insert(
+                    instruction.address,
+                    instruction.ops.iter().map(|op| op.opcode.clone()).collect(),
+                );
+            }
+        }
+        let callbacks = const_data_targets(imp, &const_uses);
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -2464,6 +2523,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
                 size: 1,
             });
         }
+        imp.const_data_starts.extend(callbacks.iter().copied());
         let again = std::time::Instant::now();
         lanes = discovery::discover_seeded(imp);
         phase(imp, "discovery", again);
@@ -3077,6 +3137,16 @@ pub fn declared_entry_model(cfg: &crate::session::RuntimeConfig, language: &str)
         .then_some(PROCESS_ENTRY_MODEL)
 }
 
+/// Whether a const-seeded entry's body swallows a better-evidenced one.
+/// Two functions cannot share code (m8-002); strict containment only --
+/// an abutting neighbour (start == end) is a correct boundary, not an
+/// overlap. Sizes of 0 read as 1, matching the stored rows.
+fn const_entry_swallowed(entry: u64, size: u64, stronger: &[u64]) -> bool {
+    stronger
+        .iter()
+        .any(|&other| entry < other && other < entry + size.max(1))
+}
+
 pub fn store_import(
     db: &ProjectDb,
     program: &str,
@@ -3126,20 +3196,8 @@ pub fn store_import(
     let swept_strings = strings::discover(imp);
     db.replace_strings(pid, imp.string_tables.iter().flat_map(|table| &table.strings)
         .chain(&swept_strings))?;
-    let rows: Vec<FunctionRow> = functions
-        .iter()
-        .map(|f| FunctionRow {
-            entry: lre_model::Address::ram(f.entry),
-            name: f.name.clone(),
-            size: f.size.max(1),
-            signature: None,
-            calling_convention: None,
-        })
-        .collect();
-    db.replace_functions(pid, &rows)?;
     // Say what produced these rows. A loader-only import declares seeds that
     // nobody has walked; demand-driven analysis upgrades them one at a time.
-    db.set_all_analysis_states(pid, if imp.analysed { "batch" } else { "seeded" })?;
     // And say *which pass* claimed each entry. One recall number over six
     // producers cannot tell you which of them is carrying it, or which one
     // to fix when it drops; the classes are derived here, in one place,
@@ -3166,6 +3224,40 @@ pub fn store_import(
         .collect();
     let declared: std::collections::HashSet<u64> =
         imp.symbol_named.iter().copied().collect();
+    let consted: std::collections::HashSet<u64> =
+        imp.const_data_starts.iter().copied().collect();
+    // A const-seeded entry whose body swallows better-evidenced entries is
+    // a mid-body label mistaken for a start (libc: one swallowed 37
+    // symtab functions into a 7KB body). Two functions cannot share code
+    // (m8-002); retract the const entry, keep what it covered. Only the
+    // const class retracts: other producers' overlaps are pre-existing
+    // behavior this rule must not relitigate.
+    {
+        let stronger: Vec<u64> = thunked
+            .iter()
+            .chain(declared.iter())
+            .chain(patterned.iter())
+            .chain(pointed.iter())
+            .chain(called.iter())
+            .copied()
+            .collect();
+        functions.retain(|f| {
+            !(consted.contains(&f.entry)
+                && const_entry_swallowed(f.entry, f.size, &stronger))
+        });
+    }
+    let rows: Vec<FunctionRow> = functions
+        .iter()
+        .map(|f| FunctionRow {
+            entry: lre_model::Address::ram(f.entry),
+            name: f.name.clone(),
+            size: f.size.max(1),
+            signature: None,
+            calling_convention: None,
+        })
+        .collect();
+    db.replace_functions(pid, &rows)?;
+    db.set_all_analysis_states(pid, if imp.analysed { "batch" } else { "seeded" })?;
     let producers: Vec<(String, String)> = rows
         .iter()
         .map(|row| {
@@ -3180,6 +3272,8 @@ pub fn store_import(
                 "pattern"
             } else if pointed.contains(&entry) {
                 "pointer"
+            } else if consted.contains(&entry) {
+                "const"
             } else if called.contains(&entry) {
                 "call"
             } else {
@@ -4959,6 +5053,44 @@ mod tests {
         let strict = session.constants(0x1000, 0x100e, &import.mappings, false).unwrap();
         assert!(strict.iter().all(|fact| fact.value != 0x4000),
             "strict constant queries must not inherit reference-inference heuristics: {strict:?}");
+    }
+
+    #[test]
+    fn const_entry_swallowed_needs_strict_containment() {
+        use super::const_entry_swallowed;
+        // Swallows a better-evidenced entry: retract.
+        assert!(const_entry_swallowed(0x1000, 100, &[0x1020]));
+        // Abutting neighbour: correct boundary, keep.
+        assert!(!const_entry_swallowed(0x1000, 0x20, &[0x1020]));
+        // Entry itself or an address before it: not containment.
+        assert!(!const_entry_swallowed(0x1000, 100, &[0x1000]));
+        assert!(!const_entry_swallowed(0x1000, 100, &[0x0ff0]));
+        // Zero size reads as one byte; an entry never swallows itself.
+        assert!(!const_entry_swallowed(0x1000, 0, &[0x1000]));
+        assert!(!const_entry_swallowed(0x1000, 0, &[0x1001]));
+        // Empty evidence: nothing to swallow.
+        assert!(!const_entry_swallowed(0x1000, 100, &[]));
+    }
+
+    #[test]
+    fn const_data_use_denied_refuses_compares_keeps_materialization() {
+        let denied = |ops: &[&str]| {
+            super::const_data_use_denied(
+                &ops.iter().map(|op| op.to_string()).collect::<Vec<_>>(),
+            )
+        };
+        // Measured libc shapes: comparison immediates must not seed.
+        assert!(denied(&["INT_EQUAL"]));
+        assert!(denied(&["INT_NOTEQUAL", "COPY"]));
+        assert!(denied(&["BOOL_AND"]));
+        assert!(denied(&["FLOAT_LESS"]));
+        // Materialization must seed: LEA/MOV lower to INT_ADD/COPY, and
+        // unknown shapes stay allowed (recall-preserving).
+        assert!(!denied(&["INT_ADD"]));
+        assert!(!denied(&["COPY"]));
+        assert!(!denied(&["LOAD"]));
+        assert!(!denied(&["INT_OR"]));
+        assert!(!denied(&[]));
     }
 
     #[test]

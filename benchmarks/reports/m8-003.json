@@ -1,9 +1,9 @@
 {
  "id": "m8-003",
- "recorded_at": "2026-09-07T11:51:56.106930+00:00",
+ "recorded_at": "2026-09-11T14:30:46.883029+00:00",
  "status": "pass",
  "passed": true,
- "summary": "23 images, 1895 bodies matched to a DWARF range: 0 crossing another entry, 0.9873 ending exactly where the compiler says, 19 ending inside one alignment slot past it, 1 running into a function nobody discovered (worst 84 bytes), 0 unexplained, 4 stopping short at tails nothing claims (worst 36 bytes)",
+ "summary": "32 images, 3012 bodies matched to a DWARF range: 0 crossing another entry, 0.9890 ending exactly where the compiler says, 27 ending inside one alignment slot past it, 1 running into a function nobody discovered (worst 84 bytes), 0 unexplained, 4 stopping short at tails nothing claims (worst 131 bytes)",
  "thresholds": {
   "body.crossing": 0,
   "body.unexplained_overshoot": 0,
@@ -12,12 +12,12 @@
  },
  "totals": {
   "body.crossing": 0,
-  "body.matched": 1895,
-  "body.exact": 0.987335092348285,
-  "body.padding_overshoot": 19,
+  "body.matched": 3012,
+  "body.exact": 0.9890438247011952,
+  "body.padding_overshoot": 27,
   "body.overshoot_into_missed": 1,
   "body.undershoot": 4,
-  "body.undershoot_bytes.max": 36,
+  "body.undershoot_bytes.max": 131,
   "body.overshoot_bytes.max": 84
  },
  "images": [
@@ -469,77 +469,269 @@
    "claimed_tail": []
   },
   {
-   "id": "tiny_pe.exe",
-   "functions": 120,
-   "truth_ranges": 90,
-   "matched": 90,
+   "id": "mipsel_plain_o0",
+   "functions": 11,
+   "truth_ranges": 2,
+   "matched": 2,
    "metrics": {
     "body.crossing": 0,
-    "body.exact": 0.9222222222222223,
-    "body.padding_overshoot": 6,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
     "body.overshoot_into_missed": 0,
     "body.unexplained_overshoot": 0,
-    "body.undershoot": 1,
+    "body.undershoot": 0,
     "body.claimed_tail": 0,
-    "body.undershoot_bytes.max": 25,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "mipsel_plain_o2",
+   "functions": 10,
+   "truth_ranges": 2,
+   "matched": 1,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "mipsel_plain_pie",
+   "functions": 8,
+   "truth_ranges": 2,
+   "matched": 1,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "mipsel_cpp_o2",
+   "functions": 19,
+   "truth_ranges": 3,
+   "matched": 3,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.6666666666666666,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 1,
+    "body.undershoot_bytes.max": 44,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": [
+    {
+     "entry": "00020940",
+     "truth_end": "000209ac",
+     "body_end": "00020980",
+     "short": 44,
+     "claimed": "00020980"
+    }
+   ]
+  },
+  {
+   "id": "mipsel_many_o2",
+   "functions": 408,
+   "truth_ranges": 401,
+   "matched": 401,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 1.0,
+    "body.padding_overshoot": 0,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 0
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe64_plain_o0",
+   "functions": 124,
+   "truth_ranges": 92,
+   "matched": 92,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9565217391304348,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
     "body.overshoot_bytes.max": 14
    },
    "crossing": [],
    "into_missed": [],
    "unexplained": [],
-   "undershoot": [
-    {
-     "entry": "140001cd0",
-     "truth_end": "140001e8d",
-     "body_end": "140001e74",
-     "short": 25
-    }
-   ],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe64_plain_o2",
+   "functions": 124,
+   "truth_ranges": 92,
+   "matched": 92,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9565217391304348,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe64_plain_pie",
+   "functions": 109,
+   "truth_ranges": 83,
+   "matched": 83,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9518072289156626,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "pe64_many_o2",
+   "functions": 465,
+   "truth_ranges": 442,
+   "matched": 442,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9909502262443439,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
+   "claimed_tail": []
+  },
+  {
+   "id": "tiny_pe.exe",
+   "functions": 124,
+   "truth_ranges": 90,
+   "matched": 90,
+   "metrics": {
+    "body.crossing": 0,
+    "body.exact": 0.9555555555555556,
+    "body.padding_overshoot": 4,
+    "body.overshoot_into_missed": 0,
+    "body.unexplained_overshoot": 0,
+    "body.undershoot": 0,
+    "body.claimed_tail": 0,
+    "body.undershoot_bytes.max": 0,
+    "body.overshoot_bytes.max": 14
+   },
+   "crossing": [],
+   "into_missed": [],
+   "unexplained": [],
+   "undershoot": [],
    "claimed_tail": []
   },
   {
    "id": "dispatch.exe",
-   "functions": 122,
+   "functions": 126,
    "truth_ranges": 90,
    "matched": 90,
    "metrics": {
     "body.crossing": 0,
-    "body.exact": 0.9222222222222223,
-    "body.padding_overshoot": 6,
+    "body.exact": 0.9555555555555556,
+    "body.padding_overshoot": 4,
     "body.overshoot_into_missed": 0,
     "body.unexplained_overshoot": 0,
-    "body.undershoot": 1,
+    "body.undershoot": 0,
     "body.claimed_tail": 0,
-    "body.undershoot_bytes.max": 25,
+    "body.undershoot_bytes.max": 0,
     "body.overshoot_bytes.max": 14
    },
    "crossing": [],
    "into_missed": [],
    "unexplained": [],
-   "undershoot": [
-    {
-     "entry": "140001cb0",
-     "truth_end": "140001e6d",
-     "body_end": "140001e54",
-     "short": 25
-    }
-   ],
+   "undershoot": [],
    "claimed_tail": []
   },
   {
    "id": "tiny_pe32.exe",
-   "functions": 110,
+   "functions": 113,
    "truth_ranges": 93,
    "matched": 75,
    "metrics": {
     "body.crossing": 0,
-    "body.exact": 0.8933333333333333,
-    "body.padding_overshoot": 6,
+    "body.exact": 0.92,
+    "body.padding_overshoot": 2,
     "body.overshoot_into_missed": 1,
     "body.unexplained_overshoot": 0,
-    "body.undershoot": 1,
+    "body.undershoot": 3,
     "body.claimed_tail": 0,
-    "body.undershoot_bytes.max": 7,
+    "body.undershoot_bytes.max": 131,
     "body.overshoot_bytes.max": 84
    },
    "crossing": [],
@@ -559,6 +751,18 @@
      "truth_end": "0040505c",
      "body_end": "00405055",
      "short": 7
+    },
+    {
+     "entry": "004050c0",
+     "truth_end": "00405144",
+     "body_end": "004050c1",
+     "short": 131
+    },
+    {
+     "entry": "004071e0",
+     "truth_end": "00407242",
+     "body_end": "004071e3",
+     "short": 95
     }
    ],
    "claimed_tail": []

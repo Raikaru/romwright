@@ -25,7 +25,7 @@ function*, not *claimed something DWARF happens to be silent about*.
 * **unattributed** -- truth no producer claimed, which is the only number
   that says what the whole pipeline is still missing.
 
-Scored across four architectures, because a producer that only works where
+Scored across six architectures, because a producer that only works where
 the instruction set is variable-length has not been shown to work.
 """
 import argparse
@@ -46,7 +46,7 @@ from dwarf_gate import stub_ranges, symbol_addresses  # noqa: E402
 
 CLI = ROOT / "target/release/lre-cli"
 VARIANTS = ("x86_64_many_o2", "i386_many_o2", "aarch64_many_o2", "powerpc_many_o2",
-            "pe64_many_o2")
+            "pe64_many_o2", "mipsel_many_o2")
 # Measured: `call` carries this corpus at 1.0 precision on every row, and
 # nothing is left unattributed. The gate holds those claims.
 PRECISION_FLOOR = 0.98
