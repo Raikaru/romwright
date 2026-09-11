@@ -36,12 +36,12 @@ import sys
 #   on the PIE layout (13 functions, neither DWARF address among them).
 # - mipsel_cpp_o2 unattributed: the 0x20980 false entry (same address as
 #   the m12/m19-004 exemptions); the row must list exactly that address.
-# - mipsel_many_o2 native recall: the 7/401 seeding collapse (STATUS.md
-#   mipsel follow-ups); stock scores 0.9975 on the same truth.
+# - mipsel_many_o2 native recall (RETIRED 2026-09-11): the 7/401 collapse
+#   was the unseeded-`main` rule; const-prop DATA-to-code seeding now
+#   recovers 401/401 and the stale guard fired on schedule.
 EXPECTED_RECALL_EXEMPT = {
     "mipsel_plain_o2": {"native", "ghidra"},
     "mipsel_plain_pie": {"native", "ghidra"},
-    "mipsel_many_o2": {"native"},
 }
 EXPECTED_UNATTRIBUTED = {"mipsel_cpp_o2": ["00020980"]}
 

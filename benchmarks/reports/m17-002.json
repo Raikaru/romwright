@@ -1,7 +1,7 @@
 {
   "gate": "m17-002",
   "milestone": "M17",
-  "commit": "ab7aeffab24bda2ca0da0d8a7f64530b36e84ce8",
+  "commit": "a3f4aaa48619e19ed650c347136981b209c08fae",
   "date": "2026-09-11",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
@@ -98,7 +98,7 @@
     {
       "id": "aarch64_many_o2",
       "truth": 401,
-      "recovered": 415,
+      "recovered": 416,
       "recall": 1.0,
       "unattributed": 0.0,
       "invented": [
@@ -131,9 +131,9 @@
           "scored": false
         },
         "thunk": {
-          "claimed": 4,
+          "claimed": 5,
           "in_truth": 0,
-          "explained": 4,
+          "explained": 5,
           "precision": 1.0,
           "coverage": 0.0,
           "scored": false

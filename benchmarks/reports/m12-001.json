@@ -2,7 +2,7 @@
   "id": "m12-001",
   "milestone": "M12",
   "criterion": "whole-program structural diff, scored against symbol truth",
-  "recorded_at": "2026-09-11T13:14:39.967054+00:00",
+  "recorded_at": "2026-09-11T13:41:20.938915+00:00",
   "thresholds": {
     "twins.precision": 1.0,
     "twins.recall": 1.0,
@@ -18,11 +18,11 @@
   "measured": {
     "twins": {
       "rows": 29,
-      "judged": 2778,
-      "correct": 2778,
-      "truth": 2778,
-      "ported_judged": 1719,
-      "ported_correct": 1719,
+      "judged": 3183,
+      "correct": 3183,
+      "truth": 3183,
+      "ported_judged": 2120,
+      "ported_correct": 2120,
       "precision": 1.0,
       "recall": 1.0,
       "name_precision": 1.0
@@ -39,8 +39,8 @@
       "name_precision": 0.9423
     },
     "anchor": {
-      "judged": 2999,
-      "correct": 2999,
+      "judged": 3404,
+      "correct": 3404,
       "precision": 1.0
     },
     "classes": {
@@ -50,8 +50,8 @@
         "precision": 1.0
       },
       "body": {
-        "judged": 2796,
-        "correct": 2796,
+        "judged": 3201,
+        "correct": 3201,
         "precision": 1.0
       },
       "import": {
@@ -335,10 +335,10 @@
     {
       "id": "aarch64_plain_o0",
       "kind": "twins",
-      "truth": 17,
-      "matched": 17,
-      "judged": 17,
-      "correct": 17,
+      "truth": 18,
+      "matched": 18,
+      "judged": 18,
+      "correct": 18,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 6,
@@ -347,23 +347,23 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 17,
-          "correct": 17
+          "judged": 18,
+          "correct": 18
         }
       },
-      "anchors": 17,
-      "reference_functions": 17,
-      "target_functions": 17,
+      "anchors": 18,
+      "reference_functions": 18,
+      "target_functions": 18,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "aarch64_plain_o2",
       "kind": "twins",
-      "truth": 17,
-      "matched": 17,
-      "judged": 17,
-      "correct": 17,
+      "truth": 18,
+      "matched": 18,
+      "judged": 18,
+      "correct": 18,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 6,
@@ -372,13 +372,13 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 17,
-          "correct": 17
+          "judged": 18,
+          "correct": 18
         }
       },
-      "anchors": 17,
-      "reference_functions": 17,
-      "target_functions": 17,
+      "anchors": 18,
+      "reference_functions": 18,
+      "target_functions": 18,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -410,10 +410,10 @@
     {
       "id": "aarch64_cpp_o2",
       "kind": "twins",
-      "truth": 24,
-      "matched": 24,
-      "judged": 24,
-      "correct": 24,
+      "truth": 25,
+      "matched": 25,
+      "judged": 25,
+      "correct": 25,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 8,
@@ -422,23 +422,23 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 24,
-          "correct": 24
+          "judged": 25,
+          "correct": 25
         }
       },
-      "anchors": 24,
-      "reference_functions": 24,
-      "target_functions": 24,
+      "anchors": 25,
+      "reference_functions": 25,
+      "target_functions": 25,
       "expected_misses": [],
       "stale_exemptions": []
     },
     {
       "id": "aarch64_many_o2",
       "kind": "twins",
-      "truth": 415,
-      "matched": 415,
-      "judged": 415,
-      "correct": 415,
+      "truth": 416,
+      "matched": 416,
+      "judged": 416,
+      "correct": 416,
       "precision": 1.0,
       "recall": 1.0,
       "ported": 405,
@@ -447,13 +447,13 @@
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 415,
-          "correct": 415
+          "judged": 416,
+          "correct": 416
         }
       },
-      "anchors": 415,
-      "reference_functions": 415,
-      "target_functions": 415,
+      "anchors": 416,
+      "reference_functions": 416,
+      "target_functions": 416,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -687,25 +687,25 @@
     {
       "id": "mipsel_many_o2",
       "kind": "twins",
-      "truth": 7,
-      "matched": 7,
-      "judged": 7,
-      "correct": 7,
+      "truth": 408,
+      "matched": 408,
+      "judged": 408,
+      "correct": 408,
       "precision": 1.0,
       "recall": 1.0,
-      "ported": 2,
-      "ported_judged": 2,
-      "ported_correct": 2,
+      "ported": 403,
+      "ported_judged": 403,
+      "ported_correct": 403,
       "name_precision": 1.0,
       "evidence": {
         "body": {
-          "judged": 7,
-          "correct": 7
+          "judged": 408,
+          "correct": 408
         }
       },
-      "anchors": 7,
+      "anchors": 408,
       "reference_functions": 408,
-      "target_functions": 7,
+      "target_functions": 408,
       "expected_misses": [],
       "stale_exemptions": []
     },
@@ -813,7 +813,7 @@
       "id": "aarch64_plain_o0->aarch64_plain_o2",
       "kind": "optimisation",
       "truth": 16,
-      "matched": 16,
+      "matched": 17,
       "judged": 15,
       "correct": 15,
       "precision": 1.0,
@@ -840,15 +840,15 @@
           "correct": 1
         }
       },
-      "anchors": 16,
-      "reference_functions": 17,
-      "target_functions": 17
+      "anchors": 17,
+      "reference_functions": 18,
+      "target_functions": 18
     },
     {
       "id": "aarch64_plain_o2->aarch64_plain_o0",
       "kind": "optimisation",
       "truth": 16,
-      "matched": 16,
+      "matched": 17,
       "judged": 15,
       "correct": 15,
       "precision": 1.0,
@@ -875,15 +875,15 @@
           "correct": 1
         }
       },
-      "anchors": 16,
-      "reference_functions": 17,
-      "target_functions": 17
+      "anchors": 17,
+      "reference_functions": 18,
+      "target_functions": 18
     },
     {
       "id": "aarch64_plain_o0->aarch64_plain_pie",
       "kind": "optimisation",
       "truth": 12,
-      "matched": 14,
+      "matched": 15,
       "judged": 10,
       "correct": 10,
       "precision": 1.0,
@@ -910,8 +910,8 @@
           "correct": 1
         }
       },
-      "anchors": 13,
-      "reference_functions": 17,
+      "anchors": 14,
+      "reference_functions": 18,
       "target_functions": 17
     },
     {
