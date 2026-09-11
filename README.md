@@ -1994,6 +1994,13 @@ that fact was checked.
 | PlayStation 3 (Cell SPU objects) | There is no SPU processor at all in the pinned tree, so SPU modules have no decoder. The PPU side is PowerPC, but an RE platform that decompiles only the PPU half of a PS3 title would misrepresent what it recovered. | Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor. |
 | Sony PSP (Allegrex ELF/PBP) | The Allegrex core's VFPU is not modelled by any pinned SLEIGH language, so PSP code that uses vector instructions cannot be decoded, let alone decompiled. Adding it means writing a SLEIGH extension, which is its own task with its own gate. | Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only. |
 | Xbox 360 (XEX) | VMX128 is not modelled: the pinned PowerPC language defines 64 VSX registers and no VMX128 variant, while the Xenon core exposes 128 vector registers with different encodings. Retail XEX images are also encrypted and compressed, which the encrypted-container row also covers. | PowerPC/data/languages/ppc_common.sinc:150 defines vs0..vs63; zero matches for 'vmx128' anywhere under Ghidra/Processors; ppc.ldefs offers Altivec variants only. |
+**Disassembly failure classes.** Instances observed over the measured corpus; zero is the gate, so any row with a count is a recorded defect.
+
+| Class | Observed | Section |
+|---|---|---|
+| data-in-code | 0 over 465 functions (aarch64, i386, x86-64) (`tests/m19-002_failure_classes.py`) | Pang §III-A |
+| overlapping decode | 0 disagreements, 0 mid-body control targets over 465 functions (aarch64, i386, x86-64) (`tests/m19-002_failure_classes.py`) | Pang §III-A |
+| indirect-branch targets | bounded sets scored by m13-001 (`benchmarks/reports/m13-001.json`) | Pang §III-D |
 <!-- support-matrix:end -->
 
 The PE parser supports PE32+ (x86-64) and PE32 (i386). Native decompilation
