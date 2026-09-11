@@ -6010,7 +6010,22 @@ point at, none reserved:
   (x86_64_many_o2 misses `main` the same way) -- that one is a
   seeding gap, not a walk gap (producer pinpoint: the 7 recovered are
   flow 5 / call 1 / thunk 1; pattern, pointer and unwind claim nothing
-  on this image, so the walk starts from entry+calls alone).
+  on this image, so the walk starts from entry+calls alone). FIXED
+  2026-09-11 by const-prop DATA-to-code seeding (`const_data_targets`):
+  every constant-propagated DATA value into executable code seeds a
+  candidate, flow confirmation still applying downstream. mipsel_many_o2
+  7/401 -> 401/401 (m3 exemption retired by its own stale guard);
+  x86_64_many_o2 `main` recovered the same way. A call-site window was
+  tried first and dropped: MIPS calls through registers leave no call
+  fact to window around. A wiring
+  gap is ruled out: the console loads 582 MIPS rules and returns 4
+  matches here (7 on plain_o2); x86_64 patterns are equally sparse by
+  design (20 rules, 6 matches on a 400-function image). Stock's 411
+  tile .text at median 8B gaps (our 7 are a subset); stock is working
+  the whole block, but not by promoting everything (it misses the
+  unreferenced `add` leaf too). Next probe for the fix: what stops our
+  walk at 0x205c0 -- gp-relative `jalr $t9` following is the suspect,
+  not seeds and not tables (many.c has no switch).
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list

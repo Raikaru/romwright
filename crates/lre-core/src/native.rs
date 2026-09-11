@@ -1395,6 +1395,41 @@ pub(crate) fn low_bit_code_mode(language: &str) -> bool {
 /// disassembly and function creation follow the reference); a target with
 /// the low bit set on a low-bit-mode language is decoded in that mode from
 /// then on (`setTargetContextForDisassembly`: clear the bit, set the mode).
+// Code addresses the propagation proved hold constants.
+//
+// A constant-propagated DATA value into executable code is usually a
+// callback -- or `main` handed to `__libc_start_main`, which arrives no
+// other way (mipsel_many_o2: 7 of 401 without this rule, all 401 with
+// `main` seeded). No other pass proposes these, so without this rule
+// they stay invisible no matter how long the walk runs. The call-site
+// window was tried first and dropped: on MIPS the call itself is a
+// `jalr` through a register that leaves no call fact, so windowing
+// around calls misses exactly the shape that motivated the rule. Flow
+// confirmation still applies downstream; this only seeds.
+fn const_data_targets(import: &NativeImport) -> Vec<u64> {
+    let entries: std::collections::HashSet<u64> =
+        import.functions.iter().map(|function| function.entry).collect();
+    let in_code = |address: u64| {
+        import.mappings.iter().any(|mapping| {
+            mapping.flags & 4 != 0
+                && address >= mapping.vaddr
+                && address - mapping.vaddr < mapping.size
+        })
+    };
+    let mut targets: Vec<u64> = import
+        .xrefs
+        .iter()
+        .filter(|xref| {
+            xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
+        })
+        .map(|xref| xref.to)
+        .filter(|&target| !entries.contains(&target) && in_code(target))
+        .collect();
+    targets.sort_unstable();
+    targets.dedup();
+    targets
+}
+
 fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> =
         import.functions.iter().map(|function| function.entry).collect();
@@ -2362,6 +2397,7 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         let targets = computed_flow_targets(imp);
+        let callbacks = const_data_targets(imp);
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -2405,11 +2441,11 @@ fn discover(imp: &mut NativeImport) -> Result<()> {
         } else if tables > 0 {
             demote_case_blocks(imp);
         }
-        if targets.is_empty() && tables == 0 {
+        if targets.is_empty() && tables == 0 && callbacks.is_empty() {
             break;
         }
         let mode = low_bit_code_mode(&imp.language);
-        for &target in &targets {
+        for &target in targets.iter().chain(callbacks.iter()) {
             if mode {
                 // The reference kept the aligned address; the mode it carried
                 // is the call's own fact. A caller whose register held an
