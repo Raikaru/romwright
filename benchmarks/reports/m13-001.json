@@ -2,7 +2,7 @@
   "id": "m13-001",
   "milestone": "M13",
   "criterion": "jump tables recovered from p-code without the decompiler, scored against stock",
-  "recorded_at": "2026-09-10T23:43:44.370009+00:00",
+  "recorded_at": "2026-09-11T02:44:58.091160+00:00",
   "thresholds": {
     "vsa_soundness": 0.99,
     "vsa_seconds": 5.0,
@@ -37,22 +37,22 @@
       "shared_with_stock": 78,
       "beyond_stock": 12,
       "missed_of_stock": 54,
-      "wall_s": 34.2,
-      "phase_s": 1.87
+      "wall_s": 35.0,
+      "phase_s": 2.054
     },
     "interpreted": {
-      "branches": 103,
-      "targets": 1190,
-      "sound_targets": 1189,
+      "branches": 131,
+      "targets": 1714,
+      "sound_targets": 1713,
       "outside_function": 1,
       "undecodable": 0,
-      "soundness": 0.9992,
-      "agree_with_stock": 80,
-      "shared_with_stock": 91,
+      "soundness": 0.9994,
+      "agree_with_stock": 98,
+      "shared_with_stock": 119,
       "beyond_stock": 12,
-      "missed_of_stock": 41,
-      "wall_s": 34.7,
-      "phase_s": 4.254
+      "missed_of_stock": 13,
+      "wall_s": 37.5,
+      "phase_s": 4.472
     },
     "decompiler": {
       "branches": 130,
@@ -65,7 +65,7 @@
       "shared_with_stock": 129,
       "beyond_stock": 1,
       "missed_of_stock": 3,
-      "wall_s": 76.7
+      "wall_s": 82.0
     },
     "combined": {
       "branches": 142,
@@ -78,12 +78,10 @@
       "shared_with_stock": 129,
       "beyond_stock": 13,
       "missed_of_stock": 3,
-      "wall_s": 89.6,
-      "phase_s": 0.375
+      "wall_s": 98.2,
+      "phase_s": 0.411
     }
   },
-  "status": "fail",
-  "failures": [
-    "the interpreter answered 103 dispatches, short of the decompiler's 130"
-  ]
+  "status": "pass",
+  "failures": []
 }

@@ -191,6 +191,11 @@ struct State {
     /// compared operand's width: a bound on `al` is a bound on one byte,
     /// whatever wider slot it was copied from.
     predicates: BTreeMap<Slot, (Slot, u64, bool, bool, u32)>,
+    /// Affine provenance: `slot = origin + off`, narrowed by the smallest
+    /// width crossed, plus the origin's own width. A copy in one block and
+    /// the compare in the next are ordinary code, so the links travel with
+    /// the state the way predicates do.
+    origins: BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
 }
 
 impl State {
@@ -220,6 +225,11 @@ impl State {
         for (key, left) in &self.predicates {
             if other.predicates.get(key) == Some(left) {
                 merged.predicates.insert(key.clone(), left.clone());
+            }
+        }
+        for (key, left) in &self.origins {
+            if other.origins.get(key) == Some(left) {
+                merged.origins.insert(key.clone(), left.clone());
             }
         }
         for (key, left) in &self.values {
@@ -315,8 +325,56 @@ pub fn analyse<I: Image>(
     }
     let order = reverse_post_order(blocks);
     let mut entry_state: Vec<Option<State>> = vec![None; blocks.len()];
-    entry_state[0] = Some(State::default());
-    // Bounded fixpoint: each block is re-analysed while its entry state
+    // Seed every component the entry cannot reach, not just the entry: a
+    // dispatch downstream of an earlier unresolved `jmp *` sits in a
+    // component the entry cannot reach, and leaving it unvisited answers
+    // nothing about it. Reachability, not in-degree, decides: a loop header
+    // has a back-edge into itself and still needs a seed, and so does the
+    // first block when the loop is the whole function. A rootless block
+    // starting at Top is the same assumption the function entry already
+    // makes; the guard's bound still lands on the edge into the dispatch.
+    let mut reached = vec![false; blocks.len()];
+    for index in 0..blocks.len() {
+        if reached[index] {
+            continue;
+        }
+        entry_state[index] = Some(State::default());
+        reached[index] = true;
+        let mut stack = vec![index];
+        while let Some(node) = stack.pop() {
+            for &successor in &blocks[node].successors {
+                if successor < blocks.len() && !reached[successor] {
+                    reached[successor] = true;
+                    stack.push(successor);
+                }
+            }
+        }
+    }
+    if let Some(at) = std::env::var("VENTRIS_TRACE_SJA_CFG")
+        .ok()
+        .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok())
+    {
+        for (index, block) in blocks.iter().enumerate() {
+            let start = block.instructions.first().map(|i| i.address).unwrap_or(0);
+            let end = block.instructions.last().map(|i| i.address).unwrap_or(0);
+            if start <= at && at <= end + 0x200 {
+                let succ: Vec<u64> = block
+                    .successors
+                    .iter()
+                    .map(|&s| {
+                        blocks
+                            .get(s)
+                            .and_then(|b| b.instructions.first())
+                            .map(|i| i.address)
+                            .unwrap_or(0)
+                    })
+                    .collect();
+                eprintln!(
+                    "CFG block {index} @{start:#x}..{end:#x} succ={succ:x?}"
+                );
+            }
+        }
+    }
     // grows, and a block that keeps growing is widened to top rather than
     // iterated forever.
     let mut rounds: Vec<u32> = vec![0; blocks.len()];
@@ -339,6 +397,26 @@ pub fn analyse<I: Image>(
                 for (key, value) in refinements {
                     next.values.insert(key.clone(), value.clone());
                 }
+            }
+            if std::env::var("VENTRIS_TRACE_SJA_EDGE")
+                .ok()
+                .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok())
+                .is_some_and(|at| {
+                    blocks[successor]
+                        .instructions
+                        .iter()
+                        .any(|i| i.address == at)
+                })
+            {
+                eprintln!(
+                    "EDGE -> block@{:#x} (succ {}) r15={:?} prior={:?}",
+                    blocks[successor].instructions.first().map(|i| i.address).unwrap_or(0),
+                    position,
+                    next.values.get(&("register".to_string(), 0xb8)),
+                    entry_state[successor]
+                        .as_ref()
+                        .and_then(|s| s.values.get(&("register".to_string(), 0xb8))),
+                );
             }
             let merged = match &entry_state[successor] {
                 Some(existing) => {
@@ -431,9 +509,19 @@ fn materialise<I: Image>(
             for address in values.iter().copied() {
                 // Every case must decode inside the branching function:
                 // that check is what stops a bound one entry too long from
-                // turning the next thing in memory into a case.
-                if !image.executable(address) || address < extent.0 || address >= extent.1 {
+                // turning the next thing in memory into a case. A case in
+                // space no other function has claimed is still reachable --
+                // a shared tail past the symbol's stated end is exactly
+                // that -- so the same owner check the strided arm uses
+                // applies here.
+                if !image.executable(address) {
                     return Err(Reason::Outside);
+                }
+                if address < extent.0 || address >= extent.1 {
+                    match image.owner(address) {
+                        Some(owner) if owner != extent => return Err(Reason::Outside),
+                        _ => {}
+                    }
                 }
                 targets.push(address);
             }
@@ -507,20 +595,21 @@ fn run_block<I: Image>(
     // edge, and the far more common `cmp idx, n; ja default` bounds the
     // fallthrough.
     let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool, u32)> = state.predicates.clone();
-    // Where each temporary came from, as (origin slot, affine offset): a
-    // machine compares a *copy* of the switch variable and then dispatches
-    // on the original, and the copy is often `x - k` rather than `x`, so a
-    // bound on the temp is a bound on the origin shifted by the offset.
-    // A bound applied only to the compared temporary is discarded the
-    // moment the temporary dies -- which is why the first measurement of
-    // this pass bounded nothing on libc.
-    // (origin slot, affine offset, narrowest width crossed). A SUBPIECE
-    // narrows the value: a bound on the piece says nothing about the
-    // origin's upper bytes unless the origin already fits the width, so the
-    // width rides along and the compare checks it. A `unique` temporary is
-    // intra-instruction and dead by the next block, so it is never an
-    // origin -- the output is its own origin instead.
-    let mut origins: BTreeMap<Slot, (Slot, i64, Option<u32>)> = BTreeMap::new();
+    // Where each temporary came from, as (origin slot, affine offset,
+    // narrowest width crossed, origin width): a machine compares a *copy*
+    // of the switch variable and then dispatches on the original, and the
+    // copy is often `x - k` rather than `x`, so a bound on the temp is a
+    // bound on the origin shifted by the offset. A bound applied only to
+    // the compared temporary is discarded the moment the temporary dies --
+    // which is why the first measurement of this pass bounded nothing on
+    // libc. A SUBPIECE narrows the value: a bound on the piece says nothing
+    // about the origin's upper bytes unless the origin already fits the
+    // width, so the width rides along and the compare checks it. A `unique`
+    // temporary is intra-instruction and dead by the next block, so it is
+    // never an origin -- the output is its own origin instead. The links
+    // live in the state: a copy in one block and the compare in the next
+    // are ordinary code.
+    let mut origins = state.origins.clone();
     let trace_at: Option<u64> = std::env::var("VENTRIS_TRACE_SJA_OPS")
         .ok()
         .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok());
@@ -533,6 +622,16 @@ fn run_block<I: Image>(
                     "SJA-OP {:#x}: {} out={:?} in={:?}",
                     instruction.address, opcode, op.output, op.inputs
                 );
+                for (key, known) in &state.values {
+                    eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
+                }
+            }
+            if std::env::var("VENTRIS_TRACE_SJA_STATE")
+                .ok()
+                .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok())
+                .is_some_and(|at| instruction.address == at)
+            {
+                eprintln!("SJA-STATE {:#x}:", instruction.address);
                 for (key, known) in &state.values {
                     eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
                 }
@@ -596,11 +695,11 @@ fn run_block<I: Image>(
                     {
                         // An in-place op reads the entry the top-of-loop
                         // clear just removed.
-                        let (origin, off, narrow) = if slot(source) == slot(output) {
-                            prior.clone().unwrap_or((slot(source), 0, None))
+                        let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
                             origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None))
+                                .unwrap_or((slot(source), 0, None, source.size))
                         };
                         // A `unique` temporary is intra-instruction and dead
                         // by the next block, so it is never an origin: the
@@ -614,7 +713,7 @@ fn run_block<I: Image>(
                             } else {
                                 narrow
                             };
-                            origins.insert(slot(output), (origin, off, narrow));
+                            origins.insert(slot(output), (origin, off, narrow, source.size));
                         }
                     }
                 }
@@ -639,11 +738,11 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off, narrow) = if slot(source) == slot(output) {
-                            prior.clone().unwrap_or((slot(source), 0, None))
+                        let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
                             origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None))
+                                .unwrap_or((slot(source), 0, None, source.size))
                         };
                         // A `unique` temporary is dead by the next block:
                         // the output has no affine parent, and recording
@@ -651,7 +750,7 @@ fn run_block<I: Image>(
                         // onto it at the next compare.
                         if origin.0 != "unique" && origin != slot(output) {
                             origins.insert(slot(output),
-                                (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow));
+                                (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow, source.size));
                         }
                     }
                 }
@@ -676,15 +775,15 @@ fn run_block<I: Image>(
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                         && source.space != "const" && konst.space == "const"
                     {
-                        let (origin, off, narrow) = if slot(source) == slot(output) {
-                            prior.clone().unwrap_or((slot(source), 0, None))
+                        let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
+                            prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
                             origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None))
+                                .unwrap_or((slot(source), 0, None, source.size))
                         };
                         if origin.0 != "unique" && origin != slot(output) {
                             origins.insert(slot(output),
-                                (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow));
+                                (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow, source.size));
                         }
                     }
                 }
@@ -817,35 +916,118 @@ fn run_block<I: Image>(
                             // to [0, high] bounds the origin to
                             // [-off, high - off].
                             let mut targets = vec![(operand.clone(), 0i64)];
-                            if let Some((origin, off, narrow)) = origins.get(&operand) {
-                                // A bound on a piece says nothing about the
-                                // whole unless the origin already fits the
-                                // narrowest width crossed. The bound's own
-                                // width is the operand's, so the effective
-                                // narrow is the smaller of the two.
-                                let effective = narrow.map_or(operand_size, |w| w.min(operand_size));
-                                let usable = if effective >= 8 {
-                                    true
-                                } else {
-                                    let mask = (1u64 << (effective * 8)) - 1;
-                                    match state.values.get(origin) {
-                                        Some(Value::Top) | None => false,
-                                        Some(Value::Const(c)) => *c <= mask,
-                                        Some(Value::Strided { base: 0, stride: 1, lo, hi, .. }) =>
-                                            *lo >= 0 && *hi >= *lo && (*hi as u64) <= mask,
-                                        _ => false,
+                            // Follow the origin chain transitively: `dl`
+                            // came from `edx`, which came from `r15`, so a
+                            // bound on the compared temp is a bound on each
+                            // link, shifted by the accumulated offset. One
+                            // hop (the first version) stopped at `edx`, and
+                            // the `movzbl %r15b,%edx` that overwrote it
+                            // carried the bound nowhere. A hop that fails
+                            // `usable` is skipped, not terminal: the bound
+                            // still reaches the wider origin past it.
+                            {
+                                let mut current = operand.clone();
+                                let mut accumulated = 0i64;
+                                // The narrowest width crossed *so far*: a
+                                // bound on `al` that came through `eax` is
+                                // still a byte bound when it reaches `rax`,
+                                // so the running minimum, not this hop's
+                                // `narrow`, is what the origin must fit.
+                                let mut narrowest = operand_size;
+                                let mut seen: std::collections::HashSet<Slot> =
+                                    [current.clone()].into_iter().collect();
+                                while let Some((origin, off, narrow, origin_size)) =
+                                    origins.get(&current)
+                                {
+                                    narrowest = narrow.map_or(narrowest, |w| w.min(narrowest));
+                                    let effective = narrowest;
+                                    // The origin's own width, not its current
+                                    // value, decides: `mov %ebx,%r11d` copies
+                                    // all of ebx, so a bound on the copy is a
+                                    // bound on ebx whatever ebx holds.
+                                    let usable = if effective >= 8 || *origin_size <= effective {
+                                        true
+                                    } else {
+                                        let mask = (1u64 << (effective * 8)) - 1;
+                                        match state.values.get(origin) {
+                                            Some(Value::Top) | None => false,
+                                            Some(Value::Const(c)) => *c <= mask,
+                                            Some(Value::Strided { base: 0, stride: 1, lo, hi, .. }) =>
+                                                *lo >= 0 && *hi >= *lo && (*hi as u64) <= mask,
+                                            _ => false,
+                                        }
+                                    };
+                                    let next_off = accumulated + off;
+                                    // The shifted bound must fit the narrow
+                                    // width too: `lea -0xf0(%r15),%eax; cmp
+                                    // $0x5a,%al` wraps inside the byte, and
+                                    // the interval would drop the wrapped
+                                    // half.
+                                    let fits = effective >= 8
+                                        || (high - next_off) as u64
+                                            <= (1u64 << (effective * 8)) - 1;
+                                    if usable && fits {
+                                        targets.push((origin.clone(), next_off));
                                     }
-                                };
-                                // The shifted bound must fit the narrow
-                                // width too: `lea -0xf0(%r15),%eax; cmp
-                                // $0x5a,%al` wraps inside the byte, and the
-                                // interval would drop the wrapped half.
-                                let fits = effective >= 8
-                                    || (high - off) as u64 <= (1u64 << (effective * 8)) - 1;
-                                if usable && fits {
-                                    targets.push((origin.clone(), *off));
+                                    accumulated = next_off;
+                                    current = origin.clone();
+                                    if !seen.insert(current.clone()) {
+                                        break;
+                                    }
                                 }
                             }
+                            // And the other direction: `mov %ebx,%r11d`
+                            // before the compare means r11's origin is the
+                            // bounded slot, so the bound belongs to r11
+                            // too. Walk the links to a fixpoint: a slot
+                            // whose origin is already targeted gets the
+                            // bound shifted by its own offset. Only exact
+                            // copies and shifts propagate -- a subpiece
+                            // (narrow set) truncates, and a bound on the
+                            // whole says nothing about the piece.
+                            let mut reached: Vec<(Slot, i64)> = targets.clone();
+                            loop {
+                                let mut grew = false;
+                                for (slot, (origin, off, narrow, _)) in &origins {
+                                    if reached.iter().any(|(s, _)| s == slot) {
+                                        continue;
+                                    }
+                                    if let Some((_, bound)) = reached.iter().find(|(s, _)| s == origin) {
+                                        // The entry is an offset: `(s, o)`
+                                        // means `s <= high - o`. `slot =
+                                        // origin + off` and `origin <=
+                                        // high - o` bound the slot to
+                                        // `high - (o - off)`, so the slot's
+                                        // entry is `o - off`.
+                                        let shifted = bound - off;
+                                        // A slot that is a truncation of its
+                                        // origin still admits the bound when
+                                        // the bound on it fits the truncated
+                                        // width: `rax = zext(eax)` is a
+                                        // 4-byte piece of `r14 - 0x20`, and
+                                        // `eax <= 0x5a` bounds `rax` to
+                                        // `0x5a` because `0x5a` fits the
+                                        // piece. A bound that does not fit
+                                        // wraps inside the piece and states
+                                        // nothing.
+                                        if let Some(width) = narrow {
+                                            let hi = high - shifted;
+                                            if *width < 8
+                                                && (hi < 0
+                                                    || (hi as u64) > (1u64 << (*width * 8)) - 1)
+                                            {
+                                                continue;
+                                            }
+                                        }
+                                        reached.push((slot.clone(), shifted));
+                                        grew = true;
+                                    }
+                                }
+                                if !grew {
+                                    break;
+                                }
+                            }
+                            targets = reached;
                             // The taken edge is the one the comparison holds
                             // on; our block successors list the taken target
                             // first (`Block::successors`). Which side of the
@@ -856,6 +1038,18 @@ fn run_block<I: Image>(
                             // targets that do not decode inside the function,
                             // and `materialise` refuses those. So both edges
                             // get the candidate and the check decides.
+                            let trace_cbranch = std::env::var("VENTRIS_TRACE_SJA_CBRANCH")
+                                .ok()
+                                .and_then(|raw| {
+                                    u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok()
+                                })
+                                == Some(instruction.address);
+                            if trace_cbranch {
+                                eprintln!(
+                                    "CBRANCH {:#x}: operand={:?} high={} targets={:?}",
+                                    instruction.address, operand, high, targets
+                                );
+                            }
                             for (target, off) in targets {
                                 let bounded = match state.values.get(&target).cloned() {
                                     // Intersect, not overwrite: a bound on
@@ -900,6 +1094,12 @@ fn run_block<I: Image>(
                                     // into an index-space bound.
                                     _ => continue,
                                 };
+                                if trace_cbranch {
+                                    eprintln!(
+                                        "  -> {:?} off={} bounded={:?}",
+                                        target, off, bounded
+                                    );
+                                }
                                 edges
                                     .entry(edge)
                                     .or_default()
@@ -942,6 +1142,7 @@ fn run_block<I: Image>(
         }
     }
     state.predicates = comparisons;
+    state.origins = origins;
     (state, edges)
 }
 
@@ -2071,5 +2272,173 @@ mod tests {
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
         assert!(found.tables.is_empty());
         assert_eq!(found.refusals, Refusals::default());
+    }
+    /// `r15 = zext(load); eax = subpiece(r15 - 0x20); r11 = zext(eax); cmp
+    /// $0x5a,%al; jbe dispatch` then `jmp *(0x9000 + r11*8)` -- the compared
+    /// slot is `al`, and `r11` is a truncation of the same origin (`r15 -
+    /// 0x20`). The bound on `al` reaches `r11` only if the origin walk
+    /// applies it to a slot whose link crossed a narrowing.
+    fn narrow_reached_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![
+                instruction(
+                    0x1000,
+                    vec![
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x100, 1)),
+                            vec![varnode("const", 0x1b1, 4), varnode("const", 0xdead, 8)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0xb8, 4)),
+                            vec![varnode("unique", 0x100, 1)],
+                        ),
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0xb8, 8)),
+                            vec![varnode("register", 0xb8, 4)],
+                        ),
+                    ],
+                ),
+                instruction(
+                    0x1010,
+                    vec![
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x200, 8)),
+                            vec![varnode("register", 0xb8, 8), varnode("const", 0xffffffffffffffe0, 8)],
+                        ),
+                        op(
+                            "SUBPIECE",
+                            Some(varnode("register", 0x0, 4)),
+                            vec![varnode("unique", 0x200, 8), varnode("const", 0, 4)],
+                        ),
+                        // r11 = zext(eax): a truncation of the same origin.
+                        op(
+                            "INT_ZEXT",
+                            Some(varnode("register", 0x58, 8)),
+                            vec![varnode("register", 0x0, 4)],
+                        ),
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x0, 1), varnode("const", 0x5b, 1)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1020, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                ),
+            ],
+            successors: vec![1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x58, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        vec![guard, dispatch]
+    }
+
+    #[test]
+    fn a_bound_reaches_a_truncated_slot_on_the_same_origin() {
+        // The bound on `al` is [0,0x5a]; `r11 = zext(eax)` is a 4-byte piece
+        // of `r15 - 0x20`, and `0x5a` fits the piece, so `r11` is bounded
+        // [0,0x5a] and the dispatch resolves the table.
+        let entries: Vec<u64> = (0..0x5bu64).map(|i| 0x1100 + i * 8).collect();
+        let image = table(&entries);
+        let found = analyse(&image, &narrow_reached_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets.len(), 0x5b);
+    }
+
+    #[test]
+    fn a_set_target_in_unclaimed_space_is_accepted() {
+        // The Set arm of `materialise` must accept a case that is outside
+        // the branching function's extent but in space no other function
+        // has claimed -- a shared tail past the symbol's stated end.
+        let image = Fixture {
+            memory: HashMap::new(),
+            code: (0x1000, 0x3000),
+        };
+        let analysis = analyse(&image, &masked_goto(0xf), (0x1000, 0x1400));
+        assert_eq!(analysis.tables.len(), 1, "{analysis:?}");
+        assert_eq!(analysis.tables[0].targets.len(), 16);
+    }
+    #[test]
+    fn a_loop_header_entry_is_still_seeded() {
+        // Block 0 is a loop header: its body jumps back to it, so it has a
+        // predecessor (itself) and in-degree seeding would leave it
+        // unvisited. Reachability seeding must still seed it.
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
+        let blocks = vec![
+            // Loop header: index < 4; jbe dispatch; else loop back.
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1, 0],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
     }
 }

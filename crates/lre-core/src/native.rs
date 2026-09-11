@@ -1554,7 +1554,12 @@ fn function_blocks(
         }
     }
     let starts: Vec<u64> = leaders.iter().copied().collect();
-    let index_of = |address: u64| starts.binary_search(&address).ok();
+    // A leader with no instruction at its own address (dead bytes after a
+    // branch) still owns the block that follows it: map every address to the
+    // last leader at or before it, not only to an exact leader hit, or the
+    // next real instruction is absorbed into the branch's block and the
+    // block ends up holding two branches.
+    let index_of = |address: u64| starts.partition_point(|&s| s <= address).checked_sub(1);
     let mut blocks: Vec<(u64, Vec<u64>, Vec<usize>)> = starts
         .iter()
         .map(|start| (*start, Vec::new(), Vec::new()))
@@ -1572,7 +1577,9 @@ fn function_blocks(
                 if let Some(target) = shape.target.filter(|t| inside(*t)).and_then(index_of) {
                     blocks[current].2.push(target);
                 }
-                if let Some(fall) = index_of(next) {
+                if inside(next)
+                    && let Some(fall) = index_of(next)
+                {
                     blocks[current].2.push(fall);
                 }
             }
@@ -1767,7 +1774,7 @@ fn recover_switch_tables_native(
         .split(':')
         .nth(1)
         .is_some_and(|field| field.eq_ignore_ascii_case("BE"));
-    let mut resolved = Vec::new();
+    let mut resolved: Vec<vsa::SwitchTable> = Vec::new();
     let mut unresolved = Vec::new();
     let mut refusals = vsa::Refusals::default();
     let mut no_window = 0usize;
@@ -1780,6 +1787,28 @@ fn recover_switch_tables_native(
     // same work up to a dozen times over.
     let mut interpreted_functions: std::collections::HashMap<u64, Option<sja::Analysis>> =
         std::collections::HashMap::new();
+    // Hoisted out of the per-function branch: the sets are the same for
+    // every analysis, and rebuilding them per function walked all of
+    // `imp.xrefs` once per SJA-analysed function.
+    let resolved_jumps: std::collections::HashSet<u64> = imp
+        .flow_overrides
+        .iter()
+        .map(|&(address, _)| address)
+        .chain(
+            imp.xrefs
+                .iter()
+                .filter(|xref| xref.kind == "COMPUTED_JUMP")
+                .map(|xref| xref.from),
+        )
+        .collect();
+    let thunk_entries: std::collections::HashSet<u64> =
+        imp.thunks.iter().map(|thunk| thunk.entry).collect();
+    let owner_of = |branch: u64| {
+        imp.functions
+            .iter()
+            .find(|f| f.size > 1 && f.entry <= branch && branch < f.entry + f.size)
+            .map(|f| f.entry)
+    };
     for &(branch, entry, end) in branches {
         let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
         if window_addresses.is_empty() {
@@ -1894,6 +1923,27 @@ fn recover_switch_tables_native(
                     let view = ImageView { imp, big_endian };
                     sja::analyse(&view, &graph, (entry, end))
                 });
+                // One analysis answers every indirect branch in the
+                // function, and a dispatch asked in an earlier round -- when
+                // the CFG was still missing the case blocks an unresolved
+                // jump hid -- is not asked again. Recording only the asked
+                // branch's table would drop the rest, so every table the
+                // analysis produced is kept for the recording loop. Only
+                // real candidates count: a thunk, an overridden flow, or a
+                // jump already answered is not a switch.
+                if let Some(analysis) = &analysed {
+                    for table in &analysis.tables {
+                        let is_candidate = imp.indirect_jumps.contains(&table.branch)
+                            && !resolved_jumps.contains(&table.branch)
+                            && !owner_of(table.branch).is_some_and(|e| thunk_entries.contains(&e));
+                        if is_candidate
+                            && !imp.switch_tables.contains_key(&table.branch)
+                            && !resolved.iter().any(|t| t.branch == table.branch)
+                        {
+                            resolved.push(table.clone());
+                        }
+                    }
+                }
                 interpreted_functions.insert(entry, analysed);
             }
             // Only this candidate's outcome is counted: analysing a function
@@ -1923,7 +1973,12 @@ fn recover_switch_tables_native(
             None => quick,
         };
         match table {
-            Some(table) => resolved.push(table),
+            // The analysis's tables were already recorded above; pushing the
+            // asked branch's again would double its xrefs.
+            Some(table) if !resolved.iter().any(|t| t.branch == table.branch) => {
+                resolved.push(table)
+            }
+            Some(_) => {}
             None => unresolved.push(branch),
         }
     }
@@ -3596,6 +3651,32 @@ mod tests {
     fn a_slice_of_a_function_with_no_dispatch_is_empty() {
         let blocks = vec![(0x1000, vec![0x1000], vec![])];
         assert!(blocks_reaching(&blocks, &[0x2000]).is_empty());
+    }
+
+    #[test]
+    fn a_leader_with_no_shape_still_splits_the_block() {
+        // `jmp` at 0x1000, dead bytes at 0x1005..0x1010 (padding, never
+        // decoded), then a `ja` at 0x1010. The leader at 0x1005 has no
+        // shape; without it the `ja` is absorbed into the `jmp`'s block and
+        // the block holds two branches.
+        use crate::native_runtime::FlowKind;
+        let imp = NativeImport {
+            flow_shapes: vec![
+                FlowShape { address: 0x1000, length: 5, kind: FlowKind::Branch, conditional: false, target: Some(0x2000) },
+                FlowShape { address: 0x1010, length: 2, kind: FlowKind::CBranch, conditional: true, target: Some(0x3000) },
+                FlowShape { address: 0x1012, length: 4, kind: FlowKind::Fallthrough, conditional: false, target: None },
+            ],
+            ..Default::default()
+        };
+        let blocks = function_blocks(&imp, 0x1000, 0x2000);
+        // Three blocks: the jmp's, the padding leader's (empty), and the
+        // ja's. The jmp's block must not contain the ja.
+        assert_eq!(blocks.len(), 3, "{blocks:?}");
+        assert_eq!(blocks[0].1, vec![0x1000]);
+        assert_eq!(blocks[0].2, Vec::<usize>::new()); // Branch: only the target, which is outside.
+        assert_eq!(blocks[1].1, vec![0x1010]);
+        assert_eq!(blocks[1].2, vec![2]);
+        assert_eq!(blocks[2].1, vec![0x1012]);
     }
     #[test]
     fn elf_data_pointer_waits_for_flow_and_walks_indirect_call_fallthrough() {
