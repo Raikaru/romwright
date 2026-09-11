@@ -435,16 +435,17 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     let mut branch_targets = Vec::new();
     // Table metadata supplies boundaries, not functions. Each entry still needs
     // bounded p-code evidence ending in an indirect transfer through a known slot.
+    // Membership mirror for the scan below: per-candidate linear search
+    // over the function list.
+    let mut known_functions: std::collections::HashSet<u64> =
+        imp.functions.iter().map(|f| f.entry).collect();
     if has_linkage_slots {
         for chunk in imp.plt_candidates.chunks(1024) {
             let addresses: Vec<_> = chunk.iter().map(|&(address, _)| address).collect();
             for (&(address, width), linkage) in
                 chunk.iter().zip(flow_provider.plt_linkages(&addresses))
             {
-                let known = imp
-                    .functions
-                    .iter()
-                    .any(|function| function.entry == address);
+                let known = known_functions.contains(&address);
                 if linkage.address != address
                     || linkage.length == 0
                     || linkage.length as u64 > width
@@ -472,6 +473,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     {
                         let destination = imp.ifunc_slots[index].1;
                         if !known {
+                            known_functions.insert(address);
                             imp.functions.push(NativeFunction {
                                 entry: address,
                                 name: format!("FUN_{address:08x}"),
@@ -488,6 +490,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                     continue;
                 };
                 if !known {
+                    known_functions.insert(address);
                     imp.functions.push(NativeFunction {
                         entry: address,
                         name: name.clone(),
