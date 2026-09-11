@@ -27,7 +27,7 @@ import re
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dwarf_arity import DIE, ATTRIBUTE, get_load_segments, integer, payload  # noqa: E402
+from dwarf_arity import DIE, ATTRIBUTE, dwarf_dump_tool, get_load_segments, integer, payload  # noqa: E402
 import os  # noqa: E402
 import subprocess  # noqa: E402
 
@@ -171,8 +171,7 @@ def extract(binary, load_bias=0):
                   if flags & 1]
     environment = dict(os.environ, LC_ALL="C", DEBUGINFOD_URLS="")
     # System readelf is ELF-only; BFD objdump reads PE DWARF identically.
-    tool = ["objdump", "--dwarf=info", "--wide"] if data[:2] == b"MZ" \
-        else ["readelf", "--debug-dump=info", "--wide"]
+    tool = dwarf_dump_tool(data)
     result = subprocess.run(
         [*tool, str(binary)],
         text=True, capture_output=True, check=True, timeout=120, env=environment)
