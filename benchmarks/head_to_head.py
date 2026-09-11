@@ -150,8 +150,12 @@ def main() -> int:
     base = min(int(row[0], 16) for row in store.execute("SELECT start FROM memory_regions"))
     bias = base if e_type == 3 else 0
     truth_set = {address + bias for address in symtab_funcs(arguments.twin or binary)}
+    # Symbols surviving the strip: recall against these is ingestion, the
+    # rest is discovery. Reported beside truth every run.
+    exposed = {address + bias for address in symtab_funcs(target)}
     axis_functions = {
         "truth_functions": len(truth_set),
+        "exposed_symbols": len(exposed),
         "load_bias": f"{bias:08x}",
         "native": {"recovered": len(native),
                    "recall": round(len(native & truth_set) / len(truth_set), 4),
@@ -236,12 +240,11 @@ def main() -> int:
               "inputs": info, "axis_functions": axis_functions,
               "axis_prototypes": axes["prototypes"], "axis_gotos": axes["gotos"],
               "note": "no DWARF on this host: function axis is symtab truth, "
-                      "not DWARF recall, and strip cannot remove .dynsym "
-                      "(2904 FUNCs survive) so recall is assisted on both "
-                      "sides -- the discriminating axes are unexplained "
-                      "entries and goto counts; prototype headline is arity "
-                      "agreement (structural on both sides), return-type pairs "
-                      "recorded per function, never parameter names"}
+                      "not DWARF recall. exposed_symbols (surviving the strip) "
+                      "is ingestion on both sides; recall over the rest is "
+                      "discovery. Prototype headline is arity agreement "
+                      "(structural on both sides), return-type pairs recorded "
+                      "per function, never parameter names"}
     arguments.report.parent.mkdir(parents=True, exist_ok=True)
     arguments.report.write_text(json.dumps(report, indent=2) + "\n")
     print(f"head-to-head: report at {arguments.report}")
