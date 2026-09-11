@@ -37,7 +37,8 @@
         "0x100668"
       ],
       "unexplained_count": 200,
-      "wall_s": 103.3
+      "wall_s": 103.3,
+      "discovered_recall": 1.0
     },
     "stock": {
       "recovered": 3987,
@@ -65,9 +66,11 @@
         "0x100890"
       ],
       "unexplained_count": 97,
-      "wall_s": 105.8
+      "wall_s": 105.8,
+      "discovered_recall": 1.0
     },
-    "exposed_symbols": 2269
+    "exposed_symbols": 2269,
+    "must_discover": 1621
   },
   "axis_prototypes": {
     "sampled": 30,

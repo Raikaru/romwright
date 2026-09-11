@@ -153,17 +153,21 @@ def main() -> int:
     # Symbols surviving the strip: recall against these is ingestion, the
     # rest is discovery. Reported beside truth every run.
     exposed = {address + bias for address in symtab_funcs(target)}
+    hidden = truth_set - exposed
     axis_functions = {
         "truth_functions": len(truth_set),
         "exposed_symbols": len(exposed),
+        "must_discover": len(hidden),
         "load_bias": f"{bias:08x}",
         "native": {"recovered": len(native),
                    "recall": round(len(native & truth_set) / len(truth_set), 4),
+                   "discovered_recall": (round(len(native & hidden) / len(hidden), 4) if hidden else None),
                    "unexplained": sorted(f"{a:#x}" for a in native - truth_set)[:20],
                    "unexplained_count": len(native - truth_set),
                    "wall_s": native_wall_s},
         "stock": {"recovered": len(stock),
                   "recall": round(len(stock & truth_set) / len(truth_set), 4),
+                  "discovered_recall": (round(len(stock & hidden) / len(hidden), 4) if hidden else None),
                   "unexplained": sorted(f"{a:#x}" for a in stock - truth_set)[:20],
                   "unexplained_count": len(stock - truth_set),
                   "wall_s": stock_wall_s},
