@@ -1,0 +1,64 @@
+{
+  "id": "m19-002",
+  "milestone": "M19",
+  "criterion": "Disassembly failure classes as support-matrix rows",
+  "recorded_at": "2026-09-11T08:35:45.527662+00:00",
+  "machine": {
+    "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
+    "cpu": "x86_64"
+  },
+  "citations": {
+    "data-in-code": "Pang et al., SoK x86/x64 disassembly, S&P 2021, \u00a7III-A",
+    "overlap": "Pang et al., SoK x86/x64 disassembly, S&P 2021, \u00a7III-A",
+    "jump-table": "Pang et al., SoK x86/x64 disassembly, S&P 2021, \u00a7III-D; measured by m13-001"
+  },
+  "thresholds": {
+    "data_in_code": 0,
+    "overlap": 0,
+    "mid_body_targets": 0
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "arch": "x86-64",
+      "functions": 12,
+      "data_in_code": [],
+      "overlap": [],
+      "mid_body_targets": 0
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "arch": "x86-64",
+      "functions": 12,
+      "data_in_code": [],
+      "overlap": [],
+      "mid_body_targets": 0
+    },
+    {
+      "id": "x86_64_many_o2",
+      "arch": "x86-64",
+      "functions": 409,
+      "data_in_code": [],
+      "overlap": [],
+      "mid_body_targets": 0
+    },
+    {
+      "id": "i386_plain_o0",
+      "arch": "i386",
+      "functions": 15,
+      "data_in_code": [],
+      "overlap": [],
+      "mid_body_targets": 0
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "arch": "aarch64",
+      "functions": 17,
+      "data_in_code": [],
+      "overlap": [],
+      "mid_body_targets": 0
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}

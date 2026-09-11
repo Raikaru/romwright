@@ -143,7 +143,7 @@ def generate_matrix() -> str:
         "|---|---|---|",
     ]
     table_lines = header + [f"| {r[0]} | {r[1]} | {r[2]} |" for r in rows]
-    return "\n".join(table_lines) + "\n" + blocked_table()
+    return "\n".join(table_lines) + "\n" + blocked_table() + failure_class_table()
 
 
 def console_reports() -> list[tuple[str, dict, dict]]:
@@ -224,6 +224,53 @@ def blocked_table() -> str:
         lines.append(
             f"| {platform['input']} | {platform['blocker']} | {platform['evidence']} |"
         )
+    return "\n".join(lines)
+
+
+def failure_class_table() -> str:
+    """Disassembly failure classes, measured against ground truth.
+
+    Each row derives from the Pang et al. SoK section it cites; the
+    classes are observables (bytes decoded in non-code regions,
+    overlapping recoveries, mid-body control targets), never a claim
+    that the paper publishes a closed list. A missing or failing
+    m19-002 report renders as unmeasured, never as zero.
+    """
+    report = load_json(REPORTS_DIR / "m19-002.json")
+    lines = [
+        "",
+        "**Disassembly failure classes.** Instances observed over the "
+        "measured corpus; zero is the gate, so any row with a count is a "
+        "recorded defect.",
+        "",
+        "| Class | Observed | Section |",
+        "|---|---|---|",
+    ]
+    if not isinstance(report, dict) or report.get("status") != "pass":
+        detail = "unmeasured"
+        if isinstance(report, dict):
+            detail = f"gate status {report.get('status', 'unknown')}"
+        lines.append(f"| data-in-code | {detail} | Pang §III-A |")
+        lines.append(f"| overlapping decode | {detail} | Pang §III-A |")
+        lines.append(f"| indirect-branch targets | m13-001 | Pang §III-D |")
+        return "\n".join(lines)
+    rows = report.get("rows", [])
+    functions = sum(row.get("functions", 0) for row in rows if "skipped" not in row)
+    data_in_code = sum(len(row.get("data_in_code", [])) for row in rows)
+    overlap = sum(len([o for o in row.get("overlap", []) if not o.get("symtab_agrees")])
+                  for row in rows)
+    mid = sum(row.get("mid_body_targets", 0) for row in rows)
+    archs = sorted({row.get("arch", "?") for row in rows if "skipped" not in row})
+    scope = f"{functions} functions ({', '.join(archs)})"
+    lines.append(
+        f"| data-in-code | {data_in_code} over {scope} "
+        f"(`tests/m19-002_failure_classes.py`) | Pang §III-A |")
+    lines.append(
+        f"| overlapping decode | {overlap} disagreements, {mid} mid-body control "
+        f"targets over {scope} (`tests/m19-002_failure_classes.py`) | Pang §III-A |")
+    lines.append(
+        f"| indirect-branch targets | bounded sets scored by m13-001 "
+        f"(`benchmarks/reports/m13-001.json`) | Pang §III-D |")
     return "\n".join(lines)
 
 
