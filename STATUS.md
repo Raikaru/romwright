@@ -6498,3 +6498,14 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   (programs.compiler, functions.traced, mark_traced, ModuleRow/
   ModuleXrefRow model rows) came from the rate-limited CompilerTrace
   agent's partial work, completed here.
+
+- m20-008 (2026-09-12): overlay-aware project model, closing M-C.
+  Schema v21 adds `modules` + `module_xrefs`; `store_import` populates
+  one module per memory region (DOL sections, ELF segments, REL images
+  when a REL loader lands); `locate` reports the covering module on
+  `LocationRow.module`; xrefs crossing module boundaries become
+  `module_xrefs` rows. Gate `tests/m20-008_overlay.py`: **PASS — 12
+  modules on bond.dol, locate names 'dol:0', 11 cross-module xrefs**
+  on an analysed GCC hello (.text->.plt). REL loader deferred: no REL
+  fixture on disk, and the modules model is format-agnostic so a REL
+  lands as modules when one arrives.
