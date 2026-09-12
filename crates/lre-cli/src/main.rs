@@ -560,6 +560,187 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!("{row}");
             }
         }
+        // `export-dtk <program> <outdir> [--splits FILE]`: write a dtk
+        // project skeleton — config.yml, symbols.txt, splits.txt — from
+        // the store. With --splits the section names are the project's
+        // real ones; without it each memory region becomes a section
+        // named after the region.
+        "export-dtk" => {
+            let program = args.get(2).ok_or("export-dtk needs a program")?;
+            let outdir = Path::new(args.get(3).ok_or("export-dtk needs an outdir")?);
+            std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
+            let splits_path = flag(args, "--splits");
+            let splits = splits_path
+                .as_ref()
+                .map(|path| {
+                    std::fs::read_to_string(path)
+                        .map(|text| lre_core::native::linkmap::parse_splits(&text))
+                        .map_err(|e| format!("{path}: {e}"))
+                })
+                .transpose()?
+                .unwrap_or_default();
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
+            let data_definitions =
+                core.data_definitions(program).map_err(|e| e.to_string())?;
+            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
+
+            // splits.txt: when the project's own file was given, copy it
+            // through; otherwise emit one extent per memory region.
+            let splits_text = if let Some(path) = &splits_path {
+                std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?
+            } else {
+                let mut text = String::from("Sections:\n");
+                for region in &regions {
+                    let kind = if region.permissions.contains('x') {
+                        "code"
+                    } else if region.permissions.contains('w') {
+                        "data"
+                    } else {
+                        "rodata"
+                    };
+                    text.push_str(&format!("\t{} type:{kind} align:4\n", region.name));
+                }
+                text.push_str(&format!("{program}:\n"));
+                for region in &regions {
+                    text.push_str(&format!(
+                        "\t{} start:{:#x} end:{:#x}\n",
+                        region.name,
+                        region.start.offset,
+                        region.start.offset + region.size
+                    ));
+                }
+                text
+            };
+            std::fs::write(outdir.join("splits.txt"), &splits_text)
+                .map_err(|e| e.to_string())?;
+
+            // Section names for symbols: splits extents first, then the
+            // containing region's dominant extent name, then the region
+            // name itself.
+            let mut region_names: Vec<(u64, u64, String)> = Vec::new();
+            for region in &regions {
+                let start = region.start.offset;
+                let end = start.saturating_add(region.size);
+                let name = splits
+                    .iter()
+                    .filter(|extent| extent.start < end && extent.end > start)
+                    .max_by_key(|extent| {
+                        extent.end.min(end).saturating_sub(extent.start.max(start))
+                    })
+                    .map(|extent| extent.name.clone())
+                    .unwrap_or_else(|| region.name.clone());
+                region_names.push((start, end, name));
+            }
+            let section_of = |address: u64| -> &str {
+                if let Some(name) =
+                    lre_core::native::linkmap::section_at(&splits, address)
+                {
+                    return name;
+                }
+                region_names
+                    .iter()
+                    .find(|(start, end, _)| address >= *start && address < *end)
+                    .map(|(_, _, name)| name.as_str())
+                    .unwrap_or(".data")
+            };
+            let mut symbols_text = String::new();
+            for function in &functions {
+                let address = function.entry.offset;
+                symbols_text.push_str(&format!(
+                    "{} = {}:{address:#x}; // type:function size:{:#x} scope:global\n",
+                    function.name,
+                    section_of(address),
+                    function.size
+                ));
+            }
+            for symbol in &symbols {
+                if symbol.external {
+                    continue;
+                }
+                let address = symbol.address.offset;
+                let size = data_definitions
+                    .iter()
+                    .find(|row| row.address.offset == address)
+                    .map(|row| row.size)
+                    .unwrap_or(0);
+                symbols_text.push_str(&format!(
+                    "{} = {}:{address:#x}; // type:object size:{size:#x} scope:global\n",
+                    symbol.name,
+                    section_of(address)
+                ));
+            }
+            std::fs::write(outdir.join("symbols.txt"), &symbols_text)
+                .map_err(|e| e.to_string())?;
+            std::fs::write(
+                outdir.join("config.yml"),
+                format!(
+                    "name: {program}\nobject: {program}\n\
+                     symbols: symbols.txt\nsplits: splits.txt\n"
+                ),
+            )
+            .map_err(|e| e.to_string())?;
+            println!(
+                "wrote {} ({} functions, {} symbols)",
+                outdir.display(),
+                functions.len(),
+                symbols.len()
+            );
+        }
+        // `export-splat <program> <outdir>`: write a splat skeleton —
+        // <program>.yaml + symbol_addrs.txt — from the store. Segments
+        // come from memory regions; symbols from functions+symbols.
+        "export-splat" => {
+            let program = args.get(2).ok_or("export-splat needs a program")?;
+            let outdir = Path::new(args.get(3).ok_or("export-splat needs an outdir")?);
+            std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
+            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
+            let mut yaml = format!(
+                "options:\n  platform: gc_wii\n  basename: {program}\n  \
+                 base_path: .\n  target_path: {program}\n  asm_path: asm\n  \
+                 src_path: src\n  build_path: build\n  compiler: GC/1.2.5\n  \
+                 symbol_addrs_path: symbol_addrs.txt\n  \
+                 undefined_syms_auto_path: undefined_syms_auto.txt\n\
+                 segments:\n"
+            );
+            for region in &regions {
+                let kind = if region.permissions.contains('x') {
+                    "code"
+                } else if region.permissions.contains('w') {
+                    "data"
+                } else {
+                    "rodata"
+                };
+                yaml.push_str(&format!(
+                    "  - name: {}\n    type: {kind}\n    vram: {:#x}\n    \
+                     start: {:#x}\n    files: []\n",
+                    region.name,
+                    region.start.offset,
+                    region.start.offset
+                ));
+            }
+            std::fs::write(outdir.join(format!("{program}.yaml")), &yaml)
+                .map_err(|e| e.to_string())?;
+            let mut addrs = String::new();
+            for function in &functions {
+                addrs.push_str(&format!("{:#x} {};\n", function.entry.offset, function.name));
+            }
+            for symbol in &symbols {
+                if !symbol.external {
+                    addrs.push_str(&format!("{:#x} {};\n", symbol.address.offset, symbol.name));
+                }
+            }
+            std::fs::write(outdir.join("symbol_addrs.txt"), &addrs)
+                .map_err(|e| e.to_string())?;
+            println!(
+                "wrote {} ({} segments, {} symbols)",
+                outdir.display(),
+                regions.len(),
+                functions.len() + symbols.len()
+            );
+        }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
             let vaddr = u64::from_str_radix(
