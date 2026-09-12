@@ -159,6 +159,7 @@ impl crate::Core {
         databases: &[std::path::PathBuf],
         analyse: bool,
         map: Option<&Path>,
+        raw: Option<(u64, &str)>,
     ) -> crate::Result<(Vec<lre_model::ProgramSummary>, Option<SignatureReport>)> {
         // A matched signature renames functions in the store, so which
         // databases were applied is part of what the import produced and
@@ -174,7 +175,7 @@ impl crate::Core {
             })
             .collect::<Vec<_>>()
             .join(",");
-        let stored = self.import_container_with(binary, name, analyse, &flavour, map)?;
+        let stored = self.import_container_with(binary, name, analyse, &flavour, map, raw)?;
         if databases.is_empty() {
             return Ok((stored, None));
         }

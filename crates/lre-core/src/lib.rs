@@ -1881,11 +1881,11 @@ impl Core {
     /// regions, relocations and the image's symbol table, stored and
     /// returned. An interactive session opens with this and analyses after.
     pub fn load_program(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, false, "", None)
+        self.import_container_with(binary, name, false, "", None, None)
     }
 
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, true, "", None)
+        self.import_container_with(binary, name, true, "", None, None)
     }
 
     pub(crate) fn import_container_with(
@@ -1895,6 +1895,7 @@ impl Core {
         analyse: bool,
         flavour: &str,
         map: Option<&Path>,
+        raw: Option<(u64, &str)>,
     ) -> Result<Vec<ProgramSummary>> {
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
@@ -1912,12 +1913,15 @@ impl Core {
                 format!("|map:{}:{digest}", path.display())
             })
             .unwrap_or_default();
+        let raw_flavour = raw
+            .map(|(base, language)| format!("|raw:{base:x}:{language}"))
+            .unwrap_or_default();
         let cache_key = (self.db.programs()?.is_empty())
             .then(|| {
                 import_cache::key(
                     binary,
                     &format!(
-                        "{name}|{}|{flavour}{map_flavour}",
+                        "{name}|{}|{flavour}{map_flavour}{raw_flavour}",
                         if analyse { "analysed" } else { "loaded" }
                     ),
                     &self.config,
@@ -1945,7 +1949,7 @@ impl Core {
                 }
             }
         }
-        let images = native::load_container_with(binary, analyse, map)?;
+        let images = native::load_container_with(binary, analyse, map, raw)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {

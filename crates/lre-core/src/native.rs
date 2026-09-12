@@ -1409,7 +1409,7 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
-    load_container_with(binary, true, None)
+    load_container_with(binary, true, None, None)
 }
 
 /// Loads every image a container carries, running discovery only when asked.
@@ -1423,11 +1423,32 @@ pub fn load_container_with(
     binary: &Path,
     analyse: bool,
     map: Option<&Path>,
+    raw: Option<(u64, &str)>,
 ) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
-    let images = parse_container(&data)?;
+    let images = match raw {
+        // A raw dump has no container to parse: one mapping, the caller's
+        // base and language. `--raw` is how flat ROM/RAM images (3DS
+        // code.bin, overlay blobs) reach the pipeline at all.
+        Some((base, language)) => vec![(
+            String::new(),
+            NativeImport {
+                mappings: vec![Mapping {
+                    vaddr: base,
+                    size: data.len() as u64,
+                    file_off: 0,
+                    flags: 7,
+                    bytes: data.clone(),
+                }],
+                format: "raw".into(),
+                language: language.to_string(),
+                ..Default::default()
+            },
+        )],
+        None => parse_container(&data)?,
+    };
     // A linker MAP is the image's own symbol table from the other side:
     // read once, applied to every image it names an address in, before
     // discovery so a seeded entry is walked rather than coined.
