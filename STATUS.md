@@ -6222,8 +6222,12 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   shows the movzbl/movslq/add/jmp PIC chain but no in-window load moves
   (base R15 and index dl both Top from outside), so it is outer-base
   class with 0x1ce42a, not reload-after-compare like 0x16ed3d;
-  0x265ffe is loop-embedded arithmetic dispatch (LEA-computed target
-  into aligned code, no table load at all) with the loop pair.
+  0x265ffe is a computed ladder (stride-3 code ladder, LEA-computed
+  target, no memory read at all): refused by construction through the
+  strided-load requirement, which is a measured decision (0.42 edge
+  precision accepting arithmetic targets without a table read), not an
+  oversight. Attacking it means a bound strong enough to replace the
+  load requirement, not loop-bound machinery.
   Cutover (decompiler out of the
   switch round) waits on missed <= 3.
 
