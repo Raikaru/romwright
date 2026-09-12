@@ -366,6 +366,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         .collect::<Vec<_>>()
                 })
                 .collect();
+            let map: Option<PathBuf> = flag(args, "--map").map(PathBuf::from);
             let started = std::time::Instant::now();
             let (stored, signatures) = core
                 .import_native_with_signatures(
@@ -373,6 +374,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     &program,
                     &databases,
                     !has_flag(args, "--no-analysis"),
+                    map.as_deref(),
                 )
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();

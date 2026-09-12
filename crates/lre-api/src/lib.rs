@@ -144,7 +144,7 @@ impl ApiService {
                     .unwrap_or(true);
                 let (stored, signatures) = self
                     .core
-                    .import_native_with_signatures(&binary, name, &databases, analyse)
+                    .import_native_with_signatures(&binary, name, &databases, analyse, None)
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
                 // The primary program stays at the top level so existing
                 // consumers keep working; a container's other processors

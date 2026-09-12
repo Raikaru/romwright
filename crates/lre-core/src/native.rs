@@ -30,6 +30,7 @@ mod elf_image;
 mod pe_roots;
 mod pe_unwind;
 mod strings;
+pub(crate) mod cwmap;
 pub(crate) mod nonreturn;
 use lre_model::{
     FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
@@ -1408,7 +1409,7 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
-    load_container_with(binary, true)
+    load_container_with(binary, true, None)
 }
 
 /// Loads every image a container carries, running discovery only when asked.
@@ -1418,11 +1419,25 @@ pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
 /// symbol table above all. That is a parse, not a walk, so it returns in
 /// seconds on an image whose full analysis takes minutes, which is what an
 /// interactive session needs before it can show anything at all.
-pub fn load_container_with(binary: &Path, analyse: bool) -> Result<Vec<(String, NativeImport)>> {
+pub fn load_container_with(
+    binary: &Path,
+    analyse: bool,
+    map: Option<&Path>,
+) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
     let images = parse_container(&data)?;
+    // A linker MAP is the image's own symbol table from the other side:
+    // read once, applied to every image it names an address in, before
+    // discovery so a seeded entry is walked rather than coined.
+    let cw_map = match map {
+        Some(path) => Some(cwmap::parse(
+            &std::fs::read_to_string(path)
+                .map_err(|e| ImportError::Bad(format!("{}: {e}", path.display())))?,
+        )),
+        None => None,
+    };
     let canonical = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     let mut loaded = Vec::with_capacity(images.len());
     for (suffix, mut imp) in images {
@@ -1431,6 +1446,9 @@ pub fn load_container_with(binary: &Path, analyse: bool) -> Result<Vec<(String, 
         let cfg = imp.cfg.clone();
         select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
+        if let Some(cw_map) = &cw_map {
+            cwmap::apply_to_import(&mut imp, cw_map);
+        }
         phase(&mut imp, "parse", parse_started);
         imp.analysed = analyse;
         if analyse {

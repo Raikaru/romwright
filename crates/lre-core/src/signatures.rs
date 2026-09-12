@@ -149,12 +149,16 @@ impl crate::Core {
     }
 
     /// Native import, then the signature pass when databases are supplied.
+    /// `map` is a CodeWarrior linker MAP applied beside the image's own
+    /// symbols; its digest joins the reuse key for the same reason the
+    /// databases' do.
     pub fn import_native_with_signatures(
         &self,
         binary: &Path,
         name: &str,
         databases: &[std::path::PathBuf],
         analyse: bool,
+        map: Option<&Path>,
     ) -> crate::Result<(Vec<lre_model::ProgramSummary>, Option<SignatureReport>)> {
         // A matched signature renames functions in the store, so which
         // databases were applied is part of what the import produced and
@@ -170,7 +174,7 @@ impl crate::Core {
             })
             .collect::<Vec<_>>()
             .join(",");
-        let stored = self.import_container_with(binary, name, analyse, &flavour)?;
+        let stored = self.import_container_with(binary, name, analyse, &flavour, map)?;
         if databases.is_empty() {
             return Ok((stored, None));
         }
