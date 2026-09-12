@@ -6245,3 +6245,13 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   collection. Unbuilt; the trace-first rule from here on is to watch
   the per-branch candidate lines on a 30 s traced import before paying
   for a gate run.
+
+- Entry-block preseed tried and reverted (2026-09-11): carrying
+  function-entry constants (R15's `LEA` for 0x121073) poisoned a working
+  chain instead (0x15a792 lost: trial loads went empty), and bought
+  nothing (0x121073 still missed). An entry const holds only where the
+  entry dominates; collected-region single-def cannot see middle-block
+  redefinitions, and neither a sole filter nor no filter saves it. The
+  window+guard joint preseed (which demonstrably fired for 0x1db6be)
+  stays; the entry channel is fully reverted, restoration confirmed at
+  trace level.
