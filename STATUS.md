@@ -6274,7 +6274,16 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   identical data-flow have identical op mixes by construction, so a
   content histogram cannot separate the false-pair zone either. The
   term is reverted rather than shipped unmeasured; the mode stays as
-  the vehicle for the module pair. That acceptance is blocked: the
-  Agent Under Fire modules are not on this machine, and no local pair
-  has the shared-engine/divergent property. m18-002's zlib half already
-  exceeds its bar (recall 0.9345).
+  the vehicle for the module pair. That acceptance is unblocked: the
+  pair lives under ~/Projects (not the corpus), pinned by m11-002;
+  propagated 0.9372 against the brief's 0.93 bar, anchors exact save
+  three exempted identical-code ambiguities recorded below.
+
+- Recorded deficit (module rows, 2026-09-11): three anchor misses are
+  genuine name-vs-content ambiguities, exempted visibly with the twins
+  tripwire (m12 modules exemption, staleness-guarded). 0x8069eb58 is one
+  stub slot at the same address in both modules with crossed spellings
+  (EXI2_Poll vs Hu_IsStub, same bytes both directions); 0x8069ffd4 vs
+  0x8068312c are identical-shape twins (EXIDeselect vs CheckDVDError).
+  Both modules link at 0x80680000, so same-address coincidence across
+  them carries no identity.
