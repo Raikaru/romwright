@@ -36,6 +36,7 @@ pub(crate) mod binmap;
 pub mod linkmap;
 pub(crate) mod psyq_sym;
 pub(crate) mod containers;
+pub(crate) mod rel;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -1446,6 +1447,8 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
             .next()
             .map(|(_, import)| import)
             .ok_or_else(|| ImportError::Bad("empty Nintendo DS container".into()))
+    } else if rel::is_rel(data) {
+        rel::import(data)
     } else {
         dol::import(data)
     }
