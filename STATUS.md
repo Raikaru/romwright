@@ -6223,3 +6223,11 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   discovery rounds, so later rounds emulated identical predecessor blocks
   twice per index. Sort+dedup in `switch_window` (window and guard) is
   answer-identical, recovers ~0.5 s of switch phase (3.9 -> 3.7 s).
+
+- R12 verdict (0x1ce42a, 2026-09-11): its `LEA` block falls into a loop
+  header (back-edge from 0x1ce435 alongside the fallthrough), so sole
+  entry correctly refuses and a wider predecessor trawl measured zero
+  twice -- reverted. The sound generalisation is no-write-between: R12
+  is set before the loop and never rewritten inside it, so carry a
+  constant when no block on any path between def and dispatch writes
+  the slot (checkable from decoded blocks), not when entry is sole.
