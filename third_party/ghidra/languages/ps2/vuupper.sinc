@@ -86,27 +86,27 @@ define pcodeop _vwaitq;
 I: ""   is vuinterlock=0 { export 0:1; }
 I: ".I" is vuinterlock=1 { export 0:1; }
 
-dest: ""      is vudest=0b0000 { export 0:1; }
-dest: ".w"    is vudest=0b0001 { export 0:1; }
-dest: ".z"    is vudest=0b0010 { export 0:1; }
-dest: ".zw"   is vudest=0b0011 { export 0:1; }
-dest: ".y"    is vudest=0b0100 { export 0:1; }
-dest: ".yw"   is vudest=0b0101 { export 0:1; }
-dest: ".yz"   is vudest=0b0110 { export 0:1; }
-dest: ".yzw"  is vudest=0b0111 { export 0:1; }
-dest: ".x"    is vudest=0b1000 { export 0:1; }
-dest: ".xw"   is vudest=0b1001 { export 0:1; }
-dest: ".xz"   is vudest=0b1010 { export 0:1; }
-dest: ".xzw"  is vudest=0b1011 { export 0:1; }
-dest: ".xy"   is vudest=0b1100 { export 0:1; }
-dest: ".xyw"  is vudest=0b1101 { export 0:1; }
-dest: ".xyz"  is vudest=0b1110 { export 0:1; }
-dest: ".xyzw" is vudest=0b1111 { export 0:1; }
+dest: ""      is vudest=0b0000 { export 0b0000:4; }
+dest: ".w"    is vudest=0b0001 { export 0b0001:4; }
+dest: ".z"    is vudest=0b0010 { export 0b0010:4; }
+dest: ".zw"   is vudest=0b0011 { export 0b0011:4; }
+dest: ".y"    is vudest=0b0100 { export 0b0100:4; }
+dest: ".yw"   is vudest=0b0101 { export 0b0101:4; }
+dest: ".yz"   is vudest=0b0110 { export 0b0110:4; }
+dest: ".yzw"  is vudest=0b0111 { export 0b0111:4; }
+dest: ".x"    is vudest=0b1000 { export 0b1000:4; }
+dest: ".xw"   is vudest=0b1001 { export 0b1001:4; }
+dest: ".xz"   is vudest=0b1010 { export 0b1010:4; }
+dest: ".xzw"  is vudest=0b1011 { export 0b1011:4; }
+dest: ".xy"   is vudest=0b1100 { export 0b1100:4; }
+dest: ".xyw"  is vudest=0b1101 { export 0b1101:4; }
+dest: ".xyz"  is vudest=0b1110 { export 0b1110:4; }
+dest: ".xyzw" is vudest=0b1111 { export 0b1111:4; }
 
-bc: "x"      is vubc=0 { export 0:1; }
-bc: "y"      is vubc=1 { export 0:1; }
-bc: "z"      is vubc=2 { export 0:1; }
-bc: "w"      is vubc=3 { export 0:1; }
+bc: "x" is vubc=0 { export 96:7; }
+bc: "y" is vubc=1 { export 64:7; }
+bc: "z" is vubc=2 { export 32:7; }
+bc: "w" is vubc=3 { export 0:7; }
 
 fsf: "x"     is vufsf=0 { export 0:1; }
 fsf: "y"     is vufsf=1 { export 0:1; }
@@ -119,23 +119,134 @@ ftf: "z"     is vuftf=2 { export 0:1; }
 ftf: "w"     is vuftf=3 { export 0:1; }
 
 :vabs^dest vuft, vufs                             is vuinst & dest      & vuft & vufs        & vuop_0_10=0b00111111101
-    { vuft = _vabs(vufs); }
+        {
+      local res:16 = vuft;
+      local pw:4 = vufs[0,32]  & 0x7fffffff;
+      local pz:4 = vufs[32,32] & 0x7fffffff;
+      local py:4 = vufs[64,32] & 0x7fffffff;
+      local px:4 = vufs[96,32] & 0x7fffffff;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuft = res;
+    }
 :vadd^dest vufd, vufs, vuft                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101000
-    { vufd = _vadd(vufs, vuft); }
+    {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f+ vuft[0,32];
+      local pz:4 = vufs[32,32] f+ vuft[32,32];
+      local py:4 = vufs[64,32] f+ vuft[64,32];
+      local px:4 = vufs[96,32] f+ vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vaddi^dest vufd, vufs, "I"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100010
-    { vufd = _vaddi(vufd, vuI); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f+ vuI;
+      local pz:4 = vufs[32,32] f+ vuI;
+      local py:4 = vufs[64,32] f+ vuI;
+      local px:4 = vufs[96,32] f+ vuI;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vaddq^dest vufd, vufs, "Q"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100000
-    { vufd = _vaddq(vufs, vuQ); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f+ vuQ;
+      local pz:4 = vufs[32,32] f+ vuQ;
+      local py:4 = vufs[64,32] f+ vuQ;
+      local px:4 = vufs[96,32] f+ vuQ;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vadd^bc^dest vufd, vufs, vuft                    is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0000 & bc
-    { vufd = _vaddbc(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f+ sb;
+      local pz:4 = vufs[32,32] f+ sb;
+      local py:4 = vufs[64,32] f+ sb;
+      local px:4 = vufs[96,32] f+ sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vadda^dest "ACC" vuft vufs                       is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01010111100
-    { vuACC = _vadda(dest, vuft, vufs); }
+        {
+      local res:16 = vuACC;
+      local pw:4 = vufs[0,32]  f+ vuft[0,32];
+      local pz:4 = vufs[32,32] f+ vuft[32,32];
+      local py:4 = vufs[64,32] f+ vuft[64,32];
+      local px:4 = vufs[96,32] f+ vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vaddai^dest "ACC", vufs, "I"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01000111110
     { vuACC = _vaddai(vufs, vuI); }        
 :vaddaq^dest "ACC", vufs, "Q"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01000111100
     { vuACC = _vaddaq(vufs, vuQ); }
 :vadda^bc^dest "ACC", vufs, vuft                  is vuinst & dest      & vuft & vufs        & vuop_2_10=0b000001111 & bc
-    { vuACC = _vaddabc(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f+ sb;
+      local pz:4 = vufs[32,32] f+ sb;
+      local py:4 = vufs[64,32] f+ sb;
+      local px:4 = vufs[96,32] f+ sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vclip"w"^dest vufs, vuft                         is vuinst & dest      & vuft & vufs        & vuop_0_10=0b00111111111
     { vuCF = _vclip(vufs, vuft); }
 :vdiv "Q", vufs^fsf, vuft^ftf                     is vuinst & ftf & fsf & vuft & vufs        & vuop_0_10=0b01110111100
@@ -175,21 +286,118 @@ ftf: "w"     is vuftf=3 { export 0:1; }
 :vlqi^dest vuft, (vuis++)                         is vuinst & dest      & vuft & vuis        & vuop_0_10=0b01101111100
     { vuft = _vlqi(vuis); }
 :vmadd^dest vufd, vufs, vuft                      is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101001
-    { vufd = _vmadd(vufs, vuft); }
+    {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* vuft[0,32]);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* vuft[32,32]);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* vuft[64,32]);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* vuft[96,32]);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
+
 :vmaddi^dest vufd, vufs, "I"                      is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100011
-    { vufd = _vmaddi(vufs, vuI); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* vuI);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* vuI);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* vuI);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* vuI);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmaddq^dest vufd, vufs, "Q"                      is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100001
-    { vufd = _vmaddq(vufs, vuQ); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* vuQ);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* vuQ);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* vuQ);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* vuQ);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmadd^bc^dest vufd, vufs, vuft                   is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0010 & bc
-    { vufd = _vmaddbc(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* sb);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* sb);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* sb);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* sb);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmadda^dest "ACC", vufs, vuft                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01010111101
-    { vuACC = _vmadda(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* vuft[0,32]);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* vuft[32,32]);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* vuft[64,32]);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* vuft[96,32]);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vmaddai^dest "ACC", vufs, "I"                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01000111111
     { vuACC = _vmaddai(vufs, vuI); }
 :vmaddaq^dest "ACC", vufs, "Q"                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01000111101
     { vuACC = _vmaddaq(vufs, vuQ); }
 :vmadda^bc^dest "ACC", vufs, vuft                 is vuinst & dest      & vuft & vufs        & vuop_2_10=0b000101111 & bc
-    { vuACC = _vmaddabc(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vuACC[0,32]  f+ (vufs[0,32]  f* sb);
+      local pz:4 = vuACC[32,32] f+ (vufs[32,32] f* sb);
+      local py:4 = vuACC[64,32] f+ (vufs[64,32] f* sb);
+      local px:4 = vuACC[96,32] f+ (vufs[96,32] f* sb);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vmax^dest vufd, vufs, vuft                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101011
     { vufd = _vmax(vufs, vuft); }
 :vmaxi^dest vufd, vufs, "I"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b011101
@@ -205,49 +413,302 @@ ftf: "w"     is vuftf=3 { export 0:1; }
 :vminibc^bc^dest vufd, vufs, vuft                 is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0101 & bc
     { vufd = _vminibc(vufs, vuft); }
 :vmove^dest vuft, vufs                            is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01100111100
-    { vuft = _vmove(vufs); }
+        {
+      local res:16 = vuft;
+      local pw:4 = vufs[0,32];
+      local pz:4 = vufs[32,32];
+      local py:4 = vufs[64,32];
+      local px:4 = vufs[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuft = res;
+    }
 :vmr32^dest vuft, vufs                            is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01100111101
-    { vuft = _vmr32(vufs); }
+        {
+      local res:16 = vuft;
+      local pw:4 = vufs[96,32];
+      local pz:4 = vufs[0,32];
+      local py:4 = vufs[32,32];
+      local px:4 = vufs[64,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuft = res;
+    }
 :vmsub^dest vufd, vufs, vuft                      is vuinst & dest      & vufs & vuft & vufd & vuop_0_5=0b101101
-    { vufd = _vmsub(vufs, vuft); }
+    {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* vuft[0,32]);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* vuft[32,32]);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* vuft[64,32]);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* vuft[96,32]);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
+
 :vmsubi^dest vufd, vufs, "I"                      is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100111
-    { vufd = _vmsubi(vufs, vuI); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* vuI);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* vuI);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* vuI);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* vuI);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmsubq^dest vufd, vufs, "Q"                      is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100101
-    { vufd = _vmsubq(vufs, vuQ); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* vuQ);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* vuQ);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* vuQ);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* vuQ);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmsub^bc^dest vufd, vufs, vuft                   is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0011 & bc
-    { vufd = _vmsubbc(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* sb);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* sb);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* sb);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* sb);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmsuba^dest "ACC", vufs, vuft                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01011111101
-    { vuACC = _vmsuba(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* vuft[0,32]);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* vuft[32,32]);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* vuft[64,32]);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* vuft[96,32]);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vmsubai^dest "ACC", vufs, "I"                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01001111111
     { vuACC = _vmsubai(vufs, vuI); }
 :vmsubaq^dest "ACC", vufs, "Q"                    is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01001111101
     { vuACC = _vmsubaq(vufs, vuQ); }
 :vmsuba^bc^dest "ACC", vufs, vuft                 is vuinst & dest      & vuft & vufs        & vuop_2_10=0b000111111 & bc
-    { vuACC = _vmsubabc(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vuACC[0,32]  f- (vufs[0,32]  f* sb);
+      local pz:4 = vuACC[32,32] f- (vufs[32,32] f* sb);
+      local py:4 = vuACC[64,32] f- (vufs[64,32] f* sb);
+      local px:4 = vuACC[96,32] f- (vufs[96,32] f* sb);
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vmtir vuit, vufs                                 is vuinst & vuftf & vufsf & vuit & vufs    & vuop_0_10=0b01111111100
     { vuit = _vmtir(vufs); }
 :vmul^dest vufd, vufs, vuft                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101010
-    { vufd = _vmul(vufs, vuft); }
+    {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f* vuft[0,32];
+      local pz:4 = vufs[32,32] f* vuft[32,32];
+      local py:4 = vufs[64,32] f* vuft[64,32];
+      local px:4 = vufs[96,32] f* vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmuli^dest vufd, vufs, "I"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b011110
-    { vufd = _vmuli(vufs, vuI); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f* vuI;
+      local pz:4 = vufs[32,32] f* vuI;
+      local py:4 = vufs[64,32] f* vuI;
+      local px:4 = vufs[96,32] f* vuI;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmulq^dest vufd, vufs, "Q"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b011100
-    { vufd = _vmulq(vufs, vuQ); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f* vuQ;
+      local pz:4 = vufs[32,32] f* vuQ;
+      local py:4 = vufs[64,32] f* vuQ;
+      local px:4 = vufs[96,32] f* vuQ;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmul^bc^dest vufd, vufs, vuft                    is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0110 & bc
-    { vufd = _vmulbc(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f- sb;
+      local pz:4 = vufs[32,32] f- sb;
+      local py:4 = vufs[64,32] f- sb;
+      local px:4 = vufs[96,32] f- sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vmula^dest "ACC", vufs, vuft                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01010111110
-    { vuACC = _vmula(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local pw:4 = vufs[0,32]  f* vuft[0,32];
+      local pz:4 = vufs[32,32] f* vuft[32,32];
+      local py:4 = vufs[64,32] f* vuft[64,32];
+      local px:4 = vufs[96,32] f* vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vmulai^dest "ACC", vufs, "I"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b00111111110
     { vuACC = _vmulai(vufs, vuI); }
 :vmulaq^dest "ACC", vufs, "Q"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b00111111100
     { vuACC = _vmulaq(vufs, vuQ); }
 :vmula^bc^dest "ACC", vufs, vuft                  is vuinst & dest      & vuft & vufs        & vuop_2_10=0b001101111 & bc
-    { vuACC = _vmulabc(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f* sb;
+      local pz:4 = vufs[32,32] f* sb;
+      local py:4 = vufs[64,32] f* sb;
+      local px:4 = vufs[96,32] f* sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vnop                                             is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01011111111
     { _vnop(); }
 :vopmula^dest "ACC", vufs, vuft                   is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01011111110
-    { vuACC = _vopmula(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local px:4 = (vufs[64,32] f* vuft[32,32]) f- (vufs[32,32] f* vuft[64,32]);
+      local py:4 = (vufs[32,32] f* vuft[96,32]) f- (vufs[96,32] f* vuft[32,32]);
+      local pz:4 = (vufs[96,32] f* vuft[64,32]) f- (vufs[64,32] f* vuft[96,32]);
+      local pw:4 = vuACC[0,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vopmsub^dest vufd, vufs, vuft                    is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101110
-    { vufd = _vopmsub(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local px:4 = (vufs[64,32] f* vuft[32,32]) f- (vufs[32,32] f* vuft[64,32]);
+      local py:4 = (vufs[32,32] f* vuft[96,32]) f- (vufs[96,32] f* vuft[32,32]);
+      local pz:4 = (vufs[96,32] f* vuft[64,32]) f- (vufs[64,32] f* vuft[96,32]);
+      local pw:4 = vufd[0,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vrget^dest vuft, "R"                             is vuinst & dest      & vuft & vufs        & vuop_0_10=0b10000111101
     { vuft = _vrget(vuft); }
 :vrinit "R", vufs                                 is vuinst & vuftf & vufsf & vuft & vufs    & vuop_0_10=0b10000111110
@@ -265,20 +726,116 @@ ftf: "w"     is vuftf=3 { export 0:1; }
 :vsqrt "Q", vuft^ftf                              is vuinst & ftf       & vuft & vufs        & vuop_0_10=0b01110111101
     { vuQ = _vsqrt(vuft); }
 :vsub^dest vufd, vufs, vuft                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b101100
-    { vufd = _vsub(vufs, vuft); }
+    {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f- vuft[0,32];
+      local pz:4 = vufs[32,32] f- vuft[32,32];
+      local py:4 = vufs[64,32] f- vuft[64,32];
+      local px:4 = vufs[96,32] f- vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vsubi^dest vufd, vufs, "I"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100110
-    { vufd = _vsubi(vufs, vuI); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f- vuI;
+      local pz:4 = vufs[32,32] f- vuI;
+      local py:4 = vufs[64,32] f- vuI;
+      local px:4 = vufs[96,32] f- vuI;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vsubq^dest vufd, vufs, "Q"                       is vuinst & dest      & vuft & vufs & vufd & vuop_0_5=0b100100
-    { vufd = _vsubq(vufd, vufs, vuQ); }
+        {
+      local res:16 = vufd;
+      local pw:4 = vufs[0,32]  f- vuQ;
+      local pz:4 = vufs[32,32] f- vuQ;
+      local py:4 = vufs[64,32] f- vuQ;
+      local px:4 = vufs[96,32] f- vuQ;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vsub^bc^dest vufd, vufs, vuft                    is vuinst & dest      & vuft & vufs & vufd & vuop_2_5=0b0001 & bc
-    { vufd = _vsubbc(vufs, vuft); }
+        {
+      local res:16 = vufd;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f* sb;
+      local pz:4 = vufs[32,32] f* sb;
+      local py:4 = vufs[64,32] f* sb;
+      local px:4 = vufs[96,32] f* sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vufd = res;
+    }
 :vsuba^dest "ACC", vufs vuft                      is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01011111100
-    { vuACC = _vsuba(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local pw:4 = vufs[0,32]  f- vuft[0,32];
+      local pz:4 = vufs[32,32] f- vuft[32,32];
+      local py:4 = vufs[64,32] f- vuft[64,32];
+      local px:4 = vufs[96,32] f- vuft[96,32];
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vsubai^dest "ACC", vufs, "I"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01001111110
     { vuACC = _vsubai(vufs, vuQ); }
 :vsubaq^dest "ACC", vufs, "Q"                     is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01001111100
     { vuACC = _vsubaq(vufs, vuQ); }
 :vsuba^bc^dest "ACC", vufs, vuft                  is vuinst & dest      & vuft & vufs        & vuop_2_10=0b000011111 & bc
-    { vuACC = _vsubabc(vufs, vuft); }
+        {
+      local res:16 = vuACC;
+      local sh:16 = zext(bc);
+      local sfull:16 = vuft >> sh;
+      local sb:4 = sfull[0,32];
+      local pw:4 = vufs[0,32]  f- sb;
+      local pz:4 = vufs[32,32] f- sb;
+      local py:4 = vufs[64,32] f- sb;
+      local px:4 = vufs[96,32] f- sb;
+      local mw:4 = 0:4 - zext(dest & 1);
+      local mz:4 = 0:4 - zext((dest >> 1) & 1);
+      local my:4 = 0:4 - zext((dest >> 2) & 1);
+      local mx:4 = 0:4 - zext((dest >> 3) & 1);
+      res[0,32]  = (pw & mw) | (res[0,32]  & ~mw);
+      res[32,32] = (pz & mz) | (res[32,32] & ~mz);
+      res[64,32] = (py & my) | (res[64,32] & ~my);
+      res[96,32] = (px & mx) | (res[96,32] & ~mx);
+      vuACC = res;
+    }
 :vwaitq                                           is vuinst & dest      & vuft & vufs        & vuop_0_10=0b01110111111
     { vuQ = _vwaitq(); }
