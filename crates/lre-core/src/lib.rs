@@ -30,6 +30,7 @@ pub mod register_params;
 mod nonreturn;
 mod signatures;
 pub mod rtti;
+pub mod sdk_types;
 pub use nonreturn::NonReturnInferenceReport;
 
 use lre_db::ProjectDb;
