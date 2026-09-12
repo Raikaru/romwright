@@ -83,15 +83,18 @@ fn with_entry_register_tracking(
     // function decoded as ARM and the decompiler reported bad instruction
     // data (182 of 512 sampled DS functions).
     let image_end = provider.backing.image_end();
-    // Register names are not context fields: raw-SLEIGH resolves each
-    // `<context_set>` name against the `.sla`'s declared context variables,
-    // and a register (`r13`, `r2`) is rejected there -- registers ride
-    // `<tracked_set>` and `getTrackedRegisters` instead (below, and
-    // `tracked_values`). Folding ranges over the filtered rows keeps a
-    // skipped point from punching a one-address hole in its neighbour.
+    // The SDA register values are not context fields: raw-SLEIGH
+    // resolves each `<context_set>` name against the `.sla`'s declared
+    // context variables, and a register (`r13`, `r2`) is rejected there --
+    // registers ride `<tracked_set>` and `getTrackedRegisters` instead
+    // (below, and `tracked_values`). Match exactly the names the importer
+    // seeds, not "is in registers.txt": ARM `TMode` mode rows share a
+    // name with an ARM register and must still decode. Folding ranges
+    // over the filtered rows keeps a skipped point from punching a
+    // one-address hole in its neighbour.
     let fields: Vec<&(u64, String, u64)> = contexts
         .iter()
-        .filter(|(_, name, _)| !provider.registers.contains_key(name))
+        .filter(|(_, name, _)| name != "r13" && name != "r2")
         .collect();
     for (index, (address, name, value)) in fields.iter().enumerate() {
         let last = fields
