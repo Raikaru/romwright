@@ -37,6 +37,7 @@ pub mod linkmap;
 pub(crate) mod psyq_sym;
 pub(crate) mod containers;
 pub(crate) mod rel;
+pub mod psx_overlays;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
