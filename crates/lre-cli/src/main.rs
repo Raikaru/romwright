@@ -873,6 +873,82 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 count
             );
         }
+        // `objdiff-report <report.json> [--frogress URL]`: roll up an
+        // objdiff-cli `report generate` JSON into per-function match-% and
+        // project totals; optionally POST the frogress-shaped payload.
+        // The report's units carry func_units with fuzzy_match_percent;
+        // we flatten to one row per function and aggregate.
+        "objdiff-report" => {
+            let path = args.get(2).ok_or("objdiff-report needs a report.json")?;
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| format!("{path}: {e}"))?;
+            let report: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| format!("{path}: {e}"))?;
+            let units = report["units"].as_array()
+                .ok_or("report has no units array")?;
+            let mut rows: Vec<serde_json::Value> = Vec::new();
+            let mut total_code = 0u64;
+            let mut matched_code = 0u64;
+            let mut complete_code = 0u64;
+            for unit in units {
+                let unit_name = unit["name"].as_str().unwrap_or("");
+                let funcs = unit["func_units"].as_object();
+                if let Some(funcs) = funcs {
+                    for (key, f) in funcs {
+                        let name = f["name"].as_str().unwrap_or(key);
+                        let fuzzy = f["fuzzy_match_percent"].as_f64().unwrap_or(0.0);
+                        let matched = f["matched_code"].as_u64().unwrap_or(0);
+                        let total = f["total_code"].as_u64().unwrap_or(0);
+                        let complete = f["complete_code"].as_u64().unwrap_or(0);
+                        total_code += total;
+                        matched_code += matched;
+                        complete_code += complete;
+                        rows.push(serde_json::json!({
+                            "unit": unit_name,
+                            "function": name,
+                            "fuzzy_match_percent": fuzzy,
+                            "matched_code": matched,
+                            "total_code": total,
+                            "complete_code": complete,
+                        }));
+                    }
+                }
+            }
+            let matched_pct = if total_code > 0 {
+                (matched_code as f64 / total_code as f64) * 100.0
+            } else { 0.0 };
+            let complete_pct = if total_code > 0 {
+                (complete_code as f64 / total_code as f64) * 100.0
+            } else { 0.0 };
+            let out = serde_json::json!({
+                "functions": rows,
+                "measures": {
+                    "total_code": total_code,
+                    "matched_code": matched_code,
+                    "matched_code_percent": matched_pct,
+                    "complete_code": complete_code,
+                    "complete_code_percent": complete_pct,
+                    "total_units": units.len(),
+                    "total_functions": rows.len(),
+                }
+            });
+            if let Some(out_path) = flag(args, "--frogress") {
+                // frogress payload: {project, version, measures:{...}} —
+                // written to a file for the caller to POST (matches the
+                // export-scratch pattern: we produce the payload, the
+                // caller owns the network).
+                let payload = serde_json::json!({
+                    "project": report["project"].as_str().unwrap_or("ventris"),
+                    "version": report["version"].as_str().unwrap_or(""),
+                    "measures": out["measures"],
+                });
+                std::fs::write(&out_path, serde_json::to_string_pretty(&payload)
+                    .map_err(|e| e.to_string())?)
+                    .map_err(|e| format!("{out_path}: {e}"))?;
+                println!("wrote frogress payload {out_path}");
+            }
+            println!("{}", serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?);
+        }
         // `import-trace <program> <trace.csv>`: ingest an emulator trace
         // — one `addr,kind[,thread]` row per event, kind in
         // exec|call|read|write|bp — into trace_events, then mark every
