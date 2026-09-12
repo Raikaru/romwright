@@ -623,12 +623,13 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     );
     collect_elf_section_starts(&sections, &mut functions);
     functions.sort_by_key(|f| f.entry);
+    let mut register_contexts = Vec::new();
     seed_ppc_sda_registers(
         elf_machine.machine,
         &abs_symbols,
         &sections,
         &functions,
-        &mut contexts,
+        &mut register_contexts,
     );
     let mut import = NativeImport {
         process_entry,
@@ -642,6 +643,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         object_sizes,
         object_names,
         contexts,
+        register_contexts,
         ..Default::default()
     };
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
@@ -914,12 +916,13 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
     let mut contexts = Vec::new();
+    let mut register_contexts = Vec::new();
     seed_ppc_sda_registers(
         elf_machine.machine,
         &abs_symbols,
         &sections,
         &functions,
-        &mut contexts,
+        &mut register_contexts,
     );
     let mut import = NativeImport {
         mappings,
@@ -929,6 +932,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         process_entry,
         object_names,
         contexts,
+        register_contexts,
         symbol_named,
         format: "ELF".into(),
         elf_machine: Some(elf_machine),
@@ -2804,22 +2808,25 @@ fn seed_mips_entry_register(imp: &mut NativeImport) {
         .collect();
     imp.register_contexts.extend(seeds);
 }
-/// Small-data-area bases for PowerPC EABI, seeded as point contexts so the
-/// decompiler resolves `r13`- and `r2`-relative access to the objects they
-/// address. This mirrors `PowerPC_ElfRelocationContext.getBaseOffset`:
-/// the `_SDA_BASE_`/`_SDA2_BASE_` ABS symbol when the image declares one,
-/// else the start of the `.sdata`/`.sbss` (respectively `.sdata2`/`.sbss2`)
+/// Small-data-area bases for PowerPC EABI, seeded as loader-established
+/// register ranges so every consumer takes them through the register
+/// channel: the console's reference pass folds `r13`-/`r2`-relative access
+/// during discovery (data xrefs to SDA globals), and the store funnels one
+/// point per range into decode contexts for the worker's tracked sets.
+/// This mirrors `PowerPC_ElfRelocationContext.getBaseOffset`: the
+/// `_SDA_BASE_`/`_SDA2_BASE_` ABS symbol when the image declares one, else
+/// the start of the `.sdata`/`.sbss` (respectively `.sdata2`/`.sbss2`)
 /// range -- the midpoint when that range exceeds 15 bits. Values are
-/// image-global, so one point per function is just the shape the range
-/// builder already folds; later functions inherit the nearest range. Ghidra
-/// applies the value to execute blocks while relocating, which is also why
-/// an image with no SDA symbols and no small-data blocks seeds nothing.
+/// image-global; one range per function matches the `t9` seed shape.
+/// Register values must never ride `imp.contexts`: the console and the
+/// raw-SLEIGH spec resolve those rows as context *variables*, and a real
+/// register is rejected by both.
 pub(crate) fn seed_ppc_sda_registers(
     machine: u16,
     abs: &[(String, u64)],
     sections: &[ElfSection],
     functions: &[NativeFunction],
-    contexts: &mut Vec<NativeContext>,
+    register_contexts: &mut Vec<NativeRegisterContext>,
 ) {
     // EM_PPC (20) and EM_PPC64 (21): `PowerPC:BE:32:default` and 64-bit
     // siblings, the only loaders that reach this seeder.
@@ -2855,12 +2862,28 @@ pub(crate) fn seed_ppc_sda_registers(
     for (register, value) in
         [("r13", r13), ("r2", r2)].into_iter().filter_map(|(r, v)| v.map(|v| (r, v)))
     {
-        contexts.extend(functions.iter().map(|function| NativeContext {
-            name: register.into(),
-            address: function.entry,
-            value,
+        register_contexts.extend(functions.iter().filter_map(|function| {
+            Some(NativeRegisterContext {
+                start: function.entry,
+                end: function.entry.checked_add(function.size.max(1))?,
+                register: register.into(),
+                value,
+            })
         }));
     }
+}
+
+/// Points the worker needs from seeded register ranges: one decode point
+/// per range start, for the SDA registers only. `t9`/PLT ranges are
+/// console-only facts; as context rows the spec would reject them.
+pub(crate) fn sda_decode_points(
+    register_contexts: &[NativeRegisterContext],
+) -> Vec<(u64, String, u64)> {
+    register_contexts
+        .iter()
+        .filter(|context| context.register == "r13" || context.register == "r2")
+        .map(|context| (context.start, context.register.clone(), context.value))
+        .collect()
 }
 
 /// One console reference query. ConstantPropagationAnalyzer's default trusts
@@ -3515,7 +3538,7 @@ pub fn store_import(
     // `TMode` (ARM) and `ISA_MODE` (MIPS) are the bit each language aliases
     // as `LowBitCodeMode` (ARM.sinc:90-93, mips.sinc:416-417); one name per
     // address keeps the last value written the one that applies.
-    let contexts: Vec<(lre_model::Address, String, u64)> = imp
+    let mut contexts: Vec<(lre_model::Address, String, u64)> = imp
         .contexts
         .iter()
         .map(|context| {
@@ -3526,6 +3549,15 @@ pub fn store_import(
             (lre_model::Address::ram(context.address), name, context.value)
         })
         .collect();
+    // Register values the worker needs as decode points, one per seeded
+    // range: SDA bases for r13/r2. The console takes the same facts from
+    // `register_contexts` directly; context-variable rows stay the only
+    // thing `imp.contexts` carries.
+    contexts.extend(
+        sda_decode_points(&imp.register_contexts)
+            .into_iter()
+            .map(|(address, name, value)| (lre_model::Address::ram(address), name, value)),
+    );
     db.replace_decode_contexts(pid, &contexts)?;
     // Refresh this loader's facts without discarding symbols from other owners.
     let mut symbols = db.symbols(pid)?;
@@ -6011,7 +6043,10 @@ fn apply_library_prototypes(
 
 #[cfg(test)]
 mod ppc_sda_tests {
-    use super::{seed_ppc_sda_registers, ElfSection, NativeContext, NativeFunction};
+    use super::{
+        sda_decode_points, seed_ppc_sda_registers, ElfSection, NativeFunction,
+        NativeRegisterContext,
+    };
 
     fn section(name: &str, addr: u64, size: u64) -> ElfSection {
         ElfSection {
@@ -6033,11 +6068,17 @@ mod ppc_sda_tests {
         ]
     }
 
-    fn values(contexts: &[NativeContext], name: &str) -> Vec<u64> {
-        let mut out: Vec<u64> = contexts
+    fn seed(machine: u16, abs: &[(String, u64)], sections: &[ElfSection]) -> Vec<NativeRegisterContext> {
+        let mut out = Vec::new();
+        seed_ppc_sda_registers(machine, abs, sections, &functions(), &mut out);
+        out
+    }
+
+    fn values(seeds: &[NativeRegisterContext], register: &str) -> Vec<u64> {
+        let mut out: Vec<u64> = seeds
             .iter()
-            .filter(|context| context.name == name)
-            .map(|context| context.value)
+            .filter(|seed| seed.register == register)
+            .map(|seed| seed.value)
             .collect();
         out.sort_unstable();
         out.dedup();
@@ -6050,20 +6091,16 @@ mod ppc_sda_tests {
         // that would conventionally give something else.
         let abs = vec![("_SDA_BASE_".to_string(), 0x806b1880)];
         let sections = vec![section(".sdata", 0x806a9880, 0xe1), section(".sbss", 0x806a9980, 0x2c4)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(20, &abs, &sections, &functions, &mut contexts);
-        assert_eq!(values(&contexts, "r13"), vec![0x806b1880]);
-        assert_eq!(contexts.iter().filter(|c| c.name == "r13").count(), 2);
+        let seeds = seed(20, &abs, &sections);
+        assert_eq!(values(&seeds, "r13"), vec![0x806b1880]);
+        assert_eq!(seeds.iter().filter(|s| s.register == "r13").count(), 2);
+        assert!(seeds.iter().all(|s| s.end == s.start + 0x40));
     }
 
     #[test]
     fn block_fallback_takes_the_least_start() {
         let sections = vec![section(".sbss", 0x2000, 0x100), section(".sdata", 0x1000, 0x100)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
-        assert_eq!(values(&contexts, "r13"), vec![0x1000]);
+        assert_eq!(values(&seed(20, &[], &sections), "r13"), vec![0x1000]);
     }
 
     #[test]
@@ -6071,30 +6108,22 @@ mod ppc_sda_tests {
         // Past fifteen bits half the range no longer reaches both ends
         // from one base, mirroring `getBaseOffset`.
         let sections = vec![section(".sdata", 0x10000, 0x10), section(".sbss", 0x30000, 0x10)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
+        let seeds = seed(20, &[], &sections);
         let span = 0x30010u64 - 0x10000;
-        assert_eq!(values(&contexts, "r13"), vec![0x10000 + ((span / 2) & !0x0f)]);
+        assert_eq!(values(&seeds, "r13"), vec![0x10000 + ((span / 2) & !0x0f)]);
     }
 
     #[test]
     fn nothing_to_derive_seeds_nothing() {
         let sections = vec![section(".text", 0x10000, 0x1000)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
-        assert!(contexts.is_empty());
+        assert!(seed(20, &[], &sections).is_empty());
     }
 
     #[test]
     fn other_machines_seed_nothing() {
         let abs = vec![("_SDA_BASE_".to_string(), 0x1234)];
         let sections = vec![section(".sdata", 0x1000, 0x100)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(3, &abs, &sections, &functions, &mut contexts);
-        assert!(contexts.is_empty());
+        assert!(seed(3, &abs, &sections).is_empty());
     }
 
     #[test]
@@ -6102,10 +6131,32 @@ mod ppc_sda_tests {
         // Ghidra establishes `_SDA2_BASE_` without a width check; the
         // 64-bit loader reaches the same seeder.
         let abs = vec![("_SDA2_BASE_".to_string(), 0x806b1c60)];
-        let functions = functions();
-        let mut contexts = Vec::new();
-        seed_ppc_sda_registers(21, &abs, &[], &functions, &mut contexts);
-        assert_eq!(values(&contexts, "r2"), vec![0x806b1c60]);
-        assert!(values(&contexts, "r13").is_empty());
+        let seeds = seed(21, &abs, &[]);
+        assert_eq!(values(&seeds, "r2"), vec![0x806b1c60]);
+        assert!(values(&seeds, "r13").is_empty());
+    }
+
+    #[test]
+    fn funnel_passes_sda_ranges_and_drops_console_only_ones() {
+        // `t9`/PLT ranges stay console-side: as decode rows the spec
+        // would reject them the way it rejects any register name.
+        let ranges = vec![
+            NativeRegisterContext {
+                start: 0x10000,
+                end: 0x10040,
+                register: "r13".into(),
+                value: 0x11000,
+            },
+            NativeRegisterContext {
+                start: 0x10000,
+                end: 0x10040,
+                register: "t9".into(),
+                value: 0x10000,
+            },
+        ];
+        assert_eq!(
+            sda_decode_points(&ranges),
+            vec![(0x10000, "r13".to_string(), 0x11000)]
+        );
     }
 }
