@@ -30,7 +30,10 @@ mod elf_image;
 mod pe_roots;
 mod pe_unwind;
 mod strings;
+mod sce;
+pub(crate) mod binmap;
 pub mod linkmap;
+mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
     FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
@@ -443,8 +446,13 @@ fn parse_elf32_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u
     let shnum = rd16(48)? as usize;
     let shoff = rd32(32)? as usize;
     let shstrndx = rd16(50)? as usize;
+    // No section table: SCE ELFs (Vita `e_type` 0xfe00) ship program
+    // headers only. Returning empty hands the mapping work to the PT_LOAD
+    // path in `import_elf32`, which is what Ghidra does when
+    // `elf.getSectionHeaderCount() == 0` (`ElfProgramBuilder.
+    // processProgramHeaders`, :3192-3225).
     if shoff == 0 || shnum == 0 {
-        return err("ELF32 has no section headers");
+        return Ok((Vec::new(), Vec::new()));
     }
     let mut sections = Vec::new();
     for i in 0..shnum {
@@ -515,6 +523,13 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     let (mut sections, _shstr) = parse_elf32_sections(data, be)?;
 
     let mut mappings = Vec::new();
+    if sections.is_empty() {
+        // Sectionless image (SCE ELF): the PT_LOAD program headers are the
+        // memory map. `complete_load_segments` covers each segment to
+        // p_memsz, file bytes to p_filesz and the bss tail empty — the same
+        // shape the section path produces for SHT_NOBITS.
+        elf_image::complete_load_segments(data, &mut mappings, 4, be, 0)?;
+    }
     for s in sections.iter() {
         if s.flags & 0x2 == 0 || s.size == 0 {
             continue;
@@ -616,6 +631,16 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             }
         }
     }
+    // A MIPS .debug stream (ECOFF mdebug or Metrowerks DWARF 1) names
+    // procedures the symtab may have stripped. The symtab's spelling
+    // wins where both exist; debug info only adds coverage.
+    let mdebug_started = std::time::Instant::now();
+    let mdebug_functions = mdebug::collect(data, &sections, be);
+    for f in &mdebug_functions {
+        symbol_functions
+            .entry(f.entry)
+            .or_insert((u8::MAX, f.name.clone(), f.size.max(1)));
+    }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
         symbol_functions
@@ -647,12 +672,16 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         register_contexts,
         ..Default::default()
     };
+    if !mdebug_functions.is_empty() {
+        phase(&mut import, "mdebug", mdebug_started);
+    }
     elf_image::prepare(data, &mut sections, &mut import, 4, be)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
     elf_pointers::collect(data, &sections, &mut import, 4, be, bias)?;
     elf_pointers::collect_got(data, &sections, &mut import, 4, be, bias)?;
     elf_unwind::collect(data, &sections, &mut import, 4, be);
     elf_exception::collect(data, &sections, &mut import, 4, be);
+    sce::collect(data, be, rd16(16)?, entry, &mut import)?;
     Ok(import)
 }
 
@@ -907,6 +936,16 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
         }
     }
+    // A MIPS .debug stream (ECOFF mdebug or Metrowerks DWARF 1) names
+    // procedures the symtab may have stripped. The symtab's spelling
+    // wins where both exist; debug info only adds coverage.
+    let mdebug_started = std::time::Instant::now();
+    let mdebug_functions = mdebug::collect(data, &sections, false);
+    for f in &mdebug_functions {
+        symbol_functions
+            .entry(f.entry)
+            .or_insert((u8::MAX, f.name.clone(), f.size.max(1)));
+    }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
         symbol_functions
@@ -939,6 +978,9 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         elf_machine: Some(elf_machine),
         ..Default::default()
     };
+    if !mdebug_functions.is_empty() {
+        phase(&mut import, "mdebug", mdebug_started);
+    }
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
     elf_pointers::collect(data, &sections, &mut import, 8, false, bias)?;
@@ -1451,13 +1493,23 @@ pub fn load_container_with(
     };
     // A linker MAP is the image's own symbol table from the other side:
     // read once, applied to every image it names an address in, before
-    // discovery so a seeded entry is walked rather than coined.
-    let cw_map = match map {
-        Some(path) => Some(linkmap::parse(
-            &std::fs::read_to_string(path)
+    // discovery so a seeded entry is walked rather than coined. Binary
+    // BINMAP blobs (Vita) sniff first; everything else is a text grammar.
+    let map_bytes = match map {
+        Some(path) => Some(
+            std::fs::read(path)
                 .map_err(|e| ImportError::Bad(format!("{}: {e}", path.display())))?,
-        )),
+        ),
         None => None,
+    };
+    let bin_map = map_bytes.as_deref().and_then(binmap::parse);
+    let cw_map = match (bin_map.is_some(), &map_bytes) {
+        (true, _) => None,
+        (false, Some(bytes)) => Some(linkmap::parse(
+            std::str::from_utf8(bytes)
+                .map_err(|_| ImportError::Bad("map is neither BINMAP nor text".into()))?,
+        )),
+        (false, None) => None,
     };
     let canonical = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
     let mut loaded = Vec::with_capacity(images.len());
@@ -1469,6 +1521,9 @@ pub fn load_container_with(
         imp.cfg.adopt_language(&imp.language);
         if let Some(cw_map) = &cw_map {
             linkmap::apply_to_import(&mut imp, cw_map);
+        }
+        if let Some(bin_map) = &bin_map {
+            binmap::apply_to_import(&mut imp, bin_map);
         }
         phase(&mut imp, "parse", parse_started);
         imp.analysed = analyse;

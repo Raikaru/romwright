@@ -7,9 +7,8 @@ fn bad(message: &str) -> ImportError {
     ImportError::Bad(message.into())
 }
 
-fn word(data: &[u8], offset: usize, width: usize, be: bool) -> Result<u64> {
-    let end = offset
-        .checked_add(width)
+pub(super) fn word(data: &[u8], offset: usize, width: usize, be: bool) -> Result<u64> {
+    let end = offset.checked_add(width)
         .ok_or_else(|| bad("ELF word overflow"))?;
     let bytes = data
         .get(offset..end)
@@ -88,7 +87,7 @@ pub(super) fn prepare(
     for section in sections.iter_mut().filter(|s| s.flags & 2 != 0) {
         section.addr = rebase(section.addr)?;
     }
-    complete_load_segments(data, import, width, be, bias)?;
+    complete_load_segments(data, &mut import.mappings, width, be, bias)?;
     collect_string_tables(data, sections, import)?;
     let machine = word(data, 18, 2, be)?;
     if machine == 20 && width == 4 && dynamic_value(data, width, be, 0x70000000)?.is_some() {
@@ -353,7 +352,7 @@ pub(super) fn prepare(
     Ok(())
 }
 
-fn program_headers(data: &[u8], width: usize, be: bool) -> Result<std::slice::ChunksExact<'_, u8>> {
+pub(super) fn program_headers(data: &[u8], width: usize, be: bool) -> Result<std::slice::ChunksExact<'_, u8>> {
     let (offset_at, size_at, count_at, minimum) =
         if width == 4 { (28, 42, 44, 32) } else { (32, 54, 56, 56) };
     let offset = usize::try_from(word(data, offset_at, width, be)?)
@@ -371,10 +370,10 @@ fn program_headers(data: &[u8], width: usize, be: bool) -> Result<std::slice::Ch
     Ok(data.get(offset..end).ok_or_else(|| bad("truncated ELF program headers"))?.chunks_exact(stride))
 }
 
-fn complete_load_segments(
-    data: &[u8], import: &mut NativeImport, width: usize, be: bool, bias: u64,
+pub(super) fn complete_load_segments(
+    data: &[u8], mappings: &mut Vec<super::Mapping>, width: usize, be: bool, bias: u64,
 ) -> Result<()> {
-    import.mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
+    mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
     for header in program_headers(data, width, be)? {
         if word(header, 0, 4, be)? != 1 { // PT_LOAD
             continue;
@@ -407,7 +406,7 @@ fn complete_load_segments(
             Ok(())
         };
         let mut cursor = start;
-        for mapping in &import.mappings {
+        for mapping in mappings.iter() {
             if mapping.vaddr >= end { break; }
             let mapped_end = mapping.vaddr.checked_add(mapping.size)
                 .ok_or_else(|| bad("ELF mapping overflow"))?;
@@ -416,8 +415,8 @@ fn complete_load_segments(
             cursor = mapped_end.min(end);
         }
         if cursor < end { add_gap(cursor, end)?; }
-        import.mappings.extend(gaps);
-        import.mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
+        mappings.extend(gaps);
+        mappings.sort_unstable_by_key(|mapping| mapping.vaddr);
     }
     Ok(())
 }
