@@ -1533,6 +1533,14 @@ pub fn load_container_with(
                 }],
                 format: "raw".into(),
                 language: language.to_string(),
+                // A flat blob has no header to name an entry; the load base
+                // is the natural seed so discovery walks from it.
+                process_entry: Some(base),
+                functions: vec![NativeFunction {
+                    entry: base,
+                    name: "entry".into(),
+                    size: 1,
+                }],
                 ..Default::default()
             },
         )],
