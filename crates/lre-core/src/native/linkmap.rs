@@ -31,6 +31,9 @@ use std::path::Path;
 pub enum MapKind {
     Func,
     Object,
+    /// A name with no type claim (PSX/PS2 .SYM rows): code when the
+    /// address is executable, a bare name otherwise.
+    Sym,
     NoType,
 }
 
@@ -573,6 +576,74 @@ fn parse_flat(text: &str) -> LinkerMap {
     }
     map
 }
+
+
+// ---------------------------------------------------------------- psx .sym
+
+/// PSX/PS2 `.SYM` (PsyQ/ProDG-era linker symbol dump): a flat array of
+/// little-endian `(u32 address, u32 name_offset)` records followed by a
+/// NUL-terminated string table. The first record's name offset is the
+/// record count times eight; a `0xffffffff` address is a linker-defined
+/// sentinel (`_end`, `_heap_size`). Rows carry no type — `Sym` lets the
+/// executable-mapping check decide code vs name.
+pub fn parse_sym(bytes: &[u8]) -> Option<LinkerMap> {
+    if bytes.len() < 16 {
+        return None;
+    }
+    let first_name_off =
+        u32::from_le_bytes(bytes[4..8].try_into().ok()?) as usize;
+    if first_name_off == 0
+        || first_name_off % 8 != 0
+        || first_name_off >= bytes.len()
+    {
+        return None;
+    }
+    let count = first_name_off / 8;
+    let mut map = LinkerMap::default();
+    let mut prev = 0u64;
+    let mut ordered = true;
+    for index in 0..count {
+        let base = index * 8;
+        let address =
+            u32::from_le_bytes(bytes[base..base + 4].try_into().ok()?) as u64;
+        let name_off =
+            u32::from_le_bytes(bytes[base + 4..base + 8].try_into().ok()?)
+                as usize;
+        if name_off >= bytes.len() {
+            return None;
+        }
+        let end = bytes[name_off..]
+            .iter()
+            .position(|b| *b == 0)
+            .map(|p| name_off + p)?;
+        let name = std::str::from_utf8(&bytes[name_off..end]).ok()?;
+        if name.is_empty()
+            || !name.bytes().all(|b| (0x20..0x7f).contains(&b))
+        {
+            return None;
+        }
+        if address < prev {
+            ordered = false;
+        }
+        prev = address;
+        map.symbols.push(MapSymbol {
+            address,
+            size: 0,
+            name: name.to_string(),
+            kind: MapKind::Sym,
+            tu: String::new(),
+            section: String::new(),
+            subsection: String::new(),
+            linker_defined: address == u32::MAX as u64,
+        });
+    }
+    // A real .SYM is address-ordered; random binary that survived the
+    // structural checks still has to pass this one.
+    if !ordered || map.symbols.len() < 2 {
+        return None;
+    }
+    Some(map)
+}
 // -------------------------------------------------------------- dtk/splat
 
 /// dtk `symbols.txt` / splat `symbol_addrs.txt`: the decomp project's own
@@ -860,10 +931,7 @@ pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
             continue;
         }
         match symbol.kind {
-            MapKind::Func => {
-                if !in_code(symbol.address) {
-                    continue;
-                }
+            MapKind::Func | MapKind::Sym if in_code(symbol.address) => {
                 if let Some(function) = imp
                     .functions
                     .iter_mut()
@@ -882,6 +950,12 @@ pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
                     imp.symbol_named.push(symbol.address);
                 }
             }
+            // A Sym outside code is a name, not an entry point.
+            MapKind::Sym => {
+                if !symbol.name.is_empty() {
+                    imp.object_names.push((symbol.address, symbol.name.clone()));
+                }
+            }
             MapKind::Object => {
                 if symbol.size > 0 {
                     imp.object_sizes.push((symbol.address, symbol.size));
@@ -890,7 +964,7 @@ pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
                     }
                 }
             }
-            MapKind::NoType => {}
+            MapKind::Func | MapKind::NoType => {}
         }
     }
 }
