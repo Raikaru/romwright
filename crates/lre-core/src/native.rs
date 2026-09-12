@@ -3323,6 +3323,11 @@ pub fn store_import(
     // side: a counter the propagation proved constant is not a callback
     // (N64 8008fa74: seeding it coined _FUN_ over the known DAT_ and the
     // decompiler rendered the overlap warning). Access wins over seeding.
+    // A seed with no callers and no out-edges never participated in flow
+    // as code -- measured and rejected 2026-09-11: the clause retracted
+    // the real leaf restorer __restore_rt on libc (recall 1.0 -> 0.9997)
+    // for a 3-entry cosmetic gain on one ROM. A taken address with no
+    // edges is indistinguishable from a quiet leaf at store time.
     {
         let stronger: Vec<u64> = thunked
             .iter()
