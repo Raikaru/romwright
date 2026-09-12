@@ -1489,7 +1489,7 @@ fn const_data_use_denied(ops: &[String]) -> bool {
     })
 }
 fn const_data_targets(
-    import: &NativeImport,
+    import: &mut NativeImport,
     session: &mut crate::native_runtime::ConsoleSession,
 ) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> =
@@ -1525,21 +1525,48 @@ fn const_data_targets(
             );
         }
     }
+    // On a low-bit-mode language the low bit of a DATA value is the
+    // instruction-set mode, not address: 0x02000ca5 *is* the 0x02000ca4
+    // entry, and coining it as a one-byte function truncates the walk
+    // through the real one (m5-013 NitroMain). Align before the
+    // membership check, and record the mode the way computed targets do
+    // so a genuinely new Thumb callback still decodes Thumb.
+    // On ARM the bit is also the code/data discriminator: data addresses
+    // are always even, so an even DATA value in executable mapping is
+    // usually data the module shares its mapping with (NDS ARM9: 320
+    // even-coined const entries, 211 spurious vs 2/256 odd). MIPS keeps
+    // even targets: mipsel_many_o2's 401 callbacks are MIPS32 (even)
+    // and its ELF sections already separate code from data.
+    let mode = low_bit_code_mode(&import.language);
+    let arm = import.language.starts_with("ARM:");
     let mut targets: Vec<u64> = import
         .xrefs
         .iter()
         .filter(|xref| {
             xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
         })
+        .filter(|xref| !arm || xref.to & 1 != 0)
         .filter(|xref| {
             uses.get(&xref.from)
                 .is_none_or(|ops| !const_data_use_denied(ops))
         })
         .map(|xref| xref.to)
+        .map(|target| if mode { target & !1 } else { target })
         .filter(|&target| !entries.contains(&target) && in_code(target))
         .collect();
     targets.sort_unstable();
     targets.dedup();
+    if mode {
+        for xref in import.xrefs.iter() {
+            if xref.kind == "DATA"
+                && xref.provenance == "native-analysis:constant-propagation"
+                && xref.to & 1 != 0
+                && targets.contains(&(xref.to & !1))
+            {
+                import.computed_mode_targets.push(xref.to & !1);
+            }
+        }
+    }
     targets
 }
 // Destinations of stub-shaped unconditional jumps. A body that is only a
