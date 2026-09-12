@@ -134,7 +134,16 @@ fn worker_candidate() -> PathBuf {
     let sibling = std::env::current_exe()
         .ok()
         .and_then(|exe| exe.parent().map(|dir| dir.join("lre-worker")));
+    // The target/ fallbacks resolve against the repository root, not the
+    // process cwd — a GUI launched from desktop/.../build must still find
+    // target/release/lre-worker.
+    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap_or_else(|_| PathBuf::from("."));
     let fallbacks = [
+        repo_root.join("target/release/lre-worker"),
+        repo_root.join("target/debug/lre-worker"),
         PathBuf::from("target/release/lre-worker"),
         PathBuf::from("target/debug/lre-worker"),
     ];
@@ -142,7 +151,7 @@ fn worker_candidate() -> PathBuf {
         .into_iter()
         .chain(fallbacks)
         .find(|candidate| candidate.is_file())
-        .unwrap_or_else(|| PathBuf::from("target/debug/lre-worker"))
+        .unwrap_or_else(|| repo_root.join("target/debug/lre-worker"))
 }
 
 /// The worker memory cap in bytes: `VENTRIS_WORKER_MEMORY_CAP` when it names
@@ -184,17 +193,25 @@ impl RuntimeConfig {
             })
             .unwrap_or_else(|| install.join("Ghidra/Processors/x86/data/languages"));
         let worker_path = worker_candidate();
+        // Relative defaults resolve against the repository root, not the
+        // process cwd — a GUI launched from desktop/.../build must still
+        // find native/build/ghidra_opt and native/specs. CARGO_MANIFEST_DIR
+        // is crates/lre-core, so ../.. is the repo root.
+        let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .canonicalize()
+            .unwrap_or_else(|_| PathBuf::from("."));
         let decompiler_path = std::env::var("VENTRIS_GHIDRA_OPT")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("native/build/ghidra_opt"));
+            .unwrap_or_else(|_| repo_root.join("native/build/ghidra_opt"));
         let library_prototypes = std::env::var("VENTRIS_LIBRARY_PROTOTYPES")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
-                PathBuf::from("oracle/library-prototypes-v1/generic_clib_64.json")
+                repo_root.join("oracle/library-prototypes-v1/generic_clib_64.json")
             });
         let spec_root = std::env::var("VENTRIS_SPECS")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("native/specs"));
+            .unwrap_or_else(|_| repo_root.join("native/specs"));
         let console_path = std::env::var("VENTRIS_CONSOLE")
             .map(PathBuf::from)
             .ok()
