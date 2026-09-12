@@ -114,4 +114,493 @@
     </pcode>
   </callfixup>
 
+
+
+  <callfixup name="_savegpr_14">
+    <pcode><body><![CDATA[
+      *(r1 - 0x48) = r14;
+      *(r1 - 0x44) = r15;
+      *(r1 - 0x40) = r16;
+      *(r1 - 0x3c) = r17;
+      *(r1 - 0x38) = r18;
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_15">
+    <pcode><body><![CDATA[
+      *(r1 - 0x44) = r15;
+      *(r1 - 0x40) = r16;
+      *(r1 - 0x3c) = r17;
+      *(r1 - 0x38) = r18;
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_16">
+    <pcode><body><![CDATA[
+      *(r1 - 0x40) = r16;
+      *(r1 - 0x3c) = r17;
+      *(r1 - 0x38) = r18;
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_17">
+    <pcode><body><![CDATA[
+      *(r1 - 0x3c) = r17;
+      *(r1 - 0x38) = r18;
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_18">
+    <pcode><body><![CDATA[
+      *(r1 - 0x38) = r18;
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_19">
+    <pcode><body><![CDATA[
+      *(r1 - 0x34) = r19;
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_20">
+    <pcode><body><![CDATA[
+      *(r1 - 0x30) = r20;
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_21">
+    <pcode><body><![CDATA[
+      *(r1 - 0x2c) = r21;
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_22">
+    <pcode><body><![CDATA[
+      *(r1 - 0x28) = r22;
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_23">
+    <pcode><body><![CDATA[
+      *(r1 - 0x24) = r23;
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_24">
+    <pcode><body><![CDATA[
+      *(r1 - 0x20) = r24;
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_25">
+    <pcode><body><![CDATA[
+      *(r1 - 0x1c) = r25;
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_26">
+    <pcode><body><![CDATA[
+      *(r1 - 0x18) = r26;
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_27">
+    <pcode><body><![CDATA[
+      *(r1 - 0x14) = r27;
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_28">
+    <pcode><body><![CDATA[
+      *(r1 - 0x10) = r28;
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_29">
+    <pcode><body><![CDATA[
+      *(r1 - 0x0c) = r29;
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_30">
+    <pcode><body><![CDATA[
+      *(r1 - 0x08) = r30;
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_savegpr_31">
+    <pcode><body><![CDATA[
+      *(r1 - 0x04) = r31;
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_14">
+    <pcode><body><![CDATA[
+      r14 = *(r1 - 0x48);
+      r15 = *(r1 - 0x44);
+      r16 = *(r1 - 0x40);
+      r17 = *(r1 - 0x3c);
+      r18 = *(r1 - 0x38);
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_15">
+    <pcode><body><![CDATA[
+      r15 = *(r1 - 0x44);
+      r16 = *(r1 - 0x40);
+      r17 = *(r1 - 0x3c);
+      r18 = *(r1 - 0x38);
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_16">
+    <pcode><body><![CDATA[
+      r16 = *(r1 - 0x40);
+      r17 = *(r1 - 0x3c);
+      r18 = *(r1 - 0x38);
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_17">
+    <pcode><body><![CDATA[
+      r17 = *(r1 - 0x3c);
+      r18 = *(r1 - 0x38);
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_18">
+    <pcode><body><![CDATA[
+      r18 = *(r1 - 0x38);
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_19">
+    <pcode><body><![CDATA[
+      r19 = *(r1 - 0x34);
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_20">
+    <pcode><body><![CDATA[
+      r20 = *(r1 - 0x30);
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_21">
+    <pcode><body><![CDATA[
+      r21 = *(r1 - 0x2c);
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_22">
+    <pcode><body><![CDATA[
+      r22 = *(r1 - 0x28);
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_23">
+    <pcode><body><![CDATA[
+      r23 = *(r1 - 0x24);
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_24">
+    <pcode><body><![CDATA[
+      r24 = *(r1 - 0x20);
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_25">
+    <pcode><body><![CDATA[
+      r25 = *(r1 - 0x1c);
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_26">
+    <pcode><body><![CDATA[
+      r26 = *(r1 - 0x18);
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_27">
+    <pcode><body><![CDATA[
+      r27 = *(r1 - 0x14);
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_28">
+    <pcode><body><![CDATA[
+      r28 = *(r1 - 0x10);
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_29">
+    <pcode><body><![CDATA[
+      r29 = *(r1 - 0x0c);
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_30">
+    <pcode><body><![CDATA[
+      r30 = *(r1 - 0x08);
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+  <callfixup name="_restgpr_31">
+    <pcode><body><![CDATA[
+      r31 = *(r1 - 0x04);
+    ]]></body></pcode>
+  </callfixup>
+
 </compiler_spec>
