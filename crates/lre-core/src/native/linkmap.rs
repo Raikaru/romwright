@@ -781,6 +781,8 @@ pub struct SplitExtent {
     /// `code`/`rodata`/`data`/`bss` from the `Sections:` header, when the
     /// row's section declared one.
     pub kind: String,
+    /// The TU block (`file.c:`) this extent belongs to.
+    pub tu: String,
 }
 
 /// dtk `splits.txt`: a `Sections:` block naming each section's type, then
@@ -792,6 +794,7 @@ pub fn parse_splits(text: &str) -> Vec<SplitExtent> {
     let mut extents = Vec::new();
     let mut section_kinds: HashMap<String, String> = HashMap::new();
     let mut in_sections = false;
+    let mut current_tu = String::new();
     for raw in text.lines() {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
         let trimmed = line.trim();
@@ -819,6 +822,7 @@ pub fn parse_splits(text: &str) -> Vec<SplitExtent> {
         // `file.c:` opens a TU block; `\t.text start:0x.. end:0x..` rows
         // carry the extents.
         if trimmed.ends_with(':') && !trimmed.contains(' ') {
+            current_tu = trimmed.trim_end_matches(':').to_string();
             continue;
         }
         let mut words = trimmed.split_whitespace();
@@ -839,6 +843,7 @@ pub fn parse_splits(text: &str) -> Vec<SplitExtent> {
                 start,
                 end,
                 kind,
+                tu: current_tu.clone(),
             });
         }
     }

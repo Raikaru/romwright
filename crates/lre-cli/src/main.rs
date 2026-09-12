@@ -741,6 +741,138 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 functions.len() + symbols.len()
             );
         }
+        // `export-objdiff <program> <outdir> --splits FILE`: write an
+        // objdiff.json whose units are the splits.txt TUs, each carrying
+        // the store's functions that fall inside its extents. objdiff
+        // matches functions by symbol name within a unit, so the unit
+        // list is the interop surface.
+        "export-objdiff" => {
+            let program = args.get(2).ok_or("export-objdiff needs a program")?;
+            let outdir = Path::new(args.get(3).ok_or("export-objdiff needs an outdir")?);
+            let splits_path = flag(args, "--splits")
+                .ok_or("export-objdiff needs --splits <splits.txt>")?;
+            let splits = lre_core::native::linkmap::parse_splits(
+                &std::fs::read_to_string(&splits_path)
+                    .map_err(|e| format!("{splits_path}: {e}"))?,
+            );
+            std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+
+            // Group extents by TU; a unit's address range is the union
+            // of its extents, its functions the store rows inside them.
+            let mut tus: Vec<(String, Vec<&lre_core::native::linkmap::SplitExtent>)> =
+                Vec::new();
+            for extent in &splits {
+                if let Some((_, list)) =
+                    tus.iter_mut().find(|(name, _)| *name == extent.tu)
+                {
+                    list.push(extent);
+                } else {
+                    tus.push((extent.tu.clone(), vec![extent]));
+                }
+            }
+            let mut units = Vec::new();
+            for (tu, extents) in &tus {
+                if tu.is_empty() {
+                    continue;
+                }
+                let stem = tu.trim_end_matches(".c").trim_end_matches(".cpp");
+                let fns: Vec<serde_json::Value> = functions
+                    .iter()
+                    .filter(|f| {
+                        extents.iter().any(|e| {
+                            f.entry.offset >= e.start && f.entry.offset < e.end
+                        })
+                    })
+                    .map(|f| {
+                        serde_json::json!({
+                            "name": f.name,
+                            "vram": format!("{:#x}", f.entry.offset),
+                            "size": f.size,
+                        })
+                    })
+                    .collect();
+                units.push(serde_json::json!({
+                    "name": format!("{program}/{stem}"),
+                    "target_path": format!("build/{stem}.o"),
+                    "base_path": format!("build/{stem}.o"),
+                    "metadata": {
+                        "auto_generated": false,
+                        "source_path": tu,
+                        "functions": fns,
+                    }
+                }));
+            }
+            let doc = serde_json::json!({
+                "min_version": "2.0.0-beta.5",
+                "custom_make": "ninja",
+                "build_target": false,
+                "units": units,
+            });
+            std::fs::write(
+                outdir.join("objdiff.json"),
+                serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            println!(
+                "wrote {} ({} units)",
+                outdir.join("objdiff.json").display(),
+                units.len()
+            );
+        }
+        // `export-scratch <program> <addr> <binary> [--compiler ID]
+        // [--c-flags FLAGS]`: emit a decomp.me scratch payload —
+        // target_asm.s (the function's disassembly), ctx.c (context
+        // stub), scratch.json (metadata). The POST to decomp.me is the
+        // caller's; we produce the payload it accepts.
+        "export-scratch" => {
+            let program = args.get(2).ok_or("export-scratch needs a program")?;
+            let addr = args.get(3).ok_or("export-scratch needs a vaddr")?;
+            let binary = args.get(4).ok_or("export-scratch needs a binary")?;
+            let outdir = flag(args, "--out").unwrap_or_else(|| "scratch".into());
+            let compiler = flag(args, "--compiler")
+                .unwrap_or_else(|| "mwcc_233_163".into());
+            let c_flags = flag(args, "--c-flags")
+                .unwrap_or_else(|| "-O4,p -nodefaults -proc gekko".into());
+            let address = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
+                .map_err(|e| e.to_string())?;
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+            let function = functions
+                .iter()
+                .find(|f| f.entry.offset == address)
+                .ok_or_else(|| format!("no function at {addr}"))?;
+            // PPC is fixed-width: size/4 instructions exactly.
+            let count = (function.size / 4).max(1) as u32;
+            let asm = core
+                .disasm_native(Path::new(binary), &format!("{:#x}", address), count)
+                .map_err(|e| e.to_string())?;
+            std::fs::create_dir_all(&outdir).map_err(|e| e.to_string())?;
+            std::fs::write(format!("{outdir}/target_asm.s"), &asm)
+                .map_err(|e| e.to_string())?;
+            std::fs::write(
+                format!("{outdir}/ctx.c"),
+                format!("/* context for {} */\n", function.name),
+            )
+            .map_err(|e| e.to_string())?;
+            let doc = serde_json::json!({
+                "name": function.name,
+                "compiler": compiler,
+                "c_flags": c_flags,
+                "target_asm": asm,
+                "context": format!("/* context for {} */", function.name),
+                "diff_label": function.name,
+            });
+            std::fs::write(
+                format!("{outdir}/scratch.json"),
+                serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?;
+            println!(
+                "wrote {outdir}/ ({} bytes asm, {} insns)",
+                asm.len(),
+                count
+            );
+        }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
             let vaddr = u64::from_str_radix(
