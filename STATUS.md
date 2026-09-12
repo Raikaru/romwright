@@ -6222,7 +6222,9 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   shows the movzbl/movslq/add/jmp PIC chain but no in-window load moves
   (base R15 and index dl both Top from outside), so it is outer-base
   class with 0x1ce42a, not reload-after-compare like 0x16ed3d;
-  0x265ffe not yet worked up). Cutover (decompiler out of the
+  0x265ffe is loop-embedded arithmetic dispatch (LEA-computed target
+  into aligned code, no table load at all) with the loop pair.
+  Cutover (decompiler out of the
   switch round) waits on missed <= 3.
 
 - Switch windows deduplicate (2026-09-11): flow shapes accumulate across
