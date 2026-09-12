@@ -1,0 +1,296 @@
+# PS2 Vector Unit (VU0/VU1) micro-mode — 64-bit VLIW.
+# Each microinstruction is one 64-bit LIW: bits 0-31 = lower pipe
+# (integer ALU, load/store, branch), bits 32-63 = upper pipe
+# (vector FP FMAC, control). Encoding per Goatman13/ps2_ida_vu_micro
+# and the Sony VU User's Manual.
+#
+# Upper word bit 31 = I bit: when set, the lower word is a 32-bit
+# immediate loaded into I (LOI), not an instruction.
+# Special ops: real op = (instr&0x3) | ((instr>>4)&0x7C), i.e.
+#   low2 = instr bits 0-1, high5 = instr bits 6-10. Triggered when
+#   instr bits 2-5 == 0xF (the 0x3C-0x3F primary opcodes).
+
+define endian=little;
+define alignment=8;
+
+define space ram type=ram_space size=4 default;
+define space register type=register_space size=4;
+
+# 128-bit vector float registers vf0-vf31 (x,y,z,w lanes)
+define register offset=0x0000 size=16 [
+	vf0 vf1 vf2 vf3 vf4 vf5 vf6 vf7
+	vf8 vf9 vf10 vf11 vf12 vf13 vf14 vf15
+	vf16 vf17 vf18 vf19 vf20 vf21 vf22 vf23
+	vf24 vf25 vf26 vf27 vf28 vf29 vf30 vf31
+];
+# 16-bit integer registers vi0-vi15 (stored in 32-bit slots)
+define register offset=0x0200 size=4 [
+	vi0 vi1 vi2 vi3 vi4 vi5 vi6 vi7
+	vi8 vi9 vi10 vi11 vi12 vi13 vi14 vi15
+];
+# Special registers
+define register offset=0x0240 size=16 [ ACC ];
+define register offset=0x0250 size=4 [ Q I P R ];
+
+# 64-bit LIW token
+define token liw(64)
+	# lower word fields (bits 0-31)
+	l_op   = (0,5)    # lower1 primary opcode (when bit31 set)
+	l_sop  = (0,1)    # special op low 2 bits
+	l_op25 = (2,5)    # special trigger: ==0xF means special
+	l_soph = (6,10)   # special op high 5 bits
+	l_imm  = (0,10)   # 11-bit immediate
+	l_simm = (0,10) signed  # signed 11-bit branch offset
+	l_is   = (11,15)  # source int reg
+	l_it   = (16,20)  # dest int reg
+	l_dest = (21,24)  # dest field
+	l_op2  = (25,31)  # lower2 opcode (when bit31 clear)
+	l_bit31= (31,31)
+	# upper word fields (bits 32-63)
+	u_op   = (32,37)  # upper primary opcode (instr bits 0-5)
+	u_sopl = (32,33)  # special op low 2 bits
+	u_op25 = (34,37)  # special trigger
+	u_soph = (38,42)  # special op high 5 bits
+	u_fd   = (38,42)  # dest vf
+	u_fs   = (43,47)  # source vf
+	u_ft   = (48,52)  # source vf / bc reg
+	u_dest = (53,56)  # dest field
+	u_bc   = (32,33)  # bc field
+	u_fsf  = (53,54)  # fsf
+	u_ftf  = (55,56)  # ftf
+	u_E    = (62,62)  # E bit
+	u_M    = (61,61)
+	u_D    = (60,60)
+	u_T    = (59,59)
+	u_I    = (63,63)  # I bit -> lower word is LOI immediate
+;
+
+# ---- pcodeops ----
+define pcodeop vu_nop;
+define pcodeop vu_add;   define pcodeop vu_addbc;
+define pcodeop vu_sub;   define pcodeop vu_subbc;
+define pcodeop vu_madd;  define pcodeop vu_maddbc;
+define pcodeop vu_msub;  define pcodeop vu_msubbc;
+define pcodeop vu_mul;   define pcodeop vu_mulbc;
+define pcodeop vu_max;   define pcodeop vu_maxbc;
+define pcodeop vu_mini;  define pcodeop vu_minibc;
+define pcodeop vu_adda;  define pcodeop vu_addabc; define pcodeop vu_madda; define pcodeop vu_maddabc;
+define pcodeop vu_suba;  define pcodeop vu_subabc; define pcodeop vu_msuba; define pcodeop vu_msubabc;
+define pcodeop vu_mula;  define pcodeop vu_mulabc;
+define pcodeop vu_opmula; define pcodeop vu_opmsub;
+define pcodeop vu_addq;  define pcodeop vu_maddq;  define pcodeop vu_mulaq; define pcodeop vu_maddaq; define pcodeop vu_msubaq; define pcodeop vu_addaq;
+define pcodeop vu_addi;  define pcodeop vu_maddi;  define pcodeop vu_mulai; define pcodeop vu_maddai; define pcodeop vu_msubai; define pcodeop vu_addai; define pcodeop vu_subai;
+define pcodeop vu_subq;  define pcodeop vu_msubq;  define pcodeop vu_mulq;  define pcodeop vu_subi;  define pcodeop vu_msubi;
+define pcodeop vu_maxi;  define pcodeop vu_muli;   define pcodeop vu_minii;
+define pcodeop vu_abs;   define pcodeop vu_clip;
+define pcodeop vu_itof0; define pcodeop vu_itof4;  define pcodeop vu_itof12; define pcodeop vu_itof15;
+define pcodeop vu_ftoi0; define pcodeop vu_ftoi4;  define pcodeop vu_ftoi12; define pcodeop vu_ftoi15;
+define pcodeop vu_div;   define pcodeop vu_sqrt;   define pcodeop vu_rsqrt;
+define pcodeop vu_waitq; define pcodeop vu_waitp;
+define pcodeop vu_move;  define pcodeop vu_mr32;   define pcodeop vu_mfp;
+define pcodeop vu_lq;    define pcodeop vu_sq;     define pcodeop vu_lqi;   define pcodeop vu_sqi;
+define pcodeop vu_lqd;   define pcodeop vu_sqd;    define pcodeop vu_ilw;   define pcodeop vu_isw;
+define pcodeop vu_mtir;  define pcodeop vu_mfir;   define pcodeop vu_ilwr;  define pcodeop vu_iswr;
+define pcodeop vu_rnext; define pcodeop vu_rget;   define pcodeop vu_rinit; define pcodeop vu_rxor;
+define pcodeop vu_xtop;  define pcodeop vu_xitop;  define pcodeop vu_xgkick;
+define pcodeop vu_esadd; define pcodeop vu_ersadd; define pcodeop vu_eleng; define pcodeop vu_erleng;
+define pcodeop vu_eatanxy; define pcodeop vu_eatanxz; define pcodeop vu_esum;
+define pcodeop vu_esqrt; define pcodeop vu_ersqrt; define pcodeop vu_ercpr;
+define pcodeop vu_esin;  define pcodeop vu_eatan;  define pcodeop vu_eexp;
+define pcodeop vu_fceq;  define pcodeop vu_fcset;  define pcodeop vu_fcand; define pcodeop vu_fcor;
+define pcodeop vu_fseq;  define pcodeop vu_fsset;  define pcodeop vu_fsand; define pcodeop vu_fsor;
+define pcodeop vu_fmeq;  define pcodeop vu_fmand;  define pcodeop vu_fmor;  define pcodeop vu_fcget;
+define pcodeop vu_loi;
+
+# ---- operand attach ----
+attach variables [ u_fd u_fs u_ft ] [ vf0 vf1 vf2 vf3 vf4 vf5 vf6 vf7 vf8 vf9 vf10 vf11 vf12 vf13 vf14 vf15 vf16 vf17 vf18 vf19 vf20 vf21 vf22 vf23 vf24 vf25 vf26 vf27 vf28 vf29 vf30 vf31 ];
+attach variables [ l_is l_it ] [ vi0 vi1 vi2 vi3 vi4 vi5 vi6 vi7 vi8 vi9 vi10 vi11 vi12 vi13 vi14 vi15 vi0 vi1 vi2 vi3 vi4 vi5 vi6 vi7 vi8 vi9 vi10 vi11 vi12 vi13 vi14 vi15 ];
+
+# Branch target operand: signed 11-bit imm * 8 relative to inst_start+8.
+baddr: reloc is l_simm [ reloc = inst_start + 8 + l_simm * 8; ] { export *:4 reloc; }
+
+# ============================================================
+# UPPER pipe sub-table (bits 32-63)
+# ============================================================
+up: "add"    is u_op=0x28 & u_fd & u_fs & u_ft & u_dest { vu_add(u_fd, u_fs, u_ft, u_dest:4); }
+up: "addbc"  is u_op=0x00 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_addbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "addbc"  is u_op=0x01 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_addbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "addbc"  is u_op=0x02 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_addbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "addbc"  is u_op=0x03 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_addbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "sub"    is u_op=0x2C & u_fd & u_fs & u_ft & u_dest { vu_sub(u_fd, u_fs, u_ft, u_dest:4); }
+up: "subbc"  is u_op=0x04 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_subbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "subbc"  is u_op=0x05 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_subbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "subbc"  is u_op=0x06 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_subbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "subbc"  is u_op=0x07 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_subbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "madd"   is u_op=0x29 & u_fd & u_fs & u_ft & u_dest { vu_madd(u_fd, u_fs, u_ft, u_dest:4); }
+up: "maddbc" is u_op=0x08 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maddbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maddbc" is u_op=0x09 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maddbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maddbc" is u_op=0x0A & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maddbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maddbc" is u_op=0x0B & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maddbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "msub"   is u_op=0x2D & u_fd & u_fs & u_ft & u_dest { vu_msub(u_fd, u_fs, u_ft, u_dest:4); }
+up: "msubbc" is u_op=0x0C & u_fd & u_fs & u_ft & u_dest & u_bc { vu_msubbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "msubbc" is u_op=0x0D & u_fd & u_fs & u_ft & u_dest & u_bc { vu_msubbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "msubbc" is u_op=0x0E & u_fd & u_fs & u_ft & u_dest & u_bc { vu_msubbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "msubbc" is u_op=0x0F & u_fd & u_fs & u_ft & u_dest & u_bc { vu_msubbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mul"    is u_op=0x2A & u_fd & u_fs & u_ft & u_dest { vu_mul(u_fd, u_fs, u_ft, u_dest:4); }
+up: "mulbc"  is u_op=0x18 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_mulbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mulbc"  is u_op=0x19 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_mulbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mulbc"  is u_op=0x1A & u_fd & u_fs & u_ft & u_dest & u_bc { vu_mulbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mulbc"  is u_op=0x1B & u_fd & u_fs & u_ft & u_dest & u_bc { vu_mulbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "max"    is u_op=0x2B & u_fd & u_fs & u_ft & u_dest { vu_max(u_fd, u_fs, u_ft, u_dest:4); }
+up: "maxbc"  is u_op=0x10 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maxbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maxbc"  is u_op=0x11 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maxbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maxbc"  is u_op=0x12 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maxbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maxbc"  is u_op=0x13 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maxbc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mini"   is u_op=0x2F & u_fd & u_fs & u_ft & u_dest { vu_mini(u_fd, u_fs, u_ft, u_dest:4); }
+up: "minibc" is u_op=0x14 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_minibc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "minibc" is u_op=0x15 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_minibc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "minibc" is u_op=0x16 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_minibc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "minibc" is u_op=0x17 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_minibc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mulq"   is u_op=0x1C & u_fd & u_fs & u_dest { vu_mulq(u_fd, u_fs, u_dest:4); }
+up: "maxi"   is u_op=0x1D & u_fd & u_fs & u_dest { vu_maxi(u_fd, u_fs, u_dest:4); }
+up: "muli"   is u_op=0x1E & u_fd & u_fs & u_dest { vu_muli(u_fd, u_fs, u_dest:4); }
+up: "minii"  is u_op=0x1F & u_fd & u_fs & u_dest { vu_minii(u_fd, u_fs, u_dest:4); }
+up: "addq"   is u_op=0x20 & u_fd & u_fs & u_dest { vu_addq(u_fd, u_fs, u_dest:4); }
+up: "maddq"  is u_op=0x21 & u_fd & u_fs & u_dest { vu_maddq(u_fd, u_fs, u_dest:4); }
+up: "addi"   is u_op=0x22 & u_fd & u_fs & u_dest { vu_addi(u_fd, u_fs, u_dest:4); }
+up: "maddi"  is u_op=0x23 & u_fd & u_fs & u_dest { vu_maddi(u_fd, u_fs, u_dest:4); }
+up: "subq"   is u_op=0x24 & u_fd & u_fs & u_dest { vu_subq(u_fd, u_fs, u_dest:4); }
+up: "msubq"  is u_op=0x25 & u_fd & u_fs & u_dest { vu_msubq(u_fd, u_fs, u_dest:4); }
+up: "subi"   is u_op=0x26 & u_fd & u_fs & u_dest { vu_subi(u_fd, u_fs, u_dest:4); }
+up: "msubi"  is u_op=0x27 & u_fd & u_fs & u_dest { vu_msubi(u_fd, u_fs, u_dest:4); }
+up: "opmsub" is u_op=0x2E & u_fd & u_fs & u_ft & u_dest { vu_opmsub(u_fd, u_fs, u_ft, u_dest:4); }
+# upper special: trigger u_op25=0xF (u_op 0x3C-0x3F), op = u_sopl | u_soph<<2
+up: "addabc"  is u_op25=0xF & u_soph=0x00 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_addabc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "subabc"  is u_op25=0xF & u_soph=0x01 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_subabc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "maddabc" is u_op25=0xF & u_soph=0x02 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_maddabc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "msubabc" is u_op25=0xF & u_soph=0x03 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_msubabc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "itof0"   is u_op25=0xF & u_soph=0x04 & u_sopl=0 & u_fd & u_fs & u_dest { vu_itof0(u_fd, u_fs, u_dest:4); }
+up: "itof4"   is u_op25=0xF & u_soph=0x04 & u_sopl=1 & u_fd & u_fs & u_dest { vu_itof4(u_fd, u_fs, u_dest:4); }
+up: "itof12"  is u_op25=0xF & u_soph=0x04 & u_sopl=2 & u_fd & u_fs & u_dest { vu_itof12(u_fd, u_fs, u_dest:4); }
+up: "itof15"  is u_op25=0xF & u_soph=0x04 & u_sopl=3 & u_fd & u_fs & u_dest { vu_itof15(u_fd, u_fs, u_dest:4); }
+up: "ftoi0"   is u_op25=0xF & u_soph=0x05 & u_sopl=0 & u_fd & u_fs & u_dest { vu_ftoi0(u_fd, u_fs, u_dest:4); }
+up: "ftoi4"   is u_op25=0xF & u_soph=0x05 & u_sopl=1 & u_fd & u_fs & u_dest { vu_ftoi4(u_fd, u_fs, u_dest:4); }
+up: "ftoi12"  is u_op25=0xF & u_soph=0x05 & u_sopl=2 & u_fd & u_fs & u_dest { vu_ftoi12(u_fd, u_fs, u_dest:4); }
+up: "ftoi15"  is u_op25=0xF & u_soph=0x05 & u_sopl=3 & u_fd & u_fs & u_dest { vu_ftoi15(u_fd, u_fs, u_dest:4); }
+up: "mulabc"  is u_op25=0xF & u_soph=0x06 & u_fd & u_fs & u_ft & u_dest & u_bc { vu_mulabc(u_fd, u_fs, u_ft, u_dest:4, u_bc:4); }
+up: "mulaq"   is u_op25=0xF & u_soph=0x07 & u_sopl=0 & u_fd & u_fs & u_dest { vu_mulaq(u_fd, u_fs, u_dest:4); }
+up: "abs"     is u_op25=0xF & u_soph=0x07 & u_sopl=1 & u_fd & u_fs & u_dest { vu_abs(u_fd, u_fs, u_dest:4); }
+up: "mulai"   is u_op25=0xF & u_soph=0x07 & u_sopl=2 & u_fd & u_fs & u_dest { vu_mulai(u_fd, u_fs, u_dest:4); }
+up: "clip"    is u_op25=0xF & u_soph=0x07 & u_sopl=3 & u_fs & u_ft { vu_clip(u_fs, u_ft); }
+up: "addaq"   is u_op25=0xF & u_soph=0x08 & u_sopl=0 & u_fd & u_fs & u_dest { vu_addaq(u_fd, u_fs, u_dest:4); }
+up: "maddaq"  is u_op25=0xF & u_soph=0x08 & u_sopl=1 & u_fd & u_fs & u_dest { vu_maddaq(u_fd, u_fs, u_dest:4); }
+up: "addai"   is u_op25=0xF & u_soph=0x08 & u_sopl=2 & u_fd & u_fs & u_dest { vu_addai(u_fd, u_fs, u_dest:4); }
+up: "maddai"  is u_op25=0xF & u_soph=0x08 & u_sopl=3 & u_fd & u_fs & u_dest { vu_maddai(u_fd, u_fs, u_dest:4); }
+up: "msubaq"  is u_op25=0xF & u_soph=0x09 & u_sopl=1 & u_fd & u_fs & u_dest { vu_msubaq(u_fd, u_fs, u_dest:4); }
+up: "subai"   is u_op25=0xF & u_soph=0x09 & u_sopl=2 & u_fd & u_fs & u_dest { vu_subai(u_fd, u_fs, u_dest:4); }
+up: "msubai"  is u_op25=0xF & u_soph=0x09 & u_sopl=3 & u_fd & u_fs & u_dest { vu_msubai(u_fd, u_fs, u_dest:4); }
+up: "adda"    is u_op25=0xF & u_soph=0x0A & u_sopl=0 & u_fd & u_fs & u_dest { vu_adda(u_fd, u_fs, u_dest:4); }
+up: "madda"   is u_op25=0xF & u_soph=0x0A & u_sopl=1 & u_fd & u_fs & u_dest { vu_madda(u_fd, u_fs, u_dest:4); }
+up: "mula"    is u_op25=0xF & u_soph=0x0A & u_sopl=2 & u_fd & u_fs & u_dest { vu_mula(u_fd, u_fs, u_dest:4); }
+up: "suba"    is u_op25=0xF & u_soph=0x0B & u_sopl=0 & u_fd & u_fs & u_dest { vu_suba(u_fd, u_fs, u_dest:4); }
+up: "msuba"   is u_op25=0xF & u_soph=0x0B & u_sopl=1 & u_fd & u_fs & u_dest { vu_msuba(u_fd, u_fs, u_dest:4); }
+up: "opmula"  is u_op25=0xF & u_soph=0x0B & u_sopl=2 & u_fd & u_fs & u_dest { vu_opmula(u_fd, u_fs, u_dest:4); }
+up: "nop"     is u_op25=0xF & u_soph=0x0B & u_sopl=3 { vu_nop(); }
+up: "unop"   is u_op=0x30 { vu_nop(); }
+up: "unop"   is u_op=0x31 { vu_nop(); }
+up: "unop"   is u_op=0x32 { vu_nop(); }
+up: "unop"   is u_op=0x33 { vu_nop(); }
+up: "unop"   is u_op=0x34 { vu_nop(); }
+up: "unop"   is u_op=0x35 { vu_nop(); }
+up: "unop"   is u_op=0x36 { vu_nop(); }
+up: "unop"   is u_op=0x37 { vu_nop(); }
+up: "unop"   is u_op=0x38 { vu_nop(); }
+up: "unop"   is u_op=0x39 { vu_nop(); }
+up: "unop"   is u_op=0x3A { vu_nop(); }
+up: "unop"   is u_op=0x3B { vu_nop(); }
+
+# ============================================================
+# LOWER pipe sub-table (bits 0-31)
+# ============================================================
+lo: "lq"     is l_bit31=0 & l_op2=0x00 & l_it & l_is & l_dest { vu_lq(l_it, l_is, l_dest:4); }
+lo: "sq"     is l_bit31=0 & l_op2=0x01 & l_it & l_is & l_dest { vu_sq(l_it, l_is, l_dest:4); }
+lo: "ilw"    is l_bit31=0 & l_op2=0x04 & l_it & l_is & l_dest & l_imm { vu_ilw(l_it, l_is, l_dest:4, l_imm:4); }
+lo: "isw"    is l_bit31=0 & l_op2=0x05 & l_it & l_is & l_dest & l_imm { vu_isw(l_it, l_is, l_dest:4, l_imm:4); }
+lo: "iaddiu" is l_bit31=0 & l_op2=0x08 & l_it & l_is & l_imm { l_it = l_is + l_imm; }
+lo: "isubiu" is l_bit31=0 & l_op2=0x09 & l_it & l_is & l_imm { l_it = l_is - l_imm; }
+lo: "fceq"   is l_bit31=0 & l_op2=0x10 & l_it & l_imm { vu_fceq(l_it, l_imm:4); }
+lo: "fcset"  is l_bit31=0 & l_op2=0x11 & l_imm { vu_fcset(l_imm:4); }
+lo: "fcand"  is l_bit31=0 & l_op2=0x12 & l_it & l_imm { vu_fcand(l_it, l_imm:4); }
+lo: "fcor"   is l_bit31=0 & l_op2=0x13 & l_it & l_imm { vu_fcor(l_it, l_imm:4); }
+lo: "fseq"   is l_bit31=0 & l_op2=0x14 & l_it & l_imm { vu_fseq(l_it, l_imm:4); }
+lo: "fsset"  is l_bit31=0 & l_op2=0x15 & l_imm { vu_fsset(l_imm:4); }
+lo: "fsand"  is l_bit31=0 & l_op2=0x16 & l_it & l_imm { vu_fsand(l_it, l_imm:4); }
+lo: "fsor"   is l_bit31=0 & l_op2=0x17 & l_it & l_imm { vu_fsor(l_it, l_imm:4); }
+lo: "fmeq"   is l_bit31=0 & l_op2=0x18 & l_it & l_imm { vu_fmeq(l_it, l_imm:4); }
+lo: "fmand"  is l_bit31=0 & l_op2=0x1A & l_it & l_imm { vu_fmand(l_it, l_imm:4); }
+lo: "fmor"   is l_bit31=0 & l_op2=0x1B & l_it & l_imm { vu_fmor(l_it, l_imm:4); }
+lo: "fcget"  is l_bit31=0 & l_op2=0x1C & l_it { vu_fcget(l_it); }
+lo: "b" baddr      is l_bit31=0 & l_op2=0x20 & baddr { goto baddr; }
+lo: "bal" l_it, baddr is l_bit31=0 & l_op2=0x21 & l_it & baddr { l_it = inst_start + 8; call baddr; }
+lo: "jr" l_is      is l_bit31=0 & l_op2=0x24 & l_is { goto [l_is]; }
+lo: "jalr" l_it, l_is is l_bit31=0 & l_op2=0x25 & l_it & l_is { l_it = inst_start + 8; goto [l_is]; }
+lo: "ibeq" l_it, l_is, baddr is l_bit31=0 & l_op2=0x28 & l_it & l_is & baddr { if (l_it == l_is) goto baddr; }
+lo: "ibne" l_it, l_is, baddr is l_bit31=0 & l_op2=0x29 & l_it & l_is & baddr { if (l_it != l_is) goto baddr; }
+lo: "ibltz" l_is, baddr is l_bit31=0 & l_op2=0x2C & l_is & baddr { if (l_is s< 0) goto baddr; }
+lo: "ibgtz" l_is, baddr is l_bit31=0 & l_op2=0x2D & l_is & baddr { if (l_is s> 0) goto baddr; }
+lo: "iblez" l_is, baddr is l_bit31=0 & l_op2=0x2E & l_is & baddr { if (l_is s<= 0) goto baddr; }
+lo: "ibgez" l_is, baddr is l_bit31=0 & l_op2=0x2F & l_is & baddr { if (l_is s>= 0) goto baddr; }
+lo: "iadd"   is l_bit31=1 & l_op=0x30 & l_it & l_is { l_it = l_is + l_it; }
+lo: "isub"   is l_bit31=1 & l_op=0x31 & l_it & l_is { l_it = l_is - l_it; }
+lo: "iaddi"  is l_bit31=1 & l_op=0x32 & l_it & l_is & l_imm { l_it = l_is + l_imm; }
+lo: "iand"   is l_bit31=1 & l_op=0x34 & l_it & l_is { l_it = l_is & l_it; }
+lo: "ior"    is l_bit31=1 & l_op=0x35 & l_it & l_is { l_it = l_is | l_it; }
+# lower special: trigger l_op25=0xF (l_op 0x3C-0x3F), op = l_sop | l_soph<<2
+lo: "move"  is l_bit31=1 & l_op25=0xF & l_soph=0x0C & l_sop=0 & l_it & l_is & l_dest { vu_move(l_it, l_is, l_dest:4); }
+lo: "mr32"  is l_bit31=1 & l_op25=0xF & l_soph=0x0C & l_sop=1 & l_it & l_is & l_dest { vu_mr32(l_it, l_is, l_dest:4); }
+lo: "lqi"   is l_bit31=1 & l_op25=0xF & l_soph=0x0D & l_sop=0 & l_it & l_is & l_dest { vu_lqi(l_it, l_is, l_dest:4); }
+lo: "sqi"   is l_bit31=1 & l_op25=0xF & l_soph=0x0D & l_sop=1 & l_it & l_is & l_dest { vu_sqi(l_it, l_is, l_dest:4); }
+lo: "lqd"   is l_bit31=1 & l_op25=0xF & l_soph=0x0D & l_sop=2 & l_it & l_is & l_dest { vu_lqd(l_it, l_is, l_dest:4); }
+lo: "sqd"   is l_bit31=1 & l_op25=0xF & l_soph=0x0D & l_sop=3 & l_it & l_is & l_dest { vu_sqd(l_it, l_is, l_dest:4); }
+lo: "div"   is l_bit31=1 & l_op25=0xF & l_soph=0x0E & l_sop=0 & l_is & l_it & u_fsf & u_ftf { vu_div(l_is, l_it, u_fsf:4, u_ftf:4); }
+lo: "sqrt"  is l_bit31=1 & l_op25=0xF & l_soph=0x0E & l_sop=1 & l_it & u_ftf { vu_sqrt(l_it, u_ftf:4); }
+lo: "rsqrt" is l_bit31=1 & l_op25=0xF & l_soph=0x0E & l_sop=2 & l_is & l_it & u_fsf & u_ftf { vu_rsqrt(l_is, l_it, u_fsf:4, u_ftf:4); }
+lo: "waitq" is l_bit31=1 & l_op25=0xF & l_soph=0x0E & l_sop=3 { vu_waitq(); }
+lo: "mtir"  is l_bit31=1 & l_op25=0xF & l_soph=0x0F & l_sop=0 & l_it & l_is & l_dest { vu_mtir(l_it, l_is, l_dest:4); }
+lo: "mfir"  is l_bit31=1 & l_op25=0xF & l_soph=0x0F & l_sop=1 & l_it & l_is & l_dest { vu_mfir(l_it, l_is, l_dest:4); }
+lo: "ilwr"  is l_bit31=1 & l_op25=0xF & l_soph=0x0F & l_sop=2 & l_it & l_is & l_dest { vu_ilwr(l_it, l_is, l_dest:4); }
+lo: "iswr"  is l_bit31=1 & l_op25=0xF & l_soph=0x0F & l_sop=3 & l_it & l_is & l_dest { vu_iswr(l_it, l_is, l_dest:4); }
+lo: "rnext" is l_bit31=1 & l_op25=0xF & l_soph=0x10 & l_sop=0 & l_it & l_dest { vu_rnext(l_it, l_dest:4); }
+lo: "rget"  is l_bit31=1 & l_op25=0xF & l_soph=0x10 & l_sop=1 & l_it & l_dest { vu_rget(l_it, l_dest:4); }
+lo: "rinit" is l_bit31=1 & l_op25=0xF & l_soph=0x10 & l_sop=2 & l_is & l_dest { vu_rinit(l_is, l_dest:4); }
+lo: "rxor"  is l_bit31=1 & l_op25=0xF & l_soph=0x10 & l_sop=3 & l_is & l_dest { vu_rxor(l_is, l_dest:4); }
+lo: "mfp"   is l_bit31=1 & l_op25=0xF & l_soph=0x19 & l_sop=0 & l_it & l_dest { vu_mfp(l_it, l_dest:4); }
+lo: "xtop"  is l_bit31=1 & l_op25=0xF & l_soph=0x1A & l_sop=0 & l_it { vu_xtop(l_it); }
+lo: "xitop" is l_bit31=1 & l_op25=0xF & l_soph=0x1A & l_sop=1 & l_it { vu_xitop(l_it); }
+lo: "xgkick" is l_bit31=1 & l_op25=0xF & l_soph=0x1B & l_sop=0 & l_is { vu_xgkick(l_is); }
+lo: "esadd" is l_bit31=1 & l_op25=0xF & l_soph=0x1C & l_sop=0 & l_it & l_is & l_dest { vu_esadd(l_it, l_is, l_dest:4); }
+lo: "ersadd" is l_bit31=1 & l_op25=0xF & l_soph=0x1C & l_sop=1 & l_it & l_is & l_dest { vu_ersadd(l_it, l_is, l_dest:4); }
+lo: "eleng" is l_bit31=1 & l_op25=0xF & l_soph=0x1C & l_sop=2 & l_it & l_is & l_dest { vu_eleng(l_it, l_is, l_dest:4); }
+lo: "erleng" is l_bit31=1 & l_op25=0xF & l_soph=0x1C & l_sop=3 & l_it & l_is & l_dest { vu_erleng(l_it, l_is, l_dest:4); }
+lo: "eatanxy" is l_bit31=1 & l_op25=0xF & l_soph=0x1D & l_sop=0 & l_it & l_is { vu_eatanxy(l_it, l_is); }
+lo: "eatanxz" is l_bit31=1 & l_op25=0xF & l_soph=0x1D & l_sop=1 & l_it & l_is { vu_eatanxz(l_it, l_is); }
+lo: "esum"  is l_bit31=1 & l_op25=0xF & l_soph=0x1D & l_sop=2 & l_it & l_is { vu_esum(l_it, l_is); }
+lo: "esqrt" is l_bit31=1 & l_op25=0xF & l_soph=0x1E & l_sop=0 & l_it & l_is & l_dest { vu_esqrt(l_it, l_is, l_dest:4); }
+lo: "ersqrt" is l_bit31=1 & l_op25=0xF & l_soph=0x1E & l_sop=1 & l_it & l_is & l_dest { vu_ersqrt(l_it, l_is, l_dest:4); }
+lo: "ercpr" is l_bit31=1 & l_op25=0xF & l_soph=0x1E & l_sop=2 & l_it & l_is & l_dest { vu_ercpr(l_it, l_is, l_dest:4); }
+lo: "waitp" is l_bit31=1 & l_op25=0xF & l_soph=0x1E & l_sop=3 { vu_waitp(); }
+lo: "esin"  is l_bit31=1 & l_op25=0xF & l_soph=0x1F & l_sop=0 & l_it & l_is & l_dest { vu_esin(l_it, l_is, l_dest:4); }
+lo: "eatan" is l_bit31=1 & l_op25=0xF & l_soph=0x1F & l_sop=1 & l_it & l_is & l_dest { vu_eatan(l_it, l_is, l_dest:4); }
+lo: "eexp"  is l_bit31=1 & l_op25=0xF & l_soph=0x1F & l_sop=2 & l_it & l_is & l_dest { vu_eexp(l_it, l_is, l_dest:4); }
+lo: "lnop"  is l_bit31=1 & l_op25=0xF & l_soph=0x1F & l_sop=3 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x00 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x33 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x36 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x37 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x38 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x39 { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x3A { vu_nop(); }
+lo: "lnop2" is l_bit31=1 & l_op=0x3B { vu_nop(); }
+
+# ============================================================
+# Top-level: one 64-bit LIW = upper ; lower
+# When I bit set, lower word is a 32-bit immediate (LOI).
+# ============================================================
+:up lo is up & lo & u_I=0 { }
+:up "loi" is up & u_I=1 & l_imm { vu_loi(l_imm:4); }

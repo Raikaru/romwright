@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language_definitions>
+  <language processor="VU"
+            endian="little"
+            size="64"
+            variant="micro"
+            version="1.0"
+            slafile="vu.sla"
+            processorspec="vu.pspec"
+            id="VU:LE:64:micro">
+    <description>PlayStation 2 Vector Unit micro-mode (64-bit VLIW: upper vector-FP + lower integer/branch)</description>
+    <compiler name="default" spec="vu.cspec" id="default"/>
+  </language>
+</language_definitions>

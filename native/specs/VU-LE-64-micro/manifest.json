@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "producer": "hand-assembled: native/languages/vu pspec/cspec + tspec from -y debug sla; registers.txt generated from vu.slaspec",
+  "language": "VU:LE:64:micro",
+  "compiler": "default",
+  "note": "VU0/VU1 micro-mode 64-bit VLIW. Spec compiles and installs; runtime load in the patched console/decompiler needs further debugging (segfault on .sla decode — likely a VLIW/64-bit-token limitation in the pinned decompiler).",
+  "files": {}
+}
