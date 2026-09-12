@@ -35,6 +35,7 @@ mod sce;
 pub(crate) mod binmap;
 pub mod linkmap;
 pub(crate) mod psyq_sym;
+pub(crate) mod containers;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -1459,6 +1460,9 @@ pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>
     }
     if nds::is_cartridge(data) {
         return nds::import(data);
+    }
+    if let Some(result) = containers::import(data) {
+        return result;
     }
     Ok(vec![(String::new(), parse_native(data)?)])
 }
