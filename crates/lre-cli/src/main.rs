@@ -367,6 +367,21 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 })
                 .collect();
             let map: Option<PathBuf> = flag(args, "--map").map(PathBuf::from);
+            // `--raw BASE --language ID`: a flat dump has no container to
+            // sniff, so the caller supplies where it loads and what runs it.
+            let raw = match flag(args, "--raw") {
+                Some(base) => {
+                    let base = u64::from_str_radix(
+                        base.trim_start_matches("0x"),
+                        16,
+                    )
+                    .map_err(|e| format!("--raw base: {e}"))?;
+                    let language = flag(args, "--language")
+                        .ok_or("--raw needs --language (e.g. ARM:LE:32:v6)")?;
+                    Some((base, language))
+                }
+                None => None,
+            };
             let started = std::time::Instant::now();
             let (stored, signatures) = core
                 .import_native_with_signatures(
@@ -375,6 +390,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     &databases,
                     !has_flag(args, "--no-analysis"),
                     map.as_deref(),
+                    raw.as_ref().map(|(base, language)| (*base, language.as_str())),
                 )
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();
