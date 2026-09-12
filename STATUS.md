@@ -6445,3 +6445,12 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   store already holds everything splat's split step needs (functions,
   data defs, regions, xrefs); the remaining piece is `split` emitting
   per-function asm + linker script, which lands as its own milestone.
+
+- m20-007 (2026-09-12): PSX/PS2 `.SYM` ingestion, closing M-A. New
+  `linkmap::parse_sym` sniffs the binary `(u32 addr, u32 name-off)`
+  record + string-table grammar; `MapKind::Sym` carries the untyped
+  rows and the executable-mapping check decides code vs name. Gate
+  `tests/m20-007_sym.py` on nightfire-ps2 DRIVING.ELF+DRIVING.SYM:
+  **PASS, 8055 functions, recall 1.0 over 8054 code-range rows**
+  (12719 total; the rest are data/linker-defined names). M-A complete:
+  5 text MAP grammars + dtk/splat + .SYM + mdebug + Vita NID/BINMAP.
