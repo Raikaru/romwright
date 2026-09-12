@@ -1011,7 +1011,17 @@ impl NativeWorker {
                     &locals,
                 );
                 wire::encode_addr_element_size(&mut doc, space as u32, vaddr, size);
+                // The known body range, not an empty list: stock machinery
+                // (scope containment for jumps into functions, overlap
+                // checks) keys off mapped ranges, and point-mapped symbols
+                // leave flow unbounded past known entries.
                 wire::encode_header(&mut doc, wire::ELEMENT_START, wire::elem::RANGELIST);
+                wire::encode_range_element(
+                    &mut doc,
+                    space as u32,
+                    vaddr,
+                    vaddr + size.max(1) - 1,
+                );
                 wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::RANGELIST);
                 wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::MAPSYM);
                 wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::DOC);
