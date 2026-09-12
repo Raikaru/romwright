@@ -6212,12 +6212,14 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   `LEA`). vsa 90 -> 94, interpreted 131 -> 133 at 1.0 soundness, phase
   3.9s. Gate truth now merges `.cold` partitions into parents
   (exact-name match): the two "outside" targets sit in cold FUNCs both
-  tools report, so the 0.9989 bar stands unrelaxed. Still missed (11):
-  loop-carried bounds (0x190be9/0x19b3b9), unguarded offset composition
-  (0x184aba), unknown bases (0x1ce42a R12), object dispatch (0x1dae47),
-  absolute-table extent (0x2366c7), three stock-only big switches, two
-  stock junk branches. Cutover (decompiler out of the switch round)
-  waits on missed <= 3.
+  tools report, so the 0.9989 bar stands unrelaxed. Still missed (13,
+  all real -- an earlier junk verdict for two of them was a base-0
+  decode artifact, retracted): loop-carried bounds (0x190be9/0x19b3b9),
+  unguarded offset composition (0x184aba), unknown bases (0x1ce42a R12),
+  object dispatch (0x1dae47), absolute-table extent (0x2366c7), three
+  stock-only big switches, two notrack-guarded dispatches (0x121073,
+  0x265ffe, shapes not yet worked up). Cutover (decompiler out of the
+  switch round) waits on missed <= 3.
 
 - Switch windows deduplicate (2026-09-11): flow shapes accumulate across
   discovery rounds, so later rounds emulated identical predecessor blocks
