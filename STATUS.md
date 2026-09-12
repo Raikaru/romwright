@@ -6046,6 +6046,16 @@ point at, none reserved:
   unreferenced `add` leaf too). Next probe for the fix: what stops our
   walk at 0x205c0 -- gp-relative `jalr $t9` following is the suspect,
   not seeds and not tables (many.c has no switch).
+- Head-to-head goto delta (173 vs 14) is worker flow-boundary handling,
+  not structuring, extents, recovery, or switch tables: stored sizes
+  agree both sides (0x1a3a40: 304 vs 283), stock holds the same 6
+  in-range entries we do, and only 3 callreturn overrides sit in the
+  10KB span. The C++ flow engine follows plain flow through known
+  entries without converting jumps to calls (no function-boundary
+  query exists in the provider protocol; MAPSYM body ranges were tried
+  and reverted -- ranges decode into symbol uselimit, not flow span).
+  Open: instrument why shared-return conversion fires in stock's
+  pipeline and not through our provider answers.
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list
