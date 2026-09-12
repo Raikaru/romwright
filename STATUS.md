@@ -6218,8 +6218,10 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   unguarded offset composition (0x184aba), unknown bases (0x1ce42a R12),
   object dispatch (0x1dae47), absolute-table extent (0x2366c7), three
   stock-only big switches, two notrack-guarded dispatches (0x121073
-  shows the movzbl/movslq/add/jmp PIC chain, recoverability not yet
-  established; 0x265ffe not yet worked up). Cutover (decompiler out of the
+  shows the movzbl/movslq/add/jmp PIC chain but no in-window load moves
+  (base R15 and index dl both Top from outside), so it is outer-base
+  class with 0x1ce42a, not reload-after-compare like 0x16ed3d;
+  0x265ffe not yet worked up). Cutover (decompiler out of the
   switch round) waits on missed <= 3.
 
 - Switch windows deduplicate (2026-09-11): flow shapes accumulate across
