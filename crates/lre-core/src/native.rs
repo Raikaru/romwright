@@ -30,6 +30,7 @@ mod elf_image;
 mod pe_roots;
 mod pe_unwind;
 mod strings;
+mod iso9660;
 mod sce;
 pub(crate) mod binmap;
 pub mod linkmap;
@@ -1409,6 +1410,9 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
 /// A single-image file yields one entry with an empty suffix, so callers do
 /// not special-case formats.
 pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    if iso9660::is_iso(data) {
+        return iso9660::import(data);
+    }
     if nds::is_cartridge(data) {
         return nds::import(data);
     }
