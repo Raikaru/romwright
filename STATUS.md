@@ -6454,3 +6454,14 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   **PASS, 8055 functions, recall 1.0 over 8054 code-range rows**
   (12719 total; the rest are data/linker-defined names). M-A complete:
   5 text MAP grammars + dtk/splat + .SYM + mdebug + Vita NID/BINMAP.
+
+- m20-006d (2026-09-12): objdiff + decomp.me interop, closing M-B.
+  `export-objdiff` emits objdiff.json units grouped by splits.txt TU
+  (new `SplitExtent.tu`); verified end-to-end — `objdiff-cli report
+  generate` on the emitted config against the real build objects:
+  **41 units, 548 functions, 99.45% matched**. `export-scratch` emits
+  a decomp.me payload (target_asm.s + ctx.c + scratch.json) from a
+  stored function's disassembly; the POST itself is Cloudflare-gated
+  here, so the payload is the deliverable. M-B complete: dtk
+  (import+export+dol-diff), splat (import+export), objdiff
+  (export+report-verified), decomp.me (payload).
