@@ -38,6 +38,7 @@ pub(crate) mod psyq_sym;
 pub(crate) mod containers;
 pub(crate) mod rel;
 pub mod psx_overlays;
+pub mod n64_overlays;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
