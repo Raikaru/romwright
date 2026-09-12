@@ -62,6 +62,76 @@ pub const MGBA_REGISTERS: RegisterMap = RegisterMap {
     ],
 };
 
+/// RPCS3 (PS3): 32 PPU GPRs + PC + the PPC64 specials, all 8 bytes.
+pub const RPCS3_REGISTERS: RegisterMap = RegisterMap {
+    emulator: "rpcs3",
+    registers: &[
+        ("r0", 8), ("r1", 8), ("r2", 8), ("r3", 8), ("r4", 8), ("r5", 8),
+        ("r6", 8), ("r7", 8), ("r8", 8), ("r9", 8), ("r10", 8), ("r11", 8),
+        ("r12", 8), ("r13", 8), ("r14", 8), ("r15", 8), ("r16", 8), ("r17", 8),
+        ("r18", 8), ("r19", 8), ("r20", 8), ("r21", 8), ("r22", 8), ("r23", 8),
+        ("r24", 8), ("r25", 8), ("r26", 8), ("r27", 8), ("r28", 8), ("r29", 8),
+        ("r30", 8), ("r31", 8),
+        ("pc", 8), ("lr", 8), ("ctr", 8), ("cr", 8), ("xer", 8),
+    ],
+};
+
+/// Vita3K (Vita): 16 ARM GPRs + CPSR, all 4 bytes (ARMv7).
+pub const VITA3K_REGISTERS: RegisterMap = RegisterMap {
+    emulator: "vita3k",
+    registers: &[
+        ("r0", 4), ("r1", 4), ("r2", 4), ("r3", 4), ("r4", 4), ("r5", 4),
+        ("r6", 4), ("r7", 4), ("r8", 4), ("r9", 4), ("r10", 4), ("r11", 4),
+        ("r12", 4), ("sp", 4), ("lr", 4), ("pc", 4), ("cpsr", 4),
+    ],
+};
+
+/// Citra (3DS): 16 ARM GPRs + CPSR, all 4 bytes (ARM11).
+pub const CITRA_REGISTERS: RegisterMap = RegisterMap {
+    emulator: "citra",
+    registers: &[
+        ("r0", 4), ("r1", 4), ("r2", 4), ("r3", 4), ("r4", 4), ("r5", 4),
+        ("r6", 4), ("r7", 4), ("r8", 4), ("r9", 4), ("r10", 4), ("r11", 4),
+        ("r12", 4), ("sp", 4), ("lr", 4), ("pc", 4), ("cpsr", 4),
+    ],
+};
+
+/// Xenia (Xbox 360): 32 PPC64 GPRs + PC + specials, all 8 bytes.
+pub const XENIA_REGISTERS: RegisterMap = RegisterMap {
+    emulator: "xenia",
+    registers: &[
+        ("r0", 8), ("r1", 8), ("r2", 8), ("r3", 8), ("r4", 8), ("r5", 8),
+        ("r6", 8), ("r7", 8), ("r8", 8), ("r9", 8), ("r10", 8), ("r11", 8),
+        ("r12", 8), ("r13", 8), ("r14", 8), ("r15", 8), ("r16", 8), ("r17", 8),
+        ("r18", 8), ("r19", 8), ("r20", 8), ("r21", 8), ("r22", 8), ("r23", 8),
+        ("r24", 8), ("r25", 8), ("r26", 8), ("r27", 8), ("r28", 8), ("r29", 8),
+        ("r30", 8), ("r31", 8),
+        ("pc", 8), ("lr", 8), ("ctr", 8), ("cr", 8), ("xer", 8),
+    ],
+};
+
+/// melonDS (DS): 16 ARM GPRs + CPSR, all 4 bytes (ARM9/ARM7).
+pub const MELONDS_REGISTERS: RegisterMap = RegisterMap {
+    emulator: "melonds",
+    registers: &[
+        ("r0", 4), ("r1", 4), ("r2", 4), ("r3", 4), ("r4", 4), ("r5", 4),
+        ("r6", 4), ("r7", 4), ("r8", 4), ("r9", 4), ("r10", 4), ("r11", 4),
+        ("r12", 4), ("sp", 4), ("lr", 4), ("pc", 4), ("cpsr", 4),
+    ],
+};
+
+/// Every adapter this crate ships, for enumeration.
+pub const ALL_ADAPTERS: &[&RegisterMap] = &[
+    &DOLPHIN_REGISTERS,
+    &PCSX2_REGISTERS,
+    &MGBA_REGISTERS,
+    &RPCS3_REGISTERS,
+    &VITA3K_REGISTERS,
+    &CITRA_REGISTERS,
+    &XENIA_REGISTERS,
+    &MELONDS_REGISTERS,
+];
+
 /// A live emulator session: an RSP client plus the register map that
 /// decodes its `g` reply.
 pub struct EmulatorSession {
