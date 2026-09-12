@@ -6231,3 +6231,12 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   is set before the loop and never rewritten inside it, so carry a
   constant when no block on any path between def and dispatch writes
   the slot (checkable from decoded blocks), not when entry is sole.
+
+- Why multi-source collection also missed R12: the loop body reloads it
+  (`MOV R12,[RBP-0x20]` at three sites for one `LEA`), so single-def
+  counting drops the slot even with every predecessor collected. Same
+  value, three definitions -- carrying it needs spill-aware resolution
+  (LOAD[FP-c] through STORE[FP-c] to the LEA value), not wider
+  collection. Unbuilt; the trace-first rule from here on is to watch
+  the per-branch candidate lines on a 30 s traced import before paying
+  for a gate run.
