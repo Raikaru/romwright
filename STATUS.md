@@ -6364,3 +6364,13 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   `_SDA_BASE_` ANALYSIS label on the section-fallback path, r2 second
   register in the fixture, ABS-0 skip (inert on Linux rows: no
   r13-relative code, verified by decompile), PPC64 convention gate.
+
+- m4-003 language parity re-run (2026-09-12, after #325 + m5-013 slices):
+  PASS, 2196 of 2292 functions token-identical across 21 corpus rows,
+  classes byte-identical to baseline (type-stronger 66, oracle-warning
+  23, name-rendering 12, name-convention 11, data-unknown/name 4+4,
+  language-variant 3; missing-data-symbol 0 before and after -- the
+  Linux rows carry no SDA code, so nothing to shrink). ARM cartridge
+  row holds 4/4 identical; NDS UNREACHED row 395/512 identical of 7364
+  shared (floor 394). Baseline stands, no re-record. Note: run needs
+  TMPDIR on /home -- /tmp tmpfs (7.5G) overflows on the JVM rows.
