@@ -6335,3 +6335,32 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   while stock keeps naming it -- then find stock's remaining
   `(r13 - x)` cases and beat those.
 
+- #325 first slice landed (2026-09-12): SDA data symbols from symtab
+  OBJECTs through the store to the worker's r13-relative application.
+  `RunNextModule` (0x80682770) renders `HadError = HadError + iVar2`
+  (was `*(undefined4 *)(unaff_r13 + -0x7f00)`); r13 = `_SDA_BASE_` ABS
+  0x806b1880, HadError OBJECT 0x806a9980, both measured against
+  `PowerPC_ElfRelocationContext.getBaseOffset` (symbol wins, else
+  `.sdata`+`.sbss` min, midpoint past 0x7fff, no width gate on r2).
+  Two raw-SLEIGH traps found live: register names in `<context_set>`
+  fail registration (registers ride `<tracked_set>` only), and one
+  `<tracked_set>` per range (a second element over a range clears the
+  first). Gates: `tests/ppc_sda.sh` (synthetic 495-byte PPC32 fixture,
+  red pre-slice as `unaff_r13 + 8`), 6 seeder unit tests, elf_image
+  7/7, corpus.sh 5/5. Follow-up 98cae1f2: the r13 rows also reached
+  the reference console, whose setVariable rejects real registers --
+  every SDA import silently skipped reference inference (`Non-existent
+  context variable: r13`). `load_mapped` now skips exactly r13/r2 (not
+  registers.txt: ARM `TMode` rows share a register name and must load);
+  the gate asserts a note-free import, MIPS unaffected. Typed split
+  landed next: the seeder writes `register_contexts` ranges (the t9
+  shape), the store funnels one decode point per range for r13/r2, and
+  the console filter is gone -- `imp.contexts` carries variables only.
+  The reference pass now folds r13: base.elf holds constant-prop DATA
+  xrefs to HadError (were 0) and imports 648 functions (were 644), and
+  `HadError` still renders with no `unaff_r13`. m5-013 NDS fails
+  identically pre-slice (worktree control at 2ccbfdad^): pre-existing,
+  not this slice; last green report 09-09. Open follow-ups:
+  `_SDA_BASE_` ANALYSIS label on the section-fallback path, r2 second
+  register in the fixture, ABS-0 skip (inert on Linux rows: no
+  r13-relative code, verified by decompile), PPC64 convention gate.
