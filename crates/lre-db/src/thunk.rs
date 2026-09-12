@@ -160,7 +160,8 @@ mod tests {
                 name: "stub".into(),
                 size: 5,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             }],
         )
         .unwrap();

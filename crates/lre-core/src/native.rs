@@ -346,6 +346,11 @@ pub struct NativeImport {
     pub language: String,
     /// Loader-selected base compiler specification; absent for raw/default images.
     pub compiler: Option<String>,
+    /// Toolchain that produced the image, detected from the image's own
+    /// markers (ELF `.comment`, PE Rich header, DOL mwcc runtime symbols).
+    /// Distinct from `compiler`: that is the SLEIGH spec, this is the
+    /// producing toolchain.
+    pub toolchain: Option<String>,
     /// What an ELF header said about its machine: the primary and secondary
     /// keys the install's opinion data is queried with.
     pub elf_machine: Option<crate::opinion::ElfMachine>,
@@ -673,6 +678,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         register_contexts,
         ..Default::default()
     };
+    import.toolchain = detect_toolchain(data, &sections, &import);
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
@@ -754,6 +760,42 @@ fn parse_elf_sections(data: &[u8]) -> Result<(Vec<ElfSection>, Vec<u8>)> {
             .unwrap_or_default();
     }
     Ok((sections, shstr))
+}
+
+/// Detect the producing toolchain from the image's own markers.
+/// ELF: the `.comment` section's `GCC: (GNU) x.y.z` / `clang version`
+/// strings. PE: the linker major.minor in the optional header (MSVC
+/// linkers stamp it; 14.x = MSVC 2015+). DOL: the mwcc runtime symbols
+/// (`__init_registers`, `__start`, `__ppc_eabi_init`) every CodeWarrior
+/// GC/Wii binary carries.
+fn detect_toolchain(
+    data: &[u8],
+    sections: &[ElfSection],
+    imp: &NativeImport,
+) -> Option<String> {
+    // ELF .comment.
+    for section in sections {
+        if section.name == ".comment" && section.size > 0 {
+            let off = section.off as usize;
+            let end = (off + section.size as usize).min(data.len());
+            let text = String::from_utf8_lossy(&data[off..end]);
+            for chunk in text.split('\0') {
+                let chunk = chunk.trim();
+                if let Some(version) = chunk.strip_prefix("GCC: (GNU) ") {
+                    return Some(format!("gcc {}", version.trim()));
+                }
+                if let Some(version) = chunk.strip_prefix("GCC: ") {
+                    return Some(format!("gcc {}", version.trim()));
+                }
+                if let Some(version) = chunk.strip_prefix("clang version ") {
+                    return Some(format!("clang {}", version.trim()));
+                }
+            }
+        }
+    }
+    // DOL detection lives in store_import: the mwcc runtime symbols it
+    // keys on arrive via --map, which applies after dol::import returns.
+    None
 }
 
 /// Ghidra's rule, verbatim: `e_entry` of an executable (`ET_EXEC`) or shared
@@ -982,6 +1024,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
+    import.toolchain = detect_toolchain(data, &sections, &import);
     elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
     elf_pointers::collect(data, &sections, &mut import, 8, false, bias)?;
@@ -3532,6 +3575,23 @@ pub fn store_import(
         }
     }
     let pid = db.upsert_program(program, &imp.language, &native_provenance())?;
+    if let Some(toolchain) = &imp.toolchain {
+        db.set_program_compiler(pid, toolchain)?;
+    }
+    // DOL toolchain: the mwcc runtime symbols are the fingerprint, and
+    // they arrive via --map after dol::import returns — so detection
+    // runs here, not in the loader.
+    if imp.toolchain.is_none() && imp.format.eq_ignore_ascii_case("dol") {
+        let mwcc = imp.functions.iter().any(|f| {
+            matches!(
+                f.name.as_str(),
+                "__init_registers" | "__start" | "__ppc_eabi_init"
+            )
+        });
+        if mwcc {
+            db.set_program_compiler(pid, "mwcc")?;
+        }
+    }
     let mut regions = imp
         .mappings
         .iter()
@@ -3631,6 +3691,7 @@ pub fn store_import(
             name: f.name.clone(),
             size: f.size.max(1),
             signature: None,
+            traced: false,
             calling_convention: None,
         })
         .collect();
@@ -4103,6 +4164,7 @@ pub fn store_import(
         program: program.to_string(),
         functions: functions.len() as u64,
         language: imp.language.clone(),
+        compiler: imp.toolchain.clone().unwrap_or_default(),
         phases: imp.phases.clone(),
         flow: imp.flow,
         patterns: imp.patterns_seen.clone(),

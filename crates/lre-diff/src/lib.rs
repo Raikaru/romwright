@@ -1386,21 +1386,24 @@ mod tests {
                     name: format!("FUN_{entry:08x}"),
                     size: sizes[0],
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 },
                 FunctionRow {
                     entry: Address::ram(helper),
                     name: format!("FUN_{helper:08x}"),
                     size: sizes[1],
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 },
                 FunctionRow {
                     entry: Address::ram(thunk),
                     name: format!("FUN_{thunk:08x}"),
                     size: sizes[2],
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 },
             ],
         )
@@ -1540,7 +1543,8 @@ mod tests {
                     name: "FUN_00900000".into(),
                     size: 0x4000,
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 }],
             )
             .unwrap();

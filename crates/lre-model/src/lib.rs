@@ -145,6 +145,12 @@ pub struct FunctionRow {
     /// Recovered prototype string, when analysis produced one.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub signature: Option<String>,
+    /// Whether an emulator trace covered this function: set by
+    /// `import-trace` when a trace event lands inside the body. A
+    /// reader's projection of the `traced` column, like
+    /// `calling_convention`: writing a function row never sets it.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub traced: bool,
     /// The convention fact held for this function, when there is one. A
     /// reader's projection of `CallingConventionRow`: the fact table owns the
     /// value and its provenance, so writing a function row never sets it.
@@ -212,6 +218,11 @@ impl serde::Serialize for FactProvenance {
 pub struct ProgramRow {
     pub program: String,
     pub language: String,
+    /// Toolchain that produced the image (`mwcc_233_163`, `gcc`, `msvc`,
+    /// ...): recorded at import from the image's own markers, empty when
+    /// nothing in the image names one.
+    #[serde(default)]
+    pub compiler: String,
     /// Functions the store holds for it.
     pub functions: u64,
     /// Store revision, which moves when a fact changes.
@@ -229,6 +240,66 @@ pub struct LocationRow {
     /// The function whose body holds the address, or `None` when none does.
     #[serde(default)]
     pub function: Option<String>,
+    /// The overlay module owning the address, when the program declares
+    /// modules (REL sections, PSX overlays). `None` for single-module
+    /// programs and for addresses no module covers.
+    #[serde(default)]
+    pub module: Option<String>,
+}
+
+/// One overlay module a program holds: a REL image, a PSX overlay, one CPU
+/// of a multi-image container. A module is a load extent with a name, so
+/// `locate` can say *which* overlay an address belongs to.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ModuleRow {
+    /// Store-assigned id; 0 on the way in means "assign one".
+    pub module_id: i64,
+    /// Program that owns this module.
+    pub program: String,
+    /// Module name (REL name table, overlay file stem, ...).
+    pub name: String,
+    /// Module kind: `rel`, `overlay`, ...
+    #[serde(default)]
+    pub kind: String,
+    /// File the module came from, when it has one.
+    #[serde(default)]
+    pub file_id: String,
+    /// Where the module loads.
+    pub load_vaddr: Address,
+    /// Loaded size in bytes.
+    pub size: u64,
+    /// File offset of the module's first byte.
+    #[serde(default)]
+    pub file_off: u64,
+    /// False for a module described but not resident (declared windows).
+    #[serde(default = "resident_default")]
+    pub resident: bool,
+}
+
+fn resident_default() -> bool {
+    true
+}
+
+/// One reference from an address in one module to an address in another:
+/// a REL relocation against the DOL, a call from a main image into an
+/// overlay. `to_module_id` is `None` for a target outside the store
+/// (the DOL a REL links against), named by `to_external` instead.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct ModuleXrefRow {
+    pub module_id: i64,
+    /// Source address (typed).
+    pub from_addr: Address,
+    /// Owning module of the target, when the store holds it.
+    pub to_module_id: Option<i64>,
+    /// Destination address (typed).
+    pub to_addr: Address,
+    /// External target name (`module0` for the DOL), when the store does
+    /// not hold the target module.
+    #[serde(default)]
+    pub to_external: String,
+    /// Reference kind (`rel-import`, `call`, ...).
+    #[serde(default)]
+    pub kind: String,
 }
 
 /// One symbol row.
@@ -533,6 +604,10 @@ pub struct ProgramSummary {
     pub functions: u64,
     /// Ghidra language ID, e.g. `x86:LE:64:default`.
     pub language: String,
+    /// Toolchain that produced the image, as recorded in the store.
+    /// Empty when nothing in the image named one.
+    #[serde(default)]
+    pub compiler: String,
     /// Measured phase wall times; empty for paths that do not measure.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub phases: Vec<PhaseTiming>,
@@ -1042,4 +1117,8 @@ mod tests {
 
 fn is_zero(value: &u64) -> bool {
     *value == 0
+}
+
+fn is_false(value: &bool) -> bool {
+    !*value
 }

@@ -873,6 +873,57 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 count
             );
         }
+        // `import-trace <program> <trace.csv>`: ingest an emulator trace
+        // — one `addr,kind[,thread]` row per event, kind in
+        // exec|call|read|write|bp — into trace_events, then mark every
+        // function whose entry an exec/call/bp event names as traced.
+        "import-trace" => {
+            let program = args.get(2).ok_or("import-trace needs a program")?;
+            let path = args.get(3).ok_or("import-trace needs a trace file")?;
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| format!("{path}: {e}"))?;
+            let db = core.store_handle().map_err(|e| e.to_string())?;
+            let id = db.program_id(program).map_err(|e| e.to_string())?;
+            let mut events = 0u64;
+            let mut hit_entries: Vec<String> = Vec::new();
+            for raw in text.lines() {
+                let line = raw.trim();
+                if line.is_empty() || line.starts_with('#') {
+                    continue;
+                }
+                let mut fields = line.split(',');
+                let Some(addr_field) = fields.next() else { continue };
+                let Some(kind) = fields.next() else { continue };
+                let thread = fields.next().unwrap_or("").trim();
+                let address = u64::from_str_radix(
+                    addr_field.trim().trim_start_matches("0x"),
+                    16,
+                );
+                let Ok(address) = address else { continue };
+                let kind = kind.trim();
+                let event = lre_model::TraceEvent {
+                    sequence: 0,
+                    at: String::new(),
+                    thread: thread.to_string(),
+                    address: Some(lre_model::Address::ram(address)),
+                    kind: kind.to_string(),
+                    payload: String::new(),
+                    provenance: "import-trace".into(),
+                };
+                db.append_trace_event(id, &event).map_err(|e| e.to_string())?;
+                events += 1;
+                if matches!(kind, "exec" | "call" | "bp") {
+                    hit_entries.push(format!("{address:08x}"));
+                }
+            }
+            let marked = db
+                .mark_traced(id, &hit_entries)
+                .map_err(|e| e.to_string())?;
+            println!(
+                "imported {events} trace events, {} functions traced",
+                marked.len()
+            );
+        }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
             let vaddr = u64::from_str_radix(

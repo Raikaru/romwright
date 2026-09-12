@@ -230,7 +230,8 @@ mod tests {
                 name: "analyst_name".into(),
                 size: 9,
                 signature: Some("int analyst_name(void)".into()),
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             }],
         )
         .unwrap();
