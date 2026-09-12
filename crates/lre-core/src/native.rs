@@ -34,6 +34,7 @@ mod iso9660;
 mod sce;
 pub(crate) mod binmap;
 pub mod linkmap;
+pub(crate) mod psyq_sym;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
