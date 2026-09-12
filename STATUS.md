@@ -6046,23 +6046,18 @@ point at, none reserved:
   unreferenced `add` leaf too). Next probe for the fix: what stops our
   walk at 0x205c0 -- gp-relative `jalr $t9` following is the suspect,
   not seeds and not tables (many.c has no switch).
-- Head-to-head goto delta (173 vs 14) is worker flow-boundary handling,
-  not structuring, extents, recovery, or switch tables: stored sizes
-  agree both sides (0x1a3a40: 304 vs 283), stock holds the same 6
-  in-range entries we do, and only 3 callreturn overrides sit in the
-  10KB span. The C++ flow engine follows plain flow through known
-  entries without converting jumps to calls (no function-boundary
-  query exists in the provider protocol; MAPSYM body ranges were tried
-  and reverted -- ranges decode into symbol uselimit, not flow span).
-  Open: instrument why shared-return conversion fires in stock's
-  pipeline and not through our provider answers. Determined since:
-  shells already preload every entry+size, ranges were tried and
-  reverted (uselimit, not flow span), VSA handed nothing bogus (3
-  overrides in range), recovery is at parity (same 6 entries), and
-  inlining is out (the inlined callee is 9584 bytes). What remains is
-  C++-internal: which edge (jump vs fallthrough vs call-then-inline)
-  enters 0x1a4270, and why no call boundary forms there. Zero calls
-  to any of the 6 callees appear in our output; stock calls them.
+ - Head-to-head goto delta, root-caused: the pilot imports the
+  *stripped* copy, whose symtab is gone -- and the 64-bit loop harvests
+  function names from SHT_SYMTAB only, never from SHT_DYNSYM, so all
+  ~2000 defined dynamic FUNCs arrive unnamed (16 named of 4090; the
+  unstripped twin keeps 3905). Without names, noreturn misses
+  (`__stack_chk_fail` is FUN_-named), flow falls through the call
+  into 10KB of neighbors (54KB of C, 106 gotos), and the worker
+  faithfully renders the soup. Fixed by harvesting defined dynsym
+  FUNCs; on a current store the same decompile emits 1059 bytes.
+  (Prior investigation on the degraded store stays valid as a protocol
+  fact: MAPSYM body ranges were tried and reverted -- ranges decode
+  into symbol uselimit, not flow span.)
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list

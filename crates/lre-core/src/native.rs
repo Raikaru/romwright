@@ -850,10 +850,20 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             if info & 0xf == 1 && shndx != 0 && value != 0 && size > 0 {
                 object_sizes.push((value, size));
             }
+            // A defined dynamic function names what the stripped symtab no
+            // longer can. Symtab spellings keep priority on ties (that loop
+            // ran first), so this only fills addresses symtab never named.
+            if info & 0xf == 2 && shndx != 0 && value != 0 && !name.is_empty() {
+                symbol_functions.entry(value).or_insert((
+                    symbol_rank(info, &name),
+                    name.clone(),
+                    size.max(1),
+                ));
+            }
             if !name.is_empty() && shndx == 0 {
                 externals.push((0, name));
-            }
         }
+    }
     }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
@@ -4237,6 +4247,61 @@ mod tests {
         assert!(import_elf(b"\x7fELF").is_err());
         assert!(import_elf(b"\x7fELF\x02\x01").is_err());
         assert!(import_elf(b"\x7fELF\x02\x01\x00\x00").is_err());
+    }
+
+    #[test]
+    fn stripped_elf_names_defined_dynsym_functions() {
+        // A stripped binary has no symtab; its defined dynamic functions
+        // (the names a strip leaves behind) must still surface -- an
+        // undefined import must stay an external, never a function.
+        let mut b = vec![0u8; 0x340];
+        b[..10].copy_from_slice(b"\x7fELF\x02\x01\x01\x00\x00\x00");
+        for (off, v) in [(16, 2_u16), (18, 0x3e), (54, 56), (58, 64), (60, 5), (62, 3)] {
+            b[off..off + 2].copy_from_slice(&v.to_le_bytes());
+        }
+        b[40..48].copy_from_slice(&0x200u64.to_le_bytes()); // e_shoff
+        let dynsym = 0x200 + 64;
+        b[dynsym + 4..dynsym + 8].copy_from_slice(&11u32.to_le_bytes());
+        b[dynsym + 24..dynsym + 32].copy_from_slice(&0x100u64.to_le_bytes());
+        b[dynsym + 32..dynsym + 40].copy_from_slice(&72u64.to_le_bytes());
+        b[dynsym + 40..dynsym + 44].copy_from_slice(&2u32.to_le_bytes());
+        // [1] defined FUNC "dynfunc" @ 0x401000; [2] undefined "puts".
+        let e1 = 0x100 + 24;
+        b[e1..e1 + 4].copy_from_slice(&6u32.to_le_bytes());
+        b[e1 + 4] = 0x12;
+        b[e1 + 6..e1 + 8].copy_from_slice(&1u16.to_le_bytes());
+        b[e1 + 8..e1 + 16].copy_from_slice(&0x401000u64.to_le_bytes());
+        b[e1 + 16..e1 + 24].copy_from_slice(&32u64.to_le_bytes());
+        let e2 = 0x100 + 48;
+        b[e2..e2 + 4].copy_from_slice(&1u32.to_le_bytes());
+        b[e2 + 4] = 0x12; // shndx stays 0: undefined
+        // Section 2: STRTAB. Section 4: ALLOC+EXEC .text mapping.
+        b[0x140..0x150].copy_from_slice(b"\0puts\0dynfunc\0\0\0");
+        let strtab = 0x200 + 128;
+        b[strtab + 4..strtab + 8].copy_from_slice(&3u32.to_le_bytes());
+        b[strtab + 24..strtab + 32].copy_from_slice(&0x140u64.to_le_bytes());
+        b[strtab + 32..strtab + 40].copy_from_slice(&16u64.to_le_bytes());
+        let shstr = 0x200 + 192;
+        b[shstr + 4..shstr + 8].copy_from_slice(&3u32.to_le_bytes());
+        b[shstr + 24..shstr + 32].copy_from_slice(&0x150u64.to_le_bytes());
+        b[shstr + 32..shstr + 40].copy_from_slice(&15u64.to_le_bytes());
+        b[dynsym..dynsym + 4].copy_from_slice(&1u32.to_le_bytes());
+        b[0x150..0x15f].copy_from_slice(b"\0.dynsym\0.text\0");
+        let text = 0x200 + 256;
+        b[text..text + 4].copy_from_slice(&9u32.to_le_bytes());
+        b[text + 4..text + 8].copy_from_slice(&1u32.to_le_bytes());
+        b[text + 8..text + 16].copy_from_slice(&6u64.to_le_bytes());
+        b[text + 16..text + 24].copy_from_slice(&0x401000u64.to_le_bytes());
+        b[text + 24..text + 32].copy_from_slice(&0x180u64.to_le_bytes());
+        b[text + 32..text + 40].copy_from_slice(&16u64.to_le_bytes());
+        b[0x180..0x190].fill(0x90);
+        let imp = import_elf(&b).unwrap();
+        let named: Vec<_> = imp.functions.iter().filter(|f| f.entry == 0x401000).collect();
+        assert_eq!(named.len(), 1, "defined dynsym address must survive: {named:?}");
+        assert_eq!(named[0].name, "dynfunc");
+        assert!(imp.externals.iter().any(|e| e.1 == "puts"), "undefined import stays external");
+        assert!(!imp.externals.iter().any(|e| e.1 == "dynfunc"));
+        assert!(!imp.functions.iter().any(|f| f.name == "puts"));
     }
 
     #[test]
