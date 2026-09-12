@@ -8,6 +8,7 @@ use lre_model::ClassRow;
 
 mod itanium;
 mod msvc;
+mod mwcc;
 
 /// Counts from one recovery pass. `anchors` counts the ABI structures that
 /// start each chain: bound `__cxxabiv1` type_info vtables for Itanium, proven
@@ -190,6 +191,28 @@ pub fn recover(import: &NativeImport) -> Recovery {
         };
     }
     let (classes, report) = itanium::recover(import, &image);
+    // MWCC (CodeWarrior) emits no __cxxabiv1 type_info chain: an ELF image
+    // whose Itanium pass anchored nothing but that carries __ct__/__dt__
+    // members is an MWCC image, and its classes come from the RTTI-less
+    // membership pass instead.
+    if report.anchors == 0 {
+        let symbols: std::collections::BTreeMap<u64, String> = import
+            .functions
+            .iter()
+            .map(|f| (f.entry, f.name.clone()))
+            .collect();
+        let has_mwcc_members = symbols
+            .values()
+            .any(|n| n.contains("__ct__") || n.contains("__dt__"));
+        if has_mwcc_members {
+            let (classes, report) = mwcc::recover(import, &image, &symbols, &[], &[]);
+            return Recovery {
+                source: mwcc::SOURCE,
+                classes,
+                report,
+            };
+        }
+    }
     Recovery {
         source: itanium::SOURCE,
         classes,
