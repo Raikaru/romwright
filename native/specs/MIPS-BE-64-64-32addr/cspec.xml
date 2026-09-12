@@ -45,11 +45,14 @@
         <pentry minsize="1" maxsize="8" metatype="float">
           <register name="f12"/>
         </pentry>
-<!--
-        <pentry minsize="4" maxsize="8" metatype="float">
+        <!-- IDO o32 float-arg hole rule (P2.4): two 32-bit floats take
+             f12 and f14 (f13 is the hole); a 32-bit then a 64-bit take
+             f12 and the f13:f14 pair; two 64-bits take f12 and f13:f14.
+             f13 is enabled with minsize=5 so it only claims a 64-bit
+             second argument — a 4-byte float falls through to f14. -->
+        <pentry minsize="5" maxsize="8" metatype="float">
           <register name="f13"/>
         </pentry>
--->
         <pentry minsize="1" maxsize="8" metatype="float">
           <register name="f14"/>
         </pentry>

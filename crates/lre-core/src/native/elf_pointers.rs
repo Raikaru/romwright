@@ -14,9 +14,13 @@ pub(super) fn collect(
         .filter(|x| x.provenance == "native-import:elf-reloc")
         .map(|x| (x.from, x.to)).collect();
     for section in sections {
+        // IDO emits switch jump tables into .late_rodata (P2.4): a
+        // read-only section that is not .rodata by name, so it must be
+        // selected explicitly or a table's code pointers are never scanned.
         let selected = matches!(section.typ, 14 | 15)
             || section.name == ".data" || section.name.starts_with(".data.")
-            || section.name == ".rodata" || section.name.starts_with(".rodata.");
+            || section.name == ".rodata" || section.name.starts_with(".rodata.")
+            || section.name == ".late_rodata" || section.name.starts_with(".late_rodata.");
         if !selected || section.flags & 2 == 0 || section.flags & 4 != 0 || section.typ == 8 {
             continue;
         }
