@@ -6046,7 +6046,7 @@ point at, none reserved:
   unreferenced `add` leaf too). Next probe for the fix: what stops our
   walk at 0x205c0 -- gp-relative `jalr $t9` following is the suspect,
   not seeds and not tables (many.c has no switch).
- - Head-to-head goto delta, root-caused: the pilot imports the
+- Head-to-head goto delta, root-caused: the pilot imports the
   *stripped* copy, whose symtab is gone -- and the 64-bit loop harvests
   function names from SHT_SYMTAB only, never from SHT_DYNSYM, so all
   ~2000 defined dynamic FUNCs arrive unnamed (16 named of 4090; the
@@ -6057,7 +6057,10 @@ point at, none reserved:
   FUNCs; on a current store the same decompile emits 1059 bytes.
   (Prior investigation on the degraded store stays valid as a protocol
   fact: MAPSYM body ranges were tried and reverted -- ranges decode
-  into symbol uselimit, not flow span.)
+  into symbol uselimit, not flow span. Ruled out along the way, kept so
+  the dead ends stay dead: VSA handed nothing bogus (3 callreturn
+  overrides in range), recovery at parity (same 6 in-range entries),
+  inlining out (the inlined callee is 9584 bytes).)
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list
@@ -6169,3 +6172,13 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   regression on any recorded metric; but the bar's intent (prove context
   helps) needs a name-scarce construction again, which is the m18 owner's
   call -- left red deliberately, not re-barred unilaterally.
+
+- Residue (2026-09-11): the const-data retraction only fires where a sized
+  access was recorded, so on the N64 image 8008fa74/8008fdf0/8005ce74
+  retract but 8008fa80 (size 13), 8008faa8 (24) and 8008fac0 (size 1) --
+  all producer='const', same data window, all absent from the oracle --
+  survive. 8008fac0 never decoded a body (size 1: no flow confirmation,
+  which the seeding rule claims to require). No gate is red because of
+  them (token row green, recall intact); closing the class wants a second
+  retraction condition on undecodable const seeds, recorded here as a
+  deficit, not implemented.
