@@ -1150,7 +1150,21 @@ impl ConsoleSession {
         let image = MappedImage::new(import)?;
         self.load_xml(&image)?;
         // The image's own mode declarations, before anything decodes.
-        self.set_contexts(&import.contexts)
+        // Register values ride decode contexts to the store/worker
+        // channel, but the console only knows context variables:
+        // setVariable throws for a real register (`Non-existent context
+        // variable: r13`) and aborts the load. Skip exactly the SDA
+        // names the importer seeds -- not "is in registers.txt":
+        // ARM's `TMode` mode rows share a name with an ARM register
+        // and must still reach the console. The worker serves the
+        // skipped names as tracked sets.
+        let variables: Vec<crate::native::NativeContext> = import
+            .contexts
+            .iter()
+            .filter(|context| context.name != "r13" && context.name != "r2")
+            .cloned()
+            .collect();
+        self.set_contexts(&variables)
     }
 
     fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
