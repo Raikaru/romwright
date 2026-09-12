@@ -4142,6 +4142,7 @@ mod tests {
             function: lre_model::Address::ram(address),
             signature: format!("int {source}(void)"),
             return_type: Some("int".into()),
+            calling_convention: None,
             provenance: FactProvenance { kind, source: source.into(), confidence: None },
         };
         let asserted = row(0x1000, FactKind::Asserted, "analyst");
@@ -4172,6 +4173,7 @@ mod tests {
             function: lre_model::Address::ram(address),
             signature: signature.into(),
             return_type: Some("int".into()),
+            calling_convention: None,
             provenance: FactProvenance {
                 kind: FactKind::Inferred, source: "native recovery".into(), confidence: None,
             },
