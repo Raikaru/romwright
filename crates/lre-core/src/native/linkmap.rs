@@ -549,10 +549,17 @@ fn parse_flat(text: &str) -> LinkerMap {
         let (Some(addr), Some(name)) = (words.next(), words.next()) else {
             continue;
         };
-        if !is_hex_word(addr) || addr.len() != 8 || name.starts_with('$') {
+        // Bare `ADDR NAME` (8-hex) and splat's `0xADDR NAME;` both land
+        // here; the `0x` prefix and trailing `;` are decoration.
+        let hex = addr.strip_prefix("0x").unwrap_or(addr);
+        if !is_hex_word(hex) || hex.len() != 8 || name.starts_with('$') {
             continue;
         }
-        let address = u64::from_str_radix(addr, 16).unwrap_or(0);
+        let address = u64::from_str_radix(hex, 16).unwrap_or(0);
+        let name = name.trim_end_matches(';');
+        if name.is_empty() {
+            continue;
+        }
         map.symbols.push(MapSymbol {
             address,
             size: 0,
@@ -566,7 +573,6 @@ fn parse_flat(text: &str) -> LinkerMap {
     }
     map
 }
-
 // -------------------------------------------------------------- dtk/splat
 
 /// dtk `symbols.txt` / splat `symbol_addrs.txt`: the decomp project's own
