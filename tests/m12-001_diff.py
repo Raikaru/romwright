@@ -62,15 +62,17 @@ THRESHOLDS = {
     "modules.name_precision": 0.90,
 }
 
-# Indexed mode (m12-002): the histogram term joins content scoring, so the
-# propagated class is measured where content decides. Floors ratcheted
-# from the first indexed run; the module-pair bar (0.93) applies when
-# those rows are present.
+# Indexed mode: run index-semantics before diffing so the semantic
+# term participates, and floor the propagated (alignment) class on
+# optimisation rows. An instruction-class histogram was tried here and
+# reverted -- ablation proved it moves nothing the semantic term does
+# not already move (see STATUS m12-002 entry). The module-pair bar
+# (0.93) applies when those rows are present; their inputs are absent
+# from this machine.
 # Propagated precision only: recall over truth measures how often the
 # alignment class fires (0.02 here -- most pairs resolve through anchors
 # or semantic evidence), not how right it is when it fires. Precision is
-# the claim, and like anchors it must be sound: measured 9/9 twice
-# (with and without the histogram experiment below).
+# the claim, and like anchors it must be sound: measured 9/9.
 INDEX_THRESHOLDS = {
     "precision": 1.0,
 }
@@ -376,7 +378,7 @@ def main() -> int:
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--index", action="store_true",
-                        help="index semantics+histograms before diffing (m12-002 mode)")
+                        help="index semantics before diffing; records propagated class")
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     subprocess.run(
@@ -457,12 +459,10 @@ def main() -> int:
             failures.append(f"{key} {value} < {threshold}")
 
     report = {
-        "id": "m12-002" if arguments.index else "m12-001",
+        "id": "m12-001",
         "milestone": "M12",
-        "criterion": ("indexed structural diff with histogram content scoring, "
-                      "propagated class floored"
-                      if arguments.index else
-                      "whole-program structural diff, scored against symbol truth"),
+        "indexed": arguments.index,
+        "criterion": "whole-program structural diff, scored against symbol truth",
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "thresholds": THRESHOLDS,
         "measured": measured,
@@ -486,8 +486,7 @@ def main() -> int:
         f"; anchors {measured['anchor']['precision']}"
         f" over {measured['anchor']['judged']}"
     )
-    gate_id = "m12-002" if arguments.index else "m12-001"
-    print(f"{gate_id}: PASS ({summary})")
+    print(f"m12-001: PASS ({summary})")
     return 0
 
 
