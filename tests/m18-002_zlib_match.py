@@ -34,9 +34,9 @@ Thresholds, set from what was measured (see
   correct match the semantic-off run missed (`compressBound`). Since
   the stripped import recovers real names, both settings resolve the
   whole judged set (157/157) and the margin is vacuous -- not broken,
-  just unmeasurable. The demonstration lives in the b47e9656 report;
-  the old gain pair still matches in both settings every run (checked
-  in the verdict, reported, never failed on).
+  just unmeasurable. The demonstration lives in the b47e9656 report.
+  The old gain pair is watched, not gated: `retired_gain` records
+  whether it still matches in each setting, and never fails.
 
 The zlib source downloads pinned (URL and sha256 below) into the work
 directory and builds with the local C compiler; the report records the
@@ -244,6 +244,9 @@ def main() -> int:
         gained = sorted(correct_with - correct_without)
         with_row["gained_refs"] = gained
         without_row["lost_refs"] = lost
+        retired = "0010101d"
+        with_row["retired_gain"] = retired in correct_with
+        without_row["retired_gain"] = retired in correct_without
         if lost:
             failures.append(f"semantic run lost correct matches {lost}")
         # Gain retired: with names recovered both settings resolve the

@@ -1904,11 +1904,16 @@ fn switch_window(
         }
     }
     predecessors.sort_unstable();
-    let window: Vec<u64> = shapes
+    // Shapes accumulate across discovery rounds, so one address can
+    // appear twice; the console and the emulator would both work it twice.
+    // Straight-line blocks stay straight-line deduplicated.
+    let mut window: Vec<u64> = shapes
         .iter()
         .filter(|shape| shape.address >= dispatch && shape.address <= branch)
         .map(|shape| shape.address)
         .collect();
+    window.sort_unstable();
+    window.dedup();
     // Each predecessor block on its own: a guard is read by running the
     // block that states it, and one block's call must not clear the index
     // another block compares.
@@ -1919,11 +1924,13 @@ fn switch_window(
             .next()
             .copied()
             .unwrap_or(end);
-        let addresses: Vec<u64> = shapes
+        let mut addresses: Vec<u64> = shapes
             .iter()
             .filter(|shape| shape.address >= block && shape.address < block_end)
             .map(|shape| shape.address)
             .collect();
+        addresses.sort_unstable();
+        addresses.dedup();
         if !addresses.is_empty() {
             guard.push(addresses);
         }

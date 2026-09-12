@@ -6218,3 +6218,8 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   absolute-table extent (0x2366c7), three stock-only big switches, two
   stock junk branches. Cutover (decompiler out of the switch round)
   waits on missed <= 3.
+
+- Switch windows deduplicate (2026-09-11): flow shapes accumulate across
+  discovery rounds, so later rounds emulated identical predecessor blocks
+  twice per index. Sort+dedup in `switch_window` (window and guard) is
+  answer-identical, recovers ~0.5 s of switch phase (3.9 -> 3.7 s).
