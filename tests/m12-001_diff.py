@@ -62,6 +62,19 @@ THRESHOLDS = {
     "modules.name_precision": 0.90,
 }
 
+# Indexed mode (m12-002): the histogram term joins content scoring, so the
+# propagated class is measured where content decides. Floors ratcheted
+# from the first indexed run; the module-pair bar (0.93) applies when
+# those rows are present.
+# Propagated precision only: recall over truth measures how often the
+# alignment class fires (0.02 here -- most pairs resolve through anchors
+# or semantic evidence), not how right it is when it fires. Precision is
+# the claim, and like anchors it must be sound: measured 9/9 twice
+# (with and without the histogram experiment below).
+INDEX_THRESHOLDS = {
+    "precision": 1.0,
+}
+
 # Evidence classes that identify a function outright rather than scoring it.
 ANCHOR_EVIDENCE = {"body", "shape", "import", "name", "string", "profile", "global"}
 
@@ -83,6 +96,16 @@ GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_")
 def is_generated(name: str) -> bool:
     bare = name.removeprefix("thunk_")
     return any(bare.startswith(prefix) for prefix in GENERATED)
+
+
+def index_program(binary: Path, project: Path, name: str) -> None:
+    result = subprocess.run(
+        [str(CLI), "index-semantics", str(binary), name, "--project", str(project)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        raise ValueError(f"index {binary.name} failed: {result.stderr[-800:]}")
 
 
 def import_program(binary: Path, project: Path, name: str) -> None:
@@ -212,7 +235,7 @@ def name_truth(
     return truth
 
 
-def corpus_rows(corpus: Path, work: Path) -> tuple[list[dict], list[dict]]:
+def corpus_rows(corpus: Path, work: Path, index: bool = False) -> tuple[list[dict], list[dict]]:
     manifest = json.loads((corpus / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"] if entry.get("status") == "ok"]
     imported: dict[str, tuple[Path, dict[int, str], Path, dict[int, str]]] = {}
@@ -223,6 +246,9 @@ def corpus_rows(corpus: Path, work: Path) -> tuple[list[dict], list[dict]]:
         target_project = work / f"{identifier}-stripped"
         import_program(corpus / entry["unstripped_twin"], reference_project, "reference")
         import_program(corpus / entry["binary"], target_project, "target")
+        if index:
+            index_program(corpus / entry["unstripped_twin"], reference_project, "reference")
+            index_program(corpus / entry["binary"], target_project, "target")
         reference_names = function_names(reference_project, "reference")
         target_recovered = function_names(target_project, "target")
         imported[identifier] = (
@@ -279,7 +305,7 @@ def corpus_rows(corpus: Path, work: Path) -> tuple[list[dict], list[dict]]:
     return twins, optimisation
 
 
-def module_rows(paths: list[Path], work: Path) -> list[dict]:
+def module_rows(paths: list[Path], work: Path, index: bool = False) -> list[dict]:
     loaded = {}
     for path in paths:
         stripped = work / f"{path.stem}.stripped"
@@ -295,6 +321,9 @@ def module_rows(paths: list[Path], work: Path) -> list[dict]:
         stripped_project = work / f"{path.stem}-stripped"
         import_program(path, named_project, path.stem)
         import_program(stripped, stripped_project, path.stem)
+        if index:
+            index_program(path, named_project, path.stem)
+            index_program(stripped, stripped_project, path.stem)
         loaded[path.stem] = (
             named_project,
             function_names(named_project, path.stem),
@@ -346,15 +375,19 @@ def main() -> int:
     parser.add_argument("--modules", type=Path, nargs="*", default=[])
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--index", action="store_true",
+                        help="index semantics+histograms before diffing (m12-002 mode)")
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     subprocess.run(
         ["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True
     )
 
-    twins, optimisation = corpus_rows(arguments.corpus_dir, arguments.work)
+    twins, optimisation = corpus_rows(arguments.corpus_dir, arguments.work,
+                                          index=arguments.index)
     present = [path for path in arguments.modules if path.is_file()]
-    modules = module_rows(present, arguments.work) if present else []
+    modules = module_rows(present, arguments.work,
+                          index=arguments.index) if present else []
     rows = twins + optimisation + modules
 
     measured = {}
@@ -388,8 +421,25 @@ def main() -> int:
         }
         for name, counts in sorted(classes.items())
     }
+    if arguments.index:
+        propagated = {"judged": 0, "correct": 0, "truth": 0}
+        for row in optimisation + modules:
+            bucket = row["evidence"].get("alignment", {"judged": 0, "correct": 0})
+            propagated["judged"] += bucket["judged"]
+            propagated["correct"] += bucket["correct"]
+            propagated["truth"] += row["truth"]
+        propagated["precision"] = round(
+            propagated["correct"] / max(propagated["judged"], 1), 4)
+        propagated["recall"] = round(
+            propagated["correct"] / max(propagated["truth"], 1), 4)
+        measured["propagated"] = propagated
 
     failures = []
+    if arguments.index and "propagated" in measured:
+        for key, threshold in INDEX_THRESHOLDS.items():
+            value = measured["propagated"][key]
+            if value < threshold:
+                failures.append(f"indexed propagated {key} {value} < {threshold}")
     for row in twins:
         if row.get("stale_exemptions"):
             failures.append(
@@ -407,9 +457,12 @@ def main() -> int:
             failures.append(f"{key} {value} < {threshold}")
 
     report = {
-        "id": "m12-001",
+        "id": "m12-002" if arguments.index else "m12-001",
         "milestone": "M12",
-        "criterion": "whole-program structural diff, scored against symbol truth",
+        "criterion": ("indexed structural diff with histogram content scoring, "
+                      "propagated class floored"
+                      if arguments.index else
+                      "whole-program structural diff, scored against symbol truth"),
         "recorded_at": datetime.now(timezone.utc).isoformat(),
         "thresholds": THRESHOLDS,
         "measured": measured,
@@ -433,7 +486,8 @@ def main() -> int:
         f"; anchors {measured['anchor']['precision']}"
         f" over {measured['anchor']['judged']}"
     )
-    print(f"m12-001: PASS ({summary})")
+    gate_id = "m12-002" if arguments.index else "m12-001"
+    print(f"{gate_id}: PASS ({summary})")
     return 0
 
 

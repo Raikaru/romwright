@@ -6256,3 +6256,19 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   window+guard joint preseed (which demonstrably fired for 0x1db6be)
   stays; the entry channel is fully reverted, restoration confirmed at
   trace level.
+
+- m12-002 indexed mode, histogram tried and reverted (2026-09-11):
+  `m12-001_diff.py --index` indexes semantics before diffing and floors
+  the propagated (alignment) class on optimisation rows (precision 1.0
+  over 9 judged, twice). The indexed run lifts optimisation recall
+  0.9377 -> 0.9532 with twins and anchors exact -- but ablation
+  (HIST_WEIGHT=0, identical numbers) proves the gain is the semantic
+  term, not the new instruction-class histogram: p-code class mixes are
+  too dense to move any pairing on these rows, and near-duplicates with
+  identical data-flow have identical op mixes by construction, so a
+  content histogram cannot separate the false-pair zone either. The
+  term is reverted rather than shipped unmeasured; the mode stays as
+  the vehicle for the module pair. That acceptance is blocked: the
+  Agent Under Fire modules are not on this machine, and no local pair
+  has the shared-engine/divergent property. m18-002's zlib half already
+  exceeds its bar (recall 0.9345).
