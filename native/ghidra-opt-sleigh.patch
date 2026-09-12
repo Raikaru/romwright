@@ -892,3 +892,28 @@ index e3be244..49487a5 100644
    void removeTrailingSpace(void);
    void applyContext(ParserWalkerChange &walker) const {
      vector<ContextChange *>::const_iterator iter;
+--- a/decompiler/coreaction.cc	2026-08-17 17:31:08.000000000 -0400
++++ b/decompiler/coreaction.cc	2026-09-12 16:10:30.257244968 -0400
+@@ -5482,6 +5482,22 @@
+ 			    "conditionalexe", "" };
+   setGroup("decompile",members);
+ 
++  // Match-emission root (P4.6): the decompile pipeline minus the groups that
++  // discard instruction-level structure a match diff needs. Kept: everything
++  // through merge (locals must exist to print) and the analysis core.
++  // Dropped: casts (hides real conversions), dynamic (invents symbols),
++  // splitcopy/splitpointer (restructures loads), doubleload/doubleprecis
++  // (merges 32-bit pairs into 64-bit), conditionalexe (predication hides
++  // branches), fixateglobals (names globals), constsequence/bitfields
++  // (idiom recognition), segment, returnsplit, nodejoin (merges blocks),
++  // subvar (splits locals), floatprecision, cleanup, switchnorm.
++  const char *matchmemb[] = { "base", "protorecovery", "protorecovery_a", "deindirect",
++                             "localrecovery", "deadcode", "typerecovery", "stackptrflow",
++                             "blockrecovery", "stackvars", "deadcontrolflow",
++                             "analysis", "fixateproto", "merge",
++                             "unreachable", "" };
++  setGroup("match",matchmemb);
++
+   const char *jumptab[] = { "base", "noproto", "localrecovery", "deadcode", "stackptrflow",
+ 			    "stackvars", "analysis", "segment", "subvar", "normalizebranches", "conditionalexe", "" };
+   setGroup("jumptable",jumptab);
