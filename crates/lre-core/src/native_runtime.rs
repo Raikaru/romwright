@@ -108,13 +108,23 @@ pub fn find_console(cfg: &RuntimeConfig) -> Result<PathBuf> {
 fn console_output(cfg: &RuntimeConfig, binary: &Path, address: &str) -> Result<String> {
     let console = find_console(cfg)?;
     let ghroot = cfg.ghidra_install.to_string_lossy().into_owned();
-    let langs = cfg.language_dir.to_string_lossy().into_owned();
     let hex_addr = if address.starts_with("0x") {
         address.to_string()
     } else {
         format!("0x{address}")
     };
     let mapped = MappedImage::for_elf_or_dol(cfg, binary)?;
+    // The console's `-s` dir must be the image's own language, not the
+    // session default: a DOL disassembles as Gekko, not x86.
+    let langs = mapped
+        .as_ref()
+        .and_then(|image| {
+            crate::architecture::directory_for_id(&cfg.ghidra_install, &image.language)
+                .ok()
+                .flatten()
+        })
+        .map(|dir| dir.to_string_lossy().into_owned())
+        .unwrap_or_else(|| cfg.language_dir.to_string_lossy().into_owned());
     let bfd_target = bfd_target_for(&cfg.language_id, binary)?;
     let load_script = if let Some(image) = &mapped {
         image.command()

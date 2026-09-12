@@ -7,6 +7,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(super) struct MappedImage {
     path: PathBuf,
+    /// The language the image's header/loader selected (`import.language`),
+    /// so the console is pointed at that language's `.sla` directory rather
+    /// than the session default.
+    pub(super) language: String,
 }
 
 impl MappedImage {
@@ -55,7 +59,10 @@ impl MappedImage {
             .create_new(true)
             .open(&path)
             .map_err(|e| NativeRuntimeError(format!("mapped image create: {e}")))?;
-        let image = Self { path };
+        let image = Self {
+            path,
+            language: import.language.clone(),
+        };
         let mut writer = std::io::BufWriter::new(file);
         let mut write_image = || -> std::io::Result<()> {
             // Full language + compiler id; resolveArchitecture uses loader.getArchType.

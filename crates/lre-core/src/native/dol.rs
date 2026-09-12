@@ -72,7 +72,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         mappings,
         functions: vec![NativeFunction { entry, name: "_entry".into(), size: 1 }],
         format: "dol".into(),
-        language: "PowerPC:BE:32:default".into(),
+        language: "PowerPC:BE:32:Gekko_Broadway".into(),
         ..Default::default()
     })
 }
