@@ -6433,3 +6433,15 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   PT_LOAD fallback covers stripped section headers. Gate
   `tests/m20-006_vita_elf.py`: **PASS, 572 SCE-seeded + 29488
   BINMAP-named functions, NID imports resolved**.
+
+- m20-006c (2026-09-12): decomp-project emit side. `export-dtk` writes
+  config.yml + symbols.txt + splits.txt from the store; verified by
+  `dtk dol diff` on the emitted project against bond.elf: **0 errors**
+  (the project's own symbols.txt diffs with 9 ambiguous @456 rows).
+  `export-splat` writes <program>.yaml + symbol_addrs.txt; the emitted
+  symbol_addrs re-imports 8524 functions. parse_flat now accepts
+  splat's `0xADDR name;` rows (previously required bare 8-hex, dropped
+  every splat row). This is the first half of our own splitter: the
+  store already holds everything splat's split step needs (functions,
+  data defs, regions, xrefs); the remaining piece is `split` emitting
+  per-function asm + linker script, which lands as its own milestone.
