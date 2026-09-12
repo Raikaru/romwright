@@ -6055,7 +6055,14 @@ point at, none reserved:
   query exists in the provider protocol; MAPSYM body ranges were tried
   and reverted -- ranges decode into symbol uselimit, not flow span).
   Open: instrument why shared-return conversion fires in stock's
-  pipeline and not through our provider answers.
+  pipeline and not through our provider answers. Determined since:
+  shells already preload every entry+size, ranges were tried and
+  reverted (uselimit, not flow span), VSA handed nothing bogus (3
+  overrides in range), recovery is at parity (same 6 entries), and
+  inlining is out (the inlined callee is 9584 bytes). What remains is
+  C++-internal: which edge (jump vs fallthrough vs call-then-inline)
+  enters 0x1a4270, and why no call boundary forms there. Zero calls
+  to any of the 6 callees appear in our output; stock calls them.
 - Recorded deficits (PE format, observed once on a large MSVC image now
   out of the corpus; need small-format reproducers, which need user
   approval as new corpus binaries under II.1): (1) linker MAPs list
