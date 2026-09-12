@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "producer": "hand-assembled: native/languages/rsp pspec/cspec + MIPS tspec/coretypes; registers.txt generated from rsp.slaspec",
+  "language": "RSP:BE:32:default",
+  "compiler": "default",
+  "files": {
+    "pspec.xml": {
+      "sha256": "7e7188b9b66def84bd888eee4fb80d4f947eb67e84f983a41d9d0d6b2d9d79d8",
+      "bytes": 210
+    },
+    "cspec.xml": {
+      "sha256": "cc977cba64cfa81e08aaaf27d37f25352511c19597b24740dc3a010a1e8b04db",
+      "bytes": 1268
+    },
+    "tspec.xml": {
+      "sha256": "20bf593067cb134d05f91557427980863a3958616b1d3379c16a18942f8ef34a",
+      "bytes": 1342
+    },
+    "coretypes.xml": {
+      "sha256": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+      "bytes": 2678
+    },
+    "registers.txt": {
+      "sha256": "b7d0982a73034e1b718567d0f071a7450c79be8b72826b9b6880fed77fed476f",
+      "bytes": 821
+    }
+  }
+}

@@ -1,0 +1,341 @@
+# Nintendo 64 RSP (Reality Signal Processor) — greenfield SLEIGH spec.
+#
+# The RSP is a MIPS-I scalar core (big-endian, 32-bit) plus a COP2 vector
+# unit. No FPU, no TLB. Scalar opcode table and the COP2 vector funct table
+# are verified against rabbitizer / spimdisasm (crates/lre-core/src/rsp.rs
+# mirrors the same tables).
+#
+# Vector ops emit named pcodeops (rsp_vmulf, rsp_vmacf, ...) so the
+# decompiler shows rsp_<name>(vd, vs, vt, e) rather than an opaque
+# copFunction. Per-lane semantics are an emission-layer concern (P4.6),
+# matching how the PsxLoader extension lifts the GTE.
+
+@define ENDIAN "big"
+
+define endian=$(ENDIAN);
+define alignment = 4;
+
+define space ram      type=ram_space      size=4 default;
+define space register type=register_space size=4;
+
+# ---------------------------------------------------------------------------
+# Registers
+# ---------------------------------------------------------------------------
+# Scalar GPRs r0-r31 (r-names avoid colliding with vector v0-v31).
+# ABI: r0=zero r1=at r2-3=v0-1 r4-7=a0-3 r8-15=t0-7 r16-23=s0-7
+#      r24-25=t8-9 r26-27=k0-1 r28=gp r29=sp r30=s8 r31=ra
+define register offset=0 size=4 [
+    r0  r1  r2  r3  r4  r5  r6  r7
+    r8  r9  r10 r11 r12 r13 r14 r15
+    r16 r17 r18 r19 r20 r21 r22 r23
+    r24 r25 r26 r27 r28 r29 r30 r31
+];
+
+define register offset=0x80 size=4 [ hi lo ];
+define register offset=0x88 size=4 [ pc ];
+
+# COP2 vector registers v0-v31: each is 128 bits (8 x 16-bit lanes).
+define register offset=0x100 size=16 [
+    v0  v1  v2  v3  v4  v5  v6  v7
+    v8  v9  v10 v11 v12 v13 v14 v15
+    v16 v17 v18 v19 v20 v21 v22 v23
+    v24 v25 v26 v27 v28 v29 v30 v31
+];
+
+# COP0 = SP/DMA interface registers (mfc0/mtc0 rd field selects).
+define register offset=0x340 size=4 [
+    sp_mem_addr sp_dram_addr sp_rd_len sp_wr_len sp_status
+    sp_dma_full sp_dma_busy sp_semaphore
+];
+
+# ---------------------------------------------------------------------------
+# Token fields
+# ---------------------------------------------------------------------------
+define token instr(32)
+    opcode   = (26,31)
+    rs       = (21,25)
+    rt       = (16,20)
+    rd       = (11,15)
+    sa       = (6,10)
+    funct    = (0,5)
+    imm      = (0,15) signed
+    uimm     = (0,15)
+    target   = (0,25)
+    bit25    = (25,25)
+    # COP2 vector op (opcode 0x12, bit25=1): element + three vector regs.
+    velem    = (21,24)
+    vt       = (16,20)
+    vs       = (11,15)
+    vd       = (6,10)
+    vfunct   = (0,5)
+    # mfc2/mtc2/cfc2/ctc2 (opcode 0x12, bit25=0): rs selects the move kind;
+    # the vector reg is the vs field, the element is bits 7-10.
+    cop2rs   = (21,25)
+    velem2   = (7,10)
+    # mfc0/mtc0 (opcode 0x10): rd selects an sp_* register.
+    cop0rd   = (11,15)
+    # LWC2(0x32)/SWC2(0x3a): rd field is the vector sub-op, elem + 7-bit off.
+    lsubop   = (11,15)
+    lelem    = (7,10)
+    loff     = (0,6) signed
+    rsval    = (21,25)   # raw rs bits, for constraining without unbinding rs
+;
+
+# ---------------------------------------------------------------------------
+# Named pcodeops for the vector unit and cop moves.
+# ---------------------------------------------------------------------------
+define pcodeop rsp_vmulf;  define pcodeop rsp_vmulu;  define pcodeop rsp_vrndp;
+define pcodeop rsp_vmulq;  define pcodeop rsp_vmudl;  define pcodeop rsp_vmudm;
+define pcodeop rsp_vmudn;  define pcodeop rsp_vmudh;  define pcodeop rsp_vmacf;
+define pcodeop rsp_vmacu;  define pcodeop rsp_vrndn;  define pcodeop rsp_vmacq;
+define pcodeop rsp_vmadl;  define pcodeop rsp_vmadm;  define pcodeop rsp_vmadn;
+define pcodeop rsp_vmadh;  define pcodeop rsp_vadd;   define pcodeop rsp_vsub;
+define pcodeop rsp_vabs;   define pcodeop rsp_vaddc;  define pcodeop rsp_vsubc;
+define pcodeop rsp_vsar;   define pcodeop rsp_vlt;    define pcodeop rsp_veq;
+define pcodeop rsp_vne;    define pcodeop rsp_vge;    define pcodeop rsp_vcl;
+define pcodeop rsp_vch;    define pcodeop rsp_vcr;    define pcodeop rsp_vmrg;
+define pcodeop rsp_vand;   define pcodeop rsp_vnand;  define pcodeop rsp_vor;
+define pcodeop rsp_vnor;   define pcodeop rsp_vxor;   define pcodeop rsp_vnxor;
+define pcodeop rsp_vrcp;   define pcodeop rsp_vrcpl;  define pcodeop rsp_vrcph;
+define pcodeop rsp_vmov;   define pcodeop rsp_vrsq;   define pcodeop rsp_vrsql;
+define pcodeop rsp_vrsqh;  define pcodeop rsp_vnop;
+define pcodeop rsp_lbv;  define pcodeop rsp_lsv;  define pcodeop rsp_llv;
+define pcodeop rsp_ldv;  define pcodeop rsp_lqv;  define pcodeop rsp_lrv;
+define pcodeop rsp_lpv;  define pcodeop rsp_luv;  define pcodeop rsp_lhv;
+define pcodeop rsp_lfv;  define pcodeop rsp_ltv;
+define pcodeop rsp_sbv;  define pcodeop rsp_ssv;  define pcodeop rsp_slv;
+define pcodeop rsp_sdv;  define pcodeop rsp_sqv;  define pcodeop rsp_srv;
+define pcodeop rsp_spv;  define pcodeop rsp_suv;  define pcodeop rsp_shv;
+define pcodeop rsp_sfv;  define pcodeop rsp_stv;
+define pcodeop rsp_mfc0;   define pcodeop rsp_mtc0;
+define pcodeop rsp_mfc2;   define pcodeop rsp_mtc2;
+define pcodeop rsp_cfc2;   define pcodeop rsp_ctc2;
+
+# ---------------------------------------------------------------------------
+# Attach: field -> register
+# ---------------------------------------------------------------------------
+attach variables [ rs rt rd ] [
+    r0  r1  r2  r3  r4  r5  r6  r7
+    r8  r9  r10 r11 r12 r13 r14 r15
+    r16 r17 r18 r19 r20 r21 r22 r23
+    r24 r25 r26 r27 r28 r29 r30 r31
+];
+attach variables [ vt vs vd ] [
+    v0  v1  v2  v3  v4  v5  v6  v7
+    v8  v9  v10 v11 v12 v13 v14 v15
+    v16 v17 v18 v19 v20 v21 v22 v23
+    v24 v25 v26 v27 v28 v29 v30 v31
+];
+attach variables [ cop0rd ] [
+    sp_mem_addr sp_dram_addr sp_rd_len sp_wr_len sp_status
+    sp_dma_full sp_dma_busy sp_semaphore
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+    sp_mem_addr sp_mem_addr sp_mem_addr sp_mem_addr
+];
+
+# ---------------------------------------------------------------------------
+# Reloc operands (branch/jump targets) and the load/store effective address.
+# ---------------------------------------------------------------------------
+Rel16: reloc   is imm    [ reloc = inst_start + 4 + 4*imm; ]                 { export *:4 reloc; }
+Abs26: reloc   is target [ reloc = ((inst_start+4) & 0xf0000000) | 4*target; ] { export *:4 reloc; }
+EA:    imm(rs) is imm & rs { tmp:4 = rs + imm; export *:4 tmp; }
+
+# ---------------------------------------------------------------------------
+# Scalar MIPS-I
+# ---------------------------------------------------------------------------
+# SPECIAL (opcode 0). RSP has delay slots on every control transfer.
+:sll  rd, rt, sa      is opcode=0 & funct=0x00 & rd & rt & sa { rd = rt << sa; }
+:srl  rd, rt, sa      is opcode=0 & funct=0x02 & rd & rt & sa { rd = rt >> sa; }
+:sra  rd, rt, sa      is opcode=0 & funct=0x03 & rd & rt & sa { rd = rt s>> sa; }
+:sllv rd, rt, rs      is opcode=0 & funct=0x04 & rd & rt & rs { rd = rt << (rs & 31); }
+:srlv rd, rt, rs      is opcode=0 & funct=0x06 & rd & rt & rs { rd = rt >> (rs & 31); }
+:srav rd, rt, rs      is opcode=0 & funct=0x07 & rd & rt & rs { rd = rt s>> (rs & 31); }
+:jr   rs              is opcode=0 & funct=0x08 & rs { delayslot(1); goto [rs]; }
+:jalr rd, rs          is opcode=0 & funct=0x09 & rd & rs { rd = inst_start + 8; delayslot(1); call [rs]; }
+:syscall              is opcode=0 & funct=0x0c { }
+:break                is opcode=0 & funct=0x0d { }
+# jr ra is the function return; give it a dedicated constructor so the
+# decompiler emits `return` rather than an indirect jump.
+:jr   rs              is opcode=0 & funct=0x08 & rsval=0x1f & rs { delayslot(1); return[r31]; }
+:mfhi rd              is opcode=0 & funct=0x10 & rd { rd = hi; }
+:mthi rs              is opcode=0 & funct=0x11 & rs { hi = rs; }
+:mflo rd              is opcode=0 & funct=0x12 & rd { rd = lo; }
+:mtlo rs              is opcode=0 & funct=0x13 & rs { lo = rs; }
+:mult rs, rt          is opcode=0 & funct=0x18 & rs & rt {
+    tmp1:8 = sext(rs); tmp2:8 = sext(rt); prod:8 = tmp1 * tmp2;
+    lo = prod:4; prod = prod >> 32; hi = prod:4;
+}
+:multu rs, rt         is opcode=0 & funct=0x19 & rs & rt {
+    tmp1:8 = zext(rs); tmp2:8 = zext(rt); prod:8 = tmp1 * tmp2;
+    lo = prod:4; prod = prod >> 32; hi = prod:4;
+}
+:div  rs, rt          is opcode=0 & funct=0x1a & rs & rt {
+    lo = rs s/ rt; hi = rs s% rt;
+}
+:divu rs, rt          is opcode=0 & funct=0x1b & rs & rt {
+    lo = rs / rt; hi = rs % rt;
+}
+:add  rd, rs, rt      is opcode=0 & funct=0x20 & rd & rs & rt { rd = rs + rt; }
+:addu rd, rs, rt      is opcode=0 & funct=0x21 & rd & rs & rt { rd = rs + rt; }
+:sub  rd, rs, rt      is opcode=0 & funct=0x22 & rd & rs & rt { rd = rs - rt; }
+:subu rd, rs, rt      is opcode=0 & funct=0x23 & rd & rs & rt { rd = rs - rt; }
+:and  rd, rs, rt      is opcode=0 & funct=0x24 & rd & rs & rt { rd = rs & rt; }
+:or   rd, rs, rt      is opcode=0 & funct=0x25 & rd & rs & rt { rd = rs | rt; }
+:xor  rd, rs, rt      is opcode=0 & funct=0x26 & rd & rs & rt { rd = rs ^ rt; }
+:nor  rd, rs, rt      is opcode=0 & funct=0x27 & rd & rs & rt { rd = ~(rs | rt); }
+:slt  rd, rs, rt      is opcode=0 & funct=0x2a & rd & rs & rt { rd = zext(rs s< rt); }
+:sltu rd, rs, rt      is opcode=0 & funct=0x2b & rd & rs & rt { rd = zext(rs < rt); }
+
+# REGIMM (opcode 1)
+:bltz   rs, Rel16     is opcode=1 & rt=0x00 & rs & Rel16 {
+    delayflag:1 = (rs s< 0); delayslot(1); if delayflag goto Rel16;
+}
+:bgez   rs, Rel16     is opcode=1 & rt=0x01 & rs & Rel16 {
+    delayflag:1 = (rs s>= 0); delayslot(1); if delayflag goto Rel16;
+}
+:bltzal rs, Rel16     is opcode=1 & rt=0x10 & rs & Rel16 {
+    r31 = inst_start + 8;
+    delayflag:1 = (rs s< 0); delayslot(1); if delayflag goto Rel16;
+}
+:bgezal rs, Rel16     is opcode=1 & rt=0x11 & rs & Rel16 {
+    r31 = inst_start + 8;
+    delayflag:1 = (rs s>= 0); delayslot(1); if delayflag goto Rel16;
+}
+
+# J / branches / immediates
+:j    Abs26           is opcode=2 & Abs26 { delayslot(1); goto Abs26; }
+:jal  Abs26           is opcode=3 & Abs26 { r31 = inst_start + 8; delayslot(1); call Abs26; }
+:beq  rs, rt, Rel16   is opcode=4 & rs & rt & Rel16 {
+    delayflag:1 = (rs == rt); delayslot(1); if delayflag goto Rel16;
+}
+:bne  rs, rt, Rel16   is opcode=5 & rs & rt & Rel16 {
+    delayflag:1 = (rs != rt); delayslot(1); if delayflag goto Rel16;
+}
+:blez rs, Rel16       is opcode=6 & rs & Rel16 {
+    delayflag:1 = (rs s<= 0); delayslot(1); if delayflag goto Rel16;
+}
+:bgtz rs, Rel16       is opcode=7 & rs & Rel16 {
+    delayflag:1 = (rs s> 0); delayslot(1); if delayflag goto Rel16;
+}
+:addi  rt, rs, imm    is opcode=8 & rt & rs & imm  { rt = rs + imm; }
+:addiu rt, rs, imm    is opcode=9 & rt & rs & imm  { rt = rs + imm; }
+:slti  rt, rs, imm    is opcode=0x0a & rt & rs & imm { rt = zext(rs s< imm); }
+:sltiu rt, rs, imm    is opcode=0x0b & rt & rs & imm { rt = zext(rs < imm); }
+:andi  rt, rs, uimm   is opcode=0x0c & rt & rs & uimm { rt = rs & uimm; }
+:ori   rt, rs, uimm   is opcode=0x0d & rt & rs & uimm { rt = rs | uimm; }
+:xori  rt, rs, uimm   is opcode=0x0e & rt & rs & uimm { rt = rs ^ uimm; }
+:lui   rt, uimm       is opcode=0x0f & rt & uimm { rt = uimm << 16; }
+
+# Scalar loads/stores
+:lb   rt, EA          is opcode=0x20 & rt & EA { rt = sext(*[ram]:1 EA); }
+:lh   rt, EA          is opcode=0x21 & rt & EA { rt = sext(*[ram]:2 EA); }
+:lw   rt, EA          is opcode=0x23 & rt & EA { rt = *[ram]:4 EA; }
+:lbu  rt, EA          is opcode=0x24 & rt & EA { rt = zext(*[ram]:1 EA); }
+:lhu  rt, EA          is opcode=0x25 & rt & EA { rt = zext(*[ram]:2 EA); }
+:sb   rt, EA          is opcode=0x28 & rt & EA { *[ram]:1 EA = rt:1; }
+:sh   rt, EA          is opcode=0x29 & rt & EA { *[ram]:2 EA = rt:2; }
+:sw   rt, EA          is opcode=0x2b & rt & EA { *[ram]:4 EA = rt; }
+
+# ---------------------------------------------------------------------------
+# COP0: SP/DMA register moves (rs selects mfc0/mtc0)
+# ---------------------------------------------------------------------------
+:mfc0 rt, cop0rd      is opcode=0x10 & cop2rs=0x00 & rt & cop0rd {
+    rsp_mfc0(rt, cop0rd);
+}
+:mtc0 rt, cop0rd      is opcode=0x10 & cop2rs=0x04 & rt & cop0rd {
+    rsp_mtc0(cop0rd, rt);
+}
+
+# ---------------------------------------------------------------------------
+# COP2: bit25=0 -> register moves; bit25=1 -> vector op on vfunct.
+# ---------------------------------------------------------------------------
+:mfc2 rt, vs          is opcode=0x12 & bit25=0 & cop2rs=0x00 & rt & vs & velem2 {
+    rsp_mfc2(rt, vs, velem2:4);
+}
+:cfc2 rt, vs          is opcode=0x12 & bit25=0 & cop2rs=0x02 & rt & vs & velem2 {
+    rsp_cfc2(rt, vs, velem2:4);
+}
+:mtc2 rt, vs          is opcode=0x12 & bit25=0 & cop2rs=0x04 & rt & vs & velem2 {
+    rsp_mtc2(vs, rt, velem2:4);
+}
+:ctc2 rt, vs          is opcode=0x12 & bit25=0 & cop2rs=0x06 & rt & vs & velem2 {
+    rsp_ctc2(vs, rt, velem2:4);
+}
+
+# Vector ops: opcode 0x12, bit25=1, dispatched on vfunct.
+# Signature: rsp_<name>(vd, vs, vt, element).
+:vmulf vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x00 & vd & vs & vt & velem { rsp_vmulf(vd, vs, vt, velem:4); }
+:vmulu vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x01 & vd & vs & vt & velem { rsp_vmulu(vd, vs, vt, velem:4); }
+:vrndp vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x02 & vd & vs & vt & velem { rsp_vrndp(vd, vs, vt, velem:4); }
+:vmulq vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x03 & vd & vs & vt & velem { rsp_vmulq(vd, vs, vt, velem:4); }
+:vmudl vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x04 & vd & vs & vt & velem { rsp_vmudl(vd, vs, vt, velem:4); }
+:vmudm vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x05 & vd & vs & vt & velem { rsp_vmudm(vd, vs, vt, velem:4); }
+:vmudn vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x06 & vd & vs & vt & velem { rsp_vmudn(vd, vs, vt, velem:4); }
+:vmudh vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x07 & vd & vs & vt & velem { rsp_vmudh(vd, vs, vt, velem:4); }
+:vmacf vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x08 & vd & vs & vt & velem { rsp_vmacf(vd, vs, vt, velem:4); }
+:vmacu vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x09 & vd & vs & vt & velem { rsp_vmacu(vd, vs, vt, velem:4); }
+:vrndn vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0a & vd & vs & vt & velem { rsp_vrndn(vd, vs, vt, velem:4); }
+:vmacq vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0b & vd & vs & vt & velem { rsp_vmacq(vd, vs, vt, velem:4); }
+:vmadl vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0c & vd & vs & vt & velem { rsp_vmadl(vd, vs, vt, velem:4); }
+:vmadm vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0d & vd & vs & vt & velem { rsp_vmadm(vd, vs, vt, velem:4); }
+:vmadn vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0e & vd & vs & vt & velem { rsp_vmadn(vd, vs, vt, velem:4); }
+:vmadh vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x0f & vd & vs & vt & velem { rsp_vmadh(vd, vs, vt, velem:4); }
+:vadd  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x10 & vd & vs & vt & velem { rsp_vadd(vd, vs, vt, velem:4); }
+:vsub  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x11 & vd & vs & vt & velem { rsp_vsub(vd, vs, vt, velem:4); }
+:vabs  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x13 & vd & vs & vt & velem { rsp_vabs(vd, vs, vt, velem:4); }
+:vaddc vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x14 & vd & vs & vt & velem { rsp_vaddc(vd, vs, vt, velem:4); }
+:vsubc vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x15 & vd & vs & vt & velem { rsp_vsubc(vd, vs, vt, velem:4); }
+:vsar  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x1d & vd & vs & vt & velem { rsp_vsar(vd, vs, vt, velem:4); }
+:vlt   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x20 & vd & vs & vt & velem { rsp_vlt(vd, vs, vt, velem:4); }
+:veq   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x21 & vd & vs & vt & velem { rsp_veq(vd, vs, vt, velem:4); }
+:vne   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x22 & vd & vs & vt & velem { rsp_vne(vd, vs, vt, velem:4); }
+:vge   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x23 & vd & vs & vt & velem { rsp_vge(vd, vs, vt, velem:4); }
+:vcl   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x24 & vd & vs & vt & velem { rsp_vcl(vd, vs, vt, velem:4); }
+:vch   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x25 & vd & vs & vt & velem { rsp_vch(vd, vs, vt, velem:4); }
+:vcr   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x26 & vd & vs & vt & velem { rsp_vcr(vd, vs, vt, velem:4); }
+:vmrg  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x27 & vd & vs & vt & velem { rsp_vmrg(vd, vs, vt, velem:4); }
+:vand  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x28 & vd & vs & vt & velem { rsp_vand(vd, vs, vt, velem:4); }
+:vnand vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x29 & vd & vs & vt & velem { rsp_vnand(vd, vs, vt, velem:4); }
+:vor   vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x2a & vd & vs & vt & velem { rsp_vor(vd, vs, vt, velem:4); }
+:vnor  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x2b & vd & vs & vt & velem { rsp_vnor(vd, vs, vt, velem:4); }
+:vxor  vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x2c & vd & vs & vt & velem { rsp_vxor(vd, vs, vt, velem:4); }
+:vnxor vd, vs, vt, velem  is opcode=0x12 & bit25=1 & vfunct=0x2d & vd & vs & vt & velem { rsp_vnxor(vd, vs, vt, velem:4); }
+:vrcp  vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x30 & vd & vt & velem { rsp_vrcp(vd, vt, velem:4); }
+:vrcpl vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x31 & vd & vt & velem { rsp_vrcpl(vd, vt, velem:4); }
+:vrcph vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x32 & vd & vt & velem { rsp_vrcph(vd, vt, velem:4); }
+:vmov  vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x33 & vd & vt & velem { rsp_vmov(vd, vt, velem:4); }
+:vrsq  vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x34 & vd & vt & velem { rsp_vrsq(vd, vt, velem:4); }
+:vrsql vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x35 & vd & vt & velem { rsp_vrsql(vd, vt, velem:4); }
+:vrsqh vd, vt, velem      is opcode=0x12 & bit25=1 & vfunct=0x36 & vd & vt & velem { rsp_vrsqh(vd, vt, velem:4); }
+:vnop                     is opcode=0x12 & bit25=1 & vfunct=0x37 { rsp_vnop(); }
+
+# ---------------------------------------------------------------------------
+# LWC2 (0x32) / SWC2 (0x3a): rd field selects the vector sub-op.
+# ---------------------------------------------------------------------------
+:lbv vt, loff(rs)     is opcode=0x32 & lsubop=0x00 & vt & rs & loff & lelem { rsp_lbv(vt, rs, loff:4, lelem:4); }
+:lsv vt, loff(rs)     is opcode=0x32 & lsubop=0x01 & vt & rs & loff & lelem { rsp_lsv(vt, rs, loff:4, lelem:4); }
+:llv vt, loff(rs)     is opcode=0x32 & lsubop=0x02 & vt & rs & loff & lelem { rsp_llv(vt, rs, loff:4, lelem:4); }
+:ldv vt, loff(rs)     is opcode=0x32 & lsubop=0x03 & vt & rs & loff & lelem { rsp_ldv(vt, rs, loff:4, lelem:4); }
+:lqv vt, loff(rs)     is opcode=0x32 & lsubop=0x04 & vt & rs & loff & lelem { rsp_lqv(vt, rs, loff:4, lelem:4); }
+:lrv vt, loff(rs)     is opcode=0x32 & lsubop=0x05 & vt & rs & loff & lelem { rsp_lrv(vt, rs, loff:4, lelem:4); }
+:lpv vt, loff(rs)     is opcode=0x32 & lsubop=0x06 & vt & rs & loff & lelem { rsp_lpv(vt, rs, loff:4, lelem:4); }
+:luv vt, loff(rs)     is opcode=0x32 & lsubop=0x07 & vt & rs & loff & lelem { rsp_luv(vt, rs, loff:4, lelem:4); }
+:lhv vt, loff(rs)     is opcode=0x32 & lsubop=0x08 & vt & rs & loff & lelem { rsp_lhv(vt, rs, loff:4, lelem:4); }
+:lfv vt, loff(rs)     is opcode=0x32 & lsubop=0x09 & vt & rs & loff & lelem { rsp_lfv(vt, rs, loff:4, lelem:4); }
+:ltv vt, loff(rs)     is opcode=0x32 & lsubop=0x0b & vt & rs & loff & lelem { rsp_ltv(vt, rs, loff:4, lelem:4); }
+
+:sbv vt, loff(rs)     is opcode=0x3a & lsubop=0x00 & vt & rs & loff & lelem { rsp_sbv(vt, rs, loff:4, lelem:4); }
+:ssv vt, loff(rs)     is opcode=0x3a & lsubop=0x01 & vt & rs & loff & lelem { rsp_ssv(vt, rs, loff:4, lelem:4); }
+:slv vt, loff(rs)     is opcode=0x3a & lsubop=0x02 & vt & rs & loff & lelem { rsp_slv(vt, rs, loff:4, lelem:4); }
+:sdv vt, loff(rs)     is opcode=0x3a & lsubop=0x03 & vt & rs & loff & lelem { rsp_sdv(vt, rs, loff:4, lelem:4); }
+:sqv vt, loff(rs)     is opcode=0x3a & lsubop=0x04 & vt & rs & loff & lelem { rsp_sqv(vt, rs, loff:4, lelem:4); }
+:srv vt, loff(rs)     is opcode=0x3a & lsubop=0x05 & vt & rs & loff & lelem { rsp_srv(vt, rs, loff:4, lelem:4); }
+:spv vt, loff(rs)     is opcode=0x3a & lsubop=0x06 & vt & rs & loff & lelem { rsp_spv(vt, rs, loff:4, lelem:4); }
+:suv vt, loff(rs)     is opcode=0x3a & lsubop=0x07 & vt & rs & loff & lelem { rsp_suv(vt, rs, loff:4, lelem:4); }
+:shv vt, loff(rs)     is opcode=0x3a & lsubop=0x08 & vt & rs & loff & lelem { rsp_shv(vt, rs, loff:4, lelem:4); }
+:sfv vt, loff(rs)     is opcode=0x3a & lsubop=0x09 & vt & rs & loff & lelem { rsp_sfv(vt, rs, loff:4, lelem:4); }
+:stv vt, loff(rs)     is opcode=0x3a & lsubop=0x0b & vt & rs & loff & lelem { rsp_stv(vt, rs, loff:4, lelem:4); }

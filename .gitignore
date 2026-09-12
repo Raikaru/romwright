@@ -56,3 +56,6 @@ __pycache__/
 /oracle/xrefs-v1/
 /oracle/strings-v1/
 /oracle/nonreturn-v1/
+
+# Compiled SLEIGH artifacts (regenerate via native/languages/*/install.sh)
+native/languages/**/*.sla
