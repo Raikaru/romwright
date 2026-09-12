@@ -43,6 +43,7 @@ pub(crate) mod wii;
 pub mod nid;
 pub(crate) mod switch;
 pub(crate) mod xbox_3ds;
+pub(crate) mod irx;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -1432,7 +1433,9 @@ fn elf_bases(data: &[u8]) -> Option<(u64, u64)> {
 }
 
 pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
-    if data.starts_with(b"\x7fELF") {
+    if data.starts_with(b"\x7fELF") && irx::is_irx(data) {
+        irx::import(data)
+    } else if data.starts_with(b"\x7fELF") {
         import_elf(data)
     } else if data.starts_with(b"MZ") {
         import_pe(data)
