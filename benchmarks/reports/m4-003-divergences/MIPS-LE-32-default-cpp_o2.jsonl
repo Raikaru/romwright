@@ -1,4 +1,4 @@
-{"address": "000207f0", "classes": {"data-type-unknown": [{"oracle": "PTR_FUN_00040bf8", "native": ["PTR_00040bf8"]}], "data-name-convention": [{"address": "00040bf8", "oracle": "PTR_FUN_00040bf8", "native": "PTR_00040bf8"}], "missing-stack-frame": ["local_10", "local_8", "local_c"]}, "oracle_tokens": 68, "native_tokens": 68}
+{"address": "000207f0", "classes": {"data-type-unknown": [{"oracle": "PTR_FUN_00040bf8", "native": ["PTR_00040bf8"]}], "data-name-convention": [{"address": "00040bf8", "oracle": "PTR_FUN_00040bf8", "native": "PTR_00040bf8"}]}, "oracle_tokens": 68, "native_tokens": 68}
 {"address": "00020b20", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00020b30", "classes": {"type-stronger": ["(code *)"]}, "oracle_tokens": 20, "native_tokens": 16}
 {"address": "00020b40", "classes": {"type-stronger": ["(code *)"], "oracle-warning": ["/* WARNING: Unknown calling convention -- yet parameter storage is locked */"]}, "oracle_tokens": 37, "native_tokens": 32}

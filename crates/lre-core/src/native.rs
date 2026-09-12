@@ -3310,7 +3310,11 @@ pub fn store_import(
     // symtab functions into a 7KB body). Two functions cannot share code
     // (m8-002); retract the const entry, keep what it covered. Only the
     // const class retracts: other producers' overlaps are pre-existing
-    // behavior this rule must not relitigate.
+    // behavior this rule must not relitigate. A const-seeded entry the
+    // analysis itself reached as data is the same mistake from the other
+    // side: a counter the propagation proved constant is not a callback
+    // (N64 8008fa74: seeding it coined _FUN_ over the known DAT_ and the
+    // decompiler rendered the overlap warning). Access wins over seeding.
     {
         let stronger: Vec<u64> = thunked
             .iter()
@@ -3320,9 +3324,15 @@ pub fn store_import(
             .chain(called.iter())
             .copied()
             .collect();
+        let accessed: std::collections::HashSet<u64> = imp
+            .reference_widths
+            .iter()
+            .map(|(address, _)| *address)
+            .collect();
         functions.retain(|f| {
             !(consted.contains(&f.entry)
-                && const_entry_swallowed(f.entry, f.size, &stronger))
+                && (const_entry_swallowed(f.entry, f.size, &stronger)
+                    || accessed.contains(&f.entry)))
         });
     }
     let rows: Vec<FunctionRow> = functions

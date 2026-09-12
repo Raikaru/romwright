@@ -1,6 +1,6 @@
 {
   "id": "head-to-head-libc",
-  "recorded_at": "2026-09-11T23:28:40.619820+00:00",
+  "recorded_at": "2026-09-12T02:13:36.823825+00:00",
   "inputs": {
     "path": "/usr/lib64/libc.so.6",
     "sha256": "01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db",
@@ -14,7 +14,7 @@
     "must_discover": 1621,
     "load_bias": "00100000",
     "native": {
-      "recovered": 4090,
+      "recovered": 4034,
       "recall": 1.0,
       "discovered_recall": 1.0,
       "unexplained": [
@@ -39,8 +39,8 @@
         "0x100650",
         "0x100668"
       ],
-      "unexplained_count": 200,
-      "wall_s": 103.3
+      "unexplained_count": 144,
+      "wall_s": 88.7
     },
     "stock": {
       "recovered": 3987,
@@ -69,15 +69,15 @@
         "0x100890"
       ],
       "unexplained_count": 97,
-      "wall_s": 105.8
+      "wall_s": 117.2
     }
   },
   "axis_prototypes": {
     "sampled": 30,
     "decompiled": 30,
     "compared": 29,
-    "arity_agreement": 0.8276,
-    "full_agreement": 0.5172,
+    "arity_agreement": 0.9655,
+    "full_agreement": 0.6552,
     "details": [
       {
         "address": "0x112160",
@@ -170,8 +170,8 @@
       {
         "address": "0x17e900",
         "native": [
-          "Removing unreachable",
-          11
+          "int",
+          3
         ],
         "stock": [
           "int",
@@ -214,8 +214,8 @@
       {
         "address": "0x18e760",
         "native": [
-          "Removing unreachable",
-          15
+          "undefined1 *",
+          4
         ],
         "stock": [
           "undefined1 *",
@@ -237,7 +237,7 @@
         "address": "0x1a3a40",
         "native": [
           "Removing unreachable",
-          8
+          4
         ],
         "stock": [
           "Removing unreachable",
@@ -270,7 +270,7 @@
         "address": "0x1dd290",
         "native": [
           "Removing unreachable",
-          6
+          4
         ],
         "stock": [
           "Removing unreachable",
@@ -291,7 +291,7 @@
       {
         "address": "0x1f8620",
         "native": [
-          "ulong",
+          "uint",
           2
         ],
         "stock": [
@@ -368,7 +368,7 @@
       {
         "address": "0x2408c0",
         "native": [
-          "uint *",
+          "undefined8",
           3
         ],
         "stock": [
@@ -404,11 +404,8 @@
   },
   "axis_gotos": {
     "functions": 30,
-    "native": 173,
+    "native": 20,
     "stock": 14
   },
-  "note": "no DWARF on this host: function axis is symtab truth, not DWARF recall. exposed_symbols (surviving the strip) is ingestion on both sides; recall over the rest is discovery. Prototype headline is arity agreement (structural on both sides), return-type pairs recorded per function, never parameter names Goto counts are NOT a structuring verdict: ~147 of the 159 delta comes from two functions where the worker decompiled ~40x the stored body (flow over-reach past known entries); stored extents agree both sides.",
-  "caveats": [
-    "goto axis measures decompiled square footage pending the flow-boundary fix, not structuring quality"
-  ]
+  "note": "no DWARF on this host: function axis is symtab truth, not DWARF recall. exposed_symbols (surviving the strip) is ingestion on both sides; recall over the rest is discovery. Prototype headline is arity agreement (structural on both sides), return-type pairs recorded per function, never parameter names"
 }
