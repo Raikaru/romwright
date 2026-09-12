@@ -145,9 +145,17 @@ def imported(binary: Path, project: Path, environment: dict[str, str]) -> tuple[
 
 
 def symbol_extents(binary: Path, base: int) -> list[tuple[int, int]]:
-    """Function extents the image itself declares, for the truth measure."""
+    """Function extents the image itself declares, for the truth measure.
+
+    Split hot/cold partitions merge: `foo.cold` is `foo`, and a case block
+    the compiler moved to cold is still its function's case (libc's
+    0x102c27 lives in `re_compile_internal.cold`, 0x1019db in
+    `__printf_buffer_flush.cold`; both stock-agreeing tables were dinged
+    for crossing a partition boundary). Only exact name matches merge; an
+    unmatched `.cold` keeps its own span.
+    """
     out = subprocess.run(["readelf", "-sW", str(binary)], capture_output=True, text=True).stdout
-    spans = []
+    spans: dict[str, list[tuple[int, int]]] = {}
     for line in out.splitlines():
         parts = line.split()
         if len(parts) < 8 or parts[3] != "FUNC":
@@ -157,9 +165,23 @@ def symbol_extents(binary: Path, base: int) -> list[tuple[int, int]]:
         except ValueError:
             continue
         if size:
-            spans.append((base + value, base + value + size))
-    spans.sort()
-    return spans
+            spans.setdefault(parts[7], []).append((base + value, base + value + size))
+    merged: list[tuple[int, int]] = []
+    groups: dict[int, int] = {}
+    for index, (name, own) in enumerate(spans.items()):
+        if name.endswith(".cold"):
+            parent_name = name[: -len(".cold")]
+            parent_index = next(
+                (i for i, n in enumerate(spans) if n == parent_name), None
+            )
+            group = parent_index if parent_index is not None else index
+        else:
+            group = index
+        for start, _ in own:
+            groups[start] = group
+        merged.extend(own)
+    merged.sort()
+    return merged, groups
 
 
 def owner(spans: list[tuple[int, int]], address: int) -> tuple[int, int] | None:
@@ -209,16 +231,21 @@ def score(
     tables: dict[int, set[int]],
     stock: dict[int, set[int]],
     spans: list[tuple[int, int]],
+    groups: dict[int, int],
     decoded: set[int],
 ) -> dict:
+    by_group: dict[int, list[tuple[int, int]]] = {}
+    for start, end in spans:
+        by_group.setdefault(groups.get(start, start), []).append((start, end))
     claimed = sum(len(targets) for targets in tables.values())
     sound = outside = undecodable = 0
     for branch, targets in tables.items():
         extent = owner(spans, branch)
+        group = by_group.get(groups.get(extent[0], extent[0])) if extent else None
         for target in targets:
             if target not in decoded:
                 undecodable += 1
-            elif extent and not (extent[0] <= target < extent[1]):
+            elif extent and not any(s <= target < e for s, e in (group or [extent])):
                 outside += 1
             else:
                 sound += 1
@@ -305,7 +332,7 @@ def main() -> int:
         # any path claims: the truth both sides are held to.
         base = min(min(targets) for targets in stock.values()) if stock else 0
         base = 0x100000 if base >= 0x100000 else 0
-        spans = symbol_extents(arguments.binary, base)
+        spans, groups = symbol_extents(arguments.binary, base)
         every: set[int] = set()
         for tables in (stock, vsa, decompiler, combined, interpreted):
             for targets in tables.values():
@@ -313,23 +340,23 @@ def main() -> int:
         decoded = decodes(arguments.binary, base, every, arguments.ghidra)
 
         measured = {
-            "stock": score(stock, stock, spans, decoded),
+            "stock": score(stock, stock, spans, groups, decoded),
             "vsa": {
-                **score(vsa, stock, spans, decoded),
+                **score(vsa, stock, spans, groups, decoded),
                 "wall_s": round(vsa_wall, 1),
                 "phase_s": round(vsa_phase, 3),
             },
             "interpreted": {
-                **score(interpreted, stock, spans, decoded),
+                **score(interpreted, stock, spans, groups, decoded),
                 "wall_s": round(interpreted_wall, 1),
                 "phase_s": round(interpreted_phase, 3),
             },
             "decompiler": {
-                **score(decompiler, stock, spans, decoded),
+                **score(decompiler, stock, spans, groups, decoded),
                 "wall_s": round(decompiler_wall, 1),
             },
             "combined": {
-                **score(combined, stock, spans, decoded),
+                **score(combined, stock, spans, groups, decoded),
                 "wall_s": round(combined_wall, 1),
                 "phase_s": round(combined_phase, 3),
             },
