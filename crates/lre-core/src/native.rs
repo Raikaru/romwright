@@ -41,6 +41,7 @@ pub mod psx_overlays;
 pub mod n64_overlays;
 pub(crate) mod wii;
 pub mod nid;
+pub(crate) mod switch;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -1472,6 +1473,9 @@ pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>
         return result;
     }
     if let Some(result) = wii::import(data) {
+        return result;
+    }
+    if let Some(result) = switch::import(data) {
         return result;
     }
     Ok(vec![(String::new(), parse_native(data)?)])
