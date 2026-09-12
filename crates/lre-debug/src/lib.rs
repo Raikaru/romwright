@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
+pub mod adapters;
+
 
 const MAX_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -293,6 +295,12 @@ impl DolphinGdb {
         }
         Ok(bytes)
     }
+    /// Sends one RSP packet and returns the decoded payload — the
+    /// adapter-facing entry point for requests beyond `m`.
+    pub fn raw_request(&mut self, payload: &[u8]) -> Result<Vec<u8>> {
+        self.request(payload)
+    }
+
 
     fn request(&mut self, payload: &[u8]) -> Result<Vec<u8>> {
         let frame = encode_remote_packet(payload);
@@ -404,7 +412,7 @@ fn read_remote_byte(stream: &mut std::net::TcpStream) -> Result<u8> {
     Ok(byte[0])
 }
 
-fn hex_digit(byte: u8) -> Option<u8> {
+pub(crate) fn hex_digit(byte: u8) -> Option<u8> {
     match byte {
         b'0'..=b'9' => Some(byte - b'0'),
         b'a'..=b'f' => Some(byte - b'a' + 10),
