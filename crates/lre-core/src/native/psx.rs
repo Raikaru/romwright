@@ -111,7 +111,11 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         mapping_names: vec!["text".into()],
         declared_regions: regions(window),
         format: "psx".into(),
-        language: "MIPS:LE:32:default".into(),
+        // The PsxLoader extension registers `PSX:LE:32:default`, whose sla
+        // models the GTE (cop2) registers and folds lwc2/rtps/swc2 sequences
+        // into named RotTransPers-style calls. The generic MIPS:LE:32:default
+        // has no cop2 register model and would emit opaque copFunction userops.
+        language: "PSX:LE:32:default".into(),
         ..Default::default()
     };
     import.functions.push(NativeFunction {
@@ -143,7 +147,7 @@ mod tests {
     fn the_header_names_the_mapping_and_the_seed() {
         let image = executable(0x8001_0040, 0x8001_0000, 0x200, 0xA00);
         let import = import(&image).expect("executable");
-        assert_eq!(import.language, "MIPS:LE:32:default");
+        assert_eq!(import.language, "PSX:LE:32:default");
         assert_eq!(import.mappings[0].vaddr, 0x8001_0000);
         assert_eq!(import.mappings[0].size, 0x200);
         assert_eq!(import.mappings[0].file_off, HEADER_LEN);

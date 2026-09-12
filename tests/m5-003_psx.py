@@ -13,7 +13,7 @@ test writes contains only documented fields -- no licence string is
 reproduced, because that text is Sony's, not a loader requirement.
 
 Assertions
-  1. The image is recognised as its own format on `MIPS:LE:32:default`; a
+  1. The image is recognised as its own format on `PSX:LE:32:default`; a
      PS-EXE must not be guessed at as an ELF, a PE or a cartridge.
   2. The store maps the image at the header's destination address, with the
      header's size, and declares the console's memory map.
@@ -123,8 +123,8 @@ def main() -> int:
 
         store = sqlite3.connect(project / "project.sqlite")
         language = store.execute("SELECT language FROM programs WHERE name = 'psx'").fetchone()
-        if language is None or language[0] != "MIPS:LE:32:default":
-            raise AssertionError(f"language is {language}, expected MIPS:LE:32:default")
+        if language is None or language[0] != "PSX:LE:32:default":
+            raise AssertionError(f"language is {language}, expected PSX:LE:32:default")
         regions = {name: (int(start, 16), size) for name, start, size in store.execute(
             "SELECT name, start, size FROM memory_regions")}
         missing_regions = EXPECTED_REGIONS - set(regions)
