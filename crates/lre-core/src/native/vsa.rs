@@ -104,8 +104,164 @@ pub trait Image {
     }
 }
 
+/// A memory location named by structure, not by address: base slot plus a
+/// constant displacement. The index of a PIC table lives in memory behind
+/// a pointer no emulation can concretise, but the guard compares, and the
+/// dispatch loads, the same expression -- forcing the expression to a
+/// concrete index per run lets the existing machinery bound and read the
+/// table with no other change.
+type MemKey = ((String, u64), u64);
+
+/// How one straight-line slice defines a varnode, as far as memory
+/// expressions care: an add of a constant displacement to a slot, a copy
+/// of another slot, or anything else.
+enum Def {
+    AddConst { base: (String, u64), disp: u64 },
+    Copy { from: (String, u64) },
+    Const { value: u64 },
+}
+
+/// The seed a run installs: a register value, or a memory expression
+/// forced to a value wherever the slice loads it.
+enum Seed<'a> {
+    Reg((&'a str, u64, u32)),
+    Mem(MemKey),
+}
+type DefMap = HashMap<(String, u64), Def>;
+
+/// Definitions a straight-line slice makes, keeping only slots defined
+/// exactly once: a redefined slot has no single meaning, and dropping it
+/// misses tables rather than misreading them.
+fn defs_for(slice: &[PcodeInstruction]) -> DefMap {
+    defs_for_slices(&[slice], false)
+}
+
+/// Names the memory a varnode's defining chain addresses, or nothing when
+/// the chain leaves the shapes an add-of-constant and copies describe.
+fn resolve_key(
+    defs: &DefMap,
+    varnode: &PcodeVarnode,
+) -> Option<MemKey> {
+    if varnode.is_const() {
+        return None;
+    }
+    let mut current = (varnode.space.clone(), varnode.offset);
+    for _ in 0..8 {
+        match defs.get(&current) {
+            Some(Def::AddConst { base, disp }) => {
+                return Some(((base.0.clone(), base.1), *disp));
+            }
+            Some(Def::Copy { from }) => {
+                current = from.clone();
+            }
+            Some(Def::Const { .. }) | None => return None,
+        }
+    }
+    None
+}
+
+/// Definitions over several straight-line slices, keeping only slots
+/// defined exactly once across all of them: a redefined slot has no
+/// single meaning, and dropping it misses tables rather than misreading
+/// them. Guard blocks dominate the dispatch by predecessor construction,
+/// so their single definitions hold wherever the dispatch runs.
+fn defs_for_slices(slices: &[&[PcodeInstruction]], persistent_only: bool) -> DefMap {
+    // Persistent slots only for cross-slice unions: `unique` offsets are
+    // reused at every instruction, so unioning them marks every temporary
+    // redefined and drops exactly the address expressions memory forcing
+    // resolves. Cross-block values flow through registers and ram, never
+    // uniques, so nothing real is lost.
+    let keep = |space: &str| !persistent_only || space != "unique";
+    let mut counts: HashMap<(String, u64), usize> = HashMap::new();
+    for slice in slices {
+        for instruction in slice.iter() {
+            for op in &instruction.ops {
+                if let Some(out) = op.output.as_ref() {
+                    if !out.is_const() && keep(&out.space) {
+                        *counts.entry((out.space.clone(), out.offset)).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+    }
+    let mut defs = HashMap::new();
+    for slice in slices {
+        for instruction in slice.iter() {
+            for op in &instruction.ops {
+                let Some(out) = op.output.as_ref() else {
+                    continue;
+                };
+                if out.is_const()
+                    || !keep(&out.space)
+                    || counts.get(&(out.space.clone(), out.offset)) != Some(&1)
+                {
+                    continue;
+                }
+                let slot = |v: &PcodeVarnode| (v.space.clone(), v.offset);
+                match op.opcode.as_str() {
+                    "INT_ADD" if op.inputs.len() >= 2 => {
+                        let (a, b) = (&op.inputs[0], &op.inputs[1]);
+                        if a.is_const() && b.is_const() {
+                            defs.insert(
+                                slot(out),
+                                Def::Const {
+                                    value: a.offset.wrapping_add(b.offset),
+                                },
+                            );
+                        } else if a.is_const() && !b.is_const() {
+                            defs.insert(slot(out), Def::AddConst { base: slot(b), disp: a.offset });
+                        } else if b.is_const() && !a.is_const() {
+                            defs.insert(slot(out), Def::AddConst { base: slot(a), disp: b.offset });
+                        }
+                    }
+                    "COPY" | "CAST" if op.inputs.len() == 1 => {
+                        if op.inputs[0].is_const() {
+                            defs.insert(
+                                slot(out),
+                                Def::Const {
+                                    value: op.inputs[0].offset,
+                                },
+                            );
+                        } else {
+                            defs.insert(slot(out), Def::Copy { from: slot(&op.inputs[0]) });
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    defs
+}
+
+/// Follows a chain that reads nothing: copies and adds of constants. The
+/// value holds on every path by construction, so seeding it is not a guess
+/// but what the code computes. Anything else is none.
+fn resolve_const(defs: &DefMap, varnode: &PcodeVarnode) -> Option<u64> {
+    let value = if varnode.is_const() {
+        varnode.offset
+    } else {
+        resolve_slot(defs, &(varnode.space.clone(), varnode.offset), 8)?
+    };
+    Some(value & mask(varnode.size))
+}
+
+fn resolve_slot(defs: &DefMap, slot: &(String, u64), depth: u8) -> Option<u64> {
+    if depth == 0 {
+        return None;
+    }
+    match defs.get(slot) {
+        Some(Def::AddConst { base, disp }) => {
+            resolve_slot(defs, base, depth - 1).map(|b| b.wrapping_add(*disp))
+        }
+        Some(Def::Const { value }) => Some(*value),
+        Some(Def::Copy { from }) => resolve_slot(defs, from, depth - 1),
+        None => None,
+    }
+}
 /// A straight-line p-code emulator: enough of the integer operations to
 /// follow a switch dispatch, and honest about everything else.
+
 struct Machine<'a, I: Image> {
     image: &'a I,
     /// Machine state, keyed by space and offset, carrying the width it was
@@ -143,6 +299,15 @@ struct Machine<'a, I: Image> {
     /// exactly what the dispatch will use. Without this the guard reads
     /// unknown and no table is ever bounded.
     pinned: bool,
+    /// Definitions visible to this slice, output slot to defining shape:
+    /// resolving a load's address through them names the memory the slice
+    /// reads by structure instead of by an address it cannot know.
+    defs: HashMap<(String, u64), Def>,
+    /// A memory expression forced to one index value for this run.
+    forced: Option<(MemKey, u64)>,
+    /// Resolved address keys already asked about, so each load resolves
+    /// its address expression once per run.
+    memo: HashMap<(String, u64), Option<MemKey>>,
 }
 
 impl<'a, I: Image> Machine<'a, I> {
@@ -157,6 +322,9 @@ impl<'a, I: Image> Machine<'a, I> {
             preserve: None,
             gave_up: false,
             pinned: false,
+            defs: HashMap::new(),
+            forced: None,
+            memo: HashMap::new(),
         }
     }
 
@@ -180,6 +348,18 @@ impl<'a, I: Image> Machine<'a, I> {
                 None
             }
         }
+    }
+    fn key_of(&mut self, varnode: &PcodeVarnode) -> Option<MemKey> {
+        if varnode.is_const() {
+            return None;
+        }
+        let slot = (varnode.space.clone(), varnode.offset);
+        if let Some(hit) = self.memo.get(&slot) {
+            return hit.clone();
+        }
+        let resolved = resolve_key(&self.defs, varnode);
+        self.memo.insert(slot, resolved.clone());
+        resolved
     }
 
     fn write(&mut self, varnode: &'a PcodeVarnode, value: Known) {
@@ -235,11 +415,30 @@ impl<'a, I: Image> Machine<'a, I> {
             "COPY" | "CAST" => a,
             "LOAD" => {
                 // input 0 names the space, input 1 is the offset.
-                let address = inputs.get(1).copied().flatten();
-                if let Some(address) = address {
-                    self.loads.push(address);
+                let forced = op
+                    .inputs
+                    .get(1)
+                    .and_then(|input| self.key_of(input))
+                    .and_then(|key| match self.forced {
+                        Some((ref forced_key, value)) if *forced_key == key => Some(value),
+                        _ => None,
+                    });
+                if forced.is_some() {
+                    // The seeded memory expression: answer the index and
+                    // mark the read, so stride detection treats it as
+                    // index-independent in every run alike.
+                    self.loads.push(u64::MAX);
                 }
-                address.and_then(|address| self.load(address, size))
+                match forced {
+                    Some(value) => Some(value),
+                    None => {
+                        let address = inputs.get(1).copied().flatten();
+                        if let Some(address) = address {
+                            self.loads.push(address);
+                        }
+                        address.and_then(|address| self.load(address, size))
+                    }
+                }
             }
             "STORE" => {
                 let address = inputs.get(1).copied().flatten();
@@ -425,17 +624,28 @@ fn run<I: Image>(
     image: &I,
     window: &[PcodeInstruction],
     seed: Option<((&str, u64, u32), u64)>,
+    mem: Option<(MemKey, u64)>,
+    concrete: &[((String, u64), u64)],
 ) -> Run {
-    run_with(image, window, seed, false)
+    run_with(image, window, seed, mem, concrete, false)
 }
 
 fn run_with<I: Image>(
     image: &I,
     window: &[PcodeInstruction],
     seed: Option<((&str, u64, u32), u64)>,
+    mem: Option<(MemKey, u64)>,
+    concrete: &[((String, u64), u64)],
     pinned: bool,
 ) -> Run {
     let mut machine = Machine::new(image);
+    machine.defs = defs_for(window);
+    machine.forced = mem;
+    for ((space, offset), value) in concrete {
+        machine
+            .state
+            .insert((space.as_str(), *offset), (*value, 8));
+    }
     if let Some(((space, offset, size), value)) = seed {
         machine
             .state
@@ -488,7 +698,7 @@ pub fn recover<I: Image>(
 
     // One dry run: what does the window read that it never wrote? Those are
     // the only places a switch variable can come from.
-    let dry = run(image, window, None);
+    let dry = run(image, window, None, None, &[]);
     if dry.live_in.is_empty() {
         if dry.gave_up {
             refusals.unmodelled += 1;
@@ -505,6 +715,21 @@ pub fn recover<I: Image>(
         == Some(branch);
     if trace {
         eprintln!("VSA {branch:#x} live-in {:x?}", dry.live_in);
+        for instruction in guard.iter().flatten().chain(window.iter()) {
+            for op in &instruction.ops {
+                let ins: Vec<String> = op
+                    .inputs
+                    .iter()
+                    .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
+                    .collect();
+                let out = op
+                    .output
+                    .as_ref()
+                    .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
+                    .unwrap_or_else(|| "-".to_string());
+                eprintln!("  {:x}: {} {} -> {}", instruction.address, op.opcode, ins.join(","), out);
+            }
+        }
     }
     // A guard states the range, and a guarded answer is the better one --
     // but it is not the only sound one. Deleting the unguarded fallback
@@ -515,28 +740,88 @@ pub fn recover<I: Image>(
     // inside the branching function before it becomes a fact.
     let mut guarded: Option<SwitchTable> = None;
     let mut unguarded: Option<SwitchTable> = None;
-    for (space, offset, size) in &dry.live_in {
-        let candidate = (space.as_str(), *offset, *size);
+    // Values the code computes without reading anything, across the
+    // window and its guard blocks: seeding them states facts, and they
+    // stop being trial candidates (sweeping a known constant only ever
+    // misread the table through it).
+    let mut joint: Vec<&[PcodeInstruction]> = vec![window];
+    joint.extend(guard.iter().map(Vec::as_slice));
+    let joint_defs = defs_for_slices(&joint, true);
+    // Address temporaries resolve per slice: uniques are per-instruction
+    // scratch, so only the window's own map sees their definitions.
+    let window_defs = defs_for(window);
+    let concrete: Vec<((String, u64), u64)> = dry
+        .live_in
+        .iter()
+        .filter_map(|(space, offset, size)| {
+            let varnode = PcodeVarnode {
+                space: space.clone(),
+                offset: *offset,
+                size: *size,
+            };
+            resolve_const(&joint_defs, &varnode).map(|value| ((space.clone(), *offset), value))
+        })
+        .collect();
+    let inside: std::collections::HashSet<u64> = guard
+        .iter()
+        .flatten()
+        .chain(window.iter())
+        .map(|instruction| instruction.address)
+        .collect();
+    // Memory the window loads through an add of a constant: the index of
+    // a PIC table lives behind a pointer no register seed moves, so those
+    // expressions seed runs of their own. Capped: each costs two stride
+    // runs before it is refused.
+    let mut memkeys: Vec<MemKey> = Vec::new();
+    for instruction in window {
+        for op in &instruction.ops {
+            if op.opcode == "LOAD" {
+                if let Some(input) = op.inputs.get(1) {
+                    if let Some(key) = resolve_key(&window_defs, input) {
+                        if !memkeys.contains(&key) {
+                            memkeys.push(key);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    memkeys.truncate(8);
+    let mut worker = |seed: Seed<'_>, label: String| {
         // A switch reads its targets out of a table, so the run must contain
         // a load whose address moves with the index by a fixed stride. That
         // single requirement is what separates a table from a register
         // sweep: without it, feeding indices to any live register produces
         // "targets" wherever the arithmetic happens to land in code, which
         // measured 0.42 edge precision against stock Ghidra on libc.
-        let first = run(image, window, Some((candidate, 0)));
-        let second = run(image, window, Some((candidate, 1)));
+        let run_seed = |index: u64| match &seed {
+            Seed::Reg(candidate) => {
+                run(image, window, Some((*candidate, index)), None, &concrete)
+            }
+            Seed::Mem(key) => run(image, window, None, Some((key.clone(), index)), &concrete),
+        };
+        let run_guard = |block: &[PcodeInstruction], index: u64| match &seed {
+            Seed::Reg(candidate) => {
+                run_with(image, block, Some((*candidate, index)), None, &concrete, true)
+            }
+            Seed::Mem(key) => {
+                run_with(image, block, None, Some((key.clone(), index)), &concrete, true)
+            }
+        };
+        let first = run_seed(0);
+        let second = run_seed(1);
         if first.gave_up || second.gave_up {
-            continue;
+            return;
         }
         saw_candidate = true;
         if trace {
             eprintln!(
-                "  candidate {}:{:x}:{} loads0 {:x?} loads1 {:x?} dest0 {:x?} dest1 {:x?}",
-                space, offset, size, first.loads, second.loads, first.destination, second.destination
+                "  candidate {label} loads0 {:x?} loads1 {:x?} dest0 {:x?} dest1 {:x?}",
+                first.loads, second.loads, first.destination, second.destination
             );
         }
         if first.loads.len() != second.loads.len() {
-            continue;
+            return;
         }
         let Some(slot) = first
             .loads
@@ -544,16 +829,16 @@ pub fn recover<I: Image>(
             .zip(&second.loads)
             .position(|(a, b)| a != b)
         else {
-            continue;
+            return;
         };
         // Everything before the table read must be index-independent, and
         // the read itself must advance by one element.
         if first.loads[..slot] != second.loads[..slot] {
-            continue;
+            return;
         }
         let stride = second.loads[slot].wrapping_sub(first.loads[slot]);
         if !matches!(stride, 1 | 2 | 4 | 8 | 16) {
-            continue;
+            return;
         }
         let table_base = first.loads[slot];
         saw_stride = true;
@@ -565,16 +850,10 @@ pub fn recover<I: Image>(
         // window instead measured recall 0.05 against stock on libc, because
         // the guard's own inputs are unknown that early and it escapes at
         // once.
-        let inside: std::collections::HashSet<u64> = guard
-            .iter()
-            .flatten()
-            .chain(window.iter())
-            .map(|instruction| instruction.address)
-            .collect();
         let mut targets = Vec::new();
         let mut guarded_by_branch = false;
         for index in 0..MAX_TABLE {
-            let attempt = run(image, window, Some((candidate, index)));
+            let attempt = run_seed(index);
             if attempt.gave_up || attempt.loads.len() <= slot {
                 break;
             }
@@ -591,7 +870,7 @@ pub fn recover<I: Image>(
             let guard_runs: Vec<Run> = guard
                 .iter()
                 .filter(|block| !block.is_empty())
-                .map(|block| run_with(image, block, Some((candidate, index)), true))
+                .map(|block| run_guard(block, index))
                 .collect();
             let escaped = attempt
                 .branches
@@ -623,13 +902,13 @@ pub fn recover<I: Image>(
             }
         }
         if targets.len() < 2 {
-            continue;
+            return;
         }
         let mut distinct = targets.clone();
         distinct.sort_unstable();
         distinct.dedup();
         if distinct.len() < 2 {
-            continue;
+            return;
         }
         let table = SwitchTable {
             branch,
@@ -649,6 +928,22 @@ pub fn recover<I: Image>(
         {
             *slot = Some(table);
         }
+    };
+    for (space, offset, size) in &dry.live_in {
+        if concrete
+            .iter()
+            .any(|((known_space, known_offset), _)| known_space == space && *known_offset == *offset)
+        {
+            continue;
+        }
+        worker(
+            Seed::Reg((space.as_str(), *offset, *size)),
+            format!("{space}:{offset:x}:{size}"),
+        );
+    }
+    for key in memkeys {
+        let label = format!("mem({}:{:x}+{:x})", key.0.0, key.0.1, key.1);
+        worker(Seed::Mem(key), label);
     }
     if guarded.is_none() && unguarded.is_none() {
         if !saw_candidate {
@@ -851,6 +1146,134 @@ mod tests {
         );
         let image = fixture(&[0x1100, 0x1200, 0x1300, 0x9999]);
         assert_eq!(recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &window, &mut Refusals::default()), None);
+    }
+    /// A PIC jump table: the guard bounds an index that lives in memory,
+    /// the table holds 32-bit offsets, and the dispatch adds the base back
+    /// (`movsxd; add; jmp`, the shape libc repeats). No register seed can
+    /// move the index load; forcing the memory expression can.
+    fn pic_dispatch() -> Vec<PcodeInstruction> {
+        vec![PcodeInstruction {
+            address: 0x1000,
+            length: 7,
+            error: None,
+            ops: vec![
+                // unique:0x80 = register:0x10 + 8 (the index address).
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x80, 8)),
+                    vec![varnode("register", 0x10, 8), varnode("const", 8, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x81, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x80, 8)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("register", 0, 4)),
+                    vec![varnode("unique", 0x81, 4)],
+                ),
+                op(
+                    "INT_ZEXT",
+                    Some(varnode("register", 0, 8)),
+                    vec![varnode("register", 0, 4)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("register", 8, 8)),
+                    vec![varnode("const", 0x2000, 8)],
+                ),
+                op(
+                    "INT_MULT",
+                    Some(varnode("unique", 0x82, 8)),
+                    vec![varnode("register", 0, 8), varnode("const", 4, 8)],
+                ),
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x83, 8)),
+                    vec![varnode("register", 8, 8), varnode("unique", 0x82, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x84, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x83, 8)],
+                ),
+                op(
+                    "INT_SEXT",
+                    Some(varnode("register", 0, 8)),
+                    vec![varnode("unique", 0x84, 4)],
+                ),
+                op(
+                    "INT_ADD",
+                    Some(varnode("register", 0, 8)),
+                    vec![varnode("register", 0, 8), varnode("register", 8, 8)],
+                ),
+                op("BRANCHIND", None, vec![varnode("register", 0, 8)]),
+            ],
+        }]
+    }
+
+    fn pic_guard(bound: u64) -> Vec<PcodeInstruction> {
+        vec![PcodeInstruction {
+            address: 0x900,
+            length: 7,
+            error: None,
+            ops: vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x70, 8)),
+                    vec![varnode("register", 0x10, 8), varnode("const", 8, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x71, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x70, 8)],
+                ),
+                op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x72, 1)),
+                    vec![varnode("const", bound, 8), varnode("unique", 0x71, 4)],
+                ),
+                op(
+                    "CBRANCH",
+                    None,
+                    vec![varnode("ram", 0x1700, 8), varnode("unique", 0x72, 1)],
+                ),
+            ],
+        }]
+    }
+
+    /// Table entries are base-relative signed offsets, below the base here
+    /// so the sign extension is load-bearing, not incidental.
+    fn pic_fixture(targets: &[u64]) -> Fixture {
+        let mut memory = HashMap::new();
+        for (index, &target) in targets.iter().enumerate() {
+            let offset = target.wrapping_sub(0x2000) as u32;
+            memory.insert(0x2000 + index as u64 * 4, offset.to_le_bytes().to_vec());
+        }
+        Fixture {
+            memory,
+            code: (0x1000, 0x1800),
+        }
+    }
+
+    #[test]
+    fn a_pic_offset_table_answers_through_the_guard() {
+        let image = pic_fixture(&[0x1100, 0x1200, 0x1300, 0x1400]);
+        let table = recover(&image, 0x1000, &[pic_guard(2)], &pic_dispatch(), &mut Refusals::default())
+            .expect("table");
+        assert_eq!(table.targets, vec![0x1100, 0x1200, 0x1300]);
+    }
+
+    #[test]
+    fn a_pic_offset_table_without_a_guard_is_not_answered() {
+        // The offsets read past the table without a bound, and an unguarded
+        // answer is what the 0.73-soundness fallback refuses.
+        let image = pic_fixture(&[0x1100, 0x1200, 0x1300, 0x1400]);
+        assert_eq!(
+            recover(&image, 0x1000, &[] as &[Vec<PcodeInstruction>], &pic_dispatch(), &mut Refusals::default()),
+            None
+        );
     }
 
     #[test]

@@ -6201,3 +6201,20 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   lost stays empty. Kept: no-loss (hard gate) plus floors raised to
   lock the win (precision 0.908 -> 0.95, recall 0.469 -> 0.85; measured
   1.0/0.9345 twice). The context demonstration lives in b47e9656.
+
+- m13-002 progress (2026-09-11): the refusal ledger is now per-branch,
+  not per-class. Memory-expression seeding (force a load's symbolic
+  address to each index; stride/escape/contiguity logic untouched)
+  recovers the PIC-offset shape (`movsxd [base+i*4]; add base; jmp` with
+  the index behind a pointer): 0x16ed3d answered. Constant pre-seeding
+  (input-free COPY/ADD chains across window+guard defs, single-def,
+  persistent slots only) answers 0x1db6be (its table base is a guard
+  `LEA`). vsa 90 -> 94, interpreted 131 -> 133 at 1.0 soundness, phase
+  3.9s. Gate truth now merges `.cold` partitions into parents
+  (exact-name match): the two "outside" targets sit in cold FUNCs both
+  tools report, so the 0.9989 bar stands unrelaxed. Still missed (11):
+  loop-carried bounds (0x190be9/0x19b3b9), unguarded offset composition
+  (0x184aba), unknown bases (0x1ce42a R12), object dispatch (0x1dae47),
+  absolute-table extent (0x2366c7), three stock-only big switches, two
+  stock junk branches. Cutover (decompiler out of the switch round)
+  waits on missed <= 3.
