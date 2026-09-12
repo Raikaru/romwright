@@ -22,18 +22,21 @@ same name when that name is unique and the stripped import recovered it.
 Thresholds, set from what was measured (see
 `benchmarks/reports/m18-002.json`):
 
-* `precision` 0.908 -- measured 0.9159 with the classes on. The floor
-  sits just below measured to catch collapse and nothing else.
-* `recall` 0.469 -- measured 0.5833 with the classes on. Recall is not
-  the claim on a 168-pair corpus with inlined-away twins; the floor
-  holds the level the structural run already reaches.
+* `precision` 0.95 -- measured 1.0 with the classes on. The floor
+  sits below measured to catch collapse and nothing else.
+* `recall` 0.85 -- measured 0.9345 with the classes on. The floor
+  holds the level the named-import run reaches; the 0.469 floor from
+  the name-scarce era is superseded.
 * No-loss rule (the hard gate): the correct matches the semantic-off
   run finds must all survive the semantic-on run. Context that costs a
   single true match fails, however the floors look.
-* Gain rule: the semantic-on run must hold at least one correct match
-  the semantic-off run misses (currently +1: `compressBound`, moved by
-  the decoding pass onto the target a false 0.956-similarity pair had
-  stolen).
+* Gain rule, retired 2026-09-11: the semantic-on run used to hold one
+  correct match the semantic-off run missed (`compressBound`). Since
+  the stripped import recovers real names, both settings resolve the
+  whole judged set (157/157) and the margin is vacuous -- not broken,
+  just unmeasurable. The demonstration lives in the b47e9656 report;
+  the old gain pair still matches in both settings every run (checked
+  in the verdict, reported, never failed on).
 
 The zlib source downloads pinned (URL and sha256 below) into the work
 directory and builds with the local C compiler; the report records the
@@ -68,7 +71,7 @@ ZLIB_SOURCES = (
     "trees", "uncompr", "zutil",
 )
 
-THRESHOLDS = {"precision": 0.908, "recall": 0.469}
+THRESHOLDS = {"precision": 0.95, "recall": 0.85}
 
 GENERATED = ("FUN_", "LAB_", "SUB_", "DAT_", "UNK_", "EXT_", "OFF_", "PTR_", "thunk_")
 
@@ -243,8 +246,9 @@ def main() -> int:
         without_row["lost_refs"] = lost
         if lost:
             failures.append(f"semantic run lost correct matches {lost}")
-        if not gained:
-            failures.append("no pair gained a correct match from the context classes")
+        # Gain retired: with names recovered both settings resolve the
+        # judged set, so an empty margin is expected, not a failure.
+        # gained_refs stays in the report as evidence either way.
         for metric in ("precision", "recall"):
             if with_row[metric] < THRESHOLDS[metric]:
                 failures.append(

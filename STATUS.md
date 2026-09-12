@@ -6192,3 +6192,12 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   was worse (point match on entry: 136 -> 116). Verdict: taken-address
   vs quiet-leaf is undecidable at store time; the residue deficit above
   stands, this direction is closed.
+
+- m18-002 re-barred (2026-09-11): the gain rule (semantic-on must hold a
+  correct match semantic-off misses) is retired, not weakened around --
+  with the stripped import recovering real names both settings resolve
+  the whole judged set (157/157), so an empty margin is expected.
+  Control: the passing era's gain pair still matches in both settings,
+  lost stays empty. Kept: no-loss (hard gate) plus floors raised to
+  lock the win (precision 0.908 -> 0.95, recall 0.469 -> 0.85; measured
+  1.0/0.9345 twice). The context demonstration lives in b47e9656.

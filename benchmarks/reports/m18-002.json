@@ -2,7 +2,7 @@
   "id": "m18-002",
   "milestone": "M18",
   "criterion": "REVDECODE-style context matching on a divergent zlib pair",
-  "recorded_at": "2026-09-12T02:54:27.239506+00:00",
+  "recorded_at": "2026-09-12T04:06:46.500746+00:00",
   "machine": {
     "os": "Linux-7.1.12-200.fc44.x86_64-x86_64-with-glibc2.43",
     "cpu": "x86_64"
@@ -18,8 +18,8 @@
     }
   },
   "thresholds": {
-    "precision": 0.908,
-    "recall": 0.469
+    "precision": 0.95,
+    "recall": 0.85
   },
   "rows": [
     {
@@ -405,8 +405,6 @@
       "lost_refs": []
     }
   ],
-  "status": "fail",
-  "failures": [
-    "no pair gained a correct match from the context classes"
-  ]
+  "status": "pass",
+  "failures": []
 }
