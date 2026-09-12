@@ -1,23 +1,22 @@
 {
  "id": "m4-003",
- "recorded_at": "2026-09-09T06:28:26.610982+00:00",
+ "recorded_at": "2026-09-12T02:22:59.133179+00:00",
  "status": "pass",
  "passed": true,
- "summary": "6 of 9 bundled languages measured against the JVM oracle on 21 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 1796 of 1892 functions token-identical, 96 differing only where a named fact differs (data-name-convention 4, data-type-unknown 4, language-variant 3, missing-stack-frame 4, name-convention 11, name-rendering 12, oracle-warning 23, type-stronger 66), 0 unexplained; 2 measured but not yet at parity (ARM:LE:32:v5t 251/512 identical of 6685 shared, MIPS:BE:64:64-32addr 17/116 identical of 116 shared); 1 languages blocked for want of an image II.1 reserves adding, each verified absent",
+ "summary": "6 of 9 bundled languages measured against the JVM oracle on 21 committed corpus rows (plain_o0, plain_o2, cpp_o2, many_o2): 2196 of 2292 functions token-identical, 96 differing only where a named fact differs (data-name-convention 4, data-type-unknown 4, language-variant 3, name-convention 11, name-rendering 12, oracle-warning 23, type-stronger 66), 0 unexplained; 2 measured but not yet at parity (ARM:LE:32:v5t 394/512 identical of 7202 shared, MIPS:BE:64:64-32addr 58/116 identical of 116 shared); 1 languages blocked for want of an image II.1 reserves adding, each verified absent",
  "metrics": {
   "parity.languages_bundled": 9,
   "parity.languages_measured": 6,
   "parity.languages_unreached": 2,
   "parity.languages_blocked": 1,
   "parity.rows_measured": 21,
-  "parity.functions_compared": 1892,
-  "parity.functions_token_identical": 1796,
+  "parity.functions_compared": 2292,
+  "parity.functions_token_identical": 2196,
   "parity.functions_fact_attributed": 96,
   "parity.functions_unattributed": 0,
   "parity.class.data-name-convention": 4,
   "parity.class.data-type-unknown": 4,
   "parity.class.language-variant": 3,
-  "parity.class.missing-stack-frame": 4,
   "parity.class.name-convention": 11,
   "parity.class.name-rendering": 12,
   "parity.class.oracle-warning": 23,
@@ -191,13 +190,12 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "missing-stack-frame",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/MIPS-LE-32-default-plain_o0.jsonl",
-    "sha256": "59277944e121fcd4914a9e6c0b32548e1d556944f385bdb3cb25e85adb4bf414"
+    "sha256": "7818f47921c77ca8dfa1dc5eb7719313ee09a352e89f19ffea030ea4150ef60a"
    }
   },
   {
@@ -211,13 +209,12 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "missing-stack-frame",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/MIPS-LE-32-default-plain_o2.jsonl",
-    "sha256": "39f4984ee18c40a2227e790a21b2f6493ee04b0dda0d858b02fb35c736c5a201"
+    "sha256": "ba9ccbad20914944ac0e55621131d5c8c539cfd752ae4a70ee6b9ae1e7391898"
    }
   },
   {
@@ -231,31 +228,29 @@
    "classes": [
     "data-name-convention",
     "data-type-unknown",
-    "missing-stack-frame",
     "oracle-warning",
     "type-stronger"
    ],
    "evidence": {
     "path": "m4-003-divergences/MIPS-LE-32-default-cpp_o2.jsonl",
-    "sha256": "ef1dc01e3cf235d698afafb5493d9142809fc456e6489534ca1161270a14a314"
+    "sha256": "638da65d79822fbd2678a97e140c001512762c4d987911ecdee69dedae747935"
    }
   },
   {
    "language": "MIPS:LE:32:default",
    "variant": "many_o2",
    "program": "mipsel_many_o2.bin",
-   "shared": 7,
-   "identical": 6,
-   "identical_tokens": 101,
+   "shared": 407,
+   "identical": 406,
+   "identical_tokens": 5301,
    "attributed": 1,
    "classes": [
     "data-name-convention",
-    "data-type-unknown",
-    "missing-stack-frame"
+    "data-type-unknown"
    ],
    "evidence": {
     "path": "m4-003-divergences/MIPS-LE-32-default-many_o2.jsonl",
-    "sha256": "50f741a4e90831c1ab807e26c4501607a52aa64afed73f27d2bf7d98f196a01a"
+    "sha256": "d231c3eab8cb6c8a8cf505ace922aba793e3254de9528024b6281ffa1c662cca"
    }
   },
   {
@@ -404,29 +399,29 @@
  ],
  "unreached": {
   "ARM:LE:32:v5t": {
-   "reason": "both stores load the cartridge -- the install now carries an NDS loader and ours unpacks the ARM9 module as crt0 does -- and the ARM9 program shares 6685 functions with the oracle, 251 of the first 512 token-identical; the rest differ where the oracle's switch recovery and stack frames name what ours does not yet",
+   "reason": "both stores load the cartridge -- the install now carries an NDS loader and ours unpacks the ARM9 module as crt0 does -- and the ARM9 program shares 7168 functions with the oracle, 394 of the first 512 token-identical now that the decompile worker replays the instruction set discovery settled at each point and discovery walks the switch tables the decompiler recovers; the rest differ where the oracle's callee prototypes and stack frames name what ours does not yet",
    "program": "pokeheartgold.us.nds",
-   "shared": 6685,
+   "shared": 7202,
    "compared": 512,
-   "identical": 251,
-   "attributed": 45,
-   "unattributed": 208,
+   "identical": 394,
+   "attributed": 15,
+   "unattributed": 103,
    "floors": {
-    "shared": 6685,
-    "identical": 251
+    "shared": 7168,
+    "identical": 394
    }
   },
   "MIPS:BE:64:64-32addr": {
-   "reason": "both stores load the ROM -- the install now carries an N64 loader and ours maps the boot segment at the header's boot address -- and 17 of the 116 shared functions are token-identical; the rest differ where the oracle names MIPS coprocessor registers and external thunks we do not, and where its wider variable renaming reorders locals",
+   "reason": "both stores load the ROM -- the install now carries an N64 loader and ours maps the boot segment at the header's boot address -- and 58 of the 116 shared functions are token-identical now that the raw-SLEIGH worker truncates the ram space as the language declares, answers LAB_ code labels, and sign-extended lui addresses wrap into the space; the rest differ where the oracle's callee prototypes, global-overlap warnings and thunk names differ from ours",
    "program": "perfect_dark_ntsc_final.z64",
    "shared": 116,
    "compared": 116,
-   "identical": 17,
-   "attributed": 1,
-   "unattributed": 95,
+   "identical": 58,
+   "attributed": 4,
+   "unattributed": 51,
    "floors": {
     "shared": 116,
-    "identical": 17
+    "identical": 58
    }
   }
  }

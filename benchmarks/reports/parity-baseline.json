@@ -1,6 +1,6 @@
 {
  "id": "parity-baseline",
- "recorded_at": "2026-09-09T09:07:03.030790+00:00",
+ "recorded_at": "2026-09-12T02:19:58.400195+00:00",
  "note": "token identity against the JVM oracle per language, and the fact class each divergence comes from; recorded once and compared against afterwards",
  "counts": {
   "rows": {
@@ -53,7 +53,7 @@
     "attributed": 7
    },
    "MIPS:LE:32:default/many_o2": {
-    "identical": 6,
+    "identical": 406,
     "attributed": 1
    },
    "PowerPC:BE:32:default/plain_o0": {

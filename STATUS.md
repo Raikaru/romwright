@@ -6145,3 +6145,27 @@ The ten platforms recorded in "Reserved decisions" split by what can be
     no runtime network call is permitted (II.1).
   - Adding any of these as a corpus member still requires a human decision per
     II.1, one platform at a time.
+
+- Head-to-head follow-up, N64 row 58 -> 57: bisected to 83fac980
+  (const-data seeding), which coined `_FUN_8008fa74` over the known data
+  symbol `DAT_8008fa74` -- the seeded counter is load/store-accessed, and
+  the decompiler rendered the overlap warning plus the wrong name, breaking
+  token identity for 80002538. Fixed at the store, not the seed: a
+  const-seeded entry the analysis itself reached as data
+  (`reference_widths`) is retracted like a swallowed entry -- access wins
+  over seeding, order-independent, const class only. Reviewed 2026-09-11:
+  a callback address is never memory-accessed (only called), so the guard
+  cannot fire on the rule's intended wins (mipsel/x86 callbacks); slot vs
+  target addresses differ, so table-driven seeds are safe. m4-003 back to
+  58/116; m3/m12/m17/m19/m16 identical pre/post.
+
+- m18-002 red by improvement, owner to re-bar (2026-09-11): the dynsym
+  harvest recovers the zlib pair's real names, so the judged set grows
+  106 -> 157 and both settings go 157/157 correct (precision 1.0, recall
+  0.9345 vs floors 0.908/0.469; pure-HEAD control: 98/97 correct, recall
+  0.5833, PASS). The gate's structural bar -- context must gain a correct
+  pair -- is vacuous at that ceiling: raw similarity already maxes the
+  judged set, so there is nothing left for context to rescue. Not a
+  regression on any recorded metric; but the bar's intent (prove context
+  helps) needs a name-scarce construction again, which is the m18 owner's
+  call -- left red deliberately, not re-barred unilaterally.
