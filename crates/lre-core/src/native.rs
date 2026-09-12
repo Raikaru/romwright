@@ -30,7 +30,7 @@ mod elf_image;
 mod pe_roots;
 mod pe_unwind;
 mod strings;
-pub(crate) mod cwmap;
+pub(crate) mod linkmap;
 pub(crate) mod nonreturn;
 use lre_model::{
     FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
@@ -1432,7 +1432,7 @@ pub fn load_container_with(
     // read once, applied to every image it names an address in, before
     // discovery so a seeded entry is walked rather than coined.
     let cw_map = match map {
-        Some(path) => Some(cwmap::parse(
+        Some(path) => Some(linkmap::parse(
             &std::fs::read_to_string(path)
                 .map_err(|e| ImportError::Bad(format!("{}: {e}", path.display())))?,
         )),
@@ -1447,7 +1447,7 @@ pub fn load_container_with(
         select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
         if let Some(cw_map) = &cw_map {
-            cwmap::apply_to_import(&mut imp, cw_map);
+            linkmap::apply_to_import(&mut imp, cw_map);
         }
         phase(&mut imp, "parse", parse_started);
         imp.analysed = analyse;
