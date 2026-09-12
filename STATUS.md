@@ -6031,19 +6031,6 @@ point at, none reserved:
   guard retracts any const seed that would swallow better-evidenced
   entries, and emitted features are filtered to stored rows (retracted
   seeds left 4 orphan feature rows at libc scale).
-- Head-to-head goto delta is a worker flow-boundary bug, not
-  structuring and not extents: stored sizes agree both sides
-  (0x1a3a40: 304 vs 283; 0x18e760: 16 vs 16), and the worker IS told
-  every stored entry (provider.functions + sizes from the store). Yet
-  it emits ~40x the body (54KB of C; 80 labels over 10KB holding 6
-  known entries). First fix attempted: MAPSYM answers now carry the
-  body range instead of an empty rangelist (Rust side only, no C++
-  changes) -- output UNCHANGED on the probe, so C++ flow and
-  shared-return do not consult mapped ranges the way program function
-  bodies do. Worker tests + differential green (no regression). Next:
-  instrument what bounds stock's FollowFlow (minaddr/maxaddr are
-  discovered, not inputs; startProcessing flows full range in stock
-  too), i.e. find the real barrier before patching anything.
 - Reliability incident 2026-09-11: a disk-pressured m12 run published
   partial analyses to the shared import cache, which read back fine
   and silently served 95 functions for a 124-function twin (twins
