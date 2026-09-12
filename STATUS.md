@@ -6182,3 +6182,13 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   them (token row green, recall intact); closing the class wants a second
   retraction condition on undecodable const seeds, recorded here as a
   deficit, not implemented.
+
+- Out-edge retraction tried and rejected (2026-09-11): a const seed with
+  no CALL inbound and no body-range out-edge looked like the residue
+  killer (N64 fa80/faa8/fac0 have DATA-only inbound, zero out-edges;
+  real functions emit body out-xrefs). It cleared the window (136 -> 117,
+  all oracle-absent) but retracted the real leaf restorer __restore_rt
+  on libc (recall 1.0 -> 0.9997, discovered 1.0 -> 0.9994). First version
+  was worse (point match on entry: 136 -> 116). Verdict: taken-address
+  vs quiet-leaf is undecidable at store time; the residue deficit above
+  stands, this direction is closed.

@@ -1,6 +1,6 @@
 {
   "id": "head-to-head-libc",
-  "recorded_at": "2026-09-12T03:01:24.084255+00:00",
+  "recorded_at": "2026-09-12T04:03:24.018816+00:00",
   "inputs": {
     "path": "/usr/lib64/libc.so.6",
     "sha256": "01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db",
@@ -40,7 +40,7 @@
         "0x100668"
       ],
       "unexplained_count": 144,
-      "wall_s": 84.7
+      "wall_s": 83.4
     },
     "stock": {
       "recovered": 3987,
@@ -69,7 +69,7 @@
         "0x100890"
       ],
       "unexplained_count": 97,
-      "wall_s": 110.2
+      "wall_s": 111.7
     }
   },
   "axis_prototypes": {
