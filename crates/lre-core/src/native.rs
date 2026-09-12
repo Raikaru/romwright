@@ -819,7 +819,11 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
         }
     }
-    // Undefined dynamic symbols; elf_image collects their loaded relocation slots.
+    // Dynamic symbols: undefined entries name externals (elf_image collects
+    // their loaded relocation slots); defined functions fill addresses the
+    // symtab never named.
+    let symtab_named: std::collections::HashSet<u64> =
+        symbol_functions.keys().copied().collect();
     for s in sections.iter().filter(|s| s.typ == 11) {
         let strtab = sections
             .get(s.link as usize)
@@ -851,19 +855,23 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
                 object_sizes.push((value, size));
             }
             // A defined dynamic function names what the stripped symtab no
-            // longer can. Symtab spellings keep priority on ties (that loop
-            // ran first), so this only fills addresses symtab never named.
+            // longer can. Addresses the symtab loop already named keep its
+            // spelling; among dynsym spellings of one address the rank
+            // decides, as in the symtab loop, so an unversioned name beats
+            // `name@@VERSION`.
             if info & 0xf == 2 && shndx != 0 && value != 0 && !name.is_empty() {
-                symbol_functions.entry(value).or_insert((
-                    symbol_rank(info, &name),
-                    name.clone(),
-                    size.max(1),
-                ));
+                let rank = symbol_rank(info, &name);
+                let slot = symbol_functions
+                    .entry(value)
+                    .or_insert((rank, name.clone(), size.max(1)));
+                if !symtab_named.contains(&value) && rank < slot.0 {
+                    *slot = (rank, name.clone(), size.max(1));
+                }
             }
             if !name.is_empty() && shndx == 0 {
                 externals.push((0, name));
+            }
         }
-    }
     }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
     functions.extend(
@@ -4273,9 +4281,11 @@ mod tests {
         let dynsym = 0x200 + 64;
         b[dynsym + 4..dynsym + 8].copy_from_slice(&11u32.to_le_bytes());
         b[dynsym + 24..dynsym + 32].copy_from_slice(&0x100u64.to_le_bytes());
-        b[dynsym + 32..dynsym + 40].copy_from_slice(&72u64.to_le_bytes());
+        b[dynsym + 32..dynsym + 40].copy_from_slice(&96u64.to_le_bytes());
         b[dynsym + 40..dynsym + 44].copy_from_slice(&2u32.to_le_bytes());
-        // [1] defined FUNC "dynfunc" @ 0x401000; [2] undefined "puts".
+        // [1] versioned "dynfunc@VER" @ 0x401000 sorts before the clean
+        // spelling [3]; rank must prefer the clean name over index order.
+        // [2] undefined "puts".
         let e1 = 0x100 + 24;
         b[e1..e1 + 4].copy_from_slice(&6u32.to_le_bytes());
         b[e1 + 4] = 0x12;
@@ -4285,32 +4295,40 @@ mod tests {
         let e2 = 0x100 + 48;
         b[e2..e2 + 4].copy_from_slice(&1u32.to_le_bytes());
         b[e2 + 4] = 0x12; // shndx stays 0: undefined
-        // Section 2: STRTAB. Section 4: ALLOC+EXEC .text mapping.
-        b[0x140..0x150].copy_from_slice(b"\0puts\0dynfunc\0\0\0");
+        let e3 = 0x100 + 72;
+        b[e3..e3 + 4].copy_from_slice(&18u32.to_le_bytes());
+        b[e3 + 4] = 0x12;
+        b[e3 + 6..e3 + 8].copy_from_slice(&1u16.to_le_bytes());
+        b[e3 + 8..e3 + 16].copy_from_slice(&0x401000u64.to_le_bytes());
+        b[e3 + 16..e3 + 24].copy_from_slice(&32u64.to_le_bytes());
+        // Section 2: STRTAB at 0x160 (past the four entries ending 0x160).
+        // Section 3: SHSTRTAB at 0x180. Section 4: ALLOC+EXEC .text.
+        b[0x160..0x180].copy_from_slice(b"\0puts\0dynfunc@VER\0dynfunc\0\0\0\0\0\0\0");
         let strtab = 0x200 + 128;
         b[strtab + 4..strtab + 8].copy_from_slice(&3u32.to_le_bytes());
-        b[strtab + 24..strtab + 32].copy_from_slice(&0x140u64.to_le_bytes());
-        b[strtab + 32..strtab + 40].copy_from_slice(&16u64.to_le_bytes());
+        b[strtab + 24..strtab + 32].copy_from_slice(&0x160u64.to_le_bytes());
+        b[strtab + 32..strtab + 40].copy_from_slice(&32u64.to_le_bytes());
         let shstr = 0x200 + 192;
         b[shstr + 4..shstr + 8].copy_from_slice(&3u32.to_le_bytes());
-        b[shstr + 24..shstr + 32].copy_from_slice(&0x150u64.to_le_bytes());
+        b[shstr + 24..shstr + 32].copy_from_slice(&0x180u64.to_le_bytes());
         b[shstr + 32..shstr + 40].copy_from_slice(&15u64.to_le_bytes());
         b[dynsym..dynsym + 4].copy_from_slice(&1u32.to_le_bytes());
-        b[0x150..0x15f].copy_from_slice(b"\0.dynsym\0.text\0");
+        b[0x180..0x18f].copy_from_slice(b"\0.dynsym\0.text\0");
         let text = 0x200 + 256;
         b[text..text + 4].copy_from_slice(&9u32.to_le_bytes());
         b[text + 4..text + 8].copy_from_slice(&1u32.to_le_bytes());
         b[text + 8..text + 16].copy_from_slice(&6u64.to_le_bytes());
         b[text + 16..text + 24].copy_from_slice(&0x401000u64.to_le_bytes());
-        b[text + 24..text + 32].copy_from_slice(&0x180u64.to_le_bytes());
+        b[text + 24..text + 32].copy_from_slice(&0x190u64.to_le_bytes());
         b[text + 32..text + 40].copy_from_slice(&16u64.to_le_bytes());
-        b[0x180..0x190].fill(0x90);
+        b[0x190..0x1a0].fill(0x90);
         let imp = import_elf(&b).unwrap();
         let named: Vec<_> = imp.functions.iter().filter(|f| f.entry == 0x401000).collect();
         assert_eq!(named.len(), 1, "defined dynsym address must survive: {named:?}");
         assert_eq!(named[0].name, "dynfunc");
+        assert!(!imp.functions.iter().any(|f| f.name.contains('@')));
         assert!(imp.externals.iter().any(|e| e.1 == "puts"), "undefined import stays external");
-        assert!(!imp.externals.iter().any(|e| e.1 == "dynfunc"));
+        assert!(!imp.externals.iter().any(|e| e.1 == "dynfunc" || e.1.contains('@')));
         assert!(!imp.functions.iter().any(|f| f.name == "puts"));
     }
 
