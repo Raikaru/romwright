@@ -40,6 +40,7 @@ pub(crate) mod rel;
 pub mod psx_overlays;
 pub mod n64_overlays;
 pub(crate) mod wii;
+pub mod nid;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
