@@ -681,9 +681,36 @@ impl ProjectDb {
                      );",
                 )?;
             }
-            // Version 21 belongs to the overlay-module work (modules /
-            // module_xrefs tables + module_id columns); it lands on its own
-            // branch and must not be claimed here.
+            if v < 21 {
+                // M-C overlay modules: a program's loadable parts (REL
+                // images, PSX overlays, DOL sections) get rows so
+                // `locate` can name the module an address belongs to.
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS modules (
+                         module_id INTEGER PRIMARY KEY,
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         name TEXT NOT NULL,
+                         kind TEXT NOT NULL DEFAULT '',
+                         file_id TEXT NOT NULL DEFAULT '',
+                         load_vaddr TEXT NOT NULL,
+                         size INTEGER NOT NULL,
+                         file_off INTEGER NOT NULL DEFAULT 0,
+                         resident INTEGER NOT NULL DEFAULT 1
+                     );
+                     CREATE INDEX IF NOT EXISTS idx_modules_program
+                         ON modules(program_id);
+                     CREATE TABLE IF NOT EXISTS module_xrefs (
+                         module_id INTEGER NOT NULL REFERENCES modules(module_id),
+                         from_addr TEXT NOT NULL,
+                         to_module_id INTEGER,
+                         to_addr TEXT NOT NULL,
+                         to_external TEXT NOT NULL DEFAULT '',
+                         kind TEXT NOT NULL DEFAULT ''
+                     );
+                     CREATE INDEX IF NOT EXISTS idx_module_xrefs_from
+                         ON module_xrefs(module_id, from_addr);",
+                )?;
+            }
             if v < 22 {
                 // M-E compiler label on programs + M-F trace coverage on
                 // functions. Both are pure additions with stable defaults
@@ -945,6 +972,105 @@ impl ProjectDb {
         )?;
         let rows = stmt
             .query_map(params![program.0], |row| row.get(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Inserts one module row and returns its assigned id.
+    pub fn insert_module(
+        &self,
+        program: ProgramId,
+        module: &lre_model::ModuleRow,
+    ) -> Result<i64> {
+        self.conn.execute(
+            "INSERT INTO modules(
+                 program_id, name, kind, file_id, load_vaddr, size, file_off, resident
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                program.0,
+                module.name,
+                module.kind,
+                module.file_id,
+                addr_cell(&module.load_vaddr),
+                module.size as i64,
+                module.file_off as i64,
+                module.resident as i64,
+            ],
+        )?;
+        Ok(self.conn.last_insert_rowid())
+    }
+
+    /// Lists a program's modules in load order.
+    pub fn modules(&self, program: ProgramId) -> Result<Vec<lre_model::ModuleRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT module_id, name, kind, file_id, load_vaddr, size, file_off, resident
+             FROM modules WHERE program_id = ?1 ORDER BY load_vaddr",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| {
+                let vaddr: String = row.get(4)?;
+                Ok(lre_model::ModuleRow {
+                    module_id: row.get(0)?,
+                    program: String::new(),
+                    name: row.get(1)?,
+                    kind: row.get(2)?,
+                    file_id: row.get(3)?,
+                    load_vaddr: lre_model::Address::parse_ram_hex(&vaddr)
+                        .unwrap_or_else(|| lre_model::Address::ram(0)),
+                    size: row.get::<_, i64>(5)? as u64,
+                    file_off: row.get::<_, i64>(6)? as u64,
+                    resident: row.get::<_, i64>(7)? != 0,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Inserts one cross-module reference.
+    pub fn insert_module_xref(
+        &self,
+        xref: &lre_model::ModuleXrefRow,
+    ) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO module_xrefs(
+                 module_id, from_addr, to_module_id, to_addr, to_external, kind
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![
+                xref.module_id,
+                addr_cell(&xref.from_addr),
+                xref.to_module_id,
+                addr_cell(&xref.to_addr),
+                xref.to_external,
+                xref.kind,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Lists a module's outgoing cross-module references.
+    pub fn module_xrefs(
+        &self,
+        module_id: i64,
+    ) -> Result<Vec<lre_model::ModuleXrefRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT module_id, from_addr, to_module_id, to_addr, to_external, kind
+             FROM module_xrefs WHERE module_id = ?1 ORDER BY from_addr",
+        )?;
+        let rows = stmt
+            .query_map(params![module_id], |row| {
+                let from: String = row.get(1)?;
+                let to: String = row.get(3)?;
+                Ok(lre_model::ModuleXrefRow {
+                    module_id: row.get(0)?,
+                    from_addr: lre_model::Address::parse_ram_hex(&from)
+                        .unwrap_or_else(|| lre_model::Address::ram(0)),
+                    to_module_id: row.get(2)?,
+                    to_addr: lre_model::Address::parse_ram_hex(&to)
+                        .unwrap_or_else(|| lre_model::Address::ram(0)),
+                    to_external: row.get(4)?,
+                    kind: row.get(5)?,
+                })
+            })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
@@ -2636,6 +2762,36 @@ impl ProjectDb {
         Ok(rows)
     }
 
+
+    pub fn set_stack_variable(
+        &self,
+        program: ProgramId,
+        row: &StackVariableRow,
+    ) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        tx.execute(
+            "INSERT INTO stack_variables(
+                 program_id, function, ordinal, name, storage, type_name, offset, size
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+             ON CONFLICT(program_id, function, ordinal) DO UPDATE SET
+                 name = excluded.name, storage = excluded.storage,
+                 type_name = excluded.type_name, offset = excluded.offset,
+                 size = excluded.size",
+            params![
+                program.0,
+                addr_cell(&row.function),
+                row.ordinal,
+                row.name,
+                row.storage,
+                row.type_name,
+                row.offset,
+                row.size
+            ],
+        )?;
+        self.bump_and_record(&tx, program, "stack-variable", &row.name)?;
+        tx.commit()?;
+        Ok(())
+    }
     pub fn replace_stack_variables(
         &self,
         program: ProgramId,
@@ -2670,36 +2826,6 @@ impl ProjectDb {
             "replace-stack-variables",
             &rows.len().to_string(),
         )?;
-        tx.commit()?;
-        Ok(())
-    }
-    /// Upserts one recovered stack variable.
-    pub fn set_stack_variable(
-        &self,
-        program: ProgramId,
-        row: &StackVariableRow,
-    ) -> Result<()> {
-        let tx = self.conn.unchecked_transaction()?;
-        tx.execute(
-            "INSERT INTO stack_variables(
-                 program_id, function, ordinal, name, storage, type_name, offset, size
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-             ON CONFLICT(program_id, function, ordinal) DO UPDATE SET
-                 name = excluded.name, storage = excluded.storage,
-                 type_name = excluded.type_name, offset = excluded.offset,
-                 size = excluded.size",
-            params![
-                program.0,
-                addr_cell(&row.function),
-                row.ordinal,
-                row.name,
-                row.storage,
-                row.type_name,
-                row.offset,
-                row.size
-            ],
-        )?;
-        self.bump_and_record(&tx, program, "stack-variable", &row.name)?;
         tx.commit()?;
         Ok(())
     }
@@ -2846,12 +2972,22 @@ impl ProjectDb {
                 .and_then(|index| extents.get(index))
                 .filter(|(_, end, _)| address.offset < *end)
                 .map(|(_, _, name)| name.clone());
+            // The module covering the address, when the program declares
+            // modules (REL sections, overlays, container images).
+            let module = self
+                .modules(id)?
+                .into_iter()
+                .find(|module| {
+                    module.load_vaddr.offset <= address.offset
+                        && address.offset - module.load_vaddr.offset < module.size
+                })
+                .map(|module| module.name);
             found.push(lre_model::LocationRow {
                 program: program.program,
                 language: program.language,
                 region,
                 function,
-                module: None,
+                module,
             });
         }
         Ok(found)
