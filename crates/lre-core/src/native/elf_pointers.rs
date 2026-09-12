@@ -74,13 +74,33 @@ pub(super) fn collect(
             if !in_code(target) {
                 continue;
             }
+            // On ARM a code pointer's low bit is the target's instruction
+            // set, not part of the address: an odd value is a Thumb entry at
+            // the even address below it (`ARM_ElfExtension`, 116-209, the
+            // same rule the symtab's FUNC low bit carries). The candidate is
+            // the aligned entry; the bit seeds TMode so the console decodes
+            // Thumb there instead of rejecting an odd address as ARM. The
+            // even case seeds TMode=0 too, or a Thumb range's mode would
+            // bleed into the ARM function that follows it.
+            let arm = import
+                .elf_machine
+                .map(|machine| machine.machine == 0x28)
+                .unwrap_or(false);
+            let entry = if arm { target & !1 } else { target };
+            if arm {
+                import.contexts.push(crate::native::NativeContext {
+                    name: "TMode".into(),
+                    address: entry,
+                    value: target & 1,
+                });
+            }
             if matches!(section.typ, 14 | 15) {
-                import.initializer_candidates.push(target);
+                import.initializer_candidates.push(entry);
             } else {
-                import.pointer_candidates.push(target);
+                import.pointer_candidates.push(entry);
             }
             if !relocated.contains_key(&source) {
-                import.xrefs.push(NativeXref::with_provenance(source, target, "DATA", "native-import:elf-pointer"));
+                import.xrefs.push(NativeXref::with_provenance(source, entry, "DATA", "native-import:elf-pointer"));
             }
         }
     }

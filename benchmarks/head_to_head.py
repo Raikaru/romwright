@@ -67,7 +67,11 @@ def symtab_funcs(binary: Path) -> dict[int, str]:
         if (len(parts) >= 8 and parts[0][:-1].isdigit()
                 and parts[3] == "FUNC" and parts[6] != "UND"):
             try:
-                symbols[int(parts[1], 16)] = parts[7]
+                # Mask the ISA-mode LSB: ARM/Thumb symtab entries carry bit 0
+                # set (0x08000845) while the recovered function entry is the
+                # even address (0x08000844). Function entries are even-aligned
+                # on every arch, so masking is safe universally.
+                symbols[int(parts[1], 16) & ~1] = parts[7]
             except ValueError:
                 continue
     return symbols
@@ -124,7 +128,22 @@ def main() -> int:
     target = work / "stripped.bin"
     if not arguments.reuse or not target.is_file():
         shutil.copy2(binary, target)
-        subprocess.run(["strip", "-s", str(target)], check=True, timeout=300)
+        # Host strip is x86-only; game binaries need a cross-strip. Try host
+        # first, then the cross tools that match the ELF machine.
+        stripped = subprocess.run(
+            ["strip", "-s", str(target)], capture_output=True, timeout=300)
+        if stripped.returncode:
+            machine = binary.read_bytes()[18:20]
+            cross = {b"\x08\x00": "mipsel-linux-gnu-strip",  # EM_MIPS LE
+                     b"\x00\x08": "mips64-linux-gnu-strip",  # EM_MIPS BE
+                     b"\x28\x00": "arm-none-eabi-strip",     # EM_ARM
+                     b"\x14\x00": "powerpc-linux-gnu-strip", # EM_PPC
+                     }.get(bytes(machine))
+            if not cross or not shutil.which(cross):
+                raise SystemExit(
+                    f"strip failed and no cross-strip for machine "
+                    f"{machine.hex()}: {stripped.stderr.decode()[-200:]}")
+            subprocess.run([cross, "-s", str(target)], check=True, timeout=300)
     info["stripped_sha256"] = sha256_file(target)
     native_project = work / "native"
     stock_project = work / "stock"
