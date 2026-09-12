@@ -17,6 +17,10 @@ CLI="${CLI:-$ROOT/target/release/lre-cli}"
     echo "missing native decompiler — build native/build_ghidra_opt.sh" >&2
     exit 1
 }
+[ -x "${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}" ] || {
+    echo "missing reference console — build native/build_console.sh" >&2
+    exit 1
+}
 [ -x "${VENTRIS_WORKER:-$ROOT/target/release/lre-worker}" ] || {
     echo "missing lre-worker — cargo build --release -p lre-worker" >&2
     exit 1
