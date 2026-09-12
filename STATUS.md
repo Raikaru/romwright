@@ -6390,3 +6390,22 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   agreement 0.9946**; stock Ghidra has no DS MAP importer (R7 baseline).
   Overlay-range FUNC rows are gated out of the static import by the
   executable-mapping check until M-C gives them programs.
+
+- m20-002..006 (2026-09-12): linker-MAP and decomp-symbol ingestion,
+  five grammars through one `--map` flag (`native/linkmap.rs` sniffs):
+  mwldarm/dtk (m20-001, HeartGold, recall 0.9946 over 11019 ELF FUNCs),
+  PsyQ/SN (m20-002, VS.MAP, 0.9976 over 818 .text-extent names), GNU ld
+  (m20-003, pokeemerald.map, 1.0 over 5280 .text rows), MSVC /MAP
+  (m20-004, ffxv_s.map, 1.0 over 154379 publics), flat ADDR NAME
+  (m20-005, FE Fates symbols.map on raw code.bin via new `--raw BASE
+  --language ID`, 1.0 over 26117 rows). dtk symbols.txt / splat
+  symbol_addrs.txt ride the same flag (m20-006, Agent Under Fire
+  dtk-template: 1.0 over 8522 function rows, export->reimport
+  round-trip 8522/8522 via new `export-symbols`). Kind precedence where
+  a grammar types rows: linker `func`/`object` wins, `notype`/absent
+  falls through to the section heuristic -- link maps list globals
+  only, so static .text rows are still code. Overlay-range rows are
+  gated out of static imports by the executable-mapping check until
+  M-C. PSX .SYM and PS2 DWARF1/Vita-NID are the remaining M-A rows
+  (agents in flight); decomp.me API and objdiff unit mapping are M-B
+  follow-ups, not yet gated.
