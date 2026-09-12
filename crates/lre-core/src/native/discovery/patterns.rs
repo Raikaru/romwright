@@ -483,6 +483,34 @@ pub(super) fn collect<P: FlowProvider>(
                 refuse("annotation-only", refused);
                 continue;
             }
+            let minimum =
+                if valid.eq_ignore_ascii_case("true") || valid.eq_ignore_ascii_case("subroutine") {
+                    -1
+                } else if valid == "false" {
+                    0
+                } else {
+                    valid.parse::<i32>().map_err(|error| {
+                        super::ImportError::Bad(format!("invalid validcode: {error}"))
+                    })?
+                };
+            let requirement = if minimum != 0 {
+                let maximum = attribute("validcodemax")
+                    .map(str::parse::<i32>)
+                    .transpose()
+                    .map_err(|error| {
+                        super::ImportError::Bad(format!("invalid validcodemax: {error}"))
+                    })?
+                    .unwrap_or(minimum);
+                Some(CodeRequirement {
+                    minimum: minimum.max(0) as usize,
+                    maximum: if maximum > 0 { maximum as usize } else { 4000 },
+                    must_terminate: minimum < 0,
+                    contiguous: !attribute("contiguous")
+                        .is_some_and(|value| value.eq_ignore_ascii_case("false")),
+                })
+            } else {
+                None
+            };
             if let Some(after) = attribute("after") {
                 let block_start = import
                     .mappings
@@ -520,39 +548,56 @@ pub(super) fn collect<P: FlowProvider>(
                     )));
                 };
                 if !block_start && !satisfied {
-                    refuse("after-prerequisite", refused);
-                    continue;
+                    // Ghidra's ArmAggressiveInstructionFinderAnalyzer: a start
+                    // whose `after` prerequisite fails inside a discovery gap
+                    // is still validated by following its body -- in the held
+                    // mode, then the opposite one. Only a low-bit-mode
+                    // language carries a second instruction set worth
+                    // retrying; elsewhere the refusal stands.
+                    let low_bit = crate::native::low_bit_code_mode(&import.language);
+                    let requirement = requirement.as_ref();
+                    let recovered = if low_bit && requirement.is_some() {
+                        aggressive_body(
+                            import,
+                            address,
+                            requirement.unwrap(),
+                            indexes,
+                            instructions,
+                            provider,
+                        )
+                    } else {
+                        None
+                    };
+                    match recovered {
+                        Some((body, mode)) => {
+                            for (start, end) in &body {
+                                round_bodies.insert(*start, end - start);
+                            }
+                            applied.push(crate::native::NativeContext {
+                                name: "LowBitCodeMode".into(),
+                                address,
+                                value: mode,
+                            });
+                            let candidate = Candidate {
+                                address,
+                                possible: action.kind == "possiblefuncstart",
+                            };
+                            candidates.push(candidate);
+                            accepted = Some(candidate);
+                            continue;
+                        }
+                        None => {
+                            refuse("after-prerequisite", refused);
+                            continue;
+                        }
+                    }
                 }
             }
-            let minimum =
-                if valid.eq_ignore_ascii_case("true") || valid.eq_ignore_ascii_case("subroutine") {
-                    -1
-                } else if valid == "false" {
-                    0
-                } else {
-                    valid.parse::<i32>().map_err(|error| {
-                        super::ImportError::Bad(format!("invalid validcode: {error}"))
-                    })?
-                };
-            if minimum != 0 {
-                let maximum = attribute("validcodemax")
-                    .map(str::parse::<i32>)
-                    .transpose()
-                    .map_err(|error| {
-                        super::ImportError::Bad(format!("invalid validcodemax: {error}"))
-                    })?
-                    .unwrap_or(minimum);
-                let requirement = CodeRequirement {
-                    minimum: minimum.max(0) as usize,
-                    maximum: if maximum > 0 { maximum as usize } else { 4000 },
-                    must_terminate: minimum < 0,
-                    contiguous: !attribute("contiguous")
-                        .is_some_and(|value| value.eq_ignore_ascii_case("false")),
-                };
+            if let Some(requirement) = &requirement {
                 let Some(body) = valid_code(
                     import,
                     address,
-                    &requirement,
+                    requirement,
                     indexes,
                     instructions,
                     provider,
@@ -593,4 +638,51 @@ pub(super) fn collect<P: FlowProvider>(
     candidates.sort_unstable_by_key(|candidate| (candidate.address, candidate.possible));
     candidates.dedup_by_key(|candidate| candidate.address);
     Ok(candidates)
+}
+
+/// Validates a candidate whose `after` prerequisite failed by following its
+/// body, trying the held instruction set first and then the opposite one.
+///
+/// This is the native analogue of Ghidra's
+/// `ArmAggressiveInstructionFinderAnalyzer.doValidStart` (228-274): a start
+/// inside a discovery gap has no decoded neighbour to satisfy `after`, so the
+/// body itself is the evidence. On a language that carries the instruction
+/// set in `LowBitCodeMode` (ARM's Thumb bit, MIPS's ISA mode) the held mode
+/// is tried first; if the body does not validate, the bit is flipped and the
+/// body retried. The winning mode is returned so the caller can record it.
+/// On failure the held mode is restored so a refused match hands the region
+/// back the value it held, matching the `setcontext` restore above.
+fn aggressive_body<P: FlowProvider>(
+    import: &NativeImport,
+    address: u64,
+    requirement: &CodeRequirement,
+    indexes: &PatternIndexes,
+    instructions: &[(u64, u64)],
+    provider: &mut P,
+) -> Option<(Vec<(u64, u64)>, u64)> {
+    // The mode the console currently holds at this address, if it has decoded
+    // anything there before.
+    let held = provider
+        .flow(&[address])
+        .pop()
+        .filter(|flow| flow.address == address)
+        .and_then(|flow| flow.mode);
+    // Held mode first.
+    if let Some(body) = valid_code(import, address, requirement, indexes, instructions, provider) {
+        return Some((body, held.unwrap_or(0)));
+    }
+    // Opposite mode.
+    let flipped = held.map(|mode| mode ^ 1).unwrap_or(1);
+    provider.set_context("LowBitCodeMode", address, flipped);
+    let body = valid_code(import, address, requirement, indexes, instructions, provider);
+    match body {
+        Some(body) => Some((body, flipped)),
+        None => {
+            // Restore the held value so the refusal leaves the region as found.
+            if let Some(held) = held {
+                provider.set_context("LowBitCodeMode", address, held);
+            }
+            None
+        }
+    }
 }
