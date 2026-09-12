@@ -196,6 +196,53 @@ fn with_entry_register_tracking(
     out
 }
 
+/// MWCC prologue/epilogue helpers (P2.3): `_savegpr_N`/`_restgpr_N` save and
+/// restore rN..r31 across the frame. A `bl _savegpr_14` is an opaque call to
+/// the decompiler unless the cspec carries a `<callfixup>` that expands it to
+/// the per-register stores the helper performs. Injected for PowerPC so a
+/// MWCC binary's frames read as callee-saved setup, not an unknown call.
+/// Stack layout: r31 at -4(sp), r30 at -8, …, rN at -4*(32-N).
+fn mwcc_callfixups() -> String {
+    let mut out = String::new();
+    for n in 14..32u8 {
+        let mut body = String::new();
+        for reg in n..32u8 {
+            let off = 4 * (32 - reg);
+            body.push_str(&format!("      *(r1 - 0x{off:02x}) = r{reg};\n"));
+        }
+        out.push_str(&format!(
+            "  <callfixup name=\"_savegpr_{n}\">\n    <pcode><body><![CDATA[\n{body}    ]]></body></pcode>\n  </callfixup>\n"
+        ));
+    }
+    for n in 14..32u8 {
+        let mut body = String::new();
+        for reg in n..32u8 {
+            let off = 4 * (32 - reg);
+            body.push_str(&format!("      r{reg} = *(r1 - 0x{off:02x});\n"));
+        }
+        out.push_str(&format!(
+            "  <callfixup name=\"_restgpr_{n}\">\n    <pcode><body><![CDATA[\n{body}    ]]></body></pcode>\n  </callfixup>\n"
+        ));
+    }
+    out
+}
+
+/// Injects the MWCC callfixups into a cspec before `</compiler_spec>`,
+/// alongside the context_data the entry-tracking pass already adds.
+fn with_mwcc_callfixups(cspec: &str, lang_dir: &str) -> String {
+    if !lang_dir.contains("PowerPC") {
+        return cspec.to_string();
+    }
+    let Some(close) = cspec.rfind("</compiler_spec>") else {
+        return cspec.to_string();
+    };
+    let mut out = String::with_capacity(cspec.len() + 8192);
+    out.push_str(&cspec[..close]);
+    out.push_str(&mwcc_callfixups());
+    out.push_str(&cspec[close..]);
+    out
+}
+
 /// Structures control-flow graphs read from stdin, one JSON object per line:
 /// `{"id":"...","blocks":[<start address>,...],"edges":[[from,to],...]}`.
 ///
@@ -543,6 +590,7 @@ fn run(
         }
     }
     let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir, &contexts);
+    let cspec = with_mwcc_callfixups(&cspec, lang_dir);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(
