@@ -1,0 +1,1765 @@
+{
+  "id": "m12-001",
+  "milestone": "M12",
+  "indexed": true,
+  "criterion": "whole-program structural diff, scored against symbol truth",
+  "recorded_at": "2026-09-12T07:38:30.267863+00:00",
+  "thresholds": {
+    "twins.precision": 1.0,
+    "twins.recall": 1.0,
+    "twins.name_precision": 1.0,
+    "anchor.precision": 1.0,
+    "optimisation.precision": 0.95,
+    "optimisation.recall": 0.75,
+    "optimisation.name_precision": 0.9,
+    "modules.precision": 0.95,
+    "modules.recall": 0.93,
+    "modules.name_precision": 0.9
+  },
+  "measured": {
+    "twins": {
+      "rows": 33,
+      "judged": 4018,
+      "correct": 4018,
+      "truth": 4018,
+      "ported_judged": 2120,
+      "ported_correct": 2120,
+      "precision": 1.0,
+      "recall": 1.0,
+      "name_precision": 1.0
+    },
+    "optimisation": {
+      "rows": 21,
+      "judged": 367,
+      "correct": 367,
+      "truth": 385,
+      "ported_judged": 54,
+      "ported_correct": 51,
+      "precision": 1.0,
+      "recall": 0.9532,
+      "name_precision": 0.9444
+    },
+    "modules": {
+      "rows": 2,
+      "judged": 1261,
+      "correct": 1234,
+      "truth": 1261,
+      "ported_judged": 1260,
+      "ported_correct": 1240,
+      "precision": 0.9786,
+      "recall": 0.9786,
+      "name_precision": 0.9841
+    },
+    "anchor": {
+      "judged": 5215,
+      "correct": 5215,
+      "precision": 1.0
+    },
+    "classes": {
+      "alignment": {
+        "judged": 414,
+        "correct": 388,
+        "precision": 0.9372
+      },
+      "body": {
+        "judged": 4050,
+        "correct": 4050,
+        "precision": 1.0
+      },
+      "import": {
+        "judged": 231,
+        "correct": 231,
+        "precision": 1.0
+      },
+      "name": {
+        "judged": 12,
+        "correct": 12,
+        "precision": 1.0
+      },
+      "profile": {
+        "judged": 20,
+        "correct": 20,
+        "precision": 1.0
+      },
+      "semantic": {
+        "judged": 17,
+        "correct": 16,
+        "precision": 0.9412
+      },
+      "shape": {
+        "judged": 886,
+        "correct": 886,
+        "precision": 1.0
+      },
+      "string": {
+        "judged": 16,
+        "correct": 16,
+        "precision": 1.0
+      }
+    },
+    "propagated": {
+      "judged": 414,
+      "correct": 388,
+      "truth": 1646,
+      "precision": 0.9372,
+      "recall": 0.2357
+    },
+    "propagated_by_kind": {
+      "modules": {
+        "judged": 405,
+        "correct": 379,
+        "precision": 0.9358
+      },
+      "optimisation": {
+        "judged": 9,
+        "correct": 9,
+        "precision": 1.0
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "x86_64_plain_o0",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "x86_64_plain_o2",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "x86_64_plain_pie",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "x86_64_cpp_o2",
+      "kind": "twins",
+      "truth": 20,
+      "matched": 20,
+      "judged": 20,
+      "correct": 20,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 7,
+      "ported_judged": 7,
+      "ported_correct": 7,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 20,
+          "correct": 20
+        }
+      },
+      "anchors": 20,
+      "reference_functions": 20,
+      "target_functions": 20,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "x86_64_many_o2",
+      "kind": "twins",
+      "truth": 409,
+      "matched": 409,
+      "judged": 409,
+      "correct": 409,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 404,
+      "ported_judged": 404,
+      "ported_correct": 404,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 409,
+          "correct": 409
+        }
+      },
+      "anchors": 409,
+      "reference_functions": 409,
+      "target_functions": 409,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "i386_plain_o0",
+      "kind": "twins",
+      "truth": 15,
+      "matched": 15,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 15,
+          "correct": 15
+        }
+      },
+      "anchors": 15,
+      "reference_functions": 15,
+      "target_functions": 15,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "i386_plain_o2",
+      "kind": "twins",
+      "truth": 15,
+      "matched": 15,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 15,
+          "correct": 15
+        }
+      },
+      "anchors": 15,
+      "reference_functions": 15,
+      "target_functions": 15,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "i386_plain_pie",
+      "kind": "twins",
+      "truth": 16,
+      "matched": 16,
+      "judged": 16,
+      "correct": 16,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 16,
+          "correct": 16
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 16,
+      "target_functions": 16,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "i386_cpp_o2",
+      "kind": "twins",
+      "truth": 23,
+      "matched": 23,
+      "judged": 23,
+      "correct": 23,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 7,
+      "ported_judged": 7,
+      "ported_correct": 7,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 23,
+          "correct": 23
+        }
+      },
+      "anchors": 23,
+      "reference_functions": 23,
+      "target_functions": 23,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "i386_many_o2",
+      "kind": "twins",
+      "truth": 413,
+      "matched": 413,
+      "judged": 413,
+      "correct": 413,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 404,
+      "ported_judged": 404,
+      "ported_correct": 404,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 413,
+          "correct": 413
+        }
+      },
+      "anchors": 413,
+      "reference_functions": 413,
+      "target_functions": 413,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_plain_o0",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 17,
+          "correct": 17
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_plain_o2",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 17,
+          "correct": 17
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_plain_pie",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 17,
+          "correct": 17
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 17,
+      "target_functions": 17,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_cpp_o2",
+      "kind": "twins",
+      "truth": 24,
+      "matched": 24,
+      "judged": 24,
+      "correct": 24,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 8,
+      "ported_judged": 8,
+      "ported_correct": 8,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 24,
+          "correct": 24
+        }
+      },
+      "anchors": 24,
+      "reference_functions": 24,
+      "target_functions": 24,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_many_o2",
+      "kind": "twins",
+      "truth": 415,
+      "matched": 415,
+      "judged": 415,
+      "correct": 415,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 405,
+      "ported_judged": 405,
+      "ported_correct": 405,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 415,
+          "correct": 415
+        }
+      },
+      "anchors": 415,
+      "reference_functions": 415,
+      "target_functions": 415,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "powerpc_plain_o0",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "powerpc_plain_o2",
+      "kind": "twins",
+      "truth": 12,
+      "matched": 12,
+      "judged": 12,
+      "correct": 12,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 12,
+          "correct": 12
+        }
+      },
+      "anchors": 12,
+      "reference_functions": 12,
+      "target_functions": 12,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "powerpc_plain_pie",
+      "kind": "twins",
+      "truth": 13,
+      "matched": 13,
+      "judged": 13,
+      "correct": 13,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 13,
+          "correct": 13
+        }
+      },
+      "anchors": 13,
+      "reference_functions": 13,
+      "target_functions": 13,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "powerpc_cpp_o2",
+      "kind": "twins",
+      "truth": 19,
+      "matched": 19,
+      "judged": 19,
+      "correct": 19,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 6,
+      "ported_judged": 6,
+      "ported_correct": 6,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 19,
+          "correct": 19
+        }
+      },
+      "anchors": 19,
+      "reference_functions": 19,
+      "target_functions": 19,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "powerpc_many_o2",
+      "kind": "twins",
+      "truth": 410,
+      "matched": 410,
+      "judged": 410,
+      "correct": 410,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 403,
+      "ported_judged": 403,
+      "ported_correct": 403,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 410,
+          "correct": 410
+        }
+      },
+      "anchors": 410,
+      "reference_functions": 410,
+      "target_functions": 410,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_o0",
+      "kind": "twins",
+      "truth": 11,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 11,
+          "correct": 11
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 11,
+      "target_functions": 11,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_o2",
+      "kind": "twins",
+      "truth": 10,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 10,
+          "correct": 10
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 10,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_plain_pie",
+      "kind": "twins",
+      "truth": 8,
+      "matched": 8,
+      "judged": 8,
+      "correct": 8,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 8,
+          "correct": 8
+        }
+      },
+      "anchors": 8,
+      "reference_functions": 9,
+      "target_functions": 8,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_cpp_o2",
+      "kind": "twins",
+      "truth": 17,
+      "matched": 17,
+      "judged": 17,
+      "correct": 17,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 17,
+          "correct": 17
+        }
+      },
+      "anchors": 17,
+      "reference_functions": 18,
+      "target_functions": 19,
+      "expected_misses": [
+        "0x20940"
+      ],
+      "stale_exemptions": []
+    },
+    {
+      "id": "mipsel_many_o2",
+      "kind": "twins",
+      "truth": 408,
+      "matched": 408,
+      "judged": 408,
+      "correct": 408,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 403,
+      "ported_judged": 403,
+      "ported_correct": 403,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 408,
+          "correct": 408
+        }
+      },
+      "anchors": 408,
+      "reference_functions": 408,
+      "target_functions": 408,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_o0",
+      "kind": "twins",
+      "truth": 138,
+      "matched": 138,
+      "judged": 138,
+      "correct": 138,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 138,
+          "correct": 138
+        }
+      },
+      "anchors": 138,
+      "reference_functions": 138,
+      "target_functions": 138,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_o2",
+      "kind": "twins",
+      "truth": 138,
+      "matched": 138,
+      "judged": 138,
+      "correct": 138,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 138,
+          "correct": 138
+        }
+      },
+      "anchors": 138,
+      "reference_functions": 138,
+      "target_functions": 138,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_plain_pie",
+      "kind": "twins",
+      "truth": 121,
+      "matched": 121,
+      "judged": 121,
+      "correct": 121,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 121,
+          "correct": 121
+        }
+      },
+      "anchors": 121,
+      "reference_functions": 121,
+      "target_functions": 121,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe64_many_o2",
+      "kind": "twins",
+      "truth": 476,
+      "matched": 476,
+      "judged": 476,
+      "correct": 476,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 476,
+          "correct": 476
+        }
+      },
+      "anchors": 476,
+      "reference_functions": 476,
+      "target_functions": 476,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe32_many_o2",
+      "kind": "twins",
+      "truth": 455,
+      "matched": 455,
+      "judged": 455,
+      "correct": 455,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 455,
+          "correct": 455
+        }
+      },
+      "anchors": 455,
+      "reference_functions": 455,
+      "target_functions": 455,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe32_plain_o0",
+      "kind": "twins",
+      "truth": 116,
+      "matched": 116,
+      "judged": 116,
+      "correct": 116,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 116,
+          "correct": 116
+        }
+      },
+      "anchors": 116,
+      "reference_functions": 116,
+      "target_functions": 116,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe32_plain_o2",
+      "kind": "twins",
+      "truth": 115,
+      "matched": 115,
+      "judged": 115,
+      "correct": 115,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 115,
+          "correct": 115
+        }
+      },
+      "anchors": 115,
+      "reference_functions": 115,
+      "target_functions": 115,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "pe32_plain_pie",
+      "kind": "twins",
+      "truth": 102,
+      "matched": 102,
+      "judged": 102,
+      "correct": 102,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 102,
+          "correct": 102
+        }
+      },
+      "anchors": 102,
+      "reference_functions": 102,
+      "target_functions": 102,
+      "expected_misses": [],
+      "stale_exemptions": []
+    },
+    {
+      "id": "aarch64_plain_o0->aarch64_plain_o2",
+      "kind": "optimisation",
+      "truth": 16,
+      "matched": 16,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 0.9375,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 2,
+          "correct": 2
+        },
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "shape": {
+          "judged": 8,
+          "correct": 8
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_o2->aarch64_plain_o0",
+      "kind": "optimisation",
+      "truth": 16,
+      "matched": 16,
+      "judged": 15,
+      "correct": 15,
+      "precision": 1.0,
+      "recall": 0.9375,
+      "ported": 5,
+      "ported_judged": 5,
+      "ported_correct": 5,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 2,
+          "correct": 2
+        },
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "shape": {
+          "judged": 8,
+          "correct": 8
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 16,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "aarch64_plain_o0->aarch64_plain_pie",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 15,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 4,
+          "correct": 4
+        },
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        },
+        "semantic": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 4,
+          "correct": 4
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 13,
+      "reference_functions": 17,
+      "target_functions": 17
+    },
+    {
+      "id": "i386_plain_o0->i386_plain_o2",
+      "kind": "optimisation",
+      "truth": 15,
+      "matched": 14,
+      "judged": 14,
+      "correct": 14,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 4,
+          "correct": 4
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 14,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_o2->i386_plain_o0",
+      "kind": "optimisation",
+      "truth": 15,
+      "matched": 14,
+      "judged": 14,
+      "correct": 14,
+      "precision": 1.0,
+      "recall": 0.9333,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 4,
+          "correct": 4
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 14,
+      "reference_functions": 15,
+      "target_functions": 15
+    },
+    {
+      "id": "i386_plain_o0->i386_plain_pie",
+      "kind": "optimisation",
+      "truth": 11,
+      "matched": 12,
+      "judged": 9,
+      "correct": 9,
+      "precision": 1.0,
+      "recall": 0.8182,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "alignment": {
+          "judged": 4,
+          "correct": 4
+        },
+        "import": {
+          "judged": 2,
+          "correct": 2
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "semantic": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 15,
+      "target_functions": 16
+    },
+    {
+      "id": "mipsel_plain_o0->mipsel_plain_o2",
+      "kind": "optimisation",
+      "truth": 10,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 7,
+          "correct": 7
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 10
+    },
+    {
+      "id": "mipsel_plain_o2->mipsel_plain_o0",
+      "kind": "optimisation",
+      "truth": 11,
+      "matched": 10,
+      "judged": 10,
+      "correct": 10,
+      "precision": 1.0,
+      "recall": 0.9091,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "shape": {
+          "judged": 7,
+          "correct": 7
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 10,
+      "reference_functions": 11,
+      "target_functions": 11
+    },
+    {
+      "id": "mipsel_plain_o0->mipsel_plain_pie",
+      "kind": "optimisation",
+      "truth": 5,
+      "matched": 8,
+      "judged": 3,
+      "correct": 3,
+      "precision": 1.0,
+      "recall": 0.6,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 2,
+      "name_precision": 0.6667,
+      "evidence": {
+        "alignment": {
+          "judged": 2,
+          "correct": 2
+        },
+        "semantic": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 3,
+      "reference_functions": 11,
+      "target_functions": 8
+    },
+    {
+      "id": "pe32_plain_o0->pe32_plain_o2",
+      "kind": "optimisation",
+      "truth": 34,
+      "matched": 115,
+      "judged": 34,
+      "correct": 34,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 32,
+          "correct": 32
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 110,
+      "reference_functions": 116,
+      "target_functions": 115
+    },
+    {
+      "id": "pe32_plain_o2->pe32_plain_o0",
+      "kind": "optimisation",
+      "truth": 34,
+      "matched": 115,
+      "judged": 34,
+      "correct": 34,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 32,
+          "correct": 32
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 110,
+      "reference_functions": 115,
+      "target_functions": 116
+    },
+    {
+      "id": "pe32_plain_o0->pe32_plain_pie",
+      "kind": "optimisation",
+      "truth": 24,
+      "matched": 99,
+      "judged": 24,
+      "correct": 24,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "import": {
+          "judged": 23,
+          "correct": 23
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 90,
+      "reference_functions": 116,
+      "target_functions": 102
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_o2",
+      "kind": "optimisation",
+      "truth": 43,
+      "matched": 137,
+      "judged": 43,
+      "correct": 43,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 41,
+          "correct": 41
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 129,
+      "reference_functions": 138,
+      "target_functions": 138
+    },
+    {
+      "id": "pe64_plain_o2->pe64_plain_o0",
+      "kind": "optimisation",
+      "truth": 43,
+      "matched": 137,
+      "judged": 43,
+      "correct": 43,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 41,
+          "correct": 41
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 129,
+      "reference_functions": 138,
+      "target_functions": 138
+    },
+    {
+      "id": "pe64_plain_o0->pe64_plain_pie",
+      "kind": "optimisation",
+      "truth": 34,
+      "matched": 119,
+      "judged": 34,
+      "correct": 34,
+      "precision": 1.0,
+      "recall": 1.0,
+      "ported": 0,
+      "ported_judged": 0,
+      "ported_correct": 0,
+      "name_precision": 0.0,
+      "evidence": {
+        "import": {
+          "judged": 33,
+          "correct": 33
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 108,
+      "reference_functions": 138,
+      "target_functions": 121
+    },
+    {
+      "id": "powerpc_plain_o0->powerpc_plain_o2",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 3,
+          "correct": 3
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_o2->powerpc_plain_o0",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 3,
+      "ported_judged": 3,
+      "ported_correct": 3,
+      "name_precision": 1.0,
+      "evidence": {
+        "body": {
+          "judged": 1,
+          "correct": 1
+        },
+        "import": {
+          "judged": 3,
+          "correct": 3
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "powerpc_plain_o0->powerpc_plain_pie",
+      "kind": "optimisation",
+      "truth": 6,
+      "matched": 9,
+      "judged": 3,
+      "correct": 3,
+      "precision": 1.0,
+      "recall": 0.5,
+      "ported": 2,
+      "ported_judged": 2,
+      "ported_correct": 1,
+      "name_precision": 0.5,
+      "evidence": {
+        "profile": {
+          "judged": 1,
+          "correct": 1
+        },
+        "semantic": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 7,
+      "reference_functions": 12,
+      "target_functions": 13
+    },
+    {
+      "id": "x86_64_plain_o0->x86_64_plain_o2",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_o2->x86_64_plain_o0",
+      "kind": "optimisation",
+      "truth": 12,
+      "matched": 11,
+      "judged": 11,
+      "correct": 11,
+      "precision": 1.0,
+      "recall": 0.9167,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 4,
+      "name_precision": 1.0,
+      "evidence": {
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "profile": {
+          "judged": 2,
+          "correct": 2
+        },
+        "shape": {
+          "judged": 6,
+          "correct": 6
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 11,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "x86_64_plain_o0->x86_64_plain_pie",
+      "kind": "optimisation",
+      "truth": 8,
+      "matched": 11,
+      "judged": 7,
+      "correct": 7,
+      "precision": 1.0,
+      "recall": 0.875,
+      "ported": 4,
+      "ported_judged": 4,
+      "ported_correct": 3,
+      "name_precision": 0.75,
+      "evidence": {
+        "alignment": {
+          "judged": 3,
+          "correct": 3
+        },
+        "import": {
+          "judged": 1,
+          "correct": 1
+        },
+        "name": {
+          "judged": 1,
+          "correct": 1
+        },
+        "semantic": {
+          "judged": 1,
+          "correct": 1
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 6,
+      "reference_functions": 12,
+      "target_functions": 12
+    },
+    {
+      "id": "base->boot",
+      "kind": "modules",
+      "truth": 630,
+      "matched": 643,
+      "judged": 630,
+      "correct": 616,
+      "precision": 0.9778,
+      "recall": 0.9778,
+      "ported": 637,
+      "ported_judged": 630,
+      "ported_correct": 619,
+      "name_precision": 0.9825,
+      "evidence": {
+        "alignment": {
+          "judged": 202,
+          "correct": 189
+        },
+        "body": {
+          "judged": 6,
+          "correct": 6
+        },
+        "profile": {
+          "judged": 7,
+          "correct": 7
+        },
+        "semantic": {
+          "judged": 6,
+          "correct": 5
+        },
+        "shape": {
+          "judged": 408,
+          "correct": 408
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 431,
+      "reference_functions": 648,
+      "target_functions": 732,
+      "expected_misses": [
+        "0x8069eb58",
+        "0x8069ffd4"
+      ],
+      "stale_exemptions": []
+    },
+    {
+      "id": "boot->base",
+      "kind": "modules",
+      "truth": 631,
+      "matched": 643,
+      "judged": 631,
+      "correct": 618,
+      "precision": 0.9794,
+      "recall": 0.9794,
+      "ported": 637,
+      "ported_judged": 630,
+      "ported_correct": 621,
+      "name_precision": 0.9857,
+      "evidence": {
+        "alignment": {
+          "judged": 203,
+          "correct": 190
+        },
+        "body": {
+          "judged": 6,
+          "correct": 6
+        },
+        "profile": {
+          "judged": 7,
+          "correct": 7
+        },
+        "semantic": {
+          "judged": 6,
+          "correct": 6
+        },
+        "shape": {
+          "judged": 408,
+          "correct": 408
+        },
+        "string": {
+          "judged": 1,
+          "correct": 1
+        }
+      },
+      "anchors": 430,
+      "reference_functions": 648,
+      "target_functions": 732,
+      "expected_misses": [
+        "0x8069eb58"
+      ],
+      "stale_exemptions": []
+    }
+  ],
+  "status": "pass",
+  "failures": []
+}

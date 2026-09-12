@@ -73,8 +73,12 @@ THRESHOLDS = {
 # alignment class fires (0.02 here -- most pairs resolve through anchors
 # or semantic evidence), not how right it is when it fires. Precision is
 # the claim, and like anchors it must be sound: measured 9/9.
+# Per kind: the corpus optimisation rows hold 1.0 on a small judged
+# set, the module pair holds the brief's 0.93. Pooling them would let
+# either kind hide behind the other's volume.
 INDEX_THRESHOLDS = {
-    "precision": 0.93,
+    "optimisation.precision": 1.0,
+    "modules.precision": 0.93,
 }
 
 # Evidence classes that identify a function outright rather than scoring it.
@@ -463,8 +467,23 @@ def main() -> int:
 
     failures = []
     if arguments.index and "propagated" in measured:
+        by_kind: dict[str, dict[str, int]] = {}
+        for row in optimisation + modules:
+            bucket = by_kind.setdefault(row["kind"], {"judged": 0, "correct": 0})
+            cell = row["evidence"].get("alignment", {"judged": 0, "correct": 0})
+            bucket["judged"] += cell["judged"]
+            bucket["correct"] += cell["correct"]
+        measured["propagated_by_kind"] = {
+            kind: {
+                "judged": counts["judged"],
+                "correct": counts["correct"],
+                "precision": round(counts["correct"] / max(counts["judged"], 1), 4),
+            }
+            for kind, counts in sorted(by_kind.items())
+        }
         for key, threshold in INDEX_THRESHOLDS.items():
-            value = measured["propagated"][key]
+            kind, _ = key.split(".")
+            value = measured["propagated_by_kind"].get(kind, {}).get("precision", 0.0)
             if value < threshold:
                 failures.append(f"indexed propagated {key} {value} < {threshold}")
     for row in twins + optimisation + modules:

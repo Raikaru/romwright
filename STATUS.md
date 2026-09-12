@@ -6280,10 +6280,15 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   three exempted identical-code ambiguities recorded below.
 
 - Recorded deficit (module rows, 2026-09-11): three anchor misses are
-  genuine name-vs-content ambiguities, exempted visibly with the twins
-  tripwire (m12 modules exemption, staleness-guarded). 0x8069eb58 is one
-  stub slot at the same address in both modules with crossed spellings
-  (EXI2_Poll vs Hu_IsStub, same bytes both directions); 0x8069ffd4 vs
-  0x8068312c are identical-shape twins (EXIDeselect vs CheckDVDError).
-  Both modules link at 0x80680000, so same-address coincidence across
-  them carries no identity.
+  body/shape keys colliding across distinct degenerate functions,
+  exempted visibly with the twins tripwire (m12 modules exemption,
+  staleness-guarded) -- not truth ambiguity: EXI2_Poll and Hu_IsStub
+  are different functions sharing one stub slot's bytes at the same
+  address in both modules (crossed spellings both directions), and
+  EXIDeselect vs CheckDVDError share a shape digest with distinct
+  names. Narrowing the keys (minimum body size) was judged riskier
+  than three documented addresses: tiny-but-unique bodies are often
+  the best anchors elsewhere. Both modules link at 0x80680000, so
+  same-address coincidence across them carries no identity. Module
+  evidence lives in benchmarks/reports/m12-001-modules.json, recorded
+  where the pair exists; CI machines without it skip those rows.
