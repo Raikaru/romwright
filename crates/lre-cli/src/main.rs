@@ -468,27 +468,68 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 );
             }
         }
-        // `export-symbols <program> [--format dtk|splat]`: the store's own
-        // symbol list in a decomp project's grammar, so a Ventris session
-        // hands dtk/splat the names it recovered rather than making the
-        // project re-derive them.
+        // `export-symbols <program> [--format dtk|splat] [--splits FILE]`:
+        // the store's own symbol list in a decomp project's grammar, so a
+        // Ventris session hands dtk/splat the names it recovered rather
+        // than making the project re-derive them. `--splits` supplies the
+        // project's splits.txt so exported rows carry real section names;
+        // without it the section column is the coarse `.text`/`.data`
+        // split the store can defend.
         "export-symbols" => {
             let program = args.get(2).ok_or("export-symbols needs a program")?;
             let format = flag(args, "--format").unwrap_or_else(|| "dtk".into());
+            let splits = flag(args, "--splits")
+                .map(|path| {
+                    std::fs::read_to_string(&path)
+                        .map(|text| lre_core::native::linkmap::parse_splits(&text))
+                        .map_err(|e| format!("{path}: {e}"))
+                })
+                .transpose()?
+                .unwrap_or_default();
             let functions = core.functions(program).map_err(|e| e.to_string())?;
             let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            // Function entries carry their size; object names come from the
-            // symbol table (object sizes live in data definitions, not the
-            // symbol row). Section names are not stored, so the section
-            // column is the coarse `.text`/`.data` split the store can
-            // defend: functions are code, everything else is data.
+            let data_definitions =
+                core.data_definitions(program).map_err(|e| e.to_string())?;
+            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
+            // Symbols outside every splits extent (unsplit TUs, gaps) still
+            // need their real section name: name each memory region after the
+            // splits extent covering most of it, so `.rodata` symbols don't
+            // fall back to `.data` and corrupt dtk's section extents.
+            let mut region_names: Vec<(u64, u64, String)> = Vec::new();
+            for region in &regions {
+                let start = region.start.offset;
+                let end = start.saturating_add(region.size);
+                let name = splits
+                    .iter()
+                    .filter(|extent| extent.start < end && extent.end > start)
+                    .max_by_key(|extent| {
+                        extent.end.min(end).saturating_sub(extent.start.max(start))
+                    })
+                    .map(|extent| extent.name.clone());
+                if let Some(name) = name {
+                    region_names.push((start, end, name));
+                }
+            }
+            let section_of = |address: u64| -> &str {
+                if let Some(name) =
+                    lre_core::native::linkmap::section_at(&splits, address)
+                {
+                    return name;
+                }
+                region_names
+                    .iter()
+                    .find(|(start, end, _)| address >= *start && address < *end)
+                    .map(|(_, _, name)| name.as_str())
+                    .unwrap_or(".data")
+            };
             let mut rows: Vec<String> = Vec::new();
             for function in &functions {
                 let address = function.entry.offset;
+                let section = section_of(address);
                 match format.as_str() {
                     "splat" => rows.push(format!("{address:#x} {};", function.name)),
                     _ => rows.push(format!(
-                        "{} = .text:{address:#x}; // type:function size:{:#x} scope:global",
+                        "{} = {section}:{address:#x}; // type:function size:{:#x} scope:global",
                         function.name, function.size
                     )),
                 }
@@ -498,10 +539,19 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     continue;
                 }
                 let address = symbol.address.offset;
+                let section = section_of(address);
+                // dtk types an unsized object `Unknown` and `dol diff`
+                // rejects it; the data-definition table holds the size
+                // the import recorded.
+                let size = data_definitions
+                    .iter()
+                    .find(|row| row.address.offset == address)
+                    .map(|row| row.size)
+                    .unwrap_or(0);
                 match format.as_str() {
                     "splat" => rows.push(format!("{address:#x} {};", symbol.name)),
                     _ => rows.push(format!(
-                        "{} = .data:{address:#x}; // type:object scope:global",
+                        "{} = {section}:{address:#x}; // type:object size:{size:#x} scope:global",
                         symbol.name
                     )),
                 }

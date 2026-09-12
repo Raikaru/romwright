@@ -530,6 +530,15 @@ impl Core {
         Ok(self.db.symbols(id)?)
     }
 
+    /// Lists data definitions (typed data extents) from the store.
+    pub fn data_definitions(
+        &self,
+        program: &str,
+    ) -> Result<Vec<lre_model::DataDefinitionRow>> {
+        let id = self.db.program_id(program)?;
+        Ok(self.db.data_definitions(id)?)
+    }
+
     /// Lists discovered strings from the durable project store.
     /// Paged strings (Phase 2.3).
     pub fn strings_page(

@@ -90,11 +90,13 @@ def main() -> int:
             f"symbols.txt recall {recall:.4f} < {RECALL_FLOOR}: "
             f"{hits} of {len(truth)}")
 
-        # Round-trip: export the store's names, re-import onto a fresh
-        # project, require the same names back.
+        # Round-trip: export the store's names with real section names
+        # from the project's splits.txt, re-import onto a fresh project,
+        # require the same names back.
         exported = subprocess.run(
             [str(cli), "export-symbols", "bond",
-             "--project", str(project), "--format", "dtk"],
+             "--project", str(project), "--format", "dtk",
+             "--splits", str(arguments.project_dir / "config/GQFE78/splits.txt")],
             cwd=ROOT, capture_output=True, text=True, timeout=300)
         assert exported.returncode == 0, f"export failed: {exported.stderr.strip()}"
         export_file = Path(temporary) / "exported.txt"
@@ -112,6 +114,37 @@ def main() -> int:
                         if second.get(address) == name)
         assert roundtrip == len(first), (
             f"round-trip lost names: {roundtrip} of {len(first)}")
+
+        # The dtk contract: our emitted config + symbols must satisfy
+        # `dtk dol diff` no worse than the project's own symbols.txt —
+        # the rebuilt ELF is mid-decomp, so even the original file diffs
+        # with errors; ours must not add any.
+        dtk = Path.home() / "Projects/agent-under-fire/tools/dtk"
+        bond_elf = arguments.project_dir / "build/GQFE78/bond.elf"
+        if dtk.is_file() and bond_elf.is_file():
+            work = Path(temporary) / "dtkproj"
+            work.mkdir()
+            (work / "bond.dol").write_bytes(dol.read_bytes())
+            (work / "splits.txt").write_text(
+                (arguments.project_dir / "config/GQFE78/splits.txt")
+                .read_text(errors="replace"))
+            (work / "config.yml").write_text(
+                "name: bond\nobject: bond.dol\n"
+                "symbols: symbols.txt\nsplits: splits.txt\n")
+
+            def dol_diff(symbols_text):
+                (work / "symbols.txt").write_text(symbols_text)
+                run = subprocess.run(
+                    [str(dtk), "dol", "diff", "config.yml", str(bond_elf)],
+                    cwd=work, capture_output=True, text=True, timeout=300)
+                return [line for line in run.stdout.splitlines()
+                        if line.startswith("ERROR")]
+
+            ours = dol_diff(exported.stdout)
+            baseline = dol_diff(symbols.read_text(errors="replace"))
+            assert len(ours) <= len(baseline), (
+                f"dtk dol diff: ours {len(ours)} errors vs "
+                f"baseline {len(baseline)}: {ours[:4]}")
 
         summary = (f"{len(first)} functions, symbols.txt recall {recall:.4f} "
                    f"over {len(truth)} dtk rows, round-trip {roundtrip}/{len(first)}")

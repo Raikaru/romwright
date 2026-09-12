@@ -692,7 +692,89 @@ fn parse_dtk_splat(text: &str) -> LinkerMap {
     map
 }
 
-// ------------------------------------------------------------------ sniff
+
+// ----------------------------------------------------------------- splits
+
+/// One dtk `splits.txt` extent: a section name over `[start, end)`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SplitExtent {
+    pub name: String,
+    pub start: u64,
+    pub end: u64,
+    /// `code`/`rodata`/`data`/`bss` from the `Sections:` header, when the
+    /// row's section declared one.
+    pub kind: String,
+}
+
+/// dtk `splits.txt`: a `Sections:` block naming each section's type, then
+/// per-TU blocks of `.section start:0x.. end:0x..` rows. The extents are
+/// what a section name on a symbol means; without them an export can only
+/// guess `.text`/`.data`, and `dtk dol diff` checks names against the
+/// linked ELF's real sections.
+pub fn parse_splits(text: &str) -> Vec<SplitExtent> {
+    let mut extents = Vec::new();
+    let mut section_kinds: HashMap<String, String> = HashMap::new();
+    let mut in_sections = false;
+    for raw in text.lines() {
+        let line = raw.strip_suffix('\r').unwrap_or(raw);
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed == "Sections:" {
+            in_sections = true;
+            continue;
+        }
+        if in_sections {
+            // `\t.init       type:code align:4` — tab-indented name + attrs.
+            if line.starts_with('\t') || line.starts_with("    ") {
+                let mut words = trimmed.split_whitespace();
+                if let Some(name) = words.next() {
+                    let kind = words
+                        .find_map(|w| w.strip_prefix("type:").map(str::to_string))
+                        .unwrap_or_default();
+                    section_kinds.insert(name.to_string(), kind);
+                }
+                continue;
+            }
+            in_sections = false;
+        }
+        // `file.c:` opens a TU block; `\t.text start:0x.. end:0x..` rows
+        // carry the extents.
+        if trimmed.ends_with(':') && !trimmed.contains(' ') {
+            continue;
+        }
+        let mut words = trimmed.split_whitespace();
+        let Some(name) = words.next() else { continue };
+        let mut start = None;
+        let mut end = None;
+        for word in words {
+            if let Some(value) = word.strip_prefix("start:") {
+                start = u64::from_str_radix(value.trim_start_matches("0x"), 16).ok();
+            } else if let Some(value) = word.strip_prefix("end:") {
+                end = u64::from_str_radix(value.trim_start_matches("0x"), 16).ok();
+            }
+        }
+        if let (Some(start), Some(end)) = (start, end) {
+            let kind = section_kinds.get(name).cloned().unwrap_or_default();
+            extents.push(SplitExtent {
+                name: name.to_string(),
+                start,
+                end,
+                kind,
+            });
+        }
+    }
+    extents
+}
+
+/// The section name an address falls inside, when the splits name it.
+pub fn section_at(extents: &[SplitExtent], address: u64) -> Option<&str> {
+    extents
+        .iter()
+        .find(|extent| address >= extent.start && address < extent.end)
+        .map(|extent| extent.name.as_str())
+}
 
 /// Parse a MAP file, sniffing the grammar from its own text. Never fails
 /// on unknown lines: a linker upgrade must not break ingestion of the
