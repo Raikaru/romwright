@@ -31,6 +31,7 @@ mod nonreturn;
 mod signatures;
 pub mod rtti;
 pub mod sdk_types;
+pub mod cross_module;
 pub use nonreturn::NonReturnInferenceReport;
 
 use lre_db::ProjectDb;
