@@ -1503,7 +1503,12 @@ pub fn load_container_with(
         None => None,
     };
     let bin_map = map_bytes.as_deref().and_then(binmap::parse);
-    let cw_map = match (bin_map.is_some(), &map_bytes) {
+    let sym_map = if bin_map.is_none() {
+        map_bytes.as_deref().and_then(linkmap::parse_sym)
+    } else {
+        None
+    };
+    let cw_map = match (bin_map.is_some() || sym_map.is_some(), &map_bytes) {
         (true, _) => None,
         (false, Some(bytes)) => Some(linkmap::parse(
             std::str::from_utf8(bytes)
@@ -1521,6 +1526,9 @@ pub fn load_container_with(
         imp.cfg.adopt_language(&imp.language);
         if let Some(cw_map) = &cw_map {
             linkmap::apply_to_import(&mut imp, cw_map);
+        }
+        if let Some(sym_map) = &sym_map {
+            linkmap::apply_to_import(&mut imp, sym_map);
         }
         if let Some(bin_map) = &bin_map {
             binmap::apply_to_import(&mut imp, bin_map);
