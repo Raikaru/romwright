@@ -6217,8 +6217,9 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   decode artifact, retracted): loop-carried bounds (0x190be9/0x19b3b9),
   unguarded offset composition (0x184aba), unknown bases (0x1ce42a R12),
   object dispatch (0x1dae47), absolute-table extent (0x2366c7), three
-  stock-only big switches, two notrack-guarded dispatches (0x121073,
-  0x265ffe, shapes not yet worked up). Cutover (decompiler out of the
+  stock-only big switches, two notrack-guarded dispatches (0x121073
+  shows the movzbl/movslq/add/jmp PIC chain, recoverability not yet
+  established; 0x265ffe not yet worked up). Cutover (decompiler out of the
   switch round) waits on missed <= 3.
 
 - Switch windows deduplicate (2026-09-11): flow shapes accumulate across
