@@ -6292,3 +6292,46 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   same-address coincidence across them carries no identity. Module
   evidence lives in benchmarks/reports/m12-001-modules.json, recorded
   where the pair exists; CI machines without it skip those rows.
+
+- Better-than-Ghidra games program (research 2026-09-11, three scouts).
+  Nobody decompiles vector units (Ghidra: no RSP/VU/GTE/DSP, one
+  unfinished community VU0; IDA: disassembly-only plugins; decomp
+  projects use hand-asm, blobs, or recompilers, never auto-C), console
+  format support is community-fragmented everywhere (Ghidra/IDA/Binja
+  all rely on per-format plugins; Nintendo MAP unsupported by all;
+  containers external via hactool/wit/Dolphin; splat lives outside RE
+  tools), and Ghidra carries years-open game bugs (PPC r13 SDA #325,
+  PS3 TOC #570, MIPS enum casts #4236, ROM mutability #278). No
+  head-to-head game benchmark exists anywhere. Axes, sequenced by
+  value over cost: (1) quick wins this codebase already brackets --
+  PPC r13 SDA globals (Agent Under Fire is PPC and on disk), MIPS
+  enum casts, ROM mutability in our memory model, Nintendo MAP
+  ingestion, container-direct import; (2) overlay-aware project model
+  (DOL/REL/NSO cross-module xrefs/names; m10 multi-image is the base)
+  plus splat segment interop and asm matching (m12-003); (3) vector
+  specs for disassembly first (RSP/VU0/GTE), then lifting to readable
+  C -- the greenfield moat, months. Every axis gets a superiority
+  gate (beat stock), never a parity gate: parity is C1, this program
+  is C2 generalising to games.
+
+- Better-than-Ghidra breadth closed (2026-09-11, four more scouts).
+  PSP/Vita: PBP/PRX/SELF/PFS all external-decrypt, NIDs via sparse
+  external DBs, PPSSPP WebSocket + Vita3K GDB as runtime backends nobody
+  integrates. Xbox: XEX crypto/XEXP/STFS preprocessing fragmented,
+  retail PDBs unavailable, BN/Rizin need external prep. PS3: no
+  maintained SPU lifter anywhere (community plugins dead/WIP), TOC/OPD
+  still partial (#570 + #1540), RPCS3 debugger unintegrated. GBA closed
+  (mature + mGBA); mobile gap is Unity/Il2CppDumper workflow
+  (dump.cs -> names) integration, not CPU support. Thin spots gone:
+  every console is now mapped.
+- #325 reproduced live on the pinned install (not fixed upstream):
+  stock names the SDA global (`HadError = HadError + iVar4`), ours
+  emits raw `unaff_r13 + -0x7f00` on Agent Under Fire `RunNextModule`
+  (0x80682770). Chain pinned: HadError OBJECT at 0x806a9980 (.sbss),
+  _SDA_BASE_ ABS 0x806b1880, target = r13 - 0x7f00 exactly; our store
+  holds no symbol or data-definition for it. Recommended first slice:
+  SDA data symbols from symtab OBJECTs through store to the worker's
+  r13-relative application, gated on this function rendering `HadError`
+  while stock keeps naming it -- then find stock's remaining
+  `(r13 - x)` cases and beat those.
+
