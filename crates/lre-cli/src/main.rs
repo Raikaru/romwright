@@ -468,6 +468,48 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 );
             }
         }
+        // `export-symbols <program> [--format dtk|splat]`: the store's own
+        // symbol list in a decomp project's grammar, so a Ventris session
+        // hands dtk/splat the names it recovered rather than making the
+        // project re-derive them.
+        "export-symbols" => {
+            let program = args.get(2).ok_or("export-symbols needs a program")?;
+            let format = flag(args, "--format").unwrap_or_else(|| "dtk".into());
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
+            // Function entries carry their size; object names come from the
+            // symbol table (object sizes live in data definitions, not the
+            // symbol row). Section names are not stored, so the section
+            // column is the coarse `.text`/`.data` split the store can
+            // defend: functions are code, everything else is data.
+            let mut rows: Vec<String> = Vec::new();
+            for function in &functions {
+                let address = function.entry.offset;
+                match format.as_str() {
+                    "splat" => rows.push(format!("{address:#x} {};", function.name)),
+                    _ => rows.push(format!(
+                        "{} = .text:{address:#x}; // type:function size:{:#x} scope:global",
+                        function.name, function.size
+                    )),
+                }
+            }
+            for symbol in &symbols {
+                if symbol.external {
+                    continue;
+                }
+                let address = symbol.address.offset;
+                match format.as_str() {
+                    "splat" => rows.push(format!("{address:#x} {};", symbol.name)),
+                    _ => rows.push(format!(
+                        "{} = .data:{address:#x}; // type:object scope:global",
+                        symbol.name
+                    )),
+                }
+            }
+            for row in &rows {
+                println!("{row}");
+            }
+        }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
             let vaddr = u64::from_str_radix(
