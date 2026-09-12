@@ -6509,3 +6509,10 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   on an analysed GCC hello (.text->.plt). REL loader deferred: no REL
   fixture on disk, and the modules model is format-agnostic so a REL
   lands as modules when one arrives.
+- m20-013: PS2 VU + PSX GTE disassembly. `crates/lre-core/src/vu.rs`
+  decodes the EE COP2 VU macro set (tables from Ghidra's vendored
+  `vuupper.sinc`/`cop2.sinc`, operand order verified against rabbitizer
+  R5900); `crates/lre-core/src/gte.rs` decodes the PSX GTE command set.
+  Gate `tests/m20-013_vector.py`: VU 19281/19281 mnemonics on real
+  nightfire-ps2 code, GTE 328/328 on an exhaustive command+flag sweep.
+  M-G vector units complete: RSP (m20-012) + VU + GTE (m20-013).
