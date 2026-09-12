@@ -3607,6 +3607,29 @@ pub fn store_import(
             source: "native-import".into(),
         })
         .collect::<Vec<_>>();
+    // Every mapped region is a module the program loads: DOL sections,
+    // ELF segments, REL images. `locate` names the module an address
+    // belongs to from these rows.
+    for region in &regions {
+        db.insert_module(
+            pid,
+            &lre_model::ModuleRow {
+                module_id: 0,
+                program: program.to_string(),
+                name: region.name.clone(),
+                kind: if region.permissions.contains('x') {
+                    "code".into()
+                } else {
+                    "data".into()
+                },
+                file_id: String::new(),
+                load_vaddr: region.start.clone(),
+                size: region.size,
+                file_off: 0,
+                resident: true,
+            },
+        )?;
+    }
     // A platform's own map: declared, byte-less, and named by the platform.
     regions.extend(imp.declared_regions.iter().map(|region| MemoryRegion {
         name: format!("{}:{}", imp.format.to_ascii_lowercase(), region.name),
@@ -3879,6 +3902,34 @@ pub fn store_import(
         })
         .collect();
     db.replace_xrefs(pid, &xrows)?;
+    // Cross-module references: an xref whose src and dst live in
+    // different modules is a module_xrefs row.
+    let module_rows = db.modules(pid)?;
+    if module_rows.len() > 1 {
+        let module_of = |address: u64| -> Option<&lre_model::ModuleRow> {
+            module_rows.iter().find(|m| {
+                m.load_vaddr.offset <= address
+                    && address - m.load_vaddr.offset < m.size
+            })
+        };
+        for x in &imp.xrefs {
+            let (Some(from), Some(to)) =
+                (module_of(x.from), module_of(x.to))
+            else {
+                continue;
+            };
+            if from.module_id != to.module_id {
+                db.insert_module_xref(&lre_model::ModuleXrefRow {
+                    module_id: from.module_id,
+                    from_addr: lre_model::Address::ram(x.from),
+                    to_module_id: Some(to.module_id),
+                    to_addr: lre_model::Address::ram(x.to),
+                    to_external: String::new(),
+                    kind: "call".into(),
+                })?;
+            }
+        }
+    }
     // Each rule owns its rows: the ABI-reserved slot and a stub's own branch
     // are different evidence for the same kind of correction.
     for source in [PLT_HEADER_SOURCE, THUNK_SOURCE, SHARED_RETURN_SOURCE] {
