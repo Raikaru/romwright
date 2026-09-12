@@ -6425,3 +6425,11 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   `tests/m20-005_mdebug.py`: PASS, 8795 functions, all 5221 DWARF1
   subroutines agreeing with symtab. Line info (`.line` section,
   AT_stmt_list) has no destination table in the model and is skipped.
+
+- m20-006b (2026-09-12): Vita SCE ELF + BINMAP. `native/sce.rs` walks
+  ET_SCE_EXEC export/import tables (segment offsets, NID-keyed stubs);
+  `native/binmap.rs` parses the 39461-record BINMAP blob and renames
+  sce_import_*/sce_export_* placeholders through its NID->name table.
+  PT_LOAD fallback covers stripped section headers. Gate
+  `tests/m20-006_vita_elf.py`: **PASS, 572 SCE-seeded + 29488
+  BINMAP-named functions, NID imports resolved**.
