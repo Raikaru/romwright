@@ -6374,3 +6374,19 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   row holds 4/4 identical; NDS UNREACHED row 395/512 identical of 7364
   shared (floor 394). Baseline stands, no re-record. Note: run needs
   TMPDIR on /home -- /tmp tmpfs (7.5G) overflows on the JVM rows.
+
+- m20-001 (2026-09-12): CodeWarrior MAP ingestion, first M-A row. New
+  `native/cwmap.rs` reads the mwldarm grammar (`N](name,type)` link rows,
+  `# .subsection` layout headers, `(lib.a member.o)` archive TUs, CRLF)
+  and dtk's `N] name (type,vis)` shape; kind precedence is link-map
+  `func`/`object` first, then section heuristic (code section -> Func,
+  data -> Object) because the link map lists globals only -- static
+  functions exist solely as layout rows. `lre-cli import --map FILE`
+  seeds named functions (linker truth renames discovery coinage),
+  object sizes/names, and `$t`/`$a` mode contexts before discovery;
+  the map digest rides the import-cache flavour. Gate
+  `tests/m20-001_cw_map.py` on HeartGold (11 MB MAP + full-symtab ELF +
+  byte-exact ROM): **named recall 0.9946 over 11019 ELF FUNCs, MAP/ELF
+  agreement 0.9946**; stock Ghidra has no DS MAP importer (R7 baseline).
+  Overlay-range FUNC rows are gated out of the static import by the
+  executable-mapping check until M-C gives them programs.

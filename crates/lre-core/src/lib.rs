@@ -1881,11 +1881,11 @@ impl Core {
     /// regions, relocations and the image's symbol table, stored and
     /// returned. An interactive session opens with this and analyses after.
     pub fn load_program(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, false, "")
+        self.import_container_with(binary, name, false, "", None)
     }
 
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, true, "")
+        self.import_container_with(binary, name, true, "", None)
     }
 
     pub(crate) fn import_container_with(
@@ -1894,18 +1894,30 @@ impl Core {
         name: &str,
         analyse: bool,
         flavour: &str,
+        map: Option<&Path>,
     ) -> Result<Vec<ProgramSummary>> {
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
         // Only a project this import would be the sole occupant of can be
         // restored wholesale, which is every gate's shape and no analyst's
         // multi-image project.
+        // A MAP changes what the import produces, so its digest rides the
+        // reuse key beside the signature flavour: a map'd import must never
+        // be served a mapless cache.
+        let map_flavour = map
+            .map(|path| {
+                let digest = std::fs::read(path)
+                    .map(|bytes| crate::import_cache::digest_bytes(&bytes))
+                    .unwrap_or_else(|_| "absent".into());
+                format!("|map:{}:{digest}", path.display())
+            })
+            .unwrap_or_default();
         let cache_key = (self.db.programs()?.is_empty())
             .then(|| {
                 import_cache::key(
                     binary,
                     &format!(
-                        "{name}|{}|{flavour}",
+                        "{name}|{}|{flavour}{map_flavour}",
                         if analyse { "analysed" } else { "loaded" }
                     ),
                     &self.config,
@@ -1933,7 +1945,7 @@ impl Core {
                 }
             }
         }
-        let images = native::load_container_with(binary, analyse)?;
+        let images = native::load_container_with(binary, analyse, map)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {
