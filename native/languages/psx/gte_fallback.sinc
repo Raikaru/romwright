@@ -1,0 +1,31 @@
+# GTE command fallback: the low 6 bits of cofun select the operation.
+# inline_s.sinc lifts the common flag combinations (cofun=0x00180001 etc.)
+# to named ops; these constructors catch every other flag combination of
+# a known command so a bare rtps (cofun=0x00000001) still shows
+# gte_rtps() rather than copFunction(2, 1). The specific cofun= matches
+# in inline_s.sinc are more specific and win; these are the fallback.
+# Command numbers verified against rabbitizer's R3000GTE table
+# (crates/lre-core/src/gte.rs).
+
+:rtps   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x01 & cofun { gte_rtps(); }
+:nclip  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x06 & cofun { gte_nclip(); }
+:op     is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x0c & cofun { gte_op0(); }
+:dpcs   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x10 & cofun { gte_dpcs(); }
+:intpl  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x11 & cofun { gte_intpl(); }
+:mvmva  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x12 & cofun { gte_mvmva(); }
+:ncds   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x13 & cofun { gte_ncds(); }
+:cdp    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x14 & cofun { gte_cdp(); }
+:ncdt   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x16 & cofun { gte_ncdt(); }
+:nccs   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x1b & cofun { gte_nccs(); }
+:cc     is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x1c & cofun { gte_cc(); }
+:ncs    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x1e & cofun { gte_ncs(); }
+:nct    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x20 & cofun { gte_nct(); }
+:sqr    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x28 & cofun { gte_sqr0(); }
+:dpcl   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x29 & cofun { gte_dpcl(); }
+:dpct   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x2a & cofun { gte_dpct(); }
+:avsz3  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x2d & cofun { gte_avsz3(); }
+:avsz4  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x2e & cofun { gte_avsz4(); }
+:rtpt   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x30 & cofun { gte_rtpt(); }
+:gpf    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x3d & cofun { gte_gpf0(); }
+:gpl    is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x3e & cofun { gte_gpl0(); }
+:ncct   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x3f & cofun { gte_ncct(); }
