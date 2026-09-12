@@ -30,7 +30,7 @@ mod elf_image;
 mod pe_roots;
 mod pe_unwind;
 mod strings;
-pub(crate) mod linkmap;
+pub mod linkmap;
 pub(crate) mod nonreturn;
 use lre_model::{
     FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
