@@ -83,8 +83,18 @@ fn with_entry_register_tracking(
     // function decoded as ARM and the decompiler reported bad instruction
     // data (182 of 512 sampled DS functions).
     let image_end = provider.backing.image_end();
-    for (index, (address, name, value)) in contexts.iter().enumerate() {
-        let last = contexts
+    // Register names are not context fields: raw-SLEIGH resolves each
+    // `<context_set>` name against the `.sla`'s declared context variables,
+    // and a register (`r13`, `r2`) is rejected there -- registers ride
+    // `<tracked_set>` and `getTrackedRegisters` instead (below, and
+    // `tracked_values`). Folding ranges over the filtered rows keeps a
+    // skipped point from punching a one-address hole in its neighbour.
+    let fields: Vec<&(u64, String, u64)> = contexts
+        .iter()
+        .filter(|(_, name, _)| !provider.registers.contains_key(name))
+        .collect();
+    for (index, (address, name, value)) in fields.iter().enumerate() {
+        let last = fields
             .get(index + 1)
             .map(|(next, _, _)| next.saturating_sub(1))
             .unwrap_or(image_end.saturating_sub(1))
@@ -109,6 +119,66 @@ fn with_entry_register_tracking(
                     ));
                 }
             }
+        }
+    }
+    // PowerPC EABI small-data-area bases over each function body the
+    // store holds: `r13` addresses `.sdata`, `r2` (32-bit EABI) `.sdata2`.
+    // Values come from the stored decode contexts (ABS symbols when
+    // declared, section convention otherwise), not from the entry address
+    // the way MIPS `t9` does. Ranges, not points: the decompiler paints a
+    // tracked set over exactly the range it names (`decodeTracked`), so a
+    // point seeds only its own byte -- the whole body must be covered, the
+    // way Ghidra paints execute blocks (`setRegisterContext`). Without them
+    // an `lwz` through `r13` decompiles as `in_r13 + offset` instead of the
+    // object it addresses.
+    if lang_dir.contains("PowerPC") {
+        let mut bases: std::collections::HashMap<(u64, &str), u64> =
+            std::collections::HashMap::new();
+        for (address, name, value) in contexts {
+            if name == "r13" || name == "r2" {
+                bases.insert((*address, name.as_str()), *value);
+            }
+        }
+        // One element per range holding every register set there: decoding
+        // a second element over a range clears the first
+        // (`ContextInternal::createSet`: `clearRange` plus `clear`), so a
+        // per-register loop leaves only the last register standing.
+        let mut points: Vec<u64> = bases.keys().map(|(address, _)| *address).collect();
+        points.sort_unstable();
+        points.dedup();
+        for entry in points {
+            let mut sets = String::new();
+            for register in ["r13", "r2"] {
+                let (Some(&value), Some(&(register_offset, register_size))) = (
+                    bases.get(&(entry, register)),
+                    provider.registers.get(register),
+                ) else {
+                    continue;
+                };
+                if register_size == 0 || register_size > 8 {
+                    continue;
+                }
+                sets.push_str(&format!(
+                    "<set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{value:x}\"/>\n"
+                ));
+            }
+            if sets.is_empty() {
+                continue;
+            }
+            let size = provider
+                .function_sizes
+                .get(&entry)
+                .copied()
+                .unwrap_or(1)
+                .max(1);
+            let last = entry
+                .saturating_add(size)
+                .saturating_sub(1)
+                .min(image_end.saturating_sub(1))
+                .max(entry);
+            data.push_str(&format!(
+                "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{last:x}\">\n{sets}</tracked_set>\n"
+            ));
         }
     }
     if data.is_empty() {
@@ -459,6 +529,16 @@ fn run(
         .map(|(address, name, value)| (address.offset, name, value))
         .collect();
     contexts.sort_by(|left, right| left.0.cmp(&right.0));
+    // Loader-established register values travel in the decode contexts
+    // discovery stored (one point per function); the provider serves them
+    // back through `getTrackedRegisters` alongside conventional MIPS `t9`.
+    for (address, name, value) in &contexts {
+        if name == "r13" || name == "r2" {
+            provider
+                .tracked_values
+                .insert((*address, name.clone()), *value);
+        }
+    }
     let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir, &contexts);
     let mut worker = lre_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;

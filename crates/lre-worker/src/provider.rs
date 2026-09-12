@@ -148,18 +148,43 @@ pub struct ProgramProvider {
     /// own installer builds the same map and sets the fixup on any function
     /// whose name is a target (`CallFixupAnalyzer.getTargetFixupMap`, :436-459).
     pub call_fixups: HashMap<String, String>,
+    /// (Function entry, register name) -> the loader-established value that
+    /// register holds there. PowerPC EABI small-data-area bases: `_SDA_BASE_`
+    /// in `r13`, `_SDA2_BASE_` in `r2` on 32-bit. Discovery stores one point
+    /// per function; the decompiler reads them through `getTrackedRegisters`
+    /// the same way it reads MIPS `t9` (which needs no table: the value is
+    /// the entry address by convention).
+    pub tracked_values: HashMap<(u64, String), u64>,
 }
 
 impl ProgramProvider {
-    /// The value a processor's ABI puts in a register on entry to the function
-    /// containing `address`, with that register's storage. MIPS is the case
-    /// that has one: `t9` holds the callee's own entry address.
-    pub fn entry_register(&self, address: u64) -> Option<(u64, (u64, u64))> {
-        let storage = *self.registers.get("t9")?;
-        if storage.1 == 0 || storage.1 > 8 {
-            return None;
+    /// The values a processor's ABI puts in registers on entry to the
+    /// function containing `address`, each with that register's storage.
+    /// MIPS is the conventional case: `t9` holds the callee's own entry
+    /// address. PowerPC EABI is the stored case: `r13`/`r2` hold the
+    /// small-data-area bases discovery recorded at the containing entry.
+    pub fn entry_registers(&self, address: u64) -> Vec<(u64, (u64, u64))> {
+        let mut out = Vec::new();
+        if let Some(storage) = self.registers.get("t9") {
+            if storage.1 != 0 && storage.1 <= 8 {
+                if let Some(entry) = self.function_containing(address) {
+                    out.push((entry, *storage));
+                }
+            }
         }
-        Some((self.function_containing(address)?, storage))
+        if let Some(entry) = self.function_containing(address) {
+            for name in ["r13", "r2"] {
+                if let (Some(&value), Some(&storage)) = (
+                    self.tracked_values.get(&(entry, name.to_string())),
+                    self.registers.get(name),
+                ) {
+                    if storage.1 != 0 && storage.1 <= 8 {
+                        out.push((value, storage));
+                    }
+                }
+            }
+        }
+        out
     }
 
     /// The entry of the function whose recorded extent holds `address`.
@@ -204,6 +229,7 @@ impl ProgramProvider {
             conventions: HashMap::new(),
             declared_models: HashSet::new(),
             call_fixups: HashMap::new(),
+            tracked_values: HashMap::new(),
         }
     }
 
@@ -700,7 +726,7 @@ impl NativeWorker {
         wire::encode_header(&mut el, wire::ELEMENT_START, wire::elem::TRACKED_POINTSET);
         if let Some((space, offset, _)) = decode_addr_element(payload) {
             if space == provider.ram_space_index {
-                if let Some((register, (reg_offset, reg_size))) = provider.entry_register(offset) {
+                for (register, (reg_offset, reg_size)) in provider.entry_registers(offset) {
                     wire::encode_header(&mut el, wire::ELEMENT_START, wire::elem::SET);
                     wire::encode_attribute(
                         &mut el,

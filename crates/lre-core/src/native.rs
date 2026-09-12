@@ -273,6 +273,10 @@ pub struct NativeImport {
     pub got_slots: Vec<(u64, u64)>,
     /// Addresses an ELF `OBJECT` symbol declares, with the size it declares.
     pub object_sizes: Vec<(u64, u64)>,
+    /// Names an ELF `OBJECT` symbol declares, keyed by the address. Sizes
+    /// travel in `object_sizes`; names travel here so data definitions can
+    /// print them instead of `DAT_` defaults.
+    pub object_names: Vec<(u64, String)>,
     /// Linkage slots whose relocation names a function, with their width.
     pub function_slots: Vec<(u64, u64)>,
     /// Entries whose name came from the image's own symbol table. Ghidra's
@@ -534,6 +538,8 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         std::collections::HashMap::new();
     let mut externals = Vec::new();
     let mut object_sizes: Vec<(u64, u64)> = Vec::new();
+    let mut object_names: Vec<(u64, String)> = Vec::new();
+    let mut abs_symbols: Vec<(String, u64)> = Vec::new();
     let mut contexts: Vec<NativeContext> = Vec::new();
     // SHT_SYMTAB (2) and SHT_DYNSYM (11): 16-byte Elf32_Sym.
     for s in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
@@ -595,6 +601,14 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             // `allocateUndefinedSymbolData`, :1358-1381).
             if typ == 1 && shndx != 0 && value != 0 && size > 0 {
                 object_sizes.push((value, size));
+                if !name.is_empty() {
+                    object_names.push((value, name.clone()));
+                }
+            }
+            // Absolute symbols carry loader-established values (`_SDA_BASE_`
+            // on PowerPC); nothing else in the loops wants them.
+            if shndx == 0xfff1 && !name.is_empty() {
+                abs_symbols.push((name.clone(), value));
             }
             if shndx == 0 && !name.is_empty() {
                 externals.push((0, name.clone()));
@@ -609,6 +623,13 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     );
     collect_elf_section_starts(&sections, &mut functions);
     functions.sort_by_key(|f| f.entry);
+    seed_ppc_sda_registers(
+        elf_machine.machine,
+        &abs_symbols,
+        &sections,
+        &functions,
+        &mut contexts,
+    );
     let mut import = NativeImport {
         process_entry,
         symbol_named,
@@ -619,6 +640,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         xrefs: Vec::new(),
         externals,
         object_sizes,
+        object_names,
         contexts,
         ..Default::default()
     };
@@ -774,6 +796,8 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         std::collections::HashMap::new();
     let mut externals = Vec::new();
     let mut object_sizes: Vec<(u64, u64)> = Vec::new();
+    let mut object_names: Vec<(u64, String)> = Vec::new();
+    let mut abs_symbols: Vec<(String, u64)> = Vec::new();
     for s in sections.iter() {
         if s.typ != 2 {
             continue;
@@ -797,6 +821,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             // ELF64_Sym: st_name(0,4) st_info(4) st_other(5) st_shndx(6,2)
             // st_value(8,8) st_size(16,8)
             let value = u64_at(data, hdr + 8)?;
+            let shndx = u16_at(data, hdr + 6)?;
             let size = u64_at(data, hdr + 16)?;
             let name = strtab
                 .get(name_off..)
@@ -813,6 +838,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
             if typ == 1 && value != 0 && size > 0 {
                 object_sizes.push((value, size));
+                if !name.is_empty() {
+                    object_names.push((value, name.clone()));
+                }
+            }
+            if shndx == 0xfff1 && !name.is_empty() {
+                abs_symbols.push((name.clone(), value));
             }
             if value == 0 && typ == 1 && !name.is_empty() {
                 externals.push((0, name));
@@ -882,12 +913,22 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     collect_elf_section_starts(&sections, &mut functions);
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
+    let mut contexts = Vec::new();
+    seed_ppc_sda_registers(
+        elf_machine.machine,
+        &abs_symbols,
+        &sections,
+        &functions,
+        &mut contexts,
+    );
     let mut import = NativeImport {
         mappings,
         functions,
         externals,
         object_sizes,
         process_entry,
+        object_names,
+        contexts,
         symbol_named,
         format: "ELF".into(),
         elf_machine: Some(elf_machine),
@@ -2763,6 +2804,64 @@ fn seed_mips_entry_register(imp: &mut NativeImport) {
         .collect();
     imp.register_contexts.extend(seeds);
 }
+/// Small-data-area bases for PowerPC EABI, seeded as point contexts so the
+/// decompiler resolves `r13`- and `r2`-relative access to the objects they
+/// address. This mirrors `PowerPC_ElfRelocationContext.getBaseOffset`:
+/// the `_SDA_BASE_`/`_SDA2_BASE_` ABS symbol when the image declares one,
+/// else the start of the `.sdata`/`.sbss` (respectively `.sdata2`/`.sbss2`)
+/// range -- the midpoint when that range exceeds 15 bits. Values are
+/// image-global, so one point per function is just the shape the range
+/// builder already folds; later functions inherit the nearest range. Ghidra
+/// applies the value to execute blocks while relocating, which is also why
+/// an image with no SDA symbols and no small-data blocks seeds nothing.
+pub(crate) fn seed_ppc_sda_registers(
+    machine: u16,
+    abs: &[(String, u64)],
+    sections: &[ElfSection],
+    functions: &[NativeFunction],
+    contexts: &mut Vec<NativeContext>,
+) {
+    // EM_PPC (20) and EM_PPC64 (21): `PowerPC:BE:32:default` and 64-bit
+    // siblings, the only loaders that reach this seeder.
+    if machine != 20 && machine != 21 {
+        return;
+    }
+    let find = |names: &[&str]| {
+        abs.iter()
+            .find_map(|(name, value)| names.contains(&name.as_str()).then_some(*value))
+    };
+    // Least start of the named blocks, or nothing when none is present.
+    // Past fifteen bits half the range no longer reaches both ends from
+    // one base, so the aligned midpoint becomes the base instead.
+    let block_base = |names: &[&str]| {
+        let mut first = u64::MAX;
+        let mut last = 0u64;
+        for section in sections.iter().filter(|section| names.contains(&section.name.as_str())) {
+            first = first.min(section.addr);
+            last = last.max(section.addr.saturating_add(section.size));
+        }
+        if first == u64::MAX {
+            return None;
+        }
+        let span = last.saturating_sub(first);
+        if span > 0x7fff {
+            Some(first.wrapping_add((span / 2) & !0x0f))
+        } else {
+            Some(first)
+        }
+    };
+    let r13 = find(&["_SDA_BASE_"]).or_else(|| block_base(&[".sdata", ".sbss"]));
+    let r2 = find(&["_SDA2_BASE_"]).or_else(|| block_base(&[".sdata2", ".sbss2"]));
+    for (register, value) in
+        [("r13", r13), ("r2", r2)].into_iter().filter_map(|(r, v)| v.map(|v| (r, v)))
+    {
+        contexts.extend(functions.iter().map(|function| NativeContext {
+            name: register.into(),
+            address: function.entry,
+            value,
+        }));
+    }
+}
 
 /// One console reference query. ConstantPropagationAnalyzer's default trusts
 /// initial writable values; this inferred-reference policy does not change
@@ -3206,7 +3305,8 @@ pub const ELF_GOT_SOURCE: &str = "native-import:elf-got";
 /// The name a mangled name was mangled from, applied beside it.
 pub const DEMANGLE_SOURCE: &str = "native-analysis:demangle";
 
-/// The size an ELF `OBJECT` symbol declares for the object it names.
+/// The size and name an ELF `OBJECT` symbol declares for the object it
+/// names: sizes ride inferred data definitions, names ride symbols.
 pub const ELF_OBJECT_SOURCE: &str = "native-import:elf-object";
 
 /// A linkage slot whose relocation names a function: the loader will write a
@@ -3477,6 +3577,24 @@ pub fn store_import(
                 address: lre_model::Address::ram(*address),
                 external: false,
                 source: DYNAMIC_LABEL_SOURCE.into(),
+            }),
+    );
+    // A name an ELF symbol table gives an object: stock defines data under
+    // that name (`ElfProgramBuilder.processSymbols`, :1703-1706), so the
+    // name travels with the size -- sizes ride `ELF_OBJECT_SOURCE` data
+    // definitions below, names ride the same source here, ranked just under
+    // primary symbols so a function or dynamic label at the same address
+    // keeps its spelling.
+    symbols.retain(|symbol| symbol.source != ELF_OBJECT_SOURCE);
+    symbols.extend(
+        imp.object_names
+            .iter()
+            .filter(|(address, _)| *address != 0)
+            .map(|(address, name)| lre_model::SymbolRow {
+                name: name.clone(),
+                address: lre_model::Address::ram(*address),
+                external: false,
+                source: ELF_OBJECT_SOURCE.into(),
             }),
     );
     // A mangled name also carries the name it was mangled from. Stock's
@@ -5889,4 +6007,105 @@ fn apply_library_prototypes(
     let revision = db.revision(pid)?;
     db.merge_inferred_prototypes(pid, revision, &rows)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod ppc_sda_tests {
+    use super::{seed_ppc_sda_registers, ElfSection, NativeContext, NativeFunction};
+
+    fn section(name: &str, addr: u64, size: u64) -> ElfSection {
+        ElfSection {
+            name: name.into(),
+            typ: 1,
+            flags: 3,
+            addr,
+            off: 0x1000,
+            size,
+            link: 0,
+            entry_size: 0,
+        }
+    }
+
+    fn functions() -> Vec<NativeFunction> {
+        vec![
+            NativeFunction { entry: 0x10000, name: "f".into(), size: 0x40 },
+            NativeFunction { entry: 0x10100, name: "g".into(), size: 0x40 },
+        ]
+    }
+
+    fn values(contexts: &[NativeContext], name: &str) -> Vec<u64> {
+        let mut out: Vec<u64> = contexts
+            .iter()
+            .filter(|context| context.name == name)
+            .map(|context| context.value)
+            .collect();
+        out.sort_unstable();
+        out.dedup();
+        out
+    }
+
+    #[test]
+    fn abs_symbol_beats_section_convention() {
+        // base.elf shape: `_SDA_BASE_` ABS 0x806b1880 beside a `.sdata`
+        // that would conventionally give something else.
+        let abs = vec![("_SDA_BASE_".to_string(), 0x806b1880)];
+        let sections = vec![section(".sdata", 0x806a9880, 0xe1), section(".sbss", 0x806a9980, 0x2c4)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(20, &abs, &sections, &functions, &mut contexts);
+        assert_eq!(values(&contexts, "r13"), vec![0x806b1880]);
+        assert_eq!(contexts.iter().filter(|c| c.name == "r13").count(), 2);
+    }
+
+    #[test]
+    fn block_fallback_takes_the_least_start() {
+        let sections = vec![section(".sbss", 0x2000, 0x100), section(".sdata", 0x1000, 0x100)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
+        assert_eq!(values(&contexts, "r13"), vec![0x1000]);
+    }
+
+    #[test]
+    fn wide_range_falls_back_to_aligned_midpoint() {
+        // Past fifteen bits half the range no longer reaches both ends
+        // from one base, mirroring `getBaseOffset`.
+        let sections = vec![section(".sdata", 0x10000, 0x10), section(".sbss", 0x30000, 0x10)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
+        let span = 0x30010u64 - 0x10000;
+        assert_eq!(values(&contexts, "r13"), vec![0x10000 + ((span / 2) & !0x0f)]);
+    }
+
+    #[test]
+    fn nothing_to_derive_seeds_nothing() {
+        let sections = vec![section(".text", 0x10000, 0x1000)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(20, &[], &sections, &functions, &mut contexts);
+        assert!(contexts.is_empty());
+    }
+
+    #[test]
+    fn other_machines_seed_nothing() {
+        let abs = vec![("_SDA_BASE_".to_string(), 0x1234)];
+        let sections = vec![section(".sdata", 0x1000, 0x100)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(3, &abs, &sections, &functions, &mut contexts);
+        assert!(contexts.is_empty());
+    }
+
+    #[test]
+    fn sda2_needs_no_machine_gate() {
+        // Ghidra establishes `_SDA2_BASE_` without a width check; the
+        // 64-bit loader reaches the same seeder.
+        let abs = vec![("_SDA2_BASE_".to_string(), 0x806b1c60)];
+        let functions = functions();
+        let mut contexts = Vec::new();
+        seed_ppc_sda_registers(21, &abs, &[], &functions, &mut contexts);
+        assert_eq!(values(&contexts, "r2"), vec![0x806b1c60]);
+        assert!(values(&contexts, "r13").is_empty());
+    }
 }
