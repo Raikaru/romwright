@@ -2857,8 +2857,21 @@ pub(crate) fn seed_ppc_sda_registers(
             Some(first)
         }
     };
-    let r13 = find(&["_SDA_BASE_"]).or_else(|| block_base(&[".sdata", ".sbss"]));
-    let r2 = find(&["_SDA2_BASE_"]).or_else(|| block_base(&[".sdata2", ".sbss2"]));
+    // A zero ABS is the linker leaving the slot: stock only establishes
+    // a base while processing an SDA-relative relocation, so zero falls
+    // through to sections (and to nothing when those are absent).
+    let abs_base =
+        |names: &[&str]| find(names).filter(|value| *value != 0);
+    // Section convention is 32-bit EABI only: on 64-bit `r2` is the TOC
+    // pointer and `r13` the thread pointer, and `.sdata` commonly exists.
+    // A declared ABS symbol still wins at any width.
+    let conventional = |names: &[&str]| {
+        (machine == 20)
+            .then(|| block_base(names))
+            .flatten()
+    };
+    let r13 = abs_base(&["_SDA_BASE_"]).or_else(|| conventional(&[".sdata", ".sbss"]));
+    let r2 = abs_base(&["_SDA2_BASE_"]).or_else(|| conventional(&[".sdata2", ".sbss2"]));
     for (register, value) in
         [("r13", r13), ("r2", r2)].into_iter().filter_map(|(r, v)| v.map(|v| (r, v)))
     {
@@ -6124,6 +6137,30 @@ mod ppc_sda_tests {
         let abs = vec![("_SDA_BASE_".to_string(), 0x1234)];
         let sections = vec![section(".sdata", 0x1000, 0x100)];
         assert!(seed(3, &abs, &sections).is_empty());
+    }
+
+    #[test]
+    fn abs_zero_falls_through_to_sections() {
+        // The linker leaves `_SDA_BASE_` zeroed when nothing establishes
+        // it; zero is not a base.
+        let abs = vec![("_SDA_BASE_".to_string(), 0)];
+        let sections = vec![section(".sdata", 0x1000, 0x100)];
+        assert_eq!(values(&seed(20, &abs, &sections), "r13"), vec![0x1000]);
+        assert!(seed(20, &abs, &[]).is_empty());
+    }
+
+    #[test]
+    fn section_convention_is_32bit_only() {
+        // On 64-bit `r2` is the TOC and `r13` the thread pointer: a
+        // `.sdata` there must not seed either. Declared ABS symbols
+        // still win (see sda2_needs_no_machine_gate).
+        let sections = vec![
+            section(".sdata", 0x1000, 0x100),
+            section(".sdata2", 0x2000, 0x100),
+        ];
+        let seeds = seed(21, &[], &sections);
+        assert!(values(&seeds, "r13").is_empty());
+        assert!(values(&seeds, "r2").is_empty());
     }
 
     #[test]
