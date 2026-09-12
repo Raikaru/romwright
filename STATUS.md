@@ -6465,3 +6465,12 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   here, so the payload is the deliverable. M-B complete: dtk
   (import+export+dol-diff), splat (import+export), objdiff
   (export+report-verified), decomp.me (payload).
+
+- m20-009 (2026-09-12): container-direct import, first M-D row. New
+  `native/iso9660.rs` reads the primary volume descriptor, walks the
+  root directory, resolves `SYSTEM.CNF`'s `BOOT2` to the boot ELF, and
+  imports every root ELF as a sibling image (boot first). Gate
+  `tests/m20-009_iso.py` on the nightfire-ps2 ISO: **PASS — 4 programs,
+  boot=nightfire.SLUS_205.79, ACTION.ELF 3038 functions** from its own
+  symtab (DRIVING/SLUS are stripped; their names live in the .SYM,
+  gated by m20-007).
