@@ -6486,3 +6486,15 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   test file imports directly (ELF, PE, N64, NSO, PSX, GBA, NDS, DOL,
   ISO9660); formats without fixtures (WAD, PBP, XBE, NCCH, SELF) are
   ungateable, not unimplemented.
+
+- m20-010 + m20-011 (2026-09-12): M-E toolchain detection + M-F trace
+  ingest. `NativeImport.toolchain` (distinct from `compiler`, the
+  SLEIGH spec) is detected from ELF `.comment` (GCC/clang) and from
+  DOL mwcc runtime symbols post-map; `ProgramSummary.compiler` reports
+  it. `import-trace` ingests `addr,kind[,thread]` CSV into
+  trace_events and marks exec/call/bp-hit functions traced. Gates:
+  **m20-010 PASS (bond.dol=mwcc, gcc-elf=gcc 16.1.1)**, **m20-011 PASS
+  (5 events, 3 traced, read/miss unmarked)**. The schema half
+  (programs.compiler, functions.traced, mark_traced, ModuleRow/
+  ModuleXrefRow model rows) came from the rate-limited CompilerTrace
+  agent's partial work, completed here.
