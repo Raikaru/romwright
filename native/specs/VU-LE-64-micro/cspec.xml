@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<compiler_spec>
+  <data_organization>
+    <pointer_size value="4"/>
+  </data_organization>
+  <global>
+    <range space="ram"/>
+  </global>
+  <default_proto>
+    <prototype name="__stdcall" extrapop="0" stackshift="0">
+      <input>
+        <pentry minsize="1" maxsize="4"><register name="vi4"/></pentry>
+        <pentry minsize="1" maxsize="4"><register name="vi5"/></pentry>
+        <pentry minsize="1" maxsize="4"><register name="vi6"/></pentry>
+        <pentry minsize="1" maxsize="4"><register name="vi7"/></pentry>
+      </input>
+      <output>
+        <pentry minsize="1" maxsize="4"><register name="vi2"/></pentry>
+      </output>
+      <unaffected>
+        <register name="vi8"/><register name="vi9"/><register name="vi10"/>
+        <register name="vi11"/><register name="vi12"/><register name="vi13"/>
+        <register name="vi14"/><register name="vi15"/>
+      </unaffected>
+    </prototype>
+  </default_proto>
+</compiler_spec>
