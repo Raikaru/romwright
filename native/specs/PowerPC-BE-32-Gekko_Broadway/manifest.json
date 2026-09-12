@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "producer": "dump_specs",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "language": "PowerPC:BE:32:Gekko_Broadway",
+  "compiler": "default",
+  "files": {
+    "pspec.xml": {
+      "sha256": "f6f6a294c1572778fb63629bf71853e8a6cc2217666f90c6ed0bfca4a043b76f",
+      "bytes": 55985
+    },
+    "cspec.xml": {
+      "sha256": "9f2b4220c679ecd660ff3f44686cc96298c1b0e2aadc2eb2bbba0ba2c3c02866",
+      "bytes": 3793
+    },
+    "tspec.xml": {
+      "sha256": "d5a0c97a8687ba44afc47b6734faf87eecc4f5dcb502e145565a54e7839070e2",
+      "bytes": 557
+    },
+    "coretypes.xml": {
+      "sha256": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+      "bytes": 2678
+    },
+    "registers.txt": {
+      "sha256": "02897ca91aa48c39bf671d7eed1078f51bf69ff80de65c43810d901c0239c9a0",
+      "bytes": 31747
+    }
+  }
+}
