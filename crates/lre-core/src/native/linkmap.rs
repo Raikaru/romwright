@@ -567,6 +567,131 @@ fn parse_flat(text: &str) -> LinkerMap {
     map
 }
 
+// -------------------------------------------------------------- dtk/splat
+
+/// dtk `symbols.txt` / splat `symbol_addrs.txt`: the decomp project's own
+/// symbol list, `name = section:0xADDR; // type:function size:0x40
+/// scope:local` (dtk) or `name = 0xADDR;` / `0xADDR name` (splat). The
+/// `//` comment carries `type:`/`size:`/`scope:`/`data:` attributes; a
+/// `label`/`notype` row is a name, not an entry point.
+fn parse_dtk_splat(text: &str) -> LinkerMap {
+    let mut map = LinkerMap::default();
+    for raw in text.lines() {
+        let line = raw.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let (body, comment) = match line.split_once("//") {
+            Some((body, comment)) => (body.trim_end(), comment),
+            None => (line, ""),
+        };
+        let body = body.trim_end_matches(';').trim();
+        if body.is_empty() {
+            continue;
+        }
+        // Attributes from the comment: `key:value` words.
+        let mut kind = MapKind::NoType;
+        let mut size = 0u64;
+        let mut typed = false;
+        for word in comment.split_whitespace() {
+            if let Some((key, value)) = word.split_once(':') {
+                match key {
+                    "type" => {
+                        typed = true;
+                        kind = match value {
+                            "function" | "func" => MapKind::Func,
+                            "object" => MapKind::Object,
+                            _ => MapKind::NoType,
+                        };
+                    }
+                    "size" => {
+                        size = u64::from_str_radix(
+                            value.trim_start_matches("0x"),
+                            16,
+                        )
+                        .unwrap_or(0);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // Two shapes: `name = [section:]0xADDR` and splat's `0xADDR name`.
+        let (name, address, section) = if let Some((left, right)) = body.split_once('=') {
+            let name = left.trim().to_string();
+            let right = right.trim();
+            let (section, addr_word) = match right.split_once(':') {
+                Some((section, addr)) => (section.to_string(), addr.trim()),
+                None => (String::new(), right),
+            };
+            let Some(address) = addr_word
+                .strip_prefix("0x")
+                .or(Some(addr_word))
+                .filter(|w| is_hex_word(w))
+                .and_then(|w| u64::from_str_radix(w, 16).ok())
+            else {
+                continue;
+            };
+            (name, address, section)
+        } else {
+            let mut words = body.split_whitespace();
+            let (Some(addr_word), Some(name)) = (words.next(), words.next()) else {
+                continue;
+            };
+            let Some(address) = addr_word
+                .strip_prefix("0x")
+                .or(Some(addr_word))
+                .filter(|w| is_hex_word(w))
+                .and_then(|w| u64::from_str_radix(w, 16).ok())
+            else {
+                continue;
+            };
+            // Trailing `type:`/`size:` tokens on the bare shape.
+            for word in words {
+                if let Some((key, value)) = word.split_once(':') {
+                    if key == "type" {
+                        typed = true;
+                        kind = match value {
+                            "func" | "function" => MapKind::Func,
+                            "object" | "data" => MapKind::Object,
+                            _ => MapKind::NoType,
+                        };
+                    } else if key == "size" {
+                        size = u64::from_str_radix(
+                            value.trim_start_matches("0x"),
+                            16,
+                        )
+                        .unwrap_or(0);
+                    }
+                }
+            }
+            (name.to_string(), address, String::new())
+        };
+        if name.is_empty() || name.starts_with('$') {
+            continue;
+        }
+        if !typed {
+            // Untyped rows take the section heuristic; no section means
+            // the flat default, code.
+            kind = if is_data_section(&section) {
+                MapKind::Object
+            } else {
+                MapKind::Func
+            };
+        }
+        map.symbols.push(MapSymbol {
+            address,
+            size,
+            name,
+            kind,
+            tu: String::new(),
+            section,
+            subsection: String::new(),
+            linker_defined: false,
+        });
+    }
+    map
+}
+
 // ------------------------------------------------------------------ sniff
 
 /// Parse a MAP file, sniffing the grammar from its own text. Never fails
@@ -586,6 +711,14 @@ pub fn parse(text: &str) -> LinkerMap {
         || text.lines().any(|l| l.trim().starts_with("*fill*"))
     {
         return parse_gnuld(text);
+    }
+    // dtk's `name = section:0xADDR;` and splat's `name = 0xADDR;` both
+    // carry `=` before `;`; a bare `0xADDR name` file is flat.
+    if text.lines().any(|l| {
+        let l = l.trim();
+        l.contains(" = ") && l.trim_end_matches(';').contains("0x")
+    }) {
+        return parse_dtk_splat(text);
     }
     parse_flat(text)
 }
@@ -678,6 +811,30 @@ pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
 mod tests {
     use super::*;
 
+
+    #[test]
+    fn dtk_splat_rows_carry_type_and_size() {
+        let text = concat!(
+            "__start = .init:0x80007140; // type:function size:0x114 scope:weak\n",
+            "Cvar_Set = .text:0x800097FC; // type:function size:0xB8 scope:global\n",
+            "_bss_init_info = .init:0x800093B0; // type:object size:0x18 scope:global data:4byte\n",
+            "gTRKInterruptVectorTable = .init:0x800073D8; // type:label scope:global\n",
+            "0x80009D34 LoadGameflow\n",
+            "plain = 0x8000B110;\n",
+        );
+        let map = parse(text);
+        let by_name = |name: &str| map.symbols.iter().find(|s| s.name == name).unwrap().clone();
+        let start = by_name("__start");
+        assert_eq!((start.address, start.size, start.kind), (0x80007140, 0x114, MapKind::Func));
+        assert_eq!(start.section, ".init");
+        assert_eq!(by_name("Cvar_Set").kind, MapKind::Func);
+        assert_eq!(by_name("_bss_init_info").kind, MapKind::Object);
+        // A label is a name, not an entry point.
+        assert_eq!(by_name("gTRKInterruptVectorTable").kind, MapKind::NoType);
+        // Bare splat rows default to code.
+        assert_eq!(by_name("LoadGameflow").kind, MapKind::Func);
+        assert_eq!(by_name("plain").kind, MapKind::Func);
+    }
     // mwldarm shape: `#` subsections, `N](name,type)` link rows without a
     // space after `]`, archive-member TUs, CRLF endings, `$t` markers.
     const MW_SAMPLE: &str = concat!(
