@@ -591,6 +591,7 @@ impl BodyWalk {
             name,
             size: self.size(),
             signature: None,
+            traced: false,
             calling_convention: None,
         }
     }

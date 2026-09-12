@@ -26,7 +26,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 20;
+pub const SCHEMA_VERSION: i64 = 22;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -180,6 +180,7 @@ impl ProjectDb {
                  id INTEGER PRIMARY KEY,
                  name TEXT NOT NULL UNIQUE,
                  language TEXT NOT NULL,
+                 compiler TEXT NOT NULL DEFAULT '',
                  revision INTEGER NOT NULL DEFAULT 1,
                  imported_at TEXT NOT NULL DEFAULT (datetime('now'))
              );
@@ -680,6 +681,41 @@ impl ProjectDb {
                      );",
                 )?;
             }
+            // Version 21 belongs to the overlay-module work (modules /
+            // module_xrefs tables + module_id columns); it lands on its own
+            // branch and must not be claimed here.
+            if v < 22 {
+                // M-E compiler label on programs + M-F trace coverage on
+                // functions. Both are pure additions with stable defaults
+                // (empty / untraced), so old stores migrate without
+                // changing any existing row's meaning.
+                let has_compiler: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('programs')
+                                   WHERE name = 'compiler')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !has_compiler {
+                    tx.execute(
+                        "ALTER TABLE programs ADD COLUMN compiler TEXT NOT NULL
+                             DEFAULT ''",
+                        [],
+                    )?;
+                }
+                let has_traced: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('functions')
+                                   WHERE name = 'traced')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !has_traced {
+                    tx.execute(
+                        "ALTER TABLE functions ADD COLUMN traced INTEGER NOT NULL
+                             DEFAULT 0",
+                        [],
+                    )?;
+                }
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
@@ -741,17 +777,36 @@ impl ProjectDb {
     }
 
     /// Inserts or replaces a program summary and its provenance. Returns the ID.
+    /// `compiler` is the toolchain the import detected (`mwcc_233_163`,
+    /// `gcc`, `msvc`, ...), or empty when nothing in the image named one:
+    /// a non-empty value overwrites, an empty one preserves what the store
+    /// holds, so a re-import that cannot see the markers (e.g. from cache)
+    /// never blanks a recorded compiler.
     pub fn upsert_program(
         &self,
         name: &str,
         language: &str,
         provenance: &Provenance,
     ) -> Result<ProgramId> {
+        self.upsert_program_with_compiler(name, language, provenance, "")
+    }
+
+    /// `upsert_program` with an explicit toolchain label.
+    pub fn upsert_program_with_compiler(
+        &self,
+        name: &str,
+        language: &str,
+        provenance: &Provenance,
+        compiler: &str,
+    ) -> Result<ProgramId> {
         self.conn.execute(
-            "INSERT INTO programs(name, language) VALUES (?1, ?2)
+            "INSERT INTO programs(name, language, compiler) VALUES (?1, ?2, ?3)
              ON CONFLICT(name) DO UPDATE SET language = excluded.language,
+                                              compiler = CASE WHEN excluded.compiler <> ''
+                                                              THEN excluded.compiler
+                                                              ELSE programs.compiler END,
                                               revision = revision + 1",
-            params![name, language],
+            params![name, language, compiler],
         )?;
         let id = self.conn.query_row(
             "SELECT id FROM programs WHERE name = ?1",
@@ -766,6 +821,26 @@ impl ProjectDb {
             params![id, provenance.producer, provenance.upstream_version],
         )?;
         Ok(ProgramId(id))
+    }
+
+    /// Records the toolchain that produced `program` (`mwcc_233_163`,
+    /// `gcc`, `msvc`, ...).
+    pub fn set_program_compiler(&self, program: ProgramId, compiler: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE programs SET compiler = ?2 WHERE id = ?1",
+            params![program.0, compiler],
+        )?;
+        Ok(())
+    }
+
+    /// Toolchain label recorded for a program; empty when none was detected.
+    pub fn program_compiler(&self, program: ProgramId) -> Result<String> {
+        let compiler: String = self.conn.query_row(
+            "SELECT compiler FROM programs WHERE id = ?1",
+            params![program.0],
+            |r| r.get(0),
+        )?;
+        Ok(compiler)
     }
 
     /// Replaces the function set of a program inside one transaction.
@@ -835,6 +910,41 @@ impl ProjectDb {
             .prepare("SELECT entry, producer FROM functions WHERE program_id = ?1")?;
         let rows = stmt
             .query_map(params![program.0], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
+    /// Marks every function whose body contains one of `entries` as
+    /// trace-covered, and returns the marked entries. A trace event that
+    /// lands mid-body marks the whole body: coverage is per-function, not
+    /// per-instruction. Unknown addresses mark nothing and seed nothing.
+    pub fn mark_traced(&self, program: ProgramId, entries: &[String]) -> Result<Vec<String>> {
+        let tx = self.conn.unchecked_transaction()?;
+        {
+            let mut stmt = tx.prepare(
+                "UPDATE functions SET traced = 1
+                 WHERE program_id = ?1 AND entry = ?2",
+            )?;
+            for entry in entries {
+                stmt.execute(params![program.0, entry])?;
+            }
+        }
+        let marked: Vec<String> = tx
+            .prepare("SELECT entry FROM functions WHERE program_id = ?1 AND traced <> 0")?
+            .query_map(params![program.0], |row| row.get(0))?
+            .collect::<rusqlite::Result<Vec<_>>>()?;
+        self.bump_and_record(&tx, program, "mark-traced", &format!("{}", marked.len()))?;
+        tx.commit()?;
+        Ok(marked)
+    }
+
+    /// Entries currently carrying the trace mark.
+    pub fn traced_functions(&self, program: ProgramId) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT entry FROM functions WHERE program_id = ?1 AND traced <> 0 ORDER BY entry",
+        )?;
+        let rows = stmt
+            .query_map(params![program.0], |row| row.get(0))?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
@@ -2646,6 +2756,29 @@ impl ProjectDb {
         Ok(())
     }
 
+    /// Every program the project holds, in import order.
+    pub fn programs(&self) -> Result<Vec<lre_model::ProgramRow>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT p.name, p.language, p.compiler, p.revision, \
+             (SELECT COUNT(*) FROM functions f WHERE f.program_id = p.id) \
+             FROM programs p ORDER BY p.id",
+        )?;
+        let rows = stmt
+            .query_map([], |row| {
+                let revision: i64 = row.get(3)?;
+                let functions: i64 = row.get(4)?;
+                Ok(lre_model::ProgramRow {
+                    program: row.get(0)?,
+                    language: row.get(1)?,
+                    compiler: row.get(2)?,
+                    functions: functions.max(0) as u64,
+                    revision: revision.max(0) as u64,
+                })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        Ok(rows)
+    }
+
     /// Upserts one provenance-bearing type dependency.
     pub fn set_type_link(&self, program: ProgramId, row: &TypeLinkRow) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
@@ -2691,28 +2824,6 @@ impl ProjectDb {
     }
 
 
-    /// Every program the project holds, in import order.
-    pub fn programs(&self) -> Result<Vec<lre_model::ProgramRow>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT p.name, p.language, p.revision, \
-             (SELECT COUNT(*) FROM functions f WHERE f.program_id = p.id) \
-             FROM programs p ORDER BY p.id",
-        )?;
-        let rows = stmt
-            .query_map([], |row| {
-                let revision: i64 = row.get(2)?;
-                let functions: i64 = row.get(3)?;
-                Ok(lre_model::ProgramRow {
-                    program: row.get(0)?,
-                    language: row.get(1)?,
-                    functions: functions.max(0) as u64,
-                    revision: revision.max(0) as u64,
-                })
-            })?
-            .collect::<std::result::Result<Vec<_>, _>>()?;
-        Ok(rows)
-    }
-
     /// Every program mapping `address`, with the region that maps it and the
     /// function containing it. A project holds more than one image -- a DS
     /// pair, an executable and its overlays -- and those images overlap, so
@@ -2740,6 +2851,7 @@ impl ProjectDb {
                 language: program.language,
                 region,
                 function,
+                module: None,
             });
         }
         Ok(found)
@@ -3228,7 +3340,9 @@ fn addr_from_cell(s: String, column: usize) -> rusqlite::Result<lre_model::Addre
 
 /// A function row with its convention fact joined in: `calling_conventions`
 /// owns the value and its provenance, and every reader of a function sees it.
-const FUNCTION_SELECT: &str = "SELECT f.entry, f.name, f.size, f.signature, c.convention
+/// `traced` rides the same select: it is a reader projection of the
+/// `functions.traced` column, never written by the function writer.
+const FUNCTION_SELECT: &str = "SELECT f.entry, f.name, f.size, f.signature, f.traced, c.convention
      FROM functions f LEFT JOIN calling_conventions c
        ON c.program_id = f.program_id AND c.function = f.entry";
 
@@ -3238,7 +3352,8 @@ fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
         name: r.get(1)?,
         size: r.get(2)?,
         signature: r.get(3)?,
-        calling_convention: r.get(4)?,
+        traced: r.get::<_, i64>(4).map(|v| v != 0)?,
+        calling_convention: r.get(5)?,
     })
 }
 
@@ -3358,6 +3473,7 @@ mod tests {
             name: "add".into(),
             size: 20,
             signature: None,
+            traced: false,
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
@@ -3372,28 +3488,32 @@ mod tests {
                 name: "handle_request".into(),
                 size: 300,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             },
             FunctionRow {
                 entry: lre_model::Address::ram(0x400000),
                 name: "add".into(),
                 size: 20,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             },
             FunctionRow {
                 entry: lre_model::Address::ram(0x400100),
                 name: "AddEntry".into(),
                 size: 80,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             },
             FunctionRow {
                 entry: lre_model::Address::ram(0x400200),
                 name: "malloc".into(),
                 size: 120,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             },
         ];
         db.replace_functions(id, &rows).unwrap();
@@ -3481,6 +3601,7 @@ mod tests {
             name: "FUN_00400000".into(),
             size: 4,
             signature: None,
+            traced: false,
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
@@ -3505,14 +3626,16 @@ mod tests {
                     name: "_init".into(),
                     size: 27,
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 },
                 FunctionRow {
                     entry: lre_model::Address::ram(0x0040_047a),
                     name: "main".into(),
                     size: 43,
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 },
             ],
         )
@@ -3585,7 +3708,8 @@ mod tests {
                 name: name.into(),
                 size: 32,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             }]
         };
         db.replace_functions(id, &discovered("FUN_00401000")).unwrap();
@@ -3607,6 +3731,7 @@ mod tests {
             name: "FUN_00401000".into(),
             size: 32,
             signature: None,
+            traced: false,
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
@@ -3646,7 +3771,8 @@ mod tests {
                 name: format!("f{i}"),
                 size: 16,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             })
             .collect();
         db.replace_functions(id, &rows).unwrap();
@@ -3672,6 +3798,7 @@ mod tests {
             name: "FUN_00400000".into(),
             size: 4,
             signature: None,
+            traced: false,
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
@@ -3697,6 +3824,7 @@ mod tests {
             name: "FUN_00400000".into(),
             size: 4,
             signature: None,
+            traced: false,
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
@@ -3877,7 +4005,6 @@ mod tests {
         let row = |address, kind, source: &str| PrototypeRow {
             function: lre_model::Address::ram(address),
             signature: format!("int {source}(void)"),
-            calling_convention: None,
             return_type: Some("int".into()),
             provenance: FactProvenance { kind, source: source.into(), confidence: None },
         };
@@ -3908,7 +4035,6 @@ mod tests {
         let inferred = |address, signature: &str| PrototypeRow {
             function: lre_model::Address::ram(address),
             signature: signature.into(),
-            calling_convention: None,
             return_type: Some("int".into()),
             provenance: FactProvenance {
                 kind: FactKind::Inferred, source: "native recovery".into(), confidence: None,
@@ -3948,7 +4074,8 @@ mod tests {
         let id = db.upsert_program("return-migration", "x86:LE:64:default", &prov()).unwrap();
         db.replace_functions(id, &[FunctionRow {
             entry: lre_model::Address::ram(0x1000), name: "analyst_name".into(), size: 9,
-            signature: Some("int analyst_name(void)".into()), calling_convention: None,
+            signature: Some("int analyst_name(void)".into()), traced: false,
+            calling_convention: None,
         }]).unwrap();
         let revision = db.revision(id).unwrap();
         db.conn.execute_batch(
@@ -4093,7 +4220,8 @@ mod tests {
                 name: "main".into(),
                 size: 8,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             }],
         )
         .unwrap();

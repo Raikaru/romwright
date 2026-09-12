@@ -212,6 +212,7 @@ impl Core {
             program: program.to_string(),
             functions: functions.len() as u64,
             language: self.db.program_language(id)?,
+            compiler: self.db.program_compiler(id).unwrap_or_default(),
             phases: Vec::new(),
             flow: None,
             patterns: None,
@@ -2209,6 +2210,7 @@ impl Core {
             program: program.to_string(),
             functions: functions.len() as u64,
             language: self.db.program_language(id)?,
+            compiler: self.db.program_compiler(id).unwrap_or_default(),
             phases: Vec::new(),
             flow: None,
             patterns: None,
@@ -2355,7 +2357,8 @@ mod tests {
                     name: "FUN_00400000".into(),
                     size: 4,
                     signature: None,
-                    calling_convention: None,
+                    traced: false,
+            calling_convention: None,
                 }],
             )
             .unwrap();

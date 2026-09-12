@@ -162,7 +162,8 @@ mod tests {
                 name: "FUN_00001000".into(),
                 size: 32,
                 signature: None,
-                calling_convention: None,
+                traced: false,
+            calling_convention: None,
             }],
         )
         .unwrap();
