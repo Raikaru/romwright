@@ -949,6 +949,50 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             println!("{}", serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?);
         }
+        // `import-score <program> <addr> <score.json>`: record a
+        // decomp.me compile score against a function. Accepts either a
+        // decomp.me `GET /api/scratch/<slug>` response ({slug, name,
+        // score, match_override}) or a local {function, score} file.
+        // The score lands as a comment on the function so the store
+        // carries the match state a project can roll up.
+        "import-score" => {
+            let program = args.get(2).ok_or("import-score needs a program")?;
+            let addr = args.get(3).ok_or("import-score needs a vaddr")?;
+            let path = args.get(4).ok_or("import-score needs a score.json")?;
+            let address = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
+                .map_err(|e| e.to_string())?;
+            let text = std::fs::read_to_string(path)
+                .map_err(|e| format!("{path}: {e}"))?;
+            let doc: serde_json::Value = serde_json::from_str(&text)
+                .map_err(|e| format!("{path}: {e}"))?;
+            // decomp.me shape: score is a number; match_override flags a
+            // manually-forced match. Local shape: {function, score}.
+            let score = doc["score"].as_f64()
+                .or_else(|| doc["match_percent"].as_f64())
+                .ok_or("score.json has no score/match_percent")?;
+            let name = doc["name"].as_str()
+                .or_else(|| doc["function"].as_str())
+                .unwrap_or("");
+            let slug = doc["slug"].as_str().unwrap_or("");
+            let functions = core.functions(program).map_err(|e| e.to_string())?;
+            let function = functions
+                .iter()
+                .find(|f| f.entry.offset == address)
+                .ok_or_else(|| format!("no function at {addr}"))?;
+            let body = format!(
+                "decomp.me score: {:.2}% (slug={}, name={}, match_override={})",
+                score, slug, name,
+                doc["match_override"].as_bool().unwrap_or(false)
+            );
+            core.comment_command(
+                program,
+                &function.entry,
+                &function.entry,
+                "eol",
+                &body,
+            ).map_err(|e| e.to_string())?;
+            println!("recorded score {:.2}% on {} ({})", score, function.name, addr);
+        }
         // `import-trace <program> <trace.csv>`: ingest an emulator trace
         // — one `addr,kind[,thread]` row per event, kind in
         // exec|call|read|write|bp — into trace_events, then mark every
