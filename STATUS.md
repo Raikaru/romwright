@@ -6409,3 +6409,19 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   M-C. PSX .SYM and PS2 DWARF1/Vita-NID are the remaining M-A rows
   (agents in flight); decomp.me API and objdiff unit mapping are M-B
   follow-ups, not yet gated.
+
+- m20-005b (2026-09-12): MIPS `.debug` (SHT_MIPS_DEBUG) ingestion. New
+  `native/mdebug.rs` sniffs two grammars under the one section type:
+  ECOFF/mdebug (HDRR/FDR/PDR/SYMR/AUX/EXTR, layouts from binutils
+  `include/coff/{sym,mips}.h`, semantics from gdb `mdebugread.c` --
+  procedure size via the stEnd aux indirection, packed-line instruction
+  count as fallback, `-x` files resolving PDR isym through the external
+  table) and Metrowerks DWARF 1 (length-includes-self DIEs, attribute
+  codes packing `(attr<<4)|form`, 4-byte null entries). SLUS_209.50
+  carries the MW shape: 5221 subroutine DIEs, every one already a FUNC
+  symtab entry with identical name and size, so the gate asserts
+  agreement plus no regression rather than a count delta. The `mdebug`
+  phase in `--timings` output proves the reader ran. Gate
+  `tests/m20-005_mdebug.py`: PASS, 8795 functions, all 5221 DWARF1
+  subroutines agreeing with symtab. Line info (`.line` section,
+  AT_stmt_list) has no destination table in the model and is skipped.
