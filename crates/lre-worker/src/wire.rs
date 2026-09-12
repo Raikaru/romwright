@@ -154,8 +154,6 @@ pub mod elem {
     pub const RETURNSYM: u32 = 172;
     /// ELEM_ADDR (address.cc:25)
     pub const ADDR: u32 = 11;
-    /// ELEM_RANGE (address.cc:26)
-    pub const RANGE: u32 = 12;
     /// ELEM_RANGELIST (address.cc:27)
     pub const RANGELIST: u32 = 13;
     /// ELEM_SCOPE (database.cc:42)
@@ -431,17 +429,6 @@ pub fn encode_addr_element_size(out: &mut Vec<u8>, space_index: u32, offset: u64
     encode_attribute(out, attr::OFFSET, attr_type::UNSIGNED_INT, offset);
     encode_attribute(out, attr::SIZE, attr_type::POSITIVE_INT, size);
     encode_header(out, ELEMENT_END, elem::ADDR);
-}
-/// Encodes a `<range space first last/>` (Range::encode, address.cc:292):
-/// both bounds inclusive. Lets the decompiler's own scope-containment
-/// machinery (jumps into ranged functions, overlap checks) work on mapped
-/// symbols the way it works on program functions.
-pub fn encode_range_element(out: &mut Vec<u8>, space_index: u32, first: u64, last: u64) {
-    encode_header(out, ELEMENT_START, elem::RANGE);
-    encode_attribute(out, attr::SPACE, attr_type::SPACE, space_index as u64);
-    encode_attribute(out, attr::FIRST, attr_type::UNSIGNED_INT, first);
-    encode_attribute(out, attr::LAST, attr_type::UNSIGNED_INT, last);
-    encode_header(out, ELEMENT_END, elem::RANGE);
 }
 
 /// Full function metadata for callbacks and non-returning preload entries.
