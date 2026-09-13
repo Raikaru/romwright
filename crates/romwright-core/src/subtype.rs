@@ -181,6 +181,10 @@ struct Collector<'a> {
     /// the destination register hold the source's var; a CALL makes the
     /// return register hold a fresh var carrying the callee's return type.
     holding: BTreeMap<u64, Var>,
+    /// Set when the current op's register output already recorded what it
+    /// holds (a spill reload or a call return); otherwise the definition
+    /// is a fresh value and gets a fresh var.
+    output_held: bool,
     /// (callee address, param register, argument var) at each call — the
     /// caller→callee observations the fixpoint feeds back.
     call_args: Vec<(u64, u64, Var)>,
@@ -199,11 +203,12 @@ impl<'a> Collector<'a> {
             built_from: BTreeMap::new(),
             sum_of: BTreeMap::new(),
             scaled: BTreeMap::new(),
+            holding: BTreeMap::new(),
+            output_held: false,
             struct_bases: BTreeSet::new(),
             pending: BTreeMap::new(),
             spill_alias: None,
             callees,
-            holding: BTreeMap::new(),
             call_args: Vec::new(),
         }
     }
@@ -219,11 +224,51 @@ impl<'a> Collector<'a> {
         var
     }
 
+    /// The var a register *read* resolves to: the value the register
+    /// currently holds (a reloaded parameter or a call return), or the
+    /// register's own var when it holds a computed value.
+    fn use_var(&mut self, v: &PcodeVarnode) -> Var {
+        if v.space == "register"
+            && let Some(&held) = self.holding.get(&v.offset)
+        {
+            return held;
+        }
+        self.var(v)
+    }
+
+    /// The register offset a varnode's value originates from — through a
+    /// spill reload or a copy — or its own offset when it is a computed
+    /// register value. Used so an array/field base recorded on a reload
+    /// temporary resolves to the parameter it holds.
+    fn origin_of(&self, v: &PcodeVarnode) -> u64 {
+        if v.space == "register" {
+            if let Some(&held) = self.holding.get(&v.offset)
+                && let Some((space, offset)) = self.names.get(held as usize)
+            {
+                if space == "register" {
+                    return *offset;
+                }
+                // The held value is a temp (a reload's unique): follow its
+                // alias back to the register it was loaded from.
+                let held_v = PcodeVarnode {
+                    space: space.clone(),
+                    offset: *offset,
+                    size: 8,
+                };
+                if let Some(origin) = self.resolve(&held_v) {
+                    return origin;
+                }
+            }
+            return v.offset;
+        }
+        self.resolve(v).unwrap_or(v.offset)
+    }
+
     fn cap(&mut self, v: &PcodeVarnode, class: Class) {
         if v.space == "const" {
             return;
         }
-        let var = self.var(v);
+        let var = self.use_var(v);
         self.constraints.push(Constraint::Cap(var, class));
     }
 
@@ -319,12 +364,13 @@ impl<'a> Collector<'a> {
 
     fn op(&mut self, op: &PcodeOp) {
         let opcode = op.opcode.as_str();
+        self.output_held = false;
         match opcode {
             "COPY" => {
                 if let (Some(output), Some(input)) = (&op.output, op.inputs.first()) {
                     // `dst = src` asserts src <: dst.
                     if input.space != "const" {
-                        let src = self.var(input);
+                        let src = self.use_var(input);
                         let dst = self.var(output);
                         self.constraints.push(Constraint::Subtype(src, dst));
                     }
@@ -333,8 +379,9 @@ impl<'a> Collector<'a> {
                         // The destination register now holds the source's
                         // value — the same type-var.
                         if input.space != "const" {
-                            let src = self.var(input);
+                            let src = self.use_var(input);
                             self.holding.insert(output.offset, src);
+                            self.output_held = true;
                         }
                     }
                     // Track the alias so a later use of the temp reaches
@@ -349,26 +396,37 @@ impl<'a> Collector<'a> {
                 if let (Some(output), Some(a), Some(b)) =
                     (&op.output, op.inputs.first(), op.inputs.get(1))
                 {
-                    // `t = reg + const` resolves t to (reg, disp).
                     if a.space == "register" && b.space == "const" {
                         let disp: i64 = if opcode == "INT_SUB" {
                             (b.offset as i64).wrapping_neg()
                         } else {
                             b.offset as i64
                         };
+                        // Record the *origin* register, not the reload
+                        // temporary, so a `*(base+disp)` read through a
+                        // reloaded pointer resolves to the parameter.
+                        let base = self.origin_of(a);
                         self.address_of
-                            .insert((output.space.clone(), output.offset), (a.offset, disp));
+                            .insert((output.space.clone(), output.offset), (base, disp));
                         self.built_from
                             .entry((output.space.clone(), output.offset))
                             .or_default()
-                            .insert(a.offset);
+                            .insert(base);
                     } else {
                         // `t = a + b` where neither is a constant: a
-                        // possible `base + index` array address.
-                        self.sum_of.insert(
-                            (output.space.clone(), output.offset),
-                            ((a.space.clone(), a.offset), (b.space.clone(), b.offset)),
-                        );
+                        // possible `base + index` array address. Record the
+                        // operands' origins so a base held in a reload
+                        // temporary resolves to the parameter.
+                        let operand = |v: &PcodeVarnode| {
+                            if v.space == "register" {
+                                ("register".to_string(), self.origin_of(v))
+                            } else {
+                                (v.space.clone(), v.offset)
+                            }
+                        };
+                        let (ra, rb) = (operand(a), operand(b));
+                        self.sum_of
+                            .insert((output.space.clone(), output.offset), (ra, rb));
                     }
                     if output.space == "register" {
                         self.defined.insert(output.offset);
@@ -437,6 +495,12 @@ impl<'a> Collector<'a> {
                         let var = self.fresh();
                         self.assert_ty(var, ty);
                         self.holding.insert(*reg, var);
+                        if let Some(output) = &op.output
+                            && output.space == "register"
+                            && output.offset == *reg
+                        {
+                            self.output_held = true;
+                        }
                     }
                 }
             }
@@ -520,6 +584,14 @@ impl<'a> Collector<'a> {
         if let Some(output) = &op.output {
             if output.space == "register" {
                 self.defined.insert(output.offset);
+                // A definition that did not record what it holds (a spill
+                // reload or a call return) produces a fresh value — a new
+                // var, so a reused register's distinct definitions do not
+                // share one var and conflate their types.
+                if !self.output_held {
+                    let var = self.fresh();
+                    self.holding.insert(output.offset, var);
+                }
             }
             if let Some((origin, size)) = self.spill_alias.take() {
                 self.alias
@@ -551,6 +623,7 @@ impl<'a> Collector<'a> {
                         self.constraints.push(Constraint::Subtype(src, dst));
                         if output.space == "register" {
                             self.holding.insert(output.offset, src);
+                            self.output_held = true;
                         }
                     }
                 }
@@ -767,6 +840,15 @@ impl<'a> Collector<'a> {
                         changed = true;
                     }
                     for (off, f) in sup_fields {
+                        // A field the sub did not have is new information and
+                        // must keep the fixpoint going — otherwise a field
+                        // that has to travel more than one subtype edge is
+                        // inserted on the last pass and never propagated.
+                        if !sub_node.fields.contains_key(&off) {
+                            sub_node.fields.insert(off, f);
+                            changed = true;
+                            continue;
+                        }
                         let e = sub_node.fields.entry(off).or_insert(f);
                         let nc = e.class.join(f.class);
                         if nc != e.class {
@@ -784,6 +866,15 @@ impl<'a> Collector<'a> {
                 break;
             }
         }
+        if std::env::var("RW_SUBTYPE_DEBUG").is_ok() {
+            for c in &self.constraints {
+                eprintln!("  constraint: {:?}", c);
+            }
+            for (i, n) in self.names.iter().enumerate() {
+                eprintln!("  var {} = {:?}", i, n);
+            }
+        }
+
 
         // Resolve each variable to a structural type — keyed by var so a
         // call argument that is a temp (not a register) still resolves.
@@ -867,6 +958,79 @@ mod tests {
             "rdi should be a pointer because its copy rax is dereferenced"
         );
     }
+    #[test]
+    fn a_spilled_pointer_recovers_its_field_through_the_reload() {
+        // `mov [rbp-8], rdi` (spill), `mov rax, [rbp-8]` (reload),
+        // `mov eax, [rax+8]` (field read): rdi is a pointer to a struct
+        // with a field at +8. The reload's value is a unique that aliases
+        // rdi, so the field must reach rdi through the subtype chain.
+        let solution = solve(&[
+            // spill: [rbp-8] = rdi
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x8f00, 8)),
+                    vec![varnode("register", 0x28, 8), varnode("const", 0xfffffffffffffff8, 8)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("unique", 0xd500, 8)),
+                    vec![varnode("register", 0x38, 8)],
+                ),
+                op(
+                    "STORE",
+                    None,
+                    vec![
+                        varnode("const", 0x1b1, 4),
+                        varnode("unique", 0x8f00, 8),
+                        varnode("unique", 0xd500, 8),
+                    ],
+                ),
+            ]),
+            // reload: rax = [rbp-8]
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x8f00, 8)),
+                    vec![varnode("register", 0x28, 8), varnode("const", 0xfffffffffffffff8, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x23e00, 8)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x8f00, 8)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("register", 0x0, 8)),
+                    vec![varnode("unique", 0x23e00, 8)],
+                ),
+            ]),
+            // field read: eax = [rax+8]
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x8f00, 8)),
+                    vec![varnode("register", 0x0, 8), varnode("const", 0x8, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x23d00, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x8f00, 8)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("register", 0x0, 4)),
+                    vec![varnode("unique", 0x23d00, 4)],
+                ),
+            ]),
+        ]);
+        assert!(
+            matches!(solution.types.get(&0x38), Some(Ty::Ptr(_))),
+            "rdi should be a pointer to a struct, got {:?}",
+            solution.types.get(&0x38)
+        );
+    }
+
 
     #[test]
     fn a_struct_base_recovers_its_fields() {
