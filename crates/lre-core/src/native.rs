@@ -44,6 +44,8 @@ pub mod nid;
 pub(crate) mod switch;
 pub(crate) mod xbox_3ds;
 pub(crate) mod irx;
+pub(crate) mod nes;
+pub(crate) mod genesis;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -1556,6 +1558,10 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
             .ok_or_else(|| ImportError::Bad("empty Nintendo DS container".into()))
     } else if rel::is_rel(data) {
         rel::import(data)
+    } else if nes::is_rom(data) {
+        nes::import(data)
+    } else if genesis::is_rom(data) {
+        genesis::import(data)
     } else {
         dol::import(data)
     }

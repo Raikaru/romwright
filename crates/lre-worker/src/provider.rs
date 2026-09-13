@@ -419,16 +419,19 @@ impl ProgramProvider {
         }
         let tspec = std::fs::read_to_string(lang_dir.join("tspec.xml"))
             .map_err(|e| WorkerError::Setup(format!("tspec.xml: {e}")))?;
-        // <space name="ram" index="3" ...> — index may appear before name;
-        // scan for either order within a <space ...> start tag.
-        self.ram_space_index = find_space_index(&tspec, "ram")
+        // The address space the decompiler reads through is the language's
+        // *default* space, named in `<spaces defaultspace="...">`. Most
+        // languages call it `ram`; the 6502 family calls it `RAM`, and a
+        // hardcoded lowercase name made those tspecs unloadable.
+        let ram_name = default_space_name(&tspec).unwrap_or_else(|| "ram".to_string());
+        self.ram_space_index = find_space_index(&tspec, &ram_name)
             .ok_or_else(|| WorkerError::Setup("tspec has no ram space".into()))?;
         self.register_space_index = find_space_index(&tspec, "register")
             .ok_or_else(|| WorkerError::Setup("tspec has no register space".into()))?;
         // A pointer is as wide as the space it addresses: `<space name="ram"
         // size="4">` on a 32-bit language. Assuming eight made the decompiler
         // carve four bytes out of every typed slot it was handed.
-        self.pointer_size = find_space_attribute(&tspec, "ram", "size")
+        self.pointer_size = find_space_attribute(&tspec, &ram_name, "size")
             .and_then(|size| size.parse().ok())
             .ok_or_else(|| WorkerError::Setup("tspec ram space has no size".into()))?;
         // Which models exist at all. A convention the store holds but this
@@ -515,6 +518,20 @@ fn find_space_attribute(tspec: &str, name: &str, attribute: &str) -> Option<Stri
         rest = &tag[end..];
     }
     None
+}
+
+/// The `defaultspace` attribute of the `<spaces>` element — the name of the
+/// address space the decompiler treats as memory. `ram` on most languages,
+/// `RAM` on the 6502 family.
+fn default_space_name(tspec: &str) -> Option<String> {
+    let pos = tspec.find("<spaces ")?;
+    let tag = &tspec[pos..];
+    let end = tag.find('>')?;
+    let start_tag = &tag[..end];
+    let i = start_tag.find("defaultspace=\"")?;
+    let after = &start_tag[i + 14..];
+    let j = after.find('"')?;
+    Some(after[..j].to_string())
 }
 
 /// Extracts `index="N"` from the `<space name="NAME"` start tag in a tspec.
