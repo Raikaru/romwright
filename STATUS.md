@@ -6130,13 +6130,17 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   is possible on day one: GBA (`ARM:LE:32:v4t`, raw ROM), NDS
   (`ARM:LE:32:v5t` + `v4t`, two CPU images per container), PS1
   (`MIPS:LE:32:default`, PS-EXE), N64 (`MIPS:BE:64:64-32addr`, Z64/V64/N64).
-- **Tier 2, prerequisite-gated** -- named blockers, each recorded rather than
-  worked around: PSP (`MIPS:LE:32:default` decodes, VFPU unmodelled); PS2
-  (no R5900 model in the pinned install, so MMI and VU0 macro ops do not
-  decode); PS3 (no Cell SPU processor at all); Xbox 360 (VMX128 unmodelled);
-  Vita and 3DS (encrypted containers accepted only already decrypted, and no
-  keys are ever bundled -- II.1 forbids the runtime network call that would
-  fetch them).
+- **Tier 2, prerequisite-gated** -- the processor blockers recorded here on
+  2026-09-07 are now all cleared: the pinned install ships PSP's Allegrex
+  *with* the VFPU (Processors/Allegrex/allegrexVfpu*.sinc), PS2's R5900 with
+  MMI and VU0-macro (Extensions/ghidra-emotionengine-reloaded), PS3's Cell
+  SPU (Extensions/GhidraSPU), and Xbox 360's VMX128 is modelled natively
+  (native/languages/xenon, PowerPC:BE:64:Xenon-32addr). Verified by decode:
+  paddw, vadd.s, and SPU a/nop all disassemble. The one remaining blocker is
+  per-title/console-provisioned key material for the encrypted containers
+  (3DS CIA, PS3/Vita SELF, Switch NCA/XCI, Xbox 360 XEX) -- II.1 forbids the
+  runtime network call that would fetch them, so those import only when the
+  user supplies a decrypted image or the loader's bundled public keys apply.
 - Rule for every platform: it is "supported" only with a loader, a language
   mapping proven by decoding, and a gate row scoring it. No platform is
   claimed from a successful import alone.

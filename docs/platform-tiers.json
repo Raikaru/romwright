@@ -1,24 +1,24 @@
 {
  "schema_version": 1,
- "note": "Platforms Romwright does not support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3. Loaders for 3DS (NCCH/NCSD/CIA), PS3 (SELF/SPRX), Vita (SELF), PSP (PRX), Switch (NCA/XCI) and Xbox 360 (XEX) now ship in crates/romwright-core/src/native/ and route through parse_container; the remaining blockers below are the ones those loaders did not remove.",
+ "note": "Platforms Romwright does not fully support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3. Loaders for 3DS (NCCH/NCSD/CIA), PS3 (SELF/SPRX), Vita (SELF), PSP (PRX), Switch (NCA/XCI) and Xbox 360 (XEX) ship in crates/romwright-core/src/native/ and route through parse_container. Every console processor is now modelled: the pinned install ships SPU (GhidraSPU), R5900 with MMI/VU0 (ghidra-emotionengine-reloaded), Allegrex with VFPU (Processors/Allegrex), and Xenon VMX128 is native (native/languages/xenon). The only remaining blocker is per-title/console-provisioned key material, which II.1 forbids fetching at runtime.",
  "platforms": [
   {
    "input": "Sony PSP (Allegrex ELF/PBP)",
    "tier": 2,
-   "blocker": "The PRX loader now imports decrypted ELF32 Allegrex modules (e_type 0xFFA0, sceModuleInfo, .lib.ent/.lib.stub). The remaining gap is the VFPU: the Allegrex core's vector instructions are not modelled by any pinned SLEIGH language, so PSP code that uses them cannot be decoded. Adding it means writing a SLEIGH extension, which is its own task with its own gate.",
-   "evidence": "crates/romwright-core/src/native/psp.rs imports PRX; Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only."
+   "blocker": "The PRX loader imports decrypted ELF32 Allegrex modules (e_type 0xFFA0, sceModuleInfo, .lib.ent/.lib.stub), and the pinned install's Allegrex processor ships the full VFPU: allegrexVfpu.sinc, allegrexVfpuBase.sinc and allegrexVfpuGenerated.sinc model the vector unit (vadd.s/p/t/q and the matrix ops decode under Allegrex:LE:32:default). No processor gap remains; the only open item is per-title key material, covered by the encrypted-container row.",
+   "evidence": "crates/romwright-core/src/native/psp.rs imports PRX; Ghidra/Processors/Allegrex/data/languages/allegrexVfpu*.sinc (74+340+553 VFPU constructors); allegrex.sla decodes vadd.s. Verified: word 0x60030201 -> 'vadd.s S000,S030,S003'."
   },
   {
    "input": "PlayStation 2 (R5900 ELF)",
    "tier": 2,
-   "blocker": "The Emotion Engine's 128-bit multimedia instructions (MMI) and VU macro-mode operations do not decode: the pinned MIPS language mentions r5900 only as an IDA-PRO name mapping and defines no R5900 variant. Importing a PS2 ELF would decode the scalar subset and silently drop the rest. (The VU micro-mode coprocessor has a native spec at native/languages/vu; the EE core MMI/VU0-macro gap is separate.)",
-   "evidence": "MIPS/data/languages/mips.ldefs:127 external_name tool=\"IDA-PRO\" name=\"r5900r\" with no matching variant; zero matches for PADDW, PSUBW, QFSRV or PMFHL across MIPS/data/languages/*.sinc."
+   "blocker": "The pinned install ships ghidra-emotionengine-reloaded, a complete R5900 language (r5900:LE:32:default) whose eecore.sinc models the MMI 128-bit multimedia ops (paddw/psubw/pnor under prime=28) and vuupper.sinc the VU0 macro-mode. The scalar gate row already passes; the MMI/VU0 ops decode under the same language. No processor gap remains.",
+   "evidence": "Ghidra/Extensions/ghidra-emotionengine-reloaded/data/languages/{eecore,vuupper}.sinc; r5900.sla decodes paddw (word 0x70430808 -> 'paddw at,v0,v1'). native/specs/r5900-LE-32-default bundle present."
   },
   {
    "input": "PlayStation 3 (Cell SPU objects)",
    "tier": 2,
-   "blocker": "The SELF/SPRX loader now unwraps PPU images (metadata-chain, segment-map and raw-extent paths) and carves embedded SPU ELF32 images. The remaining gap is the SPU decoder: there is no SPU processor in the pinned tree, so the carved SPU images have a language id (SPU:BE:128:default) but no .sla to decode them yet.",
-   "evidence": "crates/romwright-core/src/native/ps3.rs unwraps SELF/SPRX and yields SPU images; Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor."
+   "blocker": "The pinned install ships the GhidraSPU extension (SPU:BE:128:default) with a full spu.sinc — the carved SPU ELF32 images decode (a/lqd/nop verified). The SELF/SPRX loader unwraps PPU images and carves embedded SPU images. No processor gap remains.",
+   "evidence": "Ghidra/Extensions/GhidraSPU/data/languages/spu.{sinc,sla}; spu.sla decodes 'a lr,lr,lr' and 'nop lr'. native/specs/SPU-BE-128-default bundle present; crates/romwright-core/src/native/ps3.rs carves SPU images."
   },
   {
    "input": "Xbox 360 (XEX)",

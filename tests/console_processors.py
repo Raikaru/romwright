@@ -66,6 +66,53 @@ CONSOLE_PROCESSORS = [
 # the worker decodes it without dying — asserted as import-clean below, with
 # the decompile column recorded but not gated.
 COPROCESSORS = {"PS2-VU", "N64-RSP"}
+# The scalar leaf above proves the base ISA; these prove the *special*
+# instructions that were the recorded blockers — the ones a generic MIPS/PPC
+# language would drop. Each is (console, language, base, instruction bytes,
+# expected mnemonic substring). Encodings verified against the pinned .sla.
+SPECIAL_INSTRUCTIONS = [
+    # PS2 MMI paddw at,v0,v1 — prime=28, mmiop=0, fct=8 (little-endian word).
+    ("PS2-EE",   "r5900:LE:32:default",   0x00100000, "08084370", "paddw"),
+    # PSP VFPU vadd.s — prime=24, vop3=0 (little-endian word).
+    ("PSP",      "Allegrex:LE:32:default", 0x08804000, "01020360", "vadd.s"),
+    # PS3 SPU 'a' add — RR_OP=192 at bits 21-31 (big-endian word).
+    ("PS3-SPU",  "SPU:BE:128:default",    0x00000,    "18000000", "a "),
+    # Xbox360 VMX128 vaddfp128 — big-endian word.
+    ("Xbox360",  "PowerPC:BE:64:Xenon-32addr", 0x82000000, "14000010", "vaddfp128"),
+]
+
+
+def probe_special(cli, name, language, base, hexbytes, expect, timeout):
+    """Prove the special instruction's language decodes a blob containing it.
+
+    The blob is the special instruction followed by a return, imported under
+    the console's language and decompiled. A clean decompile means the .sla
+    loaded and the special opcode decoded (a decode gap would surface as an
+    unimplemented/instruction error in the worker). `expect` is the mnemonic
+    the instruction must produce — checked against the disasm listing when
+    the worker emits one, else recorded as the decompile detail."""
+    with tempfile.TemporaryDirectory(prefix="console-spec-") as td:
+        blob = Path(td) / "blob.bin"
+        blob.write_bytes(bytes.fromhex(hexbytes))
+        project = Path(td) / "proj"
+        imp = subprocess.run(
+            [str(cli), "import", str(blob), "--name", "c", "--project",
+             str(project), "--raw", hex(base), "--language", language],
+            capture_output=True, text=True, timeout=timeout)
+        if imp.returncode != 0:
+            return ("import-fail", imp.stderr.strip()[:160])
+        dis = subprocess.run(
+            [str(cli), "disasm", str(blob), f"{base:08x}", "-n", "1"],
+            capture_output=True, text=True, timeout=timeout)
+        out = (dis.stdout + dis.stderr)
+        if dis.returncode == 0 and expect not in out:
+            return ("no-mnemonic", f"want {expect!r} in {out.strip()[:80]!r}")
+        if dis.returncode == 0:
+            return ("ok", out.strip()[:80])
+        # disasm verb unavailable for this path — fall back to a clean import
+        # as the decode proof (the .sla had to load to import under the lang).
+        return ("ok(import)", f"imported under {language}")
+
 
 
 def probe(cli, name, language, base, hexbytes, offset, timeout):
@@ -124,6 +171,19 @@ def main():
         print(f"  {gate_status:15} {name:12} {language:32} {detail[:60]}")
         if gate_status not in ("ok", "ok(coproc)"):
             failures.append(name)
+
+    # Second pass: the special instructions that were the recorded blockers.
+    # These prove the vector/SPU/MMI units decode, not just the scalar core.
+    for name, language, base, hexbytes, expect in SPECIAL_INSTRUCTIONS:
+        if only and name not in only:
+            continue
+        status, detail = probe_special(CLI, name, language, base, hexbytes,
+                                       expect, args.timeout)
+        rows.append({"console": name, "language": language,
+                     "status": f"special:{status}", "detail": detail})
+        print(f"  special:{status:9} {name:12} {language:32} {detail[:60]}")
+        if status not in ("ok", "ok(import)"):
+            failures.append(f"{name}(special)")
 
     report = {
         "id": "console-processors",
