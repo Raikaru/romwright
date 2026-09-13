@@ -52,8 +52,12 @@ def main() -> int:
 
     report = json.loads(arguments.report.read_text())
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
+    lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
+    matrix = set(lock["oracle_matrix"]["architectures"])
     expected = {f"{row['architecture']}_{row['variant']}"
-                for row in manifest["entries"] if row.get("status") == "ok"}
+                for row in manifest["entries"]
+                if row.get("status") == "ok" and row["format"] == "elf"
+                and row["architecture"] in matrix}
     compared = {row["id"] for row in report["rows"]}
     if compared != expected:
         raise AssertionError(f"rows not compared: {sorted(expected - compared)}, "

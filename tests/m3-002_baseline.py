@@ -64,8 +64,12 @@ def main() -> int:
 
     baseline = json.loads(committed)
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
+    lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
+    matrix = set(lock["oracle_matrix"]["architectures"])
     expected = {f"{row['architecture']}_{row['variant']}"
-                for row in manifest["entries"] if row.get("status") == "ok"}
+                for row in manifest["entries"]
+                if row.get("status") == "ok" and row["format"] == "elf"
+                and row["architecture"] in matrix}
     scored = {row["id"] for row in baseline["rows"] if row["status"] == "recorded"}
     if scored != expected:
         raise AssertionError(f"baseline rows missing: {sorted(expected - scored)}, "

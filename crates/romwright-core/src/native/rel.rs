@@ -103,6 +103,6 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
     let mut imp = NativeImport::default();
     imp.mappings = mappings;
     imp.format = "REL".into();
-    imp.language = "PowerPC:BE:32:Gekko".into();
+    imp.language = "PowerPC:BE:32:Gekko_Broadway".into();
     Ok(imp)
 }

@@ -228,7 +228,10 @@ fn mwcc_callfixups() -> String {
 }
 
 /// Injects the MWCC callfixups into a cspec before `</compiler_spec>`,
-/// alongside the context_data the entry-tracking pass already adds.
+/// alongside the context_data the entry-tracking pass already adds. A cspec
+/// that already ships a helper (the Gekko/Broadway MWCC-aware spec carries
+/// every `_savegpr_N`/`_restgpr_N`) keeps its own — re-adding the name is a
+/// duplicate the decompiler rejects, so only absent fixups are injected.
 fn with_mwcc_callfixups(cspec: &str, lang_dir: &str) -> String {
     if !lang_dir.contains("PowerPC") {
         return cspec.to_string();
@@ -236,9 +239,22 @@ fn with_mwcc_callfixups(cspec: &str, lang_dir: &str) -> String {
     let Some(close) = cspec.rfind("</compiler_spec>") else {
         return cspec.to_string();
     };
-    let mut out = String::with_capacity(cspec.len() + 8192);
+    // Keep only the fixups the cspec does not already declare.
+    let mut extra = String::new();
+    for line in mwcc_callfixups().split("</callfixup>") {
+        let Some(name) = line.split("name=\"").nth(1).and_then(|s| s.split('\"').next())
+        else {
+            continue;
+        };
+        let needle = format!("name=\"{name}\"");
+        if !cspec.contains(&needle) {
+            extra.push_str(line);
+            extra.push_str("</callfixup>\n");
+        }
+    }
+    let mut out = String::with_capacity(cspec.len() + extra.len() + 16);
     out.push_str(&cspec[..close]);
-    out.push_str(&mwcc_callfixups());
+    out.push_str(&extra);
     out.push_str(&cspec[close..]);
     out
 }

@@ -83,7 +83,14 @@ def main() -> int:
     totals = {"dwarf.functions": 0, "dwarf.arity_matched": 0,
               "ghidra.entries_matched": 0, "ghidra.arity_correct": 0,
               "ghidra.functions": 0}
+    matrix = set(lock["oracle_matrix"]["architectures"])
     for entry in manifest["entries"]:
+        # The frozen baseline is the 20-row ELF oracle matrix. mipsel and the
+        # PE rows are corpus members measured by the parity/platform gates;
+        # they join this baseline only once they carry their own arity
+        # references (see oracle_matrix.note in tests/corpus.lock.json).
+        if entry["architecture"] not in matrix or entry["format"] != "elf":
+            continue
         identifier = f"{entry['architecture']}_{entry['variant']}"
         row = {"id": identifier, "status": "skipped"}
         if entry.get("status") != "ok":

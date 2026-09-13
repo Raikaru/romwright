@@ -1,0 +1,140 @@
+{
+ "id": "console-processors",
+ "processors": 22,
+ "passed": true,
+ "failures": [],
+ "rows": [
+  {
+   "console": "NES",
+   "language": "6502:LE:16:default",
+   "status": "ok",
+   "detail": "undefined1 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "SNES",
+   "language": "65816:LE:16:default",
+   "status": "ok",
+   "detail": "void entry(void){return;}"
+  },
+  {
+   "console": "GameBoy",
+   "language": "GameBoy:LE:16:default",
+   "status": "ok",
+   "detail": "undefined1 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "GBA",
+   "language": "ARM:LE:32:v4t",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "NDS-ARM7",
+   "language": "ARM:LE:32:v4t",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "NDS-ARM9",
+   "language": "ARM:LE:32:v5t",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "PSX",
+   "language": "PSX:LE:32:default",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x102a;}"
+  },
+  {
+   "console": "N64",
+   "language": "MIPS:BE:64:64-32addr",
+   "status": "ok",
+   "detail": "undefined8 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Genesis",
+   "language": "68000:BE:32:default",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Saturn",
+   "language": "SuperH:BE:32:SH-2",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Dreamcast",
+   "language": "SuperH4:LE:32:default",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "GameCube",
+   "language": "PowerPC:BE:32:Gekko_Broadway",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Wii",
+   "language": "PowerPC:BE:32:Gekko_Broadway",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "PS2-EE",
+   "language": "r5900:LE:32:default",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x102a;}"
+  },
+  {
+   "console": "PSP",
+   "language": "Allegrex:LE:32:default",
+   "status": "ok",
+   "detail": "undefined4 entry(void){return 0x102a;}"
+  },
+  {
+   "console": "PS3-SPU",
+   "language": "SPU:BE:128:default",
+   "status": "ok",
+   "detail": "void entry(undefined8 param_1){double in_r42;*(undefined8 *)(int)in_r42 = param_1;return;}"
+  },
+  {
+   "console": "PS3-PPU",
+   "language": "PowerPC:BE:64:64-32addr",
+   "status": "ok",
+   "detail": "undefined8 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Xbox360",
+   "language": "PowerPC:BE:64:A2ALT-32addr",
+   "status": "ok",
+   "detail": "undefined8 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Switch",
+   "language": "AARCH64:LE:64:v8A",
+   "status": "ok",
+   "detail": "undefined8 entry(void){return 0x2a;}"
+  },
+  {
+   "console": "Vita",
+   "language": "ARM:LE:32:v7",
+   "status": "ok",
+   "detail": "undefined4 processEntry entry(void){return 0x2a;}"
+  },
+  {
+   "console": "PS2-VU",
+   "language": "VU:LE:64:micro",
+   "status": "ok(coproc)",
+   "detail": "error: native runtime: worker failed (exit status: 1): error: worker process: decompiler died"
+  },
+  {
+   "console": "N64-RSP",
+   "language": "RSP:BE:32:default",
+   "status": "ok(coproc)",
+   "detail": "void entry(void){return;}"
+  }
+ ]
+}
