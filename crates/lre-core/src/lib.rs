@@ -26,6 +26,8 @@ pub mod session;
 pub mod structuring;
 pub mod speclint;
 pub mod vu;
+pub mod facts;
+pub mod subtype;
 pub mod types_infer;
 mod prototypes;
 pub mod register_params;
@@ -1403,13 +1405,18 @@ impl Core {
                     .collect();
                 // The structural type each parameter register's accesses
                 // prove — `*struct{+0x34: float32}` for a register
-                // dereferenced at several offsets. This is the TRex layer:
-                // behavior-describing, not the lost source type.
+                // dereferenced at several offsets. This is the BinSub
+                // layer: the subtype solver propagates capabilities and
+                // structure along `src <: dst` copy edges to a fixpoint, so
+                // a value used as a pointer constrains the register it was
+                // copied from — which the flat lattice cannot express.
+                let solution = crate::subtype::solve(&pcode);
                 let structural: Vec<String> = parameter_slots
                     .iter()
                     .map(|(_, offset)| {
-                        facts
-                            .structural(*offset)
+                        solution
+                            .types
+                            .get(offset)
                             .map(|ty| ty.name())
                             .unwrap_or_else(|| facts.get(*offset).name())
                     })

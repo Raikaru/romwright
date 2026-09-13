@@ -46,6 +46,12 @@ pub enum Class {
     Top,
 }
 
+impl Default for Class {
+    fn default() -> Self {
+        Class::Unknown
+    }
+}
+
 impl Class {
     /// The name the DWARF truth uses, so the two are directly comparable.
     pub fn name(self) -> String {
