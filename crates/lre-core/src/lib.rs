@@ -23,6 +23,7 @@ pub mod native_runtime;
 pub mod rsp;
 pub mod session;
 pub mod structuring;
+pub mod speclint;
 pub mod vu;
 pub mod types_infer;
 mod prototypes;
