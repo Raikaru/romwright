@@ -1,0 +1,15 @@
+cat2_return_value	0	8
+return_value	4	4
+SP	8	4
+PC	12	4
+switch_target	16	4
+return_address	20	4
+call_target	24	4
+LVA	28	4
+switch_ctrl	256	16
+switch_low	256	4
+switch_high	260	4
+switch_num	264	4
+in_table_switch	268	1
+in_lookup_switch	268	1
+alignmentPad	268	1

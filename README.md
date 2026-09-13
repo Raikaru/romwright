@@ -1977,7 +1977,7 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | ELF AARCH64 LE64 | supported | **parity measured**: 449 of 473 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF ARM LE32 | supported | **parity measured**: 4 of 4 functions token-identical to the JVM oracle across 1 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
 | ELF MIPS LE32 | supported | **parity measured**: 31 of 43 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`) |
-| ELF RISC-V LE64 | supported | no spec bundle in native/specs and no corpus row; unmeasured |
+| ELF RISC-V LE64 | supported | decodes on `RISCV:LE:64:default`; spec bundle present |
 | ELF PowerPC | supported | **parity measured**: 438 of 453 functions token-identical to the JVM oracle across 4 build variants, the rest attributed to named facts (`tests/m4-003_language_parity.py`); e500 verified on Agent Under Fire |
 | GBA cartridge ROM | supported | **gated**: DWARF recall 1.0000 over 6 functions on `ARM:LE:32:v4t` (`tests/m5-001_gba.py`) |
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
@@ -1998,6 +1998,14 @@ that fact was checked.
 | Platform | Blocker | Checked |
 |---|---|---|
 | PS Vita and Nintendo 3DS (encrypted containers) | Retail images are encrypted, and the keys are not in this repository or in the pinned Ghidra install. Fetching them would require a network call at runtime, which AGENTS.md II.1 reserves to the human and the project's offline guarantee forbids. Decrypted input supplied by the user is a separate, smaller task: it still needs a loader and a gate. | AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; no key material or decryption code exists in this repository. |
+
+**Processor coverage.** Every processor language the pinned install can
+decode has a spec bundle under `native/specs/` — 189 of 191 current
+languages. The two exceptions are unimplemented upstream, not unmapped here:
+`65802` has no `.slaspec` at all, and `CR16AB` points at a `CR16B.sinc` that
+is a stub ("TODO: instructions not implemented", no constructors). Adding
+either means writing the SLEIGH, which is its own task. Deprecated variants
+(the `old/` RISCV set) carry bundles but are not selectable.
 
 **Disassembly failure classes.** Instances observed over the measured corpus; zero is the gate, so any row with a count is a recorded defect.
 

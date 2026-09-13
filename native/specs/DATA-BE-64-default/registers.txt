@@ -1,0 +1,4 @@
+sp	0	8
+r0	8	8
+contextreg	256	4
+test	256	1
