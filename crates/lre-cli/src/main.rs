@@ -74,7 +74,8 @@ oracle generation only (launches the Stage-1 Java bridge):
   lre-cli decompile <program> <address> --oracle [--ghidra DIR]
   lre-cli decompile-batch <program> <addr,addr,...> --oracle [--ghidra DIR]
   lre-cli disasm <program> <address> --oracle [-n N] [--ghidra DIR]
-  lre-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]"
+  lre-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]
+  lre-cli lint-specs [--ghidra DIR]   (validate every language module's spec files)"
         );
     std::process::exit(2);
 }
@@ -1951,6 +1952,28 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
             println!("specs written to {out}");
             bridge.shutdown().map_err(|e| e.to_string())?;
+        }
+        "lint-specs" => {
+            // A stricter spec compiler: validate every language module under
+            // the install and report the defect classes that produce a bad
+            // spec bundle (unknown opinion attributes, missing/stub .sla,
+            // cspec schema drift). Exit non-zero when any error fires.
+            let install = flag(args, "--ghidra")
+                .map(PathBuf::from)
+                .or_else(|| std::env::var_os("VENTRIS_GHIDRA").map(PathBuf::from))
+                .unwrap_or_else(|| PathBuf::from("ghidra"));
+            let findings = lre_core::speclint::lint_install(&install);
+            let mut errors = 0usize;
+            for f in &findings {
+                if f.severity == lre_core::speclint::Severity::Error {
+                    errors += 1;
+                }
+                println!("{}: {}: {}: {}", f.severity, f.rule, f.path.display(), f.message);
+            }
+            println!("{} finding(s), {} error(s)", findings.len(), errors);
+            if errors > 0 {
+                return Err(format!("lint-specs: {errors} error(s)"));
+            }
         }
         "decompile-batch" => {
             let program = args

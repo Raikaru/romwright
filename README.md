@@ -2001,11 +2001,21 @@ that fact was checked.
 
 **Processor coverage.** Every processor language the pinned install can
 decode has a spec bundle under `native/specs/` — 189 of 191 current
-languages. The two exceptions are unimplemented upstream, not unmapped here:
-`65802` has no `.slaspec` at all, and `CR16AB` points at a `CR16B.sinc` that
-is a stub ("TODO: instructions not implemented", no constructors). Adding
-either means writing the SLEIGH, which is its own task. Deprecated variants
-(the `old/` RISCV set) carry bundles but are not selectable.
+languages. The two exceptions are disabled upstream, not unmapped here:
+both `65802` and `CR16AB` have their `<language>` element commented out in
+the `.ldefs`, so discovery never sees them (and `65802` additionally has no
+`.sla` built). Deprecated variants (the `old/` RISCV set) carry bundles but
+are not selectable.
+
+**Spec lint.** `lre-cli lint-specs [--ghidra DIR]` is a stricter spec
+compiler: it validates every language module and errors on the defect
+classes that produce a bad bundle — unknown `.opinion` constraint
+attributes (the `load=`/`loader=` class), `.ldefs` entries naming a `.sla`,
+`.pspec`, or `.cspec` that is absent, a `.slaspec` whose `@include` tree
+resolves to zero instruction constructors, and `.cspec` schema drift
+(`segmentop` without a `<pcode>` body, `callotherfixup` without
+`targetop`). Over the pinned install it reports 0 errors and 2 warnings —
+the two disabled languages above.
 
 **Disassembly failure classes.** Instances observed over the measured corpus; zero is the gate, so any row with a count is a recorded defect.
 
