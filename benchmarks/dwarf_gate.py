@@ -114,7 +114,7 @@ def native_import(binary: Path, work: Path) -> tuple[set[int], set[int], int]:
     project = work / binary.stem
     project.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "scored", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     if result.returncode != 0:
@@ -140,11 +140,11 @@ def main() -> int:
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     # The oracle column is only a baseline if it came from the pinned bridge.
     producer = provenance(Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
     if manifest["sources"] != lock["sources"]:

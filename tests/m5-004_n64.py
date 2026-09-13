@@ -70,7 +70,7 @@ def build(work: Path) -> tuple[Path, Path, int]:
     header = bytearray(CODE_OFFSET)
     struct.pack_into(">I", header, 0x00, NATIVE_CONFIGURATION)
     struct.pack_into(">I", header, 0x08, BOOT_ADDRESS)
-    header[0x20:0x2C] = b"VENTRISGATE\x00"
+    header[0x20:0x2C] = b"ROMWRIGHTGATE\x00"
     rom = work / "fixture.z64"
     rom.write_bytes(bytes(header) + raw.read_bytes())
     return elf, rom, entry
@@ -106,8 +106,8 @@ def main() -> int:
                 arguments.report.write_text(json.dumps(report, indent=2) + "\n")
             return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m5-004-") as temporary:
         work = Path(temporary)
         elf, rom, entry = build(work)

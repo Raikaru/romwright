@@ -18,11 +18,11 @@ PROJECT="${DIFF_PROJECT:-$WORK/project}"
 rm -f "$PROJECT/bridge-projects"/*.lock* 2>/dev/null || true
 # The console's own defaults (crate::session::RuntimeConfig::from_env), not the
 # pre-pinned-tree spike layout: /tmp/spike no longer exists on a clean host.
-CONSOLE="${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}"
-GHIDRA_DEFAULT="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
+CONSOLE="${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}"
+GHIDRA_DEFAULT="${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
 DECOMP="$CONSOLE"
-LANGDIR="${VENTRIS_LANGUAGE_DIR:-$GHIDRA_DEFAULT/Ghidra/Processors/x86/data/languages}"
-GHROOT="${VENTRIS_GHROOT:-$GHIDRA_DEFAULT}"
+LANGDIR="${ROMWRIGHT_LANGUAGE_DIR:-$GHIDRA_DEFAULT/Ghidra/Processors/x86/data/languages}"
+GHROOT="${ROMWRIGHT_GHROOT:-$GHIDRA_DEFAULT}"
 # The SLEIGH console is the one component needing binutils-devel to build
 # (native/build_console.sh); worker steps below do not need it.
 CONSOLE_AVAILABLE=1
@@ -30,10 +30,10 @@ CONSOLE_AVAILABLE=1
 BIN="$ROOT/tests/fixtures-src/tiny_bin"
 # Build what is being tested: a stale binary here once passed a gate for
 # a change that had already altered its output.
-cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
-CLI="$ROOT/target/release/lre-cli"
-GHIDRA="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
-export VENTRIS_SERVICE_JAR="$ROOT/service/build/ventris-service.jar"
+cargo build -q --manifest-path "$ROOT/Cargo.toml" -p romwright-cli
+CLI="$ROOT/target/release/romwright-cli"
+GHIDRA="${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
+export ROMWRIGHT_SERVICE_JAR="$ROOT/service/build/romwright-service.jar"
 
 mkdir -p "$WORK"
 
@@ -95,9 +95,9 @@ fi
 # When native/build/ghidra_opt exists, the worker path is exercised too and
 # its add output must equal the oracle exactly (same bytes, same names).
 WORKER="$ROOT/native/build/ghidra_opt"
-if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ]; then
-    step "protocol worker (VENTRIS_SLA=$VENTRIS_SLA)"
-    "$ROOT/target/release/lre-worker" "$WORKER" "$WORK/specs" \
+if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ]; then
+    step "protocol worker (ROMWRIGHT_SLA=$ROMWRIGHT_SLA)"
+    "$ROOT/target/release/romwright-worker" "$WORKER" "$WORK/specs" \
         "$BIN" tiny_bin 00400466 --project "$PROJECT" > "$WORK/worker_add.c" 2>/dev/null || \
         fail "protocol worker decompile failed"
     step "exact worker-vs-oracle check"
@@ -110,17 +110,17 @@ if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ]; then
         echo "  worker add: token-identical (whitespace-normalized)"
     fi
 else
-    step "protocol worker skipped (build native/build/ghidra_opt + set VENTRIS_SLA)"
+    step "protocol worker skipped (build native/build/ghidra_opt + set ROMWRIGHT_SLA)"
 fi
 
 # ---- Native import vs oracle function set --------------------------------
 step "native import parity (store-only, no JVM)"
 NPROJ="$WORK/native-project"
 mkdir -p "$NPROJ"
-"$ROOT/target/release/lre-cli" import "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
-"$ROOT/target/release/lre-cli" functions tiny_native --project "$NPROJ" \
+"$ROOT/target/release/romwright-cli" import "$BIN" --name tiny_native --project "$NPROJ" > /dev/null
+"$ROOT/target/release/romwright-cli" functions tiny_native --project "$NPROJ" \
     | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/native_entries.txt"
-"$ROOT/target/release/lre-cli" functions tiny_bin --project "$PROJECT" \
+"$ROOT/target/release/romwright-cli" functions tiny_bin --project "$PROJECT" \
     | grep -E '^[0-9a-f]{8}' | awk '{print $1}' | sort > "$WORK/oracle_entries.txt"
 # Oracle includes external shim functions (0x404000+); the native import
 # models externals via PLT/got naming. Compare the in-image code sets.
@@ -135,7 +135,7 @@ else
     comm -23 "$WORK/native_entries.txt" "$WORK/oracle_entries.txt" | head -5 || true
 fi
 # ---- CLI decompile (the supported JVM-free route) ------------------
-if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ]; then
+if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ]; then
     step "CLI decompile (bridge-imported project -> exact parity)"
     "$CLI" decompile "$BIN" 00400466 --name tiny_bin --project "$PROJECT" \
         > "$WORK/cli_native_add.c" 2> "$WORK/cli_native_err.txt" \
@@ -169,9 +169,9 @@ if [ -f "$SSTRIP" ]; then
     # Fast path: the console closure directly (the CLI's rounds are slower).
     discover_out=""
     if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-        discover_out=$(VENTRIS_CONSOLE="$CONSOLE" \
-            VENTRIS_GHROOT="${VENTRIS_GHROOT:-$HOME/ghidra_12.1.3_PUBLIC}" \
-            VENTRIS_LANGS="${VENTRIS_LANGS:-$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages}" \
+        discover_out=$(ROMWRIGHT_CONSOLE="$CONSOLE" \
+            ROMWRIGHT_GHROOT="${ROMWRIGHT_GHROOT:-$HOME/ghidra_12.1.3_PUBLIC}" \
+            ROMWRIGHT_LANGS="${ROMWRIGHT_LANGS:-$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages}" \
             timeout 60 "$ROOT/native/discover.sh" "$SSTRIP" 0x400380 0x400370 2>/dev/null || true)
         printf '%s\n' "$discover_out" | grep '^F ' | awk '{printf "%08x\n", $2}' | sort > "$WORK/stripped_native.txt" || true
     else
@@ -228,11 +228,11 @@ fi
 PE="$ROOT/tests/fixtures-src/tiny_pe.exe"
 PE_SPECS="$WORK/pe-specs"
 PE_PROJ="$WORK/pe-store"
-if [ -x "$WORKER" ] && [ -n "${VENTRIS_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
+if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
     mkdir -p "$PE_PROJ"
-    "$ROOT/target/release/lre-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
+    "$ROOT/target/release/romwright-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
     step "PE protocol worker (add)"
-    "$ROOT/target/release/lre-worker" "$WORKER" "$PE_SPECS" \
+    "$ROOT/target/release/romwright-worker" "$WORKER" "$PE_SPECS" \
         "$PE" tiny_pe.exe 140001450 --project "$WORK/pe-store" \
         --base 0x140000000 > "$WORK/pe_worker_add.c" 2>/dev/null || \
         fail "PE worker decompile failed"

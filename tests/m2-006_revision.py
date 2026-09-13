@@ -30,14 +30,14 @@ def main():
         ('decompile_doc', dict(**context, address=add)),
     ]
     env = dict(os.environ)
-    env.pop('VENTRIS_SLA', None)
-    with tempfile.TemporaryDirectory(prefix='ventris-m2-006-revision-') as temporary:
-        response = subprocess.run([str(root / 'target/release/lre-api'), '--project', temporary],
+    env.pop('ROMWRIGHT_SLA', None)
+    with tempfile.TemporaryDirectory(prefix='romwright-m2-006-revision-') as temporary:
+        response = subprocess.run([str(root / 'target/release/romwright-api'), '--project', temporary],
             cwd=root, env=env, input=''.join(json.dumps(dict(api=2, id=index,
                 method=method, params=params)) + '\n' for index, (method, params) in enumerate(requests)),
             text=True, capture_output=True, check=True, timeout=120)
         standalone = json.loads(subprocess.run([
-            str(root / 'target/release/lre-cli'), 'decompile-doc', str(binary),
+            str(root / 'target/release/romwright-cli'), 'decompile-doc', str(binary),
             '0x40047a', '--project', temporary], cwd=root, env=env, text=True,
             capture_output=True, check=True, timeout=120).stdout)
     replies = [json.loads(line) for line in response.stdout.splitlines()]

@@ -23,7 +23,7 @@ class CorpusIntegrity(unittest.TestCase):
         cls.lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
         cls.verifier = (ROOT / "tests/m1-006_corpus.sh").read_text().split(
             "<<'EOF'\n", 1)[1].split("\nEOF", 1)[0]
-        cls.cli = ROOT / "target/release/lre-cli"
+        cls.cli = ROOT / "target/release/romwright-cli"
         cls.addClassCleanup(cls.temp.cleanup)
 
     def verify(self, manifest, mode="normal"):

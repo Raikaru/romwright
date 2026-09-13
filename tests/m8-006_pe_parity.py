@@ -55,7 +55,7 @@ CLAIMS = {
 def declared_classes() -> set[str]:
     """The provenance strings the native importer can emit for a PE."""
     found: set[str] = set()
-    for source in (ROOT / "crates/lre-core/src").rglob("*.rs"):
+    for source in (ROOT / "crates/romwright-core/src").rglob("*.rs"):
         if "test" in source.name:
             continue
         found.update(PROVENANCE.findall(source.read_text(encoding="utf-8")))
@@ -71,7 +71,7 @@ def observed(work: Path) -> tuple[dict[str, int], int]:
         assert fixture.is_file(), f"missing committed fixture {name}"
         project = work / f"{fixture.stem}-parity"
         result = subprocess.run(
-            [str(ROOT / "target/release/lre-cli"), "import", str(fixture),
+            [str(ROOT / "target/release/romwright-cli"), "import", str(fixture),
              "--name", "parity", "--project", str(project)],
             cwd=ROOT, capture_output=True, text=True)
         assert result.returncode == 0, f"{name}: import failed: {result.stderr.strip()}"
@@ -101,7 +101,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     declared = declared_classes()
     assert declared, "the importer declares no PE provenance classes"

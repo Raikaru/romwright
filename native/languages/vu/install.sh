@@ -7,12 +7,12 @@
 # so `architecture::discover` resolves VU:LE:64:micro.
 #
 # Usage: native/languages/vu/install.sh [GHIDRA_INSTALL_DIR]
-#   default: $VENTRIS_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+#   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/native/languages/vu"
-GHIDRA="${1:-${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
+GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
 SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
 DEST="$GHIDRA/Ghidra/Extensions/VU/data/languages"
 

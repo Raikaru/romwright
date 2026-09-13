@@ -12,7 +12,7 @@
 #
 # Usage: native/build_console.sh [--jobs N] [OUTDIR]
 #   OUTDIR default: native/build; produces OUTDIR/decomp_native
-#   runtime: VENTRIS_CONSOLE=$OUTDIR/decomp_native
+#   runtime: ROMWRIGHT_CONSOLE=$OUTDIR/decomp_native
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -36,12 +36,12 @@ done
 BUILD=$(mktemp -d /tmp/ghidra-console-build.XXXXXX)
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
-cp "$ROOT/native/ventris_linkage.hh" "$ROOT/native/ventris_patterns.hh" \
-   "$ROOT/native/ventris_flow.hh" "$ROOT/native/ventris_pcode.hh" "$ROOT/native/ventris_constant_state.hh" \
-   "$ROOT/native/ventris_operand_refs.hh" \
-   "$ROOT/native/ventris_x86_references.hh" \
-   "$ROOT/native/ventris_callfixups.hh" \
-   "$ROOT/native/ventris_constants.hh" "$BUILD/decompiler/"
+cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
+   "$ROOT/native/romwright_flow.hh" "$ROOT/native/romwright_pcode.hh" "$ROOT/native/romwright_constant_state.hh" \
+   "$ROOT/native/romwright_operand_refs.hh" \
+   "$ROOT/native/romwright_x86_references.hh" \
+   "$ROOT/native/romwright_callfixups.hh" \
+   "$ROOT/native/romwright_constants.hh" "$BUILD/decompiler/"
 cp "$PATCH" "$BUILD/apply.patch"
 git -C "$BUILD" init -q
 git -C "$BUILD" add -A
@@ -55,4 +55,4 @@ make decomp_opt -j"$JOBS" LNK="-lz -lzstd" > /tmp/ghidra-console-build.log 2>&1
 mkdir -p "$OUT"
 cp decomp_opt "$OUT/decomp_native"
 echo "built: $OUT/decomp_native"
-echo "runtime: VENTRIS_CONSOLE=$OUT/decomp_native"
+echo "runtime: ROMWRIGHT_CONSOLE=$OUT/decomp_native"

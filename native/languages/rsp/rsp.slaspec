@@ -2,7 +2,7 @@
 #
 # The RSP is a MIPS-I scalar core (big-endian, 32-bit) plus a COP2 vector
 # unit. No FPU, no TLB. Scalar opcode table and the COP2 vector funct table
-# are verified against rabbitizer / spimdisasm (crates/lre-core/src/rsp.rs
+# are verified against rabbitizer / spimdisasm (crates/romwright-core/src/rsp.rs
 # mirrors the same tables).
 #
 # Vector ops emit named pcodeops (rsp_vmulf, rsp_vmacf, ...) so the

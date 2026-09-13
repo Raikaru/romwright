@@ -10,7 +10,7 @@ backports.
 
 Do not disclose an unpatched vulnerability in a public issue, discussion, or
 pull request. The canonical repository is
-https://github.com/Raikaru/ventris, maintained by the `Raikaru` GitHub
+https://github.com/Raikaru/romwright, maintained by the `Raikaru` GitHub
 account. Private vulnerability reporting is enabled at **Security →
 Advisories → Report a vulnerability**.
 
@@ -26,7 +26,7 @@ Include:
 
 The security review covers the shipped runtime surfaces:
 
-- the Rust workspace (lre-model, lre-db, lre-core, lre-cli, lre-worker)
+- the Rust workspace (romwright-model, romwright-db, romwright-core, romwright-cli, romwright-worker)
   keeps third-party runtime dependencies to serde/rusqlite/thiserror/base64,
   and its library crates forbid `unsafe_code` where reviewed constructs are
   not required;

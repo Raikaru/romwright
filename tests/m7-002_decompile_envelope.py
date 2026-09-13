@@ -9,9 +9,9 @@ Both producers decompile the *same function by name* -- `main` in each locked
 entry's unstripped twin, so neither producer needs an address guessed for it
 and PIE image bases cannot make the two disagree about what was decompiled.
 Import and analysis happen first and are **not** timed: for the native path an
-`lre-cli import`, for stock an `analyzeHeadless -import` that analyses and
+`romwright-cli import`, for stock an `analyzeHeadless -import` that analyses and
 saves. Each timed run then opens the stored program and decompiles one
-function -- native `lre-cli decompile`, stock `analyzeHeadless -process
+function -- native `romwright-cli decompile`, stock `analyzeHeadless -process
 -noanalysis -postScript scripts/DecompileOne.java` -- so both numbers include
 their own process startup and neither includes analysis.
 
@@ -50,7 +50,7 @@ FUNCTION = "main"
 def native_address(program: str, project: Path) -> str:
     """The address the native store gave the wanted function."""
     listing = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "functions", program,
+        [str(ROOT / "target/release/romwright-cli"), "functions", program,
          "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
     for line in listing.splitlines():
@@ -64,14 +64,14 @@ def native_decompile(binary: Path, identifier: str, temporary: Path
                      ) -> tuple[float, int, str, int]:
     project = temporary / "native"
     setup = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "cost", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert setup.returncode == 0, f"{identifier}: native import failed: {setup.stderr}"
     address = native_address("cost", project)
     output = temporary / "native.c"
     wall, peak, code = measure(
-        [str(ROOT / "target/release/lre-cli"), "decompile", str(binary), address,
+        [str(ROOT / "target/release/romwright-cli"), "decompile", str(binary), address,
          "--name", "cost", "--project", str(project)], cwd=ROOT, output=output)
     assert code == 0, f"{identifier}: native decompile exited {code}"
     body = output.read_text()
@@ -116,10 +116,10 @@ def main() -> int:
     parser.add_argument("--write", action="store_true",
                         help="record the envelope; refuses to overwrite one")
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"]

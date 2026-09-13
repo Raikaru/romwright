@@ -1,8 +1,8 @@
-# Scripting Ventris
+# Scripting Romwright
 
-`python/ventris_sdk.py` is a dependency-free client for the Core API. It
+`python/romwright_sdk.py` is a dependency-free client for the Core API. It
 speaks the envelope documented in `docs/core-api.md` over either the local
-`lre-api` process or an HTTP `/v2` endpoint, and it keeps no second model of
+`romwright-api` process or an HTTP `/v2` endpoint, and it keeps no second model of
 the program: what it returns is what the store answered.
 
 Every command and output line on this page is executed by
@@ -11,9 +11,9 @@ Every command and output line on this page is executed by
 ## The client
 
 ```python
-from ventris_sdk import Client
+from romwright_sdk import Client
 
-with Client.stdio("/path/to/project") as client:      # spawns lre-api
+with Client.stdio("/path/to/project") as client:      # spawns romwright-api
     client.import_native("/bin/ls", "ls")
     rows = client.functions("ls")
 
@@ -21,7 +21,7 @@ with Client.http("http://127.0.0.1:8377") as client:  # an already-running servi
     client.ping()
 ```
 
-`Client.stdio(project, executable="lre-api")` starts the service and closes it
+`Client.stdio(project, executable="romwright-api")` starts the service and closes it
 on exit. `client.request(method, **params)` reaches any method the API
 dispatches, so the client never limits what a script can do, and these named
 helpers cover the common work:

@@ -1,0 +1,14 @@
+[package]
+name = "romwright-worker-client"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Supervised persistent decompiler worker client: pool, leases, deadlines, restart"
+
+[dependencies]
+romwright-model = { path = "../romwright-model" }
+romwright-db = { path = "../romwright-db" }
+romwright-worker = { path = "../romwright-worker" }
+romwright-core = { path = "../romwright-core" }
+thiserror = { workspace = true }
+serde = { workspace = true }

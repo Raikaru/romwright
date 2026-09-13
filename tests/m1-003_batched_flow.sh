@@ -24,8 +24,8 @@ fi
 
 BIN=/usr/lib64/libc.so.6
 CONSOLE_PROJECT=/tmp/m1-003-batched-console
-cargo build -q --release -p lre-cli --no-default-features
-CONSOLE=target/release/lre-cli
+cargo build -q --release -p romwright-cli --no-default-features
+CONSOLE=target/release/romwright-cli
 
 # The build immediately above leaves the machine hot and busy, which is not
 # what this gate measures: discard one run, then keep the best of three.

@@ -17,7 +17,7 @@ deliberate act.
 ## Build and stage
 
 ```console
-$ cargo build --release -p lre-cli -p lre-api -p lre-worker
+$ cargo build --release -p romwright-cli -p romwright-api -p romwright-worker
 $ python3 packaging/stage_release.py --release $RELEASE
 ```
 
@@ -27,21 +27,21 @@ included, and fails if a binary is missing rather than shipping a partial set.
 <!-- requires: qt -->
 
 ```console
-$ cmake -S desktop/ventris-qt -B build/ventris-qt -DCMAKE_BUILD_TYPE=Release
-$ cmake --build build/ventris-qt --config Release --target ventris-qt
-$ cmake --build build/ventris-qt --config Release --target package
-$ python3 packaging/stage_release.py --release $RELEASE --package build/ventris-qt
+$ cmake -S desktop/romwright-qt -B build/romwright-qt -DCMAKE_BUILD_TYPE=Release
+$ cmake --build build/romwright-qt --config Release --target romwright-qt
+$ cmake --build build/romwright-qt --config Release --target package
+$ python3 packaging/stage_release.py --release $RELEASE --package build/romwright-qt
 ```
 
 The desktop archive is named after the system and processor
-(`ventris-0.5-Linux-x86_64.tar.gz`), so the staging step finds it rather than
+(`romwright-0.5-Linux-x86_64.tar.gz`), so the staging step finds it rather than
 naming it. `docs/desktop.md` covers what that archive contains and how it is
 gated.
 
 ## Describe
 
 ```console
-$ python3 packaging/sbom.py --output $RELEASE/ventris.spdx.json
+$ python3 packaging/sbom.py --output $RELEASE/romwright.spdx.json
 ```
 
 The SBOM is SPDX 2.3 built from the Cargo dependency graph. The gate requires

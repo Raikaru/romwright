@@ -112,9 +112,9 @@ def main():
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
     env = dict(os.environ, DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
-    with tempfile.TemporaryDirectory(prefix='ventris-nonreturn-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-nonreturn-') as temporary:
         work = Path(temporary)
         twin, binary, project = work / 'fixture.unstripped', work / 'fixture.bin', work / 'project'
         subprocess.run(['gcc', '-nostdlib', '-no-pie', '-Wl,-e,entry', '-x', 'assembler', '-',
@@ -201,7 +201,7 @@ def main():
         assert not any(token['text'] == 'ordinary' for token in after_doc['tokens']), after_doc
         assert after_doc['prototype']['no_return'] is True, after_doc
         assert after_doc['revision'] > before[-1]['revision'], (before[-1], after_doc)
-        standalone = subprocess.run([str(ROOT / 'target/release/lre-cli'), 'decompile-doc',
+        standalone = subprocess.run([str(ROOT / 'target/release/romwright-cli'), 'decompile-doc',
             str(binary), hex(symbols['relay']), '--project', str(project), '--name', 'fixture'],
             capture_output=True, text=True, check=True, timeout=120, env=env)
         assert not any(token['text'] == 'ordinary' for token in json.loads(standalone.stdout)['tokens'])

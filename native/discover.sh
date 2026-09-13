@@ -8,9 +8,9 @@
 # Usage: discover.sh <binary> [seeds...]
 set -u
 BIN="${1:?binary}"; shift
-CONSOLE="${VENTRIS_CONSOLE:-/tmp/spike/decomp_native}"
-GHROOT="${VENTRIS_GHROOT:-/tmp/spike/ghroot}"
-LANGS="${VENTRIS_LANGS:-/tmp/spike/langs}"
+CONSOLE="${ROMWRIGHT_CONSOLE:-/tmp/spike/decomp_native}"
+GHROOT="${ROMWRIGHT_GHROOT:-/tmp/spike/ghroot}"
+LANGS="${ROMWRIGHT_LANGS:-/tmp/spike/langs}"
 
 SEEDS=()
 SEEN_FILE=$(mktemp)

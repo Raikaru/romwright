@@ -45,7 +45,7 @@ ENVELOPE = ROOT / "benchmarks" / "reports" / "cost-envelope.json"
 def native(binary: Path) -> tuple[float, int]:
     with tempfile.TemporaryDirectory(prefix="m7-001-native-") as temporary:
         elapsed, peak, code = measure(
-            [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+            [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
              "--name", "cost", "--project", str(Path(temporary) / "project")],
             cwd=ROOT)
     assert code == 0, f"native import of {binary.name} exited {code}"
@@ -69,10 +69,10 @@ def main() -> int:
     parser.add_argument("--write", action="store_true",
                         help="record the envelope; refuses to overwrite one")
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"] if entry.get("status") == "ok"]

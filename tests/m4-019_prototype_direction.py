@@ -46,9 +46,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 import gate_cache  # noqa: E402
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
-GHIDRA = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
+GHIDRA = Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
 ARCHIVE = ROOT / "oracle/library-prototypes-v1/generic_clib_64.json"
 UNDECLARED = ("__libc_start_main", "__gmon_start__")
 
@@ -60,11 +60,11 @@ ORACLE_PAIR = "void __libc_start_main(void)\n{\n  (*(code *)__DT_PLTGOT)();\n  r
 
 def environment() -> dict[str, str]:
     values = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_SPECS", "VENTRIS_REGISTER_PARAMS",
-                 "VENTRIS_PROMOTE_TAILCALLS"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_SPECS", "ROMWRIGHT_REGISTER_PARAMS",
+                 "ROMWRIGHT_PROMOTE_TAILCALLS"):
         values.pop(name, None)
-    values["VENTRIS_SERVICE_JAR"] = str(ROOT / "service/build/ventris-service.jar")
+    values["ROMWRIGHT_SERVICE_JAR"] = str(ROOT / "service/build/romwright-service.jar")
     return values
 
 
@@ -153,7 +153,7 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
     module = gate()
     findings: dict[str, object] = {}

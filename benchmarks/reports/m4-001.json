@@ -112,7 +112,7 @@
       "space": "Ram"
     },
     "calling_convention": null,
-    "signature": "int __ventris_inferred(int param_1)",
+    "signature": "int __romwright_inferred(int param_1)",
     "provenance": {
       "confidence": null,
       "kind": "inferred",

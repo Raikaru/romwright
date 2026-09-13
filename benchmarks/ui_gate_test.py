@@ -17,7 +17,7 @@ BINARY = ROOT / "tests" / "fixtures-src" / "tiny_bin"
 
 
 def main() -> int:
-    with TemporaryDirectory(prefix="ventris-ui-gate-test-") as directory:
+    with TemporaryDirectory(prefix="romwright-ui-gate-test-") as directory:
         temp = Path(directory)
         fake_app = temp / "fake_gate_app.py"
         fake_app.write_text(

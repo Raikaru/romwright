@@ -8,36 +8,36 @@
 # = 100 MB; the stock-Ghidra baseline is ~375 MiB peak) and total wall time
 # under GATE_WALL_S (default 120 s). Writes benchmarks/reports/stage4-gate.json.
 #
-# Env: VENTRIS_SLA (required; compiled x86-64.sla), VENTRIS_GHIDRA
-#      (install root), VENTRIS_CONSOLE (optional; else native/build or
+# Env: ROMWRIGHT_SLA (required; compiled x86-64.sla), ROMWRIGHT_GHIDRA
+#      (install root), ROMWRIGHT_CONSOLE (optional; else native/build or
 #      /tmp/spike), RUNS (default 3).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="${1:-$ROOT/tests/fixtures-src/tiny_bin}"
-OUTDIR="${2:-/tmp/lre-gate-run}"
+OUTDIR="${2:-/tmp/romwright-gate-run}"
 RUNS="${RUNS:-3}"
 GATE_KB="${GATE_KB:-100000}"
 GATE_WALL_S="${GATE_WALL_S:-120}"
-CLI="$ROOT/target/release/lre-cli"
+CLI="$ROOT/target/release/romwright-cli"
 
 [ -x "$ROOT/native/build/ghidra_opt" ] || {
     echo "missing native/build/ghidra_opt — build: native/build_ghidra_opt.sh" >&2
     exit 1
 }
-[ -n "${VENTRIS_SLA:-}" ] || {
-    echo "set VENTRIS_SLA to a compiled x86-64.sla" >&2
+[ -n "${ROMWRIGHT_SLA:-}" ] || {
+    echo "set ROMWRIGHT_SLA to a compiled x86-64.sla" >&2
     exit 1
 }
-CONSOLE="${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}"
+CONSOLE="${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}"
 [ -x "$CONSOLE" ] || CONSOLE=/tmp/spike/decomp_native
 CONSOLE_AVAILABLE=1
 [ -x "$CONSOLE" ] || {
     CONSOLE_AVAILABLE=0
     echo "NOTE: no SLEIGH console — disasm phases SKIPPED (install binutils-devel, run native/build_console.sh)"
 }
-export VENTRIS_CONSOLE="$CONSOLE"
-export VENTRIS_SLA
+export ROMWRIGHT_CONSOLE="$CONSOLE"
+export ROMWRIGHT_SLA
 
 rss() { grep 'Maximum resident set size' "$1" | grep -o '[0-9]*' || echo 0; }
 

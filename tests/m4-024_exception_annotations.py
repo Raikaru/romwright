@@ -36,7 +36,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 import gate_cache  # noqa: E402
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 # The shapes Ghidra's exception analyzer writes; nothing else in a comment is
 # this gate's business.
@@ -129,13 +129,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--ghidra", type=Path,
-                        default=Path(os.environ.get("VENTRIS_GHIDRA",
+                        default=Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                                     Path.home() / "ghidra_12.1.3_PUBLIC")))
     parser.add_argument("--report", type=Path)
     parser.add_argument("--jobs", type=int, default=4,
                         help="rows measured concurrently; an uncached row runs a JVM")
     arguments = parser.parse_args()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True)
     lock = json.loads(LOCK.read_text())
     # The C++ rows are the ones with exception tables; the others are the

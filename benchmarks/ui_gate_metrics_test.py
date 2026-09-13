@@ -24,7 +24,7 @@ METRICS = (
 
 
 def libc_path() -> Path:
-    configured = os.environ.get("VENTRIS_UI_BINARY")
+    configured = os.environ.get("ROMWRIGHT_UI_BINARY")
     for candidate in (
         Path(configured) if configured else None,
         Path("/usr/lib64/libc.so.6"),
@@ -48,7 +48,7 @@ def main() -> int:
     if not binary.is_file():
         raise SystemExit(f"libc binary does not exist: {binary}")
 
-    with TemporaryDirectory(prefix="ventris-ui-metrics-") as directory:
+    with TemporaryDirectory(prefix="romwright-ui-metrics-") as directory:
         report = Path(directory) / "ui-gate.json"
         result = subprocess.run(
             [

@@ -12,12 +12,12 @@
   "qt": "6.11.2"
  },
  "passed": true,
- "summary": "packaged ventris-0.5-Linux-x86_64.tar.gz on Linux/x86_64 with Qt 6.11.2: store-only run from a clean prefix with no VENTRIS_* configuration, ui.list.load_ms 1.96",
+ "summary": "packaged romwright-0.5-Linux-x86_64.tar.gz on Linux/x86_64 with Qt 6.11.2: store-only run from a clean prefix with no ROMWRIGHT_* configuration, ui.list.load_ms 1.96",
  "metrics": {
   "ui.install.prefix_ok": true,
   "ui.install.store_only_ok": true,
   "ui.list.load_ms": 1.95652,
   "ui.list.filter_ms": 2.025601
  },
- "package": "ventris-0.5-Linux-x86_64.tar.gz"
+ "package": "romwright-0.5-Linux-x86_64.tar.gz"
 }

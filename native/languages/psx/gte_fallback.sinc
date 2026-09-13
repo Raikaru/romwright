@@ -5,7 +5,7 @@
 # gte_rtps() rather than copFunction(2, 1). The specific cofun= matches
 # in inline_s.sinc are more specific and win; these are the fallback.
 # Command numbers verified against rabbitizer's R3000GTE table
-# (crates/lre-core/src/gte.rs).
+# (crates/romwright-core/src/gte.rs).
 
 :rtps   is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x01 & cofun { gte_rtps(); }
 :nclip  is $(AMODE) & prime=0x12 & bit25=1 & gtecmd=0x06 & cofun { gte_nclip(); }

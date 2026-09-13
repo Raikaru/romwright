@@ -43,7 +43,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGES = Path.home() / "ventris-corpus/extracted/nds-pokeheartgold"
+IMAGES = Path.home() / "romwright-corpus/extracted/nds-pokeheartgold"
 ROM = "pokeheartgold.us.nds"
 ROM_SHA256 = "65f02a56842b75aa92d775d56d657a56fe3fa993550b04dc20704ab82d760105"
 ARM9_ELF = "pokeheartgold.elf"
@@ -99,9 +99,9 @@ def main() -> int:
     assert sha256(rom) == ROM_SHA256, f"{rom} is not the pinned cartridge"
     assert sha256(elf) == ARM9_ELF_SHA256, f"{elf} is not the pinned build"
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m5-013-") as temporary:
         project = Path(temporary) / "project"
         imported = subprocess.run([str(cli), "import", str(rom), "--project", str(project)],

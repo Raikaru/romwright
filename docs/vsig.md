@@ -1,6 +1,6 @@
 # `.vsig` — relocation-masked signature database
 
-Ventris' own container for library function signatures. A record is a byte
+Romwright' own container for library function signatures. A record is a byte
 pattern, a per-byte compare mask that hides relocated operands, and the
 provenance a clean-room project needs: the language the bytes decode in, the
 function name, the exact package build the bytes came from, and that package's
@@ -11,8 +11,8 @@ and no checksum: a matcher builds its own index after loading, and integrity of
 a published database belongs to the release artifact manifest
 (`packaging/update_manifest.py`).
 
-Reference implementation and the only normative behaviour: `crates/lre-sig`.
-Acceptance: `crates/lre-sig/tests/vsig_roundtrip.rs`.
+Reference implementation and the only normative behaviour: `crates/romwright-sig`.
+Acceptance: `crates/romwright-sig/tests/vsig_roundtrip.rs`.
 
 ## Layout
 
@@ -79,7 +79,7 @@ more, and `Signature::compared_bytes` reports what a record actually carries.
 
 `package` and `license` are mandatory because signatures are derived from
 someone else's compiled code. A record without an exact package build cannot be
-audited, and a record without its license cannot be redistributed. Ventris'
+audited, and a record without its license cannot be redistributed. Romwright'
 generator records both from the package it opened, never from a guess, and
 `docs/third-party.md` lists the packages a shipped database was built from.
 

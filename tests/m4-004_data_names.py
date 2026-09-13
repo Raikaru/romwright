@@ -6,7 +6,7 @@
 
   * `string-not-rendered` (4): the store holds `sum: %d\\n` at `002004d0`, and
     the decompilation prints `printf(0x2004d0, ...)` where the oracle prints
-    the literal. `lre-worker` answers `getStringData` from
+    the literal. `romwright-worker` answers `getStringData` from
     `ProgramProvider::strings`, and nothing fills it.
   * `missing-data-symbol` (8): the store holds a data reference to `002038f8`,
     and the decompilation prints `cRam00000000002038f8` -- the C++
@@ -46,7 +46,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 ROW = "x86_64_plain_o0"
 FALLBACK = re.compile(r"\b[a-z]{1,4}Ram[0-9a-f]{8,16}\b")
@@ -55,9 +55,9 @@ LABEL = re.compile(r"\b(?:DAT|PTR|LAB|UNK|OFF|s)_[0-9A-Za-z_]*?([0-9a-f]{6,16})\
 
 def environment() -> dict[str, str]:
     values = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_SPECS", "VENTRIS_REGISTER_PARAMS",
-                 "VENTRIS_PROMOTE_TAILCALLS"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_SPECS", "ROMWRIGHT_REGISTER_PARAMS",
+                 "ROMWRIGHT_PROMOTE_TAILCALLS"):
         values.pop(name, None)
     return values
 
@@ -148,11 +148,11 @@ def main() -> int:
 
     # The CLI is the release binary; the worker it launches is the debug one
     # (`RuntimeConfig::from_env`), so both are built or a stale worker answers.
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True, env=environment())
     # The release CLI drives the worker beside it, so the gate builds the pair
     # it measures (m4-014).
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
     lock = json.loads(LOCK.read_text())
     recipe = next(row for row in lock["entries"]

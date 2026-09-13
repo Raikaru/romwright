@@ -8,12 +8,12 @@
 # extension languages (GameCubeLoader, PsxLoader).
 #
 # Usage: native/languages/rsp/install.sh [GHIDRA_INSTALL_DIR]
-#   default: $VENTRIS_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+#   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/native/languages/rsp"
-GHIDRA="${1:-${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
+GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
 SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
 DEST="$GHIDRA/Ghidra/Extensions/RSP/data/languages"
 

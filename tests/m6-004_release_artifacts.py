@@ -45,7 +45,7 @@ REQUIRES = re.compile(r"<!--\s*requires:\s*(\w+)\s*-->")
 BLOCK = re.compile(r"```console\n(.*?)```", re.DOTALL)
 # The binaries a release ships; the desktop package is handled separately
 # because it needs Qt.
-BINARIES = ("lre-cli", "lre-api", "lre-worker")
+BINARIES = ("romwright-cli", "romwright-api", "romwright-worker")
 
 
 def sha256(path: Path) -> str:
@@ -112,7 +112,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="m6-004-") as temporary:
         stage = Path(temporary)
-        environment = dict(os.environ, VENTRIS_RELEASE_DIR=str(stage))
+        environment = dict(os.environ, ROMWRIGHT_RELEASE_DIR=str(stage))
         for requirement, commands in blocks:
             if requirement == "qt" and qt is None:
                 skipped.append("qt: no cmake with Qt 6 available")
@@ -138,7 +138,7 @@ def main() -> int:
             assert candidates, (
                 f"the release set has no {binary}; it holds {sorted(names)}")
         if qt is not None:
-            assert any(name.endswith(".tar.gz") and name.startswith("ventris-")
+            assert any(name.endswith(".tar.gz") and name.startswith("romwright-")
                        for name in names), (
                 f"Qt is available but the release set has no desktop package: "
                 f"{sorted(names)}")

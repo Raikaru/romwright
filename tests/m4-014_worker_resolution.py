@@ -2,8 +2,8 @@
 """m4-014: the worker a build drives is the worker it was built with.
 
 `RuntimeConfig::from_env` resolved the decompile worker as the literal path
-`target/release/lre-worker` unless `VENTRIS_WORKER` said otherwise. So a
-**release** `lre-cli` -- which is what every gate builds -- silently drove
+`target/release/romwright-worker` unless `ROMWRIGHT_WORKER` said otherwise. So a
+**release** `romwright-cli` -- which is what every gate builds -- silently drove
 whatever `cargo build` last left in `target/debug`, and a measurement could
 change with no source change at all.
 
@@ -13,7 +13,7 @@ twice, because an experimental debug worker was still on disk. The experiment's
 conclusion was drawn, then withdrawn, from a build that was not the tree.
 A number a gate pins has to come from the binaries that gate built.
 
-The fix is the boring one: an explicit `VENTRIS_WORKER` still wins, then the
+The fix is the boring one: an explicit `ROMWRIGHT_WORKER` still wins, then the
 worker sitting **beside the running executable**, then the workspace's release
 and debug paths, and each candidate has to exist.
 
@@ -23,7 +23,7 @@ Assertions
   2. The same CLI with a *broken* worker beside it fails, naming the worker:
      the sibling is what is used, not a fallback that happens to work. This is
      the control that gives assertion 1 its meaning.
-  3. `VENTRIS_WORKER` still overrides both.
+  3. `ROMWRIGHT_WORKER` still overrides both.
   4. In the workspace, the release CLI and the debug CLI each decompile, and
      both produce the same text: neither depends on the other's build.
 
@@ -50,13 +50,13 @@ BROKEN = "#!/bin/sh\necho 'this worker is deliberately broken' >&2\nexit 3\n"
 def environment(**overrides: str) -> dict[str, str]:
     """A plain install, with absolute paths for everything but the worker."""
     values = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_REGISTER_PARAMS", "VENTRIS_PROMOTE_TAILCALLS",
-                 "VENTRIS_WORKER"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_REGISTER_PARAMS", "ROMWRIGHT_PROMOTE_TAILCALLS",
+                 "ROMWRIGHT_WORKER"):
         values.pop(name, None)
-    values["VENTRIS_SPECS"] = str(ROOT / "native/specs")
-    values["VENTRIS_GHIDRA_OPT"] = str(ROOT / "native/build/ghidra_opt")
-    values["VENTRIS_LIBRARY_PROTOTYPES"] = str(
+    values["ROMWRIGHT_SPECS"] = str(ROOT / "native/specs")
+    values["ROMWRIGHT_GHIDRA_OPT"] = str(ROOT / "native/build/ghidra_opt")
+    values["ROMWRIGHT_LIBRARY_PROTOTYPES"] = str(
         ROOT / "oracle/library-prototypes-v1/generic_clib_64.json")
     values.update(overrides)
     return values
@@ -93,13 +93,13 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=600)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
-    release_cli = ROOT / "target/release/lre-cli"
-    release_worker = ROOT / "target/release/lre-worker"
-    debug_cli = ROOT / "target/release/lre-cli"
+    release_cli = ROOT / "target/release/romwright-cli"
+    release_worker = ROOT / "target/release/romwright-worker"
+    debug_cli = ROOT / "target/release/romwright-cli"
     assert FIXTURE.is_file(), f"{FIXTURE} is missing"
 
     findings: dict[str, object] = {}
@@ -115,9 +115,9 @@ def main() -> int:
         # 1. A directory holding the CLI and a working worker, and nothing else.
         good = work / "good"
         good.mkdir()
-        shutil.copy(release_cli, good / "lre-cli")
-        shutil.copy(release_worker, good / "lre-worker")
-        sibling = run(good / "lre-cli", call, good, arguments.timeout)
+        shutil.copy(release_cli, good / "romwright-cli")
+        shutil.copy(release_worker, good / "romwright-worker")
+        sibling = run(good / "romwright-cli", call, good, arguments.timeout)
         assert sibling.returncode == 0, (
             f"a CLI with a worker beside it could not decompile: "
             f"{sibling.stderr.strip()[:300]}")
@@ -128,21 +128,21 @@ def main() -> int:
         #    assertion 1 proves nothing about which worker ran.
         bad = work / "bad"
         bad.mkdir()
-        shutil.copy(release_cli, bad / "lre-cli")
-        broken = bad / "lre-worker"
+        shutil.copy(release_cli, bad / "romwright-cli")
+        broken = bad / "romwright-worker"
         broken.write_text(BROKEN)
         broken.chmod(0o755)
-        refused = run(bad / "lre-cli", call, bad, arguments.timeout)
+        refused = run(bad / "romwright-cli", call, bad, arguments.timeout)
         assert refused.returncode != 0, (
             f"a CLI with a deliberately broken worker beside it decompiled anyway, "
             f"so some other worker ran: {refused.stdout[:200]!r}")
         findings["broken_sibling"] = refused.stderr.strip()[-80:]
 
         # 3. An explicit override still wins, over a good sibling.
-        overridden = run(good / "lre-cli", call, good, arguments.timeout,
-                         VENTRIS_WORKER=str(broken))
+        overridden = run(good / "romwright-cli", call, good, arguments.timeout,
+                         ROMWRIGHT_WORKER=str(broken))
         assert overridden.returncode != 0, (
-            f"VENTRIS_WORKER was ignored in favour of the sibling: "
+            f"ROMWRIGHT_WORKER was ignored in favour of the sibling: "
             f"{overridden.stdout[:200]!r}")
         findings["explicit_override"] = overridden.stderr.strip()[-80:]
 

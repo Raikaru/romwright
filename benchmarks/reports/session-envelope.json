@@ -6,7 +6,7 @@
   "machine": "x86_64"
  },
  "headroom": 1.25,
- "note": "peak process-tree RSS of one lre-api session answering 7 requests for 4 warm-up and 8 measured rounds per locked corpus entry; recorded once, compared against afterwards",
+ "note": "peak process-tree RSS of one romwright-api session answering 7 requests for 4 warm-up and 8 measured rounds per locked corpus entry; recorded once, compared against afterwards",
  "entries": {
   "x86_64_plain_o0": 47568,
   "x86_64_plain_o2": 47540,

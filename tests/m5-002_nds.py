@@ -96,7 +96,7 @@ def build_container(work: Path) -> tuple[Path, dict]:
     rom = bytearray(total)
     # gbatek "DS Cartridge Header": title, game code, maker code, then the
     # two CPU descriptors at 0x20 and 0x30.
-    rom[0x00:0x0C] = b"VENTRISGATE\x00"
+    rom[0x00:0x0C] = b"ROMWRIGHTGATE\x00"
     rom[0x0C:0x10] = b"VNDS"
     rom[0x10:0x12] = b"VT"
     struct.pack_into("<IIII", rom, 0x20, arm9_offset, images["arm9"]["entry"],
@@ -143,8 +143,8 @@ def main() -> int:
                 arguments.report.write_text(json.dumps(report, indent=2) + "\n")
             return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m5-002-") as temporary:
         work = Path(temporary)
         container, images = build_container(work)

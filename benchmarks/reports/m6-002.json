@@ -3,7 +3,7 @@
  "recorded_at": "2026-09-07T09:23:35.916818+00:00",
  "status": "pass",
  "passed": true,
- "summary": "10 documented API exchanges driven through lre-api, 0 block(s) skipped",
+ "summary": "10 documented API exchanges driven through romwright-api, 0 block(s) skipped",
  "metrics": {
   "exchanges": 10,
   "skipped_blocks": 0

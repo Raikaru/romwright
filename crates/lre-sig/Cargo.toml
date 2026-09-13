@@ -1,9 +1,0 @@
-[package]
-name = "lre-sig"
-edition.workspace = true
-version.workspace = true
-license.workspace = true
-description = "Relocation-masked function signature database (.vsig) for Ventris"
-
-[dependencies]
-thiserror = { workspace = true }

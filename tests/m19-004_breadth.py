@@ -56,7 +56,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 
 ROWS = (
     ("x86_64", "plain_o0"),
@@ -258,9 +258,9 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ)
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     failures: list[str] = []
     rows = []

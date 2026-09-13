@@ -6,17 +6,17 @@
 # Variants: O0 C, O2 C, O2 C++ (exceptions + TLS + switch tables), PIE C,
 # large C (many functions), stripped variants of each.
 #
-# Env: CC (default cc), CXX (default c++), VENTRIS_SLA (unused here;
+# Env: CC (default cc), CXX (default c++), ROMWRIGHT_SLA (unused here;
 # import is JVM-free).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CFG="$(mktemp -d /tmp/ventris-corpus.XXXXXX)"
+CFG="$(mktemp -d /tmp/romwright-corpus.XXXXXX)"
 OUT="${OUT:-$ROOT/benchmarks/reports/corpus.json}"
 # Build what is being tested: a stale binary here once passed a gate for
 # a change that had already altered its output.
-cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
-CLI="$ROOT/target/release/lre-cli"
+cargo build -q --manifest-path "$ROOT/Cargo.toml" -p romwright-cli
+CLI="$ROOT/target/release/romwright-cli"
 CC="${CC:-cc}"
 CXX="${CXX:-c++}"
 

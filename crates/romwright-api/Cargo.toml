@@ -1,0 +1,15 @@
+[package]
+name = "romwright-api"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Versioned local JSON API for the Romwright Core service"
+
+[dependencies]
+romwright-core = { path = "../romwright-core" }
+romwright-debug = { path = "../romwright-debug" }
+romwright-worker-client = { path = "../romwright-worker-client" }
+romwright-model = { path = "../romwright-model" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }

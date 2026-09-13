@@ -12,7 +12,7 @@ here:
     project; every `provenance` object in every answer must carry an
     `explanation` and an `evidence` kind, unless a person asserted the fact,
     in which case the person is the evidence;
-  * **the terminal**: every verb `lre-cli` prints in its own usage that takes
+  * **the terminal**: every verb `romwright-cli` prints in its own usage that takes
     just a program is run; every `source=` it prints must be a class the
     shared table explains;
   * **the window**: the committed UI gate must show no unexplained row and a
@@ -39,7 +39,7 @@ REPORTS = ROOT / "benchmarks" / "reports"
 FIXTURE = ROOT / "tests/fixtures-src/tiny_bin"
 METHOD_SECTION = re.compile(r"## Every method\n(.*?)\n\n", re.S)
 BACKTICKED = re.compile(r"`([a-z_0-9]+)`")
-USAGE_VERB = re.compile(r"^\s*lre-cli ([a-z-]+)")
+USAGE_VERB = re.compile(r"^\s*romwright-cli ([a-z-]+)")
 SOURCE = re.compile(r"source=(\S+?);")
 CLAIMS = {
     "m9-001": ["provenance.classes", "provenance.unexplained",
@@ -60,7 +60,7 @@ NEEDS_MORE = {
 class Api:
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -88,9 +88,9 @@ def published_methods() -> list[str]:
 
 def table() -> dict[str, dict]:
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "provenance", "--json"],
+        [str(ROOT / "target/release/romwright-cli"), "provenance", "--json"],
         cwd=ROOT, capture_output=True, text=True)
-    assert result.returncode == 0, f"`lre-cli provenance` failed: {result.stderr.strip()}"
+    assert result.returncode == 0, f"`romwright-cli provenance` failed: {result.stderr.strip()}"
     return {row["source"]: row for row in json.loads(result.stdout)}
 
 
@@ -111,7 +111,7 @@ def provenance_objects(payload) -> list[dict]:
 
 def usage_verbs() -> list[str]:
     """The verbs the CLI prints in its own usage, which it emits bare."""
-    result = subprocess.run([str(ROOT / "target/release/lre-cli")],
+    result = subprocess.run([str(ROOT / "target/release/romwright-cli")],
                             cwd=ROOT, capture_output=True, text=True)
     text = result.stdout + result.stderr
     assert "usage:" in text, f"the CLI prints no usage: {text[:200]!r}"
@@ -128,8 +128,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
     kinds = table()
     methods = published_methods()
     assert methods, "no API methods are published"
@@ -140,7 +140,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="m9-005-") as directory:
         project = Path(directory) / "project"
         built = subprocess.run(
-            [str(ROOT / "target/release/lre-cli"), "import", str(FIXTURE),
+            [str(ROOT / "target/release/romwright-cli"), "import", str(FIXTURE),
              "--name", "tiny", "--project", str(project)],
             cwd=ROOT, capture_output=True, text=True)
         assert built.returncode == 0, f"import failed: {built.stderr.strip()}"
@@ -165,7 +165,7 @@ def main() -> int:
             if verb in NEEDS_MORE:
                 continue
             result = subprocess.run(
-                [str(ROOT / "target/release/lre-cli"), verb, "tiny",
+                [str(ROOT / "target/release/romwright-cli"), verb, "tiny",
                  "--project", str(project)],
                 cwd=ROOT, capture_output=True, text=True)
             if result.returncode != 0:

@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-BRIDGE_SOURCE = ROOT / "service/src/main/java/net/ventris"
+BRIDGE_SOURCE = ROOT / "service/src/main/java/net/romwright"
 
 
 def digest(path):
@@ -72,13 +72,13 @@ def bridge_command(install, java):
                   if not any(part.startswith("Extension") for part in path.parts))
     if not jars:
         raise ValueError("Ghidra runtime jars missing")
-    jars.append(ROOT / "service/build/ventris-service.jar")
-    # Same module opens as lre-cli::jvm_opens; the existing bridge owns analysis.
+    jars.append(ROOT / "service/build/romwright-service.jar")
+    # Same module opens as romwright-cli::jvm_opens; the existing bridge owns analysis.
     opens = [f"--add-opens=java.base/{name}=ALL-UNNAMED" for name in
              ("java.lang", "java.lang.invoke", "java.lang.ref", "java.util", "java.io")]
     return [java, *opens, "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
             "-Djava.awt.headless=true", "-cp", os.pathsep.join(map(str, jars)),
-            "net.ventris.Main", "--install-dir", str(install)]
+            "net.romwright.Main", "--install-dir", str(install)]
 
 
 def generate_reference(command, binary, expected, timeout, *, include_xrefs=False, include_strings=False):
@@ -159,7 +159,7 @@ def main():
     parser.add_argument("--output-dir", type=Path, default=ROOT / "oracle")
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--java", default="java")
     parser.add_argument("--timeout", type=int, default=180, help="Per-binary bridge timeout in seconds")
     parser.add_argument("--check", action="store_true", help="Validate existing references without launching Java")
@@ -235,7 +235,7 @@ def main():
 
     if plan:
         command = bridge_command(args.ghidra, args.java)
-        jobs = max(1, min(int(os.environ.get("VENTRIS_ORACLE_JOBS", "4")), len(plan)))
+        jobs = max(1, min(int(os.environ.get("ROMWRIGHT_ORACLE_JOBS", "4")), len(plan)))
         with ThreadPoolExecutor(max_workers=jobs) as pool:
             futures = {pool.submit(produce_reference, command, binary, sha, expected,
                                    cache, args.timeout): (row, cache)

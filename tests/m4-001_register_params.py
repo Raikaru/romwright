@@ -18,7 +18,7 @@ pass.
 Assertions
   1. Default behaviour is unchanged: with the pass off, native arity on the
      i386 row still equals the frozen baseline.
-  2. With `VENTRIS_REGISTER_PARAMS=1`, native arity on that row is at least
+  2. With `ROMWRIGHT_REGISTER_PARAMS=1`, native arity on that row is at least
      0.98 against DWARF truth.
   3. No other corpus row loses arity when the pass is enabled.
   4. The recovered facts say where they came from: the persisted prototype
@@ -48,9 +48,9 @@ PROVENANCE = "native-prototype:register-input"
 def arity_scores(corpus: Path, enabled: bool, timeout: int) -> dict:
     """Per-row native arity from the prototype gate, pass off or on."""
     environment = dict(os.environ)
-    environment.pop("VENTRIS_REGISTER_PARAMS", None)
+    environment.pop("ROMWRIGHT_REGISTER_PARAMS", None)
     if enabled:
-        environment["VENTRIS_REGISTER_PARAMS"] = "1"
+        environment["ROMWRIGHT_REGISTER_PARAMS"] = "1"
     with tempfile.TemporaryDirectory(prefix="m4-001-") as temporary:
         report = Path(temporary) / "arity.json"
         result = subprocess.run(
@@ -83,8 +83,8 @@ def recovered_prototype(corpus: Path, timeout: int) -> dict:
     if target is None:
         raise AssertionError("no fn_* symbol in the unstripped twin")
 
-    environment = dict(os.environ, VENTRIS_REGISTER_PARAMS="1")
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR", "VENTRIS_SPECS"):
+    environment = dict(os.environ, ROMWRIGHT_REGISTER_PARAMS="1")
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR", "ROMWRIGHT_SPECS"):
         environment.pop(name, None)
     with tempfile.TemporaryDirectory(prefix="m4-001-store-") as temporary:
         project = Path(temporary)

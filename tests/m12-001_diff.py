@@ -36,7 +36,7 @@ import sqlite3
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 
 # Acceptance. The twin rows are the ceiling and must stay exact; the
 # cross-optimisation rows are the measured floor of the current matcher.
@@ -411,7 +411,7 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     subprocess.run(
-        ["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True
+        ["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True
     )
 
     twins, optimisation = corpus_rows(arguments.corpus_dir, arguments.work,

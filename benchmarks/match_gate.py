@@ -81,11 +81,11 @@ def main():
     parser.add_argument('--timeout', type=int, default=900)
     args = parser.parse_args()
     env = dict(os.environ, DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-cli', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'romwright-cli', '-p', 'romwright-api', '-p', 'romwright-worker'],
         cwd=ROOT, env=env, check=True)
-    cli = ROOT / 'target/release/lre-cli'
+    cli = ROOT / 'target/release/romwright-cli'
     rows = []
     with tempfile.TemporaryDirectory(prefix='match-gate-') as temporary:
         work = Path(temporary)

@@ -36,11 +36,11 @@ def main():
     parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle/strings-v1")
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--java", default="java")
     parser.add_argument("--timeout", type=int, default=180)
     args = parser.parse_args()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
     matrix = set(lock["oracle_matrix"]["architectures"])
     required = [row for row in lock["entries"]
@@ -107,7 +107,7 @@ def main():
                 continue
             try:
                 project = Path(temporary) / row["id"]
-                result = subprocess.run([str(ROOT / "target/release/lre-cli"), "import", str(binary),
+                result = subprocess.run([str(ROOT / "target/release/romwright-cli"), "import", str(binary),
                     "--name", row["id"], "--project", str(project)],
                     capture_output=True, text=True, timeout=args.timeout)
                 if result.returncode:

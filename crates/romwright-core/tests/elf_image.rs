@@ -1,0 +1,481 @@
+//! Loaded ELF addresses and relocation bytes must agree across native consumers.
+use romwright_core::{native::import_elf, session::ProgramImage};
+
+fn fixture(width: usize, be: bool, relocation: u64, image_base: u64) -> Vec<u8> {
+    let mut data = vec![0u8; 0x600];
+    data[..6].copy_from_slice(b"\x7fELF\x01\x01");
+    data[4] = if width == 8 { 2 } else { 1 };
+    data[5] = if be { 2 } else { 1 };
+    let mut put = |offset: usize, size: usize, value: u64| {
+        for i in 0..size {
+            data[offset + if be { size - 1 - i } else { i }] = (value >> (i * 8)) as u8;
+        }
+    };
+    put(16, 2, 3); // ET_DYN; a nonzero prelinked base must remain unchanged.
+    put(
+        18,
+        2,
+        if width == 8 {
+            62
+        } else if be {
+            20
+        } else {
+            3
+        },
+    );
+    put(24, width, image_base + 0x1000);
+    let stride = if width == 8 { 64 } else { 40 };
+    if width == 8 {
+        for (offset, size, value) in [
+            (32, 8, 0x80),
+            (40, 8, 0x100),
+            (54, 2, 56),
+            (56, 2, 1),
+            (58, 2, stride),
+            (60, 2, 5),
+            (62, 2, 4),
+        ] {
+            put(offset, size, value);
+        }
+        put(0x80, 4, 1);
+        put(0x90, 8, image_base);
+    } else {
+        for (offset, size, value) in [
+            (28, 4, 0x80),
+            (32, 4, 0x100),
+            (42, 2, 32),
+            (44, 2, 1),
+            (46, 2, stride),
+            (48, 2, 5),
+            (50, 2, 4),
+        ] {
+            put(offset, size, value);
+        }
+        put(0x80, 4, 1);
+        put(0x88, 4, image_base);
+    }
+    let names = b"\0.text\0.data\0.reloc\0.shstrtab\0";
+    let record_words = if relocation == 4 {
+        3
+    } else if relocation == 9 {
+        2
+    } else {
+        1
+    };
+    let reloc_size = if relocation == 19 {
+        2 * width
+    } else {
+        3 * record_words * width
+    };
+    for (index, name, typ, flags, addr, offset, size) in [
+        (1, 1, 1, 6, image_base + 0x1000, 0x400, 64),
+        (2, 7, 1, 3, image_base + 0x2000, 0x440, 3 * width),
+        (3, 13, relocation, 0, 0, 0x480, reloc_size),
+        (4, 20, 3, 0, 0, 0x380, names.len()),
+    ] {
+        let start = 0x100 + index * stride as usize;
+        put(start, 4, name);
+        put(start + 4, 4, typ);
+        for (i, value) in [flags, addr, offset, size as u64].into_iter().enumerate() {
+            put(start + 8 + i * width, width, value);
+        }
+    }
+    let relative_type = if be { 22 } else { 8 };
+    for (i, addend) in [image_base + 0x1010, 0, u64::MAX - 15]
+        .into_iter()
+        .enumerate()
+    {
+        if relocation == 4 || relocation == 9 {
+            let record = 0x480 + i * record_words * width;
+            put(record, width, image_base + 0x2000 + (i * width) as u64);
+            put(record + width, width, relative_type);
+            if relocation == 4 {
+                put(record + 2 * width, width, addend);
+            }
+        }
+        if relocation != 4 {
+            put(0x440 + i * width, width, addend);
+        }
+    }
+    if relocation == 19 {
+        put(0x480, width, image_base + 0x2000);
+        put(0x480 + width, width, 7); // Relocate the following two words.
+    }
+    data[0x380..0x380 + names.len()].copy_from_slice(names);
+    data[0x400..0x404].copy_from_slice(&[0x90, 0x90, 0x90, 0xc3]);
+    data
+}
+
+#[test]
+fn shared_data_strings_use_alignment_and_reference_evidence() {
+    use romwright_core::native::{Mapping, NativeImport, NativeXref, store_import};
+    for (padding, referenced) in [(2, false), (1, true)] {
+        let mut bytes = vec![0; padding];
+        for unit in "A😀BC".encode_utf16().chain([0]) {
+            bytes.extend_from_slice(&unit.to_le_bytes());
+        }
+        let address = 0x3000 + padding as u64;
+        let import = NativeImport {
+            language: "x86:LE:64:default".into(), format: "raw".into(),
+            mappings: vec![Mapping { vaddr: 0x3000, size: bytes.len() as u64, file_off: 0, flags: 2, bytes }],
+            xrefs: if referenced { vec![NativeXref::new(0x1000, address, "READ")] } else { Vec::new() },
+            ..Default::default()
+        };
+        let db = romwright_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
+        store_import(&db, "shared-data", &import, None).unwrap();
+        let rows = db.strings(db.program_id("shared-data").unwrap()).unwrap();
+        let actual: Vec<_> = rows.into_iter().map(|row| (row.address.offset, row.value, row.kind)).collect();
+        assert_eq!(actual, vec![(address, "A😀BC".into(), "UTF-16LE".into())],
+            "padding must not make a shifted UTF-16 interpretation hide the aligned or referenced string");
+    }
+}
+
+#[test]
+fn elf_string_tables_preserve_namespaces_and_utf8() {
+    for loaded in [false, true] {
+        let mut data = fixture(8, false, 4, 0x400000);
+        if loaded {
+            data[0x208..0x210].copy_from_slice(&2u64.to_le_bytes());
+            data[0x210..0x218].copy_from_slice(&0x403000u64.to_le_bytes());
+        }
+        let import = import_elf(&data).unwrap();
+        let db = romwright_db::ProjectDb::open(std::path::Path::new(":memory:")).unwrap();
+        romwright_core::native::store_import(&db, "strings", &import, None).unwrap();
+        let mut rows = db.strings(db.program_id("strings").unwrap()).unwrap();
+        rows.sort_by_key(|row| row.address.offset);
+        let actual: Vec<_> = rows.into_iter()
+            .map(|row| (row.address.space, row.address.offset, row.value, row.kind)).collect();
+        let expected: Vec<_> = [(1, ".text"), (7, ".data"), (13, ".reloc"), (20, ".shstrtab")]
+            .into_iter().map(|(offset, value)| (
+                if loaded { romwright_model::AddressSpace::Ram }
+                else { romwright_model::AddressSpace::Other(".shstrtab".into()) },
+                offset + if loaded { 0x403000 } else { 0 },
+                value.to_owned(), "UTF-8".to_owned(),
+            )).collect();
+        assert_eq!(actual, expected, "retain declared strings without aliasing non-loaded metadata to RAM");
+    }
+}
+
+#[test]
+fn loaded_elf_addresses_and_relative_pointer_bytes_agree() {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path =
+        std::env::temp_dir().join(format!("romwright-elf-image-{}-{stamp}", std::process::id()));
+    for (width, be) in [(8, false), (4, false), (4, true)] {
+        for relocation in [4, 9, 19] {
+            for original_base in [0, 0x400000] {
+                let data = fixture(width, be, relocation, original_base);
+                let import = import_elf(&data).unwrap();
+                let bias = if original_base != 0 {
+                    0
+                } else if width == 8 {
+                    0x100000
+                } else {
+                    0x10000
+                };
+                let loaded_base = original_base + bias;
+                assert!(import.functions.iter().any(|f| f.entry == loaded_base + 0x1000),
+                        "entry must use loaded addresses: width={width} be={be} relocation={relocation}");
+                std::fs::write(&path, &data).unwrap();
+                let mut image = ProgramImage::open(&path).unwrap();
+                assert_eq!(
+                    image.read(loaded_base + 0x1000, 4).unwrap(),
+                    [0x90, 0x90, 0x90, 0xc3]
+                );
+                let mapping = import
+                    .mappings
+                    .iter()
+                    .find(|m| m.vaddr == loaded_base + 0x2000)
+                    .unwrap();
+                for (i, value) in [loaded_base + 0x1010, bias, bias.wrapping_sub(16)]
+                    .into_iter()
+                    .enumerate()
+                {
+                    let expected: Vec<_> = (0..width)
+                        .map(|j| (value >> (8 * if be { width - 1 - j } else { j })) as u8)
+                        .collect();
+                    let at = loaded_base + 0x2000 + (i * width) as u64;
+                    assert_eq!(
+                        image.read(at, width as u64).unwrap(),
+                        expected,
+                        "relocated image word {i}"
+                    );
+                    assert_eq!(
+                        &mapping.bytes[i * width..(i + 1) * width],
+                        expected,
+                        "console mapping word {i}"
+                    );
+                    assert_eq!(
+                        image.read(at + 1, 2).unwrap(),
+                        expected[1..3],
+                        "partial pointer read"
+                    );
+                }
+                image.patch(loaded_base + 0x2001, vec![0xaa]);
+                assert_eq!(
+                    image.read(loaded_base + 0x2001, 1).unwrap(),
+                    [0xaa],
+                    "user patches override relocations"
+                );
+                assert!(image.read(loaded_base + 0x3000, 1).is_none());
+                drop(image);
+            }
+        }
+    }
+    // BSS relocations overlay zero-fill, never bytes at the section's file offset.
+    let mut data = fixture(8, false, 4, 0);
+    data[0x184..0x188].copy_from_slice(&8u32.to_le_bytes()); // SHT_NOBITS
+    data[0x1a0..0x1a8].copy_from_slice(&32u64.to_le_bytes());
+    data[0x440..0x460].fill(0xa5);
+    std::fs::write(&path, data).unwrap();
+    let image = ProgramImage::open(&path).unwrap();
+    assert_eq!(image.read(0x102000, 8).unwrap(), 0x101010u64.to_le_bytes());
+    assert_eq!(image.read(0x102018, 8).unwrap(), [0; 8]);
+    drop(image);
+    std::fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn undefined_elf32_symbols_are_not_function_definitions() {
+    for be in [false, true] {
+        let mut data = fixture(4, be, 4, 0x400000);
+        let mut put = |offset: usize, value: u32| {
+            data[offset..offset + 4].copy_from_slice(&if be {
+                value.to_be_bytes()
+            } else {
+                value.to_le_bytes()
+            });
+        };
+        // Replace the relocation section with one dynamic function symbol.
+        for (offset, value) in [
+            (0x17c, 11),
+            (0x18c, 16),
+            (0x190, 4),
+            (0x1b4, 0x60),
+            (0x480, 0x40),
+            (0x484, 0x401010),
+            (0x488, 4),
+        ] {
+            put(offset, value);
+        }
+        data[0x48c..0x490].copy_from_slice(&[0x12, 0, 0, 0]); // STT_FUNC, SHN_UNDEF
+        data[0x3c0..0x3c9].copy_from_slice(b"imported\0");
+        let import = import_elf(&data).unwrap();
+        assert!(
+            !import.functions.iter().any(|f| f.entry == 0x401010),
+            "a nonzero undefined-symbol value does not define code"
+        );
+        assert!(import
+            .externals
+            .iter()
+            .any(|(address, name)| *address == 0 && name == "imported"));
+        // The same address remains a real function when the symbol is defined.
+        data[0x48e..0x490].copy_from_slice(&if be {
+            1u16.to_be_bytes()
+        } else {
+            1u16.to_le_bytes()
+        });
+        let import = import_elf(&data).unwrap();
+        assert!(import
+            .functions
+            .iter()
+            .any(|f| f.entry == 0x401010 && f.name == "imported"));
+        assert!(!import.externals.iter().any(|(_, name)| name == "imported"));
+    }
+}
+
+fn external_fixture(width: usize, be: bool, relocation: u64, image_base: u64) -> Vec<u8> {
+    let mut data = fixture(width, be, relocation, image_base);
+    let stride = if width == 8 { 64 } else { 40 };
+    let mut put = |offset: usize, size: usize, value: u64| {
+        for i in 0..size {
+            data[offset + i] = (value >> (8 * if be { size - 1 - i } else { i })) as u8;
+        }
+    };
+    put(if width == 8 { 60 } else { 48 }, 2, 6);
+    put(0x100 + 4 * stride + 8 + 3 * width, width, 0x60);
+    let rel = 0x100 + 3 * stride;
+    put(
+        rel + 8 + 3 * width,
+        width,
+        (if relocation == 4 { 3 } else { 2 }) * width as u64,
+    );
+    put(rel + 8 + 4 * width, 4, 5);
+    let sym = 0x100 + 5 * stride;
+    put(sym + 4, 4, 11); // SHT_DYNSYM
+    put(sym + 8 + 2 * width, width, 0x500);
+    put(sym + 8 + 3 * width, width, if width == 8 { 48 } else { 32 });
+    put(sym + 8 + 4 * width, 4, 4); // names in section 4
+    let symbol = 0x500 + if width == 8 { 24 } else { 16 };
+    put(symbol, 4, 0x40);
+    put(symbol + if width == 8 { 4 } else { 12 }, 1, 0x12);
+    put(0x480, width, image_base + 0x2000);
+    put(
+        0x480 + width,
+        width,
+        if width == 8 {
+            (1 << 32) | 7
+        } else {
+            (1 << 8) | if be { 21 } else { 7 }
+        },
+    );
+    if relocation == 4 {
+        put(0x480 + 2 * width, width, 0);
+    }
+    data[0x3c0..0x3c9].copy_from_slice(b"imported\0");
+    data
+}
+
+#[test]
+fn external_relocation_slots_are_loaded_facts_without_code_promotion() {
+    for (width, be, relocation) in [(4, false, 9), (4, true, 4), (8, false, 4)] {
+        let data = external_fixture(width, be, relocation, 0);
+        let import = import_elf(&data).unwrap();
+        let bias = if width == 8 { 0x100000 } else { 0x10000 };
+        assert!(import
+            .externals
+            .iter()
+            .any(|(address, name)| *address == 0 && name == "imported"));
+        assert!(
+            import
+                .externals
+                .iter()
+                .any(|(address, name)| *address == bias + 0x2000 && name == "imported"),
+            "external relocation identity must not depend on finding an instruction stub"
+        );
+        assert!(!import
+            .functions
+            .iter()
+            .any(|function| function.name == "imported"));
+    }
+}
+
+#[test]
+fn unreferenced_plt_entry_requires_executable_table_and_bound_slot() {
+    let cfg = romwright_core::session::RuntimeConfig::from_env();
+    if romwright_core::native_runtime::find_console(&cfg).is_err() {
+        eprintln!("SKIP: SLEIGH console not available");
+        return;
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_nanos();
+    let path = std::env::temp_dir().join(format!("romwright-plt-{}-{stamp}", std::process::id()));
+    for width in [4, 8] {
+        for (executable, bound) in [(true, true), (false, true), (true, false)] {
+            let mut data = external_fixture(width, false, if width == 8 { 4 } else { 9 }, 0x400000);
+            let stride = if width == 8 { 64 } else { 40 };
+            let mut put = |offset: usize, size: usize, value: u64| {
+                for i in 0..size {
+                    data[offset + i] = (value >> (8 * i)) as u8;
+                }
+            };
+            put(if width == 8 { 60 } else { 48 }, 2, 7);
+            if width == 8 {
+                put(18, 2, 183); // AArch64
+                put(0x488, 8, (1 << 32) | if bound { 1026 } else { 0 });
+            } else if !bound {
+                put(0x484, 4, 0);
+            }
+            let table = 0x100 + 6 * stride;
+            put(table, 4, 0x50);
+            put(table + 4, 4, 1);
+            for (i, value) in [if executable { 6 } else { 2 }, 0x403000, 0x580, 32]
+                .into_iter()
+                .enumerate()
+            {
+                put(table + 8 + i * width, width, value);
+            }
+            put(table + if width == 8 { 56 } else { 36 }, width, 16);
+            data[0x3d0..0x3d5].copy_from_slice(b".plt\0");
+            if width == 8 {
+                data[0x400..0x404].copy_from_slice(&[0xc0, 0x03, 0x5f, 0xd6]);
+                // LLVM: adrp x16,#-4096; ldr x17,[x16]; add x16,x16,#0; br x17.
+                data[0x590..0x5a0].copy_from_slice(&[
+                    0xf0, 0xff, 0xff, 0xf0, 0x11, 0x02, 0x40, 0xf9, 0x10, 0x02, 0x00, 0x91, 0x20,
+                    0x02, 0x1f, 0xd6,
+                ]);
+            } else {
+                data[0x400] = 0xc3;
+                data[0x590..0x596].copy_from_slice(&[0xff, 0x25, 0x00, 0x20, 0x40, 0x00]);
+            }
+            std::fs::write(&path, data).unwrap();
+            let import = romwright_core::native::load_native(&path).unwrap();
+            let function = import
+                .functions
+                .iter()
+                .find(|function| function.entry == 0x403010);
+            assert_eq!(
+                function.is_some(),
+                executable && bound,
+                "width={width}, executable={executable}, bound={bound}"
+            );
+            if let Some(function) = function {
+                assert_eq!(function.name, "imported");
+            }
+        }
+    }
+    std::fs::remove_file(path).unwrap();
+}
+
+#[test]
+fn load_segment_gaps_preserve_bytes_and_section_precedence() {
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+    let path = std::env::temp_dir()
+        .join(format!("romwright-elf-segments-{}-{stamp}", std::process::id()));
+    for (width, be) in [(8, false), (4, false), (4, true)] {
+        let mut data = fixture(width, be, 4, 0);
+        data.resize(0x2200, 0x5a);
+        data.copy_within(0x400..0x440, 0x1000);
+        data.copy_within(0x440..0x440 + 3 * width, 0x2000);
+        let stride = if width == 8 { 64 } else { 40 };
+        let file_offset_at = 0x80 + if width == 8 { 8 } else { 4 };
+        for (offset, size, value) in [
+            (0x80 + if width == 8 { 4 } else { 24 }, 4, 7u64),
+            (0x80 + if width == 8 { 32 } else { 16 }, width, 0x2200),
+            (0x80 + if width == 8 { 40 } else { 20 }, width, 0x2300),
+            (0x100 + stride + 8 + 2 * width, width, 0x1000),
+            (0x100 + 2 * stride + 8 + 2 * width, width, 0x2000),
+        ] {
+            for i in 0..size {
+                data[offset + if be { size - 1 - i } else { i }] = (value >> (8 * i)) as u8;
+            }
+        }
+        let base = if width == 8 { 0x100000 } else { 0x10000 };
+        let import = import_elf(&data).unwrap();
+        std::fs::write(&path, &data).unwrap();
+        let image = ProgramImage::open(&path).unwrap();
+        assert_eq!(image.read(base, 4), Some(b"\x7fELF".to_vec()),
+            "loaded headers are mapped: width={width}, be={be}");
+        assert_eq!(image.read(base + 0x800, 8), Some(vec![0x5a; 8]),
+            "inter-section bytes come from the segment's file range");
+        assert_eq!(image.read(base + 0x2200, 16), Some(vec![0; 16]),
+            "the segment's memory-only tail is zero-filled");
+        assert!(image.read(base + 0x2300, 1).is_none(), "do not map beyond p_memsz");
+        assert_eq!(image.read(base + 0x1000, 4), Some(vec![0x90, 0x90, 0x90, 0xc3]));
+        let pointer = base + 0x1010;
+        let relocated: Vec<_> = (0..width)
+            .map(|i| (pointer >> (8 * if be { width - 1 - i } else { i })) as u8).collect();
+        assert_eq!(image.read(base + 0x2000, width as u64), Some(relocated),
+            "segment completion must not shadow relocated section bytes");
+        let code = import.mappings.iter().find(|m| m.vaddr == base + 0x1000).unwrap();
+        assert_eq!(code.flags & 7, 6, "section permissions override broader segment permissions");
+        let mut ranges: Vec<_> = import.mappings.iter()
+            .map(|m| (m.vaddr, m.vaddr + m.size)).collect();
+        ranges.sort_unstable();
+        assert!(ranges.windows(2).all(|pair| pair[0].1 <= pair[1].0),
+            "every mapped address has one byte owner");
+        drop(image);
+        for i in 0..width {
+            data[file_offset_at + if be { width - 1 - i } else { i }] =
+                (0x2000u64 >> (8 * i)) as u8;
+        }
+        assert!(import_elf(&data).is_err(), "truncated PT_LOAD contents must be rejected");
+    }
+    std::fs::remove_file(path).unwrap();
+}

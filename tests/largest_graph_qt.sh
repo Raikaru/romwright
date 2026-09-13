@@ -4,8 +4,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
-APP="${VENTRIS_QT_APP:-/tmp/ventris-qt-build/ventris-qt}"
+CLI="${LRE_CLI:-$ROOT/target/release/romwright-cli}"
+APP="${ROMWRIGHT_QT_APP:-/tmp/romwright-qt-build/romwright-qt}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 PROGRAM="${PROGRAM:-largest-target}"
 
@@ -20,7 +20,7 @@ if [ ! -x "$APP" ]; then
 fi
 
 # Step 1: Locate largest-BB function and assert >= 200 basic blocks.
-PROJECT="$(mktemp -d /tmp/ventris-largest-bb-qt.XXXXXX)"
+PROJECT="$(mktemp -d /tmp/romwright-largest-bb-qt.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 "$CLI" import "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null

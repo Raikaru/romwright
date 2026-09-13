@@ -124,7 +124,7 @@ def main():
     parser.add_argument('--compiler', default='default', help='compiler spec for --input')
     parser.add_argument('--out-dir', type=Path, default=ROOT / 'native/specs')
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
-        'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
+        'ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--java', default='java')
     parser.add_argument('--timeout', type=int, default=180)
     parser.add_argument('--check', action='store_true')

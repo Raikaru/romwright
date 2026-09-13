@@ -3,7 +3,7 @@
 
 `_INIT_0` is stock Ghidra's name for the function `DT_INIT_ARRAY[0]` points
 at (`ElfProgramBuilder.createDynamicEntryPoints:690-750`, base names `_INIT_`,
-`_PREINIT_` and `_FINI_`). Ventris referenced the same function from the same
+`_PREINIT_` and `_FINI_`). Romwright referenced the same function from the same
 array slot and still called it `FUN_00201670`, which is the last
 name-difference class left on the corpus after m5-009.
 
@@ -52,7 +52,7 @@ THRESHOLDS = {
 
 DERIVED = re.compile(r"^_(INIT|PREINIT|FINI)_\d+$")
 # Names stock Ghidra takes from a `<funcstart label=...>` pattern in the pinned
-# install. Empty since m5-011: Ventris applies those labels itself, so such a
+# install. Empty since m5-011: Romwright applies those labels itself, so such a
 # row would now be a real disagreement. A new row fails here.
 PATTERN_LABELS: dict[str, dict[str, str]] = {}
 
@@ -309,7 +309,7 @@ def main() -> int:
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
@@ -322,9 +322,9 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"slots": 0, "missing": 0, "unbacked": 0, "equal": 0,

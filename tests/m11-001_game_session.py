@@ -13,7 +13,7 @@ image, with no JVM anywhere in it, and records the numbers:
      symbols, which never reach the importer.
   2. **Navigation.** `functions_page` unfiltered and filtered, `xrefs_page`
      into a recovered callee, and a `listing` window, each through a real
-     `lre-api` process bound to the session project.
+     `romwright-api` process bound to the session project.
   3. **Decompilation.** `decompile_doc` on recovered functions: tokens and a
      prototype for every one, JVM-free, with the language resolved from the
      program's stored language id.
@@ -28,7 +28,7 @@ image, with no JVM anywhere in it, and records the numbers:
      pass has to recycle its worker and carry on: the report records the
      recycles, and a pass that failed at the cap instead would fail here.
   6. **The live target.** `memory_live` against a GDB stub when
-     `VENTRIS_LIVE_ENDPOINT` names one, recorded as skipped with its reason
+     `ROMWRIGHT_LIVE_ENDPOINT` names one, recorded as skipped with its reason
      when it does not, so the session never claims a running console it did
      not talk to. Dolphin's stub accepts one client per boot and stops
      listening when it disconnects, so the run needs a freshly booted target.
@@ -57,8 +57,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
-API = ROOT / "target/release/lre-api"
+CLI = ROOT / "target/release/romwright-cli"
+API = ROOT / "target/release/romwright-api"
 TARGET = Path.home() / "Projects/agent-under-fire/orig/GQFE78/files/Bond.elf"
 TARGET_SHA = "424880792a74f6220f6534f4c99e3b43d71abdfca50f78d070df901e9730a1e2"
 PROGRAM = "bond"
@@ -81,7 +81,7 @@ THRESHOLDS = {
 
 
 class Api:
-    """One `lre-api` process bound to the session project."""
+    """One `romwright-api` process bound to the session project."""
 
     def __init__(self, project: Path, environment: dict[str, str] | None = None) -> None:
         self.process = subprocess.Popen(
@@ -181,8 +181,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", type=Path, default=TARGET)
     parser.add_argument("--work", type=Path,
-                        default=Path(os.environ.get("VENTRIS_SESSION_WORK",
-                                                    Path.home() / "ventris-cache/session")))
+                        default=Path(os.environ.get("ROMWRIGHT_SESSION_WORK",
+                                                    Path.home() / "romwright-cache/session")))
     parser.add_argument("--budget-ms", type=int, default=20000)
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
@@ -205,8 +205,8 @@ def main() -> int:
                             f"(007 Agent Under Fire, GameCube GQFE78, a private disc image)")
         print(f"m11-001: SKIP ({report['reason']})")
     else:
-        subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                        "-p", "lre-api", "-p", "lre-worker"], cwd=ROOT, check=True)
+        subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                        "-p", "romwright-api", "-p", "romwright-worker"], cwd=ROOT, check=True)
         image = arguments.target.read_bytes()
         digest = hashlib.sha256(image).hexdigest()
         report["target"]["sha256"] = digest
@@ -296,7 +296,7 @@ def main() -> int:
                               address=f"{sample[0]:08x}", size=8)[0]
             report["metrics"]["session.memory_bytes"] = held["size"]
 
-            endpoint = os.environ.get("VENTRIS_LIVE_ENDPOINT")
+            endpoint = os.environ.get("ROMWRIGHT_LIVE_ENDPOINT")
             if endpoint:
                 live, live_ms = api.result("memory_live", program=PROGRAM,
                                            endpoint=endpoint, address="80000000", size=16)
@@ -312,7 +312,7 @@ def main() -> int:
             else:
                 report["steps"]["memory_live"] = {
                     "status": "skipped",
-                    "reason": "no VENTRIS_LIVE_ENDPOINT: no GDB stub was serving the "
+                    "reason": "no ROMWRIGHT_LIVE_ENDPOINT: no GDB stub was serving the "
                               "running console, so no live read is claimed"}
 
             renamed = f"auf_session_{sample[2]:08x}"
@@ -333,7 +333,7 @@ def main() -> int:
         # The cap bounds a long session's memory rather than failing the
         # request that discovers the growth: with the cap set below what this
         # module's inference reaches, the pass recycles workers and completes.
-        bounded = Api(project, {"VENTRIS_WORKER_MEMORY_CAP": str(120 * 1024 * 1024)})
+        bounded = Api(project, {"ROMWRIGHT_WORKER_MEMORY_CAP": str(120 * 1024 * 1024)})
         try:
             recycled, recycled_ms = bounded.result(
                 "infer_prototypes", program=PROGRAM, binary=str(stripped),

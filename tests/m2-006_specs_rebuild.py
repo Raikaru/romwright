@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     manifest = json.loads((args.corpus_dir / 'manifest.json').read_text())
     architectures = {'i386', 'aarch64', 'powerpc'}
-    with tempfile.TemporaryDirectory(prefix='ventris-spec-rebuild-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-spec-rebuild-') as temporary:
         work = Path(temporary)
         corpus, specs = work / 'corpus', work / 'specs'
         corpus.mkdir()

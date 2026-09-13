@@ -14,12 +14,12 @@
   "improvement.residual_dead_parameters": 3
  },
  "passes": {
-  "VENTRIS_REGISTER_PARAMS": {
+  "ROMWRIGHT_REGISTER_PARAMS": {
    "field": "register_params",
    "off": 0,
    "on": 400
   },
-  "VENTRIS_PROMOTE_TAILCALLS": {
+  "ROMWRIGHT_PROMOTE_TAILCALLS": {
    "field": "promote_tailcalls",
    "off": 0,
    "on": 1

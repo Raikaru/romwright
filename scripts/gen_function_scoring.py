@@ -90,7 +90,7 @@ def main():
     parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
     parser.add_argument("--output-dir", type=Path, default=ROOT / "oracle/scoring-v1")
     parser.add_argument("--report", type=Path, required=True)
-    parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+    parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--timeout", type=int, default=180)
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args()

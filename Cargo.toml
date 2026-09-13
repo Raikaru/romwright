@@ -1,17 +1,17 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/lre-model",
-    "crates/lre-db",
-    "crates/lre-core",
-    "crates/lre-cli",
-    "crates/lre-worker",
-    "crates/lre-worker-client",
-    "crates/lre-qt-bridge",
-    "crates/lre-api",
-    "crates/lre-debug",
-    "crates/lre-sig",
-    "crates/lre-diff",
+    "crates/romwright-model",
+    "crates/romwright-db",
+    "crates/romwright-core",
+    "crates/romwright-cli",
+    "crates/romwright-worker",
+    "crates/romwright-worker-client",
+    "crates/romwright-qt-bridge",
+    "crates/romwright-api",
+    "crates/romwright-debug",
+    "crates/romwright-sig",
+    "crates/romwright-diff",
 ]
 
 [workspace.package]
@@ -19,7 +19,7 @@ edition = "2024"
 rust-version = "1.85"
 version = "0.5.0"
 license = "Apache-2.0"
-repository = "https://github.com/Raikaru/ventris"
+repository = "https://github.com/Raikaru/romwright"
 
 [workspace.dependencies]
 serde = { version = "1", features = ["derive"] }

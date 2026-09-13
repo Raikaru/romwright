@@ -137,7 +137,7 @@ index 813d955..0f81b9f 100644
  PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
  
  {
-+  const char *rawsla = getenv("VENTRIS_SLA");
++  const char *rawsla = getenv("ROMWRIGHT_SLA");
 +  if ((rawsla != (const char *)0) && (rawsla[0] != '\0')) {
 +    // Raw-SLEIGH mode: injections must be compiled from the loaded compiler
 +    // spec, not fetched from a client. PcodeInjectLibraryGhidra asks the
@@ -163,7 +163,7 @@ index 813d955..0f81b9f 100644
  Translate *ArchitectureGhidra::buildTranslator(DocumentStorage &store)
  
  {
-+  const char *slafile = getenv("VENTRIS_SLA");
++  const char *slafile = getenv("ROMWRIGHT_SLA");
 +  if ((slafile != (const char *)0) && (slafile[0] != '\0')) {
 +    // Raw-SLEIGH mode (spike): register the <sleigh> tag whose CONTENT is
 +    // the compiled .sla path (same handshake as
@@ -205,7 +205,7 @@ index 813d955..0f81b9f 100644
  
  {
 -  context = new ContextGhidra(this);
-+  const char *slafile = getenv("VENTRIS_SLA");
++  const char *slafile = getenv("ROMWRIGHT_SLA");
 +  if ((slafile != (const char *)0) && (slafile[0] != '\0')) {
 +    // Raw-SLEIGH mode: the Sleigh self-disassembler needs a real context
 +    // database (ContextGhidra blocks registerVariable).
@@ -247,7 +247,7 @@ index a93aa00..8f6415e 100644
   */
  #include "ghidra_process.hh"
 +#include "database_ghidra.hh"
-+#include "ventris_nonreturn.hh"
++#include "romwright_nonreturn.hh"
  #include "flow.hh"
  #include "blockaction.hh"
  
@@ -353,7 +353,7 @@ index a93aa00..8f6415e 100644
        }
 -      fd->encode(encoder,0,ghidra->getSendSyntaxTree());
 +      {
-+        VentrisNoReturnHint hint(*fd);
++        RomwrightNoReturnHint hint(*fd);
 +        fd->encode(encoder,0,ghidra->getSendSyntaxTree());
 +      }
        if (ghidra->getSendCCode()&&
@@ -438,12 +438,12 @@ index e62ab6a..1486693 100644
   * limitations under the License.
   */
  #include "ifacedecomp.hh"
-+#include "ventris_linkage.hh"
-+#include "ventris_patterns.hh"
-+#include "ventris_flow.hh"
-+#include "ventris_pcode.hh"
-+#include "ventris_constants.hh"
-+#include "ventris_callfixups.hh"
++#include "romwright_linkage.hh"
++#include "romwright_patterns.hh"
++#include "romwright_flow.hh"
++#include "romwright_pcode.hh"
++#include "romwright_constants.hh"
++#include "romwright_callfixups.hh"
  extern "C" {
  #include <time.h>
  }
@@ -731,7 +731,7 @@ index 0c56b2e..20e1bad 100644
   * limitations under the License.
   */
  #include "sleigh.hh"
-+#include "ventris_flow.hh"
++#include "romwright_flow.hh"
  #include "loadimage.hh"
  
  namespace ghidra {

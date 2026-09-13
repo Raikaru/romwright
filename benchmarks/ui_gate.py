@@ -86,7 +86,7 @@ def git_commit(root: Path) -> str:
 
 
 def default_binary() -> Path:
-    configured = os.environ.get("VENTRIS_UI_BINARY")
+    configured = os.environ.get("ROMWRIGHT_UI_BINARY")
     candidates = [
         Path(configured) if configured else None,
         Path("/usr/lib64/libc.so.6"),
@@ -100,16 +100,16 @@ def default_binary() -> Path:
 
 
 def default_app(root: Path) -> Path:
-    configured = os.environ.get("VENTRIS_QT_APP")
+    configured = os.environ.get("ROMWRIGHT_QT_APP")
     candidates = [
         Path(configured) if configured else None,
-        root / "build" / "ventris-qt" / "ventris-qt",
-        root / "desktop" / "ventris-qt" / "build" / "ventris-qt",
+        root / "build" / "romwright-qt" / "romwright-qt",
+        root / "desktop" / "romwright-qt" / "build" / "romwright-qt",
     ]
     for candidate in candidates:
         if candidate is not None and candidate.is_file():
             return candidate
-    raise GateError("no Qt app found; pass --app or set VENTRIS_QT_APP")
+    raise GateError("no Qt app found; pass --app or set ROMWRIGHT_QT_APP")
 
 
 def parse_metrics(stdout: str) -> dict[str, Any]:
@@ -167,13 +167,13 @@ def run_app(
     env = os.environ.copy()
     env["QT_QPA_PLATFORM"] = "offscreen"
     root = Path(__file__).resolve().parent.parent
-    env.setdefault("VENTRIS_SPECS", str(root / "native" / "specs"))
-    env.setdefault("VENTRIS_GHIDRA_OPT", str(root / "native" / "build" / "ghidra_opt"))
-    env.setdefault("VENTRIS_LANGUAGE", "x86:LE:64:default")
-    env.setdefault("VENTRIS_CONSOLE", str(root / "native" / "build" / "decomp_native"))
+    env.setdefault("ROMWRIGHT_SPECS", str(root / "native" / "specs"))
+    env.setdefault("ROMWRIGHT_GHIDRA_OPT", str(root / "native" / "build" / "ghidra_opt"))
+    env.setdefault("ROMWRIGHT_LANGUAGE", "x86:LE:64:default")
+    env.setdefault("ROMWRIGHT_CONSOLE", str(root / "native" / "build" / "decomp_native"))
     env.setdefault(
-        "VENTRIS_SLA",
-        str(Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
+        "ROMWRIGHT_SLA",
+        str(Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
             / "Ghidra" / "Processors" / "x86" / "data" / "languages" / "x86-64.sla"),
     )
     result = subprocess.run(
@@ -264,11 +264,11 @@ def write_report(path: Path, document: dict[str, Any]) -> None:
 def main() -> int:
     root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--app", type=Path, help="Qt executable; defaults to VENTRIS_QT_APP or build/ventris-qt")
+    parser.add_argument("--app", type=Path, help="Qt executable; defaults to ROMWRIGHT_QT_APP or build/romwright-qt")
     parser.add_argument("--binary", type=Path, help="corpus binary; defaults to libc")
     parser.add_argument("--project", type=Path, help="project directory passed to the Qt app")
-    parser.add_argument("--program", default=os.environ.get("VENTRIS_UI_PROGRAM", "libc"))
-    parser.add_argument("--address", default=os.environ.get("VENTRIS_UI_ADDRESS", "00400466"))
+    parser.add_argument("--program", default=os.environ.get("ROMWRIGHT_UI_PROGRAM", "libc"))
+    parser.add_argument("--address", default=os.environ.get("ROMWRIGHT_UI_ADDRESS", "00400466"))
     parser.add_argument("--runs", type=int, default=3)
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument(
@@ -290,7 +290,7 @@ def main() -> int:
         if not binary.is_file():
             raise GateError(f"corpus binary does not exist: {binary}")
         if args.project is None:
-            with tempfile.TemporaryDirectory(prefix="ventris-ui-gate-") as directory:
+            with tempfile.TemporaryDirectory(prefix="romwright-ui-gate-") as directory:
                 project = Path(directory)
                 samples = [
                     run_app(app, project, binary, args.program, args.address, args.timeout)

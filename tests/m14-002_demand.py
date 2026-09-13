@@ -40,8 +40,8 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
-API = ROOT / "target/release/lre-api"
+CLI = ROOT / "target/release/romwright-cli"
+API = ROOT / "target/release/romwright-api"
 # Budgets. The split is deliberate: walking a body is ours to make fast, and
 # it costs about 15 ms; the rest is the pinned Ghidra decompiler answering for
 # that body, which costs about a quarter of a second and is not ours to
@@ -113,11 +113,11 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     env = os.environ.copy()
-    env.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    env.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     # Both imports run cold: this gate measures the analyser, and reuse of a
     # previous import is m14-001's claim, not this one's.
-    env["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-api"],
+    env["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-api"],
                    cwd=ROOT, check=True)
     binary = arguments.binary.resolve()
     failures = []

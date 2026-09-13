@@ -108,8 +108,8 @@ def main() -> int:
                 arguments.report.write_text(json.dumps(report, indent=2) + "\n")
             return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m5-003-") as temporary:
         work = Path(temporary)
         elf, executable, entry = build(work)

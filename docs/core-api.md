@@ -1,11 +1,11 @@
 # The Core API
 
-`lre-api` is the interface every consumer speaks: the Qt desktop, scripts and
+`romwright-api` is the interface every consumer speaks: the Qt desktop, scripts and
 agents all send the same requests. It has no analysis of its own — it opens a
 project and answers from the store, so a request never changes what a fact
 means.
 
-Every exchange on this page is sent to a real `lre-api` process by
+Every exchange on this page is sent to a real `romwright-api` process by
 `tests/m6-002_documented_api.py`, and each documented response must be a
 subset of the real one: every documented field must be present with the
 documented value. `$PROGRAM` is the program name and `$BINARY` the imported
@@ -14,8 +14,8 @@ binary's path.
 ## Running it
 
 ```
-lre-api --project DIR                    # newline-delimited JSON on stdin
-lre-api --project DIR --listen 127.0.0.1:8377   # HTTP/1.1 POST /v2, localhost
+romwright-api --project DIR                    # newline-delimited JSON on stdin
+romwright-api --project DIR --listen 127.0.0.1:8377   # HTTP/1.1 POST /v2, localhost
 ```
 
 Requests are one JSON object per line; responses come back in order, one per
@@ -30,7 +30,7 @@ parameters. A response echoes the version and id, and carries exactly one of
 
 ```json
 {"api": 2, "id": 1, "method": "ping"}
-{"api": 2, "id": 1, "result": {"api": 2, "service": "lre-core"}}
+{"api": 2, "id": 1, "result": {"api": 2, "service": "romwright-core"}}
 ```
 
 Omitting `api` is an error rather than a default, so a client built against a

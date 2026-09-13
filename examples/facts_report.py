@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Drive a Ventris project from a script: read facts, write one, undo it.
+"""Drive a Romwright project from a script: read facts, write one, undo it.
 
 Everything here goes through the same Core API the desktop uses, over the
-stdio transport in `python/ventris_sdk.py`. The script computes over the
+stdio transport in `python/romwright_sdk.py`. The script computes over the
 facts it is given -- the containing function is worked out from the function
 extents rather than asked for, because the store answers with what it proved
 and leaves the interpretation to its consumer.
@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "python"))
 
-from ventris_sdk import Client  # noqa: E402
+from romwright_sdk import Client  # noqa: E402
 
 
 def offset(address: object) -> int:
@@ -47,7 +47,7 @@ def main() -> int:
     parser.add_argument("--address", default="00400466")
     parser.add_argument("--inside", default="00400488")
     parser.add_argument("--executable",
-                        default=str(ROOT / "target/release/lre-api"))
+                        default=str(ROOT / "target/release/romwright-api"))
     arguments = parser.parse_args()
 
     with Client.stdio(arguments.project, arguments.executable) as client:

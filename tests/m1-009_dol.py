@@ -13,7 +13,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 ORIG = Path.home() / "Projects/agent-under-fire/orig/GQFE78"
 DOL_SHA = "2f082f5b7b3f060746ed28d3ee8970eec2e8613f97136733b2e374173e23d26b"
 ORACLE_SHA = "29b2a3b48badbfef7b62542d14a0ca41f4bfc72a728bb4644c012bc69061446d"
@@ -25,7 +25,7 @@ def main():
     parser.add_argument("--oracle", type=Path, default=ORIG / "files/boot.elf")
     parser.add_argument("--update-report", action="store_true")
     args = parser.parse_args()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     row = {"id": "GQFE78-main-dol", "sha256": None, "status": "skipped",
            "metrics": {}, "thresholds": {"fn.recall": 0.95}, "runs": 1}
     with tempfile.TemporaryDirectory(prefix="m1-009-") as temporary:
@@ -69,7 +69,7 @@ def main():
                         oracle.add(address)
             assert oracle, "Symbol oracle is empty"
             row["oracle_functions"] = len(oracle)
-            console = Path(os.environ.get("VENTRIS_CONSOLE", ROOT / "native/build/decomp_native"))
+            console = Path(os.environ.get("ROMWRIGHT_CONSOLE", ROOT / "native/build/decomp_native"))
             if not console.is_file():
                 raise FileNotFoundError(f"Required SLEIGH console missing: {console}")
             # Import only the stripped DOL. Oracle addresses/names never reach the importer.

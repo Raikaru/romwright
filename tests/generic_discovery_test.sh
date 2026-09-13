@@ -8,12 +8,12 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # change that had already altered its output. The release binary is preferred
 # when one exists, because this gate imports libc.
 if [ -z "${LRE_CLI:-}" ]; then
-    if [ -x "$ROOT/target/release/lre-cli" ]; then
-        cargo build -q --manifest-path "$ROOT/Cargo.toml" --release -p lre-cli
-        CLI="$ROOT/target/release/lre-cli"
+    if [ -x "$ROOT/target/release/romwright-cli" ]; then
+        cargo build -q --manifest-path "$ROOT/Cargo.toml" --release -p romwright-cli
+        CLI="$ROOT/target/release/romwright-cli"
     else
-        cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
-        CLI="$ROOT/target/release/lre-cli"
+        cargo build -q --manifest-path "$ROOT/Cargo.toml" -p romwright-cli
+        CLI="$ROOT/target/release/romwright-cli"
     fi
 else
     CLI="$LRE_CLI"
@@ -26,11 +26,11 @@ if [ ! -f "$LIBC_BIN" ]; then
     exit 1
 fi
 
-PROJECT="$(mktemp -d /tmp/ventris-m1-002.XXXXXX)"
+PROJECT="$(mktemp -d /tmp/romwright-m1-002.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 # Step 1: Import libc and verify function count matches or exceeds recall >= 0.986 (>= 3931 functions)
-VENTRIS_GENERIC_DISCOVERY=1 "$CLI" import "$LIBC_BIN" --name libc --project "$PROJECT" >/dev/null
+ROMWRIGHT_GENERIC_DISCOVERY=1 "$CLI" import "$LIBC_BIN" --name libc --project "$PROJECT" >/dev/null
 
 python3 - "$PROJECT/project.sqlite" "$ROOT/oracle/01cccbe278d898add05282986a9346d4dda4b3d2b84bc496f9c04c66016528db.json" <<'PY'
 import json, sqlite3, sys
@@ -71,7 +71,7 @@ PY
 # bridge's own analysis of the same image. The M1 criterion is entry recall,
 # not growth over the symtab seeds: a symbol-rich image can be fully seeded.
 if [ -f "$PPC_BIN" ]; then
-    VENTRIS_GENERIC_DISCOVERY=1 "$CLI" import "$PPC_BIN" --name base --project "$PROJECT" >/dev/null
+    ROMWRIGHT_GENERIC_DISCOVERY=1 "$CLI" import "$PPC_BIN" --name base --project "$PROJECT" >/dev/null
     if "$CLI" import "$PPC_BIN" --oracle --name base_oracle --project "$PROJECT" >/dev/null 2>&1; then
         python3 - "$PROJECT/project.sqlite" <<'PY'
 import sqlite3, sys

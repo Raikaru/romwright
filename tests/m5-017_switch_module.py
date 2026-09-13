@@ -2,7 +2,7 @@
 """m5-017: a Nintendo Switch module, loaded and scored with no JVM.
 
 The image is an NSO0: three LZ4-compressed segments and a `MOD0` header
-pointing at an ELF64 dynamic table. The loader is `crates/lre-core/src/
+pointing at an ELF64 dynamic table. The loader is `crates/romwright-core/src/
 native/nso.rs`; this gate proves it against the module's own symbol table,
 which it parses here independently -- a different LZ4 implementation, a
 different dynamic-table reader -- so the measurement does not rest on the
@@ -26,8 +26,8 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
-DEFAULT_TARGET = Path.home() / "ventris-corpus/extracted/nx-xenoblade-de/main"
+CLI = ROOT / "target" / "release" / "romwright-cli"
+DEFAULT_TARGET = Path.home() / "romwright-corpus/extracted/nx-xenoblade-de/main"
 
 # Where a 64-bit module is mapped (`SwitchLoader.load` in the Ghidra
 # extension, and `nso.rs`).
@@ -128,7 +128,7 @@ def module_functions(data: bytes) -> dict[int, str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target", type=Path, default=DEFAULT_TARGET)
-    parser.add_argument("--work", type=Path, default=Path.home() / "ventris-cache/tmp/m5-017")
+    parser.add_argument("--work", type=Path, default=Path.home() / "romwright-cache/tmp/m5-017")
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
@@ -149,7 +149,7 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     data = arguments.target.read_bytes()
     truth = module_functions(data)
 

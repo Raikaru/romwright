@@ -44,11 +44,11 @@ PE_FIXTURES = {"tiny_pe32.exe": "llvm-strip", "exports32.dll": "i686-w64-mingw32
 
 
 class Api:
-    """One long-lived `lre-api` process, spoken to over its stdio protocol."""
+    """One long-lived `romwright-api` process, spoken to over its stdio protocol."""
 
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -75,9 +75,9 @@ class Api:
 def table() -> dict[str, str]:
     """Class -> evidence kind, as the CLI publishes the shared table."""
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "provenance", "--json"],
+        [str(ROOT / "target/release/romwright-cli"), "provenance", "--json"],
         cwd=ROOT, capture_output=True, text=True)
-    assert result.returncode == 0, f"`lre-cli provenance` failed: {result.stderr.strip()}"
+    assert result.returncode == 0, f"`romwright-cli provenance` failed: {result.stderr.strip()}"
     return {row["source"]: row["evidence"] for row in json.loads(result.stdout)}
 
 
@@ -162,8 +162,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
     kinds = table()
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"] if entry.get("status") == "ok"]
@@ -182,7 +182,7 @@ def main() -> int:
         for image in images:
             project = work / f"{image.stem}-filter"
             built = subprocess.run(
-                [str(ROOT / "target/release/lre-cli"), "import", str(image),
+                [str(ROOT / "target/release/romwright-cli"), "import", str(image),
                  "--name", "filtered", "--project", str(project)],
                 cwd=ROOT, capture_output=True, text=True)
             assert built.returncode == 0, (

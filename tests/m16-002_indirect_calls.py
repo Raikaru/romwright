@@ -35,7 +35,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 from dwarf_types import extract  # noqa: E402
 
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 FIXTURE = ROOT / "tests/fixtures-src/indirect_calls.c"
 LEVELS = ("O0", "O2")
 
@@ -56,9 +56,9 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     report = {
         "gate": "m16-002",

@@ -10,7 +10,7 @@
 /.ghidra-java/
 
 # Local analysis output
-.ventris/
+.romwright/
 *.log
 *.tmp
 err
@@ -39,10 +39,10 @@ third_party/ghidra/decompiler/ghi_opt/
 third_party/ghidra/decompiler/ghidra_opt
 third_party/ghidra/decompiler/sla_opt/
 third_party/ghidra/decompiler/sleigh_opt
-/desktop/ventris-qt/generated/
+/desktop/romwright-qt/generated/
 /third_party/sysroots/
 # Local analysis caches
-.lre/
+.romwright/
 
 # Volatile benchmark run artifacts (keep only the summarized report)
 /benchmarks/reports/gate-run/

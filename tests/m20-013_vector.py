@@ -48,7 +48,7 @@ def main() -> int:
 
     import rabbitizer
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
                     "--bin", "vu_dump", "--bin", "gte_dump"],
                    cwd=ROOT, check=True, capture_output=True, timeout=1800)
 

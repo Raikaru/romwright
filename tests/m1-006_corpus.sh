@@ -6,18 +6,18 @@
 # Requirements (Gate contract):
 # 1. Read-only and reproducible: writes per-run manifest and report under temporary directory; leaves git diff empty
 # 2. Compares generated artifacts against authoritative invariants in tests/corpus.lock.json
-# 3. Rebuilds lre-cli so the gate exercises current sources, even with a populated target directory
+# 3. Rebuilds romwright-cli so the gate exercises current sources, even with a populated target directory
 # 4. Validates source hashes, artifact hashes, exact entry coverage, symbol counts, architectures, endianness, PE/ELF twin identity, and native imports
 # 5. Supports --update-report / UPDATE_REPORT=1 to explicitly update benchmarks/reports/m1-006.json
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-if [ -f "$ROOT/target/release/lre-cli.exe" ]; then
-    CLI="$ROOT/target/release/lre-cli.exe"
-elif [ -f "$ROOT/target/release/lre-cli" ]; then
-    CLI="$ROOT/target/release/lre-cli"
+if [ -f "$ROOT/target/release/romwright-cli.exe" ]; then
+    CLI="$ROOT/target/release/romwright-cli.exe"
+elif [ -f "$ROOT/target/release/romwright-cli" ]; then
+    CLI="$ROOT/target/release/romwright-cli"
 else
-    CLI="$ROOT/target/release/lre-cli"
+    CLI="$ROOT/target/release/romwright-cli"
 fi
 
 CORPUS_SRC="$ROOT/tests/corpus-src"
@@ -42,9 +42,9 @@ if [ -n "${VCToolsInstallDir:-}" ]; then
 fi
 
 # Build current sources, independent of the caller's working directory.
-cargo build --manifest-path "$ROOT/Cargo.toml" -p lre-cli --quiet
-if [ -f "$ROOT/target/release/lre-cli.exe" ]; then
-    CLI="$ROOT/target/release/lre-cli.exe"
+cargo build --manifest-path "$ROOT/Cargo.toml" -p romwright-cli --quiet
+if [ -f "$ROOT/target/release/romwright-cli.exe" ]; then
+    CLI="$ROOT/target/release/romwright-cli.exe"
 fi
 
 # 3. Check committed sources and committed lock exist

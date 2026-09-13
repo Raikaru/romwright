@@ -13,7 +13,7 @@ Per module:
      is imported, and recall and precision are scored against the unstripped
      module's `STT_FUNC` symbols, which never reach the importer.
   2. **Navigation.** `functions_page` unfiltered and filtered, `xrefs_page`
-     into a recovered callee, and a `listing` window, through one `lre-api`
+     into a recovered callee, and a `listing` window, through one `romwright-api`
      process bound to the module's project.
   3. **Decompilation.** `decompile_doc` on five recovered functions: tokens
      and a prototype for every one.
@@ -227,8 +227,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--files", type=Path, default=FILES)
     parser.add_argument("--work", type=Path,
-                        default=Path(os.environ.get("VENTRIS_SESSION_WORK",
-                                                    Path.home() / "ventris-cache/session")) / "modules")
+                        default=Path(os.environ.get("ROMWRIGHT_SESSION_WORK",
+                                                    Path.home() / "romwright-cache/session")) / "modules")
     parser.add_argument("--budget-ms", type=int, default=20000)
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
@@ -257,8 +257,8 @@ def main() -> int:
             f"the target is present but modules are missing: "
             f"{sorted(set(MODULES) - set(present))}")
         import subprocess
-        subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                        "-p", "lre-api", "-p", "lre-worker"], cwd=ROOT, check=True)
+        subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                        "-p", "romwright-api", "-p", "romwright-worker"], cwd=ROOT, check=True)
         gate = load_session_gate()
         failures = []
         for name, source in present.items():

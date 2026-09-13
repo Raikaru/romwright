@@ -113,7 +113,7 @@ def store(image: Path, work: Path) -> tuple[dict[int, tuple[str, int, str]],
                                             dict[int, str], list[tuple[int, int, str]]]:
     project = work / f"{image.stem}-imports"
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(image),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(image),
          "--name", "imports", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, f"native import failed: {result.stderr.strip()}"
@@ -185,7 +185,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     load_m8_001()
     rows = []

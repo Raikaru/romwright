@@ -80,11 +80,11 @@ def build_document(manifest: Path) -> dict[str, Any]:
         "spdxVersion": "SPDX-2.3",
         "dataLicense": "CC0-1.0",
         "SPDXID": "SPDXRef-DOCUMENT",
-        "name": "ventris-cargo-dependencies",
-        "documentNamespace": f"https://ventris.dev/spdx/{digest}",
+        "name": "romwright-cargo-dependencies",
+        "documentNamespace": f"https://romwright.dev/spdx/{digest}",
         "creationInfo": {
             "created": created,
-            "creators": ["Tool: ventris-sbom/1"],
+            "creators": ["Tool: romwright-sbom/1"],
         },
         "packages": sbom_packages,
         "relationships": relationships,
@@ -98,7 +98,7 @@ def main() -> int:
         type=Path,
         default=Path(__file__).resolve().parents[1] / "Cargo.toml",
     )
-    parser.add_argument("--output", type=Path, default=Path("ventris.spdx.json"))
+    parser.add_argument("--output", type=Path, default=Path("romwright.spdx.json"))
     args = parser.parse_args()
     document = build_document(args.manifest_path.resolve())
     rendered = json.dumps(document, indent=2, sort_keys=True) + "\n"

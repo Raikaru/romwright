@@ -69,7 +69,7 @@
   },
   "memory_live": {
    "status": "skipped",
-   "reason": "no VENTRIS_LIVE_ENDPOINT: no GDB stub was serving the running console, so no live read is claimed"
+   "reason": "no ROMWRIGHT_LIVE_ENDPOINT: no GDB stub was serving the running console, so no live read is claimed"
   },
   "reimport": {
    "wall_s": 39.72,

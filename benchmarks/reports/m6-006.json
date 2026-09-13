@@ -13,19 +13,19 @@
  },
  "surfaces": {
   "binaries": [
-   "lre-api",
-   "lre-cli",
-   "lre-debug",
-   "lre-worker"
+   "romwright-api",
+   "romwright-cli",
+   "romwright-debug",
+   "romwright-worker"
   ],
   "desktop": [
-   "ventris-qt"
+   "romwright-qt"
   ],
   "python": [
-   "ventris_ai.py",
-   "ventris_console.py",
-   "ventris_plugin_host.py",
-   "ventris_sdk.py"
+   "romwright_ai.py",
+   "romwright_console.py",
+   "romwright_plugin_host.py",
+   "romwright_sdk.py"
   ],
   "packaging": [
    "sbom.py",

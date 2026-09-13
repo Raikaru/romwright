@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """m16-001: parameter and return types inferred from p-code, scored against DWARF.
 
-The inference is constraint-based (`lre-core/src/types_infer.rs`): every
+The inference is constraint-based (`romwright-core/src/types_infer.rs`): every
 operation an operand takes part in is a constraint, constraints join over a
 small lattice, and nothing is claimed where nothing constrained it. This
 gate scores it against what the compiler said, using TIE's two measures
@@ -41,7 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 from dwarf_types import extract  # noqa: E402
 
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 FIXTURE = ROOT / "tests/fixtures-src/types_fixture.c"
 LEVELS = ("O0", "O2")
 # Measured: exact 0.50, conservative 0.956, three contradictions out of 68.
@@ -121,9 +121,9 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     report = {
         "gate": "m16-001",

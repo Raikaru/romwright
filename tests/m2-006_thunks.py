@@ -26,8 +26,8 @@ def main():
     entry, main = next((entry, row) for entry, row in truth['functions'].items() if row['name'] == 'main')
     assert main['arity'] == 2, main
     env = os.environ.copy()
-    env.pop('VENTRIS_SLA', None)
-    with tempfile.TemporaryDirectory(prefix='ventris-m2-thunks-') as temporary:
+    env.pop('ROMWRIGHT_SLA', None)
+    with tempfile.TemporaryDirectory(prefix='romwright-m2-thunks-') as temporary:
         project = Path(temporary) / 'project'
         context = dict(binary=str(binary), program='cpp')
         target = dict(**context, address=dict(space='Ram', offset=int(entry, 16)))

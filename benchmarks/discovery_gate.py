@@ -22,19 +22,19 @@ from gen_function_scoring import POLICY, expected_view, validate_view
 def architecture_check():
     # The roadmap explicitly requires a source check as well as set metrics.
     # Checking only the new module would miss the still-active legacy routes.
-    core = ROOT / "crates/lre-core/src/native/discovery.rs"
-    native = ROOT / "crates/lre-core/src/native.rs"
+    core = ROOT / "crates/romwright-core/src/native/discovery.rs"
+    native = ROOT / "crates/romwright-core/src/native.rs"
     legacy = re.findall(r"(?m)^(?:pub(?:\([^)]*\))?\s+)?fn\s+((?:sweep_calls|sweep_ppc_calls|flow_discover)\w*)\s*[<(]",
                         native.read_text())
     isa_lines = [{"line": n, "text": line.strip()}
                  for n, line in enumerate(core.read_text().splitlines(), 1)
                  if re.search(r"x86|PowerPC|AARCH64|disasm::", line, re.IGNORECASE)]
-    decoder = ROOT / "crates/lre-core/src/disasm.rs"
+    decoder = ROOT / "crates/romwright-core/src/disasm.rs"
     retired = re.findall(r"(?m)^pub fn (discover)\s*[<(]", decoder.read_text())
     switches = [str(path.relative_to(ROOT)) for path in (
-        ROOT / "crates/lre-core/Cargo.toml", ROOT / "crates/lre-cli/Cargo.toml")
+        ROOT / "crates/romwright-core/Cargo.toml", ROOT / "crates/romwright-cli/Cargo.toml")
         if re.search(r"(?m)^x86_decoder\s*=", path.read_text())]
-    runtime = ROOT / "crates/lre-core/src/native_runtime.rs"
+    runtime = ROOT / "crates/romwright-core/src/native_runtime.rs"
     console_legacy = re.findall(r"(?m)^pub fn (console_discover|console_seeds)\s*[<(]",
                                 runtime.read_text())
     return {"passed": not legacy and not isa_lines and not retired and not switches and not console_legacy,
@@ -55,7 +55,7 @@ def main():
     # Release, with overflow checks kept on by the workspace profile: the
     # gate scores facts, and a debug import spends minutes proving nothing
     # extra. The twenty imports are independent, so they run concurrently.
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
     matrix = set(lock["oracle_matrix"]["architectures"])
     required = [r for r in lock["entries"]
@@ -74,7 +74,7 @@ def main():
             if key in actual:
                 raise ValueError("Duplicate corpus row")
             actual[key] = item
-        producer = provenance(Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        producer = provenance(Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     except (OSError, ValueError, KeyError, TypeError) as error:
         setup_error = error
     rows = []
@@ -109,7 +109,7 @@ def main():
                 row.update(oracle_sha256=digest(reference_path), scoring_view_sha256=digest(view_path),
                            raw_oracle_functions=len(raw["entries"]), excluded_functions=len(view["excluded"]))
                 project = Path(temporary) / row["id"]
-                result = subprocess.run([str(ROOT / "target/release/lre-cli"), "import", str(binary),
+                result = subprocess.run([str(ROOT / "target/release/romwright-cli"), "import", str(binary),
                     "--name", row["id"], "--project", str(project)], capture_output=True, text=True, timeout=180)
                 if result.returncode:
                     raise ValueError(result.stdout + result.stderr)
@@ -131,7 +131,7 @@ def main():
         # Each entry writes its own project and reads a distinct oracle, so
         # the twenty scores are independent; only the report's order is
         # fixed, and `map` preserves it.
-        jobs = max(1, min(int(os.environ.get("VENTRIS_GATE_JOBS", "4")), len(required)))
+        jobs = max(1, min(int(os.environ.get("ROMWRIGHT_GATE_JOBS", "4")), len(required)))
         with ThreadPoolExecutor(max_workers=jobs) as pool:
             rows = list(pool.map(score, required))
     for row in rows:

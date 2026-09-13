@@ -67,7 +67,7 @@ def blocks(text: str) -> list[tuple[str | None, list[tuple[str, list[str]]]]]:
 
 
 def usage_text() -> str:
-    result = subprocess.run([str(ROOT / "target/release/lre-cli")],
+    result = subprocess.run([str(ROOT / "target/release/romwright-cli")],
                             cwd=ROOT, capture_output=True, text=True)
     text = result.stdout + result.stderr
     assert "usage:" in text, f"the CLI prints no usage: {text[:200]!r}"
@@ -77,21 +77,21 @@ def usage_text() -> str:
 def implemented_verbs() -> set[str]:
     """Verbs the CLI dispatches.
 
-    Read from the dispatch arms in `crates/lre-cli/src/main.rs`, which couples
+    Read from the dispatch arms in `crates/romwright-cli/src/main.rs`, which couples
     this check to our own source on purpose: the invariant is that the tool
     lists everything it does, and `xrefs`, `undo`, `open`, `comment`,
     `comments` and `types` were all missing from the usage text when this gate
     was written.
     """
-    source = (ROOT / "crates/lre-cli/src/main.rs").read_text(encoding="utf-8")
+    source = (ROOT / "crates/romwright-cli/src/main.rs").read_text(encoding="utf-8")
     return set(re.findall(r'^\s{8}"([a-z][a-z-]*)"(?:\s+if [^=]*)?\s*=>',
                           source, re.MULTILINE))
 
 
 def sleigh_available() -> bool:
-    install = Path(os.environ.get("VENTRIS_GHIDRA",
+    install = Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                   str(Path.home() / "ghidra_12.1.3_PUBLIC")))
-    console = Path(os.environ.get("VENTRIS_CONSOLE",
+    console = Path(os.environ.get("ROMWRIGHT_CONSOLE",
                                   str(ROOT / "native/build/decomp_native")))
     return install.is_dir() and console.is_file()
 
@@ -114,14 +114,14 @@ def main() -> int:
 
     usage = usage_text()
     verbs = implemented_verbs()
-    undocumented = sorted(verb for verb in verbs if f"lre-cli {verb} " not in usage
-                          and f"lre-cli {verb}\n" not in usage)
+    undocumented = sorted(verb for verb in verbs if f"romwright-cli {verb} " not in usage
+                          and f"romwright-cli {verb}\n" not in usage)
     assert not undocumented, (
         f"the CLI dispatches these verbs and does not list them in its usage: "
         f"{undocumented}")
     documented_here = {shlex.split(command)[1] for _, commands in parsed
                        for command, _ in commands
-                       if shlex.split(command)[0].endswith("lre-cli")}
+                       if shlex.split(command)[0].endswith("romwright-cli")}
     unknown = sorted(documented_here - verbs)
     assert not unknown, (
         f"the walkthrough uses commands the CLI does not dispatch: {unknown}")

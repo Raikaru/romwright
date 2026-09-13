@@ -18,7 +18,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / 'target/release/lre-cli'
+CLI = ROOT / 'target/release/romwright-cli'
 REMOVED = ('import-native', 'decompile-native', 'decompile-native-doc', 'disasm-native')
 # Repository text that must no longer name a removed verb.
 TRACKED = ('*.rs', '*.py', '*.sh', '*.md', '*.yml', '*.cpp', '*.h')
@@ -56,7 +56,7 @@ def ci_bridge_steps():
     steps = re.split(r'\n      - (?:name|uses):', workflow)
     offenders = []
     for step in steps:
-        bridge = ('VENTRIS_SERVICE_JAR' in step or 'ventris-service.jar' in step
+        bridge = ('ROMWRIGHT_SERVICE_JAR' in step or 'romwright-service.jar' in step
             or re.search(r'--oracle(?![-\w])', step))
         if bridge and 'oracle' not in step.split('\n')[0].lower():
             offenders.append(step.split('\n')[0].strip())
@@ -68,15 +68,15 @@ def main():
     parser.add_argument('--binary', type=Path, default=ROOT / 'tests/fixtures-src/tiny_bin')
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-cli'], cwd=ROOT, check=True)
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'romwright-cli'], cwd=ROOT, check=True)
     # No JVM may be reachable on any default path. The native decompiler still
     # reads SLEIGH language data from the Ghidra install, so `store` keeps that
     # install while `bare` removes it too: an import needs neither.
-    store = dict(os.environ, VENTRIS_SERVICE_JAR=str(ROOT / 'does/not/exist.jar'),
+    store = dict(os.environ, ROMWRIGHT_SERVICE_JAR=str(ROOT / 'does/not/exist.jar'),
         DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         store.pop(name, None)
-    env = dict(store, VENTRIS_GHIDRA=str(ROOT / 'does/not/exist'))
+    env = dict(store, ROMWRIGHT_GHIDRA=str(ROOT / 'does/not/exist'))
     evidence = {}
     with tempfile.TemporaryDirectory(prefix='m2-015-') as temporary:
         work = Path(temporary)
@@ -114,12 +114,12 @@ def main():
             f'--oracle must launch the bridge: {oracle.stdout} {oracle.stderr}'
         evidence['oracle_routing'] = oracle.stderr.strip()[:160]
         evidence['sleigh_data'] = 'native decompile reads SLEIGH languages, never a JVM'
-        jar = ROOT / 'service/build/ventris-service.jar'
-        installed = Path(os.environ.get('VENTRIS_GHIDRA', Path.home() / 'ghidra_12.1.3_PUBLIC'))
+        jar = ROOT / 'service/build/romwright-service.jar'
+        installed = Path(os.environ.get('ROMWRIGHT_GHIDRA', Path.home() / 'ghidra_12.1.3_PUBLIC'))
         if jar.is_file() and installed.is_dir():
             bridged = work / 'bridged'
             real = dict(os.environ, DEBUGINFOD_URLS='')
-            real.pop('VENTRIS_SERVICE_JAR', None)
+            real.pop('ROMWRIGHT_SERVICE_JAR', None)
             result = run(['import', str(args.binary), '--oracle', '--project', str(bridged),
                 '--ghidra', str(installed)], real, timeout=900)
             assert result.returncode == 0, f'bridge oracle import failed: {result.stderr[-600:]}'
@@ -130,7 +130,7 @@ def main():
     stale = stale_references()
     assert not stale, f'removed verbs still referenced: {stale}'
     readme = (ROOT / 'README.md').read_text()
-    assert 'lre-cli import <binary>' in readme and '--oracle' in readme, \
+    assert 'romwright-cli import <binary>' in readme and '--oracle' in readme, \
         'README must document the native default and the oracle flag'
     offenders = ci_bridge_steps()
     assert not offenders, f'CI takes a bridge path outside oracle generation: {offenders}'

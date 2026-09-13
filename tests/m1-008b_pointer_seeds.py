@@ -26,13 +26,13 @@ def main():
     parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
     parser.add_argument("--update-report", action="store_true")
     args = parser.parse_args()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
     manifest = json.loads((args.corpus_dir / "manifest.json").read_text())
     assert manifest["sources"] == lock["sources"], "Corpus source manifest mismatch"
     for name, info in lock["sources"].items():
         assert digest(ROOT / "tests/corpus-src" / name) == info["sha256"]
-    producer = provenance(Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+    producer = provenance(Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     rows = []
     with tempfile.TemporaryDirectory(prefix="m1-008b-gate-") as temporary:
         work = Path(temporary)
@@ -74,7 +74,7 @@ def main():
                 row["oracle_entries_outside_executable_sections"] = [f"{a:08x}" for a in sorted(oracle)
                     if not any(start <= a < end for start, end in executable)]
                 project = work / variant
-                result = subprocess.run([str(ROOT / "target/release/lre-cli"), "import", str(binary),
+                result = subprocess.run([str(ROOT / "target/release/romwright-cli"), "import", str(binary),
                     "--name", variant, "--project", str(project)], capture_output=True, text=True, timeout=180)
                 assert result.returncode == 0, result.stdout + result.stderr
                 with sqlite3.connect(project / "project.sqlite") as db:

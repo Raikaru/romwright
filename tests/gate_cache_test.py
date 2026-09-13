@@ -5,7 +5,7 @@ A cache that answers when an input changed is the m4-014 trap in a new
 costume: a stale worker drove three measurement rounds and their conclusion.
 These tests pin the properties that make reuse safe -- the key is the
 provenance, a changed input misses, a failed build leaves nothing behind, and
-`VENTRIS_GATE_CACHE=` switches reuse off entirely for the gates that measure
+`ROMWRIGHT_GATE_CACHE=` switches reuse off entirely for the gates that measure
 the work itself.
 """
 import json
@@ -24,14 +24,14 @@ class GateCache(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory(prefix="gate-cache-test-")
         self.work = Path(self.temporary.name)
-        self.previous = os.environ.get("VENTRIS_GATE_CACHE")
-        os.environ["VENTRIS_GATE_CACHE"] = str(self.work / "cache")
+        self.previous = os.environ.get("ROMWRIGHT_GATE_CACHE")
+        os.environ["ROMWRIGHT_GATE_CACHE"] = str(self.work / "cache")
 
     def tearDown(self) -> None:
         if self.previous is None:
-            os.environ.pop("VENTRIS_GATE_CACHE", None)
+            os.environ.pop("ROMWRIGHT_GATE_CACHE", None)
         else:
-            os.environ["VENTRIS_GATE_CACHE"] = self.previous
+            os.environ["ROMWRIGHT_GATE_CACHE"] = self.previous
         self.temporary.cleanup()
 
     def test_a_store_is_built_once_and_reused(self):
@@ -71,7 +71,7 @@ class GateCache(unittest.TestCase):
         key = {"kind": "oracle", "binary_sha256": "abc"}
         with self.assertRaises(RuntimeError):
             gate_cache.store(key, explode)
-        root = Path(os.environ["VENTRIS_GATE_CACHE"])
+        root = Path(os.environ["ROMWRIGHT_GATE_CACHE"])
         left = [path for path in root.glob("*") if path.is_dir()] if root.is_dir() else []
         self.assertEqual(left, [], f"a crashed build left {left}")
 
@@ -112,7 +112,7 @@ class GateCache(unittest.TestCase):
                          "one build, one hit, and one build for a new address set")
 
     def test_an_empty_setting_disables_reuse(self):
-        os.environ["VENTRIS_GATE_CACHE"] = ""
+        os.environ["ROMWRIGHT_GATE_CACHE"] = ""
         calls = []
 
         def build(directory: Path) -> None:
@@ -129,7 +129,7 @@ class GateCache(unittest.TestCase):
         self.assertEqual(len(answers), 2)
 
     def test_the_oracle_key_carries_the_provenance_it_depends_on(self):
-        install = Path(os.environ.get("VENTRIS_GHIDRA",
+        install = Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                       Path.home() / "ghidra_12.1.3_PUBLIC"))
         if not (install / "Ghidra/application.properties").is_file():
             self.skipTest(f"no pinned install at {install}")

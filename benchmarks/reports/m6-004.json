@@ -16,11 +16,11 @@
   "skipped_blocks": 0
  },
  "artifacts": [
-  "lre-api",
-  "lre-cli",
-  "lre-worker",
-  "ventris-0.5-Linux-x86_64.tar.gz",
-  "ventris.spdx.json"
+  "romwright-api",
+  "romwright-cli",
+  "romwright-worker",
+  "romwright-0.5-Linux-x86_64.tar.gz",
+  "romwright.spdx.json"
  ],
  "skipped": []
 }

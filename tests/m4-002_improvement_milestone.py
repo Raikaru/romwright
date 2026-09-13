@@ -8,7 +8,7 @@ and each writes its own report. Nothing states the milestone claim, nothing
 proves both passes are off unless asked, and nothing explains the arity that
 neither producer recovers -- so a reader cannot tell a ceiling from a defect.
 
-The passes are enumerated from `crates/lre-core/src/session.rs`, not listed
+The passes are enumerated from `crates/romwright-core/src/session.rs`, not listed
 here, and then:
 
   * **every opt-in pass is gated**: a boolean pass read from the environment
@@ -46,8 +46,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from prototype_gate import run_api  # noqa: E402  (repo-local helper)
 
 REPORTS = ROOT / "benchmarks" / "reports"
-SESSION = ROOT / "crates/lre-core/src/session.rs"
-FLAG = re.compile(r'(\w+):\s*std::env::var_os\("(VENTRIS_[A-Z_]+)"\)\.is_some\(\)')
+SESSION = ROOT / "crates/romwright-core/src/session.rs"
+FLAG = re.compile(r'(\w+):\s*std::env::var_os\("(ROMWRIGHT_[A-Z_]+)"\)\.is_some\(\)')
 # The NDS cartridge is assembled from committed sources by `m5-002`, the gate
 # that owns the loader; the promotion pass is measured on that same image.
 NDS_BUILDER = ROOT / "tests/m5-002_nds.py"
@@ -55,13 +55,13 @@ NDS_BUILDER = ROOT / "tests/m5-002_nds.py"
 # Every opt-in pass, the gate that measured it, and the claim that gate must
 # still carry. Paths are tuples because metric names contain dots.
 PASSES = {
-    "VENTRIS_REGISTER_PARAMS": {
+    "ROMWRIGHT_REGISTER_PARAMS": {
         "field": "register_params",
         "report": "m4-001",
         "claim": [(("rows", "i386_many_o2", "on"), "ge", 0.98),
                   (("rows", "i386_many_o2", "off"), "le", 0.02)],
     },
-    "VENTRIS_PROMOTE_TAILCALLS": {
+    "ROMWRIGHT_PROMOTE_TAILCALLS": {
         "field": "promote_tailcalls",
         "report": "m5-007",
         "claim": [(("metrics", "arm7.dwarf.fn.recall"), "ge", 1.0),
@@ -71,9 +71,9 @@ PASSES = {
 # The behavioural proof that each pass is off by default: the fact it produces,
 # and how to ask the store for it.
 DEFAULT_OFF = {
-    "VENTRIS_REGISTER_PARAMS": {"row": "i386_many_o2",
+    "ROMWRIGHT_REGISTER_PARAMS": {"row": "i386_many_o2",
                                 "provenance": "native-prototype:register-input"},
-    "VENTRIS_PROMOTE_TAILCALLS": {"entry": 0x037F8000},
+    "ROMWRIGHT_PROMOTE_TAILCALLS": {"entry": 0x037F8000},
 }
 # One arity both producers miss, per row, and the register that would carry it.
 # `dead` spellings are every name the SLEIGH disassembler can print for the
@@ -110,8 +110,8 @@ def load_module(name: str, path: Path):
 def clean_environment(**extra: str) -> dict[str, str]:
     """The environment a plain install has: no pass flags, no spec overrides."""
     environment = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_SPECS", *PASSES):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_SPECS", *PASSES):
         environment.pop(name, None)
     environment.update(extra)
     return environment
@@ -131,7 +131,7 @@ def register_pass_facts(corpus: Path, binary: Path, row: str, provenance: str,
     """Prototypes carrying the register pass's provenance, flag off or on."""
     environment = clean_environment()
     if enabled:
-        environment["VENTRIS_REGISTER_PARAMS"] = "1"
+        environment["ROMWRIGHT_REGISTER_PARAMS"] = "1"
     with tempfile.TemporaryDirectory(prefix="m4-002-proto-") as temporary:
         project = Path(temporary)
         run_api(ROOT, project, [
@@ -149,7 +149,7 @@ def promotion_pass_facts(binary: Path, entry: int, enabled: bool, timeout: int) 
     """Whether the tail-called leaf exists as a function, flag off or on."""
     environment = clean_environment()
     if enabled:
-        environment["VENTRIS_PROMOTE_TAILCALLS"] = "1"
+        environment["ROMWRIGHT_PROMOTE_TAILCALLS"] = "1"
     with tempfile.TemporaryDirectory(prefix="m4-002-promote-") as temporary:
         project = Path(temporary)
         imported, = run_api(ROOT, project, [
@@ -204,7 +204,7 @@ def main() -> int:
 
     # Build what is being measured: the behavioural checks below run the
     # debug API binary, and a stale one hides exactly the defect they look for.
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-api", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-api", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=clean_environment())
 
     lock = json.loads((ROOT / "tests/corpus.lock.json").read_text())
@@ -224,18 +224,18 @@ def main() -> int:
 
     # 2. Each pass is off unless asked, proved by the facts it leaves.
     defaults = {}
-    row = DEFAULT_OFF["VENTRIS_REGISTER_PARAMS"]["row"]
+    row = DEFAULT_OFF["ROMWRIGHT_REGISTER_PARAMS"]["row"]
     binary = (arguments.corpus_dir / recipes[row]["binary"]).resolve()
-    provenance = DEFAULT_OFF["VENTRIS_REGISTER_PARAMS"]["provenance"]
+    provenance = DEFAULT_OFF["ROMWRIGHT_REGISTER_PARAMS"]["provenance"]
     off = register_pass_facts(arguments.corpus_dir, binary, row, provenance,
                               False, arguments.timeout)
     on = register_pass_facts(arguments.corpus_dir, binary, row, provenance,
                              True, arguments.timeout)
     assert off == 0, f"the register pass produced {off} facts with a clean environment"
     assert on > 0, "the register pass produced nothing when asked, so the flag is dead"
-    defaults["VENTRIS_REGISTER_PARAMS"] = {"off": off, "on": on}
+    defaults["ROMWRIGHT_REGISTER_PARAMS"] = {"off": off, "on": on}
 
-    promote = DEFAULT_OFF["VENTRIS_PROMOTE_TAILCALLS"]
+    promote = DEFAULT_OFF["ROMWRIGHT_PROMOTE_TAILCALLS"]
     with tempfile.TemporaryDirectory(prefix="m4-002-nds-") as temporary:
         container, _ = load_module("m5_002", NDS_BUILDER).build_container(Path(temporary))
         off_found = promotion_pass_facts(container, promote["entry"], False,
@@ -247,7 +247,7 @@ def main() -> int:
     assert on_found, (
         f"{promote['entry']:#x} stayed absent when promotion was asked for, "
         f"so the flag is dead")
-    defaults["VENTRIS_PROMOTE_TAILCALLS"] = {"off": 0, "on": 1}
+    defaults["ROMWRIGHT_PROMOTE_TAILCALLS"] = {"off": 0, "on": 1}
 
     # 3. Native is never worse than stock, on the committed regression gate.
     regression = json.loads((REPORTS / "m3-003.json").read_text())

@@ -55,7 +55,7 @@ def surfaces() -> dict[str, list[str]]:
     binaries = sorted({target["name"] for package in metadata["packages"]
                        for target in package["targets"] if "bin" in target["kind"]})
     desktop = re.findall(r"add_executable\((\S+)",
-                         (ROOT / "desktop/ventris-qt/CMakeLists.txt")
+                         (ROOT / "desktop/romwright-qt/CMakeLists.txt")
                          .read_text(encoding="utf-8"))
     modules = sorted(path.name for path in (ROOT / "python").glob("*.py"))
     packaging = sorted(path.name for path in (ROOT / "packaging").glob("*.py"))
