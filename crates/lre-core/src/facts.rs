@@ -71,9 +71,15 @@ impl<T> Fact<T> {
 /// A per-subject fact store: subject key -> the strongest fact so far.
 /// `K` is whatever names the thing described — a register offset, a
 /// `(function, offset)` pair, a global address.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub struct FactStore<K, T> {
     facts: BTreeMap<K, Fact<T>>,
+}
+
+impl<K, T> Default for FactStore<K, T> {
+    fn default() -> Self {
+        Self { facts: BTreeMap::new() }
+    }
 }
 
 impl<K: Ord, T: Clone> FactStore<K, T> {
