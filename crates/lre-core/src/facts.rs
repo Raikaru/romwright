@@ -96,6 +96,13 @@ impl<K: Ord, T: Clone> FactStore<K, T> {
             .or_insert(fact);
     }
 
+
+    /// The mutable fact for a subject, so a pass can refine a value in
+    /// place — a caller's observed argument type joining into a callee's
+    /// inferred signature.
+    pub fn get_mut(&mut self, key: &K) -> Option<&mut Fact<T>> {
+        self.facts.get_mut(key)
+    }
     pub fn get(&self, key: &K) -> Option<&Fact<T>> {
         self.facts.get(key)
     }

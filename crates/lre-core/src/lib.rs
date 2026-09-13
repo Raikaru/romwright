@@ -1447,14 +1447,52 @@ impl Core {
             }
             // The callee map the solver consumes is the winning fact per
             // function — the Knowledge DB's answer, not a bare map.
-            let callees: std::collections::BTreeMap<u64, crate::subtype::Signature> = signatures
-                .iter()
-                .map(|(addr, fact)| (*addr, fact.value.clone()))
-                .collect();
-            // Pass 2: re-solve each function with the callee map, so a call
-            // constrains its argument registers to the callee's parameter
-            // types and its return register to the callee's return type.
-            for (entry_offset, instructions, pcode) in &lifted {
+            let mut callees: std::collections::BTreeMap<u64, crate::subtype::Signature> =
+                signatures
+                    .iter()
+                    .map(|(addr, fact)| (*addr, fact.value.clone()))
+                    .collect();
+            // Pass 2 iterates to a fixpoint. Each solve observes what every
+            // caller passes; those observations join into the callee's
+            // inferred signature, which re-constrains the callers — the
+            // bidirectional BinSub direction. A Strong/Ghidra signature is
+            // authoritative and is not refined by caller observations.
+            let mut solutions: Vec<crate::subtype::Solution> = Vec::new();
+            for _round in 0..8 {
+                solutions = lifted
+                    .iter()
+                    .map(|(_, _, pcode)| crate::subtype::solve_with(pcode, &callees))
+                    .collect();
+                // caller→callee: join each observed argument type into the
+                // callee's inferred signature.
+                for sol in &solutions {
+                    for (callee, args) in &sol.calls {
+                        if let Some(fact) = signatures.get_mut(callee)
+                            && fact.confidence == crate::facts::Confidence::Inferred
+                        {
+                            for (reg, ty) in args {
+                                match fact.value.params.iter_mut().find(|(r, _)| r == reg) {
+                                    Some((_, existing)) => {
+                                        *existing = existing.join(ty);
+                                    }
+                                    None => fact.value.params.push((*reg, ty.clone())),
+                                }
+                            }
+                        }
+                    }
+                }
+                let next: std::collections::BTreeMap<u64, crate::subtype::Signature> = signatures
+                    .iter()
+                    .map(|(addr, fact)| (*addr, fact.value.clone()))
+                    .collect();
+                if next == callees {
+                    break;
+                }
+                callees = next;
+            }
+            for ((entry_offset, instructions, pcode), solution) in
+                lifted.iter().zip(solutions.iter())
+            {
                 let facts = crate::types_infer::infer(pcode);
                 let parameters: Vec<String> = parameter_slots
                     .iter()
@@ -1486,7 +1524,6 @@ impl Core {
                 // structure along `src <: dst` copy edges to a fixpoint, and
                 // a call asserts the callee's signature onto the argument
                 // and return registers — the interprocedural direction.
-                let solution = crate::subtype::solve_with(pcode, &callees);
                 let structural: Vec<String> = parameter_slots
                     .iter()
                     .map(|(_, offset)| {
