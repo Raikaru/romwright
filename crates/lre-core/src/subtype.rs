@@ -51,17 +51,38 @@ pub struct Solution {
     pub types: BTreeMap<u64, Ty>,
 }
 
-/// Solve the subtype constraints a function's p-code implies and return
-/// each register's structural type.
+/// A callee's recovered signature, asserted into a caller's solve so the
+/// argument registers and the return value take the callee's types. This
+/// is the interprocedural half of BinSub: the callee's `Fact` flows into
+/// the caller as a constraint.
+#[derive(Debug, Clone)]
+pub struct Signature {
+    /// Parameter register offset -> the callee's solved type for it.
+    pub params: Vec<(u64, Ty)>,
+    /// Return register offset -> the callee's solved return type.
+    pub returns: Vec<(u64, Ty)>,
+}
+
+/// Solve a function in isolation — no callee facts.
 pub fn solve(instructions: &[PcodeInstruction]) -> Solution {
-    let mut c = Collector::default();
+    solve_with(instructions, &BTreeMap::new())
+}
+
+/// Solve with callee signatures: at each `CALL`/`CALLIND` to a known
+/// address, the callee's parameter types constrain the caller's argument
+/// registers and the callee's return type constrains the caller's use of
+/// the return register.
+pub fn solve_with(
+    instructions: &[PcodeInstruction],
+    callees: &BTreeMap<u64, Signature>,
+) -> Solution {
+    let mut c = Collector::new(callees);
     c.collect(instructions);
     c.solve()
 }
 
 /// Interns variables and gathers constraints in one pass over the p-code.
-#[derive(Default)]
-struct Collector {
+struct Collector<'a> {
     vars: BTreeMap<(String, u64), Var>,
     names: Vec<(String, u64)>,
     constraints: Vec<Constraint>,
@@ -76,9 +97,36 @@ struct Collector {
     struct_bases: BTreeSet<u64>,
     pending: BTreeMap<(String, u64), (u64, i64, u32)>,
     spill_alias: Option<(u64, u32)>,
+    /// Callee signatures by call target address, for interprocedural
+    /// constraint injection.
+    callees: &'a BTreeMap<u64, Signature>,
+    /// Which type-var currently holds each register's value. A copy makes
+    /// the destination register hold the source's var; a CALL makes the
+    /// return register hold a fresh var carrying the callee's return type.
+    holding: BTreeMap<u64, Var>,
 }
 
-impl Collector {
+impl<'a> Collector<'a> {
+    fn new(callees: &'a BTreeMap<u64, Signature>) -> Self {
+        Self {
+            vars: BTreeMap::new(),
+            names: Vec::new(),
+            constraints: Vec::new(),
+            defined: BTreeSet::new(),
+            alias: BTreeMap::new(),
+            address_of: BTreeMap::new(),
+            spilled: BTreeMap::new(),
+            built_from: BTreeMap::new(),
+            sum_of: BTreeMap::new(),
+            scaled: BTreeMap::new(),
+            struct_bases: BTreeSet::new(),
+            pending: BTreeMap::new(),
+            spill_alias: None,
+            callees,
+            holding: BTreeMap::new(),
+        }
+    }
+
     fn var(&mut self, v: &PcodeVarnode) -> Var {
         let key = (v.space.clone(), v.offset);
         if let Some(&var) = self.vars.get(&key) {
@@ -96,6 +144,67 @@ impl Collector {
         }
         let var = self.var(v);
         self.constraints.push(Constraint::Cap(var, class));
+    }
+
+    /// A fresh type variable not tied to a varnode — for a call's return
+    /// value, which has no storage location until the caller uses it.
+    fn fresh(&mut self) -> Var {
+        let var = self.names.len() as Var;
+        self.names.push(("fresh".to_string(), var as u64));
+        var
+    }
+
+    /// Assert a structural type onto a variable as constraints — the
+    /// interprocedural direction, where a callee's solved `Ty` becomes
+    /// this variable's capabilities and structure.
+    fn assert_ty(&mut self, var: Var, ty: &Ty) {
+        match ty {
+            Ty::Unknown => {}
+            Ty::Scalar(class) => {
+                self.constraints.push(Constraint::Cap(var, *class));
+            }
+            Ty::Ptr(inner) => {
+                self.constraints.push(Constraint::Cap(var, Class::Ptr));
+                // The pointee's structure is this variable's own: a `*T`
+                // is a field at offset 0, a `*struct{..}` is each field.
+                match inner.as_ref() {
+                    Ty::Scalar(class) => {
+                        self.constraints.push(Constraint::Field(
+                            var,
+                            0,
+                            Field { offset: 0, size: class.width() / 8, class: *class },
+                        ));
+                    }
+                    Ty::Struct(fields) => {
+                        for field in fields.values() {
+                            self.constraints
+                                .push(Constraint::Field(var, field.offset, *field));
+                        }
+                    }
+                    Ty::Array { elem, stride } => {
+                        if let Ty::Scalar(class) = elem.as_ref() {
+                            self.constraints
+                                .push(Constraint::Array(var, *stride, *class));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            // A variable that *is* an aggregate (not a pointer to one):
+            // assert its fields/elements directly.
+            Ty::Struct(fields) => {
+                for field in fields.values() {
+                    self.constraints
+                        .push(Constraint::Field(var, field.offset, *field));
+                }
+            }
+            Ty::Array { elem, stride } => {
+                if let Ty::Scalar(class) = elem.as_ref() {
+                    self.constraints
+                        .push(Constraint::Array(var, *stride, *class));
+                }
+            }
+        }
     }
 
     fn collect(&mut self, instructions: &[PcodeInstruction]) {
@@ -140,6 +249,12 @@ impl Collector {
                     }
                     if output.space == "register" {
                         self.defined.insert(output.offset);
+                        // The destination register now holds the source's
+                        // value — the same type-var.
+                        if input.space != "const" {
+                            let src = self.var(input);
+                            self.holding.insert(output.offset, src);
+                        }
                     }
                     // Track the alias so a later use of the temp reaches
                     // the source register.
@@ -210,6 +325,37 @@ impl Collector {
             }
             "LOAD" => self.load(op),
             "STORE" => self.store(op),
+            "CALL" => {
+                // A direct call to a known callee: the callee's parameter
+                // types constrain the value each argument register holds,
+                // and the callee's return type constrains the caller's use
+                // of the return register. The argument is the *value* in
+                // the register — which `holding` tracks through copies —
+                // not the register's own var.
+                if let Some(target) = op.inputs.first()
+                    && (target.space == "ram" || target.space == "const")
+                    && let Some(sig) = self.callees.get(&target.offset)
+                {
+                    for (reg, ty) in &sig.params {
+                        let var = match self.holding.get(reg) {
+                            Some(&v) => v,
+                            None => self.var(&PcodeVarnode {
+                                space: "register".into(),
+                                offset: *reg,
+                                size: 8,
+                            }),
+                        };
+                        self.assert_ty(var, ty);
+                    }
+                    for (reg, ty) in &sig.returns {
+                        // The return register holds a fresh value after the
+                        // call — a new var carrying the callee's return type.
+                        let var = self.fresh();
+                        self.assert_ty(var, ty);
+                        self.holding.insert(*reg, var);
+                    }
+                }
+            }
             "CALLIND" | "BRANCHIND" => {
                 if let Some(target) = op.inputs.first() {
                     self.cap(target, Class::Code);
@@ -319,6 +465,9 @@ impl Collector {
                         });
                         let dst = self.var(output);
                         self.constraints.push(Constraint::Subtype(src, dst));
+                        if output.space == "register" {
+                            self.holding.insert(output.offset, src);
+                        }
                     }
                 }
             }
@@ -665,6 +814,50 @@ mod tests {
                 Ty::Struct(fields) => {
                     assert!(fields.contains_key(&0x34), "field at +0x34: {fields:?}");
                     assert!(fields.contains_key(&0x10), "field at +0x10: {fields:?}");
+                }
+                other => panic!("expected a struct, got {other:?}"),
+            },
+            other => panic!("expected a pointer, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_call_constrains_the_argument_register_to_the_callees_type() {
+        // The callee at 0x2000 takes a struct pointer in rdi. A caller that
+        // copies its own rdi into the argument register and calls should
+        // see its rdi take the callee's type — the interprocedural edge.
+        let mut callees = BTreeMap::new();
+        let mut fields = BTreeMap::new();
+        fields.insert(
+            0x34i64,
+            Field { offset: 0x34, size: 4, class: Class::Float(32) },
+        );
+        callees.insert(
+            0x2000u64,
+            Signature {
+                params: vec![(0x38, Ty::Ptr(Box::new(Ty::Struct(fields))))],
+                returns: vec![],
+            },
+        );
+        let solution = solve_with(
+            &[
+                instruction(vec![op(
+                    "COPY",
+                    Some(varnode("register", 0x38, 8)), // rdi = rdi (param)
+                    vec![varnode("register", 0x38, 8)],
+                )]),
+                instruction(vec![op(
+                    "CALL",
+                    None,
+                    vec![varnode("ram", 0x2000, 8)],
+                )]),
+            ],
+            &callees,
+        );
+        match solution.types.get(&0x38) {
+            Some(Ty::Ptr(inner)) => match inner.as_ref() {
+                Ty::Struct(fields) => {
+                    assert!(fields.contains_key(&0x34), "callee field at +0x34: {fields:?}");
                 }
                 other => panic!("expected a struct, got {other:?}"),
             },

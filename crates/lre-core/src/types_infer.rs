@@ -67,6 +67,15 @@ impl Class {
         }
     }
 
+    /// The bit width a sized class carries; pointer-ish and unknown
+    /// classes have no meaningful width, so they report a word.
+    pub fn width(self) -> u32 {
+        match self {
+            Class::Num(b) | Class::Int(b) | Class::Uint(b) | Class::Float(b) => b,
+            _ => 64,
+        }
+    }
+
     /// The least class above both. A width joins with a width of the same
     /// size; two different widths keep the wider, because the narrower use
     /// is a truncation of the same storage.
