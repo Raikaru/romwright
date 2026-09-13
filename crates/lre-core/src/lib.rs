@@ -1367,8 +1367,12 @@ impl Core {
             // each has a Signature the callers' second pass can consume.
             let mut lifted: Vec<(u64, usize, Vec<crate::native_runtime::PcodeInstruction>)> =
                 Vec::with_capacity(entries.len());
-            let mut callees: std::collections::BTreeMap<u64, crate::subtype::Signature> =
-                std::collections::BTreeMap::new();
+            // The Knowledge DB: each function's signature is a fact with
+            // provenance. The solver's own recovery is Inferred; the
+            // decompiler's FuncProto is Strong and overrides it, so a
+            // caller sees the more authoritative signature.
+            let mut signatures: crate::facts::FactStore<u64, crate::subtype::Signature> =
+                crate::facts::FactStore::default();
             for entry in entries {
                 let walk = live.walk(entry.offset)?;
                 if walk.instructions == 0 {
@@ -1398,9 +1402,55 @@ impl Core {
                         solution.types.get(offset).map(|ty| (*offset, ty.clone()))
                     })
                     .collect();
-                callees.insert(entry.offset, crate::subtype::Signature { params, returns });
+                signatures.assert(
+                    entry.offset,
+                    crate::facts::Fact::new(
+                        crate::subtype::Signature { params, returns },
+                        crate::facts::Confidence::Inferred,
+                        crate::facts::FactOrigin::TypeInference,
+                    ),
+                );
                 lifted.push((entry.offset, walk.instructions as usize, pcode));
             }
+            // The decompiler's own prototype recovery is the stronger
+            // source: a FuncProto asserts each function's signature at
+            // Strong, overriding the solver's Inferred fact. Best-effort —
+            // a function the decompiler declines keeps its inferred
+            // signature.
+            let int_slots: Vec<u64> = parameter_slots.iter().map(|(_, o)| *o).collect();
+            let float_slot_offsets: Vec<u64> = float_slots.iter().map(|(_, o)| *o).collect();
+            let int_ret: Vec<u64> = return_slots.iter().map(|(_, o)| *o).collect();
+            for (entry_offset, _, _) in &lifted {
+                let address = lre_model::Address {
+                    space: lre_model::AddressSpace::Ram,
+                    offset: *entry_offset,
+                };
+                if let Ok(doc) = self.decompile_native_doc(binary, &address, program, None)
+                    && let Some(proto) = doc.prototype
+                {
+                    let sig = crate::subtype::Signature::from_funcproto(
+                        &proto,
+                        &int_slots,
+                        &float_slot_offsets,
+                        &int_ret,
+                        &float_return_slots,
+                    );
+                    signatures.assert(
+                        *entry_offset,
+                        crate::facts::Fact::new(
+                            sig,
+                            crate::facts::Confidence::Strong,
+                            crate::facts::FactOrigin::Ghidra,
+                        ),
+                    );
+                }
+            }
+            // The callee map the solver consumes is the winning fact per
+            // function — the Knowledge DB's answer, not a bare map.
+            let callees: std::collections::BTreeMap<u64, crate::subtype::Signature> = signatures
+                .iter()
+                .map(|(addr, fact)| (*addr, fact.value.clone()))
+                .collect();
             // Pass 2: re-solve each function with the callee map, so a call
             // constrains its argument registers to the callee's parameter
             // types and its return register to the callee's return type.

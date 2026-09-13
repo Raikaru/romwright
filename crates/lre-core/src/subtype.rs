@@ -63,6 +63,79 @@ pub struct Signature {
     pub returns: Vec<(u64, Ty)>,
 }
 
+
+/// A decompiler type as a structural `Ty` — the Ghidra/`Strong` direction,
+/// where a recovered `FuncProto` overrides the solver's inference.
+fn decomp_to_ty(ty: &lre_model::DecompType) -> Ty {
+    let name = ty.name.as_deref().unwrap_or("");
+    // Ghidra often omits `size`; fall back to the C type's canonical width
+    // (LP64) so `int` is 32, not the 64 a missing size would default to.
+    let name_bits = |n: &str| -> u32 {
+        match n {
+            "char" | "byte" | "bool" | "schar" | "uchar" => 8,
+            "short" | "ushort" | "wchar_t" => 16,
+            "int" | "uint" | "float" | "long32" => 32,
+            "long" | "ulong" | "double" | "long64" | "pointer" => 64,
+            _ => 64,
+        }
+    };
+    let bits = ty.size.map(|s| (s * 8) as u32).unwrap_or_else(|| name_bits(name));
+    match ty.metatype.as_deref() {
+        Some("ptr") => Ty::Ptr(Box::new(
+            ty.target.as_deref().map(decomp_to_ty).unwrap_or(Ty::Unknown),
+        )),
+        Some("array") => Ty::Array {
+            elem: Box::new(ty.target.as_deref().map(decomp_to_ty).unwrap_or(Ty::Unknown)),
+            stride: ty.target.as_ref().and_then(|t| t.size).unwrap_or(1),
+        },
+        Some("float") => Ty::Scalar(Class::Float(bits)),
+        Some("code") => Ty::Scalar(Class::Code),
+        _ => match name {
+            "float" | "double" => Ty::Scalar(Class::Float(bits)),
+            n if n.starts_with("uint") || n.starts_with("unsigned") || n.starts_with('u') => {
+                Ty::Scalar(Class::Uint(bits))
+            }
+            "int" | "long" | "short" | "char" | "schar" => Ty::Scalar(Class::Int(bits)),
+            _ => Ty::Scalar(Class::Num(bits)),
+        },
+    }
+}
+
+impl Signature {
+    /// Build a `Signature` from a decompiler-recovered `FuncProto`: each
+    /// parameter's `DecompType` becomes a `Ty` on its register slot, split
+    /// across the integer and float parameter registers by kind.
+    pub fn from_funcproto(
+        proto: &lre_model::FuncProto,
+        int_slots: &[u64],
+        float_slots: &[u64],
+        int_ret: &[u64],
+        float_ret: &[u64],
+    ) -> Signature {
+        let mut params = Vec::new();
+        let mut int_i = 0;
+        let mut float_i = 0;
+        for param in &proto.parameters {
+            let ty = decomp_to_ty(&param.data_type);
+            let is_float = matches!(ty, Ty::Scalar(Class::Float(_)));
+            let slot = if is_float {
+                float_slots.get(float_i).copied().inspect(|_| float_i += 1)
+            } else {
+                int_slots.get(int_i).copied().inspect(|_| int_i += 1)
+            };
+            if let Some(reg) = slot {
+                params.push((reg, ty));
+            }
+        }
+        let ret_ty = decomp_to_ty(&proto.return_type);
+        let returns = if matches!(ret_ty, Ty::Scalar(Class::Float(_))) {
+            float_ret.first().map(|r| (*r, ret_ty)).into_iter().collect()
+        } else {
+            int_ret.first().map(|r| (*r, ret_ty)).into_iter().collect()
+        };
+        Signature { params, returns }
+    }
+}
 /// Solve a function in isolation — no callee facts.
 pub fn solve(instructions: &[PcodeInstruction]) -> Solution {
     solve_with(instructions, &BTreeMap::new())
