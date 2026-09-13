@@ -1363,6 +1363,12 @@ impl Core {
             .collect();
         let mut rows = Vec::with_capacity(entries.len());
         self.live.with(binary, program, |live| {
+            // Pass 1: lift every function and solve it in isolation, so
+            // each has a Signature the callers' second pass can consume.
+            let mut lifted: Vec<(u64, usize, Vec<crate::native_runtime::PcodeInstruction>)> =
+                Vec::with_capacity(entries.len());
+            let mut callees: std::collections::BTreeMap<u64, crate::subtype::Signature> =
+                std::collections::BTreeMap::new();
             for entry in entries {
                 let walk = live.walk(entry.offset)?;
                 if walk.instructions == 0 {
@@ -1379,7 +1385,27 @@ impl Core {
                     all
                 };
                 let pcode = live.pcode(&addresses)?;
-                let facts = crate::types_infer::infer(&pcode);
+                let solution = crate::subtype::solve(&pcode);
+                let params = parameter_slots
+                    .iter()
+                    .filter_map(|(_, offset)| {
+                        solution.types.get(offset).map(|ty| (*offset, ty.clone()))
+                    })
+                    .collect();
+                let returns = return_slots
+                    .iter()
+                    .filter_map(|(_, offset)| {
+                        solution.types.get(offset).map(|ty| (*offset, ty.clone()))
+                    })
+                    .collect();
+                callees.insert(entry.offset, crate::subtype::Signature { params, returns });
+                lifted.push((entry.offset, walk.instructions as usize, pcode));
+            }
+            // Pass 2: re-solve each function with the callee map, so a call
+            // constrains its argument registers to the callee's parameter
+            // types and its return register to the callee's return type.
+            for (entry_offset, instructions, pcode) in &lifted {
+                let facts = crate::types_infer::infer(pcode);
                 let parameters: Vec<String> = parameter_slots
                     .iter()
                     .map(|(_, offset)| facts.get(*offset).name())
@@ -1407,10 +1433,10 @@ impl Core {
                 // prove — `*struct{+0x34: float32}` for a register
                 // dereferenced at several offsets. This is the BinSub
                 // layer: the subtype solver propagates capabilities and
-                // structure along `src <: dst` copy edges to a fixpoint, so
-                // a value used as a pointer constrains the register it was
-                // copied from — which the flat lattice cannot express.
-                let solution = crate::subtype::solve(&pcode);
+                // structure along `src <: dst` copy edges to a fixpoint, and
+                // a call asserts the callee's signature onto the argument
+                // and return registers — the interprocedural direction.
+                let solution = crate::subtype::solve_with(pcode, &callees);
                 let structural: Vec<String> = parameter_slots
                     .iter()
                     .map(|(_, offset)| {
@@ -1422,13 +1448,13 @@ impl Core {
                     })
                     .collect();
                 rows.push(serde_json::json!({
-                    "entry": entry.to_string(),
+                    "entry": format!("{:08x}", entry_offset),
                     "model": model.name,
                     "parameters": parameters,
                     "structural": structural,
                     "float_parameters": float_parameters,
                     "returns": returns,
-                    "instructions": walk.instructions,
+                    "instructions": instructions,
                 }));
             }
             Ok(())
