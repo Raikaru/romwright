@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/raikaru/ventris/desktop/ventris-qt/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
