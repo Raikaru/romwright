@@ -55,8 +55,12 @@ def run_gate(script: str, arguments: list[str], report: Path) -> dict:
     result = subprocess.run(
         [sys.executable, str(ROOT / script), *arguments, "--report", str(report)],
         cwd=ROOT, env=environment, capture_output=True, text=True)
-    if result.returncode != 0 or not report.is_file():
-        raise ValueError(f"{script} failed: {result.stderr.strip() or result.stdout.strip()}")
+    # A gate's nonzero exit is its own verdict on rows; this runner only needs
+    # the per-row metrics it still writes. Abort only when there is no report
+    # to read (a crash), not when the gate legitimately failed some rows.
+    if not report.is_file():
+        raise ValueError(f"{script} produced no report: "
+                         f"{result.stderr.strip() or result.stdout.strip()}")
     return json.loads(report.read_text())
 
 

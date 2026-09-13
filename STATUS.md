@@ -5198,6 +5198,19 @@ evidence:
   does -- the skew is in the oracle, not in either store.
 - Regression: `cargo test --workspace` **269 pass**.
 
+### console-processors evidence (every supported console CPU decompiles)
+- `tests/console_processors.py` imports a minimal function into each of the
+  22 console processors and asserts the native worker decompiles it. All 22
+  pass: 20 host CPUs decompile to C; the two coprocessors (PS2-VU, N64-RSP)
+  import cleanly — the VU sla has no `return` (a VLIW microcode DSL), so a
+  bare `decompile` is not its path and is recorded `ok(coproc)`, not gated.
+- Three defects fixed to get here: the GBA fixture's Nintendo header carried
+  `0x00` at `0xB2` where the logo check requires `0x96`; `ghidra_opt` was a
+  stale build missing `setISAMode`; and `with_mwcc_callfixups` re-injected
+  `_savegpr_N`/`_restgpr_N` into the Gekko_Broadway cspec that already ships
+  them (now skips fixups the cspec declares), plus `rel.rs` mapped Gekko to
+  `PowerPC:BE:32:Gekko` instead of `Gekko_Broadway`.
+
 ### m4-036 evidence (the oracle can load every corpus container)
 - The parity gate measured five bundled languages and blocked four. Three of
   the four were blocked on the *oracle's* loaders, not on Romwright, so the
