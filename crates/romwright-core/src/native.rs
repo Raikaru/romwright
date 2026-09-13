@@ -49,6 +49,11 @@ pub(crate) mod genesis;
 pub(crate) mod gameboy;
 pub(crate) mod snes;
 pub(crate) mod xex;
+pub(crate) mod crypto;
+pub(crate) mod threeds;
+pub(crate) mod ps3;
+pub(crate) mod vita;
+pub(crate) mod psp;
 mod mdebug;
 pub(crate) mod nonreturn;
 use romwright_model::{
@@ -1595,6 +1600,22 @@ pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>
         return result;
     }
     if let Some(result) = switch::import(data) {
+        return result;
+    }
+    // 3DS NCCH/NCSD/CIA before xbox_3ds: threeds implements them where
+    // xbox_3ds only refuses. xbox_3ds still owns XEX/XBE.
+    if let Some(result) = threeds::import(data) {
+        return result;
+    }
+    // Vita before PS3: both use the `SCE\0` magic, but Vita's little-endian
+    // version-3/type-1 header would misparse under PS3's big-endian layout.
+    if let Some(result) = vita::import(data) {
+        return result;
+    }
+    if let Some(result) = ps3::import(data) {
+        return result;
+    }
+    if let Some(result) = psp::import(data) {
         return result;
     }
     if let Some(result) = xbox_3ds::import(data) {
@@ -5220,6 +5241,55 @@ mod tests {
         } else {
             assert!(!imp.functions.is_empty(), "entry function must be present");
         }
+    }
+
+    #[test]
+    fn console_containers_route_to_their_loader() {
+        // Each console magic must reach its own loader, not fall through to
+        // the generic native path. A magic-only blob is recognized but
+        // malformed, so the loader answers Some(Err) — which still proves the
+        // dispatch routed (a miss would return the generic parse or None).
+        let mut ncch = vec![0u8; 0x200];
+        ncch[0x100..0x104].copy_from_slice(b"NCCH");
+        assert!(threeds::is_ncch(&ncch), "NCCH magic must detect");
+        assert!(threeds::import(&ncch).is_some(), "NCCH must route to threeds");
+
+        let mut ncsd = vec![0u8; 0x200];
+        ncsd[0x100..0x104].copy_from_slice(b"NCSD");
+        assert!(threeds::is_ncsd(&ncsd));
+        assert!(threeds::import(&ncsd).is_some(), "NCSD must route to threeds");
+
+        // CIA: header size 0x2020 + type/version fields.
+        let mut cia = vec![0u8; 0x10];
+        cia[0..4].copy_from_slice(&[0x20, 0x20, 0x00, 0x00]);
+        cia[4..8].copy_from_slice(&[0x00, 0x00, 0x01, 0x00]);
+        assert!(threeds::is_cia(&cia));
+        assert!(threeds::import(&cia).is_some(), "CIA must route to threeds");
+
+        // PS3 SELF: SCE\0 magic. PS3's detector is magic-only.
+        let mut ps3 = vec![0u8; 0x70];
+        ps3[0..4].copy_from_slice(b"SCE\0");
+        assert!(ps3::is_self(&ps3), "PS3 SELF magic must detect");
+
+        // Vita shares the SCE\0 magic but its is_self is strict: it parses
+        // the whole LE layout (version 3, type 1, embedded ARM ELF). A
+        // magic-only blob is NOT a Vita image — and PS3 must not claim it
+        // either, which is why vita::import runs before ps3::import.
+        let mut vita = vec![0u8; 0x80];
+        vita[0..4].copy_from_slice(b"SCE\0");
+        vita[4..8].copy_from_slice(&3u32.to_le_bytes());   // version 3
+        vita[10..12].copy_from_slice(&1u16.to_le_bytes()); // type SELF
+        assert!(!vita::is_self(&vita),
+                "a bare SCE\\0 header is not a complete Vita SELF");
+
+        // PSP PRX: ELF32 LE MIPS with e_type 0xFFA0 (ET_SCE_PSPRELEXEC).
+        let mut prx = vec![0u8; 0x40];
+        prx[0..4].copy_from_slice(b"\x7fELF");
+        prx[4] = 1; // ELFCLASS32
+        prx[5] = 1; // ELFDATA2LSB
+        prx[16..18].copy_from_slice(&0xffa0u16.to_le_bytes()); // e_type
+        prx[18..20].copy_from_slice(&8u16.to_le_bytes());      // EM_MIPS
+        assert!(psp::is_prx(&prx), "PSP PRX must detect");
     }
 
     #[test]

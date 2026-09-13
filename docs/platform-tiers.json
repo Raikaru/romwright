@@ -1,36 +1,36 @@
 {
  "schema_version": 1,
- "note": "Platforms Romwright does not support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3.",
+ "note": "Platforms Romwright does not support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3. Loaders for 3DS (NCCH/NCSD/CIA), PS3 (SELF/SPRX), Vita (SELF), PSP (PRX), Switch (NCA/XCI) and Xbox 360 (XEX) now ship in crates/romwright-core/src/native/ and route through parse_container; the remaining blockers below are the ones those loaders did not remove.",
  "platforms": [
   {
    "input": "Sony PSP (Allegrex ELF/PBP)",
    "tier": 2,
-   "blocker": "The Allegrex core's VFPU is not modelled by any pinned SLEIGH language, so PSP code that uses vector instructions cannot be decoded, let alone decompiled. Adding it means writing a SLEIGH extension, which is its own task with its own gate.",
-   "evidence": "Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only."
+   "blocker": "The PRX loader now imports decrypted ELF32 Allegrex modules (e_type 0xFFA0, sceModuleInfo, .lib.ent/.lib.stub). The remaining gap is the VFPU: the Allegrex core's vector instructions are not modelled by any pinned SLEIGH language, so PSP code that uses them cannot be decoded. Adding it means writing a SLEIGH extension, which is its own task with its own gate.",
+   "evidence": "crates/romwright-core/src/native/psp.rs imports PRX; Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only."
   },
   {
    "input": "PlayStation 2 (R5900 ELF)",
    "tier": 2,
-   "blocker": "The Emotion Engine's 128-bit multimedia instructions (MMI) and VU macro-mode operations do not decode: the pinned MIPS language mentions r5900 only as an IDA-PRO name mapping and defines no R5900 variant. Importing a PS2 ELF would decode the scalar subset and silently drop the rest.",
+   "blocker": "The Emotion Engine's 128-bit multimedia instructions (MMI) and VU macro-mode operations do not decode: the pinned MIPS language mentions r5900 only as an IDA-PRO name mapping and defines no R5900 variant. Importing a PS2 ELF would decode the scalar subset and silently drop the rest. (The VU micro-mode coprocessor has a native spec at native/languages/vu; the EE core MMI/VU0-macro gap is separate.)",
    "evidence": "MIPS/data/languages/mips.ldefs:127 external_name tool=\"IDA-PRO\" name=\"r5900r\" with no matching variant; zero matches for PADDW, PSUBW, QFSRV or PMFHL across MIPS/data/languages/*.sinc."
   },
   {
    "input": "PlayStation 3 (Cell SPU objects)",
    "tier": 2,
-   "blocker": "There is no SPU processor at all in the pinned tree, so SPU modules have no decoder. The PPU side is PowerPC, but an RE platform that decompiles only the PPU half of a PS3 title would misrepresent what it recovered.",
-   "evidence": "Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor."
+   "blocker": "The SELF/SPRX loader now unwraps PPU images (metadata-chain, segment-map and raw-extent paths) and carves embedded SPU ELF32 images. The remaining gap is the SPU decoder: there is no SPU processor in the pinned tree, so the carved SPU images have a language id (SPU:BE:128:default) but no .sla to decode them yet.",
+   "evidence": "crates/romwright-core/src/native/ps3.rs unwraps SELF/SPRX and yields SPU images; Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor."
   },
   {
    "input": "Xbox 360 (XEX)",
    "tier": 2,
-   "blocker": "VMX128 is not modelled: the pinned PowerPC language defines 64 VSX registers and no VMX128 variant, while the Xenon core exposes 128 vector registers with different encodings. Retail XEX images are also encrypted and compressed, which the encrypted-container row also covers.",
-   "evidence": "PowerPC/data/languages/ppc_common.sinc:150 defines vs0..vs63; zero matches for 'vmx128' anywhere under Ghidra/Processors; ppc.ldefs offers Altivec variants only."
+   "blocker": "The Xenon language (PowerPC:BE:64:Xenon-32addr) now models VMX128's 128 vector registers and the XEX loader maps the image. The remaining gap is XEX decryption: retail images are encrypted and compressed, and the keys are not bundled (the encrypted-container row covers this).",
+   "evidence": "native/languages/xenon builds PowerPC:BE:64:Xenon-32addr with VMX128; crates/romwright-core/src/native/xex.rs maps the container. Retail XEX decryption keys are not in this repository."
   },
   {
-   "input": "PS Vita and Nintendo 3DS (encrypted containers)",
+   "input": "Encrypted console containers (3DS CIA, PS3/Vita SELF, Switch NCA/XCI, Xbox 360 XEX)",
    "tier": 2,
-   "blocker": "Retail images are encrypted, and the keys are not in this repository or in the pinned Ghidra install. Fetching them would require a network call at runtime, which AGENTS.md II.1 reserves to the human and the project's offline guarantee forbids. Decrypted input supplied by the user is a separate, smaller task: it still needs a loader and a gate.",
-   "evidence": "AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; no key material or decryption code exists in this repository."
+   "blocker": "Retail images are encrypted. The loaders now decrypt where public keys exist (3DS zeros fixed key, PS3 APP vault, Vita public keys, Switch header/key-area stand-ins), but per-title and console-provisioned keys are not in this repository or the pinned Ghidra install, and AGENTS.md II.1 forbids the runtime network call that would fetch them. Decrypted input supplied by the user imports cleanly.",
+   "evidence": "AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; per-title klic/RAP/titlekey material is not bundled."
   }
  ]
 }

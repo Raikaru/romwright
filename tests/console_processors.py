@@ -13,6 +13,13 @@ worker cannot load, or a cspec the decompiler rejects (the Gekko duplicate
 callfixup this gate was written to catch). It is not a discovery score — the
 blob is one leaf function — it is the decode+decompile floor every console
 claim stands on.
+
+The loader half of "loader + processor" is gated in Rust, not here:
+`native::tests::console_containers_route_to_their_loader` proves each
+console's container magic routes to its own loader (3DS NCCH/NCSD/CIA, PS3
+and Vita SELF, PSP PRX, Switch NCA/XCI, Xbox 360 XEX), and each loader
+module carries synthetic-fixture unit tests that exercise the full import.
+This file's job is the processor column: the language each loader names.
 """
 import argparse
 import json
@@ -45,9 +52,10 @@ CONSOLE_PROCESSORS = [
     ("PSP",        "Allegrex:LE:32:default",        0x08804000,   "2a1002240800e00300000000", 0),
     ("PS3-SPU",    "SPU:BE:128:default",            0x00000,      "2400150335000000",       0),
     ("PS3-PPU",    "PowerPC:BE:64:64-32addr",       0x00010000,   "3860002a4e800020",       0),
-    ("Xbox360",    "PowerPC:BE:64:A2ALT-32addr",    0x82000000,   "3860002a4e800020",       0),
+    ("Xbox360",    "PowerPC:BE:64:Xenon-32addr",    0x82000000,   "3860002a4e800020",       0),
     ("Switch",     "AARCH64:LE:64:v8A",             0x7100000000, "40058052c0035fd6",       0),
     ("Vita",       "ARM:LE:32:v7",                  0x81000000,   "2a00a0e31eff2fe1",       0),
+    ("3DS",        "ARM:LE:32:v6",                  0x00100000,   "2a00a0e31eff2fe1",       0),
     ("PS2-VU",     "VU:LE:64:micro",                0x00000,      "0000000000000000",       0),
     ("N64-RSP",    "RSP:BE:32:default",             0x0000,       "03e0000800000000",       0),
 ]
