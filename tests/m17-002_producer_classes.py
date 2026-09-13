@@ -44,7 +44,7 @@ sys.path.insert(0, str(ROOT / "benchmarks"))
 from dwarf_types import extract  # noqa: E402
 from dwarf_gate import stub_ranges, symbol_addresses  # noqa: E402
 
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 VARIANTS = ("x86_64_many_o2", "i386_many_o2", "aarch64_many_o2", "powerpc_many_o2",
             "pe64_many_o2", "mipsel_many_o2")
 # Measured: `call` carries this corpus at 1.0 precision on every row, and
@@ -66,9 +66,9 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = {f"{row['architecture']}_{row['variant']}": row

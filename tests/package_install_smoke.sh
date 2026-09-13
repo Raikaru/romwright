@@ -5,7 +5,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_DIR="${VENTRIS_BUILD_DIR:-/tmp/ventris-qt-build}"
+BUILD_DIR="${ROMWRIGHT_BUILD_DIR:-/tmp/romwright-qt-build}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 
 if [ ! -f "$BINARY" ]; then
@@ -16,21 +16,21 @@ fi
 # Step 1: Build the CPack package.
 cmake --build "$BUILD_DIR" --target package >/dev/null
 
-PACKAGE="$(ls -t "$BUILD_DIR"/ventris-*.tar.gz 2>/dev/null | head -n1)"
+PACKAGE="$(ls -t "$BUILD_DIR"/romwright-*.tar.gz 2>/dev/null | head -n1)"
 if [ -z "$PACKAGE" ] || [ ! -f "$PACKAGE" ]; then
     echo "no CPack package found in $BUILD_DIR" >&2
     exit 1
 fi
 
 # Step 2: Extract to a clean temporary installation prefix.
-INSTALL_DIR="$(mktemp -d /tmp/ventris-install-smoke.XXXXXX)"
+INSTALL_DIR="$(mktemp -d /tmp/romwright-install-smoke.XXXXXX)"
 trap 'rm -rf "$INSTALL_DIR"' EXIT
 
 tar -xzf "$PACKAGE" -C "$INSTALL_DIR"
 
-INSTALLED_APP="$(find "$INSTALL_DIR" -name ventris-qt -type f -perm -111 | head -n1)"
+INSTALLED_APP="$(find "$INSTALL_DIR" -name romwright-qt -type f -perm -111 | head -n1)"
 if [ -z "$INSTALLED_APP" ] || [ ! -x "$INSTALLED_APP" ]; then
-    echo "installed ventris-qt not found in $INSTALL_DIR" >&2
+    echo "installed romwright-qt not found in $INSTALL_DIR" >&2
     exit 1
 fi
 
@@ -38,7 +38,7 @@ fi
 PROJECT="$INSTALL_DIR/project"
 REPORT="$INSTALL_DIR/ui-gate.json"
 
-QT_QPA_PLATFORM=offscreen VENTRIS_UI_INSTALL_OK=1 python3 "$ROOT/benchmarks/ui_gate.py" \
+QT_QPA_PLATFORM=offscreen ROMWRIGHT_UI_INSTALL_OK=1 python3 "$ROOT/benchmarks/ui_gate.py" \
     --app "$INSTALLED_APP" \
     --binary "$BINARY" \
     --program libc \

@@ -2,13 +2,13 @@
 """m9-004: the evidence filter, where a user can reach it.
 
 `m9-003` put `evidence` on the paged reads and proved it exact over the API.
-No consumer passed it: `lre-cli xrefs` had no flag and the xrefs dock fetched
+No consumer passed it: `romwright-cli xrefs` had no flag and the xrefs dock fetched
 every reference, so the audit the filter exists for could not be run from a
 terminal or a window.
 
 This gate drives both surfaces against the service that answers them:
 
-  * `lre-cli xrefs --evidence KIND` must print **exactly** what the API
+  * `romwright-cli xrefs --evidence KIND` must print **exactly** what the API
     returns for that kind -- including an address where the filter actually
     narrows the set, so a flag that is accepted and ignored fails -- and must
     refuse a kind that does not exist rather than printing everything;
@@ -46,7 +46,7 @@ ROW = re.compile(r"^([0-9a-f]+) --(\S+)--> ([0-9a-f]+) \[.*source=(\S+);")
 class Api:
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -68,7 +68,7 @@ class Api:
 
 
 def cli(*arguments: str) -> subprocess.CompletedProcess:
-    return subprocess.run([str(ROOT / "target/release/lre-cli"), *arguments],
+    return subprocess.run([str(ROOT / "target/release/romwright-cli"), *arguments],
                           cwd=ROOT, capture_output=True, text=True)
 
 
@@ -97,8 +97,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
     assert FIXTURE.is_file(), f"missing committed fixture {FIXTURE.name}"
 
     checked, narrowing = 0, 0

@@ -100,7 +100,7 @@
       "binary": "x86_64_plain_o0.bin",
       "unstripped_twin": "x86_64_plain_o0.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris -O0 -g tests/corpus-src/plain.c -o $OUT/x86_64_plain_o0.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_o0.bin"
+      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright -O0 -g tests/corpus-src/plain.c -o $OUT/x86_64_plain_o0.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_o0.bin"
     },
     {
       "architecture": "x86_64",
@@ -111,7 +111,7 @@
       "binary": "x86_64_plain_o2.bin",
       "unstripped_twin": "x86_64_plain_o2.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris -O2 -g tests/corpus-src/plain.c -o $OUT/x86_64_plain_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_o2.bin"
+      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright -O2 -g tests/corpus-src/plain.c -o $OUT/x86_64_plain_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_o2.bin"
     },
     {
       "architecture": "x86_64",
@@ -122,7 +122,7 @@
       "binary": "x86_64_plain_pie.bin",
       "unstripped_twin": "x86_64_plain_pie.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/x86_64_plain_pie.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_pie.bin"
+      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/x86_64_plain_pie.unstripped && llvm-strip --strip-all $OUT/x86_64_plain_pie.bin"
     },
     {
       "architecture": "x86_64",
@@ -133,7 +133,7 @@
       "binary": "x86_64_cpp_o2.bin",
       "unstripped_twin": "x86_64_cpp_o2.unstripped",
       "min_symbols": 15,
-      "command": "clang++ --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/x86_64_cpp_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_cpp_o2.bin"
+      "command": "clang++ --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/x86_64_cpp_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_cpp_o2.bin"
     },
     {
       "architecture": "x86_64",
@@ -144,7 +144,7 @@
       "binary": "x86_64_many_o2.bin",
       "unstripped_twin": "x86_64_many_o2.unstripped",
       "min_symbols": 400,
-      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/x86_64_many_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_many_o2.bin"
+      "command": "clang --target=x86_64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/x86_64_many_o2.unstripped && llvm-strip --strip-all $OUT/x86_64_many_o2.bin"
     },
     {
       "architecture": "i386",
@@ -155,7 +155,7 @@
       "binary": "i386_plain_o0.bin",
       "unstripped_twin": "i386_plain_o0.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/i386_plain_o0.unstripped && llvm-strip --strip-all $OUT/i386_plain_o0.bin"
+      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/i386_plain_o0.unstripped && llvm-strip --strip-all $OUT/i386_plain_o0.bin"
     },
     {
       "architecture": "i386",
@@ -166,7 +166,7 @@
       "binary": "i386_plain_o2.bin",
       "unstripped_twin": "i386_plain_o2.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/i386_plain_o2.unstripped && llvm-strip --strip-all $OUT/i386_plain_o2.bin"
+      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/i386_plain_o2.unstripped && llvm-strip --strip-all $OUT/i386_plain_o2.bin"
     },
     {
       "architecture": "i386",
@@ -177,7 +177,7 @@
       "binary": "i386_plain_pie.bin",
       "unstripped_twin": "i386_plain_pie.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/i386_plain_pie.unstripped && llvm-strip --strip-all $OUT/i386_plain_pie.bin"
+      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/i386_plain_pie.unstripped && llvm-strip --strip-all $OUT/i386_plain_pie.bin"
     },
     {
       "architecture": "i386",
@@ -188,7 +188,7 @@
       "binary": "i386_cpp_o2.bin",
       "unstripped_twin": "i386_cpp_o2.unstripped",
       "min_symbols": 15,
-      "command": "clang++ --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/i386_cpp_o2.unstripped && llvm-strip --strip-all $OUT/i386_cpp_o2.bin"
+      "command": "clang++ --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/i386_cpp_o2.unstripped && llvm-strip --strip-all $OUT/i386_cpp_o2.bin"
     },
     {
       "architecture": "i386",
@@ -199,7 +199,7 @@
       "binary": "i386_many_o2.bin",
       "unstripped_twin": "i386_many_o2.unstripped",
       "min_symbols": 400,
-      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/i386_many_o2.unstripped && llvm-strip --strip-all $OUT/i386_many_o2.bin"
+      "command": "clang --target=i686-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/i386 -B third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -L third_party/sysroots/i386/usr/lib/gcc-cross/i686-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/i386_many_o2.unstripped && llvm-strip --strip-all $OUT/i386_many_o2.bin"
     },
     {
       "architecture": "aarch64",
@@ -210,7 +210,7 @@
       "binary": "aarch64_plain_o0.bin",
       "unstripped_twin": "aarch64_plain_o0.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/aarch64_plain_o0.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_o0.bin"
+      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/aarch64_plain_o0.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_o0.bin"
     },
     {
       "architecture": "aarch64",
@@ -221,7 +221,7 @@
       "binary": "aarch64_plain_o2.bin",
       "unstripped_twin": "aarch64_plain_o2.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/aarch64_plain_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_o2.bin"
+      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/aarch64_plain_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_o2.bin"
     },
     {
       "architecture": "aarch64",
@@ -232,7 +232,7 @@
       "binary": "aarch64_plain_pie.bin",
       "unstripped_twin": "aarch64_plain_pie.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/aarch64_plain_pie.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_pie.bin"
+      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/aarch64_plain_pie.unstripped && llvm-strip --strip-all $OUT/aarch64_plain_pie.bin"
     },
     {
       "architecture": "aarch64",
@@ -243,7 +243,7 @@
       "binary": "aarch64_cpp_o2.bin",
       "unstripped_twin": "aarch64_cpp_o2.unstripped",
       "min_symbols": 15,
-      "command": "clang++ --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/aarch64_cpp_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_cpp_o2.bin"
+      "command": "clang++ --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/aarch64_cpp_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_cpp_o2.bin"
     },
     {
       "architecture": "aarch64",
@@ -254,7 +254,7 @@
       "binary": "aarch64_many_o2.bin",
       "unstripped_twin": "aarch64_many_o2.unstripped",
       "min_symbols": 400,
-      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/aarch64_many_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_many_o2.bin"
+      "command": "clang --target=aarch64-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/aarch64 -B third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -L third_party/sysroots/aarch64/usr/lib/gcc-cross/aarch64-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/aarch64_many_o2.unstripped && llvm-strip --strip-all $OUT/aarch64_many_o2.bin"
     },
     {
       "architecture": "powerpc",
@@ -265,7 +265,7 @@
       "binary": "powerpc_plain_o0.bin",
       "unstripped_twin": "powerpc_plain_o0.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/powerpc_plain_o0.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_o0.bin"
+      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O0 -g tests/corpus-src/plain.c -o $OUT/powerpc_plain_o0.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_o0.bin"
     },
     {
       "architecture": "powerpc",
@@ -276,7 +276,7 @@
       "binary": "powerpc_plain_o2.bin",
       "unstripped_twin": "powerpc_plain_o2.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/powerpc_plain_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_o2.bin"
+      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g tests/corpus-src/plain.c -o $OUT/powerpc_plain_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_o2.bin"
     },
     {
       "architecture": "powerpc",
@@ -287,7 +287,7 @@
       "binary": "powerpc_plain_pie.bin",
       "unstripped_twin": "powerpc_plain_pie.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/powerpc_plain_pie.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_pie.bin"
+      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/powerpc_plain_pie.unstripped && llvm-strip --strip-all $OUT/powerpc_plain_pie.bin"
     },
     {
       "architecture": "powerpc",
@@ -298,7 +298,7 @@
       "binary": "powerpc_cpp_o2.bin",
       "unstripped_twin": "powerpc_cpp_o2.unstripped",
       "min_symbols": 15,
-      "command": "clang++ --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/powerpc_cpp_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_cpp_o2.bin"
+      "command": "clang++ --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/powerpc_cpp_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_cpp_o2.bin"
     },
     {
       "architecture": "powerpc",
@@ -309,7 +309,7 @@
       "binary": "powerpc_many_o2.bin",
       "unstripped_twin": "powerpc_many_o2.unstripped",
       "min_symbols": 400,
-      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/powerpc_many_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_many_o2.bin"
+      "command": "clang --target=powerpc-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/powerpc -B third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -L third_party/sysroots/powerpc/usr/lib/gcc-cross/powerpc-linux-gnu/12 -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/powerpc_many_o2.unstripped && llvm-strip --strip-all $OUT/powerpc_many_o2.bin"
     },
     {
       "architecture": "mipsel",
@@ -320,7 +320,7 @@
       "binary": "mipsel_plain_o0.bin",
       "unstripped_twin": "mipsel_plain_o0.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O0 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o0.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o0.bin"
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O0 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o0.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o0.bin"
     },
     {
       "architecture": "mipsel",
@@ -331,7 +331,7 @@
       "binary": "mipsel_plain_o2.bin",
       "unstripped_twin": "mipsel_plain_o2.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o2.bin"
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g tests/corpus-src/plain.c -o $OUT/mipsel_plain_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_o2.bin"
     },
     {
       "architecture": "mipsel",
@@ -342,7 +342,7 @@
       "binary": "mipsel_plain_pie.bin",
       "unstripped_twin": "mipsel_plain_pie.unstripped",
       "min_symbols": 10,
-      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/mipsel_plain_pie.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_pie.bin"
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fPIE -pie tests/corpus-src/plain.c -o $OUT/mipsel_plain_pie.unstripped && llvm-strip --strip-all $OUT/mipsel_plain_pie.bin"
     },
     {
       "architecture": "mipsel",
@@ -353,7 +353,7 @@
       "binary": "mipsel_cpp_o2.bin",
       "unstripped_twin": "mipsel_cpp_o2.unstripped",
       "min_symbols": 15,
-      "command": "clang++ --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/mipsel_cpp_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_cpp_o2.bin"
+      "command": "clang++ --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O2 -g -fno-pie -no-pie tests/corpus-src/src.cpp -o $OUT/mipsel_cpp_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_cpp_o2.bin"
     },
     {
       "architecture": "mipsel",
@@ -364,7 +364,7 @@
       "binary": "mipsel_many_o2.bin",
       "unstripped_twin": "mipsel_many_o2.unstripped",
       "min_symbols": 400,
-      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=ventris --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/mipsel_many_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_many_o2.bin"
+      "command": "clang --target=mipsel-linux-gnu -fuse-ld=lld -ffile-prefix-map=$ROOT=romwright --sysroot third_party/sysroots/mipsel -B third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -L third_party/sysroots/mipsel/usr/lib/gcc-cross/mipsel-linux-gnu/12 -Wl,-z,execstack -O1 -fno-inline -g tests/corpus-src/many.c -o $OUT/mipsel_many_o2.unstripped && llvm-strip --strip-all $OUT/mipsel_many_o2.bin"
     },
     {
       "architecture": "pe64",
@@ -375,7 +375,7 @@
       "binary": "pe64_plain_o0.exe",
       "unstripped_twin": "pe64_plain_o0.unstripped.exe",
       "min_symbols": 100,
-      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o0.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o0.exe"
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o0.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o0.exe"
     },
     {
       "architecture": "pe64",
@@ -386,7 +386,7 @@
       "binary": "pe64_plain_o2.exe",
       "unstripped_twin": "pe64_plain_o2.unstripped.exe",
       "min_symbols": 100,
-      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o2.exe"
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_o2.exe"
     },
     {
       "architecture": "pe64",
@@ -397,7 +397,7 @@
       "binary": "pe64_plain_pie.dll",
       "unstripped_twin": "pe64_plain_pie.unstripped.dll",
       "min_symbols": 100,
-      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_pie.unstripped.dll && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_pie.dll"
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe64_plain_pie.unstripped.dll && x86_64-w64-mingw32-strip -s $OUT/pe64_plain_pie.dll"
     },
     {
       "architecture": "pe64",
@@ -408,7 +408,7 @@
       "binary": "pe64_many_o2.exe",
       "unstripped_twin": "pe64_many_o2.unstripped.exe",
       "min_symbols": 400,
-      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe64_many_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_many_o2.exe"
+      "command": "x86_64-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe64_many_o2.unstripped.exe && x86_64-w64-mingw32-strip -s $OUT/pe64_many_o2.exe"
     },
     {
       "architecture": "msvc",
@@ -474,7 +474,7 @@
       "binary": "pe32_plain_o0.exe",
       "unstripped_twin": "pe32_plain_o0.unstripped.exe",
       "min_symbols": 100,
-      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o0.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o0.exe"
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O0 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o0.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o0.exe"
     },
     {
       "architecture": "pe32",
@@ -485,7 +485,7 @@
       "binary": "pe32_plain_o2.exe",
       "unstripped_twin": "pe32_plain_o2.unstripped.exe",
       "min_symbols": 100,
-      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o2.exe"
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O2 -g -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_plain_o2.exe"
     },
     {
       "architecture": "pe32",
@@ -496,7 +496,7 @@
       "binary": "pe32_plain_pie.dll",
       "unstripped_twin": "pe32_plain_pie.unstripped.dll",
       "min_symbols": 100,
-      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_pie.unstripped.dll && i686-w64-mingw32-strip -s $OUT/pe32_plain_pie.dll"
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O2 -g -fPIC -shared -Wl,--disable-auto-image-base -Wno-error=implicit-function-declaration tests/corpus-src/plain.c -o $OUT/pe32_plain_pie.unstripped.dll && i686-w64-mingw32-strip -s $OUT/pe32_plain_pie.dll"
     },
     {
       "architecture": "pe32",
@@ -507,7 +507,7 @@
       "binary": "pe32_many_o2.exe",
       "unstripped_twin": "pe32_many_o2.unstripped.exe",
       "min_symbols": 400,
-      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=ventris -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe32_many_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_many_o2.exe"
+      "command": "i686-w64-mingw32-gcc -ffile-prefix-map=$ROOT=romwright -O1 -fno-inline -g -Wno-error=implicit-function-declaration tests/corpus-src/many.c -o $OUT/pe32_many_o2.unstripped.exe && i686-w64-mingw32-strip -s $OUT/pe32_many_o2.exe"
     }
   ]
 }

@@ -11,9 +11,9 @@ disassembly at every offset gives a superset CFG that backward
 analyses prune without polluting intended instructions, in O(n) with
 a result for every offset. Inputs are raw bytes plus architecture
 semantics -- no symbols. Their reference implementation is GPL-3.0
-and cannot be vendored into this Apache-2.0 tree, so `lre-cli
+and cannot be vendored into this Apache-2.0 tree, so `romwright-cli
 byte-scan` is a clean-room sweep over our own hand decoder
-(`crates/lre-core/src/disasm.rs`): one (length, flow-class) pair per
+(`crates/romwright-core/src/disasm.rs`): one (length, flow-class) pair per
 offset, a FNV digest over the stream, and point queries answered from
 the swept bytes.
 
@@ -44,8 +44,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
-CORPUS = Path("/home/raikaru/ventris-cache/corpus")
+CLI = ROOT / "target" / "release" / "romwright-cli"
+CORPUS = Path("/home/raikaru/romwright-cache/corpus")
 THRESHOLDS = {"agreement": 0.95}
 
 
@@ -98,7 +98,7 @@ LIBC = Path("/usr/lib64/libc.so.6")
 
 
 def elf_slide(data: bytes, endian: str) -> int:
-    # Mirrors `elf_bases` in crates/lre-core/src/native.rs: ET_EXEC maps
+    # Mirrors `elf_bases` in crates/romwright-core/src/native.rs: ET_EXEC maps
     # at its link VAs; ET_DYN slides to its minimum PT_LOAD vaddr, or to
     # the Ghidra-default base when that is zero.
     e_type = int.from_bytes(data[0x10:0x12], endian)
@@ -147,11 +147,11 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ)
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     environment["TMPDIR"] = str(arguments.work / "tmp")
     (arguments.work / "tmp").mkdir(exist_ok=True)
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     failures: list[str] = []
     rows = []

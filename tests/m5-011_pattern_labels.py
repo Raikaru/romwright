@@ -6,7 +6,7 @@ The pinned install ships byte patterns with names attached, for example
     <pattern><data>0x8b 0x1c 0x24 0xc3</data>
       <funcstart label="__i686.get_pc_thunk.bx" validcode="function"/></pattern>
 
-in `Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`. Ventris already
+in `Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`. Romwright already
 matches those patterns and already uses their labels to install call fixups in
 the decompiler console (`ConsoleSession::send_reference_fixups`) -- it just
 never wrote the name into the store, which left eleven `__i686.get_pc_thunk.*`
@@ -171,7 +171,7 @@ def main() -> int:
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
@@ -185,9 +185,9 @@ def main() -> int:
         return 0
 
     helpers = load_module("m5_010", ROOT / "tests" / "m5-010_initializer_names.py")
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"applied": 0, "missing": 0, "spurious": 0, "disagreed": 0}

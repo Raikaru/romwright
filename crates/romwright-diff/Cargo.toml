@@ -1,0 +1,13 @@
+[package]
+name = "romwright-diff"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Whole-program structural diff and name propagation for Romwright"
+
+[dependencies]
+romwright-model = { path = "../romwright-model" }
+romwright-db = { path = "../romwright-db" }
+serde = { workspace = true }
+thiserror = { workspace = true }

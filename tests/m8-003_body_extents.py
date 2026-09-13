@@ -132,7 +132,7 @@ def store_bodies(binary: Path, work: Path) -> tuple[dict[int, int], int, set[int
     """entry -> size from a fresh import, the image base, and reference targets."""
     project = work / f"{binary.stem}-extents"
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "extents", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, f"native import failed: {result.stderr.strip()}"
@@ -244,7 +244,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     m8_001 = load_m8_001()
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())

@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "desktop" / "ventris-qt" / "src"
+SRC = ROOT / "desktop" / "romwright-qt" / "src"
 MAIN_WINDOW = SRC / "main_window.cpp"
 
 EXPECTED_DOCKS = (

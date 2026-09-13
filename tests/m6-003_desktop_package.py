@@ -2,20 +2,20 @@
 """m6-003: the packaged desktop is built, installed and launched.
 
 `tests/package_install_smoke.sh` already builds the CPack archive, extracts it
-and runs the offscreen gate -- but it passes `VENTRIS_UI_INSTALL_OK=1` to the
+and runs the offscreen gate -- but it passes `ROMWRIGHT_UI_INSTALL_OK=1` to the
 app, and the app reports that variable back as `ui.install.ok`. The gate
 asserts a value the harness supplied, so nothing about the installation is
 measured.
 
 This gate measures it instead. It builds the archive, extracts it to a clean
-prefix, and launches the *extracted* binary with **every `VENTRIS_*` variable
+prefix, and launches the *extracted* binary with **every `ROMWRIGHT_*` variable
 removed**, so the run has no configuration to lean on. The app reports two
 facts it can see for itself:
 
   * `ui.install.prefix_ok` -- the executable is running from an installed
     layout, not from a build tree;
   * `ui.install.store_only_ok` -- it completed the store-facing workflow
-    (import, function list, filter) with no `VENTRIS_*` variable set.
+    (import, function list, filter) with no `ROMWRIGHT_*` variable set.
 
 `ui.install.ok` is left alone: it is a metric in a committed gate, and
 AGENTS.md II.1 reserves metric-definition changes. STATUS.md records the
@@ -42,7 +42,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / "desktop" / "ventris-qt"
+SOURCE = ROOT / "desktop" / "romwright-qt"
 DOC = ROOT / "docs" / "desktop.md"
 FIXTURE = ROOT / "tests" / "fixtures-src" / "tiny_bin"
 # The same list thresholds the M0 UI gate uses; unchanged.
@@ -81,7 +81,7 @@ def build_package(build: Path, timeout: int) -> Path:
     # The page and the gate must run the same targets; a page that drifts from
     # the build it documents is the failure this checks for.
     documented = documented_commands()
-    for target in ("-S desktop/ventris-qt", "--target ventris-qt", "--target package"):
+    for target in ("-S desktop/romwright-qt", "--target romwright-qt", "--target package"):
         assert any(target in command for command in documented), (
             f"docs/desktop.md documents no command with {target!r}: {documented}")
     subprocess.run(["cmake", "-S", str(SOURCE), "-B", str(build),
@@ -89,14 +89,14 @@ def build_package(build: Path, timeout: int) -> Path:
                    cwd=ROOT, check=True, timeout=timeout,
                    stdout=subprocess.DEVNULL)
     subprocess.run(["cmake", "--build", str(build), "--config", "Release",
-                    "--target", "ventris-qt"],
+                    "--target", "romwright-qt"],
                    cwd=ROOT, check=True, timeout=timeout,
                    stdout=subprocess.DEVNULL)
     subprocess.run(["cmake", "--build", str(build), "--config", "Release",
                     "--target", "package"],
                    cwd=ROOT, check=True, timeout=timeout,
                    stdout=subprocess.DEVNULL)
-    archives = sorted(build.glob("ventris-*.tar.gz"),
+    archives = sorted(build.glob("romwright-*.tar.gz"),
                       key=lambda path: path.stat().st_mtime, reverse=True)
     assert archives, f"no CPack archive under {build}"
     return archives[0]
@@ -108,9 +108,9 @@ def extract(archive: Path, prefix: Path) -> Path:
             assert not member.name.startswith("/") and ".." not in member.name, (
                 f"archive member escapes the prefix: {member.name}")
         bundle.extractall(prefix)
-    installed = [path for path in prefix.rglob("ventris-qt")
+    installed = [path for path in prefix.rglob("romwright-qt")
                  if path.is_file() and os.access(path, os.X_OK)]
-    assert installed, f"no executable ventris-qt inside {archive.name}"
+    assert installed, f"no executable romwright-qt inside {archive.name}"
     return installed[0]
 
 
@@ -118,7 +118,7 @@ def run_gate(app: Path, project: Path, extra: dict[str, str],
              store_only: bool, timeout: int) -> dict:
     # Nothing from this shell leaks in: a packaged run must stand on its own.
     environment = {key: value for key, value in os.environ.items()
-                   if not key.startswith("VENTRIS_")}
+                   if not key.startswith("ROMWRIGHT_")}
     environment["QT_QPA_PLATFORM"] = "offscreen"
     environment.update(extra)
     command = [str(app), "--gate", "--project", str(project), "--name", "tiny",
@@ -148,8 +148,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--build-dir", type=Path,
-                        default=Path(os.environ.get("VENTRIS_BUILD_DIR",
-                                                    "/tmp/ventris-qt-m6-003")))
+                        default=Path(os.environ.get("ROMWRIGHT_BUILD_DIR",
+                                                    "/tmp/romwright-qt-m6-003")))
     parser.add_argument("--timeout", type=int, default=2400)
     arguments = parser.parse_args()
 
@@ -187,7 +187,7 @@ def main() -> int:
 
     summary = (f"packaged {archive.name} on {platform.system()}/"
                f"{platform.machine()} with Qt {version}: store-only run from a "
-               f"clean prefix with no VENTRIS_* configuration, "
+               f"clean prefix with no ROMWRIGHT_* configuration, "
                f"ui.list.load_ms {store['ui.list.load_ms']:.2f}")
     if arguments.report:
         report.update(status="pass", passed=True, summary=summary,

@@ -6,20 +6,20 @@ this machine that comparison reads 107 against 107 while the two sets differ
 by thirteen entries in each direction. Counts agreeing is not parity, so this
 gate compares the facts themselves over the locked corpus:
 
-  * every thunk Ventris records must be a thunk stock Ghidra records
+  * every thunk Romwright records must be a thunk stock Ghidra records
     (`thunk.entry.precision` = 1.0 -- no invented thunk);
   * every stock thunk whose *entry* is inside the image must be recorded
     (`thunk.entry.recall`), with the known misses pinned by address and
     symbol so a new one fails and a fixed one demands an update;
   * every destination must either match stock exactly or be *explained*:
     Ghidra hops PLT stub -> EXTERNAL-block stub -> external symbol, while
-    Ventris hops PLT stub -> the GOT slot the stub reads. A row is explained
+    Romwright hops PLT stub -> the GOT slot the stub reads. A row is explained
     only when the stock destination lies outside every image mapping and the
-    Ventris destination is an in-image address carrying the same import name.
+    Romwright destination is an in-image address carrying the same import name.
     Anything else is an unexplained disagreement and fails.
 
 Stock thunks whose entry lies in Ghidra's synthetic EXTERNAL block are
-excluded, because Ventris has no such block; the exclusion is asserted rather
+excluded, because Romwright has no such block; the exclusion is asserted rather
 than assumed -- every excluded entry must be outside every image mapping.
 
 Usage:
@@ -48,7 +48,7 @@ THRESHOLDS = {
     "thunk.destination.unexplained": 0,
 }
 
-# Stock thunks Ventris does not record, keyed by corpus entry and pinned with
+# Stock thunks Romwright does not record, keyed by corpus entry and pinned with
 # the symbol each one binds. Empty: every stock thunk whose entry is in the
 # image is recorded, including the register-relative PIE stubs whose slot is
 # only known from propagated evidence. A new miss fails here rather than
@@ -102,7 +102,7 @@ def compare(identifier: str, stock: dict, native: dict) -> dict:
 
     # A thunk of ours that stock does not record at the same entry is only
     # acceptable when stock records the same *symbol* as a thunk in its
-    # EXTERNAL block: Ghidra puts the fact on the slot, Ventris puts it on the
+    # EXTERNAL block: Ghidra puts the fact on the slot, Romwright puts it on the
     # stub that reads the slot. The correspondence is by name, not by count.
     outside_names = {fact["name"] for fact in excluded.values()}
     explained_entries, invented = [], []
@@ -146,7 +146,7 @@ def main() -> int:
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--libc", type=Path, default=Path("/usr/lib64/libc.so.6"))
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
@@ -163,9 +163,9 @@ def main() -> int:
     from thunk_gate import stock_thunks
     from gen_oracle import digest
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"comparable": 0, "native": 0, "agree": 0, "equal": 0,

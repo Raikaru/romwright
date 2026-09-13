@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGES = Path.home() / "ventris-corpus/extracted/psv-need-for-speed-most-wanted"
+IMAGES = Path.home() / "romwright-corpus/extracted/psv-need-for-speed-most-wanted"
 ELF = "eboot.elf"
 BINMAP = "EBOOT.BINMAP"
 
@@ -63,9 +63,9 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m20-006-") as temporary:
         # 1. The sectionless SCE ELF imports through its program headers:
         #    module_start from the export table, NID-named import stubs.

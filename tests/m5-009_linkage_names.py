@@ -60,7 +60,7 @@ THRESHOLDS = {
     "linkage.name.unsupported": 0,
 }
 
-# Ghidra's labels for entries of `.init_array` / `.fini_array`. Ventris derives
+# Ghidra's labels for entries of `.init_array` / `.fini_array`. Romwright derives
 # the same names from the dynamic arrays as of m5-010, so the presentation
 # class below is normally empty; it stays because a platform without a dynamic
 # table would fall back to it, and it demands the reference either way.
@@ -156,7 +156,7 @@ def main() -> int:
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
@@ -173,9 +173,9 @@ def main() -> int:
 
     patterns_module = load_module("m5_011", ROOT / "tests" / "m5-011_pattern_labels.py")
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
 
     rows, totals = [], {"rows": 0, "comparable": 0, "equal": 0, "presentation": 0,

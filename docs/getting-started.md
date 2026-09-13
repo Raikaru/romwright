@@ -7,14 +7,14 @@ command is matched against what the command actually prints — if this page
 drifts from the tool, that gate fails.
 
 `$PROJECT` is the project directory the walkthrough writes to; use any path,
-for example `/tmp/ventris-demo`.
+for example `/tmp/romwright-demo`.
 
 ## What needs what
 
 | Step | Needs |
 |---|---|
 | `import`, `functions`, `symbols`, `strings`, `xrefs`, `search`, `rename`, `bookmark`, `patch` | nothing beyond the built binary |
-| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra install for **SLEIGH language data** (`VENTRIS_GHIDRA`, default `~/ghidra_12.1.3_PUBLIC`) and the native console (`native/build_console.sh`) |
+| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra install for **SLEIGH language data** (`ROMWRIGHT_GHIDRA`, default `~/ghidra_12.1.3_PUBLIC`) and the native console (`native/build_console.sh`) |
 | anything with `--oracle` | a Java runtime and the Stage-1 bridge; used only to generate comparison oracles |
 
 **No step starts a JVM** unless you pass `--oracle`. The native decompiler
@@ -28,7 +28,7 @@ are honest; the smaller one simply had less evidence.
 ## Build
 
 ```console
-$ cargo build --release -p lre-cli
+$ cargo build --release -p romwright-cli
 ```
 
 ## Import a binary
@@ -38,7 +38,7 @@ into a SQLite project. Nothing is invented: every fact carries its producing
 pass as provenance.
 
 ```console
-$ ./target/release/lre-cli import tests/fixtures-src/tiny_bin --name tiny --project $PROJECT
+$ ./target/release/romwright-cli import tests/fixtures-src/tiny_bin --name tiny --project $PROJECT
 imported tiny natively
 ```
 
@@ -47,7 +47,7 @@ imported tiny natively
 Functions, with entry, size and name:
 
 ```console
-$ ./target/release/lre-cli functions tiny --project $PROJECT
+$ ./target/release/romwright-cli functions tiny --project $PROJECT
 00400466      20  add
 0040047a      43  main
 ```
@@ -55,21 +55,21 @@ $ ./target/release/lre-cli functions tiny --project $PROJECT
 Imported symbols, with the pass that recorded each one:
 
 ```console
-$ ./target/release/lre-cli symbols tiny --project $PROJECT
+$ ./target/release/romwright-cli symbols tiny --project $PROJECT
 00402fd8  EXT       native-import  __libc_start_main
 ```
 
 Strings, with their encoding:
 
 ```console
-$ ./target/release/lre-cli strings tiny --project $PROJECT
+$ ./target/release/romwright-cli strings tiny --project $PROJECT
 00401000  [ASCII]  /lib64/ld-linux-x86-64.so.2
 ```
 
 References to an address, each with its kind and provenance:
 
 ```console
-$ ./target/release/lre-cli xrefs tiny --to 00400466 --project $PROJECT
+$ ./target/release/romwright-cli xrefs tiny --to 00400466 --project $PROJECT
 004011a8 --DATA--> 00400466 [inferred; source=native-import:elf-unwind; confidence=unknown]
 ```
 
@@ -78,7 +78,7 @@ takes `declared`, `decoded` or `inferred`, and the store applies it, so nothing
 is fetched to be thrown away:
 
 ```console
-$ ./target/release/lre-cli xrefs tiny --to 00400466 --evidence declared --project $PROJECT
+$ ./target/release/romwright-cli xrefs tiny --to 00400466 --evidence declared --project $PROJECT
 004011a8 --DATA--> 00400466 [inferred; source=native-import:elf-unwind; confidence=unknown]
 ```
 
@@ -89,13 +89,13 @@ program mapping an address, and `--follow` prints what that image holds there.
      needs two; `tests/m10-002_image_navigation.py` drives this command. -->
 
 ```sh
-lre-cli locate 00401000 --follow --project $PROJECT
+romwright-cli locate 00401000 --follow --project $PROJECT
 ```
 
 Search names and symbols:
 
 ```console
-$ ./target/release/lre-cli search tiny add --project $PROJECT
+$ ./target/release/romwright-cli search tiny add --project $PROJECT
 00400466  [function]  add
 -- 1 search hits
 ```
@@ -105,22 +105,22 @@ $ ./target/release/lre-cli search tiny add --project $PROJECT
 A rename is a durable fact, and `undo` reverses it:
 
 ```console
-$ ./target/release/lre-cli rename tiny 00400466 demo_add --project $PROJECT
+$ ./target/release/romwright-cli rename tiny 00400466 demo_add --project $PROJECT
 renamed 00400466 -> demo_add
-$ ./target/release/lre-cli functions tiny --project $PROJECT
+$ ./target/release/romwright-cli functions tiny --project $PROJECT
 00400466      20  demo_add
-$ ./target/release/lre-cli undo tiny --project $PROJECT
+$ ./target/release/romwright-cli undo tiny --project $PROJECT
 undid rename seq 1 (00400466 -> add)
-$ ./target/release/lre-cli functions tiny --project $PROJECT
+$ ./target/release/romwright-cli functions tiny --project $PROJECT
 00400466      20  add
 ```
 
 Bookmarks carry a label and an optional comment:
 
 ```console
-$ ./target/release/lre-cli bookmark tiny 00400466 hot checked --project $PROJECT
+$ ./target/release/romwright-cli bookmark tiny 00400466 hot checked --project $PROJECT
 bookmarked 00400466 -> hot
-$ ./target/release/lre-cli bookmarks tiny --project $PROJECT
+$ ./target/release/romwright-cli bookmarks tiny --project $PROJECT
 00400466  hot  checked
 -- 1 bookmarks
 ```
@@ -134,11 +134,11 @@ next entry, and the call into `add` is recorded as a reference.
 <!-- requires: sleigh -->
 
 ```console
-$ ./target/release/lre-cli import tests/fixtures-src/tiny_bin --name flowed --project $PROJECT
+$ ./target/release/romwright-cli import tests/fixtures-src/tiny_bin --name flowed --project $PROJECT
 imported flowed natively (12 functions, x86:LE:64:default)
-$ ./target/release/lre-cli functions flowed --project $PROJECT
+$ ./target/release/romwright-cli functions flowed --project $PROJECT
 00400370       6  printf
-$ ./target/release/lre-cli xrefs flowed --to 00400466 --project $PROJECT
+$ ./target/release/romwright-cli xrefs flowed --to 00400466 --project $PROJECT
 00400488 --UNCONDITIONAL_CALL--> 00400466 [inferred; source=native-import; confidence=unknown]
 -- 2 xrefs
 ```
@@ -154,10 +154,10 @@ JVM.
 <!-- requires: sleigh -->
 
 ```console
-$ ./target/release/lre-cli disasm tests/fixtures-src/tiny_bin 00400466 -n 4
+$ ./target/release/romwright-cli disasm tests/fixtures-src/tiny_bin 00400466 -n 4
 0x00400466: PUSH      RBP
 0x00400467: MOV       RBP,RSP
-$ ./target/release/lre-cli decompile tests/fixtures-src/tiny_bin 00400466 --name tiny --project $PROJECT
+$ ./target/release/romwright-cli decompile tests/fixtures-src/tiny_bin 00400466 --name tiny --project $PROJECT
 int add(int param_1,int param_2){return param_2 + param_1;}
 ```
 

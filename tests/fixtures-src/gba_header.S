@@ -15,7 +15,7 @@ _rom_entry:
     .byte   0x24, 0xff, 0xae, 0x51  @ 0x04: logo magic a loader identifies by
     .byte   0x69, 0x9a, 0xa2, 0x21
     .space  0x94, 0                 @ 0x0c: rest of the logo area, blank
-    .ascii  "VENTRISGATE"           @ 0xa0: game title (12 bytes)
+    .ascii  "ROMWRIGHTGATE"           @ 0xa0: game title (12 bytes)
     .byte   0
     .ascii  "VGAT"                  @ 0xac: game code
     .ascii  "VT"                    @ 0xb0: maker code

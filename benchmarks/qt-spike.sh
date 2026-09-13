@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-BUILD=${BUILD_DIR:-"$ROOT/desktop/ventris-qt/build"}
+BUILD=${BUILD_DIR:-"$ROOT/desktop/romwright-qt/build"}
 REPORT=${REPORT:-"$ROOT/benchmarks/reports/qt-spike.json"}
 mkdir -p "$BUILD" "$(dirname -- "$REPORT")"
 
@@ -11,7 +11,7 @@ if ! command -v cmake >/dev/null 2>&1; then
   exit 2
 fi
 
-cmake -S "$ROOT/desktop/ventris-qt" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
+cmake -S "$ROOT/desktop/romwright-qt" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
 /usr/bin/time -f '%e %M' -o "$BUILD/time.txt" cmake --build "$BUILD" --parallel "${JOBS:-2}"
 
 # The offscreen run exercises QApplication construction, the CXX/Rust Core
@@ -20,7 +20,7 @@ cmake -S "$ROOT/desktop/ventris-qt" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
 set +e
 QT_QPA_PLATFORM=offscreen /usr/bin/time -f '%e %M' -o "$BUILD/run-time.txt" \
   timeout --signal=TERM "${SMOKE_SECONDS:-3}" \
-  "$BUILD/ventris-qt" --project "$ROOT/.lre" --name smoke_bin \
+  "$BUILD/romwright-qt" --project "$ROOT/.romwright" --name smoke_bin \
   --binary "$ROOT/tests/fixtures-src/tiny_bin" --address 00400466 \
   >"$BUILD/run.out" 2>"$BUILD/run.err"
 status=$?

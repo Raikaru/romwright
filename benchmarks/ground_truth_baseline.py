@@ -42,7 +42,7 @@ def readelf_version() -> str:
 def stock_references(corpus: Path, prototypes: Path, ghidra: Path, timeout: int) -> dict:
     """Validate the immutable stock arity references and index them by id."""
     environment = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR", "VENTRIS_SPECS"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR", "ROMWRIGHT_SPECS"):
         environment.pop(name, None)
     with tempfile.TemporaryDirectory(prefix="m3-002-references-") as temporary:
         checked = Path(temporary) / "reference.json"
@@ -63,7 +63,7 @@ def main() -> int:
     parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
     parser.add_argument("--prototype-dir", type=Path, default=ROOT / "oracle/prototypes-v1")
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--baseline", type=Path,
                         default=ROOT / "benchmarks/reports/baseline-ghidra-truth.json")
     parser.add_argument("--write", action="store_true",

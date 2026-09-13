@@ -2,13 +2,13 @@
 """m6-005: the documented script runs, and the documented client exists.
 
 `docs/scripting.md` shows `examples/facts_report.py` driving a project through
-`python/ventris_sdk.py`. This gate runs the documented command exactly as
+`python/romwright_sdk.py`. This gate runs the documented command exactly as
 written, matches every output line under it, and checks the page against the
 client itself: every helper the page names must exist on `Client`, and every
 `Client` helper must be named by the page. A client that grows a method the
 page never mentions, or a page that promises one the client lost, fails here.
 
-The script is run twice -- with the SLEIGH console and with every `VENTRIS_*`
+The script is run twice -- with the SLEIGH console and with every `ROMWRIGHT_*`
 variable stripped -- because the page claims it works either way.
 
 Usage:
@@ -31,7 +31,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs" / "scripting.md"
-SDK = ROOT / "python" / "ventris_sdk.py"
+SDK = ROOT / "python" / "romwright_sdk.py"
 BLOCK = re.compile(r"```console\n(.*?)```", re.DOTALL)
 
 
@@ -59,7 +59,7 @@ def documented_commands(text: str) -> list[tuple[str, list[str]]]:
 
 def check_helpers(text: str) -> list[str]:
     """The page and the client name the same helpers."""
-    client = load("ventris_sdk", SDK).Client
+    client = load("romwright_sdk", SDK).Client
     helpers = sorted(
         name for name, value in inspect.getmembers(client, inspect.isfunction)
         if not name.startswith("_")
@@ -111,8 +111,8 @@ def main() -> int:
     assert commands, "the page contains no runnable command"
     helpers = check_helpers(text)
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-api",
-                    "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-api",
+                    "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     checked = 0
     with tempfile.TemporaryDirectory(prefix="m6-005-") as temporary:
@@ -121,9 +121,9 @@ def main() -> int:
                                   dict(os.environ), arguments.timeout)
         # And with nothing: the page claims the script runs either way.
         bare = {key: value for key, value in os.environ.items()
-                if not key.startswith("VENTRIS_")}
-        bare["VENTRIS_GHIDRA"] = "/nonexistent"
-        bare["VENTRIS_CONSOLE"] = "/nonexistent"
+                if not key.startswith("ROMWRIGHT_")}
+        bare["ROMWRIGHT_GHIDRA"] = "/nonexistent"
+        bare["ROMWRIGHT_CONSOLE"] = "/nonexistent"
         checked += run_documented(commands, Path(temporary) / "bare", bare,
                                   arguments.timeout)
 

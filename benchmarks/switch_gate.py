@@ -83,15 +83,15 @@ def main():
     parser.add_argument('--oracle-dir', type=Path, default=ROOT / 'oracle/switches-v1')
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
-        'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
+        'ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--timeout', type=int, default=180)
     args = parser.parse_args()
     if args.timeout <= 0:
         parser.error('timeout must be positive')
-    env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    env = dict(os.environ, ROMWRIGHT_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'romwright-api', '-p', 'romwright-worker'],
         cwd=ROOT, env=env, check=True)
     lock = json.loads((ROOT / 'tests/corpus.lock.json').read_text())
     recipes = {row['architecture'] + '_' + row['variant']: row

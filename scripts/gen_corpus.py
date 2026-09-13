@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Multi-architecture corpus generation script for Ventris (m1-006).
+"""Multi-architecture corpus generation script for Romwright (m1-006).
 
 Builds 5 corpus variants across target architectures:
 - x86-64 (host)
@@ -751,7 +751,7 @@ def main():
             # any checkout; without it the committed oracles keyed by binary
             # sha256 can never be found on a fresh clone.
             base_cmd = list(compiler)
-            base_cmd.append(f"-ffile-prefix-map={ROOT}=ventris")
+            base_cmd.append(f"-ffile-prefix-map={ROOT}=romwright")
             if arch_cfg["sysroot"]:
                 base_cmd.extend(["--sysroot", str(arch_cfg["sysroot"])])
             base_cmd.extend(arch_cfg["extra_flags"])
@@ -814,7 +814,7 @@ def main():
                 # (--enable-auto-image-base); a locked corpus needs one.
                 flags += ["-fPIC", "-shared", "-Wl,--disable-auto-image-base"]
             base_cmd = list(arch_cfg["c_compiler"])
-            base_cmd.append(f"-ffile-prefix-map={ROOT}=ventris")
+            base_cmd.append(f"-ffile-prefix-map={ROOT}=romwright")
             base_cmd.extend(arch_cfg["extra_flags"])
             cmd_twin = (base_cmd + flags
                         + ["-Wno-error=implicit-function-declaration",

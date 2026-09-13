@@ -55,8 +55,8 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
-WORKER = ROOT / "target/release/lre-worker"
+CLI = ROOT / "target/release/romwright-cli"
+WORKER = ROOT / "target/release/romwright-worker"
 SPECS = ROOT / "native/specs"
 LIBC_CANDIDATES = (
     "/usr/lib64/libc.so.6",
@@ -76,7 +76,7 @@ SHAPES = (
 
 
 def default_binary() -> Path:
-    pinned = os.environ.get("VENTRIS_LIBC")
+    pinned = os.environ.get("ROMWRIGHT_LIBC")
     if pinned:
         return Path(pinned)
     for candidate in LIBC_CANDIDATES:
@@ -110,15 +110,15 @@ def main():
                         help="multi-block functions scored")
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    install = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    install = Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
     shape_environment = dict(
         environment,
-        VENTRIS_LANGUAGE="x86:LE:64:default",
-        VENTRIS_LANGUAGE_DIR=str(SPECS),
-        VENTRIS_SLA=str(install / "Ghidra/Processors/x86/data/languages/x86-64.sla"))
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+        ROMWRIGHT_LANGUAGE="x86:LE:64:default",
+        ROMWRIGHT_LANGUAGE_DIR=str(SPECS),
+        ROMWRIGHT_SLA=str(install / "Ghidra/Processors/x86/data/languages/x86-64.sla"))
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True)
 
     report = {

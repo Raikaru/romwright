@@ -22,7 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGES = Path.home() / "ventris-corpus/extracted/gba-pokeemerald"
+IMAGES = Path.home() / "romwright-corpus/extracted/gba-pokeemerald"
 ROM = "pokeemerald.gba"
 MAP = "pokeemerald.map"
 AGB_MAIN = 0x080003A4
@@ -81,9 +81,9 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m20-003-", dir=Path.home() / "tmp") as temporary:
         project = Path(temporary) / "project"
         imported = subprocess.run(

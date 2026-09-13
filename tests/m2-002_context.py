@@ -32,7 +32,7 @@ def main():
     try:
         generate_reference(command, binary,
                            {**expected, "language": "PowerPC:BE:32:default",
-                            "compiler": "ventris-invalid-compiler"}, 180, include_xrefs=True)
+                            "compiler": "romwright-invalid-compiler"}, 180, include_xrefs=True)
     except ValueError as error:
         assert "Bridge RPC error" in str(error), error
     else:

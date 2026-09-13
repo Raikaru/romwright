@@ -51,7 +51,7 @@ LIBC_CANDIDATES = (
 
 def default_binary() -> Path:
     """The largest image every supported host has: its own libc."""
-    pinned = os.environ.get("VENTRIS_LIBC")
+    pinned = os.environ.get("ROMWRIGHT_LIBC")
     if pinned:
         return Path(pinned)
     for candidate in LIBC_CANDIDATES:
@@ -98,11 +98,11 @@ def run_import(binary: Path, shards: int, work: Path) -> dict:
     # reuse is m14-001's claim.
     environment = dict(
         os.environ,
-        VENTRIS_CONSOLE_SHARDS=str(shards),
-        VENTRIS_NO_IMPORT_CACHE="1",
+        ROMWRIGHT_CONSOLE_SHARDS=str(shards),
+        ROMWRIGHT_NO_IMPORT_CACHE="1",
     )
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "libc", "--project", str(project), "--timings"],
         cwd=ROOT, env=environment, capture_output=True, text=True)
     if result.returncode != 0:
@@ -140,8 +140,8 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-worker"],
                    cwd=ROOT, check=True)
     lanes = min(os.cpu_count() or 1, 6)
     report["consoles"] = lanes

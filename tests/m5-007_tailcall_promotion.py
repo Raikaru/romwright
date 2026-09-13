@@ -11,7 +11,7 @@ Stock Ghidra does not create the function either (`tests/m5-002_nds.py`
 records that), so this is an improvement over the frozen baseline, not
 parity repair. AGENTS.md II.1 reserves *enabling* an M4-style pass by
 default to the human, so the pass is off unless
-`VENTRIS_PROMOTE_TAILCALLS` is set, and this gate asserts both states:
+`ROMWRIGHT_PROMOTE_TAILCALLS` is set, and this gate asserts both states:
 
   * flag off  -- every fact is byte-identical to m5-006's behaviour;
   * flag on   -- `nds.arm7` recovers `mix`, recall 0.7500 -> 1.0000, and
@@ -40,7 +40,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
-FLAG = "VENTRIS_PROMOTE_TAILCALLS"
+FLAG = "ROMWRIGHT_PROMOTE_TAILCALLS"
 TAIL_CALL = (0x037F_802C, 0x037F_8000)
 BASELINE = ROOT / "benchmarks" / "reports" / "m3-001.json"
 
@@ -147,9 +147,9 @@ def main() -> int:
     fixture = load_module("m5_002", ROOT / "tests" / "m5-002_nds.py")
     from dwarf_arity import extract
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
 
     with tempfile.TemporaryDirectory(prefix="m5-007-") as temporary:
         work = Path(temporary)

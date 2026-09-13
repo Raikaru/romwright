@@ -29,7 +29,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 SAMPLE = 30
 DECOMPILE_TIMEOUT = 180
 
@@ -100,7 +100,7 @@ def main() -> int:
     parser.add_argument("--twin", type=Path, default=None,
                         help="unstripped twin for symbol truth (defaults to --binary itself)")
     parser.add_argument("--ghidra", type=Path, default=Path(
-        os.environ.get("VENTRIS_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC")))
+        os.environ.get("ROMWRIGHT_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC")))
     parser.add_argument("--sample", type=int, default=SAMPLE)
     parser.add_argument("--reuse", action="store_true",
                         help="reuse existing projects and C artifacts instead of re-running")
@@ -111,9 +111,9 @@ def main() -> int:
     environment = dict(os.environ)
     environment["TMPDIR"] = str(work / "tmp")
     # Honest cold numbers: the import cache would time a restore, not an analysis.
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     (work / "tmp").mkdir(exist_ok=True)
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     package = subprocess.run(
         ["rpm", "-qf", str(binary), "--queryformat", "%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}"],

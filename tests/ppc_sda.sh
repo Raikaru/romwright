@@ -9,26 +9,26 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PROJECT="${1:-$(mktemp -d /tmp/ventris-ppc-sda.XXXXXX)}"
-CLI="${CLI:-$ROOT/target/release/lre-cli}"
+PROJECT="${1:-$(mktemp -d /tmp/romwright-ppc-sda.XXXXXX)}"
+CLI="${CLI:-$ROOT/target/release/romwright-cli}"
 
-[ -x "$CLI" ] || { echo "missing $CLI — cargo build --release -p lre-cli" >&2; exit 1; }
-[ -x "${VENTRIS_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}" ] || {
+[ -x "$CLI" ] || { echo "missing $CLI — cargo build --release -p romwright-cli" >&2; exit 1; }
+[ -x "${ROMWRIGHT_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}" ] || {
     echo "missing native decompiler — build native/build_ghidra_opt.sh" >&2
     exit 1
 }
-[ -x "${VENTRIS_CONSOLE:-$ROOT/native/build/decomp_native}" ] || {
+[ -x "${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}" ] || {
     echo "missing reference console — build native/build_console.sh" >&2
     exit 1
 }
-[ -x "${VENTRIS_WORKER:-$ROOT/target/release/lre-worker}" ] || {
-    echo "missing lre-worker — cargo build --release -p lre-worker" >&2
+[ -x "${ROMWRIGHT_WORKER:-$ROOT/target/release/romwright-worker}" ] || {
+    echo "missing romwright-worker — cargo build --release -p romwright-worker" >&2
     exit 1
 }
 
-export VENTRIS_GHIDRA_OPT="${VENTRIS_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}"
-export VENTRIS_WORKER="${VENTRIS_WORKER:-$ROOT/target/release/lre-worker}"
-export VENTRIS_SPECS="${VENTRIS_SPECS:-$ROOT/native/specs}"
+export ROMWRIGHT_GHIDRA_OPT="${ROMWRIGHT_GHIDRA_OPT:-$ROOT/native/build/ghidra_opt}"
+export ROMWRIGHT_WORKER="${ROMWRIGHT_WORKER:-$ROOT/target/release/romwright-worker}"
+export ROMWRIGHT_SPECS="${ROMWRIGHT_SPECS:-$ROOT/native/specs}"
 
 rm -rf "$PROJECT"
 mkdir -p "$PROJECT"

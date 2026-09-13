@@ -4,7 +4,7 @@
   "disasm": 4,
   "decompile": 1,
   "decompile-doc": 1,
-  "oracle_routing": "error: no Ghidra jars under /home/raikaru/ventris/does/not/exist",
+  "oracle_routing": "error: no Ghidra jars under /home/raikaru/romwright/does/not/exist",
   "sleigh_data": "native decompile reads SLEIGH languages, never a JVM",
   "oracle_import": "imported tiny_bin (15 functions, x86:LE:64:default)",
   "passed": true,

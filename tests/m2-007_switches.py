@@ -35,18 +35,18 @@ __attribute__((noinline)) int dispatch(int value) {
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
-        'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
+        'ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    env = dict(os.environ, ROMWRIGHT_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
 
     def run(command, **kwargs):
         return subprocess.run(command, cwd=ROOT, env=env, text=True,
             capture_output=True, check=True, timeout=120, **kwargs)
 
-    with tempfile.TemporaryDirectory(prefix='ventris-m2-switch-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-m2-switch-') as temporary:
         work = Path(temporary)
         twin, binary = work / 'fixture.unstripped', work / 'fixture.bin'
         run(['clang', '-O2', '-g', '-funwind-tables', '-fno-pie', '-no-pie',
@@ -64,7 +64,7 @@ def main():
         assert len(expected) == 1 and len(next(iter(expected.values()))) == 7, oracle
         assert oracle['functions'][f"{symbols['plain']:08x}"] == [], oracle
         project = work / 'project'
-        cli = str(ROOT / 'target/release/lre-cli')
+        cli = str(ROOT / 'target/release/romwright-cli')
         run([cli, 'import', str(binary), '--project', str(project)])
         standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             hex(symbols['dispatch']), '--project', str(project)]).stdout)

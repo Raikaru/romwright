@@ -1,4 +1,4 @@
-Ventris is distributed under the Apache License, Version 2.0. See LICENSE.
+Romwright is distributed under the Apache License, Version 2.0. See LICENSE.
 
 Development oracle references
 ----------------------------
@@ -6,23 +6,23 @@ The optional `tools/diff_ghidra.py` workflow and checked-in semantic fixtures
 may be compared with the Apache-2.0-licensed Ghidra project:
 https://github.com/NationalSecurityAgency/ghidra
 
-Ventris does not bundle Ghidra binaries, Java classes, native decompiler
+Romwright does not bundle Ghidra binaries, Java classes, native decompiler
 artifacts, or protocol implementation code.
 
 Corpus metadata references
 --------------------------
 The optional source-backed corpus manifest contains metadata references to
-public projects. Ventris does not bundle their game images or copied source:
+public projects. Romwright does not bundle their game images or copied source:
 
 * n64decomp/perfect_dark — MIT, as stated by that project.
 * ACreTeam/ac-decomp — CC0-1.0, as stated by that project.
 * crowded-street/3s-decomp — AGPL-3.0, as stated by that project.
 * pret/pokeemerald — no explicit repository license was recorded when the
-  metadata was captured; Ventris preserves that fact and does not redistribute
+  metadata was captured; Romwright preserves that fact and does not redistribute
   its source or ROM.
 
 --------------------------
-Ventris vendors Ghidra 12.1.3's decompiler sources and
+Romwright vendors Ghidra 12.1.3's decompiler sources and
 `third_party/ghidra/typeinfo/generic_clib.gdt`, its C library type archive,
 unmodified. It builds the sources into the program it drives; the archive is
 data, not source, and is used as-is. Ghidra applies the archive's prototypes to

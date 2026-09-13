@@ -10,7 +10,7 @@
   },
   "architecture_check": {
     "passed": true,
-    "core": "crates/lre-core/src/native/discovery.rs",
+    "core": "crates/romwright-core/src/native/discovery.rs",
     "core_sha256": "9f22d85e49c12da4fd1eb77968f4372af0c230e2bb95cb4d787d5ec9f255b8ff",
     "legacy_source_sha256": "097543cd32b120100331421bb3900b9dd6f1bb7248aa4a2658bff193605ce840",
     "retired_decoder_discovery": [],

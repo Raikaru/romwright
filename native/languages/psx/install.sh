@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds and installs the ventris PSX language — the PsxLoader MIPS spec
+# Builds and installs the romwright PSX language — the PsxLoader MIPS spec
 # plus a GTE command fallback that lifts every known cop2 command to a
 # named pcodeop (gte_rtps, gte_mvmva, ...) regardless of flag bits.
 #
@@ -9,12 +9,12 @@
 # replacing the stock sla so PSX:LE:32:default resolves to the patched one.
 #
 # Usage: native/languages/psx/install.sh [GHIDRA_INSTALL_DIR]
-#   default: $VENTRIS_GHIDRA or ~/ghidra_12.1.3_PUBLIC
+#   default: $ROMWRIGHT_GHIDRA or ~/ghidra_12.1.3_PUBLIC
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 SRC="$ROOT/native/languages/psx"
-GHIDRA="${1:-${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
+GHIDRA="${1:-${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}}"
 SLEIGH="$GHIDRA/Ghidra/Features/Decompiler/os/linux_x86_64/sleigh"
 DEST="$GHIDRA/Ghidra/Extensions/PsxLoader/data/languages"
 

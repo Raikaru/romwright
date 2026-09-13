@@ -3,7 +3,7 @@
 
 `docs/core-api.md` documents the stdio interface every consumer speaks -- the
 Qt desktop, scripts, agents. Each documented exchange is sent to a real
-`lre-api` process here, and the documented response must be a subset of what
+`romwright-api` process here, and the documented response must be a subset of what
 comes back: every documented key must be present with the documented value.
 Extra fields are allowed, missing or different ones fail.
 
@@ -107,9 +107,9 @@ def contains(documented, actual, path: str) -> str | None:
 
 
 def sleigh_available() -> bool:
-    install = Path(os.environ.get("VENTRIS_GHIDRA",
+    install = Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                   str(Path.home() / "ghidra_12.1.3_PUBLIC")))
-    console = Path(os.environ.get("VENTRIS_CONSOLE",
+    console = Path(os.environ.get("ROMWRIGHT_CONSOLE",
                                   str(ROOT / "native/build/decomp_native")))
     return install.is_dir() and console.is_file()
 
@@ -124,10 +124,10 @@ def main() -> int:
     parsed = exchanges(DOC.read_text(encoding="utf-8"))
     assert parsed, "the document contains no documented exchange"
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-api",
-                    "-p", "lre-cli"], cwd=ROOT, check=True)
-    api = ROOT / "target/release/lre-api"
-    cli = ROOT / "target/release/lre-cli"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-api",
+                    "-p", "romwright-cli"], cwd=ROOT, check=True)
+    api = ROOT / "target/release/romwright-api"
+    cli = ROOT / "target/release/romwright-cli"
 
     checked, skipped = 0, []
     with tempfile.TemporaryDirectory(prefix="m6-002-") as temporary:
@@ -165,7 +165,7 @@ def main() -> int:
                 checked += 1
 
     assert checked >= 8, f"only {checked} documented exchanges were checked"
-    summary = (f"{checked} documented API exchanges driven through lre-api, "
+    summary = (f"{checked} documented API exchanges driven through romwright-api, "
                f"{len(skipped)} block(s) skipped")
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)

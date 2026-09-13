@@ -77,9 +77,9 @@ def main():
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
     env = dict(os.environ, DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
-    with tempfile.TemporaryDirectory(prefix='ventris-thunks-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-thunks-') as temporary:
         work = Path(temporary)
         twin, binary, project = work / 'fixture.unstripped', work / 'fixture.bin', work / 'project'
         subprocess.run(['gcc', '-nostdlib', '-no-pie', '-Wl,-e,entry', '-x', 'assembler', '-',

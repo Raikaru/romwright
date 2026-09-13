@@ -1,0 +1,457 @@
+#include "main_window.h"
+
+#include "analyst_dock.h"
+#include "core_bridge.h"
+#include "decompiler_dock.h"
+#include "decompiler_view.h"
+#include "facts_dock.h"
+#include "function_table_model.h"
+#include "functions_dock.h"
+#include "gate_runner.h"
+#include "graph_canvas.h"
+#include "graph_dock.h"
+#include "jobs_dock.h"
+#include "json_util.h"
+#include "listing_canvas.h"
+#include "memory_dock.h"
+#include "navigation_controller.h"
+#include "theme.h"
+#include "types_dock.h"
+#include "views.h"
+#include "vtables_dock.h"
+#include "xrefs_dock.h"
+
+#include <QAction>
+#include <QApplication>
+#include <QDialog>
+#include <QFileDialog>
+#include <QGridLayout>
+#include <QInputDialog>
+#include <QJsonArray>
+#include <QLabel>
+#include <QTimer>
+#include <QComboBox>
+#include <QPointer>
+#include <QLineEdit>
+#include <QListWidget>
+#include <QMenu>
+#include <QMenuBar>
+#include <QPushButton>
+#include <QSettings>
+#include <QStatusBar>
+#include <QVBoxLayout>
+
+MainWindow::MainWindow(const QString &project, const QString &program,
+                        const QString &binary, const QString &address,
+                        QWidget *parent)
+    : QMainWindow(parent), bridge_(new CoreBridge(project, this)),
+      program_(program), binary_(binary), address_(address) {
+    navigation_ = new NavigationController(this);
+    gate_runner_ = new GateRunner(this, bridge_, this);
+    setWindowTitle(QStringLiteral("Romwright"));
+    resize(1280, 820);
+
+    auto *central = new QWidget(this);
+    auto *root = new QVBoxLayout(central);
+    auto *controls = new QGridLayout();
+
+    controls->addWidget(new QLabel(QStringLiteral("Project"), central), 0, 0);
+    controls->addWidget(project_edit_ = new QLineEdit(project, central), 0, 1);
+    controls->addWidget(new QLabel(QStringLiteral("Program"), central), 0, 2);
+    controls->addWidget(program_edit_ = new QLineEdit(program, central), 0, 3);
+    controls->addWidget(new QLabel(QStringLiteral("Images"), central), 0, 4);
+    controls->addWidget(program_box_ = new QComboBox(central), 0, 5);
+    program_box_->setObjectName(QStringLiteral("programSelector"));
+    connect(program_box_, &QComboBox::activated, this, &MainWindow::selectProgramAt);
+    controls->addWidget(new QLabel(QStringLiteral("Binary"), central), 1, 0);
+    controls->addWidget(binary_edit_ = new QLineEdit(binary, central), 1, 1, 1, 3);
+    controls->addWidget(new QLabel(QStringLiteral("Address"), central), 2, 0);
+    controls->addWidget(address_edit_ = new QLineEdit(address, central), 2, 1);
+
+    auto add_btn = [this, controls](const QString &lbl, int r, int c, auto slot) {
+        auto *btn = new QPushButton(lbl, this);
+        controls->addWidget(btn, r, c);
+        connect(btn, &QPushButton::clicked, this, slot);
+        return btn;
+    };
+    add_btn(QStringLiteral("Import native"), 2, 2, &MainWindow::importNative);
+    add_btn(QStringLiteral("Open"), 2, 3, &MainWindow::openProgram);
+    add_btn(QStringLiteral("<"), 3, 0, [this]() { navigation_->back(); });
+    add_btn(QStringLiteral(">"), 3, 1, [this]() { navigation_->forward(); });
+    add_btn(QStringLiteral("Refresh"), 3, 2, &MainWindow::loadProgramPanels);
+    add_btn(QStringLiteral("Decompile"), 3, 3, &MainWindow::decompile);
+    controls->addWidget(new QLabel(QStringLiteral("Rename"), central), 4, 0);
+    controls->addWidget(name_edit_ = new QLineEdit(central), 4, 1);
+    add_btn(QStringLiteral("Apply rename"), 4, 2, &MainWindow::renameFunction);
+    add_btn(QStringLiteral("Undo"), 4, 3, &MainWindow::undoCommand);
+    controls->addWidget(new QLabel(QStringLiteral("Comment"), central), 5, 0);
+    controls->addWidget(comment_edit_ = new QLineEdit(central), 5, 1);
+    controls->addWidget(comment_kind_edit_ = new QLineEdit(QStringLiteral("eol"), central), 5, 2);
+    add_btn(QStringLiteral("Apply comment"), 5, 3, &MainWindow::applyComment);
+
+    auto *btn_listing = new QPushButton(QStringLiteral("Listing"), central);
+    connect(btn_listing, &QPushButton::clicked, this, &MainWindow::loadListing);
+    auto *btn_xref = new QPushButton(QStringLiteral("Xrefs"), central);
+    connect(btn_xref, &QPushButton::clicked, this, [this]() { xrefs_dock_->loadXrefs(program_edit_->text(), address_edit_->text()); });
+
+    listing_canvas_ = new ListingCanvas(central);
+    root->addLayout(controls);
+    root->addWidget(listing_canvas_, 1);
+    setCentralWidget(central);
+
+    auto add_dock = [this](Qt::DockWidgetArea a, QDockWidget *d) { addDockWidget(a, d); return d; };
+    functions_dock_ = static_cast<FunctionsDock*>(add_dock(Qt::LeftDockWidgetArea, new FunctionsDock(bridge_, this)));
+    analyst_dock_ = static_cast<AnalystDock*>(add_dock(Qt::LeftDockWidgetArea, new AnalystDock(bridge_, this)));
+    types_dock_ = static_cast<TypesDock*>(add_dock(Qt::LeftDockWidgetArea, new TypesDock(bridge_, this)));
+    decompiler_dock_ = static_cast<DecompilerDock*>(add_dock(Qt::BottomDockWidgetArea, new DecompilerDock(this)));
+    graph_dock_ = static_cast<GraphDock*>(add_dock(Qt::BottomDockWidgetArea, new GraphDock(bridge_, this)));
+    jobs_dock_ = static_cast<JobsDock*>(add_dock(Qt::BottomDockWidgetArea, new JobsDock(bridge_, this)));
+    facts_dock_ = static_cast<FactsDock*>(add_dock(Qt::RightDockWidgetArea, new FactsDock(bridge_, this)));
+    memory_dock_ = static_cast<MemoryDock*>(add_dock(Qt::RightDockWidgetArea, new MemoryDock(bridge_, this)));
+    xrefs_dock_ = static_cast<XrefsDock*>(add_dock(Qt::RightDockWidgetArea, new XrefsDock(bridge_, this)));
+    vtables_dock_ = static_cast<VtablesDock*>(add_dock(Qt::RightDockWidgetArea, new VtablesDock(bridge_, this)));
+
+    status_ = new QLabel(this);
+    statusBar()->addWidget(status_, 1);
+    // How complete the open program's facts are. A window that shows a
+    // listing built from a loader-only import must say the answer is
+    // provisional; the alternative is showing nothing until analysis ends,
+    // which on a 45k-function module is minutes of an empty window.
+    analysis_label_ = new QLabel(this);
+    analysis_label_->setObjectName(QStringLiteral("analysisStatus"));
+    statusBar()->addPermanentWidget(analysis_label_);
+    analysis_timer_ = new QTimer(this);
+    analysis_timer_->setInterval(50);
+    connect(analysis_timer_, &QTimer::timeout, this, &MainWindow::analysePending);
+
+    auto *menu_bar = menuBar();
+    auto *file_menu = menu_bar->addMenu(QStringLiteral("&File"));
+    file_menu->addAction(QStringLiteral("&Open project…"), this, [this]() {
+        const QString dir = QFileDialog::getExistingDirectory(this, QStringLiteral("Open SQLite project"), project_edit_->text());
+        if (!dir.isEmpty()) { project_edit_->setText(dir); }
+    });
+    recent_menu_ = file_menu->addMenu(QStringLiteral("Open &recent"));
+    file_menu->addSeparator();
+    file_menu->addAction(QStringLiteral("&Quit"), qApp, &QApplication::quit, QKeySequence::Quit);
+
+    auto *view_menu = menu_bar->addMenu(QStringLiteral("&View"));
+    const QList<QDockWidget*> all_docks = {functions_dock_, decompiler_dock_, facts_dock_, memory_dock_, graph_dock_, analyst_dock_, types_dock_, xrefs_dock_, jobs_dock_, vtables_dock_};
+    for (auto *dock : all_docks) {
+        view_menu->addAction(dock->toggleViewAction());
+    }
+
+    auto *search_menu = menu_bar->addMenu(QStringLiteral("&Search"));
+    search_menu->addAction(QStringLiteral("&Command palette"), this, &MainWindow::showCommandPalette, QKeySequence(QStringLiteral("Ctrl+Shift+P")));
+    search_menu->addAction(QStringLiteral("&Byte-pattern search…"), this, &MainWindow::showSignatureSearch);
+    search_menu->addAction(QStringLiteral("Recover &vtables"), this, [this]() { vtables_dock_->recoverVtables(binary_edit_->text()); });
+
+    connect(functions_dock_, &FunctionsDock::addressSelected, navigation_, &NavigationController::goTo);
+    connect(functions_dock_->model(), &FunctionTableModel::refreshed, gate_runner_, &GateRunner::modelRefreshed);
+    connect(decompiler_dock_->view(), &DecompilerView::addressSelected, navigation_, &NavigationController::goTo);
+    connect(decompiler_dock_->view(), &DecompilerView::renameRequested, this, &MainWindow::renameFunctionAt);
+    connect(listing_canvas_, &ListingCanvas::addressSelected, navigation_, &NavigationController::goTo);
+    connect(listing_canvas_, &QWidget::customContextMenuRequested, this, [this](const QPoint &p) { listingContextMenu(p, listing_canvas_->currentAddress()); });
+    connect(graph_dock_, &GraphDock::addressSelected, navigation_, &NavigationController::goTo);
+    connect(facts_dock_, &FactsDock::addressSelected, this, [this](const QString &a, bool) { address_edit_->setText(a); xrefs_dock_->loadXrefs(program_edit_->text(), a); });
+    connect(facts_dock_, &FactsDock::addressDoubleClicked, this, [this](const QString &a) { navigation_->goTo(a, true); });
+    connect(memory_dock_, &MemoryDock::addressSelected, navigation_, &NavigationController::goTo);
+    connect(analyst_dock_, &AnalystDock::addressDoubleClicked, this, [this](const QString &a) { navigation_->goTo(a, true); });
+    connect(vtables_dock_, &VtablesDock::addressDoubleClicked, this, [this](const QString &a) { navigation_->goTo(a, true); });
+    connect(xrefs_dock_, &XrefsDock::addressDoubleClicked, this, [this](const QString &a) { navigation_->goTo(a, true); });
+    connect(types_dock_, &TypesDock::prototypeSaved, this, [this](const QString &addr) {
+        decompile_cache_.remove(program_edit_->text() + QLatin1Char('|') + addr);
+        decompile();
+    });
+
+    auto hook = [this](auto *d) {
+        connect(d, &std::remove_pointer_t<decltype(d)>::jobStarted, jobs_dock_, [this](const QString &n) { jobs_dock_->beginJob(n); });
+        connect(d, &std::remove_pointer_t<decltype(d)>::jobFinished, jobs_dock_, [this](const QString &, bool ok, const QString &det) { jobs_dock_->finishJob(jobs_dock_->findChildren<QListWidget*>().first()->count() - 1, ok, det); });
+    };
+    hook(memory_dock_); hook(graph_dock_); hook(analyst_dock_); hook(types_dock_); hook(xrefs_dock_); hook(vtables_dock_);
+    connect(jobs_dock_, &JobsDock::statusRequested, this, &MainWindow::setStatus);
+
+    connect(navigation_, &NavigationController::addressChanged, this, [this](const QString &address) {
+        address_edit_->setText(address);
+        decompile();
+        loadListing();
+        xrefs_dock_->loadXrefs(program_edit_->text(), address);
+        types_dock_->setPrototypeAddress(address);
+        saveWorkspace();
+    });
+
+    if (!bridge_->startupError().isEmpty()) {
+        setStatus(bridge_->startupError(), true);
+    } else if (!program_.isEmpty()) {
+        functions_dock_->setProgram(program_);
+        navigation_->setProgram(program_);
+        if (!qEnvironmentVariableIsSet("ROMWRIGHT_UI_GATE")) { loadProgramPanels(); }
+    }
+    checkOnboardingGate();
+    restoreWorkspace();
+}
+
+MainWindow::~MainWindow() {
+    saveWorkspace();
+    bridge_->shutdown();
+}
+
+QString MainWindow::program() const { return program_edit_->text(); }
+
+void MainWindow::refreshPrograms() {
+    bridge_->request(QJsonObject{{"method", "programs"}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+        if (guard.isNull()) { return; }
+        QString error;
+        if (!successful(res, &error)) {
+            setStatus(error, true);
+            emit programsListed(0);
+            return;
+        }
+        const QJsonArray rows = res.value("result").toArray();
+        const QString current = program_edit_->text();
+        program_box_->blockSignals(true);
+        program_box_->clear();
+        for (const QJsonValue &value : rows) {
+            const QJsonObject row = value.toObject();
+            program_box_->addItem(QStringLiteral("%1 (%2)")
+                                      .arg(row.value("program").toString(),
+                                           row.value("language").toString()),
+                                  row.value("program").toString());
+        }
+        const int index = program_box_->findData(current);
+        if (index >= 0) {
+            program_box_->setCurrentIndex(index);
+        }
+        program_box_->blockSignals(false);
+        emit programsListed(rows.size());
+    });
+}
+
+int MainWindow::programCount() const {
+    return program_box_ == nullptr ? 0 : program_box_->count();
+}
+
+void MainWindow::selectProgramAt(int index) {
+    if (program_box_ == nullptr || index < 0 || index >= program_box_->count()) {
+        return;
+    }
+    const QString chosen = program_box_->itemData(index).toString();
+    if (chosen.isEmpty()) {
+        return;
+    }
+    program_box_->setCurrentIndex(index);
+    switchProgram(chosen);
+}
+
+void MainWindow::switchProgram(const QString &program) {
+    program_edit_->setText(program);
+    functions_dock_->setProgram(program);
+    navigation_->setProgram(program);
+    loadProgramPanels();
+    setStatus(QStringLiteral("showing %1").arg(program));
+}
+QString MainWindow::binary() const { return binary_edit_->text(); }
+
+QString MainWindow::firstAnalysisText() const { return first_analysis_; }
+void MainWindow::runGate(bool store_only) { gate_runner_->run(store_only); }
+
+void MainWindow::setStatus(const QString &message, bool error) {
+    if (status_ != nullptr) {
+        status_->setText(message);
+        status_->setStyleSheet(error ? QStringLiteral("color:#e06c75") : QString());
+    }
+}
+
+void MainWindow::loadProgramPanels() {
+    const QString p = program_edit_->text(), b = binary_edit_->text(), a = address_edit_->text();
+    // No search term from here: the Facts dock owns its own search box, and
+    // the window's `search_edit_` was never constructed -- every call to this
+    // function dereferenced null, so opening a program crashed the app.
+    facts_dock_->loadFacts(p, QString());
+    memory_dock_->loadMemory(p, b, a);
+    graph_dock_->loadGraph(b, a);
+    analyst_dock_->loadAnalystData(p);
+    types_dock_->loadTypes(p);
+    refreshAnalysisStatus();
+}
+
+void MainWindow::refreshAnalysisStatus() {
+    const QString p = program_edit_->text();
+    if (p.isEmpty()) {
+        analysis_label_->clear();
+        analysis_timer_->stop();
+        return;
+    }
+    bridge_->request(QJsonObject{{"method", "analysis_status"}, {"program", p}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         QString err;
+                         if (!successful(res, &err)) { analysis_label_->clear(); return; }
+                         const QJsonObject row = res.value(QStringLiteral("result")).toObject();
+                         const qint64 analysed = row.value(QStringLiteral("analysed")).toInteger();
+                         const qint64 seeded = row.value(QStringLiteral("seeded")).toInteger();
+                         const bool stale = row.value(QStringLiteral("stale")).toBool();
+                         analysis_label_->setText(
+                             stale ? QStringLiteral("provisional: %1 analysed, %2 to go")
+                                         .arg(analysed).arg(seeded)
+                                   : QStringLiteral("analysed: %1").arg(analysed));
+                         if (first_analysis_.isEmpty()) {
+                             first_analysis_ = analysis_label_->text();
+                         }
+                         // Keep asking for more only while there is more.
+                         if (stale && !analysis_timer_->isActive()) {
+                             analysis_timer_->start();
+                         } else if (!stale) {
+                             analysis_timer_->stop();
+                         }
+                     });
+}
+
+void MainWindow::analysePending() {
+    // One request at a time: the pass is work, and stacking requests would
+    // queue the window behind itself.
+    if (analysis_running_) { return; }
+    const QString p = program_edit_->text(), b = binary_edit_->text();
+    if (p.isEmpty() || b.isEmpty()) { analysis_timer_->stop(); return; }
+    analysis_running_ = true;
+    bridge_->request(QJsonObject{{"method", "analyse_pending"},
+                                 {"binary", b},
+                                 {"program", p},
+                                 {"budget", 16}},
+                     [this, guard = QPointer<MainWindow>(this)](const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         analysis_running_ = false;
+                         QString err;
+                         if (!successful(res, &err)) { analysis_timer_->stop(); return; }
+                         const QJsonObject row = res.value(QStringLiteral("result")).toObject();
+                         const qint64 analysed = row.value(QStringLiteral("analysed")).toInteger();
+                         const qint64 seeded = row.value(QStringLiteral("seeded")).toInteger();
+                         const bool stale = row.value(QStringLiteral("stale")).toBool();
+                         analysis_label_->setText(
+                             stale ? QStringLiteral("provisional: %1 analysed, %2 to go")
+                                         .arg(analysed).arg(seeded)
+                                   : QStringLiteral("analysed: %1").arg(analysed));
+                         if (!stale) {
+                             analysis_timer_->stop();
+                             // The facts changed under every view: refresh
+                             // once, at the end, rather than per function.
+                             functions_dock_->setProgram(program_edit_->text());
+                         }
+                     });
+}
+
+void MainWindow::importNative() {
+    const QString binary = binary_edit_->text(), p = program_edit_->text();
+    const int job = jobs_dock_->beginJob(QStringLiteral("native import"));
+    bridge_->request(QJsonObject{{"method", "import_native"}, {"binary", binary}, {"name", p}},
+                     [this, guard = QPointer<MainWindow>(this), job, p](
+                         const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         QString err;
+                         if (!successful(res, &err)) { jobs_dock_->finishJob(job, false, err); return; }
+                         jobs_dock_->finishJob(job, true, QStringLiteral("imported %1").arg(p));
+                         functions_dock_->setProgram(p);
+                         navigation_->setProgram(p);
+                         loadProgramPanels();
+                     });
+}
+
+void MainWindow::openProgram() {
+    const QString p = program_edit_->text();
+    const int job = jobs_dock_->beginJob(QStringLiteral("open program"));
+    // The answer arrives on the event loop, which may outlive this window when
+    // the gate exits: a raw `this` here read a destroyed QLineEdit.
+    bridge_->request(QJsonObject{{"method", "open"}, {"program", p}},
+                     [this, guard = QPointer<MainWindow>(this), job, p](
+                         const QJsonObject &res) {
+                         if (guard.isNull()) { return; }
+                         QString err;
+                         if (!successful(res, &err)) { jobs_dock_->finishJob(job, false, err); return; }
+                         jobs_dock_->finishJob(job, true, QStringLiteral("opened %1").arg(p));
+                         functions_dock_->setProgram(p);
+                         navigation_->setProgram(p);
+                         loadProgramPanels();
+                     });
+}
+
+void MainWindow::decompile() {
+    const QString address = address_edit_->text();
+    const QString key = program_edit_->text() + QLatin1Char('|') + address;
+    if (decompile_cache_.contains(key)) {
+        const auto cached = decompile_cache_.value(key);
+        decompiler_dock_->view()->setTokens(cached.second);
+        decompiler_dock_->view()->setAddress(address);
+        return;
+    }
+    const int job = jobs_dock_->beginJob(QStringLiteral("decompile %1").arg(address));
+    decompiler_dock_->view()->setPending(QStringLiteral("Decompiling…"));
+    const quint64 gen = ++decompile_generation_;
+    bridge_->request(QJsonObject{{"method", "decompile_doc"}, {"binary", binary_edit_->text()}, {"program", program_edit_->text()}, {"address", address}},
+                     [this, job, key, gen, address](const QJsonObject &res) {
+                         if (gen != decompile_generation_) { return; }
+                         QString err;
+                         if (!successful(res, &err)) {
+                             decompiler_dock_->view()->setPending(QStringLiteral("Decompilation failed: %1").arg(err));
+                             jobs_dock_->finishJob(job, false, err);
+                             return;
+                         }
+                         const QJsonObject result = res.value("result").toObject();
+                         QVector<TokenView> tokens;
+                         for (const QJsonValue &v : result.value("tokens").toArray()) {
+                             tokens.append(TokenView::fromJson(v.toObject()));
+                         }
+                         const qint64 rev = result.value("revision").toVariant().toLongLong();
+                         decompile_cache_.insert(key, qMakePair(rev, tokens));
+                         decompiler_dock_->view()->setTokens(tokens);
+                         decompiler_dock_->view()->setAddress(address);
+                         jobs_dock_->finishJob(job, true, QStringLiteral("%1 tokens, revision %2").arg(tokens.size()).arg(rev));
+                     });
+}
+
+void MainWindow::loadListing() { loadListingAt(address_edit_->text()); }
+
+void MainWindow::loadListingAt(const QString &address) {
+    if (address.isEmpty() || binary_edit_->text().isEmpty()) { return; }
+    const int job = jobs_dock_->beginJob(QStringLiteral("listing %1").arg(address));
+    bridge_->request(QJsonObject{{"method", "listing"}, {"binary", binary_edit_->text()}, {"start", address}, {"count", 128}},
+                     [this, job, address](const QJsonObject &res) {
+                         QString err;
+                         if (!successful(res, &err)) { jobs_dock_->finishJob(job, false, err); return; }
+                         QVector<ListingRowView> views;
+                         for (const QJsonValue &v : res.value("result").toObject().value("rows").toArray()) {
+                             views.append(ListingRowView::fromJson(v.toObject()));
+                         }
+                         listing_canvas_->setWindow(views);
+                         listing_canvas_->setAddress(address);
+                         jobs_dock_->finishJob(job, true, QStringLiteral("listing loaded"));
+                     });
+}
+
+void MainWindow::listingContextMenu(const QPoint &pos, const QString &addr) {
+    QMenu menu(this);
+    menu.addAction(QStringLiteral("Rename function"), this, [this, addr]() { renameFunctionAt(addr, QString()); });
+    menu.addAction(QStringLiteral("Show xrefs"), this, [this, addr]() { xrefs_dock_->loadXrefs(program_edit_->text(), addr); });
+    menu.addAction(QStringLiteral("Decompile here"), this, [this, addr]() { navigation_->goTo(addr, true); });
+    menu.exec(pos);
+}
+
+
+void MainWindow::checkOnboardingGate() {
+    if (qEnvironmentVariableIsSet("ROMWRIGHT_UI_GATE")) { return; }
+}
+
+void MainWindow::restoreWorkspace() {
+    QSettings settings(QStringLiteral("Romwright"), QStringLiteral("Romwright"));
+    const QString scope = program_edit_->text().isEmpty() ? QString() : program_edit_->text() + QLatin1Char('/');
+    const QByteArray geo = settings.value(scope + QStringLiteral("geometry")).toByteArray();
+    if (!geo.isEmpty()) { restoreGeometry(geo); }
+    const QByteArray state = settings.value(scope + QStringLiteral("windowState")).toByteArray();
+    if (!state.isEmpty()) { restoreState(state); }
+}
+
+void MainWindow::saveWorkspace() {
+    QSettings settings(QStringLiteral("Romwright"), QStringLiteral("Romwright"));
+    const QString scope = program_edit_->text().isEmpty() ? QString() : program_edit_->text() + QLatin1Char('/');
+    settings.setValue(scope + QStringLiteral("geometry"), saveGeometry());
+    settings.setValue(scope + QStringLiteral("windowState"), saveState());
+}

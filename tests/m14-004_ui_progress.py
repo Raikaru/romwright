@@ -73,7 +73,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="m14-004-") as temporary:
         project = Path(temporary) / "project"
         project.mkdir()
-        environment_key = "VENTRIS_UI_LOAD_ONLY"
+        environment_key = "ROMWRIGHT_UI_LOAD_ONLY"
         previous = os.environ.get(environment_key)
         os.environ[environment_key] = "1"
         started = time.perf_counter()

@@ -11,8 +11,8 @@ cd "$ROOT"
 WORK="$(mktemp -d /tmp/m1-004-pie.XXXXXX)"
 trap 'rm -rf "$WORK"' EXIT
 
-CLI="target/release/lre-cli"
-cargo build -q --release -p lre-cli
+CLI="target/release/romwright-cli"
+cargo build -q --release -p romwright-cli
 
 # Generate PIE corpus fixtures:
 # 1. plain_pie: standard PIE with -fPIE -pie (DT_RELA / R_X86_64_RELATIVE)

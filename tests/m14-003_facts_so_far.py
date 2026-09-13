@@ -36,7 +36,7 @@ import threading
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LIBC_CANDIDATES = (
     "/usr/lib64/libc.so.6",
     "/usr/lib/x86_64-linux-gnu/libc.so.6",
@@ -49,7 +49,7 @@ BUDGET = 100
 
 
 def libc() -> Path:
-    pinned = os.environ.get("VENTRIS_LIBC")
+    pinned = os.environ.get("ROMWRIGHT_LIBC")
     if pinned:
         return Path(pinned)
     for candidate in LIBC_CANDIDATES:
@@ -77,9 +77,9 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
-    environment["VENTRIS_NO_IMPORT_CACHE"] = "1"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     failures = []
     report = {

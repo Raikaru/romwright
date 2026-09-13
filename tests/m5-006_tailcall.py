@@ -194,9 +194,9 @@ def main() -> int:
             return 0
 
     fixture = load_fixture()
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
 
     with tempfile.TemporaryDirectory(prefix="m5-006-") as temporary:
         work = Path(temporary)

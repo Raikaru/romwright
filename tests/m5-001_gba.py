@@ -119,9 +119,9 @@ def main() -> int:
                 arguments.report.write_text(json.dumps(report, indent=2) + "\n")
             return 0
 
-        subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+        subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                        cwd=ROOT, check=True)
-        cli = ROOT / "target/release/lre-cli"
+        cli = ROOT / "target/release/romwright-cli"
         project = work / "project"
         imported = subprocess.run(
             [str(cli), "import", str(rom), "--name", "gba", "--project", str(project)],

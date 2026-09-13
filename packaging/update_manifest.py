@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create hash-addressed metadata for a Ventris release artifact set."""
+"""Create hash-addressed metadata for a Romwright release artifact set."""
 from __future__ import annotations
 
 import argparse
@@ -21,7 +21,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", required=True)
     parser.add_argument("--channel", default="stable")
-    parser.add_argument("--product", default="ventris")
+    parser.add_argument("--product", default="romwright")
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--output", type=Path, default=Path("update.json"))
     parser.add_argument("artifacts", nargs="+", type=Path)

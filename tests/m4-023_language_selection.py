@@ -9,7 +9,7 @@ hand-written table instead, which is how an ARM ELF was decoded as `v7` where
 the pinned install's own opinion file pins `v8`.
 
 This gate recomputes the selection from the install for every row, compares it
-with what `lre-cli import` selected, and compares both with what stock chose
+with what `romwright-cli import` selected, and compares both with what stock chose
 for the same bytes. A disagreement with stock passes only when it is *proven
 unconstrained*: no ELF constraint for that machine pins a variant, none has a
 secondary matching the image's flags, both languages are declared for the same
@@ -38,7 +38,7 @@ import xml.etree.ElementTree as ET
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 import gate_cache  # noqa: E402
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 ELF_LOADER = "Executable and Linking Format (ELF)"
 # The neutral decoder: the variant to take when the opinion data leaves the
@@ -221,7 +221,7 @@ def stock_language(install: Path, binary: Path, work: Path, name: str) -> str:
 
     The answer depends on the bytes and on the pinned install, so it is cached
     under exactly those (`benchmarks/gate_cache.py`); a different binary, a
-    different install revision, or an empty `VENTRIS_GATE_CACHE` all run
+    different install revision, or an empty `ROMWRIGHT_GATE_CACHE` all run
     `analyzeHeadless` again.
     """
     def probe() -> str:
@@ -291,7 +291,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--ghidra", type=Path,
-                        default=Path(os.environ.get("VENTRIS_GHIDRA",
+                        default=Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                                     Path.home() / "ghidra_12.1.3_PUBLIC")))
     parser.add_argument("--report", type=Path)
     parser.add_argument("--jobs", type=int, default=4,
@@ -299,7 +299,7 @@ def main() -> int:
     arguments = parser.parse_args()
     install = arguments.ghidra
     assert (install / "support/analyzeHeadless").is_file(), f"no install at {install}"
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
                    cwd=ROOT, check=True)
 
     measured, skipped = [], []

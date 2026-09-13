@@ -7,7 +7,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 ## Current implementation surface
 
-- Phases 5–7 are implemented in `lre-core`, `lre-api`, the Qt workstation
+- Phases 5–7 are implemented in `romwright-core`, `romwright-api`, the Qt workstation
   source, and `python/`: symbols/strings/search, memory and graph views,
   bookmarks/patches, typed data manager and propagation, a versioned
   stdio/HTTP API, a dependency-free SDK and console, an isolated
@@ -20,10 +20,10 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   AARCH64, ARM, MIPS, RISC-V and PowerPC. ELF/PE discovery now uses the generic
   SLEIGH worklist; without the console, only structural facts remain. Worker
   verification covers x86-64 and the Agent Under Fire PPC e500 target.
-- `lre-cli architectures --project DIR` scans the installed `.ldefs` catalog.
+- `romwright-cli architectures --project DIR` scans the installed `.ldefs` catalog.
   Non-x86 native decompile parity is not claimed without a matching compiled
   SLEIGH language and normalized specification bundle.
-- `desktop/ventris-qt` has CPack TGZ packaging. `packaging/sbom.py` emits an
+- `desktop/romwright-qt` has CPack TGZ packaging. `packaging/sbom.py` emits an
   SPDX 2.3 SBOM; `update_manifest.py` and `verify_update.py` produce and
   validate release artifact metadata.
 - `.github/workflows/ci.yml` is the cross-platform build/test definition.
@@ -37,9 +37,9 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   functions/function/symbols/read_memory/xrefs_to/xrefs_from/
   function_xrefs_from/export_facts/rename/decompile/disassemble/ping/
   dump_specs. Written against verified Ghidra sources only.
-- Rust workspace: lre-model, lre-db (SQLite WAL+FK, schema_version=1,
-  revision-stamped mutations), lre-core (CoreService facade), lre-cli,
-  lre-worker, lre-worker-client, lre-api, and lre-debug. `cargo test
+- Rust workspace: romwright-model, romwright-db (SQLite WAL+FK, schema_version=1,
+  revision-stamped mutations), romwright-core (CoreService facade), romwright-cli,
+  romwright-worker, romwright-worker-client, romwright-api, and romwright-debug. `cargo test
   --workspace`: 82 tests pass across 20 suites.
 - E2E proven on x86-64 ELF fixture (gcc -O0, 12.6 KB):
   - import: 15 functions, 34 xrefs, 93 symbols persisted with
@@ -47,7 +47,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   - store-only `open` (no JVM launched): works
   - rename persists in store, revision bump verified in unit tests
   - decompile + disasm through bridge against saved program
-- Native worker protocol (lre-worker) fixed to the pinned C++ exactly:
+- Native worker protocol (romwright-worker) fixed to the pinned C++ exactly:
   - registerProgram (queries answered from store/binary),
   - arch-id frame for decompileAt/setAction (ghidra_process.cc:82-97),
   - packed `<addr>` element + attribute ids from the marshal tables,
@@ -75,7 +75,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 ## Stage 3 closed: JVM-free protocol decompile (getPcode gap)
 - Out-of-tree `ghidra_opt` gains a raw-SLEIGH translator hook
   (native/ghidra-opt-sleigh.patch + native/build_ghidra_opt.sh; the pinned
-  third_party tree is untouched): when VENTRIS_SLA points at the compiled
+  third_party tree is untouched): when ROMWRIGHT_SLA points at the compiled
   x86-64.sla, ArchitecutureGhidra::buildTranslator registers the
   `<sleigh>`-path tag (SleighArchitecture::buildSpecFile handshake,
   sleigh_arch.cc:410-418) and builds a real `Sleigh`; buildContext then
@@ -96,15 +96,15 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 ## Stage 4 closed (this phase)
 - CLI `decompile <binary> <addr> [--name P] [--project DIR] [--base HEX]`:
-  the supported no-JVM decompile route. Spawns `lre-worker` against the
-  patched ghidra_opt (env VENTRIS_GHIDRA_OPT, default native/build/ghidra_opt)
+  the supported no-JVM decompile route. Spawns `romwright-worker` against the
+  patched ghidra_opt (env ROMWRIGHT_GHIDRA_OPT, default native/build/ghidra_opt)
   with vendored specs (native/specs) and the store project. Verified
   token-identical to the bridge oracle (`int add(int param_1,int param_2){
   return param_2 + param_1;}`) — differential step "CLI decompile".
 - `native/build_console.sh`: reproducible SLEIGH console build (needs
   binutils-devel/bfd.h, Ghidra's own native-build prerequisite; the bfd-less
   spike binary predates the pinned tree). Console env defaults now derive
-  from the Ghidra install (VENTRIS_GHIDRA) instead of /tmp/spike.
+  from the Ghidra install (ROMWRIGHT_GHIDRA) instead of /tmp/spike.
 - `benchmarks/gate.sh`: full JVM-free workflow gate (import ->
   functions/xrefs/rename/open -> disasm -> decompile),
   per-phase peak RSS + total wall; asserts < 100 MB and < 120 s.
@@ -153,7 +153,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 ## CORE-006: command + undo journal
 - `command_journal` table (schema v2, migrate): per-program monotonic seq,
   kind, JSON payload/undo_payload, done flag.
-- lre-db composes command transactions: `rename_command` (rename + revision
+- romwright-db composes command transactions: `rename_command` (rename + revision
   bump/event + journal push, one tx) and `undo_rename` (rename back + event
   + mark done, one tx); `journal_latest`/`journal_push`.
 - Core: `rename_command` (captures prior name for undo) + `undo_last`
@@ -170,7 +170,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   ("replace-functions"/"replace-symbols"/"replace-xrefs"/
   "replace-comments"/"replace-datatypes" + row count). rename_function is
   now transactional.
-- `lre-model::RevisionEvent { revision, kind, detail }`; store
+- `romwright-model::RevisionEvent { revision, kind, detail }`; store
   `events_since(program, since)`; `Core::events_since`.
 - Evidence (native import + rename, real store):
   (2, replace-functions, 11), (3, replace-xrefs, 3), (4, rename,
@@ -179,7 +179,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   paged test updated for bump semantics. 36 workspace tests.
 
 ## CORE-004: paged query API
-- `lre-model::Page<T> { rows, offset, total, revision }`; store methods
+- `romwright-model::Page<T> { rows, offset, total, revision }`; store methods
   `functions_page`/`symbols_page`/`xrefs_page` (LIMIT/OFFSET windows +
   COUNT + revision); Core exposes the same three.
 - CLI: `functions --offset N --limit M` proves the window path (header
@@ -191,7 +191,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 ## CORE-001: typed address migration
 - Model rows now carry `Address { space, offset }` (FunctionRow/SymbolRow/
   XrefRow/CommentRow/DisasmRow); strings exist only at serialization edges:
-  lre-db (hex TEXT columns, `addr_cell`/`addr_from_cell`), the JSON-RPC
+  romwright-db (hex TEXT columns, `addr_cell`/`addr_from_cell`), the JSON-RPC
   bridge (tolerant `parse_rows`: rows with unsupported-space addresses
   — e.g. Ghidra stack comments `Stack[-0x10]` — are skipped with a count,
   not silently mangled or import-aborting), and the CLI (argument parsing).
@@ -199,7 +199,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   last-colon split for overlay names like `.annobin.notes::00000000`) and
   `Display`/`hex()`.
 - API: `Core::{xrefs_to, xrefs_from, rename_function}` take typed
-  `&Address`; `lre-db` same; the worker consumes `f.entry.offset` directly.
+  `&Address`; `romwright-db` same; the worker consumes `f.entry.offset` directly.
 - Verification: 34 workspace tests; differential RC=0 (bridge boundary
   exercised through import + oracle steps); CLI e2e (functions/xrefs/rename)
   clean; corpus 5/5.
@@ -216,7 +216,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   `0x4003c0` 33 (was 112), `0x400430` 33 (was 48) — walk-verified bodies.
 - QA-002 fuzz smoke: deterministic malformed-input loop (truncated/
   magic-only/absurd-section-table ELF+PE + decode over byte soups) — no
-  panic, typed errors (19 lre-core tests incl. this).
+  panic, typed errors (19 romwright-core tests incl. this).
 - PIE evidence: gcc `-fPIE -pie -O2 -s` executable imports natively
   (11 functions; entries include `_entry` 0x800 with the RDI convention;
   zero-based vaddrs like ET_DYN). Remaining (QA-003 corpus): oracle
@@ -228,7 +228,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   No claim mixes categories.
 
 ## Sessionful runtime foundation (review Phase 2 start)
-- `lre-core::session`: `RuntimeConfig` (immutable; env-derived defaults, the
+- `romwright-core::session`: `RuntimeConfig` (immutable; env-derived defaults, the
   internal contract services take — native_runtime migration continues),
   `MemoryRegion { vaddr, size, file_off, file_size, flags }`,
   `ProgramImage` (one read-only `memmap2` mapping + regions + sparse patch
@@ -240,7 +240,7 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
   re-discover the binary (review CORE-002 / 4.8).
 - New dependency: `memmap2` (safe `Mmap`; the one reviewed FFI-adjacent
   site, read-only mappings only).
-- Tests (18 lre-core, 32 workspace): region file-byte reads, BSS zero-fill,
+- Tests (18 romwright-core, 32 workspace): region file-byte reads, BSS zero-fill,
   patch overlay, unmapped/crossing reads, `RuntimeConfig` defaults, and
   `ProgramImage::open` against the real fixture (add's bytes at 0x400466).
 - The environment-var contract inside `native_runtime` moves to accept a
@@ -249,10 +249,10 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 ## Post-review hardening (facade contract + real-binary evidence)
 - Native paths moved into the Core facade (review: "a GUI can't reuse the
-  native decompile/disasm without copying lre-cli's spawn logic"): new
-  `lre-core::native_runtime` + `Core::{import_native, disasm_native,
-  decompile_native, mem_native}`; lre-cli is now a thin delegate (same
-  methods a GUI consumes). `decompile` validates VENTRIS_SLA
+  native decompile/disasm without copying romwright-cli's spawn logic"): new
+  `romwright-core::native_runtime` + `Core::{import_native, disasm_native,
+  decompile_native, mem_native}`; romwright-cli is now a thin delegate (same
+  methods a GUI consumes). `decompile` validates ROMWRIGHT_SLA
   existence — a missing .sla used to surface as a silent "no architecture
   registered" decompiler exception.
 - Typed address accessors on the model rows (FunctionRow::entry_addr,
@@ -315,12 +315,12 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 
 ## Native import (no-JVM) landed
-- `lre-core::native`: ELF64 + PE (PE32/PE32+) parsers (sections -> memory map,
+- `romwright-core::native`: ELF64 + PE (PE32/PE32+) parsers (sections -> memory map,
   SHT_SYMTAB function symbols, SHT_DYNSYM externals, SHT_RELA GOT relocs
   naming the `ff 25` PLT stubs), direct-call sweep (call/jcc/jmp rel32),
   and the call-target closure (FUN_<hex> naming). Facts land in the same
   store tables with provenance `native-import / 12.1.3`.
-- CLI: `lre-cli import <binary> [--name N] [--project DIR]` — the
+- CLI: `romwright-cli import <binary> [--name N] [--project DIR]` — the
   whole import with zero JVM.
 - Verified: tiny_bin native import = 12 code functions whose entry set
   is a subset of the bridge oracle's (differential "import parity" step);
@@ -330,17 +330,17 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 ## Memory measurement (ADR-0001 target: beat 375 MiB stock)
 - Protocol worker run (register + setAction + decompileAt on the x86-64
-  ELF fixture, VENTRIS_SLA self-disassembling build):
+  ELF fixture, ROMWRIGHT_SLA self-disassembling build):
   peak RSS 39.5 MB — **9.5× under the 375 MiB stock-Ghidra baseline**.
 - The native console path and the store-only workflows stay in the same
   order of magnitude (no JVM in any no-JVM path).
 
 ## JVM-free workflow CLI (added this phase)
-- `lre-cli import <binary> [--name N]` — ELF/PE -> store, no JVM.
-- `lre-cli mem <binary> <vaddr> <size>` — mapping-backed memory dump.
-- `lre-cli disasm <binary> <addr>` — SLEIGH disassembly via the
+- `romwright-cli import <binary> [--name N]` — ELF/PE -> store, no JVM.
+- `romwright-cli mem <binary> <vaddr> <size>` — mapping-backed memory dump.
+- `romwright-cli disasm <binary> <addr>` — SLEIGH disassembly via the
   pinned console (no JVM).
-- `lre-cli comments <program>` / `types <program>` — store-owned facts.
+- `romwright-cli comments <program>` / `types <program>` — store-owned facts.
 
 ## PE parity closed
 - PE32+ ImageBase fixed (PE32+ has no BaseOfData: ImageBase at optional+24,
@@ -441,7 +441,7 @@ green (82 tests across 20 suites); the CPack TGZ builds.
     `FuncProto`, renames the loaded function, clears analysis, and the
     Agent Under Fire PPC target smoke renders the edited name and params.
   - Live-target memory overlay is complete at the transport, Core/API,
-    and Qt layers: `lre-debug` implements read-only GDB RSP memory reads,
+    and Qt layers: `romwright-debug` implements read-only GDB RSP memory reads,
     Core reuses a bounded connection, and the hex canvas exposes a live
     endpoint toggle and source marker. A deterministic local RSP server
     verifies acknowledgements, checksum rejection, target errors, bounds,
@@ -450,7 +450,7 @@ green (82 tests across 20 suites); the CPack TGZ builds.
     Under Fire RVZ served GDB port 24689; `memory_live` read 16 bytes at
     `0x80000000`, beginning with `47 57 37 45 36 39` (`GW7E69`).
 
-- m0-003: added `lre-cli graph <program> --largest --binary <path>` locator
+- m0-003: added `romwright-cli graph <program> --largest --binary <path>` locator
   which sorts recovered functions by size descending, analyzes their native
   basic-block graphs, and returns the target function with >= 200 blocks
   (found `__vfscanf_internal` at `00042cb0` with 297 basic blocks on libc).
@@ -589,7 +589,7 @@ m3-003, all three wired into continuous integration)
   --msvc-only support. Primaries derived by stripping copies of twins (via llvm-strip --strip-all
   or PE debug directory zeroing), ensuring bit-for-bit loadable code identity while stripped
   primaries lack .symtab and twins contain function symbols (plain_o0 stripped).
-  Added machine 0x3 (EM_386) to elf_language in lre-core, enabling native ELF32 x86 import.
+  Added machine 0x3 (EM_386) to elf_language in romwright-core, enabling native ELF32 x86 import.
   All 20 binaries import cleanly natively: x86-64 (8..408 functions), i386 (6..13 functions),
   aarch64 (3..5 functions), and powerpc (9..408 functions). Gate outputs and import
   databases are temporary; source digests, artifact hashes, recipes, unique matrix entries,
@@ -621,7 +621,7 @@ m3-003, all three wired into continuous integration)
   non-PIE C++ output passed both inputs; the `cpp_o2` ELF recipe now fixes
   that relocation model on every target. `plain_pie` is unchanged.
 - Closed m1-006 corrections at `2ea65bac64eb5921fd5c2939e2d9ecabb2941db1`:
-  [CI run 33915494027](https://github.com/Raikaru/ventris/actions/runs/33915494027)
+  [CI run 33915494027](https://github.com/Raikaru/romwright/actions/runs/33915494027)
   passed 9/9 jobs, including Linux corpus 20 entries, MSVC corpus 5 entries,
   Rust on 3 operating systems, and Qt packages on 3 operating systems.
   Normal local gate: exit 0; `git diff --exit-code`: 0; porcelain output empty.
@@ -977,7 +977,7 @@ m3-003, all three wired into continuous integration)
 - d2 is complete. d3/d4 and e remain open.
 
 ## m1-010-d3 acceptance
-- `crates/lre-core/tests/elf_image.rs` checks ELF64 LE and ELF32 LE/BE
+- `crates/romwright-core/tests/elf_image.rs` checks ELF64 LE and ELF32 LE/BE
   REL, RELA and RELR pointers, zero/signed addends, prelinked bases, partial
   memory reads and user-patch precedence against console mapping bytes.
 - `tests/m1-004_pie.sh` compares zero-based PIE symbols at Ghidra's loaded
@@ -1253,7 +1253,7 @@ m3-003, all three wired into continuous integration)
   `3d768a4c219fc380efafb2513bc2ae6c185aabe2`. Its downloaded discovery report
   has 20 pass / 0 fail / 0 skipped and precision/recall 1.0 on every row.
   Rust and Qt build/package jobs pass on Linux, macOS and Windows.
-  https://github.com/Raikaru/ventris/actions/runs/33966774392
+  https://github.com/Raikaru/romwright/actions/runs/33966774392
 
 ## m2-001 mapped pointer propagation complete
 - Acceptance `b5073a3` failed on the missing `constants` command. Its x86-64
@@ -1287,7 +1287,7 @@ m3-003, all three wired into continuous integration)
 - Hosted CI run 33979109416 passes all 10 jobs on published commit
   `49b027b62a99ac7a0531b858e3cc246e72e67456`, including the native constant
   propagation step and the complete oracle/discovery gate.
-  https://github.com/Raikaru/ventris/actions/runs/33979109416
+  https://github.com/Raikaru/romwright/actions/runs/33979109416
 
 ## m2-002 implementation slices
 - User authorized correcting the missing `ReferenceCodeAnalyzer` citation.
@@ -1729,7 +1729,7 @@ m3-003, all three wired into continuous integration)
 - c: verify workspace/corpus/string regressions, commit measured evidence,
   and document the response contract. Split implementation commits below 800
   changed lines. Durable inference remains m2-006, not this task.
-- b prerequisite regression: with no `VENTRIS_SLA` override, the standalone
+- b prerequisite regression: with no `ROMWRIGHT_SLA` override, the standalone
   fixture recovers `int add(int, int)` but the pooled API emits bad-instruction
   tokens and a void prototype. Keep `tests/m2-005_prototype.py` as the real
   CLI/API acceptance; reuse language resolution and configure the pool's child
@@ -1747,7 +1747,7 @@ m3-003, all three wired into continuous integration)
 - `benchmarks/reports/m2-005.json` records 1 standalone and 3 pooled real
   decompiles (`add`, `main`, `add`), with 1 warm idle worker and 0 restarts.
   Add has 2 int parameters and an int return; standalone/pooled prototypes
-  agree. The regression deliberately unsets `VENTRIS_SLA`.
+  agree. The regression deliberately unsets `ROMWRIGHT_SLA`.
 - String regression on the same source: 20 passed, 0 failed, 0 skipped,
   recall 1.0 throughout; `benchmarks/reports/m2-003.json` refreshed.
   Support matrix current; throwaway drivers removed. No baseline was edited.
@@ -2030,7 +2030,7 @@ m3-003, all three wired into continuous integration)
 - Stock false return flags remain unknown rather than returning assertions; the
   15 additional native ELF entry-point inferences are reported separately.
 - Verification: `cargo test --workspace` 163 pass/2 ignored;
-  `cargo test -p lre-core --no-default-features native::discovery` 18 pass;
+  `cargo test -p romwright-core --no-default-features native::discovery` 18 pass;
   `tests/corpus.sh` 5/5; `tests/m2-008_nonreturn.py`, `tests/m2-008_ppc_linkage.py`,
   and `tests/m2-006_thunks.py --architecture powerpc` all pass.
 - m2-008 is complete. No metric definition, corpus member, or reserved decision changed.
@@ -2076,15 +2076,15 @@ m3-003, all three wired into continuous integration)
 
 ## m2-010 implementation slices
 - a: commit the failing round-trip acceptance
-  (`crates/lre-sig/tests/vsig_roundtrip.rs`) with the crate registered in the
+  (`crates/romwright-sig/tests/vsig_roundtrip.rs`) with the crate registered in the
   workspace and no format code.
 - b: implement the container, its invariants and typed rejections; document
   the layout in `docs/vsig.md` and the clean-room stance in
   `docs/third-party.md`.
 
 ### m2-010 evidence
-- `638df1d` commits the failing acceptance: `unresolved imports lre_sig::…`.
-- `crates/lre-sig` implements `.vsig` v1: 16-byte header (`VSIG`, version,
+- `638df1d` commits the failing acceptance: `unresolved imports romwright_sig::…`.
+- `crates/romwright-sig` implements `.vsig` v1: 16-byte header (`VSIG`, version,
   reserved flags, record count, payload length) and records carrying language,
   name, package, license, pattern and per-byte mask. Masked pattern bytes are
   normalized to zero and records are strictly ascending by
@@ -2109,11 +2109,11 @@ m3-003, all three wired into continuous integration)
 - a: commit the failing gate (`benchmarks/signature_gate.py`) that builds
   databases from the pinned cross sysroot archives and reports record count and
   byte size per source, with a byte-identical rebuild check.
-- b: `lre-sig` gains the `ar` archive reader and ELF `ET_REL` extraction:
+- b: `romwright-sig` gains the `ar` archive reader and ELF `ET_REL` extraction:
   per-function patterns with relocation-covered bytes masked from public
   relocation width tables, rejecting unknown relocation types instead of
   guessing a width. Unit tests cover both.
-- c: `lre-cli signatures build|info`, the CI job, and the docs. Slices stay
+- c: `romwright-cli signatures build|info`, the CI job, and the docs. Slices stay
   below 800 changed lines each.
 
 ### m2-011 evidence
@@ -2334,8 +2334,8 @@ m3-003, all three wired into continuous integration)
   acceptance and recorded in `benchmarks/reports/m2-016.json`).
 - Default shard count is physical cores, capped at eight: six shards measured
   2.86 s of flow against 3.09 s at eight and 3.11 s at twelve, because SMT
-  siblings contend on the same execution units. `VENTRIS_CONSOLE_SHARDS` pins
-  it; `VENTRIS_REF_SHARDS` never shipped.
+  siblings contend on the same execution units. `ROMWRIGHT_CONSOLE_SHARDS` pins
+  it; `ROMWRIGHT_REF_SHARDS` never shipped.
 - `tests/m1-003_batched_flow.sh` rescoped (user-authorised): the 5.0 s number
   is unchanged but now reads the `flow` phase instead of total import time,
   best of three runs after a discarded warm-up. It also asserts what batching
@@ -2468,7 +2468,7 @@ m3-003, all three wired into continuous integration)
 
 ## M4 implementation slices
 - m4-001: recover parameters passed in registers that no shipped prototype
-  model claims, behind `VENTRIS_REGISTER_PARAMS`.
+  model claims, behind `ROMWRIGHT_REGISTER_PARAMS`.
 
 ### m4-001 evidence
 - `98fc02f` commits the failing acceptance
@@ -2481,10 +2481,10 @@ m3-003, all three wired into continuous integration)
   ("Irregular input", `Scope::buildDefaultName`, database.cc:2470-2478 of the
   pinned tree, verified there).
 - The document now carries that evidence structurally:
-  `lre_model::StorageSymbol` rows come from `<mapsym>` (symbol plus its
+  `romwright_model::StorageSymbol` rows come from `<mapsym>` (symbol plus its
   storage entries, database.cc:2643-2654), so the pass reads mapped storage
   rather than scraping C text.
-- `crates/lre-core/src/register_params.rs` commits exactly the registers the
+- `crates/romwright-core/src/register_params.rs` commits exactly the registers the
   evidence names, with three guards, each measured:
   1. **Volatility.** A register must be one the compiler spec says a call
      destroys. A callee-saved live-in is something else -- on i386 PIC it is
@@ -2520,7 +2520,7 @@ m3-003, all three wired into continuous integration)
 ### m5-001 evidence
 - `0a2131c` commits the failing acceptance (`tests/m5-001_gba.py`), which the
   loader then had to satisfy: the ROM was first mis-detected as a DOL.
-- `crates/lre-core/src/native/gba.rs` loads a cartridge only on positive
+- `crates/romwright-core/src/native/gba.rs` loads a cartridge only on positive
   evidence -- the fixed 0x96 at 0xB2 (gbatek "Cartridge Header") **and** an
   unconditional ARM branch at offset 0 whose target lands inside the image.
   It maps ROM at 0x08000000, seeds the branch target as the entry, and
@@ -2575,7 +2575,7 @@ m3-003, all three wired into continuous integration)
 ### m5-002 evidence
 - `d70e5fd` commits the failing acceptance (`tests/m5-002_nds.py`); the
   container was first mis-detected as a DOL.
-- `crates/lre-core/src/native/nds.rs` reads the documented CPU descriptors
+- `crates/romwright-core/src/native/nds.rs` reads the documented CPU descriptors
   (gbatek "DS Cartridge Header", 0x20 for ARM9 and 0x30 for ARM7) and
   accepts a cartridge only when every declared region fits the file, the two
   images do not overlap, each entry lands inside its own image, and each load
@@ -2618,13 +2618,13 @@ m3-003, all three wired into continuous integration)
 - `9f1b42d` and `4718d75` commit the failing acceptances
   (`tests/m5-003_psx.py`, `tests/m5-004_n64.py`); both images were first
   mis-detected as DOLs.
-- `crates/lre-core/src/native/psx.rs` reads the documented PS-EXE fields
+- `crates/romwright-core/src/native/psx.rs` reads the documented PS-EXE fields
   (psx-spx "Executables": magic, initial PC at 0x10, destination at 0x18,
   size at 0x1C) and accepts an image only when the declared size is in the
   file, the destination is main RAM through one of the three MIPS segment
   windows, and the initial PC lands inside the image. Seven unit tests pin
   the refusals, including the uncached mirror being *accepted* at 0xa0000000.
-- `crates/lre-core/src/native/n64.rs` reads the PI configuration word and the
+- `crates/romwright-core/src/native/n64.rs` reads the PI configuration word and the
   boot address (n64brew "ROM header") and maps the game code after the
   0x1000-byte header and boot area. IPL3 is not interpreted or reproduced --
   that code is Nintendo's. **Byte-swapped dumps are refused with their
@@ -2641,7 +2641,7 @@ m3-003, all three wired into continuous integration)
 
 ### A pinned SLA could silently decompile the wrong language
 - Found while running the platform gates in a shell that exported
-  `VENTRIS_SLA` for the x86-64 workflow -- as this repo's own tests and docs
+  `ROMWRIGHT_SLA` for the x86-64 workflow -- as this repo's own tests and docs
   do. `language_decompile_config` treated the pin as absolute, so an ARM or
   MIPS program was decompiled with the **x86-64** decoder, producing
   plausible-looking nonsense and a `DataUnavailError` at a garbage address
@@ -2649,7 +2649,7 @@ m3-003, all three wired into continuous integration)
 - The pin now applies only to the language it pins; a program whose language
   differs resolves from the install instead. Verified by re-running all four
   platform gates plus `tests/differential.sh` and `tests/workflow.sh` with
-  `VENTRIS_SLA` exported: all pass, and the x86-64 parity path is unchanged.
+  `ROMWRIGHT_SLA` exported: all pass, and the x86-64 parity path is unchanged.
 
 ### m5-005 evidence
 - `db1ad45` commits the failing acceptance (`tests/m5-005_platform_matrix.py`).
@@ -2690,7 +2690,7 @@ m3-003, all three wired into continuous integration)
   `SharedReturnAnalysisCmd.processFunctionJumpReferences:376-425` applies a
   `CALL_RETURN` flow override when an unconditional jump leaves its function
   for another function's entry, and skips the override when the branch
-  instruction is itself a function entry (the thunk case). Ventris now
+  instruction is itself a function entry (the thunk case). Romwright now
   records the first as `UNCONDITIONAL_CALL` and the second as
   `UNCONDITIONAL_JUMP`. One pass decides the kind of every branch-derived
   reference, including rows the thunk pass produced, so the model cannot
@@ -2710,7 +2710,7 @@ m3-003, all three wired into continuous integration)
   (`jump.precision` 0.4412), disabling the pass (the `mix` transfer
   disappears), and rendering loops as transfers (the fixture's two loop
   branches).
-- `crates/lre-core/src/native/discovery/tests.rs` renamed and re-pointed:
+- `crates/romwright-core/src/native/discovery/tests.rs` renamed and re-pointed:
   its landing-prefix fixture is exactly the x86-64 `endbr64; jmp target`
   shape the oracle records as a call, so its old expectation pinned
   non-parity behaviour.
@@ -2718,7 +2718,7 @@ m3-003, all three wired into continuous integration)
 ### m5-007 evidence
 - `0c38cb3` commits the failing acceptance
   (`tests/m5-007_tailcall_promotion.py`).
-- Promotion is **off by default** (`VENTRIS_PROMOTE_TAILCALLS`): stock Ghidra
+- Promotion is **off by default** (`ROMWRIGHT_PROMOTE_TAILCALLS`): stock Ghidra
   creates none of these functions, so the pass moves output past the frozen
   baseline and II.1 reserves enabling it. The gate asserts both states.
 - A candidate faces the m1-005 evidence standard, not the branch alone: code
@@ -2736,7 +2736,7 @@ m3-003, all three wired into continuous integration)
   the outcome and corpus safety; the *refusals* are pinned by
   `promotion_refuses_targets_without_their_own_evidence` and
   `a_proven_tail_call_target_is_promoted_only_when_asked` in
-  `crates/lre-core/src/native/discovery/tests.rs`. Removing the evidence walk
+  `crates/romwright-core/src/native/discovery/tests.rs`. Removing the evidence walk
   fails those two unit tests and no Python gate, which is why they exist.
 - Negative controls: forcing the flag on fails the acceptance ("promoted with
   the flag off"); removing the evidence walk fails the unit tests.
@@ -2749,7 +2749,7 @@ m3-003, all three wired into continuous integration)
   and jump references are scored against the oracle by m5-006 instead.
 - The reason m5-006 landed without noticing: `data_xrefs.sh`, `corpus.sh`,
   `differential.sh` and `generic_discovery_test.sh` all ran
-  `target/debug/lre-cli` **without building it**, so they tested whatever
+  `target/debug/romwright-cli` **without building it**, so they tested whatever
   binary happened to be there. All four now build the CLI they test.
 
 ### m5-008 evidence
@@ -2759,7 +2759,7 @@ m3-003, all three wired into continuous integration)
   thunked address only when every register the body set is later used or
   hidden (`setRegisters.size() == 0`). `nds.arm7`'s stub computes and leaves
   its result in a register for the callee, so stock Ghidra records no thunk
-  there -- and neither does Ventris. Pinned by
+  there -- and neither does Romwright. Pinned by
   `a_computing_tail_call_is_not_a_thunk`, with the promotion flag both off
   and on.
 - **The existing count comparison was hiding a real difference.**
@@ -2835,7 +2835,7 @@ m3-003, all three wired into continuous integration)
   (Ghidra says `_DT_INIT`), `_plt` for the `.plt` section start where Ghidra
   leaves `FUN_`.
 - The 11 pinned rows are `__i686.get_pc_thunk.*`, which stock takes from a
-  `<funcstart label=...>` entry in `x86gcc_patterns.xml`. Ventris already
+  `<funcstart label=...>` entry in `x86gcc_patterns.xml`. Romwright already
   reads those pattern files for function starts; applying their labels is
   m5-011.
 - Forced cutover: `tests/m5-009_linkage_names.py` accepted `_INIT_n` as a
@@ -2916,7 +2916,7 @@ m3-003, all three wired into continuous integration)
   22 documented output lines checked, 24 CLI verbs all listed in usage.
 - **The gate is run in both environments.** With the SLEIGH console: 18
   commands, 0 skipped. Without the pinned install
-  (`VENTRIS_GHIDRA=/nonexistent VENTRIS_CONSOLE=/nonexistent`): 13 commands,
+  (`ROMWRIGHT_GHIDRA=/nonexistent ROMWRIGHT_CONSOLE=/nonexistent`): 13 commands,
   2 SLEIGH-marked blocks skipped. That forced the walkthrough to stop
   claiming environment-dependent numbers: the console proves `printf`'s
   linkage stub, flow-proven extents and the call reference into `add`, so
@@ -2937,7 +2937,7 @@ m3-003, all three wired into continuous integration)
 - `docs/core-api.md` documents the envelope (`api`, `id`, `method`,
   `params`), the four error codes, typed addresses, fact provenance, the
   paged-read shape, and which requests need the SLEIGH console. Every
-  documented exchange is sent to a real `lre-api` process and the documented
+  documented exchange is sent to a real `romwright-api` process and the documented
   response must be a **subset** of the real one, so a documented field that
   does not exist fails.
 - Measured (`benchmarks/reports/m6-002.json`): 10 exchanges with the console,
@@ -2964,28 +2964,28 @@ m3-003, all three wired into continuous integration)
 - `7427641` commits the failing acceptance
   (`tests/m6-003_desktop_package.py`).
 - **`ui.install.ok` was never measured.** `gate_runner.cpp` read it from
-  `qEnvironmentVariableIsSet("VENTRIS_UI_INSTALL_OK")`, and
+  `qEnvironmentVariableIsSet("ROMWRIGHT_UI_INSTALL_OK")`, and
   `tests/package_install_smoke.sh` sets that variable itself -- the gate
   asserted a value its own harness supplied.
 - Two additive metrics now measure what the old one claimed, both computed by
   the app: `ui.install.prefix_ok` (the executable is not running from a build
   tree: no `CMakeCache.txt`/`CMakeFiles` beside it or one level up) and
   `ui.install.store_only_ok` (the store-facing workflow completed with **no**
-  `VENTRIS_*` variable set). A new `--gate --store-only` mode stops after
+  `ROMWRIGHT_*` variable set). A new `--gate --store-only` mode stops after
   import, list and filter, so a packaged run needs no SLEIGH data.
 - The gate builds the CPack archive with the three commands
   `docs/desktop.md` documents, asserts the page documents those targets,
   extracts the archive into a clean prefix, refuses an archive member that
   escapes it, and launches the extracted binary offscreen with every
-  `VENTRIS_*` variable stripped from the environment.
-- Measured (`benchmarks/reports/m6-003.json`): `ventris-0.5-Linux-x86_64.tar.gz`
+  `ROMWRIGHT_*` variable stripped from the environment.
+- Measured (`benchmarks/reports/m6-003.json`): `romwright-0.5-Linux-x86_64.tar.gz`
   on Linux/x86_64 with Qt 6.11.2, `ui.install.prefix_ok` true,
   `ui.install.store_only_ok` true, `ui.list.load_ms` 1.96 and
   `ui.list.filter_ms` inside the M0 thresholds. **The report names its own
   platform**, so single-machine evidence cannot read as three-OS evidence;
   the CI `qt` job runs it on Linux, macOS and Windows and uploads each report.
 - Negative controls, run against the same binary: the build-tree executable
-  reports `ui.install.prefix_ok: false`, and setting any `VENTRIS_*` variable
+  reports `ui.install.prefix_ok: false`, and setting any `ROMWRIGHT_*` variable
   reports `ui.install.store_only_ok: false`.
 
 ## Proposed changes (reserved for the human)
@@ -3009,8 +3009,8 @@ m3-003, all three wired into continuous integration)
   printer's cosmetic choices -- both of which this repo already reaches
   through `native/ghidra-opt-sleigh.patch` and the action pool. So the first
   candidate is a *constrained emission mode* of the existing backend behind a
-  flag, in the shape the M4 passes already use (`VENTRIS_REGISTER_PARAMS`,
-  `VENTRIS_PROMOTE_TAILCALLS`, off by default per II.1): keep the
+  flag, in the shape the M4 passes already use (`ROMWRIGHT_REGISTER_PARAMS`,
+  `ROMWRIGHT_PROMOTE_TAILCALLS`, off by default per II.1): keep the
   transformations soundness requires, drop the ones that discard
   instruction-level structure, name locals after ABI storage, spell stack
   slots explicitly. A second emitter is only unavoidable for what a mode
@@ -3024,14 +3024,14 @@ m3-003, all three wired into continuous integration)
   citable with a `docs/third-party.md` entry recording the licence; its code
   is never linked or copied.
 - Retire `ui.install.ok` from the M0 UI gate. It reports whether
-  `VENTRIS_UI_INSTALL_OK` is set, not whether an installation works, and
+  `ROMWRIGHT_UI_INSTALL_OK` is set, not whether an installation works, and
   `ui.install.prefix_ok` plus `ui.install.store_only_ok` (m6-003) measure the
   fact instead. AGENTS.md II.1 reserves metric-definition changes, so the
   metric and `benchmarks/reports/ui-gate.json` are untouched;
   `tests/package_install_smoke.sh` still passes because it still sets the
   variable. Removing it means deleting the metric from
   `benchmarks/ui_gate.py`'s `ALL_METRICS`, the `qEnvironmentVariableIsSet`
-  read in `desktop/ventris-qt/src/gate_runner.cpp`, and the `VENTRIS_UI_INSTALL_OK`
+  read in `desktop/romwright-qt/src/gate_runner.cpp`, and the `ROMWRIGHT_UI_INSTALL_OK`
   export in the smoke test, then re-recording the UI gate report.
 
 ### m6-004 evidence
@@ -3056,8 +3056,8 @@ m3-003, all three wired into continuous integration)
   truncation both rejected, SBOM covering 60 packages including every
   workspace crate with a declared licence.
 - Negative controls: dropping one workspace crate from the SBOM fails
-  (`the SBOM omits workspace crates: ['lre-worker']`), and neutering
-  `verify_update.py` fails (`a flipped byte in lre-api passed verification`).
+  (`the SBOM omits workspace crates: ['romwright-worker']`), and neutering
+  `verify_update.py` fails (`a flipped byte in romwright-api passed verification`).
 - CI cutover: the three placeholder packaging steps are replaced by this
   gate, so the SBOM and manifest are now checked against real artifacts.
 - The page states what is not claimed: no reproducibility (two builds are not
@@ -3067,9 +3067,9 @@ m3-003, all three wired into continuous integration)
 ### m6-005 evidence
 - `0367538` commits the failing acceptance (`tests/m6-005_scripting.py`).
 - `docs/scripting.md` shows `examples/facts_report.py` driving a project
-  through `python/ventris_sdk.py`: import, read the functions, write a rename,
+  through `python/romwright_sdk.py`: import, read the functions, write a rename,
   undo it. The gate runs the documented command **in two environments** --
-  with the SLEIGH console and with every `VENTRIS_*` variable stripped --
+  with the SLEIGH console and with every `ROMWRIGHT_*` variable stripped --
   because the page claims the script runs either way, and matches all four
   output lines in both.
 - The gate also compares the page against the client. **Twelve helpers were
@@ -3165,7 +3165,7 @@ m3-003, all three wired into continuous integration)
 - Both producers decompile **`main` resolved by name** in each locked entry's
   unstripped twin, so no address is guessed and PIE image bases cannot make
   the two disagree about what was decompiled. Import and analysis run first
-  and are **not** timed -- `lre-cli import` for the native path, an
+  and are **not** timed -- `romwright-cli import` for the native path, an
   `analyzeHeadless -import` that analyses and saves for stock. Each timed run
   opens the stored program and decompiles one function
   (`analyzeHeadless -process -noanalysis -postScript scripts/DecompileOne.java`,
@@ -3193,7 +3193,7 @@ m3-003, all three wired into continuous integration)
 ### m7-003 evidence
 - `602ff06` commits the failing acceptance
   (`tests/m7-003_session_envelope.py`): the envelope did not exist yet.
-- One long-lived `lre-api` process per locked entry answers the same seven
+- One long-lived `romwright-api` process per locked entry answers the same seven
   requests (`functions`, `symbols`, `strings`, `memory_regions`, `search`,
   `xrefs`, `decompile_doc`) for 4 warm-up and 8 measured rounds, with the
   **process tree**'s resident size -- the service plus the SLEIGH console
@@ -3230,7 +3230,7 @@ m3-003, all three wired into continuous integration)
   recall on `tiny_pe.exe` was **0.5667**, 39 of 90 DWARF functions missing --
   `WinMainCRTStartup`, `__do_global_ctors`, `__mingw_TLScallback` and the rest
   of the CRT, none of them reachable by flow from the entry point.
-- `crates/lre-core/src/native/pe_unwind.rs` reads
+- `crates/romwright-core/src/native/pe_unwind.rs` reads
   `IMAGE_DIRECTORY_ENTRY_EXCEPTION` (data directory 3, AMD64 only -- ARM
   records have a different layout, as Ghidra's own dispatch shows) and
   promotes `ImageBase + BeginAddress` for every non-chained
@@ -3363,7 +3363,7 @@ m3-003, all three wired into continuous integration)
 - `4de643e` commits the failing acceptance (`tests/m8-004_pe_roots.py`) and one
   new fixture, `tests/fixtures-src/exports32.dll` with its source: an i686
   MinGW DLL exporting three functions that nothing inside the image calls.
-- `crates/lre-core/src/native/pe_roots.rs` reads two directories, both
+- `crates/romwright-core/src/native/pe_roots.rs` reads two directories, both
   verified in the pinned sources:
   - **TLS callbacks** (`TLSDirectory`, `TLSDataDirectory.markup`):
     `AddressOfCallBacks` is the fourth pointer-sized field and holds
@@ -3452,7 +3452,7 @@ m3-003, all three wired into continuous integration)
   them** -- `pe-unwind`, `pe-tls` and `pe-export` were asserted by gates that
   never recorded which class they proved.
 - The classes are read from the importer's own vocabulary (the
-  `native-import:pe-*` provenance strings in `crates/lre-core/src`), then
+  `native-import:pe-*` provenance strings in `crates/romwright-core/src`), then
   checked three ways: every class must be **exercised** by a committed
   fixture, **measured** by a committed report other than this one, and the
   five milestone claims must each exist, pass, and carry their metric.
@@ -3476,14 +3476,14 @@ m3-003, all three wired into continuous integration)
 ### m9-001 evidence
 - `dad2bfe` commits the failing acceptance
   (`tests/m9-001_provenance_explained.py`): there was no table to fail
-  against -- `lre-cli provenance` did not exist, and the desktop's xrefs dock
+  against -- `romwright-cli provenance` did not exist, and the desktop's xrefs dock
   had **no provenance column at all**, so a user could not learn what a base
   relocation proves.
-- `crates/lre-model/src/provenance.rs` holds one table: 15 classes, each a
+- `crates/romwright-model/src/provenance.rs` holds one table: 15 classes, each a
   sentence. `FactProvenance` now serialises `explanation` from it via a
   hand-written `Serialize`, so every API and CLI consumer receives the
   sentence with the fact and no construction site has to remember it.
-- Surfaces read that table rather than copying it: `lre-cli provenance
+- Surfaces read that table rather than copying it: `romwright-cli provenance
   [<program>] [--json]` prints it (or only the classes one program holds and
   fails on an unexplained one), and `XrefsDock` renders the sentence in an
   Evidence column with the raw class as tooltip.
@@ -3497,12 +3497,12 @@ m3-003, all three wired into continuous integration)
 - Measured (`benchmarks/reports/m9-001.json`): 15 classes in the table, 15
   declared in the crates, 11 observed in stores over four corpus entries and
   four PE fixtures, `provenance.unexplained` **0**, 10 facts checked through a
-  real `lre-api`, and the desktop rendered 19 xref rows with **0**
+  real `romwright-api`, and the desktop rendered 19 xref rows with **0**
   unexplained.
 - Controls: deleting one class's sentence fails, a UI report claiming three
   unexplained rows fails, and a UI report that stops measuring the metric at
   all fails.
-- `crates/lre-db` had a test pinning the exact provenance JSON; it now pins
+- `crates/romwright-db` had a test pinning the exact provenance JSON; it now pins
   the new shape, including `explanation: null` for a source the table does not
   know.
 - Regression: `cargo test --workspace` 237 pass; `corpus.sh`,
@@ -3519,7 +3519,7 @@ m3-003, all three wired into continuous integration)
   the importer actually has -- `declared` (the image or platform states it),
   `decoded` (SLEIGH decoded the instruction that performs it), `inferred` (a
   pass concluded it) -- in the same table as its sentence, exposed as
-  `provenance.evidence` through the API, `lre-cli provenance`, and the
+  `provenance.evidence` through the API, `romwright-cli provenance`, and the
   desktop's Evidence tooltip.
 - Two measured rules, over the locked corpus and the four PE fixtures:
   a `declared` class must attribute **1.0000** of the entries it names
@@ -3534,7 +3534,7 @@ m3-003, all three wired into continuous integration)
   named by a pattern label `m5-011` already gates, and nothing else attributes
   them.
 - `confidence` stays `null` for native facts because nothing derives one; the
-  only derivation in the tree is `lre-sig`'s share of compared bytes. A
+  only derivation in the tree is `romwright-sig`'s share of compared bytes. A
   `declared` class claiming a number fails a unit test: a header either says a
   thing or it does not.
 - **A control caught a hole in my own gate.** Downgrading
@@ -3554,7 +3554,7 @@ m3-003, all three wired into continuous integration)
   (`tests/m9-003_evidence_filter.py`): `evidence` was ignored, so a filtered
   page returned the unfiltered rows.
 - `symbols_page` and `xrefs_page` now take `evidence` (`declared`, `decoded`,
-  `inferred`) through `lre-api`, `lre-core`, `lre-db` and the Qt bridge. The
+  `inferred`) through `romwright-api`, `romwright-core`, `romwright-db` and the Qt bridge. The
   `IN (...)` clause is built from `provenance::sources(kind)`, so the filter
   is the same table the API reports on each fact and cannot drift from it.
 - Measured (`benchmarks/reports/m9-003.json`): over 5 images and 20
@@ -3582,7 +3582,7 @@ m3-003, all three wired into continuous integration)
   session slightly ahead of its test, so its rule is proved by a control
   instead: making the CLI drop the filter fails
   (`the terminal shows 1 rows, the API returns 0`).
-- `lre-cli xrefs --evidence declared|decoded|inferred` routes through
+- `romwright-cli xrefs --evidence declared|decoded|inferred` routes through
   `xrefs_page`, so the terminal and the service share one filter; filtering
   with no address is refused rather than answered, and an unknown kind exits
   non-zero.
@@ -3616,7 +3616,7 @@ m3-003, all three wired into continuous integration)
 - `840f002` commits the failing acceptance
   (`tests/m9-005_explanation_milestone.py`).
 - The surfaces are enumerated from the repository and then driven: the API
-  methods `docs/core-api.md` publishes, the verbs `lre-cli` prints in its own
+  methods `docs/core-api.md` publishes, the verbs `romwright-cli` prints in its own
   usage (bare, not `--help`, which it does not accept), and the window the UI
   gate measures.
 - Measured (`benchmarks/reports/m9-005.json`): **28 of 52** published methods
@@ -3649,8 +3649,8 @@ m3-003, all three wired into continuous integration)
 - `ProjectDb::programs` lists every program with its language, function count
   and revision; `ProjectDb::locate` answers which programs map an address,
   with the region that maps it and the function containing it. Both reach
-  `lre-api` (`programs`, `locate`) and the terminal
-  (`lre-cli programs`, `lre-cli locate <hex>`).
+  `romwright-api` (`programs`, `locate`) and the terminal
+  (`romwright-cli programs`, `romwright-cli locate <hex>`).
 - **The interesting case is real, not synthetic.** A stripped `tiny_pe32.exe`
   and `tiny_bin` both map `0x00401000`, so an address alone names no program:
   `locate 00401000` returns `tiny` (`elf:8`, no function) and `win`
@@ -3682,7 +3682,7 @@ m3-003, all three wired into continuous integration)
 - `1ff00c9` commits the failing acceptance
   (`tests/m10-002_image_navigation.py`): `--follow` printed nothing and the
   window listed no images.
-- `lre-cli locate <hex> --follow` prints, under each program mapping the
+- `romwright-cli locate <hex> --follow` prints, under each program mapping the
   address, that program's containing function, the symbols at the address and
   the references in each direction. The desktop has an **Images** selector
   filled from `programs`; choosing one points every dock at it.
@@ -3749,7 +3749,7 @@ m3-003, all three wired into continuous integration)
 
 ### m10-004 evidence
 - The gate enumerates its own subject: it scans every dispatch arm in
-  `crates/lre-api/src/lib.rs` that reads `params.program` -- **41 methods** --
+  `crates/romwright-api/src/lib.rs` that reads `params.program` -- **41 methods** --
   and fails when one is driven nowhere. That is the hole the milestone had.
 - Measured: 54 reads answered identically in a two-image project and in a
   project holding that image alone (13 of 26 read methods tell the images
@@ -3785,8 +3785,8 @@ m3-003, all three wired into continuous integration)
 
 ### m4-002 evidence
 - The passes are enumerated from `RuntimeConfig::from_env`, so an opt-in pass
-  with no gate behind it fails: **2 passes** (`VENTRIS_REGISTER_PARAMS` ->
-  `m4-001`, `VENTRIS_PROMOTE_TAILCALLS` -> `m5-007`).
+  with no gate behind it fails: **2 passes** (`ROMWRIGHT_REGISTER_PARAMS` ->
+  `m4-001`, `ROMWRIGHT_PROMOTE_TAILCALLS` -> `m5-007`).
 - Off by default is proved by facts, not by reading source: the register pass
   leaves **400** prototypes carrying `native-prototype:register-input` when
   asked and **0** with a clean environment; the promoted leaf `0x37f8000` is
@@ -3804,7 +3804,7 @@ m3-003, all three wired into continuous integration)
   a flag wired to nothing, a row where native drops below stock, a residual
   whose register is read after all, and a carried gate that stops passing.
 - **The gate failed its own first audit**: two controls passed because the
-  behavioural checks ran a stale `target/debug/lre-api`. The gate now builds
+  behavioural checks ran a stale `target/debug/romwright-api`. The gate now builds
   what it measures -- the same trap `tests/differential.sh` records in its
   header.
 
@@ -3865,7 +3865,7 @@ m3-003, all three wired into continuous integration)
   (`parse_core_types`, unit-tested against the shipped file). Data references
   live under kinds `DATA`, `READ` and `WRITE`, and filtering on `DATA` alone
   missed the byte `_FINI_0` guards. And the runtime launches
-  `target/debug/lre-worker`, so a release-only build measured a stale worker.
+  `target/debug/romwright-worker`, so a release-only build measured a stale worker.
 - Residual, now named rather than hidden: `data-type-unknown` 4 -- both sides
   name the location and only the oracle knows a pointer is there, because its
   analyzers define data and the native store records a reference. That is the
@@ -4093,7 +4093,7 @@ m3-003, all three wired into continuous integration)
   the asserted prototype was the *only* row (library imports carry archive
   declarations now); its stale-positive seeding took its source from
   `facts[0]`, which is no longer the inference pass's row, so the source is
-  named explicitly. `lre-worker-client`'s synthetic tspec had no ram width,
+  named explicitly. `romwright-worker-client`'s synthetic tspec had no ram width,
   which the contract now requires; the fixture declares one.
 - Regression: `cargo test --workspace` **244 pass**; `m4-002`..`m4-011`,
   `m3-001`, `m3-003`, `m2-006`, `m2-008`, `m2-009`, `m5-001`, `m5-002`,
@@ -4220,13 +4220,13 @@ m3-003, all three wired into continuous integration)
   the relocation table names as pointers, then as `undefined<width>` -- read
   25 as well. So did an unmodified tree at `HEAD`, twice.
 - The cause was not the data rule. `RuntimeConfig::from_env` resolved the
-  worker as the literal `target/debug/lre-worker`, so the **release** CLI that
+  worker as the literal `target/debug/romwright-worker`, so the **release** CLI that
   every gate builds drove whatever `cargo build` had last left in
   `target/debug`. Three measurement rounds were made against a build that was
   not the tree, and the conclusion drawn from them was wrong. After
   `cargo build --workspace` at the same `HEAD`: **30 of 56**, the pinned
   number, reproducibly.
-- Fixed where it belongs: `VENTRIS_WORKER` still wins, then the worker
+- Fixed where it belongs: `ROMWRIGHT_WORKER` still wins, then the worker
   **beside the running executable**, then the workspace's release and debug
   paths, each of which has to exist. Every gate that measures with the release
   CLI now builds the release worker with it (11 gates), so a gate's number
@@ -4234,7 +4234,7 @@ m3-003, all three wired into continuous integration)
 - Controls, all three firing: a CLI with a working worker beside it decompiles
   from a directory where no workspace path resolves; the same CLI with a
   *broken* worker beside it fails (without which the first control proves
-  nothing about which worker ran); and `VENTRIS_WORKER` still overrides a good
+  nothing about which worker ran); and `ROMWRIGHT_WORKER` still overrides a good
   sibling. Plus: the release and debug builds now produce identical text for
   the same function.
 - The data-answer question is **not** closed, and the measurement says why:
@@ -4261,7 +4261,7 @@ m3-003, all three wired into continuous integration)
   wide as the access. Answering "nothing" instead, which is what stock does
   only when it has neither symbol nor data, costs **5 of 30** identical
   functions -- measured, twice, with correct builds.
-- The width was already decoded and thrown away. `ventris_constants.hh`
+- The width was already decoded and thrown away. `romwright_constants.hh`
   recorded `{pc, target, access}` per reference; it now records the bytes the
   access touches -- a `CPUI_LOAD`'s output size, a `CPUI_STORE`'s value size,
   a memory varnode's own size -- merges the widest when two accesses share a
@@ -4514,12 +4514,12 @@ m3-003, all three wired into continuous integration)
     installed only on a branch the flow walk proved: `_FINI_0` is
     token-identical to stock.
 - **A pin pins one language.** `RuntimeConfig::adopt_language` kept
-  `VENTRIS_SLA` while rewriting `language_id` to the image's language, so an
+  `ROMWRIGHT_SLA` while rewriting `language_id` to the image's language, so an
   exported x86-64 `.sla` made a 32-bit import resolve the *64-bit* spec
   bundle -- which is how the `long` filter above passed at import time and
   failed at decompile time, where `language_decompile_config` refuses a
   mismatched pin. Adopting another language now drops the pin, and
-  `m7-002`/`m7-003` pass with a foreign `VENTRIS_SLA` exported.
+  `m7-002`/`m7-003` pass with a foreign `ROMWRIGHT_SLA` exported.
 - Three new classes, each with the evidence for it, none of them an excuse:
   `mangled-name` 8 (both stores hold `_ZTIi` from the COPY relocation that
   names it -- newly recorded as `native-import:elf-copy` -- and stock prints
@@ -4566,7 +4566,7 @@ m3-003, all three wired into continuous integration)
   **0** and `PowerPC:BE:32:default/default` is index **12**. After the
   loader's endian/size filter the first surviving preferred spec wins, so
   stock's variant is hash order, not evidence from the image. Recorded, not
-  copied: Ventris takes the neutral `default` variant.
+  copied: Romwright takes the neutral `default` variant.
 - **Our own defect, found by the same reading:** the loader answered from a
   hand-written table that said `ARM:LE:32:v7`, `ARM:BE:32:v7` and
   `ARM:LEBE:32:v7LEInstruction` -- three rows the pinned install contradicts,
@@ -4683,8 +4683,8 @@ evidence:
 - `benchmarks/gate_cache.py` reuses an artifact under the provenance that
   produced it: an oracle artifact by binary digest + `bridge_sources_sha256` +
   the install's `upstream_revision`; a stock headless export by binary +
-  exporter-script + install; a native artifact by binary + the `lre-cli` and
-  `lre-worker` digests, because m4-014 is the standing proof that a key
+  exporter-script + install; a native artifact by binary + the `romwright-cli` and
+  `romwright-worker` digests, because m4-014 is the standing proof that a key
   without the build is a stale-worker trap. A miss, a changed input, a corrupt
   marker or a crashed build all fall through to real work
   (`tests/gate_cache_test.py`, 8 tests).
@@ -4697,7 +4697,7 @@ evidence:
   adjectives: the whole `tests/*.py` sweep was 2375 s with `m4-003` included
   and every cache cold.
 - The cost gates (`m7-001`..`m7-003`) do not use the cache: they measure the
-  work it skips. `VENTRIS_GATE_CACHE=` switches reuse off everywhere.
+  work it skips. `ROMWRIGHT_GATE_CACHE=` switches reuse off everywhere.
 
 ### m4-025 evidence
 - The rule, from the pinned tree: the decompiler's C parser resolves a type
@@ -4842,7 +4842,7 @@ evidence:
     front of an array (printc.cc:1082-1090). On 32-bit rows the same symbol
     declares 8 bytes, stays a scalar, and stock prints `&int::typeinfo` --
     which is exactly what we now print.
-- Implemented: `lre_core::demangle`, an Itanium C++ ABI demangler for the
+- Implemented: `romwright_core::demangle`, an Itanium C++ ABI demangler for the
   four names the ABI defines for data (`TV`, `TT`, `TI`, `TS`) over the type
   grammar it parses -- builtins, nested and `std`-scoped class names,
   sequential and standard substitutions, pointers, references, cv-qualifiers,
@@ -4954,7 +4954,7 @@ evidence:
   `code-pointer` is a pointer with its target named -- the same claim, not a
   weaker one.
 - Local note, not a code change: the gate cache moved off `/tmp`
-  (`VENTRIS_GATE_CACHE=/home/raikaru/ventris-cache/gate`) after tmpfs filled;
+  (`ROMWRIGHT_GATE_CACHE=/home/raikaru/romwright-cache/gate`) after tmpfs filled;
   Ghidra refuses a project path with a dot component
   (`NamingUtilities.checkName`), so `~/.cache` will not do.
 
@@ -5014,7 +5014,7 @@ evidence:
   11.5 s at 65 MB peak**, language `PowerPC:BE:32:default`, scored against the
   unstripped module's own **8522** `STT_FUNC` symbols -- **recall 0.9799,
   precision 0.9384** (8351 matched). The symbols never reach the importer.
-- **The session's surfaces**, through one real `lre-api` process: paged
+- **The session's surfaces**, through one real `romwright-api` process: paged
   functions filtered and unfiltered, xrefs into a recovered callee, a listing
   window, **5 functions decompiled** (median **17 ms**, tokens and a prototype
   for each), static memory, `recover_classes` (recorded, not asserted: a
@@ -5032,7 +5032,7 @@ evidence:
     the cap's own comment already described a retry path nobody implemented.
     Every pooled operation now recycles once on a cap hit
     (`with_worker_retrying`), the pass counts the recycles, and the gate proves
-    the path on purpose: with `VENTRIS_WORKER_MEMORY_CAP` at 120 MiB the same
+    the path on purpose: with `ROMWRIGHT_WORKER_MEMORY_CAP` at 120 MiB the same
     inference **recycled 8 workers and still analysed 1716 functions** instead
     of failing. A fresh worker over the cap still fails -- then the cap is
     below the language's floor.
@@ -5042,7 +5042,7 @@ evidence:
     `USER_DEFINED` symbol during re-analysis -- so the store now re-applies
     the name every live `rename` in the command journal asserts, and an undone
     rename is never resurrected. Two store regressions pin both directions.
-- `VENTRIS_WORKER_MEMORY_CAP` is new and documented in README: a host with
+- `ROMWRIGHT_WORKER_MEMORY_CAP` is new and documented in README: a host with
   less memory bounds its workers lower, and the parse refuses a value under
   16 MiB rather than failing every request.
 - Not wired into CI, for the same reason `m1-009` is not: the image is a
@@ -5073,7 +5073,7 @@ evidence:
   With the arm in place the same import runs the flow phase (1013 requests,
   9417 instructions decoded) and recovers **480 functions, recall 0.4353**.
 - The silent part is fixed too: a discovery fallback now records *why* in
-  `ProgramSummary::discovery_note`, which `lre-cli import --timings` prints,
+  `ProgramSummary::discovery_note`, which `romwright-cli import --timings` prints,
   naming the first unanswered address. A whole architecture lost half its
   functions to a fallback that reported nothing.
 - Regression: `flow_batch_answers_every_address_it_is_asked` pins the
@@ -5086,7 +5086,7 @@ evidence:
   Fighting Evolution, 8794 `STT_FUNC` symbols in its own symbol table; the
   scored copy is stripped). Stock Ghidra on this install answers it with
   `r5900:LE:32:default` -- a language an installed *extension* supplies
-  (`Ghidra/Extensions/ghidra-emotionengine-reloaded`). Ventris read opinions
+  (`Ghidra/Extensions/ghidra-emotionengine-reloaded`). Romwright read opinions
   and language definitions from `Ghidra/Processors` only, so that language was
   invisible and the image was typed as plain MIPS32. Both readers now walk
   every module of the install's `Ghidra` tree, which is what
@@ -5101,7 +5101,7 @@ evidence:
     function at a match that already holds an instruction, provided no
     function body contains it and nothing above flows into it
     (`FunctionStartAnalyzer.applyActionToSet`, 289-324;
-    `checkAlreadyInFunctionAbove`, 491-530). Ventris refused every match the
+    `checkAlreadyInFunctionAbove`, 491-530). Romwright refused every match the
     walk had already decoded.
   - **Prologue matches were treated as addresses read from data.** The
     overlap rule that retracts PE32 switch case labels was applied to pattern
@@ -5109,11 +5109,11 @@ evidence:
 - Measured against the module's own 8794 symbols, JVM-free:
   **6540 functions, recall 0.7422, precision 0.9980, 3.6 s, 37 MB peak**.
   Stock Ghidra on the same stripped copy: 6662 functions, recall 0.7560,
-  precision 0.9979, **181.7 s, 1.19 GB peak**. Ventris is 1.4 points of recall
+  precision 0.9979, **181.7 s, 1.19 GB peak**. Romwright is 1.4 points of recall
   behind at 50x the speed and 3% of the memory.
 - The same fixes on the MIPS-III corpus image (`dungeon_game.elf`, 781
   symbols): recall **0.3065 -> 0.7695**, precision **0.7083 -> 0.8394**.
-- `lre-cli import --timings` now reports `patterns` as
+- `romwright-cli import --timings` now reports `patterns` as
   `{hits, accepted, refused}`, keyed by prerequisite name. Every number above
   was read off that field rather than guessed.
 - Regression: `cargo test --workspace` **268 pass**; `corpus.sh`,
@@ -5123,7 +5123,7 @@ evidence:
 ### m4-034 evidence (ARM: the mode the image declares)
 - An Android ARM library arrived in the corpus (`librealfootball2011.so`,
   Real Football 2011, 12136 `STT_FUNC` symbols; the scored copy has its
-  symbol table stripped and keeps only the dynamic one). Ventris recovered
+  symbol table stripped and keeps only the dynamic one). Romwright recovered
   **8** of them. Three things were missing, each one in Ghidra's own rules:
   - **The Thumb bit is a mode, not an address.** ARM marks Thumb code with
     the low bit of a function's address and with `$t`/`$a` mapping symbols;
@@ -5181,12 +5181,12 @@ evidence:
     it. A single undecodable byte used to fail the whole import.
   - One range the console still cannot answer now costs that range's
     references, not the image. The count is reported as
-    `references_refused` by `lre-cli import --timings` rather than swallowed.
+    `references_refused` by `romwright-cli import --timings` rather than swallowed.
 - **PlayStation, MIPS R3000 PS-EXE** (`VS.EXE`, Darkstalkers 3 prototype,
   1998-05-25, with the build's own `VS.MAP`). The map names 818 addresses
   inside the main `.text` (0x801395f0-0x8018ed2b): **751 matched, recall
   0.9181**. A linker map names only what the linker exported, so the 1993
-  functions Ventris recovers there cannot be scored for precision against it.
+  functions Romwright recovers there cannot be scored for precision against it.
 - **PlayStation Portable, MIPS Allegrex PRX** (`BOOT.BIN`, Puzzle Bobble
   Pocket, 621 sized `STT_FUNC` symbols): **634 functions, recall 0.7778,
   precision 0.7618**. The oracle needs care: this is a relocatable module, so
@@ -5194,13 +5194,13 @@ evidence:
   (`ElfLoadAdapter.getSectionSymbolRelativeOffset`, 561-567), and reading the
   values as absolute makes every symbol 0x40 low. Ghidra's own
   `isRelocatable()` is `e_type == ET_REL` (ElfHeader:1532), which a PSP
-  module's `0xffa0` is not, so stock places these symbols exactly as Ventris
+  module's `0xffa0` is not, so stock places these symbols exactly as Romwright
   does -- the skew is in the oracle, not in either store.
 - Regression: `cargo test --workspace` **269 pass**.
 
 ### m4-036 evidence (the oracle can load every corpus container)
 - The parity gate measured five bundled languages and blocked four. Three of
-  the four were blocked on the *oracle's* loaders, not on Ventris, so the
+  the four were blocked on the *oracle's* loaders, not on Romwright, so the
   install at `~/ghidra_12.1.3_PUBLIC` was completed, with every extension
   built by `javac` against its jars (no gradle on the box) and verified with
   stock `analyzeHeadless`, headless, on a real corpus image. Each port's diff
@@ -5219,7 +5219,7 @@ evidence:
     the m5-001 fixture header carried only the latter. The fixture now carries
     the eight logo bytes (not the bitmap). Its `load` maps the whole console
     address space, which is why a 420-byte cartridge ran the JVM out of a 2G
-    heap: the bridge now launches with `-Xmx8g` (`VENTRIS_BRIDGE_MAXMEM`).
+    heap: the bridge now launches with `-Xmx8g` (`ROMWRIGHT_BRIDGE_MAXMEM`).
   - **PsxLoader** (`lab313ru/ghidra_psx_ldr` 6f6be18): Swing RAM choosers
     replaced by declared options, the MIPS pre-analyzer un-shadowed. `VS.EXE`
     imports as `MIPS:LE:32:default`, 2012 functions, `main`/`VSync`/
@@ -5327,7 +5327,7 @@ evidence:
 
 ### m5-014 evidence (decode contexts reach the decompiler, and flow carries the instruction set)
 - Diagnosis: 182 of the 512 sampled DS functions decompiled to "bad instruction data" natively. The worker read every Thumb body as ARM: discovery's `LowBitCodeMode` values lived only in the console sessions and the store kept none.
-- The store now holds `decode_contexts` (`replace_decode_contexts`/`decode_contexts`): every pattern-declared mode, computed-target mode, flowed mode and entry mode discovery settled, `TMode`/`ISA_MODE` folded to the `LowBitCodeMode` each language aliases (ARM.sinc:90-93, mips.sinc:416-417). `lre-worker` replays them as `<context_set>` ranges in the cspec's `<context_data>` (`ContextInternal::decodeFromSpec`, globalcontext.cc:531-553), each value holding to the next recorded point.
+- The store now holds `decode_contexts` (`replace_decode_contexts`/`decode_contexts`): every pattern-declared mode, computed-target mode, flowed mode and entry mode discovery settled, `TMode`/`ISA_MODE` folded to the `LowBitCodeMode` each language aliases (ARM.sinc:90-93, mips.sinc:416-417). `romwright-worker` replays them as `<context_set>` ranges in the cspec's `<context_data>` (`ContextInternal::decodeFromSpec`, globalcontext.cc:531-553), each value holding to the next recorded point.
 - Discovery carries the instruction set along flow as `DisassemblerContextImpl` does: the console names, per branch/call target, the value that flows there (`flow_modes=`; a globalset at the target -- an ARM `blx`, ARMinstructions.sinc:773 -- wins and is named so sibling shards learn it), and discovery sets it before the target decodes. Entry modes disagreeing with the ELF's `$a`/`$t` mapping symbols: 116 of 6818 before, 11 of 7021 after.
 - Pattern rounds now follow Ghidra's pass order: a match landing inside a body an earlier match of the same round decoded is refused as `offcut` (the disassembler's conflict; `PossibleDelayedFunctionCreator` 1001-1012), and a refused match hands the console region back the mode it held (`setCurrentContext` sets one address; the console paints to the next change point). Before this a Thumb `push.w` pattern two bytes into an ARM `stmdb` painted the stretch Thumb and, with flow, cascaded into 164 lost ARM functions.
 - Measured: m5-013 fn.recall 0.6144 -> 0.6320, fn.precision 0.9924 -> 0.9912 (7026 functions); DS parity sample 211 -> 373 of 512 token-identical, 0 native-only "bad instruction data"; ratchet raised to 373. m4-003 re-recorded: `missing-stack-frame` 4 -> 0 (native frames), every other class unchanged, 1796/1892 identical.
@@ -5389,7 +5389,7 @@ evidence:
 
 The gap the tool had was version diffing: nothing matched the functions of one
 program onto another, which is what makes a decompilation with symbols usable
-as an oracle for a retail image. `crates/lre-diff` does it over facts the
+as an oracle for a retail image. `crates/romwright-diff` does it over facts the
 import already holds, no decompiler and no JVM.
 
 - **The store was missing the primitives.** A diff needs per-body structure,
@@ -5429,7 +5429,7 @@ import already holds, no decompiler and no JVM.
 
 ### m5-017 evidence (a Nintendo Switch module, no JVM)
 
-`crates/lre-core/src/native/nso.rs` loads an NSO0: three LZ4-block segments
+`crates/romwright-core/src/native/nso.rs` loads an NSO0: three LZ4-block segments
 assembled at their memory offsets, mapped at `0x71_0000_0000` where
 `SwitchLoader.load` puts a 64-bit module, then the `MOD0` header the word at
 text offset 4 names, and through it an ELF64 dynamic table. The symbol table's
@@ -5457,7 +5457,7 @@ absent.
 The switch round was the last pass in a native import that called the
 decompiler, and the most expensive: 130 of 137 s on a statically linked
 AArch64 image, with two bodies hitting the per-function deadline. The console
-now exports SLEIGH's p-code (`native/ventris_pcode.hh`, export only -- no
+now exports SLEIGH's p-code (`native/romwright_pcode.hh`, export only -- no
 analysis was added to the pinned tree), and `native/vsa.rs` emulates the
 dispatch path once per index, as `JumpBasic::buildAddresses`
 (jumptable.cc:1451-1478) does over the decompiler's IR.
@@ -5515,10 +5515,10 @@ tracked, which by construction survives to the dispatch.
 Enabling it does not move a ratchet: `m4-003` is unchanged at 1796 of 1892
 token-identical with the pass on.
 
-**The abstract interpreter (`VENTRIS_SJA=1`), and why it is opt-in.** Emulating
+**The abstract interpreter (`ROMWRIGHT_SJA=1`), and why it is opt-in.** Emulating
 one straight-line window per index is the wrong instrument for a dispatch
 whose index is bounded in a *different* block than the one that loads it, so
-`crates/lre-core/src/native/sja.rs` adds SJA-style relational abstract
+`crates/romwright-core/src/native/sja.rs` adds SJA-style relational abstract
 interpretation over the whole function CFG: a lattice of `Top`, `Const`,
 `Strided {lo, hi, stride}` and explicit target `Set`s, joined at merges,
 widened only on the values that keep changing, with comparison predicates
@@ -5572,9 +5572,9 @@ own report rather than the code:
   against 0.999 for the guarded answer, so it stays recorded and unreturned
   (`vsa.rs`, the `let _ = unguarded` with the numbers beside it).
 - A "regression" where the decompiler path answered zero dispatches was a
-  stale `lre-worker` binary refusing store schema 19 -- exactly the guard
+  stale `romwright-worker` binary refusing store schema 19 -- exactly the guard
   `m4-014` added. The switch round now reports that refusal in its
-  `discovery_note`, and `VENTRIS_TRACE_VSA` prints the round's inputs
+  `discovery_note`, and `ROMWRIGHT_TRACE_VSA` prints the round's inputs
   (candidates, indirect jumps, asked, known tables) so an empty round is
   distinguishable from a failing one.
 
@@ -5645,7 +5645,7 @@ same gate:
 ### m14-002 evidence (one function, on demand, on a warm image)
 
 `tests/m14-002_demand.py`, `benchmarks/reports/m14-002.json`, cold imports
-(`VENTRIS_NO_IMPORT_CACHE=1`), libc.so.6, 20 sampled bodies:
+(`ROMWRIGHT_NO_IMPORT_CACHE=1`), libc.so.6, 20 sampled bodies:
 
 | Measured | Value |
 |---|---|
@@ -5745,7 +5745,7 @@ starts agreeing.
 
 ### m16-001 evidence (types from p-code, scored against DWARF)
 
-Constraint-based inference over p-code (`crates/lre-core/src/types_infer.rs`):
+Constraint-based inference over p-code (`crates/romwright-core/src/types_infer.rs`):
 each operation an operand takes part in is a constraint, constraints join
 over a small lattice, and nothing is claimed where nothing constrained it.
 Scored on a fixture built at `-O0` and `-O2` (`tests/fixtures-src/types_fixture.c`)
@@ -5823,7 +5823,7 @@ window driven offscreen:
 The window opens a project the way a large image forces you to -- map it,
 show the loader's answer, analyse in the background -- driven by a timer
 that runs bounded `analyse_pending` calls and stops itself when nothing is
-left, so an idle window does no work. `VENTRIS_UI_LOAD_ONLY` selects that
+left, so an idle window does no work. `ROMWRIGHT_UI_LOAD_ONLY` selects that
 path in the gate; without it the harness imports everything up front and
 the provisional state never exists, which is why the first version of this
 gate passed while proving nothing.
@@ -5835,7 +5835,7 @@ A producer that needs nothing pointing at a function: sweep a range,
 cluster what decodes into connected components over intraprocedural edges
 (calls excluded -- they are the edges that leave a function), and call each
 component a function. Nucleus's observation, over our console's decode
-(`crates/lre-core/src/cfg_functions.rs`).
+(`crates/romwright-core/src/cfg_functions.rs`).
 
 Scored standalone -- the sweep covers the whole executable range with
 nothing claimed in advance, so it cannot be handed the answers -- against
@@ -5993,7 +5993,7 @@ point at, none reserved:
   re-baseline to do.
 
 - Recorded deficit, now half closed: a tail-called leaf function is
-  invisible to flow analysis in both Ventris and stock Ghidra. **The
+  invisible to flow analysis in both Romwright and stock Ghidra. **The
   transfer is recorded as of m5-006** (`037f802c -> 037f8000`,
   `UNCONDITIONAL_JUMP`); the function is still not created, and neither
   does stock Ghidra create it. Promoting it is m5-007 and needs evidence,
@@ -6121,7 +6121,7 @@ The ten platforms recorded in "Reserved decisions" split by what can be
 - Console platform targets (recorded per user direction, 2026-09-06; not
   scheduled yet): PS1, PS2, N64, Game Boy Advance, NDS, 3DS, PS3, Xbox 360,
   PSP, PS Vita. What the pinned Ghidra 12.1.3 install already supplies, from
-  `lre-cli architectures`:
+  `romwright-cli architectures`:
   - PS1 R3000A -> `MIPS:LE:32:default`; N64 VR4300 -> `MIPS:BE:64:64-32addr`;
     PSP Allegrex -> `MIPS:LE:32:default` (VFPU unmodelled); GBA ARM7TDMI ->
     `ARM:LE:32:v4t`; NDS ARM946E-S/ARM7TDMI -> `ARM:LE:32:v5t` + `v4t`;
@@ -6381,7 +6381,7 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   and dtk's `N] name (type,vis)` shape; kind precedence is link-map
   `func`/`object` first, then section heuristic (code section -> Func,
   data -> Object) because the link map lists globals only -- static
-  functions exist solely as layout rows. `lre-cli import --map FILE`
+  functions exist solely as layout rows. `romwright-cli import --map FILE`
   seeds named functions (linker truth renames discovery coinage),
   object sizes/names, and `$t`/`$a` mode contexts before discovery;
   the map digest rides the import-cache flavour. Gate
@@ -6509,10 +6509,10 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   on an analysed GCC hello (.text->.plt). REL loader deferred: no REL
   fixture on disk, and the modules model is format-agnostic so a REL
   lands as modules when one arrives.
-- m20-013: PS2 VU + PSX GTE disassembly. `crates/lre-core/src/vu.rs`
+- m20-013: PS2 VU + PSX GTE disassembly. `crates/romwright-core/src/vu.rs`
   decodes the EE COP2 VU macro set (tables from Ghidra's vendored
   `vuupper.sinc`/`cop2.sinc`, operand order verified against rabbitizer
-  R5900); `crates/lre-core/src/gte.rs` decodes the PSX GTE command set.
+  R5900); `crates/romwright-core/src/gte.rs` decodes the PSX GTE command set.
   Gate `tests/m20-013_vector.py`: VU 19281/19281 mnemonics on real
   nightfire-ps2 code, GTE 328/328 on an exhaustive command+flag sweep.
   M-G vector units complete: RSP (m20-012) + VU + GTE (m20-013).

@@ -145,12 +145,12 @@ On Linux, install JDK 25 and the pinned Ghidra 12.1.3 release, then run:
 
 <!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```bash
-python3 scripts/gen_corpus.py --architectures x86_64,i386,aarch64,powerpc --out-dir /tmp/ventris-corpus
-python3 scripts/gen_oracle.py --corpus-dir /tmp/ventris-corpus --report /tmp/ventris-oracle-report.json
+python3 scripts/gen_corpus.py --architectures x86_64,i386,aarch64,powerpc --out-dir /tmp/romwright-corpus
+python3 scripts/gen_oracle.py --corpus-dir /tmp/romwright-corpus --report /tmp/romwright-oracle-report.json
 python3 tests/m1-007_oracle_test.py
 ```
 
-`VENTRIS_GHIDRA` or `--ghidra` selects the installation; the default is
+`ROMWRIGHT_GHIDRA` or `--ghidra` selects the installation; the default is
 `~/ghidra_12.1.3_PUBLIC`. CI verifies the official release archive's SHA-256.
 The generator rebuilds the existing Java bridge once when analysis is needed,
 imports each stripped primary into an isolated temporary project, runs default
@@ -199,7 +199,7 @@ open. Ghidra's importer then takes the first element of a
 `HashSet<QueryResult>` iteration over candidates that are all equally
 preferred, which for a flags-0 32-bit big-endian PowerPC ELF is
 `PowerPC:BE:32:e500` (`PowerPC:BE:32:default` is twelfth in the same set).
-Hash order is not a fact about the image, so Ventris takes the neutral
+Hash order is not a fact about the image, so Romwright takes the neutral
 `default` variant and `m4-023` records the disagreement with the proof that
 nothing in the data separates the two.
 
@@ -212,7 +212,7 @@ Ubuntu LLVM 18 routes generic `*-none-elf` x86 links through GCC, whose
 default PIE mode rejects the probes' absolute relocations. The explicit
 targets/model avoid that host-dependent driver behavior.
 
-## Reusable gate stores (`VENTRIS_GATE_CACHE`)
+## Reusable gate stores (`ROMWRIGHT_GATE_CACHE`)
 
 A gate run spent most of its wall time re-analysing bytes that never changed
 with analysers that never changed: `m4-003` imported sixteen corpus rows
@@ -224,7 +224,7 @@ answers, keyed by the provenance that produced them and nothing else:
 |---|---|
 | oracle store, oracle decompile texts | binary digest + `bridge_sources_sha256` + install `upstream_version`/`upstream_revision` |
 | stock headless export (thunks, names, selected language) | binary digest + exporter-script digest + install version/revision |
-| native store, native decompile texts | binary digest + `lre-cli` digest + `lre-worker` digest |
+| native store, native decompile texts | binary digest + `romwright-cli` digest + `romwright-worker` digest |
 
 The native key carries the executables on purpose: m4-014 recorded three
 measurement rounds driven by a stale worker, and a key that omitted the build
@@ -232,8 +232,8 @@ would reintroduce that failure as a cache hit. A miss, a changed input, a
 corrupt marker or a crashed build all fall through to real work, and
 `tests/gate_cache_test.py` pins each of those properties.
 
-Set `VENTRIS_GATE_CACHE=/some/path` to relocate the store (default:
-`$TMPDIR/ventris-gate-cache`), or `VENTRIS_GATE_CACHE=` to switch reuse off.
+Set `ROMWRIGHT_GATE_CACHE=/some/path` to relocate the store (default:
+`$TMPDIR/romwright-gate-cache`), or `ROMWRIGHT_GATE_CACHE=` to switch reuse off.
 The cost gates (`m7-001`..`m7-003`) never use it: they measure the work it
 skips. Measured on the corpus: `m4-003` 690-1300 s -> **250 s** cold and
 **3 s** reused, `m5-008` 172 s -> 14 s, `m5-011` 177 s -> 6 s, `m4-023` 65 s

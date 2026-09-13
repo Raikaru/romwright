@@ -31,7 +31,7 @@ recall has no unwind evidence behind it yet.
 Neither gated fixture carries a chained `UNW_FLAG_CHAININFO` record -- 95 and
 97 records, all plain -- so the rule that a chained record describes a
 fragment rather than a function is pinned by a unit test in
-`crates/lre-core/src/native/pe_unwind.rs`, not by these images.
+`crates/romwright-core/src/native/pe_unwind.rs`, not by these images.
 
 Usage:
     python3 tests/m8-001_pe_unwind.py [--report OUT.json]
@@ -170,7 +170,7 @@ def symbol_addresses(binary: Path) -> set[int]:
 def native_import(binary: Path, work: Path) -> tuple[set[int], set[str]]:
     project = work / f"{binary.stem}-project"
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "scored", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, f"native import failed: {result.stderr.strip()}"
@@ -235,7 +235,7 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     rows, recorded = [], []
     with tempfile.TemporaryDirectory(prefix="m8-001-") as directory:

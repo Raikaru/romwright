@@ -22,7 +22,7 @@ source is used as an oracle.
 
 ## Function signature database
 
-`.vsig` (`docs/vsig.md`, `crates/lre-sig`) is Ventris' own container. Pattern
+`.vsig` (`docs/vsig.md`, `crates/romwright-sig`) is Romwright' own container. Pattern
 plus per-byte compare mask is a general, publicly described idea; no
 proprietary signature format documentation, database or tool output was
 consulted, and nothing is byte-compatible with one. Every record carries the
@@ -34,7 +34,7 @@ No FunctionID database, signature file or tool output was read.
 
 ## Itanium C++ RTTI
 
-`crates/lre-core/src/rtti.rs` follows the public Itanium C++ ABI: §2.9.5 for
+`crates/romwright-core/src/rtti.rs` follows the public Itanium C++ ABI: §2.9.5 for
 the `__class_type_info`, `__si_class_type_info` and `__vmi_class_type_info`
 layouts and their `base_class_type_info` offset/flag encoding, §2.5.2 for
 vtable layout (`offset_to_top`, the `type_info` slot and the address point),
@@ -46,7 +46,7 @@ candidates produce no class.
 
 ## MSVC RTTI
 
-`crates/lre-core/src/rtti/msvc.rs` follows LLVM's Microsoft C++ ABI code
+`crates/romwright-core/src/rtti/msvc.rs` follows LLVM's Microsoft C++ ABI code
 generation (`clang/lib/CodeGen/MicrosoftCXXABI.cpp`, Apache-2.0 WITH
 LLVM-exception), which documents `RTTICompleteObjectLocator`,
 `RTTIClassHierarchyDescriptor`, `RTTIBaseClassDescriptor`, `TypeDescriptor`
@@ -83,7 +83,7 @@ change its fingerprint or the immutable raw oracle references.
 
 ## Instruction flow metadata
 
-`native/ventris_flow.hh` follows Ghidra 12.1.3
+`native/romwright_flow.hh` follows Ghidra 12.1.3
 `SleighInstructionPrototype.walkTemplates`, `flowListToFlowType`,
 `gatherFlags` and `convertFlowFlags` (Apache-2.0). The pinned-tree patch
 collects template flow facts during ordinary SLEIGH p-code generation, not
@@ -119,7 +119,7 @@ thunk analyzer.
 The bounded indirect-linkage prerequisite also follows `getThunkedAddr` and
 `addRegisterUsage` in `CreateThunkFunctionCmd` (Apache-2.0), with stricter
 fail-closed handling of unknown inputs and partial register aliases.
-`native/ventris_linkage.hh` consumes SLEIGH p-code and reuses the decompiler's
+`native/romwright_linkage.hh` consumes SLEIGH p-code and reuses the decompiler's
 registered `OpBehavior` constant evaluators. It tracks pointer-slot identity,
 not invented external pointer values. Stores, calls, other control flow and
 unused non-flag register writes are rejected. Bounds are 8 instructions,
@@ -177,7 +177,7 @@ loader-recorded external slot. Generic branch-target recognition remains strict.
 
 ## Native function-start pattern matching
 
-`native/ventris_patterns.hh` follows Ghidra 12.1.3 BytePatterns (Apache-2.0):
+`native/romwright_patterns.hh` follows Ghidra 12.1.3 BytePatterns (Apache-2.0):
 `Patterns`, `Pattern`, `PatternPairSet`, `DittedBitSequence`, `AlignRule`,
 `LanguageConstraint`, `CompilerConstraint`, and `generic.constraint.DecisionNode`.
 The existing native XML parser reads installed `patternconstraints.xml` and the
@@ -203,7 +203,7 @@ base load-spec selection, not producer identification from Go/Swift metadata.
 
 ## Native instruction-flow facts
 
-`native/ventris_flow.hh` follows Ghidra 12.1.3
+`native/romwright_flow.hh` follows Ghidra 12.1.3
 `SleighInstructionPrototype.walkTemplates`, `flowListToFlowType` and
 `convertFlowFlags` (Apache-2.0). It retains template distinctions that resolved
 p-code alone loses: instruction-local labels and J_START/J_NEXT are not
@@ -217,7 +217,7 @@ batch, including error rows, rather than once per instruction.
 
 ## Function-start eligibility and scheduling
 
-`crates/lre-core/src/native/discovery/patterns.rs` follows Ghidra 12.1.3
+`crates/romwright-core/src/native/discovery/patterns.rs` follows Ghidra 12.1.3
 `FunctionStartAnalyzer`, `PseudoDisassembler`, `RepeatInstructionByteTracker`
 and `PossibleDelayedFunctionCreator` (Apache-2.0). This is entry selection
 against retained native facts, not a replacement for all BytePatterns
@@ -263,7 +263,7 @@ Core memory reads retain their strict region-boundary contract.
 
 ## Function constant propagation
 
-`native/ventris_constants.hh` follows Ghidra 12.1.3's
+`native/romwright_constants.hh` follows Ghidra 12.1.3's
 `ConstantPropagationContextEvaluator`, `SymbolicPropogator` and
 `VarnodeContext` (Apache-2.0), checked against the extracted release sources.
 The evaluator supplies pointer policy; it is not itself a propagation engine.
@@ -319,7 +319,7 @@ The scalar pass honors `ScalarOperandAnalyzer.getDefaultEnablement2`'s
 instruction-alignment restriction. Aligned ISAs still receive memory and
 computed-use references, but unused address formation is not promoted by
 the scalar pass.
-`native/ventris_operand_refs.hh` walks decoded display operands, not assembly
+`native/romwright_operand_refs.hh` walks decoded display operands, not assembly
 text or incidental p-code constants. Direct control-flow targets keep their
 flow classification; address literals in comparisons need no pointer output.
 The x86-only computed-address policy follows `X86Analyzer.evaluateContext`
@@ -439,7 +439,7 @@ Ghidra sources. Payloads are bounded by the protocol's 12-bit byte length.
 
 ## Recovered native prototypes
 
-`crates/lre-worker/src/prototype.rs` follows the pinned Ghidra 12.1.3
+`crates/romwright-worker/src/prototype.rs` follows the pinned Ghidra 12.1.3
 `Funcdata::encode`, `FuncProto::encode`, `ProtoStoreInternal::encode`,
 `Symbol::encodeHeader`, and datatype `encodeRef`/`encode` methods
 (`funcdata.cc`, `fspec.cc`, `database.cc`, `type.cc`; Apache-2.0).
@@ -449,7 +449,7 @@ nested function-pointer prototypes do not replace the enclosing function's
 prototype. Missing references remain unknown, and malformed or truncated
 documents do not publish a partial prototype. No pinned source is modified.
 
-The switch projection in `crates/lre-worker/src/doc.rs` follows
+The switch projection in `crates/romwright-worker/src/doc.rs` follows
 `Funcdata::encodeJumpTable` and `JumpTable::encode` (`funcdata.cc`,
 `jumptable.cc`; Apache-2.0). It retains the branch address and every ordered
 destination, including duplicates. The structural function's direct address
@@ -468,7 +468,7 @@ booleans follow `PackedEncode::writeBool` in `marshal.cc`. Output type storage
 stays unlocked so the flag does not replace existing prototype recovery.
 Known names and leading-underscore normalization follow Ghidra 12.1.3
 `Features/Base/data/{Elf,PE}FunctionsThatDoNotReturn` and
-`NoReturnFunctionAnalyzer` (Apache-2.0). `native/ventris_nonreturn.hh` checks
+`NoReturnFunctionAnalyzer` (Apache-2.0). `native/romwright_nonreturn.hh` checks
 completed basic-block CFGs, halt flags, and recovered jump tables using pinned
 `funcdata.hh`, `block.hh`, `op.hh`, and `jumptable.hh`; it exports a transient
 prototype flag and restores the cached prototype after encoding.
@@ -476,7 +476,7 @@ The benchmark-only `scripts/ExportReturnBehaviors.java` reads
 `Function.hasNoReturn`, inherited `Namespace.getBody`, and
 `AddressSetView.getAddressRanges` / `AddressRange` endpoints from the extracted
 Ghidra 12.1.3 Java API (Apache-2.0). Eligibility reuses `code-functions-v1`.
-The native flow closure and revision-owned SQLite publication are Ventris code.
+The native flow closure and revision-owned SQLite publication are Romwright code.
 
 ## Benchmark DWARF arity truth
 

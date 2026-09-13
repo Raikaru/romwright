@@ -1,6 +1,6 @@
 {
  "schema_version": 1,
- "note": "Platforms Ventris does not support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3.",
+ "note": "Platforms Romwright does not support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3.",
  "platforms": [
   {
    "input": "Sony PSP (Allegrex ELF/PBP)",

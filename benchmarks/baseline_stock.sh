@@ -3,9 +3,9 @@
 # latency for import+analyze on the tiny fixture, using stock analyzeHeadless.
 # Results are machine-readable JSON on stdout; Ghidra chatter goes to the log.
 set -u
-GHIDRA="${VENTRIS_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
+GHIDRA="${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
 FIXTURE="${1:-tests/fixtures-src/tiny_bin}"
-OUTDIR="${2:-/tmp/lre-baseline}"
+OUTDIR="${2:-/tmp/romwright-baseline}"
 RUNS="${RUNS:-3}"
 
 mkdir -p "$OUTDIR"
@@ -40,7 +40,7 @@ rss  = sorted(r['maxrss_kb'] for r in ok)
 def med(v): return v[len(v)//2] if v else None
 report = {
   'component': 'stock-ghidra-analyzeHeadless',
-  'ghidra': os.environ.get('VENTRIS_GHIDRA', os.path.expanduser('~/ghidra_12.1.3_PUBLIC')),
+  'ghidra': os.environ.get('ROMWRIGHT_GHIDRA', os.path.expanduser('~/ghidra_12.1.3_PUBLIC')),
   'host': {'kernel': platform.release(), 'machine': platform.machine(),
            'cpu': os.cpu_count()},
   'runs': runs,

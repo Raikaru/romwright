@@ -27,7 +27,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 
 
 def import_program(binary: Path, project: Path, name: str) -> None:

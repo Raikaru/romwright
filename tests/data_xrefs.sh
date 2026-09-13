@@ -4,14 +4,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CLI="${LRE_CLI:-$ROOT/target/release/lre-cli}"
+CLI="${LRE_CLI:-$ROOT/target/release/romwright-cli}"
 TINY_BIN="$ROOT/tests/fixtures-src/tiny_bin"
 LIBC_BIN="${1:-/usr/lib64/libc.so.6}"
 
 # Build what is being tested: a stale binary here once passed this gate for a
 # change that had already altered its output.
 if [ -z "${LRE_CLI:-}" ]; then
-    cargo build -q --manifest-path "$ROOT/Cargo.toml" -p lre-cli
+    cargo build -q --manifest-path "$ROOT/Cargo.toml" -p romwright-cli
 fi
 
 if [ ! -f "$TINY_BIN" ]; then
@@ -19,7 +19,7 @@ if [ ! -f "$TINY_BIN" ]; then
     exit 1
 fi
 
-PROJECT="$(mktemp -d /tmp/ventris-data-xrefs.XXXXXX)"
+PROJECT="$(mktemp -d /tmp/romwright-data-xrefs.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 # Step 1: Import tiny_bin and verify CRT helper discovery + all 4 xref kinds

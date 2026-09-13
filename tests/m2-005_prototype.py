@@ -18,15 +18,15 @@ def main():
     env = os.environ.copy()
     # Both entrypoints must resolve the fixture's language without requiring
     # callers to set a process-global SLA just to make pooled analysis work.
-    env.pop('VENTRIS_SLA', None)
+    env.pop('ROMWRIGHT_SLA', None)
 
     def run(command, **kwargs):
         return subprocess.run(command, cwd=root, env=env, text=True,
             capture_output=True, check=True, timeout=60, **kwargs)
 
-    with tempfile.TemporaryDirectory(prefix='ventris-m2-005-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-m2-005-') as temporary:
         project = Path(temporary) / 'project'
-        cli = str(root / 'target/release/lre-cli')
+        cli = str(root / 'target/release/romwright-cli')
         run([cli, 'import', str(binary), '--project', str(project)])
         standalone = json.loads(run([cli, 'decompile-doc', str(binary),
             '0x400466', '--project', str(project)]).stdout)
@@ -34,7 +34,7 @@ def main():
             binary=str(binary), program='tiny_bin', address=dict(space='Ram', offset=address)))
             for index, address in enumerate([0x400466, 0x40047a, 0x400466])]
         requests.append(dict(api=2, id=3, method='jobs_page', params={}))
-        response = run([str(root / 'target/release/lre-api'), '--project', str(project)],
+        response = run([str(root / 'target/release/romwright-api'), '--project', str(project)],
             input=''.join(json.dumps(request) + '\n' for request in requests))
         replies = [json.loads(line) for line in response.stdout.splitlines()]
         assert len(replies) == 4, replies

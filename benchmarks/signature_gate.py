@@ -54,8 +54,8 @@ def main():
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--timeout', type=int, default=900)
     args = parser.parse_args()
-    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-cli'], cwd=ROOT, check=True)
-    cli = ROOT / 'target/release/lre-cli'
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'romwright-cli'], cwd=ROOT, check=True)
+    cli = ROOT / 'target/release/romwright-cli'
     rows = []
     with tempfile.TemporaryDirectory(prefix='vsig-gate-') as temporary:
         work = Path(temporary)

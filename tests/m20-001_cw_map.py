@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGES = Path.home() / "ventris-corpus/extracted/nds-pokeheartgold"
+IMAGES = Path.home() / "romwright-corpus/extracted/nds-pokeheartgold"
 ROM = "pokeheartgold.us.nds"
 MAP = "pokeheartgold.map"
 ELF = "pokeheartgold.elf"
@@ -87,9 +87,9 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m20-001-") as temporary:
         project = Path(temporary) / "project"
         imported = subprocess.run(

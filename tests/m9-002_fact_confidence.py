@@ -31,7 +31,7 @@ PE fixtures:
   * **A number must be derived.** No stored fact may carry a numeric
     `confidence` unless its class declares a derivation. The one derivation
     that exists is the signature matcher's share of compared bytes
-    (`lre-sig`), so any other class carrying a number is a number nothing
+    (`romwright-sig`), so any other class carrying a number is a number nothing
     derives.
 
 Attribution follows `m3-001`: DWARF truth, a symbol in the unstripped twin, a
@@ -90,10 +90,10 @@ def load(name: str, path: Path):
 def table() -> dict[str, dict]:
     """The shared table, as the CLI publishes it."""
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "provenance", "--json"],
+        [str(ROOT / "target/release/romwright-cli"), "provenance", "--json"],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, (
-        f"`lre-cli provenance --json` failed: {result.stderr.strip()}")
+        f"`romwright-cli provenance --json` failed: {result.stderr.strip()}")
     return {row["source"]: row for row in json.loads(result.stdout)}
 
 
@@ -121,7 +121,7 @@ def main() -> int:
                         help="add classes the record does not hold yet")
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
     pe = load("m8_001", ROOT / "tests/m8-001_pe_unwind.py")
     extents = load("m8_003", ROOT / "tests/m8-003_body_extents.py")
@@ -164,7 +164,7 @@ def main() -> int:
         for image, twin, big_endian, is_pe in scored_images(arguments.corpus_dir, work):
             project = work / f"{image.stem}-confidence"
             result = subprocess.run(
-                [str(ROOT / "target/release/lre-cli"), "import", str(image),
+                [str(ROOT / "target/release/romwright-cli"), "import", str(image),
                  "--name", "scored", "--project", str(project)],
                 cwd=ROOT, capture_output=True, text=True)
             assert result.returncode == 0, (

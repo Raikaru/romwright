@@ -45,7 +45,7 @@ PER_PROGRAM = ("functions", "symbols", "strings", "memory_regions", "thunks",
 class Api:
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -71,7 +71,7 @@ class Api:
 
 def imported(binary: Path, name: str, project: Path) -> None:
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", name, "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, (
@@ -90,8 +90,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
     assert ELF.is_file() and PE.is_file(), "a committed fixture is missing"
 
     checks: dict[str, int] = {}
@@ -214,7 +214,7 @@ def main() -> int:
 
             # The terminal answers the same question.
             listing = subprocess.run(
-                [str(ROOT / "target/release/lre-cli"), "locate",
+                [str(ROOT / "target/release/romwright-cli"), "locate",
                  f"{shared_address:08x}", "--project", str(shared)],
                 cwd=ROOT, capture_output=True, text=True)
             assert listing.returncode == 0, (

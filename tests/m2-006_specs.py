@@ -23,13 +23,13 @@ def main():
     args = parser.parse_args()
     subprocess.run([sys.executable, str(ROOT / 'scripts/gen_native_specs.py'),
         '--corpus-dir', str(args.corpus_dir), '--check'], cwd=ROOT, check=True)
-    install = Path(os.environ.get('VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC')))
+    install = Path(os.environ.get('ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC')))
     producer = producer_context(install)
     env = os.environ.copy()
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
     results = []
-    with tempfile.TemporaryDirectory(prefix='ventris-native-specs-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-native-specs-') as temporary:
         for architecture in ('i386', 'aarch64', 'powerpc'):
             binary = (args.corpus_dir / (architecture + '_plain_o0.bin')).resolve()
             context = CONTEXTS[architecture]

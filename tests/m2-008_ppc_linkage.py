@@ -31,9 +31,9 @@ def main():
         assert len(matches) == 1, (name, matches)
         entries[name] = int(matches[0][0], 16)
     env = os.environ.copy()
-    for key in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    for key in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(key, None)
-    with tempfile.TemporaryDirectory(prefix='ventris-ppc-linkage-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='romwright-ppc-linkage-') as temporary:
         _, functions, report, facts, repeated = run_api(ROOT, Path(temporary) / 'project', [
             ('import_native', dict(binary=str(binary), name='cpp')),
             ('functions', dict(program='cpp')),

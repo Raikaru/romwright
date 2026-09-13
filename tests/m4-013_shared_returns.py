@@ -35,7 +35,7 @@ transfers` types such a branch `UNCONDITIONAL_CALL` -- and never recorded the
 cause, so nothing reached the decompiler. The second, `assumeContiguous
 Functions` half of the same command *creates* functions at jump destinations
 beyond the next entry; that is tail-call promotion, which II.1 keeps behind
-`VENTRIS_PROMOTE_TAILCALLS`, and this task does not touch it.
+`ROMWRIGHT_PROMOTE_TAILCALLS`, and this task does not touch it.
 
 Assertions
   1. On the corpus: the tail branch of the PowerPC entry and of the AArch64
@@ -66,7 +66,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target/release/lre-cli"
+CLI = ROOT / "target/release/romwright-cli"
 LOCK = ROOT / "tests/corpus.lock.json"
 SOURCE = "native-analysis:shared-return"
 JUMPTABLE = re.compile(r"Could not recover jumptable")
@@ -120,9 +120,9 @@ stub:
 
 def environment() -> dict[str, str]:
     values = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_SPECS", "VENTRIS_REGISTER_PARAMS",
-                 "VENTRIS_PROMOTE_TAILCALLS"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_SPECS", "ROMWRIGHT_REGISTER_PARAMS",
+                 "ROMWRIGHT_PROMOTE_TAILCALLS"):
         values.pop(name, None)
     return values
 
@@ -252,11 +252,11 @@ def main() -> int:
     parser.add_argument("--timeout", type=int, default=900)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True, env=environment())
     # The release CLI drives the worker beside it, so the gate builds the pair
     # it measures (m4-014).
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
 
     lock = json.loads(LOCK.read_text())

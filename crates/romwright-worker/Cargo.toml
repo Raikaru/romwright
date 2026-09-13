@@ -1,0 +1,22 @@
+[package]
+name = "romwright-worker"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+description = "Native decompiler worker: burst/packed protocol client for ghidra_opt"
+
+[[bin]]
+name = "romwright-worker"
+path = "src/main.rs"
+
+[dependencies]
+romwright-model = { path = "../romwright-model" }
+romwright-db = { path = "../romwright-db" }
+romwright-core = { path = "../romwright-core" }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[lib]
+name = "romwright_worker"
+path = "src/lib.rs"

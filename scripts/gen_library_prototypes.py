@@ -58,7 +58,7 @@ def export(install: Path, archive: Path, timeout: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--ghidra", type=Path, default=Path(os.environ.get(
-        "VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
+        "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     parser.add_argument("--check", action="store_true",
                         help="verify the committed table against the archive")
     parser.add_argument("--timeout", type=int, default=900)

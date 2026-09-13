@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-IMAGES = Path.home() / "ventris-corpus/extracted/ps2-capcom-fighting-evolution"
+IMAGES = Path.home() / "romwright-corpus/extracted/ps2-capcom-fighting-evolution"
 IMAGE = "SLUS_209.50"
 
 # DWARF 1 tags and attributes the reader consumes.
@@ -134,14 +134,14 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
                    cwd=ROOT, check=True)
-    cli = ROOT / "target/release/lre-cli"
+    cli = ROOT / "target/release/romwright-cli"
     with tempfile.TemporaryDirectory(prefix="m20-005-") as temporary:
         project = Path(temporary) / "project"
         # The import cache would serve a stored DB with no phase timings;
         # the gate needs the reader to actually run.
-        env = dict(os.environ, VENTRIS_NO_IMPORT_CACHE="1")
+        env = dict(os.environ, ROMWRIGHT_NO_IMPORT_CACHE="1")
         imported = subprocess.run(
             [str(cli), "import", str(image), "--no-analysis",
              "--name", "ps2", "--project", str(project), "--timings"],

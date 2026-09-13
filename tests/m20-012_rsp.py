@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-ROM = Path("/home/raikaru/ventris-corpus/perfect_dark_ntsc_final.z64")
+ROM = Path("/home/raikaru/romwright-corpus/perfect_dark_ntsc_final.z64")
 
 
 def main() -> int:
@@ -27,7 +27,7 @@ def main() -> int:
 
     import rabbitizer  # the reference decoder
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
                     "--bin", "rsp_dump"], cwd=ROOT, check=True,
                    capture_output=True, timeout=1800)
     cli = ROOT / "target" / "release" / "rsp_dump"

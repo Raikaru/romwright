@@ -3,11 +3,11 @@
 
 `m7-001` and `m7-002` each measure one process that starts, answers once and
 exits. The desktop and every script hold a project open through a single
-`lre-api` process and ask it many questions, and nothing measured what that
+`romwright-api` process and ask it many questions, and nothing measured what that
 costs after N requests -- or whether the Nth answer costs more than the
 second.
 
-Per locked corpus entry this drives one long-lived `lre-api` process through
+Per locked corpus entry this drives one long-lived `romwright-api` process through
 the same request sequence for several identical rounds, sampling the *process
 tree*'s resident size (the service plus the SLEIGH console child it spawns for
 `decompile_doc`) every 25 ms. It then requires:
@@ -127,7 +127,7 @@ def sequence(program: str, binary: Path, address: str, console: bool
 
 def native_address(program: str, project: Path) -> str:
     listing = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "functions", program,
+        [str(ROOT / "target/release/romwright-cli"), "functions", program,
          "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
     for line in listing.splitlines():
@@ -140,7 +140,7 @@ def native_address(program: str, project: Path) -> str:
 def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict:
     project = temporary / "project"
     imported = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "session", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert imported.returncode == 0, (
@@ -149,7 +149,7 @@ def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict
     requests = sequence("session", binary, address, console)
 
     service = subprocess.Popen(
-        [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+        [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
         cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL, text=True, bufsize=1)
     sampler = Sampler(service.pid)
@@ -243,14 +243,14 @@ def main() -> int:
                         help="record the envelope; refuses to overwrite one")
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-api",
-                    "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-api",
+                    "-p", "romwright-cli"], cwd=ROOT, check=True)
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"]
                if entry.get("status") == "ok" and entry.get("unstripped_twin")]
     assert len(entries) >= 20, f"only {len(entries)} corpus entries are usable"
 
-    console = bool(os.environ.get("VENTRIS_CONSOLE")) or (
+    console = bool(os.environ.get("ROMWRIGHT_CONSOLE")) or (
         ROOT / "native/build/decomp_native").is_file()
     skipped = [] if console else [
         "decompile_doc: no SLEIGH console, so the session holds no console child"]
@@ -265,7 +265,7 @@ def main() -> int:
     if arguments.write:
         record_envelope(
             ENVELOPE, peaks,
-            f"peak process-tree RSS of one lre-api session answering "
+            f"peak process-tree RSS of one romwright-api session answering "
             f"{rows[0]['requests_per_round']} requests for {WARMUP} warm-up "
             f"and {ROUNDS} measured rounds per locked corpus entry; recorded "
             f"once, compared against afterwards",

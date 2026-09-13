@@ -65,7 +65,7 @@ def run_api(root, project, requests, timeout, env):
     import signal
     import subprocess
     process = subprocess.Popen(
-        [str(root / 'target/release/lre-api'), '--project', str(project)],
+        [str(root / 'target/release/romwright-api'), '--project', str(project)],
         cwd=root, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, text=True, start_new_session=True)
     payload = ''.join(json.dumps(dict(api=2, id=index, method=method, params=params)) + '\n'
@@ -120,16 +120,16 @@ def main():
     parser.add_argument('--oracle-dir', type=Path, default=root / 'oracle/prototypes-v1')
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
-        'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
+        'ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--budget-ms', type=int, default=60000)
     parser.add_argument('--timeout', type=int, default=180)
     args = parser.parse_args()
     if args.budget_ms < 0 or args.timeout <= 0:
         parser.error('budget must be nonnegative and timeout must be positive')
-    env = dict(os.environ, VENTRIS_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
-    for name in ('VENTRIS_SLA', 'VENTRIS_LANGUAGE', 'VENTRIS_LANGUAGE_DIR', 'VENTRIS_SPECS'):
+    env = dict(os.environ, ROMWRIGHT_GHIDRA=str(args.ghidra.resolve()), DEBUGINFOD_URLS='')
+    for name in ('ROMWRIGHT_SLA', 'ROMWRIGHT_LANGUAGE', 'ROMWRIGHT_LANGUAGE_DIR', 'ROMWRIGHT_SPECS'):
         env.pop(name, None)
-    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'lre-api', '-p', 'lre-worker'],
+    subprocess.run(['cargo', 'build', '-q', '--release', '-p', 'romwright-api', '-p', 'romwright-worker'],
         cwd=root, env=env, check=True)
     lock = json.loads((root / 'tests/corpus.lock.json').read_text())
     recipes = {row['architecture'] + '_' + row['variant']: row
@@ -219,7 +219,7 @@ def main():
         machine=dict(os=platform.platform(), cpu=platform.processor() or platform.machine(), ram_gb=physical_memory_gb()),
         budget_ms=args.budget_ms, dwarf_reader_sha256=digest(root / 'benchmarks/dwarf_arity.py'),
         native_patch_sha256=digest(root / 'native/ghidra-opt-sleigh.patch'),
-        native_linkage_sha256=digest(root / 'native/ventris_linkage.hh'),
+        native_linkage_sha256=digest(root / 'native/romwright_linkage.hh'),
         corpus=rows, summary=summary, passed=len(rows) == 20 and summary['pass'] == 20)
     write_native_report(args.report, report, recipes)
     print(json.dumps(dict(summary=summary, passed=report['passed'])))

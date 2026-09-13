@@ -60,7 +60,7 @@ def is_generated(name: str) -> bool:
 
 def run(arguments: list[str], environment: dict[str, str], timeout: int = 3600) -> str:
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli")] + arguments, cwd=ROOT, env=environment,
+        [str(ROOT / "target/release/romwright-cli")] + arguments, cwd=ROOT, env=environment,
         capture_output=True, text=True, timeout=timeout,
     )
     if result.returncode:
@@ -163,11 +163,11 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ)
-    environment.setdefault("VENTRIS_CONSOLE", str(ROOT / "native/build/decomp_native"))
+    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     tmp = arguments.work / "tmp"
     tmp.mkdir(exist_ok=True)
     environment["TMPDIR"] = str(tmp)
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 
     failures: list[str] = []
     rows = locked_rows(arguments.corpus_dir, arguments.work, environment)

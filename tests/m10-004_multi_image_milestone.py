@@ -5,7 +5,7 @@ Three gates exist (`m10-001`..`m10-003`) and each writes its own report.
 Nothing states the milestone-level claim, and nothing notices when a method
 that takes a `program` appears with no per-program isolation behind it.
 
-The methods are enumerated from `crates/lre-api/src/lib.rs` -- every dispatch
+The methods are enumerated from `crates/romwright-api/src/lib.rs` -- every dispatch
 arm that reads `params.program` -- and then driven against a project holding
 two images:
 
@@ -38,7 +38,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS = ROOT / "benchmarks" / "reports"
-DISPATCH = ROOT / "crates/lre-api/src/lib.rs"
+DISPATCH = ROOT / "crates/romwright-api/src/lib.rs"
 ELF = ROOT / "tests/fixtures-src/tiny_bin"
 PE = ROOT / "tests/fixtures-src/tiny_pe32.exe"
 ARM = re.compile(r'\n            "([a-z_0-9]+)" =>')
@@ -58,11 +58,11 @@ EXCUSED: dict[str, str] = {}
 
 
 class Api:
-    """One `lre-api` process bound to one project."""
+    """One `romwright-api` process bound to one project."""
 
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -102,7 +102,7 @@ def program_taking_methods() -> list[str]:
 
 def imported(binary: Path, name: str, project: Path) -> None:
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", name, "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, (
@@ -231,8 +231,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
 
     methods = program_taking_methods()
     findings: dict[str, object] = {}

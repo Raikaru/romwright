@@ -10,12 +10,12 @@ uncertain, so it is cached -- but only under the key that *is* its provenance:
   (`bridge_sources_sha256`, the same digest `gen_oracle.py` pins into every
   committed reference) and on the pinned install's `upstream_revision`;
 * a **native** artifact depends on the binary and on the executables that
-  produced it -- the release `lre-cli` and `lre-worker` -- which is the
+  produced it -- the release `romwright-cli` and `romwright-worker` -- which is the
   m4-014 lesson: a stale worker silently drove a measurement for three
   rounds, and a cache keyed on anything less would reintroduce it.
 
 A miss, a mismatch, a missing marker or a partially written directory all fall
-through to real work. Set `VENTRIS_GATE_CACHE=` (empty) to disable reuse
+through to real work. Set `ROMWRIGHT_GATE_CACHE=` (empty) to disable reuse
 entirely; a cost gate must, since it measures the work this module skips.
 """
 from __future__ import annotations
@@ -49,10 +49,10 @@ def digest(path: Path) -> str:
 
 def cache_root() -> Path | None:
     """Where reusable stores live, or `None` when reuse is switched off."""
-    configured = os.environ.get("VENTRIS_GATE_CACHE")
+    configured = os.environ.get("ROMWRIGHT_GATE_CACHE")
     if configured is not None:
         return Path(configured) if configured.strip() else None
-    return Path(tempfile.gettempdir()) / "ventris-gate-cache"
+    return Path(tempfile.gettempdir()) / "romwright-gate-cache"
 
 
 def oracle_key(binary: Path, install: Path, **extra: str) -> dict:
@@ -99,8 +99,8 @@ def native_key(binary: Path, **extra: str) -> dict:
     return {
         "kind": "native",
         "binary_sha256": digest(Path(binary)),
-        "cli_sha256": digest(ROOT / "target/release/lre-cli"),
-        "worker_sha256": digest(ROOT / "target/release/lre-worker"),
+        "cli_sha256": digest(ROOT / "target/release/romwright-cli"),
+        "worker_sha256": digest(ROOT / "target/release/romwright-worker"),
         "spec_bundles_sha256": specs.hexdigest(),
         **extra,
     }

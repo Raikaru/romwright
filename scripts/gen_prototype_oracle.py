@@ -72,7 +72,7 @@ def main():
     parser.add_argument('--oracle-dir', type=Path, default=ROOT / 'oracle/prototypes-v1')
     parser.add_argument('--report', type=Path, required=True)
     parser.add_argument('--ghidra', type=Path, default=Path(os.environ.get(
-        'VENTRIS_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
+        'ROMWRIGHT_GHIDRA', str(Path.home() / 'ghidra_12.1.3_PUBLIC'))))
     parser.add_argument('--timeout', type=int, default=180)
     parser.add_argument('--check', action='store_true',
         help='verify and score immutable references without rerunning stock analysis')

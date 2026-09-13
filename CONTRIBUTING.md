@@ -1,10 +1,10 @@
-# Contributing to Ventris
+# Contributing to Romwright
 
-Thank you for your interest in contributing to Ventris. To maintain the project's integrity, legal standing, and engineering rigor, all contributors—human and AI agents—must follow these rules.
+Thank you for your interest in contributing to Romwright. To maintain the project's integrity, legal standing, and engineering rigor, all contributors—human and AI agents—must follow these rules.
 
 ## Clean-room policy
 
-Ventris is a clean-room, JVM-free reverse-engineering platform aiming to match and exceed Ghidra's decompilation quality without proprietary encumbrances.
+Romwright is a clean-room, JVM-free reverse-engineering platform aiming to match and exceed Ghidra's decompilation quality without proprietary encumbrances.
 
 - **No proprietary or leaked material**: Never consult, quote, or reproduce code, decompiled output, or internal material from proprietary decompilers or leaked sources.
 - **Allowed sources**: Contributors may consult only:

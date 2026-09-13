@@ -4,7 +4,7 @@
 One definition of "what it cost", used by every producer in every M7 gate:
 `os.wait4`, whose `ru_maxrss` covers the process and the children it waited
 for. That is the accounting `benchmarks/reports/baseline-stock.json` documents
-for the stock launcher, so the JVM's decompiler child and `lre-cli`'s SLEIGH
+for the stock launcher, so the JVM's decompiler child and `romwright-cli`'s SLEIGH
 console child are both inside their own producer's number rather than escaping
 it.
 

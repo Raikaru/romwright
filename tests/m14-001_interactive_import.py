@@ -34,7 +34,7 @@ import sys
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 
 BUDGETS = {
     # Measured: 1.2 s on the host libc, 2.1 s on a 60 MB Switch module of
@@ -96,9 +96,9 @@ def main() -> int:
     parser.add_argument(
         "--large",
         type=Path,
-        default=Path.home() / "ventris-corpus/extracted/nx-xenoblade-de/main",
+        default=Path.home() / "romwright-corpus/extracted/nx-xenoblade-de/main",
     )
-    parser.add_argument("--work", type=Path, default=Path.home() / "ventris-cache/tmp/m14-001")
+    parser.add_argument("--work", type=Path, default=Path.home() / "romwright-cache/tmp/m14-001")
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
@@ -118,7 +118,7 @@ def main() -> int:
             arguments.report.write_text(json.dumps(report, indent=2) + "\n")
         return 0
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
     work = arguments.work
     cache = fresh(work / "cache")
     measured: dict[str, object] = {}
@@ -129,7 +129,7 @@ def main() -> int:
     _, load_seconds = run(
         [str(CLI), "import", str(arguments.small), "--project", str(loaded), "--name", "small",
          "--no-analysis"],
-        {"VENTRIS_IMPORT_CACHE": str(cache)},
+        {"ROMWRIGHT_IMPORT_CACHE": str(cache)},
     )
     listing, list_seconds = run(
         [str(CLI), "functions", "small", "--project", str(loaded)]
@@ -178,7 +178,7 @@ def main() -> int:
         _, large_seconds = run(
             [str(CLI), "import", str(arguments.large), "--project", str(large), "--name", "large",
              "--no-analysis"],
-            {"VENTRIS_IMPORT_CACHE": str(cache)},
+            {"ROMWRIGHT_IMPORT_CACHE": str(cache)},
         )
         large_listing, _ = run([str(CLI), "functions", "large", "--project", str(large)])
         measured["load_large"] = {
@@ -197,12 +197,12 @@ def main() -> int:
     first = fresh(work / "first")
     _, first_seconds = run(
         [str(CLI), "import", str(arguments.small), "--project", str(first), "--name", "small"],
-        {"VENTRIS_IMPORT_CACHE": str(cache)},
+        {"ROMWRIGHT_IMPORT_CACHE": str(cache)},
     )
     second = fresh(work / "second")
     _, second_seconds = run(
         [str(CLI), "import", str(arguments.small), "--project", str(second), "--name", "small"],
-        {"VENTRIS_IMPORT_CACHE": str(cache)},
+        {"ROMWRIGHT_IMPORT_CACHE": str(cache)},
     )
     before, after = snapshot(first), snapshot(second)
     # `programs` carries the import timestamp and `revision_events` its
@@ -231,7 +231,7 @@ def main() -> int:
     changed = fresh(work / "changed")
     _, changed_seconds = run(
         [str(CLI), "import", str(arguments.small), "--project", str(changed), "--name", "small"],
-        {"VENTRIS_IMPORT_CACHE": str(cache), "VENTRIS_NO_SWITCH_VSA": "1"},
+        {"ROMWRIGHT_IMPORT_CACHE": str(cache), "ROMWRIGHT_NO_SWITCH_VSA": "1"},
     )
     measured["invalidation"] = {"seconds": round(changed_seconds, 1)}
     if changed_seconds <= BUDGETS["second_import_seconds"]:

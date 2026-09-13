@@ -323,133 +323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lre-api"
-version = "0.5.0"
-dependencies = [
- "lre-core",
- "lre-debug",
- "lre-model",
- "lre-worker-client",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lre-cli"
-version = "0.5.0"
-dependencies = [
- "base64",
- "lre-core",
- "lre-db",
- "lre-diff",
- "lre-model",
- "lre-sig",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lre-core"
-version = "0.5.0"
-dependencies = [
- "aes",
- "base64",
- "cbc",
- "lre-db",
- "lre-debug",
- "lre-diff",
- "lre-model",
- "lre-sig",
- "lzxd",
- "memmap2",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lre-db"
-version = "0.5.0"
-dependencies = [
- "lre-model",
- "regex",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lre-debug"
-version = "0.5.0"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
-name = "lre-diff"
-version = "0.5.0"
-dependencies = [
- "lre-db",
- "lre-model",
- "serde",
- "thiserror",
-]
-
-[[package]]
-name = "lre-model"
-version = "0.5.0"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lre-qt-bridge"
-version = "0.5.0"
-dependencies = [
- "cxx",
- "cxx-build",
- "lre-core",
- "lre-model",
- "lre-worker-client",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "lre-sig"
-version = "0.5.0"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
-name = "lre-worker"
-version = "0.5.0"
-dependencies = [
- "lre-core",
- "lre-db",
- "lre-model",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "lre-worker-client"
-version = "0.5.0"
-dependencies = [
- "lre-core",
- "lre-db",
- "lre-model",
- "lre-worker",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "lzxd"
 version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -522,6 +395,133 @@ name = "regex-syntax"
 version = "0.8.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+
+[[package]]
+name = "romwright-api"
+version = "0.5.0"
+dependencies = [
+ "romwright-core",
+ "romwright-debug",
+ "romwright-model",
+ "romwright-worker-client",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-cli"
+version = "0.5.0"
+dependencies = [
+ "base64",
+ "romwright-core",
+ "romwright-db",
+ "romwright-diff",
+ "romwright-model",
+ "romwright-sig",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "romwright-core"
+version = "0.5.0"
+dependencies = [
+ "aes",
+ "base64",
+ "cbc",
+ "lzxd",
+ "memmap2",
+ "romwright-db",
+ "romwright-debug",
+ "romwright-diff",
+ "romwright-model",
+ "romwright-sig",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-db"
+version = "0.5.0"
+dependencies = [
+ "regex",
+ "romwright-model",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-debug"
+version = "0.5.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-diff"
+version = "0.5.0"
+dependencies = [
+ "romwright-db",
+ "romwright-model",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-model"
+version = "0.5.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "romwright-qt-bridge"
+version = "0.5.0"
+dependencies = [
+ "cxx",
+ "cxx-build",
+ "romwright-core",
+ "romwright-model",
+ "romwright-worker-client",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "romwright-sig"
+version = "0.5.0"
+dependencies = [
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-worker"
+version = "0.5.0"
+dependencies = [
+ "romwright-core",
+ "romwright-db",
+ "romwright-model",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "romwright-worker-client"
+version = "0.5.0"
+dependencies = [
+ "romwright-core",
+ "romwright-db",
+ "romwright-model",
+ "romwright-worker",
+ "serde",
+ "thiserror",
+]
 
 [[package]]
 name = "rusqlite"

@@ -15,14 +15,14 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BINARIES = ("lre-cli", "lre-api", "lre-worker")
+BINARIES = ("romwright-cli", "romwright-api", "romwright-worker")
 PACKAGE_SUFFIXES = (".tar.gz", ".zip", ".dmg")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", type=Path,
-                        default=Path(os.environ.get("VENTRIS_RELEASE_DIR", "release")))
+                        default=Path(os.environ.get("ROMWRIGHT_RELEASE_DIR", "release")))
     parser.add_argument("--binaries", type=Path, default=ROOT / "target" / "release")
     parser.add_argument("--package", type=Path, default=None,
                         help="CPack build directory holding the desktop archive")
@@ -43,7 +43,7 @@ def main() -> int:
 
     if arguments.package is not None:
         archives = [path for path in sorted(arguments.package.iterdir())
-                    if path.is_file() and path.name.startswith("ventris-")
+                    if path.is_file() and path.name.startswith("romwright-")
                     and any(path.name.endswith(suffix) for suffix in PACKAGE_SUFFIXES)]
         if not archives:
             print(f"error: no desktop archive under {arguments.package}",

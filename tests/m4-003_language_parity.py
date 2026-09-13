@@ -48,8 +48,8 @@ sys.path.insert(0, str(ROOT / "benchmarks"))
 import gate_cache  # noqa: E402
 SPECS = ROOT / "native/specs"
 LOCK = ROOT / "tests/corpus.lock.json"
-GHIDRA = Path(os.environ.get("VENTRIS_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
-CLI = ROOT / "target/release/lre-cli"
+GHIDRA = Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
+CLI = ROOT / "target/release/romwright-cli"
 # Pinned once, compared against afterwards, like the memory envelopes.
 BASELINE = ROOT / "benchmarks/reports/parity-baseline.json"
 # The variants to compare: every ELF variant the corpus lock already holds
@@ -75,7 +75,7 @@ CONTAINERS = {
 # pinned by hash and its absence is reported rather than passed over silently.
 UNREACHED = {
     "ARM:LE:32:v5t": {
-        "image": Path.home() / "ventris-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
+        "image": Path.home() / "romwright-corpus/extracted/nds-pokeheartgold/pokeheartgold.us.nds",
         "sha256": "65f02a56842b75aa92d775d56d657a56fe3fa993550b04dc20704ab82d760105",
         "variant": "cartridge",
         "native_program": "pokeheartgold.us.nds.arm9",
@@ -93,7 +93,7 @@ UNREACHED = {
                   "yet",
     },
     "MIPS:BE:64:64-32addr": {
-        "image": Path.home() / "ventris-corpus/perfect_dark_ntsc_final.z64",
+        "image": Path.home() / "romwright-corpus/perfect_dark_ntsc_final.z64",
         "sha256": "4e51142acac686d96861cecc58cf7cb7c3b06b21733b7f8ed609a709dc039a21",
         "variant": "cartridge",
         "shared_floor": 116,
@@ -174,11 +174,11 @@ def tokens(text: str) -> list[str]:
 def environment() -> dict[str, str]:
     """A plain install: per-language resolution, no spec or language overrides."""
     values = dict(os.environ)
-    for name in ("VENTRIS_SLA", "VENTRIS_LANGUAGE", "VENTRIS_LANGUAGE_DIR",
-                 "VENTRIS_SPECS", "VENTRIS_REGISTER_PARAMS",
-                 "VENTRIS_PROMOTE_TAILCALLS"):
+    for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
+                 "ROMWRIGHT_SPECS", "ROMWRIGHT_REGISTER_PARAMS",
+                 "ROMWRIGHT_PROMOTE_TAILCALLS"):
         values.pop(name, None)
-    values["VENTRIS_SERVICE_JAR"] = str(ROOT / "service/build/ventris-service.jar")
+    values["ROMWRIGHT_SERVICE_JAR"] = str(ROOT / "service/build/romwright-service.jar")
     return values
 
 
@@ -579,7 +579,7 @@ def label_substitutions(native_text: str, oracle_text: str, store: dict,
 
 
 def c_identifier(name: str) -> str:
-    """The name as C can spell it: the rendering `lre_worker::c_identifier`
+    """The name as C can spell it: the rendering `romwright_worker::c_identifier`
     applies, so a label like `__i686.get_pc_thunk.bx` is comparable."""
     return re.sub(r"[^A-Za-z0-9_]", "_", name)
 
@@ -763,7 +763,7 @@ def import_native(binary: Path, timeout: int) -> Path:
 
     Re-analysing bytes that never changed with executables that never changed
     is the whole of this gate's old wall time. The key is the provenance:
-    the binary's digest and the digests of the `lre-cli` and `lre-worker` that
+    the binary's digest and the digests of the `romwright-cli` and `romwright-worker` that
     read it, so a rebuilt worker is a miss (`benchmarks/gate_cache.py`).
     """
     def build(directory: Path) -> None:
@@ -892,10 +892,10 @@ def main() -> int:
                         help="rows compared concurrently; an uncached row runs a JVM")
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-worker"],
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-worker"],
                    cwd=ROOT, check=True, env=environment())
-    assert (ROOT / "service/build/ventris-service.jar").is_file(), (
+    assert (ROOT / "service/build/romwright-service.jar").is_file(), (
         "the oracle bridge jar is missing; build service/ before this gate")
 
     lock = json.loads(LOCK.read_text())

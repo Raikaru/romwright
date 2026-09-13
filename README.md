@@ -1,6 +1,6 @@
-# Ventris
+# Romwright
 
-Ventris is a lightweight reverse-engineering platform that reuses Ghidra's
+Romwright is a lightweight reverse-engineering platform that reuses Ghidra's
 proven components (SLEIGH, p-code, the native decompiler) as compiler
 technology rather than reimplementing them. It is **not** a Ghidra fork and
 claims no drop-in compatibility.
@@ -18,7 +18,7 @@ claims no drop-in compatibility.
 The bridge is an implementation aid, not the final architecture. The Rust
 core owns durable facts (functions, symbols, xrefs, renames) in SQLite with
 provenance. Every user path is native and runs with **no JVM in the process
-tree**: `lre-cli import <binary>`, `decompile`, `decompile-doc`, `disasm` and
+tree**: `romwright-cli import <binary>`, `decompile`, `decompile-doc`, `disasm` and
 store browsing. The Stage-1 Java bridge is reachable only through `--oracle`,
 which exists to produce comparison oracles — `import --oracle`,
 `decompile --oracle`, `disasm --oracle` and `dump-specs --oracle` — and needs
@@ -29,15 +29,15 @@ data from the Ghidra install; that is data, not a JVM.
 ## Layout
 
 service/           Java JSON-RPC stdio bridge over pinned Ghidra APIs
-crates/lre-model   IDs, address-space+offset Address, API rows
-crates/lre-db      SQLite durable store (WAL, FKs, schema versioning)
-crates/lre-core    CoreService facade: store + native import/worker API
-crates/lre-worker  no-JVM decompiler worker (pinned ghidra_opt protocol)
-crates/lre-api     versioned stdio/HTTP Core API
-crates/lre-diff    whole-program structural diff, name porting across builds
-crates/lre-debug isolated GDB/LLDB read-only debugger backend
-crates/lre-cli     scriptable CLI over the facade
-desktop/ventris-qt Qt 6 Widgets workstation
+crates/romwright-model   IDs, address-space+offset Address, API rows
+crates/romwright-db      SQLite durable store (WAL, FKs, schema versioning)
+crates/romwright-core    CoreService facade: store + native import/worker API
+crates/romwright-worker  no-JVM decompiler worker (pinned ghidra_opt protocol)
+crates/romwright-api     versioned stdio/HTTP Core API
+crates/romwright-diff    whole-program structural diff, name porting across builds
+crates/romwright-debug isolated GDB/LLDB read-only debugger backend
+crates/romwright-cli     scriptable CLI over the facade
+desktop/romwright-qt Qt 6 Widgets workstation
 python/            SDK, console, permissioned plugins, AI tool adapter
 tests/             differential test (native vs Ghidra oracle)
 benchmarks/        gold baseline, Stage-4 gate, reports
@@ -49,7 +49,7 @@ third_party/ghidra pinned Ghidra 12.1.3 decompiler C++ + language sources
 ## Prerequisites
 
 - Rust stable (tested 1.98)
-- A Ghidra 12.1.3 installation; default lookup is `$VENTRIS_GHIDRA`, then
+- A Ghidra 12.1.3 installation; default lookup is `$ROMWRIGHT_GHIDRA`, then
   `~/ghidra_12.1.3_PUBLIC`. The JVM and JDK are needed only for the bridge
   (Java service) and oracle-side tests.
 - Native C++ builds: `binutils-devel` (bfd.h) for the SLEIGH console,
@@ -67,29 +67,29 @@ cargo build --workspace
 # Optional: SLEIGH console (disasm / import --discover)
 ./native/build_console.sh   # needs binutils-devel
 # Versioned Core API (stdio by default, HTTP with --listen)
-cargo build -p lre-api
+cargo build -p romwright-api
 # Java service (only for bridge compatibility paths; Ghidra install jars)
 ./service/build.sh
 # Qt desktop package (requires Qt development files)
-cmake -S desktop/ventris-qt -B build/ventris-qt
-cmake --build build/ventris-qt --config Release
-cmake --build build/ventris-qt --target package --config Release
+cmake -S desktop/romwright-qt -B build/romwright-qt
+cmake --build build/romwright-qt --config Release
+cmake --build build/romwright-qt --target package --config Release
 ```
 
 ## API, scripting, and extensions
 
 The versioned Core API uses newline-delimited JSON over stdio or `POST /v2`
-over HTTP. It is the same `lre-core` service used by the CLI and desktop
+over HTTP. It is the same `romwright-core` service used by the CLI and desktop
 bridge:
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-./target/debug/lre-api --project ./proj
-./target/debug/lre-api --project ./proj --listen 127.0.0.1:8787
-python3 python/ventris_console.py --project ./proj \
-  --api-executable ./target/debug/lre-api \
+./target/debug/romwright-api --project ./proj
+./target/debug/romwright-api --project ./proj --listen 127.0.0.1:8787
+python3 python/romwright_console.py --project ./proj \
+  --api-executable ./target/debug/romwright-api \
   -c 'print(client.ping())'
-python3 python/ventris_plugin_host.py plugin.py --project ./proj --permission read
+python3 python/romwright_plugin_host.py plugin.py --project ./proj --permission read
 ```
 
 API envelopes use `"api": 2`. Xref `provenance` is an object containing
@@ -104,13 +104,13 @@ entries with explicitly matched Ghidra language/compiler contexts, requiring
 data-reference precision >= 0.98 and recall >= 0.95. Full xref metrics remain
 reported separately; this is not a claim of complete M2 program-model parity.
 
-`python/ventris_sdk.py` is dependency-free and supports both transports.
-`ventris_plugin_host.py` runs each plugin in a child process and gates API
+`python/romwright_sdk.py` is dependency-free and supports both transports.
+`romwright_plugin_host.py` runs each plugin in a child process and gates API
 methods by `read`, `write`, `types`, and `native` permissions. The optional
-`ventris_ai.py` adapter exposes the same read tools and requires an explicit
+`romwright_ai.py` adapter exposes the same read tools and requires an explicit
 mutation opt-in.
 
-`lre-debug` provides isolated GDB/LLDB read commands (backtrace, registers,
+`romwright-debug` provides isolated GDB/LLDB read commands (backtrace, registers,
 and bounded memory reads) through fresh child processes with deadlines. Its
 read-only `DolphinGdb` client speaks acknowledged GDB RSP for live target
 memory; the Core/API/Qt `memory_live` surface reuses that connection.
@@ -122,24 +122,24 @@ share durable analysis changes without sharing SQLite connections.
 
 <!-- not gated: prepares a host environment or a cross toolchain that a gate cannot install for itself -->
 ```sh
-export VENTRIS_SLA=$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages/x86-64.sla
-export VENTRIS_GHIDRA=$HOME/ghidra_12.1.3_PUBLIC          # console defaults
+export ROMWRIGHT_SLA=$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages/x86-64.sla
+export ROMWRIGHT_GHIDRA=$HOME/ghidra_12.1.3_PUBLIC          # console defaults
 
-./target/debug/lre-cli import ./smoke_bin --name smoke --project ./proj
-./target/debug/lre-cli functions smoke --project ./proj   # store only
-./target/debug/lre-cli xrefs smoke --to 00400466 --project ./proj
-./target/debug/lre-cli rename smoke 00400466 my_add --project ./proj
-./target/debug/lre-cli open smoke --project ./proj        # reopen, no reanalysis
-./target/debug/lre-cli disasm ./smoke_bin 00400466 -n 8
-./target/debug/lre-cli decompile ./smoke_bin 00400466 --name smoke --project ./proj
+./target/debug/romwright-cli import ./smoke_bin --name smoke --project ./proj
+./target/debug/romwright-cli functions smoke --project ./proj   # store only
+./target/debug/romwright-cli xrefs smoke --to 00400466 --project ./proj
+./target/debug/romwright-cli rename smoke 00400466 my_add --project ./proj
+./target/debug/romwright-cli open smoke --project ./proj        # reopen, no reanalysis
+./target/debug/romwright-cli disasm ./smoke_bin 00400466 -n 8
+./target/debug/romwright-cli decompile ./smoke_bin 00400466 --name smoke --project ./proj
 ```
 
 Import measures itself. `--timings` prints one machine-readable line: the
 total, the phases (`parse`, `patterns`, `flow`, `discovery`, `references`,
 `store`), the console shard count, and what the flow phase asked of the
 console. Batch-parallel work (flow batches, reference rounds) runs one
-console per physical core, capped at eight; `VENTRIS_CONSOLE_SHARDS` pins
-that count. `VENTRIS_WORKER_MEMORY_CAP` bounds one decompiler worker's
+console per physical core, capped at eight; `ROMWRIGHT_CONSOLE_SHARDS` pins
+that count. `ROMWRIGHT_WORKER_MEMORY_CAP` bounds one decompiler worker's
 resident size in bytes (256 MiB by default, values under 16 MiB refused): a
 worker that grows past it is recycled mid-pass rather than failing the request
 that discovered the growth, and `benchmarks/reports/m11-001.json` records eight
@@ -150,7 +150,7 @@ function, xref, string, symbol and thunk sets.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-./target/debug/lre-cli import /usr/lib64/libc.so.6 --name libc \
+./target/debug/romwright-cli import /usr/lib64/libc.so.6 --name libc \
     --project ./proj --timings
 # TIMINGS {"total":9.30,"functions":3961,"shards":6,
 #          "flow":{"requests":3146,"instructions":297390},
@@ -164,7 +164,7 @@ or the service jar, and exist for oracle generation, not for daily use.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-./target/debug/lre-cli import ./smoke_bin --oracle --project ./oracle-proj
+./target/debug/romwright-cli import ./smoke_bin --oracle --project ./oracle-proj
 python3 tests/m2-015_native_default.py
 ```
 
@@ -176,7 +176,7 @@ is supplied to the importer. `.rel` loading is not implemented.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-./target/debug/lre-cli import /path/to/sys/main.dol --name dol --project ./proj
+./target/debug/romwright-cli import /path/to/sys/main.dol --name dol --project ./proj
 python3 tests/m1-009_dol.py --dol /path/to/sys/main.dol --oracle /path/to/files/boot.elf
 ```
 
@@ -189,8 +189,8 @@ that CI possesses or tests the game binary.
 <!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
 ```sh
 cargo test --workspace
-VENTRIS_SLA=... ./tests/differential.sh     # native vs Ghidra oracle
-RUNS=3 VENTRIS_SLA=... ./benchmarks/gate.sh # memory/perf gates
+ROMWRIGHT_SLA=... ./tests/differential.sh     # native vs Ghidra oracle
+RUNS=3 ROMWRIGHT_SLA=... ./benchmarks/gate.sh # memory/perf gates
 ```
 
 ## Honest status
@@ -296,7 +296,7 @@ because that is how a tail call reaches its target; a branch that lands inside
 its own function is a loop and is not recorded. The reference kind follows
 Ghidra: `SharedReturnAnalysisCmd.processFunctionJumpReferences` gives a jump
 that leaves its function for **another function's entry** a `CALL_RETURN`
-override, which makes the reference a call, so Ventris records those as
+override, which makes the reference a call, so Romwright records those as
 `UNCONDITIONAL_CALL`. A jump to an address that is *not* a function entry
 keeps its `UNCONDITIONAL_JUMP` reference: that is a tail call into code
 nobody recovered, and the only record that the code is reached.
@@ -336,9 +336,9 @@ image the committed baseline was recorded from
 Two model differences are named and asserted rather than averaged away:
 
 * **Destination.** Ghidra hops PLT stub → EXTERNAL-block stub → external
-  symbol; Ventris hops PLT stub → the GOT slot the stub's own instructions
+  symbol; Romwright hops PLT stub → the GOT slot the stub's own instructions
   read. A row counts as explained only when the stock destination lies outside
-  every image mapping *and* the Ventris destination is an in-image address
+  every image mapping *and* the Romwright destination is an in-image address
   carrying the same import name. 71 rows are explained this way; 114 match
   exactly.
 * **Entry.** For thirteen libc stubs Ghidra records the thunk on the slot
@@ -347,7 +347,7 @@ Two model differences are named and asserted rather than averaged away:
   on both sides, which is what the count comparison was accidentally counting.
 
 A thunk with neither explanation fails the gate, as does a stock thunk whose
-entry is in the image and which Ventris does not record.
+entry is in the image and which Romwright does not record.
 
 ### Function names against stock Ghidra
 
@@ -370,7 +370,7 @@ from the slot's position -- the same construction as
 replaced; a symbol keeps its name, as it does in Ghidra.
 
 A *proven-equivalent* label is the same address named from a different source:
-Ventris says `_entry`, `_init`, `_fini` and `_plt` from the ELF header and the
+Romwright says `_entry`, `_init`, `_fini` and `_plt` from the ELF header and the
 section table where Ghidra says `entry`, `_DT_INIT`, `_DT_FINI` and nothing.
 The gate proves each one by reading the header, the dynamic table or the
 section table, so "equivalent" is never a shrug.
@@ -400,7 +400,7 @@ image (`tests/m5-009_linkage_names.py`,
 | import name proven but not applied | **0** |
 | names with no symbol at their own address | **0** |
 
-`_INIT_0` is Ghidra's label for an entry of `.init_array`. Ventris does not
+`_INIT_0` is Ghidra's label for an entry of `.init_array`. Romwright does not
 copy it: the fact is the reference from the initializer array, which the store
 holds (`native-import:elf-pointer`, or `native-import:elf-reloc` for a PIE),
 and the gate accepts that class only when the reference really is there. A
@@ -409,7 +409,7 @@ Ghidra, so agreement can never be manufactured.
 
 ### Promoting a tail-call target (off by default)
 
-`VENTRIS_PROMOTE_TAILCALLS=1` lets a recorded transfer create the function it
+`ROMWRIGHT_PROMOTE_TAILCALLS=1` lets a recorded transfer create the function it
 reaches. Stock Ghidra creates none of these, so the pass moves output past the
 frozen baseline and stays off unless asked -- AGENTS.md II.1 reserves enabling
 it. The evidence a candidate must supply is the evidence a relocation
@@ -581,7 +581,7 @@ on a 60 MB Switch module, 92 s on the host libc. Loading is a parse -- mapped
 bytes, declared regions, relocations, and the image's own symbol table -- and
 that is what an analyst needs before anything else can be shown.
 
-`lre-cli import <binary> --no-analysis` does exactly that, and analysis is a
+`romwright-cli import <binary> --no-analysis` does exactly that, and analysis is a
 separate pass over the same store. Measured (`tests/m14-001_interactive_import.py`,
 `benchmarks/reports/m14-001.json`):
 
@@ -599,11 +599,11 @@ that reads them -- this executable, the SLEIGH console, the decompiler worker
 -- the configuration that changes facts, and the store schema. A second
 import of an unchanged image restores 32 byte-identical tables in 0.41 s;
 changing any fact-affecting switch misses the key and re-analyses, which the
-gate also checks. `VENTRIS_NO_IMPORT_CACHE=1` switches it off, as a gate that
+gate also checks. `ROMWRIGHT_NO_IMPORT_CACHE=1` switches it off, as a gate that
 measures import cost must.
 
 A resumable walk -- later rounds walking only new seeds instead of the whole
-image -- is implemented and **off by default** (`VENTRIS_INCREMENTAL_ROUNDS=1`):
+image -- is implemented and **off by default** (`ROMWRIGHT_INCREMENTAL_ROUNDS=1`):
 it takes libc from 111 s to 79 s, but its fact set is not yet byte-identical
 to the batch walk (31991 xrefs against 33050), and a second analyser that
 disagrees with the first is not worth the seconds.
@@ -612,7 +612,7 @@ disagrees with the first is not worth the seconds.
 
 Switch recovery was the last pass in a native import that called the
 decompiler, and the most expensive: 130 of 137 s on a statically linked
-AArch64 image. The console exports SLEIGH's p-code (`native/ventris_pcode.hh`
+AArch64 image. The console exports SLEIGH's p-code (`native/romwright_pcode.hh`
 -- a printer, no analysis added to the pinned tree) and `native/vsa.rs`
 emulates the dispatch path once per index, as `JumpBasic::buildAddresses`
 does over the decompiler's IR.
@@ -633,7 +633,7 @@ targets fall outside the branching function and 5 do not decode
 
 The default answers **13 dispatches stock has no table for** and misses 3 of
 stock's. The 13 are real: relative tables in the hand-written SSE string
-routines, which stock's decompiler declines. `VENTRIS_NO_SWITCH_VSA=1` turns
+routines, which stock's decompiler declines. `ROMWRIGHT_NO_SWITCH_VSA=1` turns
 the pass off.
 
 Four rules earned their place by measurement: a table must be read by a
@@ -782,7 +782,7 @@ seven-target indirect branch through standalone and warm pooled workers:
 <!-- not gated: reproduces a gate that needs the locked corpus and the pinned Ghidra install; CI runs it in the corpus job -->
 ```sh
 python3 tests/m2-007_switches.py
-cargo test -p lre-worker --test jump_tables
+cargo test -p romwright-worker --test jump_tables
 python3 benchmarks/switch_gate.py --corpus-dir "$CORPUS" \
   --report benchmarks/reports/m2-007.json
 ```
@@ -828,10 +828,10 @@ relocation slots on architectures without a recognized PLT table layout.
 
 <!-- not gated: builds native components whose toolchains are host-specific; the workflow they enable is gated by tests/m6-001_documented_workflow.py -->
 ```sh
-cargo build -p lre-cli -p lre-api -p lre-worker
+cargo build -p romwright-cli -p romwright-api -p romwright-worker
 python3 tests/m2-005_prototype.py
 python3 tests/m2-006_revision.py
-cargo test -p lre-worker --test prototype_recovery -- --ignored
+cargo test -p romwright-worker --test prototype_recovery -- --ignored
 python3 tests/m2-006_inference.py
 python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus
 python3 tests/m2-006_thunks.py --corpus-dir /path/to/corpus --architecture powerpc
@@ -900,7 +900,7 @@ loads DWARF into either analyzer. References are immutable; `--check` verifies
 and scores them without rerunning stock analysis. Reports retain complete
 mismatches in SHA-256-linked JSONL files.
 
-`lre-cli signatures build` turns one static archive into a `.vsig` database
+`romwright-cli signatures build` turns one static archive into a `.vsig` database
 (`docs/vsig.md`): every exported `STT_FUNC` symbol becomes a byte pattern whose
 relocated bytes are masked out, using the public relocation widths for that
 architecture. A relocation type with no ABI width in the tables skips its
@@ -912,9 +912,9 @@ records, languages, packages and licenses.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-lre-cli signatures build --archive libc.a --package glibc-2.36-8 \
+romwright-cli signatures build --archive libc.a --package glibc-2.36-8 \
   --license LGPL-2.1-or-later --out libc.vsig --report libc.json
-lre-cli signatures info --db libc.vsig
+romwright-cli signatures info --db libc.vsig
 python3 benchmarks/signature_gate.py --report benchmarks/reports/m2-011.json
 ```
 
@@ -932,7 +932,7 @@ producer, so a repeated pass writes no new revision.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
-lre-cli import ./program --name p --signatures libc.vsig
+romwright-cli import ./program --name p --signatures libc.vsig
 python3 benchmarks/match_gate.py --report benchmarks/reports/m2-012.json
 ```
 
@@ -1026,7 +1026,7 @@ page states what is *not* claimed: no reproducibility, no signing.
 `docs/desktop.md` documents the build, the CPack archive and the launch, and
 `tests/m6-003_desktop_package.py` runs exactly those commands, extracts the
 archive into a clean prefix and launches the *extracted* binary offscreen with
-every `VENTRIS_*` variable removed. Two metrics the app measures for itself
+every `ROMWRIGHT_*` variable removed. Two metrics the app measures for itself
 replace an assertion that was previously handed to it:
 `ui.install.prefix_ok` (not a build tree) and `ui.install.store_only_ok` (no
 external configuration). Both go false when they should -- a build-tree binary
@@ -1038,9 +1038,9 @@ on; the CI `qt` job runs it on Linux, macOS and Windows.
 A fact's `source` names the pass that produced it, and every surface used to
 show that string raw or not at all -- the desktop's xrefs dock had no
 provenance column whatsoever. One table in
-`crates/lre-model/src/provenance.rs` gives each class a sentence, and every
+`crates/romwright-model/src/provenance.rs` gives each class a sentence, and every
 surface reads it: the API serialises `explanation` inside each `provenance`
-object, `lre-cli provenance` prints the table or just the classes one program
+object, `romwright-cli provenance` prints the table or just the classes one program
 holds, and the desktop renders the sentence in an Evidence column with the raw
 class as its tooltip.
 
@@ -1049,7 +1049,7 @@ class as its tooltip.
 | `provenance.classes` | **15** in the table |
 | `provenance.declared` / `provenance.observed` | 15 declared in the crates, 11 observed in stores |
 | `provenance.unexplained` | **0** |
-| `provenance.api_facts_checked` | 10 facts carried the table's sentence through a real `lre-api` |
+| `provenance.api_facts_checked` | 10 facts carried the table's sentence through a real `romwright-api` |
 | `ui.xrefs.rows` / `ui.xrefs.unexplained` | 19 rows rendered, **0** unexplained |
 
 The desktop number is measured, not asserted: the xrefs dock counts what it
@@ -1328,7 +1328,7 @@ what it measures.
 ## Multi-image projects, as one claim
 
 The methods are not listed by hand: the gate scans every dispatch arm in
-`crates/lre-api/src/lib.rs` that reads `params.program`, then drives each one
+`crates/romwright-api/src/lib.rs` that reads `params.program`, then drives each one
 against a project holding two images
 (`tests/m10-004_multi_image_milestone.py`, `benchmarks/reports/m10-004.json`):
 
@@ -1347,11 +1347,11 @@ as inert.
 
 ## Carrying names from one build onto another
 
-`lre-cli diff <program> --reference DIR` matches the functions of a program in
+`romwright-cli diff <program> --reference DIR` matches the functions of a program in
 another project onto this one and ports the reference's names across
 (`--apply` writes them, as one undoable command). It answers "which function
 in B is this function of A", which is a different question from "what known
-function is this": the second is `lre-cli match`'s signature database, and no
+function is this": the second is `romwright-cli match`'s signature database, and no
 decompiler or JVM is involved in either.
 
 The matcher works on facts the import already recorded: instruction, block and
@@ -1455,7 +1455,7 @@ address, and one that stops at the first program.
 ## Fact explanation, as one measured claim
 
 Every surface that shows a fact is enumerated from the repository and then
-driven: the API methods `docs/core-api.md` publishes, the verbs `lre-cli`
+driven: the API methods `docs/core-api.md` publishes, the verbs `romwright-cli`
 prints in its own usage, and the window the UI gate measures
 (`tests/m9-005_explanation_milestone.py`, `benchmarks/reports/m9-005.json`):
 
@@ -1476,7 +1476,7 @@ to pass.
 
 ## The filter, where a user can reach it
 
-`lre-cli xrefs --evidence declared|decoded|inferred` prints only the facts of
+`romwright-cli xrefs --evidence declared|decoded|inferred` prints only the facts of
 that kind, and the Xrefs dock carries a selector for the same three. Both go
 through the store's filter, so neither keeps a second pass over rows it already
 fetched (`tests/m9-004_filter_surfaces.py`, `benchmarks/reports/m9-004.json`):
@@ -1641,7 +1641,7 @@ base relocation happened to point at them -- a relocation says a pointer lives
 in that slot, while the directory says what the pointer is, so the reference
 is upgraded rather than duplicated. No committed fixture exports a forwarder,
 so that rule is pinned by a unit test in
-`crates/lre-core/src/native/pe_roots.rs` rather than claimed from an image.
+`crates/romwright-core/src/native/pe_roots.rs` rather than claimed from an image.
 
 ### PE32 x86, where there is no unwind directory
 
@@ -1657,7 +1657,7 @@ span, not a byte pattern: **two functions cannot share code**. The cases'
 chains interleave through the switch's shared tail, so one case's span runs
 past the next case's start, while a real function's span abuts its
 neighbour's. Overlapping spans are retracted unless a call reaches them
-(`crates/lre-core/src/native/discovery.rs`).
+(`crates/romwright-core/src/native/discovery.rs`).
 
 | Metric | `tiny_pe32.exe` |
 |---|---|
@@ -1732,7 +1732,7 @@ analysis, and stay inside a recorded envelope
 | `cost.wall_ratio.median` | **32.91x** faster |
 
 Decompiling one function is measured the same way, with import and analysis
-done first and untimed in both producers -- `lre-cli decompile` against an
+done first and untimed in both producers -- `romwright-cli decompile` against an
 imported project, `analyzeHeadless -process -noanalysis -postScript
 scripts/DecompileOne.java` against an analysed and saved one. Both decompile
 `main` **by name** in each entry's unstripped twin, so no address is guessed
@@ -1749,7 +1749,7 @@ and PIE image bases cannot make the two disagree about what was decompiled
 | `decompile.wall_ratio.median` | **74.03x** faster |
 
 A session is a third question: the desktop and every script hold a project
-open through one `lre-api` process and ask it many things. Per entry one
+open through one `romwright-api` process and ask it many things. Per entry one
 session answers the same seven requests for four warm-up rounds and eight
 measured rounds, with the *process tree*'s resident size -- the service plus
 the SLEIGH console child -- sampled every 25 ms
@@ -1811,9 +1811,9 @@ be caught in prose.
 ## Scripting
 
 `docs/scripting.md` shows `examples/facts_report.py` driving a project through
-`python/ventris_sdk.py`: read the functions, write a rename, undo it. The page
+`python/romwright_sdk.py`: read the functions, write a rename, undo it. The page
 is executed by `tests/m6-005_scripting.py` in two environments -- with the
-SLEIGH console and with every `VENTRIS_*` variable stripped -- because it
+SLEIGH console and with every `ROMWRIGHT_*` variable stripped -- because it
 claims the script runs either way. The gate also compares the page against the
 client: a helper the client grows and the page omits fails it, which is how
 twelve undocumented helpers were found.
@@ -1823,7 +1823,7 @@ twelve undocumented helpers were found.
 `docs/core-api.md` documents the stdio interface every consumer speaks --
 envelope, error codes, typed addresses, fact provenance, paged reads, and
 which requests need the SLEIGH console. Every documented exchange is sent to a
-real `lre-api` process by `tests/m6-002_documented_api.py`, and each
+real `romwright-api` process by `tests/m6-002_documented_api.py`, and each
 documented response must be a subset of the real one, so an invented field
 fails the gate. Writing that page found a live defect: the `function` field of
 a reference named whichever function row a scan reached first, because the
@@ -2007,7 +2007,7 @@ the `.ldefs`, so discovery never sees them (and `65802` additionally has no
 `.sla` built). Deprecated variants (the `old/` RISCV set) carry bundles but
 are not selectable.
 
-**Spec lint.** `lre-cli lint-specs [--ghidra DIR]` is a stricter spec
+**Spec lint.** `romwright-cli lint-specs [--ghidra DIR]` is a stricter spec
 compiler: it validates every language module and errors on the defect
 classes that produce a bad bundle — unknown `.opinion` constraint
 attributes (the `load=`/`loader=` class), `.ldefs` entries naming a `.sla`,
@@ -2034,18 +2034,18 @@ The catalog itself was exercised against the pinned Ghidra installation.
 
 ## Packaging and desktop status
 
-`desktop/ventris-qt` contains the Qt 6 Widgets workstation and CPack TGZ
+`desktop/romwright-qt` contains the Qt 6 Widgets workstation and CPack TGZ
 configuration. `packaging/sbom.py` emits an SPDX 2.3 dependency inventory;
 `packaging/update_manifest.py` creates release artifact size/SHA-256 metadata;
 `packaging/verify_update.py` verifies downloaded artifacts before use.
 This workstation has Qt 6 development files; CMake configure and the
-`ventris-qt` target build pass locally, and the app has an offscreen launch
+`romwright-qt` target build pass locally, and the app has an offscreen launch
 smoke check. CI remains authoritative for the cross-platform package.
 CMake configure and visual UI verification remain unavailable on machines
 without the Qt development package.
 
 Known limits remain: the all-input discovery gate is incomplete and PE
-function-set parity is not claimed. The x86-64 worker needs `VENTRIS_SLA`
+function-set parity is not claimed. The x86-64 worker needs `ROMWRIGHT_SLA`
 and a patched `ghidra_opt`; the API HTTP listener is localhost-oriented and
 does not provide authentication; the Python plugin host is the capability
 boundary for untrusted scripts. The live overlay was also smoke-tested against

@@ -1,11 +1,11 @@
 # Third-party notices
 
-Ventris's own source is licensed under Apache-2.0. The root `LICENSE` and
-`NOTICE` files apply to the Ventris distribution itself.
+Romwright's own source is licensed under Apache-2.0. The root `LICENSE` and
+`NOTICE` files apply to the Romwright distribution itself.
 
 ## Ghidra-compatible formats and algorithms
 
-`ventris-sleigh` implements the compiled-SLEIGH container, packed marshal
+`romwright-sleigh` implements the compiled-SLEIGH container, packed marshal
 records, constructor decisions and context actions, and p-code templates
 described by Ghidra 12.1.3 source. The compatibility reference is upstream tag
 `Ghidra_12.1.3_build`, commit
@@ -38,7 +38,7 @@ instructions.
 its `Makefile`, unmodified. `tools/build_native.py` builds two programs from it:
 `ghidra_opt`, which is the same program Ghidra ships as
 `Features/Decompiler/os/<platform>/decompile`, and `sleigh_opt`, the SLEIGH
-compiler. Ventris drives the first over the `ghidra_process` protocol and uses
+compiler. Romwright drives the first over the `ghidra_process` protocol and uses
 the second to compile language data. Neither program is patched, and
 `tools/vendor_ghidra.py --verify` re-hashes every vendored byte against
 `third_party/ghidra/MANIFEST.sha256` so that an edit to Ghidra's C++ is a build
@@ -60,13 +60,13 @@ functions by name, so reproducing Ghidra's output requires the same data.
 Ghidra is licensed under Apache-2.0, which permits this redistribution with
 attribution.
 
-`tools/diff_ghidra.py` optionally compares Ventris output against a separately
+`tools/diff_ghidra.py` optionally compares Romwright output against a separately
 installed Ghidra 12.1.3. The official release archive has SHA-256
 `93a5d11a9ad510622acaaf908c556a7b9b764d338e78a7567f3689bf5081fd54`.
 
 ## Runtime crates
 
-`ventris-sleigh` uses `miniz_oxide` (MIT OR Zlib OR Apache-2.0) to inflate the
+`romwright-sleigh` uses `miniz_oxide` (MIT OR Zlib OR Apache-2.0) to inflate the
 zlib payload in compiled `.sla` files. Its transitive `adler2` dependency is
 licensed under 0BSD OR MIT OR Apache-2.0.
 

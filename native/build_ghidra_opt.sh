@@ -3,7 +3,7 @@
 #
 # The pinned third_party/ghidra tree is NEVER modified in place; this script
 # copies the decompiler sources aside, applies native/ghidra-opt-sleigh.patch,
-# and builds. At runtime, when the worker sets VENTRIS_SLA to a compiled
+# and builds. At runtime, when the worker sets ROMWRIGHT_SLA to a compiled
 # .sla, the binary self-disassembles (Sleigh translator) instead of asking
 # the client for per-instruction pcode — closing the getPcode gap for the
 # JVM-free worker path (see STATUS.md, stages/notes).
@@ -26,13 +26,13 @@ done
 BUILD=$(mktemp -d /tmp/ghidra-opt-build.XXXXXX)
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
-cp "$ROOT/native/ventris_linkage.hh" "$ROOT/native/ventris_patterns.hh" \
-   "$ROOT/native/ventris_flow.hh" "$ROOT/native/ventris_constant_state.hh" \
-   "$ROOT/native/ventris_operand_refs.hh" \
-   "$ROOT/native/ventris_x86_references.hh" \
-   "$ROOT/native/ventris_callfixups.hh" \
-   "$ROOT/native/ventris_nonreturn.hh" \
-   "$ROOT/native/ventris_constants.hh" "$BUILD/decompiler/"
+cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
+   "$ROOT/native/romwright_flow.hh" "$ROOT/native/romwright_constant_state.hh" \
+   "$ROOT/native/romwright_operand_refs.hh" \
+   "$ROOT/native/romwright_x86_references.hh" \
+   "$ROOT/native/romwright_callfixups.hh" \
+   "$ROOT/native/romwright_nonreturn.hh" \
+   "$ROOT/native/romwright_constants.hh" "$BUILD/decompiler/"
 
 cp "$PATCH" "$BUILD/apply.patch"
 git -C "$BUILD" init -q
@@ -44,4 +44,4 @@ make ghidra_opt -j"$JOBS" > /tmp/ghidra-opt-build.log 2>&1
 mkdir -p "$OUT"
 cp ghidra_opt "$OUT/ghidra_opt"
 echo "built: $OUT/ghidra_opt"
-echo "runtime: VENTRIS_SLA=/path/to/x86-64.sla $OUT/ghidra_opt"
+echo "runtime: ROMWRIGHT_SLA=/path/to/x86-64.sla $OUT/ghidra_opt"

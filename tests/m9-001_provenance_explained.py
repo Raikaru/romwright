@@ -8,12 +8,12 @@ surface showed that string raw or not at all. The CLI printed
 provenance column whatsoever, and a user had no way to learn what a base
 relocation proves.
 
-One table in `lre-model` names each class in a sentence, and every surface
+One table in `romwright-model` names each class in a sentence, and every surface
 reads that table rather than keeping its own:
 
   * the API serialises `explanation` inside every `provenance` object, so a
     consumer never has to map the string itself;
-  * `lre-cli provenance` lists the table, or the classes one program holds;
+  * `romwright-cli provenance` lists the table, or the classes one program holds;
   * the desktop's xrefs dock renders the sentence, counted by the UI gate as
     `ui.xrefs.unexplained`.
 
@@ -22,7 +22,7 @@ The gate requires:
   * every provenance string the crates declare has a sentence;
   * every provenance value present in a store built from a committed fixture
     or a locked corpus entry has a sentence;
-  * a real `lre-api` process returns that same sentence with each fact;
+  * a real `romwright-api` process returns that same sentence with each fact;
   * `benchmarks/reports/ui-gate.json` records `ui.xrefs.unexplained == 0`, so
     the desktop is measured rather than assumed.
 
@@ -64,10 +64,10 @@ def declared_classes() -> set[str]:
 def table() -> dict[str, str]:
     """The shared table, as the CLI publishes it."""
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "provenance", "--json"],
+        [str(ROOT / "target/release/romwright-cli"), "provenance", "--json"],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, (
-        f"`lre-cli provenance --json` failed: {result.stderr.strip()}")
+        f"`romwright-cli provenance --json` failed: {result.stderr.strip()}")
     rows = json.loads(result.stdout)
     return {row["source"]: row["explanation"] for row in rows}
 
@@ -75,7 +75,7 @@ def table() -> dict[str, str]:
 def store_classes(binary: Path, work: Path) -> tuple[set[str], Path]:
     project = work / f"{binary.stem}-explained"
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-cli"), "import", str(binary),
+        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
          "--name", "explained", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, f"{binary.name}: import failed: {result.stderr.strip()}"
@@ -92,9 +92,9 @@ def api_explanations(project: Path, address: str) -> list[dict]:
     request = json.dumps({"api": 2, "id": 1, "method": "xrefs",
                           "params": {"program": "explained", "address": address}})
     result = subprocess.run(
-        [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+        [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
         cwd=ROOT, input=request + "\n", capture_output=True, text=True)
-    assert result.returncode == 0, f"lre-api failed: {result.stderr.strip()}"
+    assert result.returncode == 0, f"romwright-api failed: {result.stderr.strip()}"
     answer = json.loads(result.stdout.splitlines()[0])
     assert "result" in answer, f"xrefs failed: {answer}"
     return answer["result"]
@@ -106,8 +106,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
     declared = declared_classes()
     published = table()
     assert published, "the shared table is empty"

@@ -1,6 +1,6 @@
-# Ventris game-decompilation program
+# Romwright game-decompilation program
 
-Plan of record for making Ventris the best tool for console game
+Plan of record for making Romwright the best tool for console game
 decompilation. Built from eight primary-source research scouts
 (2026-09-12; transcripts `history://R1DecompWorkflow` … `R8GameTypes`)
 on top of the console/format map already in `STATUS.md`. Every item
@@ -15,7 +15,7 @@ sits inside their loop: split the image, name everything the symbols
 and maps already know, emit the files their toolchain reads
 (splat/dtk/objdiff/decomp.me), decompile in the shape their compiler
 emits so the diff score moves, and pull runtime truth from the
-emulator when static analysis stalls. Ventris already has the
+emulator when static analysis stalls. Romwright already has the
 expensive parts (native SLEIGH/p-code/decompiler, no JVM, a fact store
 with provenance, multi-program projects, a JSON API). What it lacks
 is exactly the integration surface — and, per platform, three
@@ -23,7 +23,7 @@ load-bearing readers/loaders that nobody else has done right.
 
 Three facts from the research shape the whole sequence:
 
-1. **Ventris reads none of the debug/symbol formats decomp projects
+1. **Romwright reads none of the debug/symbol formats decomp projects
    live on** (CodeWarrior MAP, psyq SYM, `.mdebug`, DWARF1, NIDs, DS
    overlay tables). Stock Ghidra reads only one (GameCubeLoader MAP).
    We already hold an 11 MB CodeWarrior MAP beside its ELF and ROM
@@ -125,7 +125,7 @@ Order is disassembly-first, in-install specs before greenfield.
 | P4.3 | VU0-macro semantics: replace opaque `_v*` pcodeops in vendored `vuupper.sinc` with lane-wise float semantics; libvux-style helper rendering | M+M | — | ps2sdk math3d routine renders `vf[d] = vf[s] + vf[t]`-shaped C where stock emits `_vadd(...)` unknowns (BUILD) |
 | P4.4 | **RSP SLEIGH** (new SU-minus + VU language, IMEM/DMEM, OSTask-at-0xFC0 loader) + GBI display-list annotator; audio-first C policy, gfx stays annotated asm | L+M+S | — | ≥99% mnemonic+operand parity vs ares (ISC) on f3dex2 CC0 F3DEX2 2.08; DL command boundaries ≥95% vs repo labels (CC0 corpus) |
 | P4.5 | **VU-micro SLEIGH** (new 64-bit VLIW, lower pipeline, I/E/M/D/T bits) + VIF MPG/MSCAL code finder | L | P4.3 tables | ≥98% parity vs `ee-dvp-as -d` on ps2sdk VU samples; auto-found MPG blobs vs stock (blobs = data) (BUILD) |
-| P4.6 | m2c-parity emission layer (clean-room): deterministic temporaries, `/* irregular */` honesty, stack-struct dump, globals emission; div/mod/`cntlzw` canonicalizers | L+L | P2.3–P2.5 | token-diff(Ventris, m2c) < token-diff(stock, m2c) AND objdiff(Ventris C) ≥ objdiff(m2c C) on ≥2/3 of {sm64 IDO fn, pokeemerald agbcc fn, `base.elf` MWCC fn} |
+| P4.6 | m2c-parity emission layer (clean-room): deterministic temporaries, `/* irregular */` honesty, stack-struct dump, globals emission; div/mod/`cntlzw` canonicalizers | L+L | P2.3–P2.5 | token-diff(Romwright, m2c) < token-diff(stock, m2c) AND objdiff(Romwright C) ≥ objdiff(m2c C) on ≥2/3 of {sm64 IDO fn, pokeemerald agbcc fn, `base.elf` MWCC fn} |
 
 ## 4. Sequencing rationale
 
@@ -134,7 +134,7 @@ Order is disassembly-first, in-install specs before greenfield.
   (baselines) first: no gate after it is allowed to lack a stock
   number.
 - P2 is chosen by adoption value: symbols in, files out, score up.
-  P2.1–P2.2 give a project a reason to open Ventris; P2.3–P2.6 make
+  P2.1–P2.2 give a project a reason to open Romwright; P2.3–P2.6 make
   the decompile worth exporting.
 - P3 is breadth. REL and PSX overlays before N64/DS because their
   data-model demands are strictest; PS2 IRX and Switch rtld last

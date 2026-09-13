@@ -8,7 +8,7 @@ programs mapping an address but not look at what is there.
 
 Both surfaces now move:
 
-  * `lre-cli locate <hex> --follow` prints, under each program that maps the
+  * `romwright-cli locate <hex> --follow` prints, under each program that maps the
     address, the facts that program holds there -- the containing function,
     the symbols at that address, and the references in each direction. Every
     number is compared with the API's answer for that program, so a `--follow`
@@ -47,7 +47,7 @@ FOLLOW = re.compile(
 class Api:
     def __init__(self, project: Path) -> None:
         self.process = subprocess.Popen(
-            [str(ROOT / "target/release/lre-api"), "--project", str(project)],
+            [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
             cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL, text=True, bufsize=1)
         self.identity = 0
@@ -69,7 +69,7 @@ class Api:
 
 
 def cli(*arguments: str) -> subprocess.CompletedProcess:
-    return subprocess.run([str(ROOT / "target/release/lre-cli"), *arguments],
+    return subprocess.run([str(ROOT / "target/release/romwright-cli"), *arguments],
                           cwd=ROOT, capture_output=True, text=True)
 
 
@@ -99,8 +99,8 @@ def main() -> int:
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "lre-cli",
-                    "-p", "lre-api"], cwd=ROOT, check=True)
+    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli",
+                    "-p", "romwright-api"], cwd=ROOT, check=True)
 
     followed, desktop = {}, {}
     with tempfile.TemporaryDirectory(prefix="m10-002-") as directory:

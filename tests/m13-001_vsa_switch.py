@@ -4,7 +4,7 @@
 Switch recovery was the last pass in a native import that still called the
 decompiler, and the most expensive one: 130 of 137 seconds on a statically
 linked AArch64 image, with two bodies hitting the per-function decompiler
-deadline. `crates/lre-core/src/native/vsa.rs` answers the same question by
+deadline. `crates/romwright-core/src/native/vsa.rs` answers the same question by
 emulating the dispatch path over SLEIGH's own p-code, once per index, exactly
 as `JumpBasic::buildAddresses` does over the decompiler's IR.
 
@@ -17,7 +17,7 @@ What this gate pins is the claim, not a hope:
   the recovered set is no worse than the decompiler alone.
 
 Its recall against stock is ~0.12 today; that is recorded, not asserted as
-good, and it is why the pass is opt-in (`VENTRIS_SWITCH_VSA=1`).
+good, and it is why the pass is opt-in (`ROMWRIGHT_SWITCH_VSA=1`).
 
 The subject is the host's own libc, which has real switches in real
 compiler-emitted shapes, and stock's answer comes from Ghidra with the
@@ -40,7 +40,7 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-CLI = ROOT / "target" / "release" / "lre-cli"
+CLI = ROOT / "target" / "release" / "romwright-cli"
 EXPORTER = ROOT / "scripts/ExportSwitchTargets.java"
 
 # Scored against truth, with stock as the baseline it must beat. Truth for a
@@ -119,7 +119,7 @@ def imported(binary: Path, project: Path, environment: dict[str, str]) -> tuple[
         text=True,
         # Cold: this gate reports the switch round's own cost, and a reused
         # import restores facts without running the phase that produced them.
-        env={**os.environ, "VENTRIS_NO_IMPORT_CACHE": "1", **environment},
+        env={**os.environ, "ROMWRIGHT_NO_IMPORT_CACHE": "1", **environment},
     )
     wall = time.time() - started
     if result.returncode:
@@ -202,7 +202,7 @@ def decodes(binary: Path, base: int, addresses: set[int], ghidra: Path) -> set[i
     """Every address SLEIGH decodes to a real instruction."""
     if not addresses:
         return set()
-    console = Path(os.environ.get("VENTRIS_CONSOLE", ROOT / "native/build/decomp_native"))
+    console = Path(os.environ.get("ROMWRIGHT_CONSOLE", ROOT / "native/build/decomp_native"))
     ordered = sorted(addresses)
     good: set[int] = set()
     for start in range(0, len(ordered), 400):
@@ -270,9 +270,9 @@ def main() -> int:
     parser.add_argument(
         "--ghidra",
         type=Path,
-        default=Path(os.environ.get("VENTRIS_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC")),
+        default=Path(os.environ.get("ROMWRIGHT_GHIDRA", Path.home() / "ghidra_12.1.3_PUBLIC")),
     )
-    parser.add_argument("--work", type=Path, default=Path.home() / "ventris-cache/tmp/m13-001")
+    parser.add_argument("--work", type=Path, default=Path.home() / "romwright-cache/tmp/m13-001")
     parser.add_argument("--report", type=Path)
     arguments = parser.parse_args()
     # Disk preflight: tmpfs pressure once made this gate report 90
@@ -298,12 +298,12 @@ def main() -> int:
         report["reason"] = f"{arguments.binary} is not on this machine"
         print(f"m13-001: SKIPPED ({report['reason']})")
     else:
-        # The switch round spawns `lre-worker`, which refuses a store whose
+        # The switch round spawns `romwright-worker`, which refuses a store whose
         # schema is newer than the one it was built against. Building only
         # the CLI made a stale worker look like the decompiler path
         # answering zero dispatches; build both.
         subprocess.run(
-            ["cargo", "build", "-q", "--release", "-p", "lre-cli", "-p", "lre-worker"],
+            ["cargo", "build", "-q", "--release", "-p", "romwright-cli", "-p", "romwright-worker"],
             cwd=ROOT,
             check=True,
         )
@@ -311,19 +311,19 @@ def main() -> int:
         vsa, vsa_wall, vsa_phase = imported(
             arguments.binary,
             arguments.work / "vsa",
-            {"VENTRIS_NO_SWITCH_DECOMPILER": "1"},
+            {"ROMWRIGHT_NO_SWITCH_DECOMPILER": "1"},
         )
         decompiler, decompiler_wall, _ = imported(
-            arguments.binary, arguments.work / "decompiler", {"VENTRIS_NO_SWITCH_VSA": "1"}
+            arguments.binary, arguments.work / "decompiler", {"ROMWRIGHT_NO_SWITCH_VSA": "1"}
         )
-        # The abstract interpretation (`VENTRIS_SJA=1`) is opt-in, and this
+        # The abstract interpretation (`ROMWRIGHT_SJA=1`) is opt-in, and this
         # is its gate: it runs only where the pattern-shaped pass refused,
         # so it can only add dispatches, and what it adds has to be as sound
         # as what it adds to.
         interpreted, interpreted_wall, interpreted_phase = imported(
             arguments.binary,
             arguments.work / "interpreted",
-            {"VENTRIS_NO_SWITCH_DECOMPILER": "1", "VENTRIS_SJA": "1"},
+            {"ROMWRIGHT_NO_SWITCH_DECOMPILER": "1", "ROMWRIGHT_SJA": "1"},
         )
         combined, combined_wall, combined_phase = imported(
             arguments.binary, arguments.work / "combined", {}

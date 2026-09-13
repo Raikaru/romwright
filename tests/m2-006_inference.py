@@ -11,12 +11,12 @@ def main():
     root = Path(__file__).resolve().parents[1]
     binary = root / 'tests/fixtures-src/tiny_bin'
     env = os.environ.copy()
-    env.pop('VENTRIS_SLA', None)
-    with tempfile.TemporaryDirectory(prefix='ventris-m2-006-') as temporary:
+    env.pop('ROMWRIGHT_SLA', None)
+    with tempfile.TemporaryDirectory(prefix='romwright-m2-006-') as temporary:
         project = Path(temporary) / 'project'
 
         def invoke(requests):
-            response = subprocess.run([str(root / 'target/release/lre-api'), '--project', str(project)],
+            response = subprocess.run([str(root / 'target/release/romwright-api'), '--project', str(project)],
                 cwd=root, env=env, input=''.join(json.dumps(dict(api=2, id=index,
                     method=method, params=params)) + '\n' for index, (method, params) in enumerate(requests)),
                 text=True, capture_output=True, check=True, timeout=120)

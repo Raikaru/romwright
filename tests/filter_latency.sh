@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${VENTRIS_QT_APP:-/tmp/ventris-qt-build/ventris-qt}"
+APP="${ROMWRIGHT_QT_APP:-/tmp/romwright-qt-build/romwright-qt}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 PROGRAM="${PROGRAM:-libc}"
 
@@ -18,7 +18,7 @@ if [ ! -x "$APP" ]; then
     exit 1
 fi
 
-PROJECT="$(mktemp -d /tmp/ventris-filter-test.XXXXXX)"
+PROJECT="$(mktemp -d /tmp/romwright-filter-test.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 REPORT="$PROJECT/ui-gate.json"

@@ -6,7 +6,7 @@ Deciders: primary agent (user-directed staged architecture)
 
 ## Context
 
-Ventris must deliver an x86-64 ELF/PE reverse-engineering workflow whose
+Romwright must deliver an x86-64 ELF/PE reverse-engineering workflow whose
 steady state runs with no JVM. Ghidra's Java program model (loaders,
 analyzers, symbol database) is Stage-1 irreplaceable, but the decompiler
 and SLEIGH are native C++ already — verified by the feasibility spike
@@ -18,7 +18,7 @@ import+analyze of the tiny fixture.
 ## Decision
 
 1. **Three process classes, fixed roles:**
-   - **Rust core** (`lre-core` + `lre-db`): the only owner of durable state.
+   - **Rust core** (`romwright-core` + `romwright-db`): the only owner of durable state.
      Owns `project.sqlite`, addresses/IDs model, revision-stamped facts,
      and the CoreService facade. Linked in-process by CLI today, by the GUI
      later. Never hosts Java or C++ analysis code.
