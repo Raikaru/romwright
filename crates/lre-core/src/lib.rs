@@ -1401,10 +1401,24 @@ impl Core {
                     .iter()
                     .map(|(_, offset)| facts.get(*offset).name())
                     .collect();
+                // The structural type each parameter register's accesses
+                // prove — `*struct{+0x34: float32}` for a register
+                // dereferenced at several offsets. This is the TRex layer:
+                // behavior-describing, not the lost source type.
+                let structural: Vec<String> = parameter_slots
+                    .iter()
+                    .map(|(_, offset)| {
+                        facts
+                            .structural(*offset)
+                            .map(|ty| ty.name())
+                            .unwrap_or_else(|| facts.get(*offset).name())
+                    })
+                    .collect();
                 rows.push(serde_json::json!({
                     "entry": entry.to_string(),
                     "model": model.name,
                     "parameters": parameters,
+                    "structural": structural,
                     "float_parameters": float_parameters,
                     "returns": returns,
                     "instructions": walk.instructions,

@@ -113,6 +113,50 @@ impl Class {
     }
 }
 
+/// A field recovered at one offset of a struct: the access width and the
+/// scalar class the value's first use proved.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct Field {
+    pub offset: i64,
+    pub size: u32,
+    pub class: Class,
+}
+
+/// A structural type — the TRex layer over the flat `Class` lattice. It
+/// describes observed behavior (`*struct{+0x34: float32}`), not a lost
+/// source type: a register that is only ever dereferenced at two offsets is
+/// a pointer to a two-field struct whether or not the source declared one.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Ty {
+    Unknown,
+    Scalar(Class),
+    Ptr(Box<Ty>),
+    /// offset -> field; the layout the accesses proved.
+    Struct(BTreeMap<i64, Field>),
+    /// `base[index]` with a constant stride.
+    Array { elem: Box<Ty>, stride: u64 },
+}
+
+impl Ty {
+    /// C-ish rendering for reports: `*struct{+0x34: float32}`.
+    pub fn name(&self) -> String {
+        match self {
+            Ty::Unknown => "unknown".into(),
+            Ty::Scalar(class) => class.name(),
+            Ty::Ptr(inner) => format!("*{}", inner.name()),
+            Ty::Struct(fields) => {
+                let body: Vec<String> = fields
+                    .values()
+                    .map(|f| format!("+{:#x}: {}", f.offset, f.class.name()))
+                    .collect();
+                format!("struct{{{}}}", body.join(", "))
+            }
+            Ty::Array { elem, stride } => format!("{}[stride {}]", elem.name(), stride),
+        }
+    }
+}
+
 /// A storage location an inference tracks: a register, by its offset and
 /// size in the register space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -138,6 +182,10 @@ pub struct Facts {
     /// shuffle); one holding another register, or nothing, computed or
     /// carries the call's argument.
     aliases: BTreeMap<u64, (u64, u32)>,
+    /// The structural type each parameter register's accesses prove —
+    /// `*struct{…}` for a register dereferenced at several offsets. This is
+    /// the TRex layer: behavior-describing, built from LOAD/STORE evidence.
+    structural: BTreeMap<u64, Ty>,
 }
 
 impl Facts {
@@ -167,6 +215,11 @@ impl Facts {
     /// it: a function's actual parameter, not a caller-saved leftover.
     pub fn read_before_write(&self, offset: u64) -> bool {
         self.read_before_write.contains(&offset)
+    }
+
+    /// The structural type the register at `offset` proved, if any.
+    pub fn structural(&self, offset: u64) -> Option<&Ty> {
+        self.structural.get(&offset)
     }
 
     /// The parameter register whose value the register at `offset`
@@ -248,6 +301,24 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     // from the slot. Addresses computed as `base + displacement` are
     // tracked by that pair, which is what a frame slot is, and a slot that
     // received a parameter carries the parameter's identity.
+    // Structural evidence: (base register, displacement) -> the field the
+    // access proved. A LOAD's field type is the class its loaded value's
+    // first use commits to, so a load records a pending read keyed by the
+    // output temporary and the first consuming op resolves it.
+    let mut fields: BTreeMap<(u64, i64), Field> = BTreeMap::new();
+    let mut pending: BTreeMap<(String, u64), (u64, i64, u32)> = BTreeMap::new();
+    // `base[index]` with a constant stride: base register -> (stride, elem).
+    let mut arrays: BTreeMap<u64, (u64, Class)> = BTreeMap::new();
+    // Registers established as a struct base — used as the address of a
+    // field access. A parameter stored into `*(base+disp)` on one of these
+    // is a field write, not a frame spill.
+    let mut struct_bases: BTreeSet<u64> = BTreeSet::new();
+    // `t = index * stride` or `t = index << shift`: the scaled index of an
+    // array access, temp -> stride in bytes.
+    let mut scaled: BTreeMap<(String, u64), u64> = BTreeMap::new();
+    // `t = a + b` where b is not a constant: a base-plus-index sum, temp ->
+    // (base, index) so a LOAD through it is an array access on the base.
+    let mut sum_of: BTreeMap<(String, u64), ((String, u64), (String, u64))> = BTreeMap::new();
     let mut address_of: BTreeMap<(String, u64), (u64, i64)> = BTreeMap::new();
     let mut spilled: BTreeMap<(u64, i64), u64> = BTreeMap::new();
     // Registers that went into computing a temporary. When the temporary
@@ -313,17 +384,86 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     built_from.insert((output.space.clone(), output.offset), sources);
                 }
             }
-            // Frame arithmetic: `base + displacement` into a temporary.
-            if opcode == "INT_ADD"
+            // Frame arithmetic: `base ± displacement` into a temporary. The
+            // base may itself be a temporary already resolved to
+            // `(register, disp)`, so `lea 0x10(%rax)` after `lea -0x8(%rax)`
+            // composes to `rax + 8` rather than losing the register.
+            if matches!(opcode, "INT_ADD" | "INT_SUB")
                 && let Some(output) = &op.output
                 && let (Some(base), Some(offset)) = (op.inputs.first(), op.inputs.get(1))
-                && base.space == "register"
                 && offset.space == "const"
             {
-                address_of.insert(
-                    (output.space.clone(), output.offset),
-                    (base.offset, offset.offset as i64),
-                );
+                let disp = offset.offset as i64;
+                let disp = if opcode == "INT_SUB" { -disp } else { disp };
+                let resolved = if base.space == "register" {
+                    Some((base.offset, disp))
+                } else {
+                    address_of
+                        .get(&(base.space.clone(), base.offset))
+                        .map(|(reg, d)| (*reg, d + disp))
+                };
+                if let Some(pair) = resolved {
+                    address_of.insert((output.space.clone(), output.offset), pair);
+                }
+            }
+            // `t = index * stride` or `t = index << shift`: the scaled index
+            // of an array access.
+            if let Some(output) = &op.output {
+                let key = (output.space.clone(), output.offset);
+                if opcode == "INT_MULT"
+                    && let (Some(a), Some(b)) = (op.inputs.first(), op.inputs.get(1))
+                {
+                    let stride = if b.space == "const" { Some(b.offset) }
+                        else if a.space == "const" { Some(a.offset) } else { None };
+                    if let Some(stride) = stride {
+                        scaled.insert(key.clone(), stride);
+                    }
+                } else if opcode == "INT_LEFT"
+                    && let (Some(_), Some(shift)) = (op.inputs.first(), op.inputs.get(1))
+                    && shift.space == "const"
+                {
+                    scaled.insert(key.clone(), 1u64 << shift.offset.min(63));
+                }
+                // `t = a + b` with no constant: a base-plus-index sum.
+                if opcode == "INT_ADD"
+                    && let (Some(a), Some(b)) = (op.inputs.first(), op.inputs.get(1))
+                    && a.space != "const" && b.space != "const"
+                {
+                    sum_of.insert(
+                        key,
+                        ((a.space.clone(), a.offset), (b.space.clone(), b.offset)),
+                    );
+                }
+            }
+            // A loaded value's first use resolves the field's class: the
+            // read itself only proved a width.
+            for input in &op.inputs {
+                if let Some((base, disp, size)) =
+                    pending.get(&(input.space.clone(), input.offset)).copied()
+                {
+                    let class = match opcode {
+                        "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SBORROW" | "INT_SRIGHT"
+                        | "INT_SDIV" | "INT_SREM" | "INT_SEXT" => Class::Int(size * 8),
+                        "INT_LESS" | "INT_LESSEQUAL" | "INT_CARRY" | "INT_RIGHT"
+                        | "INT_DIV" | "INT_REM" | "INT_ZEXT" => Class::Uint(size * 8),
+                        _ if opcode.starts_with("FLOAT_") => Class::Float(size * 8),
+                        "COPY" | "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_AND"
+                        | "INT_OR" | "INT_XOR" | "INT_LEFT" | "INT_EQUAL"
+                        | "INT_NOTEQUAL" => Class::Num(size * 8),
+                        _ => Class::Unknown,
+                    };
+                    if class != Class::Unknown {
+                        let entry = fields.entry((base, disp)).or_insert(Field {
+                            offset: disp,
+                            size,
+                            class: Class::Unknown,
+                        });
+                        entry.class = entry.class.join(class);
+                        // The widest access is the field's width; a narrower
+                        // read is a partial one.
+                        entry.size = entry.size.max(size);
+                    }
+                }
             }
             match opcode {
                 // The address operand of a memory access is a pointer, and
@@ -361,8 +501,67 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                         );
                                     }
                                 }
+                                // `base[index]` with a constant stride is an
+                                // array access on the base register.
+                                if let Some((a, b)) = sum_of
+                                    .get(&(address.space.clone(), address.offset))
+                                    .cloned()
+                                {
+                                    let pair = if scaled.contains_key(&b) {
+                                        Some((a, b))
+                                    } else if scaled.contains_key(&a) {
+                                        Some((b, a))
+                                    } else {
+                                        None
+                                    };
+                                    if let Some((base_key, idx_key)) = pair
+                                        && let Some(stride) = scaled.get(&idx_key).copied()
+                                    {
+                                        let bases: Vec<u64> = if base_key.0 == "register" {
+                                            vec![base_key.1]
+                                        } else {
+                                            built_from.get(&base_key).cloned().unwrap_or_default()
+                                        };
+                                        let elem = op
+                                            .output
+                                            .as_ref()
+                                            .map(|o| Class::Num(o.size * 8))
+                                            .unwrap_or(Class::Unknown);
+                                        for base in bases {
+                                            if !defined.contains(&base) {
+                                                arrays.insert(base, (stride, elem));
+                                            }
+                                        }
+                                    }
+                                }
                             }
-                            None => {}
+                            None => {
+                                // `*(base + disp)` through a resolved
+                                // address that is not a spill slot: a field
+                                // read. The class is whatever the loaded
+                                // value's first use commits to, so the read
+                                // is recorded pending and resolved when the
+                                // output temporary is consumed.
+                                if let Some(&(base, disp)) = slot
+                                    && let Some(output) = &op.output
+                                {
+                                    struct_bases.insert(base);
+                                    pending.insert(
+                                        (output.space.clone(), output.offset),
+                                        (base, disp, output.size),
+                                    );
+                                    if !defined.contains(&base) {
+                                        facts.constrain(
+                                            &PcodeVarnode {
+                                                space: "register".into(),
+                                                offset: base,
+                                                size: 8,
+                                            },
+                                            Class::Ptr,
+                                        );
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -371,8 +570,14 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         let key = address_of.get(&(address.space.clone(), address.offset)).copied();
                         match key {
                             Some(key) => {
+                                // A store into `*(base+disp)` where `base`
+                                // is an established struct base is a field
+                                // write, never a spill — even when the value
+                                // is a parameter register.
+                                let is_struct_base = struct_bases.contains(&key.0);
                                 // Remember which parameter landed in this
-                                // slot, if any.
+                                // slot, if any — but only for a real frame
+                                // slot, not a struct field.
                                 if let Some(value) = op.inputs.get(2) {
                                     let origin = if value.space == "register"
                                         && !defined.contains(&value.offset)
@@ -383,12 +588,53 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                             .get(&(value.space.clone(), value.offset))
                                             .map(|(origin, _)| *origin)
                                     };
-                                    match origin {
-                                        Some(origin) => {
-                                            spilled.insert(key, origin);
+                                    if !is_struct_base {
+                                        match origin {
+                                            Some(origin) => {
+                                                spilled.insert(key, origin);
+                                            }
+                                            None => {
+                                                spilled.remove(&key);
+                                            }
                                         }
-                                        None => {
-                                            spilled.remove(&key);
+                                    }
+                                    // A store into a resolved address that
+                                    // is not a spill slot is a field write:
+                                    // `*(base + disp) = value`. The field's
+                                    // class is the stored value's own.
+                                    if is_struct_base || !spilled.contains_key(&key) {
+                                        let (base, disp) = key;
+                                        struct_bases.insert(base);
+                                        let class = if value.space == "const" {
+                                            Class::Num(value.size * 8)
+                                        } else if value.space == "register" {
+                                            let known = facts.get(value.offset);
+                                            if known == Class::Unknown {
+                                                Class::Num(value.size * 8)
+                                            } else {
+                                                known
+                                            }
+                                        } else {
+                                            Class::Num(value.size * 8)
+                                        };
+                                        let entry = fields
+                                            .entry((base, disp))
+                                            .or_insert(Field {
+                                                offset: disp,
+                                                size: value.size,
+                                                class: Class::Unknown,
+                                            });
+                                        entry.class = entry.class.join(class);
+                                        entry.size = entry.size.max(value.size);
+                                        if !defined.contains(&base) {
+                                            facts.constrain(
+                                                &PcodeVarnode {
+                                                    space: "register".into(),
+                                                    offset: base,
+                                                    size: 8,
+                                                },
+                                                Class::Ptr,
+                                            );
                                         }
                                     }
                                 }
@@ -600,6 +846,29 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
             }
         }
     }
+    // Fold the field accesses and array strides into a structural type per
+    // base register. A register dereferenced at several offsets is a
+    // `*struct{…}`; one dereferenced only at offset 0 is a `*T`; one indexed
+    // by a scaled value is an array.
+    let mut by_base: BTreeMap<u64, BTreeMap<i64, Field>> = BTreeMap::new();
+    for ((base, disp), field) in fields {
+        by_base.entry(base).or_default().insert(disp, field);
+    }
+    for (base, map) in by_base {
+        let ty = if map.len() == 1 && map.contains_key(&0) {
+            let field = map[&0];
+            Ty::Ptr(Box::new(Ty::Scalar(field.class)))
+        } else {
+            Ty::Ptr(Box::new(Ty::Struct(map)))
+        };
+        facts.structural.insert(base, ty);
+    }
+    for (base, (stride, elem)) in arrays {
+        facts
+            .structural
+            .entry(base)
+            .or_insert(Ty::Array { elem: Box::new(Ty::Scalar(elem)), stride });
+    }
     facts
 }
 
@@ -650,6 +919,57 @@ mod tests {
             vec![varnode("const", 0x1b1, 4), varnode("register", 0x38, 8)],
         )])]);
         assert_eq!(facts.get(0x38), Class::Ptr);
+    }
+
+    #[test]
+    fn a_parameter_dereferenced_at_two_offsets_is_a_struct_pointer() {
+        // `*(rdi + 0x34) = 1.0f` then `*(rdi + 0x10) = x`: the register is a
+        // pointer to a struct with a float at +0x34 and a number at +0x10.
+        let facts = infer(&[
+            // t0 = rdi + 0x34
+            instruction(vec![op(
+                "INT_ADD",
+                Some(varnode("unique", 0x100, 8)),
+                vec![varnode("register", 0x38, 8), varnode("const", 0x34, 8)],
+            )]),
+            // *(t0) = 1.0f  (a float constant store)
+            instruction(vec![op(
+                "STORE",
+                None,
+                vec![
+                    varnode("const", 0x1b1, 4),
+                    varnode("unique", 0x100, 8),
+                    varnode("const", 0x3f800000, 4),
+                ],
+            )]),
+            // t1 = rdi + 0x10
+            instruction(vec![op(
+                "INT_ADD",
+                Some(varnode("unique", 0x108, 8)),
+                vec![varnode("register", 0x38, 8), varnode("const", 0x10, 8)],
+            )]),
+            // *(t1) = rsi
+            instruction(vec![op(
+                "STORE",
+                None,
+                vec![
+                    varnode("const", 0x1b1, 4),
+                    varnode("unique", 0x108, 8),
+                    varnode("register", 0x30, 8),
+                ],
+            )]),
+        ]);
+        let ty = facts.structural(0x38).expect("a structural type for rdi");
+        match ty {
+            Ty::Ptr(inner) => match inner.as_ref() {
+                Ty::Struct(fields) => {
+                    assert!(fields.contains_key(&0x34), "field at +0x34: {fields:?}");
+                    assert!(fields.contains_key(&0x10), "field at +0x10: {fields:?}");
+                }
+                other => panic!("expected a struct, got {other:?}"),
+            },
+            other => panic!("expected a pointer, got {other:?}"),
+        }
     }
 
     /// A comparison plus the branch that reads it: only then is the
