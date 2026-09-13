@@ -198,8 +198,8 @@ fn defs_for_slices(slices: &[&[PcodeInstruction]], persistent_only: bool) -> Def
                     continue;
                 }
                 let slot = |v: &PcodeVarnode| (v.space.clone(), v.offset);
-                match op.opcode.as_str() {
-                    "INT_ADD" if op.inputs.len() >= 2 => {
+                match op.opcode.parse::<crate::ir::Opcode>().unwrap_or(crate::ir::Opcode::Other) {
+                    crate::ir::Opcode::IntAdd if op.inputs.len() >= 2 => {
                         let (a, b) = (&op.inputs[0], &op.inputs[1]);
                         if a.is_const() && b.is_const() {
                             defs.insert(
@@ -214,7 +214,7 @@ fn defs_for_slices(slices: &[&[PcodeInstruction]], persistent_only: bool) -> Def
                             defs.insert(slot(out), Def::AddConst { base: slot(a), disp: b.offset });
                         }
                     }
-                    "COPY" | "CAST" if op.inputs.len() == 1 => {
+                    crate::ir::Opcode::Copy | crate::ir::Opcode::Cast if op.inputs.len() == 1 => {
                         if op.inputs[0].is_const() {
                             defs.insert(
                                 slot(out),
@@ -395,6 +395,10 @@ impl<'a, I: Image> Machine<'a, I> {
     /// Runs one operation. Returns the branch destination when the operation
     /// is the window's indirect branch.
     fn step(&mut self, op: &'a PcodeOp) -> Option<u64> {
+        use crate::ir::Opcode as O;
+        // Lift the raw opcode string into the typed IR opcode; the varnodes
+        // stay borrowed from `op` so `read`/`write` keep the `'a` lifetime.
+        let opcode = op.opcode.parse::<O>().unwrap_or(O::Other);
         let inputs: Vec<Known> = op.inputs.iter().map(|input| {
             if input.is_const() {
                 Some(input.offset & mask(input.size))
@@ -405,15 +409,15 @@ impl<'a, I: Image> Machine<'a, I> {
         let size = op.output.as_ref().map_or(8, |out| out.size);
         let a = inputs.first().copied().flatten();
         let b = inputs.get(1).copied().flatten();
-        if op.opcode == "CBRANCH" {
+        if opcode == O::CBranch {
             // input 0 is the destination, input 1 the condition.
             let destination = op.inputs.first().map(|input| input.offset);
             let condition = inputs.get(1).copied().flatten();
             self.branches.push((destination, condition));
         }
-        let value: Known = match op.opcode.as_str() {
-            "COPY" | "CAST" => a,
-            "LOAD" => {
+        let value: Known = match opcode {
+            O::Copy | O::Cast => a,
+            O::Load => {
                 // input 0 names the space, input 1 is the offset.
                 let forced = op
                     .inputs
@@ -440,7 +444,7 @@ impl<'a, I: Image> Machine<'a, I> {
                     }
                 }
             }
-            "STORE" => {
+            O::Store => {
                 let address = inputs.get(1).copied().flatten();
                 let stored = inputs.get(2).copied().flatten();
                 let width = op.inputs.get(2).map_or(8, |input| input.size);
@@ -455,97 +459,97 @@ impl<'a, I: Image> Machine<'a, I> {
                 }
                 return None;
             }
-            "INT_ADD" => match (a, b) {
+            O::IntAdd => match (a, b) {
                 (Some(a), Some(b)) => Some(a.wrapping_add(b)),
                 _ => None,
             },
-            "INT_SUB" => match (a, b) {
+            O::IntSub => match (a, b) {
                 (Some(a), Some(b)) => Some(a.wrapping_sub(b)),
                 _ => None,
             },
-            "INT_MULT" => match (a, b) {
+            O::IntMult => match (a, b) {
                 (Some(a), Some(b)) => Some(a.wrapping_mul(b)),
                 _ => None,
             },
-            "INT_DIV" => match (a, b) {
+            O::IntDiv => match (a, b) {
                 (Some(a), Some(b)) if b != 0 => Some(a / b),
                 _ => None,
             },
-            "INT_REM" => match (a, b) {
+            O::IntRem => match (a, b) {
                 (Some(a), Some(b)) if b != 0 => Some(a % b),
                 _ => None,
             },
-            "INT_AND" => match (a, b) {
+            O::IntAnd => match (a, b) {
                 (Some(a), Some(b)) => Some(a & b),
                 _ => None,
             },
-            "INT_OR" => match (a, b) {
+            O::IntOr => match (a, b) {
                 (Some(a), Some(b)) => Some(a | b),
                 _ => None,
             },
-            "INT_XOR" => match (a, b) {
+            O::IntXor => match (a, b) {
                 (Some(a), Some(b)) => Some(a ^ b),
                 _ => None,
             },
-            "INT_LEFT" => match (a, b) {
+            O::IntLeft => match (a, b) {
                 (Some(a), Some(b)) if b < 64 => Some(a << b),
                 (Some(_), Some(_)) => Some(0),
                 _ => None,
             },
-            "INT_RIGHT" => match (a, b) {
+            O::IntRight => match (a, b) {
                 (Some(a), Some(b)) if b < 64 => Some(a >> b),
                 (Some(_), Some(_)) => Some(0),
                 _ => None,
             },
-            "INT_SRIGHT" => match (a, b) {
+            O::IntSRight => match (a, b) {
                 (Some(a), Some(b)) if b < 64 => {
                     let width = op.inputs.first().map_or(8, |input| input.size);
                     Some(((sign_extend(a, width) as i64) >> b) as u64)
                 }
                 _ => None,
             },
-            "INT_NEGATE" => a.map(|a| !a),
-            "INT_2COMP" => a.map(|a| a.wrapping_neg()),
-            "INT_ZEXT" => a,
-            "INT_SEXT" => {
+            O::IntNegate => a.map(|a| !a),
+            O::Int2Comp => a.map(|a| a.wrapping_neg()),
+            O::IntZExt => a,
+            O::IntSExt => {
                 let width = op.inputs.first().map_or(8, |input| input.size);
                 a.map(|a| sign_extend(a, width))
             }
-            "SUBPIECE" => match (a, b) {
+            O::Subpiece => match (a, b) {
                 (Some(a), Some(shift)) => {
                     let bits = shift.saturating_mul(8);
                     if bits >= 64 { Some(0) } else { Some(a >> bits) }
                 }
                 _ => None,
             },
-            "PIECE" => match (a, b) {
+            O::Piece => match (a, b) {
                 (Some(high), Some(low)) => {
                     let low_width = op.inputs.get(1).map_or(0, |input| input.size);
                     Some((high << (low_width * 8)) | low)
                 }
                 _ => None,
             },
-            "INT_EQUAL" => match (a, b) {
+            O::IntEqual => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a == b)),
                 _ => None,
             },
-            "INT_NOTEQUAL" => match (a, b) {
+            O::IntNotEqual => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a != b)),
                 _ => None,
             },
-            "INT_LESS" => match (a, b) {
+            O::IntLess => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a < b)),
                 _ => None,
             },
-            "INT_LESSEQUAL" => match (a, b) {
+            O::IntLessEqual => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a <= b)),
                 _ => None,
             },
-            "INT_SLESS" | "INT_SLESSEQUAL" => match (a, b) {
+            O::IntSLess | O::IntSLessEqual => match (a, b) {
                 (Some(a), Some(b)) => {
                     let width = op.inputs.first().map_or(8, |input| input.size);
                     let (a, b) = (sign_extend(a, width) as i64, sign_extend(b, width) as i64);
-                    Some(u64::from(if op.opcode == "INT_SLESS" {
+                    Some(u64::from(if opcode == O::IntSLess {
                         a < b
                     } else {
                         a <= b
@@ -553,24 +557,24 @@ impl<'a, I: Image> Machine<'a, I> {
                 }
                 _ => None,
             },
-            "BOOL_AND" => match (a, b) {
+            O::BoolAnd => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a != 0 && b != 0)),
                 _ => None,
             },
-            "BOOL_OR" => match (a, b) {
+            O::BoolOr => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from(a != 0 || b != 0)),
                 _ => None,
             },
-            "BOOL_XOR" => match (a, b) {
+            O::BoolXor => match (a, b) {
                 (Some(a), Some(b)) => Some(u64::from((a != 0) ^ (b != 0))),
                 _ => None,
             },
-            "BOOL_NEGATE" => a.map(|a| u64::from(a == 0)),
-            "POPCOUNT" => a.map(|a| u64::from(a.count_ones())),
+            O::BoolNegate => a.map(|a| u64::from(a == 0)),
+            O::PopCount => a.map(|a| u64::from(a.count_ones())),
             // Recorded above; a conditional branch inside the window is the
             // guard, not a reason to abandon the path.
-            "CBRANCH" => None,
-            "BRANCHIND" | "CALLIND" | "RETURN" => {
+            O::CBranch => None,
+            O::BranchInd | O::CallInd | O::Return => {
                 // The window's whole purpose: the destination this indirect
                 // transfer computed.
                 return a;
@@ -580,7 +584,7 @@ impl<'a, I: Image> Machine<'a, I> {
             // one nothing is known at all. Clearing is the conservative
             // reading; keeping the old values would let a stale register
             // produce a target that the machine never computes.
-            "CALL" | "CALLIND" | "CALLOTHER" => {
+            O::Call | O::CallOther => {
                 let kept = self
                     .preserve
                     .and_then(|key| self.state.get(&key).map(|value| (key, *value)));
@@ -594,7 +598,7 @@ impl<'a, I: Image> Machine<'a, I> {
             // An unconditional branch is how a guard block reaches the
             // dispatch: the region is a straight line by construction, so
             // there is nothing to do here.
-            "BRANCH" => None,
+            O::Branch => None,
             // Anything else -- a flag computation, a floating-point
             // operation, an instruction with no integer model here -- makes
             // its output unknown and nothing else. Abandoning the whole run
@@ -775,7 +779,7 @@ pub fn recover<I: Image>(
     let mut memkeys: Vec<MemKey> = Vec::new();
     for instruction in window {
         for op in &instruction.ops {
-            if op.opcode == "LOAD" {
+            if op.opcode.parse::<crate::ir::Opcode>() == Ok(crate::ir::Opcode::Load) {
                 if let Some(input) = op.inputs.get(1) {
                     if let Some(key) = resolve_key(&window_defs, input) {
                         if !memkeys.contains(&key) {

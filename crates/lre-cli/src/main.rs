@@ -75,7 +75,8 @@ oracle generation only (launches the Stage-1 Java bridge):
   lre-cli decompile-batch <program> <addr,addr,...> --oracle [--ghidra DIR]
   lre-cli disasm <program> <address> --oracle [-n N] [--ghidra DIR]
   lre-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]
-  lre-cli lint-specs [--ghidra DIR]   (validate every language module's spec files)"
+  lre-cli lint-specs [--ghidra DIR]   (validate every language module's spec files)
+  lre-cli ir-dump <binary> <addr,addr,...> [--base HEX]   (typed IR / normalized p-code)"
         );
     std::process::exit(2);
 }
@@ -1127,6 +1128,36 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .disasm_native(Path::new(&binary), &addr, n)
                 .map_err(|e| e.to_string())?;
             println!("{text}");
+        }
+        "ir-dump" => {
+            // Print the typed IR (normalized p-code) for a comma-separated
+            // address list — the form analyses consume, not the raw strings.
+            let binary = args.get(2).ok_or("ir-dump needs a binary path")?.clone();
+            let addresses: Vec<u64> = args
+                .get(3)
+                .ok_or("ir-dump needs a comma-separated address list")?
+                .split(',')
+                .filter_map(|a| u64::from_str_radix(a.trim().trim_start_matches("0x"), 16).ok())
+                .collect();
+            let irs = core
+                .ir_native(Path::new(&binary), &addresses)
+                .map_err(|e| e.to_string())?;
+            for ir in &irs {
+                println!("{:#x} (len {})", ir.address, ir.length);
+                for op in &ir.ops {
+                    let ins: Vec<String> = op
+                        .inputs
+                        .iter()
+                        .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
+                        .collect();
+                    let out = op
+                        .output
+                        .as_ref()
+                        .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
+                        .unwrap_or_else(|| "-".into());
+                    println!("  {} {} <- {}", op.opcode.name(), out, ins.join(", "));
+                }
+            }
         }
         "decompile" if !has_flag(args, "--oracle") => {
             let binary = args

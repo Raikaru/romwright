@@ -14,6 +14,7 @@ pub mod demangle;
 pub mod bridge;
 pub mod architecture;
 pub mod disasm;
+pub mod ir;
 pub mod graph;
 pub mod sigscan;
 pub mod listing;
@@ -2029,6 +2030,26 @@ impl Core {
     /// Native disassembly of `count` instructions at `address`.
     pub fn disasm_native(&self, binary: &Path, address: &str, count: u32) -> Result<String> {
         Ok(native_runtime::disasm_native(&self.config, binary, address, count)?)
+    }
+
+    /// Lift the p-code at `addresses` into the typed IR (`ir::IrInstruction`)
+    /// — the normalized form analyses consume. The binary is imported
+    /// natively so the session decodes under the program's real language.
+    pub fn ir_native(
+        &self,
+        binary: &Path,
+        addresses: &[u64],
+    ) -> Result<Vec<ir::IrInstruction>> {
+        let import = native::load_native(binary)?;
+        let mut session = native_runtime::ConsoleSession::new(&import.cfg)
+            .map_err(CoreError::NativeRuntime)?;
+        session
+            .load_mapped(&import)
+            .map_err(CoreError::NativeRuntime)?;
+        let pcode = session
+            .pcode_batch(addresses)
+            .map_err(CoreError::NativeRuntime)?;
+        Ok(ir::lift_all(&pcode))
     }
 
     /// Exhaustive length sweep over a mapped range plus point queries

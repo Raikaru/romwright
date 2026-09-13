@@ -586,6 +586,7 @@ fn run_block<I: Image>(
     mut state: State,
     dispatches: &mut BTreeMap<u64, (Value, Value)>,
 ) -> (State, BTreeMap<usize, Vec<(Slot, Value)>>) {
+    use crate::ir::Opcode as O;
     let mut edges: BTreeMap<usize, Vec<(Slot, Value)>> = BTreeMap::new();
     // The comparison that produced each boolean, so a branch reading it can
     // refine the operand.
@@ -615,12 +616,12 @@ fn run_block<I: Image>(
         .and_then(|raw| u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok());
     for instruction in &block.instructions {
         for op in &instruction.ops {
-            let opcode = op.opcode.as_str();
+            let opcode = op.opcode.parse::<crate::ir::Opcode>().unwrap_or(crate::ir::Opcode::Other);
             let inputs: Vec<Value> = op.inputs.iter().map(|input| state.get(input)).collect();
             if trace_at == Some(instruction.address) {
                 eprintln!(
                     "SJA-OP {:#x}: {} out={:?} in={:?}",
-                    instruction.address, opcode, op.output, op.inputs
+                    instruction.address, opcode.name(), op.output, op.inputs
                 );
                 for (key, known) in &state.values {
                     eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
@@ -650,7 +651,7 @@ fn run_block<I: Image>(
                 // `cmp $4,%eax; mov (%rsi),%eax; jbe` bounds the new eax.
                 // A value-preserving same-slot widening is the exception:
                 // `cmp $0x5a,%al; movzbl %al,%eax; ja` keeps the bound.
-                let preserves = matches!(opcode, "COPY" | "INT_ZEXT" | "INT_SEXT")
+                let preserves = matches!(opcode, crate::ir::Opcode::Copy | crate::ir::Opcode::IntZExt | crate::ir::Opcode::IntSExt)
                     && op.inputs.first().is_some_and(|src| slot(src) == key);
                 if !preserves {
                     comparisons.retain(|_, (operand, ..)| *operand != key);
@@ -658,7 +659,7 @@ fn run_block<I: Image>(
                 origins.remove(&key)
             });
             match opcode {
-                "COPY" | "INT_ZEXT" | "INT_SEXT" | "SUBPIECE" => {
+                O::Copy | O::IntZExt | O::IntSExt | O::Subpiece => {
                     if let (Some(output), Some(value)) = (&op.output, inputs.first()) {
                         // A widening is arithmetic on the value, not a
                         // relabelling: a PIC jump table holds 32-bit signed
@@ -666,26 +667,26 @@ fn run_block<I: Image>(
                         // every such table unrecoverable.
                         let width = op.inputs.first().map_or(output.size, |input| input.size);
                         let converted = match opcode {
-                            "INT_SEXT" => map_values(value, |raw| sign_extend(raw, width)),
+                            O::IntSExt => map_values(value, |raw| sign_extend(raw, width)),
                             // A zero-extension of a value that already fits
                             // the *input* width is a no-op: the bound
                             // carries through, flag and all, rather than
                             // laundering into a set.
-                            "INT_ZEXT" if matches!(value, Value::Strided { base: 0, stride: 1, lo, hi, .. } if *lo >= 0 && *hi >= *lo && (width >= 8 || (*hi as u64) < (1u64 << (width * 8)))) => value.clone(),
+                            O::IntZExt if matches!(value, Value::Strided { base: 0, stride: 1, lo, hi, .. } if *lo >= 0 && *hi >= *lo && (width >= 8 || (*hi as u64) < (1u64 << (width * 8)))) => value.clone(),
                             // A zero-extension of an unknown w-byte input is
                             // provably 0..=2^(8w)-1 -- the bound the domain
                             // can state without knowing the value. Only a
                             // byte or a word is worth stating: a 4-byte
                             // bound turns every unknown 32-bit register into
                             // a live Strided entry the join loop carries.
-                            "INT_ZEXT" if matches!(value, Value::Top) && width <= 2 => {
+                            O::IntZExt if matches!(value, Value::Top) && width <= 2 => {
                                 let high = (1i64 << (width * 8)) - 1;
                                 // A width, not a guard: `movzbl` says the
                                 // index is a byte, not that the table is
                                 // 256 entries.
                                 Value::Strided { base: 0, stride: 1, lo: 0, hi: high , guarded: false }
                             }
-                            "INT_ZEXT" => map_values(value, |raw| truncate(raw, width)),
+                            O::IntZExt => map_values(value, |raw| truncate(raw, width)),
                             _ => value.clone(),
                         };
                         state.set(output, converted);
@@ -708,7 +709,7 @@ fn run_block<I: Image>(
                             // A bound on a piece says nothing about the
                             // whole: record the narrowest width crossed so
                             // the compare can check the origin already fits.
-                            let narrow = if opcode == "SUBPIECE" {
+                            let narrow = if opcode == O::Subpiece {
                                 Some(narrow.map_or(output.size, |w| w.min(output.size)))
                             } else {
                                 narrow
@@ -717,7 +718,7 @@ fn run_block<I: Image>(
                         }
                     }
                 }
-                "INT_ADD" => {
+                O::IntAdd => {
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, inputs.first(), inputs.get(1))
                     {
@@ -754,7 +755,7 @@ fn run_block<I: Image>(
                         }
                     }
                 }
-                "INT_SUB" => {
+                O::IntSub => {
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, inputs.first(), inputs.get(1))
                     {
@@ -787,14 +788,14 @@ fn run_block<I: Image>(
                         }
                     }
                 }
-                "INT_MULT" => {
+                O::IntMult => {
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, inputs.first(), inputs.get(1))
                     {
                         state.set(output, multiply(left.clone(), right.clone()));
                     }
                 }
-                "INT_LEFT" => {
+                O::IntLeft => {
                     if let Some(output) = &op.output {
                         match (inputs.first(), inputs.get(1)) {
                             (Some(left), Some(Value::Const(shift))) => {
@@ -816,7 +817,7 @@ fn run_block<I: Image>(
                 // computed-goto class: `and; shl; add table; jmp *reg`
                 // materialises an arithmetic progression of code addresses
                 // with no table in memory to read.
-                "INT_AND" if op.output.as_ref().is_some_and(|output| output.size > 1) => {
+                O::IntAnd if op.output.as_ref().is_some_and(|output| output.size > 1) => {
                     if let Some(output) = &op.output {
                         let masked = match (inputs.first(), inputs.get(1)) {
                             (Some(Value::Const(left)), Some(Value::Const(right))) => {
@@ -831,7 +832,7 @@ fn run_block<I: Image>(
                         state.set(output, masked);
                     }
                 }
-                "LOAD" => {
+                O::Load => {
                     if let (Some(output), Some(address)) = (&op.output, inputs.get(1)) {
                         state.set(output, load(image, address.clone(), output.size));
                     }
@@ -842,8 +843,8 @@ fn run_block<I: Image>(
                 // `ZF = edx == 10`. Every boolean that depends on exactly
                 // one compared slot carries that slot's bound forward, so
                 // the branch can find it however the flags were combined.
-                "BOOL_AND" | "BOOL_OR" | "INT_AND" | "INT_OR" | "INT_EQUAL"
-                | "INT_NOTEQUAL" | "BOOL_NEGATE"
+                O::BoolAnd | O::BoolOr | O::IntAnd | O::IntOr | O::IntEqual
+                | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
                     let mut carried: Option<(Slot, u64, bool, bool, u32)> = None;
@@ -869,13 +870,13 @@ fn run_block<I: Image>(
                         state.set(output, Value::Top);
                     }
                 }
-                "INT_LESS" | "INT_SLESS" | "INT_LESSEQUAL" | "INT_SLESSEQUAL" => {
+                O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
                     // Remember what this boolean says, for the branch that
                     // reads it: `index < n` bounds the index above.
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                     {
-                        let inclusive = opcode.ends_with("EQUAL");
+                        let inclusive = matches!(opcode, O::IntLessEqual | O::IntSLessEqual);
                         match (state.get(left), state.get(right)) {
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
@@ -891,7 +892,7 @@ fn run_block<I: Image>(
                         }
                     }
                 }
-                "CBRANCH" => {
+                O::CBranch => {
                     // Slot 0 of a block's successors is the fallthrough in
                     // our own construction, slot 1 the taken edge, so the
                     // refinement is applied to whichever assumes the test.
@@ -1112,7 +1113,7 @@ fn run_block<I: Image>(
                         }
                     }
                 }
-                "BRANCHIND" => {
+                O::BranchInd => {
                     if let Some(target) = op.inputs.first() {
                         let value = state.get(target);
                         if std::env::var("VENTRIS_TRACE_SJA_AT")
