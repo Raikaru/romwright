@@ -313,7 +313,7 @@ pub(super) fn confirm_referenced_pointers(import: &mut NativeImport) {
 }
 
 /// The pointer-sized word at one address, from the mapping that carries it.
-fn word_at(import: &NativeImport, address: u64, width: u64, be: bool) -> Option<u64> {
+pub(super) fn word_at(import: &NativeImport, address: u64, width: u64, be: bool) -> Option<u64> {
     let mapping = import.mappings.iter().find(|mapping| {
         address >= mapping.vaddr && address - mapping.vaddr < mapping.size
     })?;

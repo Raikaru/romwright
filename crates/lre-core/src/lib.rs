@@ -192,7 +192,21 @@ impl Core {
         binary: &Path,
         name: Option<&str>,
     ) -> Result<ProgramSummary> {
-        let mut summary = bridge.import(session, binary)?;
+        self.import_program_as(bridge, session, binary, name, None, None)
+    }
+
+    /// Imports with an explicit language/compiler pair, overriding Ghidra's
+    /// opinion (e.g. `PowerPC:BE:64:default` for a PS3 PPE image).
+    pub fn import_program_as(
+        &self,
+        bridge: &mut bridge::Bridge,
+        session: &str,
+        binary: &Path,
+        name: Option<&str>,
+        language: Option<&str>,
+        compiler: Option<&str>,
+    ) -> Result<ProgramSummary> {
+        let mut summary = bridge.import_as(session, binary, language, compiler)?;
         if let Some(name) = name {
             summary.program = name.to_string();
         }
