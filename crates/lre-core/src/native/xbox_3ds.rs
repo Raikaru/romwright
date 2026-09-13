@@ -34,21 +34,12 @@ pub(crate) fn is_xex(data: &[u8]) -> bool {
     data.len() >= 4 && (&data[0..4] == b"XEX2" || &data[0..4] == b"XEX0" || &data[0..4] == b"XEX1")
 }
 
-/// Imports a XEX: the header's optional-header table names the PE
-/// image's file offset. The PE is imported by the existing PE loader.
+/// Imports a XEX: decrypts and decompresses the embedded PE image, then maps
+/// its sections. The real container pipeline lives in `native::xex`; this
+/// adapts it to the multi-image container shape.
 pub(crate) fn import_xex(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
-    // XEX header: magic(4) module_flags(4) data_offset(4) reserved(4)
-    // then optional headers. The PE image is at data_offset.
-    let data_off = u32_be(data, 0x08)? as usize;
-    if data_off >= data.len() {
-        return err("XEX data offset outside file");
-    }
-    let pe = &data[data_off..];
-    if pe.starts_with(b"MZ") {
-        let imp = super::parse_native(pe)?;
-        return Ok(vec![("xex".into(), imp)]);
-    }
-    err("XEX payload is not a PE")
+    let imp = super::xex::import(data)?;
+    Ok(vec![("xex".into(), imp)])
 }
 
 // ---------------------------------------------------------------- XBE

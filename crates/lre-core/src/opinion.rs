@@ -209,7 +209,11 @@ pub fn elf_selection(install: &Path, image: ElfMachine) -> Result<Selection> {
                 continue;
             }
             let size: u32 = language.size.parse().unwrap_or(0);
-            if image.bits == 32 && size > 32 {
+            // The ELF-class filter compares the image's class (32/64) to the
+            // language's address size. A language whose size exceeds 64 is a
+            // wide-word machine (SPU is 128) on an ordinary ELF container, not
+            // a 64-bit address space, so the class test does not apply to it.
+            if image.bits == 32 && size > 32 && size <= 64 {
                 continue;
             }
             if image.bits == 64 && size <= 32 {
