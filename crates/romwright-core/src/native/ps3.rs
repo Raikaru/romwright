@@ -58,7 +58,7 @@
 use super::crypto::aes128_ctr;
 use super::{err, NativeImport, Result};
 use aes::cipher::{BlockCipherDecrypt, KeyInit};
-use aes::Aes256;
+use aes::{Aes128, Aes256};
 
 /// Ghidra language for the PPU image (task contract, not the install
 /// opinion: the install would answer `PowerPC:BE:64:default`).
@@ -82,8 +82,9 @@ const EM_SPU: u16 = 23;
 
 /// `app_type` of a plain application SELF (fail0verflow `unself.c`).
 const APP_TYPE_APP: u32 = 4;
-/// `app_type` of an NPDRM SELF: needs a per-title RAP license, which no
-/// offline loader can mint.
+/// `app_type` of an NPDRM SELF: needs its per-title RAP license, supplied
+/// by the user via `--keys` (`import_with`); without one the title reports
+/// the key gap instead of decrypting.
 const APP_TYPE_NPDRM: u32 = 8;
 
 /// DEBUG/fSELF flag in the SCE flags halfword: the metadata info is stored
@@ -441,13 +442,150 @@ fn aes256_cbc_decrypt(key: &[u8; 32], iv: &[u8; 16], data: &mut [u8]) -> Result<
     }
     Ok(())
 }
+/// Public NPDRM license constants from RPCS3 `key_vault.h` (the same openly
+/// published research as `APP_KEYS` above): `RAP_KEY`/`RAP_PBOX`/`RAP_E1`/
+/// `RAP_E2` drive `rap_to_rif`, and `NP_KLIC_KEY` unwraps its output the way
+/// `SELFDecrypter::DecryptNPDRM` does before the vault unwrap below.
+const RAP_KEY: [u8; 16] = [
+    0x86, 0x9F, 0x77, 0x45, 0xC1, 0x3F, 0xD8, 0x90, 0xCC, 0xF2, 0x91, 0x88, 0xE3, 0xCC, 0x3E, 0xDF,
+];
+const RAP_PBOX: [u8; 16] = [
+    0x0C, 0x03, 0x06, 0x04, 0x01, 0x0B, 0x0F, 0x08, 0x02, 0x07, 0x00, 0x05, 0x0A, 0x0E, 0x0D, 0x09,
+];
+const RAP_E1: [u8; 16] = [
+    0xA9, 0x3E, 0x1F, 0xD6, 0x7C, 0x55, 0xA3, 0x29, 0xB7, 0x5F, 0xDD, 0xA6, 0x2A, 0x95, 0xC7, 0xA5,
+];
+const RAP_E2: [u8; 16] = [
+    0x67, 0xD4, 0x5D, 0xA3, 0x29, 0x6D, 0x00, 0x6A, 0x4E, 0x7C, 0x53, 0x7B, 0xF5, 0x53, 0x8C, 0x74,
+];
+const NP_KLIC_KEY: [u8; 16] = [
+    0xF2, 0xFB, 0xCA, 0x7A, 0x75, 0xB0, 0x4E, 0xDC, 0x13, 0x90, 0x63, 0x8C, 0xCD, 0xFD, 0xD1, 0xEE,
+];
+/// The NPDRM metadata layer uses a zero IV (RPCS3 `DecryptNPDRM`).
+const NPDRM_ZERO_IV: [u8; 16] = [0u8; 16];
+
+/// AES-128-CBC decrypt in place (the NPDRM metadata layer wrapped around
+/// the AES-256 vault unwrap for per-title keys).
+fn aes128_cbc_decrypt(key: &[u8; 16], iv: &[u8; 16], data: &mut [u8]) -> Result<()> {
+    if data.is_empty() || data.len() % 16 != 0 {
+        return err("SELF metadata info is not a whole number of blocks");
+    }
+    let cipher = Aes128::new(key.into());
+    let mut prev = *iv;
+    for chunk in data.chunks_mut(16) {
+        let mut block = [0u8; 16];
+        block.copy_from_slice(chunk);
+        let cipher_block = block;
+        cipher.decrypt_block((&mut block).into());
+        for (b, p) in block.iter_mut().zip(prev.iter()) {
+            *b ^= *p;
+        }
+        chunk.copy_from_slice(&block);
+        prev = cipher_block;
+    }
+    Ok(())
+}
+
+/// Converts a 16-byte user RAP license into the per-title intermediate key
+/// (RPCS3 `rap_to_rif` in `key_vault.cpp`: AES-128 decrypt with the public
+/// `RAP_KEY` under a zero IV, then five `RAP_PBOX`/`RAP_E1`/`RAP_E2`
+/// rounds).
+fn rap_to_rif(rap: &[u8; 16]) -> [u8; 16] {
+    let cipher = Aes128::new((&RAP_KEY).into());
+    // Single-block CBC decrypt under a zero IV: the IV XOR is a no-op.
+    let mut key = *rap;
+    cipher.decrypt_block((&mut key).into());
+    for _ in 0..5 {
+        for i in 0..16 {
+            let p = RAP_PBOX[i] as usize;
+            key[p] ^= RAP_E1[p];
+        }
+        for i in (1..16).rev() {
+            let p = RAP_PBOX[i] as usize;
+            let pp = RAP_PBOX[i - 1] as usize;
+            key[p] ^= key[pp];
+        }
+        let mut o: u8 = 0;
+        for i in 0..16 {
+            let p = RAP_PBOX[i] as usize;
+            let kc = key[p].wrapping_sub(o);
+            let ec2 = RAP_E2[p];
+            if o != 1 || kc != 0xFF {
+                o = u8::from(kc < ec2);
+                key[p] = kc.wrapping_sub(ec2);
+            } else if kc == 0xFF {
+                key[p] = kc.wrapping_sub(ec2);
+            } else {
+                key[p] = kc;
+            }
+        }
+    }
+    key
+}
+
+/// Unwraps the `rap_to_rif` output into the content key that decrypts an
+/// NPDRM title's metadata layer (RPCS3 `SELFDecrypter::DecryptNPDRM`:
+/// one AES-128-ECB decrypt with the public `NP_KLIC_KEY`).
+fn npdrm_content_key(rap: &[u8; 16]) -> [u8; 16] {
+    let cipher = Aes128::new((&NP_KLIC_KEY).into());
+    let mut key = rap_to_rif(rap);
+    cipher.decrypt_block((&mut key).into());
+    key
+}
+
+/// Every 16-byte RAP the user supplied: the named `rap` entry (a
+/// `rap = hex` line in a text dump) plus any raw 16-byte key file (a `.rap`
+/// license is the key itself), de-duplicated. A RAP is matched to its title
+/// by decryption succeeding, not by name.
+fn rap_candidates(keys: &super::keys::KeyStore) -> Vec<[u8; 16]> {
+    let mut out = Vec::new();
+    if let Some(rap) = keys.get_array::<16>("rap") {
+        out.push(rap);
+    }
+    for (_, raw) in keys.raw_keys() {
+        if let Ok(bytes) = <[u8; 16]>::try_from(raw.as_slice()) {
+            if !out.contains(&bytes) {
+                out.push(bytes);
+            }
+        }
+    }
+    out
+}
+
+/// Tries every public vault key against the zero-pad oracle; `Some` is the
+/// unwrapped metadata info when one fits.
+fn try_vault_unwrap(info: &[u8], sceversion: u64) -> Option<Vec<u8>> {
+    for (erk, riv) in ordered_vault(sceversion) {
+        let mut candidate = info.to_vec();
+        // `info` is always exactly 64 bytes, so a block-length error here
+        // is impossible; skip rather than abort if it ever misbehaves.
+        if aes256_cbc_decrypt(&erk, &riv, &mut candidate).is_err() {
+            continue;
+        }
+        if candidate[0x10..0x20].iter().all(|b| *b == 0)
+            && candidate[0x30..0x40].iter().all(|b| *b == 0)
+        {
+            return Some(candidate);
+        }
+    }
+    None
+}
 
 /// Unwraps the file's metadata: reads the 64-byte info at
 /// `meta + sizeof(SCE header)`, decrypts it unless the DEBUG flag says it
 /// is plaintext, validates the pads, CTR-decodes the headers with the
 /// file's own key/iv, and parses the section map plus key vault
-/// (RPCS3 `SCEDecrypter::LoadMetadata`).
-fn load_metadata(data: &[u8], sce: &Sce, sceversion: u64) -> Result<Meta> {
+/// (RPCS3 `SCEDecrypter::LoadMetadata`). NPDRM titles (`app_type` 8) wrap
+/// that decrypt in a per-title AES-128-CBC layer keyed by the user's RAP
+/// license, peeled first (RPCS3 `SELFDecrypter::DecryptNPDRM` runs before
+/// the vault unwrap).
+fn load_metadata(
+    data: &[u8],
+    sce: &Sce,
+    sceversion: u64,
+    keys: &super::keys::KeyStore,
+    app_type: u32,
+) -> Result<Meta> {
     let meta_off = usize::try_from(sce.meta).unwrap_or(usize::MAX);
     let hsize = usize::try_from(sce.hsize).unwrap_or(0);
     let info_off = meta_off
@@ -461,19 +599,31 @@ fn load_metadata(data: &[u8], sce: &Sce, sceversion: u64) -> Result<Meta> {
     }
     let mut info = data[info_off..info_off + 64].to_vec();
     if sce.flags & FLAG_DEBUG == 0 {
-        let mut accepted = false;
-        for (erk, riv) in ordered_vault(sceversion) {
-            let mut candidate = info.clone();
-            aes256_cbc_decrypt(&erk, &riv, &mut candidate)?;
-            if candidate[0x10..0x20].iter().all(|b| *b == 0)
-                && candidate[0x30..0x40].iter().all(|b| *b == 0)
-            {
-                info = candidate;
-                accepted = true;
-                break;
+        if app_type == APP_TYPE_NPDRM {
+            // Peel one candidate RAP layer, then let the vault oracle decide:
+            // the gate in `import_self_with` guarantees a candidate exists.
+            let mut opened = None;
+            for rap in rap_candidates(keys) {
+                let content_key = npdrm_content_key(&rap);
+                let mut candidate = info.clone();
+                if aes128_cbc_decrypt(&content_key, &NPDRM_ZERO_IV, &mut candidate).is_err() {
+                    continue;
+                }
+                if let Some(unwrapped) = try_vault_unwrap(&candidate, sceversion) {
+                    opened = Some(unwrapped);
+                    break;
+                }
             }
-        }
-        if !accepted {
+            info = opened.ok_or_else(|| {
+                super::ImportError::Bad(
+                    "NPDRM SELF metadata did not unwrap with the supplied RAP \
+                     (wrong title's license?) — supply the title's .rap via --keys"
+                        .into(),
+                )
+            })?;
+        } else if let Some(unwrapped) = try_vault_unwrap(&info, sceversion) {
+            info = unwrapped;
+        } else {
             return err("SELF is encrypted and no public APP vault key unwrapped its metadata (firmware too new or NPDRM title)");
         }
     }
@@ -855,19 +1005,31 @@ fn spu_images(elf: &[u8]) -> Vec<Vec<u8>> {
 /// embedded SPU images beside it. `None` means the magic does not match; a
 /// recognized-but-malformed file is `Some(Err(..))`.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
+    import_with(data, &super::keys::KeyStore::empty())
+}
+
+/// `import` with a user-supplied key store: NPDRM titles (`app_type` 8)
+/// wrap their metadata in an extra layer keyed by their per-title RAP
+/// license, so a RAP from `keys` unwraps them where the keyless path
+/// reports the key gap.
+pub(crate) fn import_with(
+    data: &[u8],
+    keys: &super::keys::KeyStore,
+) -> Option<Result<Vec<(String, NativeImport)>>> {
     if !is_self(data) {
         return None;
     }
-    Some(import_self(data))
+    Some(import_self_with(data, keys))
 }
 
-fn import_self(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+fn import_self_with(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     let (sce, ext) = parse_headers(data)?;
     let (app_type, sceversion) = app_info(data, &ext)?;
     if app_type == APP_TYPE_NPDRM {
-        return err("NPDRM SELF needs its per-title RAP license — re-extract with the license present");
-    }
-    if app_type != 0 && app_type != APP_TYPE_APP && sce.flags & FLAG_DEBUG == 0 {
+        if rap_candidates(keys).is_empty() {
+            return err("NPDRM SELF needs its per-title RAP license — re-extract with the license present (supply the title's .rap via --keys)");
+        }
+    } else if app_type != 0 && app_type != APP_TYPE_APP && sce.flags & FLAG_DEBUG == 0 {
         return err(format!(
             "SELF application type {app_type} is a firmware loader, not an application image"
         ));
@@ -885,7 +1047,7 @@ fn import_self(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
             .checked_add(0x60)
             .is_some_and(|end| end <= hsize && hsize <= data.len());
     let elf = if meta_present {
-        let meta = load_metadata(data, &sce, sceversion)?;
+        let meta = load_metadata(data, &sce, sceversion, keys, app_type)?;
         rebuild_from_meta(data, &ext, ehdr_off, &head, &meta)?
     } else if ext.seg != 0 {
         rebuild_from_segments(data, &sce, &ext, &head)?
@@ -980,8 +1142,21 @@ mod tests {
     /// section). Like a real SELF, the ELF headers live as a plaintext copy
     /// in the header area (the extended header points at them) while the
     /// metadata section carries only the segment payload — the 16 code
-    /// bytes the program header places at `p_offset` 184.
+    /// bytes the program header places at `p_offset` 184. `app_type` stamps
+    /// the program-identification header; `npdrm_key` adds the NPDRM title's
+    /// outer AES-128-CBC layer (vault first, then the per-title layer — the
+    /// reverse of the loader's peel order).
     fn self_with_metadata(etype: u16, encrypt: bool, magic4: u8) -> Vec<u8> {
+        self_with_metadata_and_type(etype, encrypt, magic4, APP_TYPE_APP, None)
+    }
+
+    fn self_with_metadata_and_type(
+        etype: u16,
+        encrypt: bool,
+        magic4: u8,
+        app_type: u32,
+        npdrm_key: Option<[u8; 16]>,
+    ) -> Vec<u8> {
         let elf = ppc64_elf(etype);
         let (erk, riv) = (
             hex_arr::<32>(APP_KEYS[0].2).unwrap(),
@@ -1029,7 +1204,7 @@ mod tests {
         data[0x48..0x50].copy_from_slice(&be64v(seg_off as u64));
         // app info: vendor, type APP, version in the vault key's range.
         data[app_off + 8..app_off + 12].copy_from_slice(&be32v(0x0100_0002));
-        data[app_off + 12..app_off + 16].copy_from_slice(&be32v(APP_TYPE_APP));
+        data[app_off + 12..app_off + 16].copy_from_slice(&be32v(app_type));
         data[app_off + 16..app_off + 24].copy_from_slice(&be64v(sceversion));
         // segment map: one plain entry (a real file carries it; the metadata
         // path does not read it).
@@ -1044,6 +1219,9 @@ mod tests {
         info[32..48].copy_from_slice(&miv);
         if encrypt {
             cbc_encrypt(&erk, &riv, &mut info);
+            if let Some(nk) = npdrm_key {
+                cbc128_encrypt(&nk, &NPDRM_ZERO_IV, &mut info);
+            }
         }
         data[meta_off..meta_off + 64].copy_from_slice(&info);
 
@@ -1105,6 +1283,23 @@ mod tests {
     fn cbc_encrypt(key: &[u8; 32], iv: &[u8; 16], data: &mut [u8]) {
         use aes::cipher::BlockCipherEncrypt;
         let cipher = Aes256::new(key.into());
+        let mut prev = *iv;
+        for chunk in data.chunks_mut(16) {
+            let mut block = [0u8; 16];
+            for (i, (b, p)) in chunk.iter().zip(prev.iter()).enumerate() {
+                block[i] = b ^ p;
+            }
+            cipher.encrypt_block((&mut block).into());
+            chunk.copy_from_slice(&block);
+            prev = block;
+        }
+    }
+
+    /// Test-only AES-128-CBC encrypt (mirror of the loader's NPDRM layer).
+    fn cbc128_encrypt(key: &[u8; 16], iv: &[u8; 16], data: &mut [u8]) {
+        use aes::cipher::BlockCipherEncrypt;
+        use aes::Aes128;
+        let cipher = Aes128::new(key.into());
         let mut prev = *iv;
         for chunk in data.chunks_mut(16) {
             let mut block = [0u8; 16];
@@ -1295,5 +1490,47 @@ mod tests {
         assert_ne!(block, plain);
         aes256_cbc_decrypt(&erk, &riv, &mut block).expect("decrypts");
         assert_eq!(block, plain);
+    }
+
+    #[test]
+    fn npdrm_self_imports_with_supplied_rap() {
+        use super::super::keys::KeyStore;
+        use std::io::Write as _;
+
+        // The title's license: 16 bytes, like a dumped `.rap` file.
+        // An NPDRM-type SELF whose metadata wears the RAP-derived outer
+        let rap = *b"test-rap-0123456";
+        let data = self_with_metadata_and_type(2, true, 0x00, APP_TYPE_NPDRM, Some(npdrm_content_key(&rap)));
+
+        // Without keys the encrypted NPDRM path still reports the key gap.
+        let gap = import(&data).expect("recognized").expect_err("NPDRM without RAP must refuse");
+        let gap_msg = format!("{gap:?}");
+        assert!(
+            gap_msg.contains("RAP") && gap_msg.contains("--keys"),
+            "key gap names the license: {gap_msg}"
+        );
+
+        // Another title's RAP does not unwrap either.
+        let mut wrong = KeyStore::empty();
+        wrong.parse_text_for_test("rap = 00000000000000000000000000000000");
+        assert!(import_with(&data, &wrong).expect("recognized").is_err());
+        // The right RAP as a named `rap = hex` line unwraps to the PPU image.
+        let mut named = KeyStore::empty();
+        named.parse_text_for_test("rap = 746573742d7261702d30313233343536");
+        let images = import_with(&data, &named).expect("recognized").expect("RAP unwraps NPDRM");
+        assert_eq!(images.len(), 1);
+        let imp = &images[0].1;
+        assert_eq!(imp.format, "SELF");
+        assert_eq!(imp.language, PPU_LANGUAGE);
+        assert_eq!(imp.process_entry, Some(ENTRY));
+        assert_eq!(imp.mappings[0].bytes[0..4], be32v(0x6000_0000));
+
+        // The same RAP as a raw 16-byte `.rap` file unwraps too.
+        let path = std::env::temp_dir().join("ps3-npdrm-test.rap");
+        std::fs::File::create(&path).unwrap().write_all(&rap).unwrap();
+        let raw = KeyStore::load(&path).unwrap();
+        let images = import_with(&data, &raw).expect("recognized").expect("raw .rap unwraps NPDRM");
+        assert_eq!(images[0].1.process_entry, Some(ENTRY));
+        std::fs::remove_file(&path).ok();
     }
 }

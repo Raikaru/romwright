@@ -364,6 +364,18 @@ struct VaultEntry {
     compressed: bool,
 }
 
+/// The title's per-title `klic` from the user's key store: a `klic = <hex>`
+/// line first, then any raw 16-byte dump (a `.klic` license file *is* the
+/// key, so the store selects it by length).
+fn klic_from_keys(keys: &super::keys::KeyStore) -> Option<[u8; 16]> {
+    if let Some(klic) = keys.get_array::<16>("klic") {
+        return Some(klic);
+    }
+    keys.raw_keys()
+        .iter()
+        .find_map(|(_, bytes)| <[u8; 16]>::try_from(bytes.as_slice()).ok())
+}
+
 /// Recover every encrypted segment's key/iv from the metadata blob
 /// (sceutils `get_segments`): the blob at
 /// `metadata_offset + 48 .. header_length` opens with a 64-byte
@@ -371,6 +383,7 @@ struct VaultEntry {
 /// key was right), then an AES-128-CBC body of section descriptors plus the
 /// key vault. APP images wrap the head in their per-title `klic`, which is
 /// not public — without one only the refusal below can run.
+
 fn metadata_vault(
     data: &[u8],
     layout: &SelfLayout,
@@ -407,7 +420,8 @@ fn metadata_vault(
             super::ImportError::Bad(
                 "vita: retail NPDRM APP segments need the title's klic \
                  (a per-title key from its license file, not a public \
-                 constant) — import a decrypted image instead"
+                 constant) — import a decrypted image instead; supply it \
+                 via --keys (klic = <hex> or a .klic file)"
                     .into(),
             )
         })?;
@@ -497,12 +511,13 @@ fn resolve_payloads(
     segments: &[Segment],
     self_type: u32,
     sysver: u64,
+    klic: Option<&[u8; 16]>,
 ) -> Result<Vec<Vec<u8>>> {
     let need_vault = segments.iter().any(|s| {
         s.filesz > 0 && s.encryption != ENC_PLAIN
     });
     let vault = if need_vault {
-        Some(metadata_vault(data, layout, self_type, sysver, None)?)
+        Some(metadata_vault(data, layout, self_type, sysver, klic)?)
     } else {
         None
     };
@@ -606,12 +621,15 @@ pub(crate) fn is_vita_elf(data: &[u8]) -> bool {
     e_type == ET_SCE_EXEC && (machine == EM_ARM || machine == EM_SECURE)
 }
 
-fn import_self(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+fn import_self(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     let layout = parse_layout(data)?;
     let self_type = u32le(data, layout.appinfo_offset + 12)?;
     let sysver = u64le(data, layout.appinfo_offset + 16)?;
     let segments = read_segments(data, &layout)?;
-    let payloads = resolve_payloads(data, &layout, &segments, self_type, sysver)?;
+    // The NPDRM APP head is wrapped in the title's `klic`; a user dump
+    // supplies it, otherwise the vault refusal below names the gap.
+    let klic = klic_from_keys(keys);
+    let payloads = resolve_payloads(data, &layout, &segments, self_type, sysver, klic.as_ref())?;
     let elf = rebuild_elf(data, &layout, &segments, &payloads)?;
     // `import_elf` dispatches ELF32 to the sectionless path, which maps the
     // PT_LOADs and runs `super::sce::collect` over the module info — the
@@ -624,10 +642,20 @@ fn import_self(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
 
 /// Unwrap a Vita SELF to its ARMv7 image; None when the magic doesn't match.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
+    import_with(data, &super::keys::KeyStore::empty())
+}
+
+/// `import` with a user-supplied key store: a `klic = <hex>` line or a raw
+/// 16-byte `.klic` dump unwraps a retail NPDRM APP image's metadata head;
+/// absent, the klic-gap error is unchanged.
+pub(crate) fn import_with(
+    data: &[u8],
+    keys: &super::keys::KeyStore,
+) -> Option<Result<Vec<(String, NativeImport)>>> {
     if !is_self(data) {
         return None;
     }
-    Some(import_self(data))
+    Some(import_self(data, keys))
 }
 
 // ---------------------------------------------------------------- tests
@@ -937,6 +965,105 @@ mod tests {
         assert!(format!("{err:?}").contains("klic"), "unexpected: {err:?}");
     }
 
+    /// Build an NPDRM APP metadata blob + CTR-encrypted payload wrapped in
+    /// the caller's `klic`, mirroring sceutils `get_segments` in reverse:
+    /// the AES-256 head carries the same section key/iv as the USER parts,
+    /// additionally wrapped in the klic-derived key the loader unwraps.
+    fn encrypted_app_parts(klic: &[u8; 16]) -> (Vec<u8>, Vec<u8>) {
+        let meta = META_KEYS
+            .iter()
+            .find(|k| k.self_type == SELF_TYPE_APP && k.keyrev == 0)
+            .expect("APP keyrev-0 metadata key");
+        let np_key = NPDRM_KEYS
+            .iter()
+            .find(|(rev, _)| *rev == 0)
+            .map(|(_, key)| key)
+            .expect("NPDRM rev-0 key");
+        let seg_key: [u8; 16] = *b"0123456789abcdef";
+        let seg_iv: [u8; 16] = *b"fedcba9876543210";
+        // MetadataInfo: key @0, zero pad, iv @32, zero pad.
+        let mut info = vec![0u8; 64];
+        info[..16].copy_from_slice(&seg_key);
+        info[32..48].copy_from_slice(&seg_iv);
+        let head_in = cbc_encrypt256(&meta.key, &meta.iv, &info);
+        // The loader AES-decrypts the klic with the NPDRM key to obtain the
+        // head key, so the fixture wraps it the same way round.
+        let predec = cbc_decrypt128(np_key, &ZERO_IV, klic).expect("klic is one block");
+        let predec: [u8; 16] = predec.try_into().expect("klic wrap is one block");
+        let head = cbc_encrypt128(&predec, &ZERO_IV, &head_in);
+        // MetadataHeader: sig_len, sig_type, 1 section, 2 keys, opt 0, 0, 0.
+        let mut body = vec![0u8; 32];
+        body[12..16].copy_from_slice(&1u32.to_le_bytes());
+        body[16..20].copy_from_slice(&2u32.to_le_bytes());
+        // MetadataSection `<QQIiIiIiiI`: offset, size, type 0, seg_idx 0,
+        // hash NONE(1), hash_idx 0, encryption AES128CTR(3), key_idx 0,
+        // iv_idx 1, compression NONE(1).
+        let mut section = vec![0u8; 48];
+        section[..8].copy_from_slice(&(HEADER_LEN as u64).to_le_bytes());
+        section[8..16].copy_from_slice(&0x200u64.to_le_bytes());
+        section[20..24].copy_from_slice(&0i32.to_le_bytes());
+        section[24..28].copy_from_slice(&1i32.to_le_bytes());
+        section[32..36].copy_from_slice(&3i32.to_le_bytes());
+        section[36..40].copy_from_slice(&0i32.to_le_bytes());
+        section[40..44].copy_from_slice(&1i32.to_le_bytes());
+        section[44..48].copy_from_slice(&1i32.to_le_bytes());
+        body.extend_from_slice(&section);
+        body.extend_from_slice(&seg_key);
+        body.extend_from_slice(&seg_iv);
+        let tail = cbc_encrypt128(&seg_key, &seg_iv, &body);
+        let mut blob = head;
+        blob.extend_from_slice(&tail);
+        // Segment payload: CTR-encrypt the inner segment bytes.
+        let mut payload = inner_elf()[0x100..0x300].to_vec();
+        super::super::crypto::aes128_ctr(&seg_key, &seg_iv, &mut payload);
+        (blob, payload)
+    }
+
+    #[test]
+    fn encrypted_app_self_decrypts_with_supplied_klic() {
+        let klic: [u8; 16] = [
+            0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd,
+            0xee, 0xff,
+        ];
+        let (blob, payload) = encrypted_app_parts(&klic);
+        let data = wrap_self(
+            &inner_elf(),
+            SELF_TYPE_APP,
+            0x0360_0000_0000,
+            COMP_RAW,
+            1,
+            Some(payload),
+            Some(blob),
+        );
+        assert!(is_self(&data));
+        // Without keys the klic gap fires, through both entry points.
+        for err in [
+            import(&data).expect("recognized").expect_err("needs klic"),
+            import_with(&data, &super::super::keys::KeyStore::empty())
+                .expect("recognized")
+                .expect_err("needs klic"),
+        ] {
+            assert!(format!("{err:?}").contains("klic"), "unexpected: {err:?}");
+        }
+        // A `klic = <hex>` line decrypts the image.
+        let mut named = super::super::keys::KeyStore::empty();
+        let hex: String = klic.iter().map(|b| format!("{b:02x}")).collect();
+        named.parse_text_for_test(&format!("klic = {hex}"));
+        let images = import_with(&data, &named)
+            .expect("recognized")
+            .expect("import");
+        check_import(images);
+        // A raw `.klic` dump decrypts it too.
+        let path = std::env::temp_dir().join("vita-test-title.klic");
+        std::fs::write(&path, klic).unwrap();
+        let raw = super::super::keys::KeyStore::load(&path).unwrap();
+        let images = import_with(&data, &raw)
+            .expect("recognized")
+            .expect("import");
+        check_import(images);
+
+        std::fs::remove_file(&path).ok();
+    }
     #[test]
     fn compressed_segment_is_refused() {
         let data = wrap_self(

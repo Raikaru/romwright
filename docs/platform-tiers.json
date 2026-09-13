@@ -29,8 +29,8 @@
   {
    "input": "Encrypted console containers (3DS CIA, PS3/Vita SELF, Switch NCA/XCI, Xbox 360 XEX)",
    "tier": 2,
-   "blocker": "Retail images are encrypted. The loaders now decrypt where public keys exist (3DS zeros fixed key, PS3 APP vault, Vita public keys, Switch header/key-area stand-ins), but per-title and console-provisioned keys are not in this repository or the pinned Ghidra install, and AGENTS.md II.1 forbids the runtime network call that would fetch them. Decrypted input supplied by the user imports cleanly.",
-   "evidence": "AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; per-title klic/RAP/titlekey material is not bundled."
+   "blocker": "Retail images are encrypted. The loaders decrypt with bundled public keys where those exist (Xbox 360 XEX retail key, PS3 APP vault, Vita public MetaKeys, 3DS zeros fixed key), and now accept user-supplied keys through a KeyStore (`--keys <file>`): a Switch prod.keys supplies header_key/key_area_key, a PS3 .rap derives the NPDRM title key, a Vita .klic unwraps NPDRM, and a 3DS aes_keys.txt supplies slot0xNN/fixed_system. What remains unreachable is content whose key only the console holds and the user has not dumped — PSP KIRK device-key crypto is the hard case (no file-supplied key can drive it; pre-decrypt with prxtool/PPSSPP). II.1 still forbids any runtime fetch; the keys come only from a file the user provides.",
+   "evidence": "crates/romwright-core/src/native/keys.rs (KeyStore: prod.keys/aes_keys.txt named-hex + raw .rap/.klic); import_with(data, keys) on switch/threeds/vita/ps3/psp; tests prove a retail-keyed NCA, an NPDRM SELF via .rap, and a klic-wrapped Vita SELF import only when the key is supplied."
   }
  ]
 }

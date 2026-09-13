@@ -160,6 +160,7 @@ impl crate::Core {
         analyse: bool,
         map: Option<&Path>,
         raw: Option<(u64, &str)>,
+        keys: &crate::native::keys::KeyStore,
     ) -> crate::Result<(Vec<romwright_model::ProgramSummary>, Option<SignatureReport>)> {
         // A matched signature renames functions in the store, so which
         // databases were applied is part of what the import produced and
@@ -175,7 +176,7 @@ impl crate::Core {
             })
             .collect::<Vec<_>>()
             .join(",");
-        let stored = self.import_container_with(binary, name, analyse, &flavour, map, raw)?;
+        let stored = self.import_container_with(binary, name, analyse, &flavour, map, raw, keys)?;
         if databases.is_empty() {
             return Ok((stored, None));
         }

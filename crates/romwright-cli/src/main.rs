@@ -385,6 +385,19 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 }
                 None => None,
             };
+            // User-supplied console keys: each `--keys <file>` is a
+            // prod.keys/keys.txt/aes_keys.txt named-hex file or a raw
+            // .rap/.klic blob. They reach the console loaders through the
+            // KeyStore; absent keys leave the loaders' key-gap errors as-is.
+            let key_paths: Vec<std::path::PathBuf> = args
+                .iter()
+                .skip_while(|a| a.as_str() != "--keys")
+                .skip(1)
+                .take_while(|a| !a.starts_with("--"))
+                .map(std::path::PathBuf::from)
+                .collect();
+            let keys = romwright_core::native::keys::KeyStore::load_all(&key_paths)
+                .map_err(|e| e.to_string())?;
             let started = std::time::Instant::now();
             let (stored, signatures) = core
                 .import_native_with_signatures(
@@ -394,6 +407,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     !has_flag(args, "--no-analysis"),
                     map.as_deref(),
                     raw.as_ref().map(|(base, language)| (*base, language.as_str())),
+                    &keys,
                 )
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();

@@ -2149,11 +2149,24 @@ impl Core {
     /// regions, relocations and the image's symbol table, stored and
     /// returned. An interactive session opens with this and analyses after.
     pub fn load_program(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, false, "", None, None)
+        self.import_container_with(binary, name, false, "", None, None, &native::keys::KeyStore::empty())
     }
 
     pub fn import_container(&self, binary: &Path, name: &str) -> Result<Vec<ProgramSummary>> {
-        self.import_container_with(binary, name, true, "", None, None)
+        self.import_container_with(binary, name, true, "", None, None, &native::keys::KeyStore::empty())
+    }
+
+    /// `import_container` with a user-supplied key store: encrypted console
+    /// content the user has dumped keys for (a Switch `prod.keys`, a PS3
+    /// `.rap`, a Vita `klic`, a 3DS `aes_keys.txt`) decrypts on the way in.
+    /// An empty store behaves exactly like `import_container`.
+    pub fn import_container_keys(
+        &self,
+        binary: &Path,
+        name: &str,
+        keys: &native::keys::KeyStore,
+    ) -> Result<Vec<ProgramSummary>> {
+        self.import_container_with(binary, name, true, "", None, None, keys)
     }
 
     pub(crate) fn import_container_with(
@@ -2164,6 +2177,7 @@ impl Core {
         flavour: &str,
         map: Option<&Path>,
         raw: Option<(u64, &str)>,
+        keys: &native::keys::KeyStore,
     ) -> Result<Vec<ProgramSummary>> {
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
@@ -2217,7 +2231,7 @@ impl Core {
                 }
             }
         }
-        let images = native::load_container_with(binary, analyse, map, raw)?;
+        let images = native::load_container_with(binary, analyse, map, raw, keys)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {

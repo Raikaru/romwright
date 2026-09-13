@@ -142,9 +142,15 @@ impl ApiService {
                     .get("analyse")
                     .and_then(Value::as_bool)
                     .unwrap_or(true);
+                let key_paths = string_list_param(params, "keys")?
+                    .into_iter()
+                    .map(std::path::PathBuf::from)
+                    .collect::<Vec<_>>();
+                let keys = romwright_core::native::keys::KeyStore::load_all(&key_paths)
+                    .map_err(|e| DispatchError::Request(e.to_string()))?;
                 let (stored, signatures) = self
                     .core
-                    .import_native_with_signatures(&binary, name, &databases, analyse, None, None)
+                    .import_native_with_signatures(&binary, name, &databases, analyse, None, None, &keys)
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
                 // The primary program stays at the top level so existing
                 // consumers keep working; a container's other processors

@@ -54,6 +54,7 @@ pub(crate) mod threeds;
 pub(crate) mod ps3;
 pub(crate) mod vita;
 pub(crate) mod psp;
+pub mod keys;
 mod mdebug;
 pub(crate) mod nonreturn;
 use romwright_model::{
@@ -1587,6 +1588,17 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
 /// A single-image file yields one entry with an empty suffix, so callers do
 /// not special-case formats.
 pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    parse_container_with(data, &keys::KeyStore::empty())
+}
+
+/// `parse_container` with a user-supplied key store: the console loaders
+/// that can use a dumped key (Switch NCA/XCI, 3DS slot-key content, PS3
+/// NPDRM/RAP, Vita klic, PSP KIRK) read it from `keys`; an absent key leaves
+/// the loader's existing key-gap error unchanged.
+pub(crate) fn parse_container_with(
+    data: &[u8],
+    keys: &keys::KeyStore,
+) -> Result<Vec<(String, NativeImport)>> {
     if iso9660::is_iso(data) {
         return iso9660::import(data);
     }
@@ -1599,23 +1611,23 @@ pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>
     if let Some(result) = wii::import(data) {
         return result;
     }
-    if let Some(result) = switch::import(data) {
+    if let Some(result) = switch::import_with(data, keys) {
         return result;
     }
     // 3DS NCCH/NCSD/CIA before xbox_3ds: threeds implements them where
     // xbox_3ds only refuses. xbox_3ds still owns XEX/XBE.
-    if let Some(result) = threeds::import(data) {
+    if let Some(result) = threeds::import_with(data, keys) {
         return result;
     }
     // Vita before PS3: both use the `SCE\0` magic, but Vita's little-endian
     // version-3/type-1 header would misparse under PS3's big-endian layout.
-    if let Some(result) = vita::import(data) {
+    if let Some(result) = vita::import_with(data, keys) {
         return result;
     }
-    if let Some(result) = ps3::import(data) {
+    if let Some(result) = ps3::import_with(data, keys) {
         return result;
     }
-    if let Some(result) = psp::import(data) {
+    if let Some(result) = psp::import_with(data, keys) {
         return result;
     }
     if let Some(result) = xbox_3ds::import(data) {
@@ -1660,7 +1672,7 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
-    load_container_with(binary, true, None, None)
+    load_container_with(binary, true, None, None, &keys::KeyStore::empty())
 }
 
 /// Loads every image a container carries, running discovery only when asked.
@@ -1675,6 +1687,7 @@ pub fn load_container_with(
     analyse: bool,
     map: Option<&Path>,
     raw: Option<(u64, &str)>,
+    keys: &keys::KeyStore,
 ) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
@@ -1706,7 +1719,7 @@ pub fn load_container_with(
                 ..Default::default()
             },
         )],
-        None => parse_container(&data)?,
+        None => parse_container_with(&data, keys)?,
     };
     // A linker MAP is the image's own symbol table from the other side:
     // read once, applied to every image it names an address in, before

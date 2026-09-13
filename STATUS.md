@@ -5927,10 +5927,35 @@ sixteen loads/stores, compares, `vperm128`, `vsldoi128`, and base PPC all
 decode. `xex.rs` now names `Xenon-32addr`; a `native::tests` dispatch test
 proves each console magic reaches its loader.
 
-What is still blocked, unchanged: PS2 R5900 MMI/VU0-macro (no language), PS3
-SPU decode (images carve but no `.sla`), PSP VFPU, and the per-title /
-console-provisioned keys the encrypted containers need (II.1 forbids the
-runtime fetch).
+What was still blocked at m18-001 — PS2 R5900 MMI/VU0-macro, PS3 SPU decode,
+PSP VFPU — turned out to be stale: the pinned install ships all three
+(GhidraSPU, ghidra-emotionengine-reloaded, Processors/Allegrex VFPU), and the
+console gate's SPECIAL_INSTRUCTIONS pass now proves each decodes. The only
+real blocker left was key material, addressed by m18-002.
+
+### m18-002 evidence (user-supplied console keys)
+The encrypted-container blockers were not "private keys" but two honest
+classes: bundled public keys the loaders already use, and keys only the
+console holds. The second class now has a channel. `native::keys::KeyStore`
+parses the formats key material actually arrives in — `prod.keys`/
+`aes_keys.txt` named-hex and raw `.rap`/`.klic` blobs — and threads through
+`parse_container_with` to `import_with(data, keys)` on each console loader.
+The CLI takes `--keys <file>` (repeatable); the API takes a `keys` list.
+
+What each loader does with it, verified by a fixture that imports only when
+the key is supplied:
+- Switch NCA/XCI: `header_key` + `key_area_key_application_00` from a
+  prod.keys drive the XTS header unwrap and key-area ECB unwrap.
+- 3DS NCCH/NCSD/CIA: `slot0xNN`/`fixed_system` from an aes_keys.txt supply
+  the bootrom keyslot / system fixed key the ncchflag selects.
+- PS3 NPDRM SELF: a `.rap` derives the per-title key (RAP→klic→content key,
+  public RPCS3 constants) that unwraps the metadata.
+- Vita NPDRM SELF: a `.klic` unwraps the per-title metadata key.
+- PSP `~PSP`: KIRK is device-key crypto no file can drive — it stays a
+  decrypt-first error, the honest answer.
+
+336 lib tests + 27/27 console-gate rows pass. II.1 is untouched: keys come
+only from a file the user dumps, never a runtime fetch.
 
 
 
@@ -6138,9 +6163,11 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   (native/languages/xenon, PowerPC:BE:64:Xenon-32addr). Verified by decode:
   paddw, vadd.s, and SPU a/nop all disassemble. The one remaining blocker is
   per-title/console-provisioned key material for the encrypted containers
-  (3DS CIA, PS3/Vita SELF, Switch NCA/XCI, Xbox 360 XEX) -- II.1 forbids the
-  runtime network call that would fetch them, so those import only when the
-  user supplies a decrypted image or the loader's bundled public keys apply.
+  (3DS CIA, PS3/Vita SELF, Switch NCA/XCI). II.1 forbids the runtime fetch,
+  so the loaders take a user-supplied KeyStore (`--keys <file>`): a Switch
+  prod.keys, a PS3 .rap, a Vita .klic, or a 3DS aes_keys.txt now decrypts on
+  import (m18-002). PSP KIRK is device-key crypto no file can drive — it
+  stays decrypt-first.
 - Rule for every platform: it is "supported" only with a loader, a language
   mapping proven by decoding, and a gate row scoring it. No platform is
   claimed from a successful import alone.
