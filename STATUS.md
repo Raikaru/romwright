@@ -5899,6 +5899,40 @@ absorbed: the gate holds the count at no more than two per row, so it
 cannot grow quietly, and precision floors apply to classes of twenty or
 more claims where a rate means something.
 
+### m18-001 evidence (console loaders + the Xenon VMX128 language)
+
+The console-container surface the platform-tiers file called blocked is now
+mostly loaders, not missing processors. `parse_container` routes each magic
+to a dedicated native loader, each verified by synthetic-fixture unit tests
+in its module:
+
+| Console | formats | loader | processor |
+|---|---|---|---|
+| 3DS | NCCH / NCSD / CIA | `native/threeds.rs` | `ARM:LE:32:v6` |
+| PS3 | SELF / SPRX (+SPU carve) | `native/ps3.rs` | `PowerPC:BE:64:64-32addr`, `SPU:BE:128:default` |
+| Vita | SELF | `native/vita.rs` | `ARM:LE:32:v7` |
+| PSP | PRX | `native/psp.rs` | `Allegrex:LE:32:default` |
+| Switch | NCA / XCI | `native/switch.rs` | `AARCH64:LE:64:v8A` |
+| Xbox 360 | XEX | `native/xex.rs` | `PowerPC:BE:64:Xenon-32addr` |
+
+The Xenon language is the new piece: `native/languages/xenon` compiles a
+`PowerPC:BE:64:Xenon-32addr` `.sla` adding VMX128's 128 vector registers to
+the A2/AltiVec base. The register operands are split fields whose high bits
+sit inside the low-11 opcode region, so each is a sub-table over four
+display/variable field pairs (one per 32-register bank); the opcode matches
+on `XOP4`+`VMXB4`, `XOP7`, or `XOP9` by format. Opcodes come from xenia's
+`ppc_opcode_table_gen.cc` cross-checked against Biallas `vmx128.txt`. Verified
+by a `libsla.a` disasm harness: `vaddfp128 vmx69,vmx74,vmx52`, `vmx127`, all
+sixteen loads/stores, compares, `vperm128`, `vsldoi128`, and base PPC all
+decode. `xex.rs` now names `Xenon-32addr`; a `native::tests` dispatch test
+proves each console magic reaches its loader.
+
+What is still blocked, unchanged: PS2 R5900 MMI/VU0-macro (no language), PS3
+SPU decode (images carve but no `.sla`), PSP VFPU, and the per-title /
+console-provisioned keys the encrypted containers need (II.1 forbids the
+runtime fetch).
+
+
 
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
@@ -6142,8 +6176,10 @@ The ten platforms recorded in "Reserved decisions" split by what can be
     `ARM:LE:32:v7`; PS3 PPE and Xbox 360 Xenon -> `PowerPC:BE:64:default`.
   - Missing from the pinned install: no R5900 language id (the `r5900l/r5900r`
     strings in `mips.ldefs` are IDA aliases on generic MIPS, so PS2 MMI and
-    VU0 macro ops are unmodelled), no Cell SPU processor at all, and no
-    VMX128 for Xenon. These need SLEIGH data we do not yet have.
+    VU0 macro ops are unmodelled) and no Cell SPU processor at all. VMX128 for
+    Xenon is now modelled natively: `native/languages/xenon` builds
+    `PowerPC:BE:64:Xenon-32addr` with the 128-register vector unit, and the
+    XEX loader names it.
   - No console loader ships with Ghidra; OSI-licensed third-party loaders and
     processor extensions exist and are citable under the clean-room policy
     once each licence is recorded in `docs/third-party.md`: NDS
