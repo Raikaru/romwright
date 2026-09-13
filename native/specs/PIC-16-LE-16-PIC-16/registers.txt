@@ -1,0 +1,15 @@
+PC	0	2
+STKPTR	2	1
+W	3	1
+SkipNext	4	1
+IRP	7	1
+RP	8	1
+INDF	0	1
+PCL	2	1
+STATUS	3	1
+FSR	4	1
+PCLATH	10	1
+INTCON	11	1
+contextreg	256	4
+doPseudo	256	1
+possibleSkip	256	1

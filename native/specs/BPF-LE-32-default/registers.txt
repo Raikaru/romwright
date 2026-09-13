@@ -1,0 +1,15 @@
+A	0	4
+X	4	4
+RS	8	4
+R	12	4
+PC	16	4
+AH	0	2
+XH	4	2
+RSH	8	2
+RH	12	2
+PCH	16	2
+AB	0	1
+XB	4	1
+RSB	8	1
+RB	12	1
+PCB	16	1
