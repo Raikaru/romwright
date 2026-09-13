@@ -163,17 +163,22 @@ struct Collector<'a> {
     vars: BTreeMap<(String, u64), Var>,
     names: Vec<(String, u64)>,
     constraints: Vec<Constraint>,
-    // --- tracking, mirroring types_infer::infer ---
     defined: BTreeSet<u64>,
-    alias: BTreeMap<(String, u64), (u64, u32)>,
-    address_of: BTreeMap<(String, u64), (u64, i64)>,
+    /// A value var's register origin — set for a spill reload, whose loaded
+    /// temp aliases the parameter it was spilled from.
+    alias: BTreeMap<Var, u64>,
+    /// A value var that is `base + const` -> (base register offset, disp).
+    address_of: BTreeMap<Var, (u64, i64)>,
     spilled: BTreeMap<(u64, i64), u64>,
-    built_from: BTreeMap<(String, u64), BTreeSet<u64>>,
-    sum_of: BTreeMap<(String, u64), ((String, u64), (String, u64))>,
-    scaled: BTreeMap<(String, u64), u64>,
+    built_from: BTreeMap<Var, BTreeSet<u64>>,
+    /// A value var that is `a + b` (neither const) -> the operand vars.
+    sum_of: BTreeMap<Var, (Var, Var)>,
+    /// A value var that is `index * stride` / `index << shift` -> stride.
+    scaled: BTreeMap<Var, u64>,
     struct_bases: BTreeSet<u64>,
-    pending: BTreeMap<(String, u64), (u64, i64, u32)>,
-    spill_alias: Option<(u64, u32)>,
+    /// A loaded value var -> (base register offset, disp, size), resolved
+    /// to a field class at the value's first use.
+    pending: BTreeMap<Var, (u64, i64, u32)>,
     /// Callee signatures by call target address, for interprocedural
     /// constraint injection.
     callees: &'a BTreeMap<u64, Signature>,
@@ -181,11 +186,19 @@ struct Collector<'a> {
     /// the destination register hold the source's var; a CALL makes the
     /// return register hold a fresh var carrying the callee's return type.
     holding: BTreeMap<u64, Var>,
+    /// The current version var of each `unique` temp. P-code reuses a
+    /// `unique` offset for distinct values (a reload's temp and a later
+    /// load's temp share an offset), so each definition mints a fresh var
+    /// and reads resolve to the latest one — the same SSA discipline
+    /// `holding` gives registers.
+    unique_vars: BTreeMap<u64, Var>,
     /// Set when the current op's register output already recorded what it
     /// holds (a spill reload or a call return); otherwise the definition
     /// is a fresh value and gets a fresh var.
     output_held: bool,
-    /// (callee address, param register, argument var) at each call — the
+    /// Set when the current op's `unique` output already minted its
+    /// version var (def_var); otherwise the tail mints it.
+    output_versioned: bool,
     /// caller→callee observations the fixpoint feeds back.
     call_args: Vec<(u64, u64, Var)>,
 }
@@ -203,12 +216,13 @@ impl<'a> Collector<'a> {
             built_from: BTreeMap::new(),
             sum_of: BTreeMap::new(),
             scaled: BTreeMap::new(),
-            holding: BTreeMap::new(),
-            output_held: false,
             struct_bases: BTreeSet::new(),
             pending: BTreeMap::new(),
-            spill_alias: None,
             callees,
+            holding: BTreeMap::new(),
+            unique_vars: BTreeMap::new(),
+            output_held: false,
+            output_versioned: false,
             call_args: Vec::new(),
         }
     }
@@ -224,44 +238,36 @@ impl<'a> Collector<'a> {
         var
     }
 
-    /// The var a register *read* resolves to: the value the register
-    /// currently holds (a reloaded parameter or a call return), or the
-    /// register's own var when it holds a computed value.
+    /// The var a *read* resolves to. A register read resolves to the value
+    /// it currently holds (a reloaded parameter or a call return); a
+    /// `unique` read resolves to the current version of that temp, since a
+    /// `unique` offset is reused for distinct values.
     fn use_var(&mut self, v: &PcodeVarnode) -> Var {
         if v.space == "register"
             && let Some(&held) = self.holding.get(&v.offset)
         {
             return held;
         }
+        if v.space == "unique"
+            && let Some(&version) = self.unique_vars.get(&v.offset)
+        {
+            return version;
+        }
         self.var(v)
     }
 
-    /// The register offset a varnode's value originates from — through a
-    /// spill reload or a copy — or its own offset when it is a computed
-    /// register value. Used so an array/field base recorded on a reload
-    /// temporary resolves to the parameter it holds.
-    fn origin_of(&self, v: &PcodeVarnode) -> u64 {
-        if v.space == "register" {
-            if let Some(&held) = self.holding.get(&v.offset)
-                && let Some((space, offset)) = self.names.get(held as usize)
-            {
-                if space == "register" {
-                    return *offset;
-                }
-                // The held value is a temp (a reload's unique): follow its
-                // alias back to the register it was loaded from.
-                let held_v = PcodeVarnode {
-                    space: space.clone(),
-                    offset: *offset,
-                    size: 8,
-                };
-                if let Some(origin) = self.resolve(&held_v) {
-                    return origin;
-                }
-            }
-            return v.offset;
+    /// The var a `unique` *definition* binds: a fresh version, so a reused
+    /// `unique` offset's distinct values stay distinct. Register outputs
+    /// are handled by `holding`, not here.
+    fn def_var(&mut self, v: &PcodeVarnode) -> Var {
+        if v.space == "unique" {
+            let var = self.names.len() as Var;
+            self.names.push((v.space.clone(), v.offset));
+            self.unique_vars.insert(v.offset, var);
+            self.output_versioned = true;
+            return var;
         }
-        self.resolve(v).unwrap_or(v.offset)
+        self.var(v)
     }
 
     fn cap(&mut self, v: &PcodeVarnode, class: Class) {
@@ -341,54 +347,83 @@ impl<'a> Collector<'a> {
         }
     }
 
-    /// The register a varnode's value was copied from, following the
-    /// alias chain — the subtype edge's real source.
-    fn resolve(&self, v: &PcodeVarnode) -> Option<u64> {
-        if v.space == "register" {
-            return Some(v.offset);
-        }
+    /// The register offset a value var originates from, following the
+    /// alias a spill reload records — the subtype edge's real source.
+    fn resolve_var(&self, var: Var) -> Option<u64> {
         let mut seen = BTreeSet::new();
-        let mut key = (v.space.clone(), v.offset);
-        while let Some(&(origin, _)) = self.alias.get(&key) {
-            if !seen.insert(origin) {
+        let mut cur = var;
+        while let Some(&origin) = self.alias.get(&cur) {
+            if !seen.insert(cur) {
                 break;
             }
-            key = ("register".to_string(), origin);
+            cur = match self.names.iter().position(|n| *n == ("register".into(), origin)) {
+                Some(i) => i as Var,
+                None => return Some(origin),
+            };
         }
-        if key.0 == "register" {
-            Some(key.1)
-        } else {
-            None
+        match self.names.get(cur as usize) {
+            Some((space, offset)) if space == "register" => Some(*offset),
+            _ => None,
         }
+    }
+
+    /// The register offset a varnode's value originates from — through a
+    /// spill reload or a copy — or its own offset when it is a computed
+    /// register value. Used so an array/field base recorded on a reload
+    /// temporary resolves to the parameter it holds.
+    fn origin_of(&self, v: &PcodeVarnode) -> u64 {
+        if v.space == "register" {
+            if let Some(&held) = self.holding.get(&v.offset)
+                && let Some(origin) = self.resolve_var(held)
+            {
+                return origin;
+            }
+            return v.offset;
+        }
+        if v.space == "unique"
+            && let Some(&version) = self.unique_vars.get(&v.offset)
+            && let Some(origin) = self.resolve_var(version)
+        {
+            return origin;
+        }
+        v.offset
+    }
+
+    /// The var an op's output binds, recording the definition. A `unique`
+    /// output mints a fresh version; a register output that is not a
+    /// reload or call return holds a fresh value.
+    fn out_value(&mut self, output: &PcodeVarnode) -> Var {
+        if output.space == "unique" {
+            return self.def_var(output);
+        }
+        if output.space == "register" {
+            self.defined.insert(output.offset);
+            let var = self.fresh();
+            self.holding.insert(output.offset, var);
+            self.output_held = true;
+            return var;
+        }
+        self.var(output)
     }
 
     fn op(&mut self, op: &PcodeOp) {
         let opcode = op.opcode.as_str();
         self.output_held = false;
+        self.output_versioned = false;
         match opcode {
             "COPY" => {
                 if let (Some(output), Some(input)) = (&op.output, op.inputs.first()) {
-                    // `dst = src` asserts src <: dst.
+                    // `dst = src`: the destination holds the source's var.
                     if input.space != "const" {
                         let src = self.use_var(input);
-                        let dst = self.var(output);
-                        self.constraints.push(Constraint::Subtype(src, dst));
-                    }
-                    if output.space == "register" {
-                        self.defined.insert(output.offset);
-                        // The destination register now holds the source's
-                        // value — the same type-var.
-                        if input.space != "const" {
-                            let src = self.use_var(input);
+                        if output.space == "register" {
+                            self.defined.insert(output.offset);
                             self.holding.insert(output.offset, src);
                             self.output_held = true;
+                        } else if output.space == "unique" {
+                            self.unique_vars.insert(output.offset, src);
+                            self.output_versioned = true;
                         }
-                    }
-                    // Track the alias so a later use of the temp reaches
-                    // the source register.
-                    if let Some(origin) = self.resolve(input) {
-                        self.alias
-                            .insert((output.space.clone(), output.offset), (origin, input.size));
                     }
                 }
             }
@@ -403,33 +438,21 @@ impl<'a> Collector<'a> {
                             b.offset as i64
                         };
                         // Record the *origin* register, not the reload
-                        // temporary, so a `*(base+disp)` read through a
+                        // temporary, so a `*(base+disp)` access through a
                         // reloaded pointer resolves to the parameter.
                         let base = self.origin_of(a);
-                        self.address_of
-                            .insert((output.space.clone(), output.offset), (base, disp));
-                        self.built_from
-                            .entry((output.space.clone(), output.offset))
-                            .or_default()
-                            .insert(base);
+                        let out = self.out_value(output);
+                        self.address_of.insert(out, (base, disp));
+                        self.built_from.entry(out).or_default().insert(base);
                     } else {
                         // `t = a + b` where neither is a constant: a
                         // possible `base + index` array address. Record the
-                        // operands' origins so a base held in a reload
-                        // temporary resolves to the parameter.
-                        let operand = |v: &PcodeVarnode| {
-                            if v.space == "register" {
-                                ("register".to_string(), self.origin_of(v))
-                            } else {
-                                (v.space.clone(), v.offset)
-                            }
-                        };
-                        let (ra, rb) = (operand(a), operand(b));
-                        self.sum_of
-                            .insert((output.space.clone(), output.offset), (ra, rb));
-                    }
-                    if output.space == "register" {
-                        self.defined.insert(output.offset);
+                        // operand value vars so a base held in a reload
+                        // temporary resolves to the parameter it holds.
+                        let ra = self.use_var(a);
+                        let rb = self.use_var(b);
+                        let out = self.out_value(output);
+                        self.sum_of.insert(out, (ra, rb));
                     }
                 }
             }
@@ -453,12 +476,9 @@ impl<'a> Collector<'a> {
                     } else {
                         None
                     };
+                    let out = self.out_value(output);
                     if let Some(stride) = stride {
-                        self.scaled
-                            .insert((output.space.clone(), output.offset), stride);
-                    }
-                    if output.space == "register" {
-                        self.defined.insert(output.offset);
+                        self.scaled.insert(out, stride);
                     }
                 }
             }
@@ -507,15 +527,14 @@ impl<'a> Collector<'a> {
             "CALLIND" | "BRANCHIND" => {
                 if let Some(target) = op.inputs.first() {
                     self.cap(target, Class::Code);
-                    if let Some(origin) = self.resolve(target) {
-                        if !self.defined.contains(&origin) {
-                            let var = self.var(&PcodeVarnode {
-                                space: "register".into(),
-                                offset: origin,
-                                size: 8,
-                            });
-                            self.constraints.push(Constraint::Cap(var, Class::Code));
-                        }
+                    let origin = self.origin_of(target);
+                    if !self.defined.contains(&origin) {
+                        let var = self.var(&PcodeVarnode {
+                            space: "register".into(),
+                            offset: origin,
+                            size: 8,
+                        });
+                        self.constraints.push(Constraint::Cap(var, Class::Code));
                     }
                 }
             }
@@ -556,9 +575,11 @@ impl<'a> Collector<'a> {
         // Resolve a pending field read: the loaded temporary's first use
         // commits the field's class.
         for input in &op.inputs {
-            if let Some((base, disp, size)) =
-                self.pending.remove(&(input.space.clone(), input.offset))
-            {
+            if input.space == "const" {
+                continue;
+            }
+            let ivar = self.use_var(input);
+            if let Some((base, disp, size)) = self.pending.remove(&ivar) {
                 let class = match opcode {
                     "FLOAT_ADD" | "FLOAT_SUB" | "FLOAT_MULT" | "FLOAT_DIV" => {
                         Class::Float(size * 8)
@@ -580,51 +601,44 @@ impl<'a> Collector<'a> {
             }
         }
 
-        // Mark outputs defined and record the alias a spill reload holds.
+        // A register output that did not record what it holds (a reload or
+        // call return) is a fresh value; a `unique` output not yet minted
+        // gets its version here.
         if let Some(output) = &op.output {
             if output.space == "register" {
                 self.defined.insert(output.offset);
-                // A definition that did not record what it holds (a spill
-                // reload or a call return) produces a fresh value — a new
-                // var, so a reused register's distinct definitions do not
-                // share one var and conflate their types.
                 if !self.output_held {
                     let var = self.fresh();
                     self.holding.insert(output.offset, var);
                 }
-            }
-            if let Some((origin, size)) = self.spill_alias.take() {
-                self.alias
-                    .insert((output.space.clone(), output.offset), (origin, size));
+            } else if output.space == "unique" && !self.output_versioned {
+                self.def_var(output);
             }
         }
     }
 
     fn load(&mut self, op: &PcodeOp) {
         let Some(address) = op.inputs.get(1) else { return };
-        let slot = self
-            .address_of
-            .get(&(address.space.clone(), address.offset))
-            .copied();
+        let addr_var = self.use_var(address);
+        let slot = self.address_of.get(&addr_var).copied();
         match slot.and_then(|key| self.spilled.get(&key)).copied() {
             Some(origin) => {
-                // A reload of a spilled parameter: the output aliases it.
-                // `out = *(slot)` asserts origin <: out, so whatever the
-                // reload is used as constrains the parameter it holds.
+                // A reload of a spilled parameter: the loaded value aliases
+                // it, so whatever the reload is used as constrains the
+                // parameter it holds.
                 if let Some(output) = &op.output {
-                    self.spill_alias = Some((origin, output.size));
-                    if output.space != "const" {
-                        let src = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: origin,
-                            size: output.size,
-                        });
-                        let dst = self.var(output);
+                    let src = self.var(&PcodeVarnode {
+                        space: "register".into(),
+                        offset: origin,
+                        size: output.size,
+                    });
+                    if output.space == "register" {
+                        self.holding.insert(output.offset, src);
+                        self.output_held = true;
+                    } else if output.space == "unique" {
+                        let dst = self.def_var(output);
                         self.constraints.push(Constraint::Subtype(src, dst));
-                        if output.space == "register" {
-                            self.holding.insert(output.offset, src);
-                            self.output_held = true;
-                        }
+                        self.alias.insert(dst, origin);
                     }
                 }
             }
@@ -632,7 +646,7 @@ impl<'a> Collector<'a> {
                 self.cap(address, Class::Ptr);
                 for origin in self
                     .built_from
-                    .get(&(address.space.clone(), address.offset))
+                    .get(&addr_var)
                     .cloned()
                     .unwrap_or_default()
                 {
@@ -646,11 +660,7 @@ impl<'a> Collector<'a> {
                     }
                 }
                 // `base[index]` with a constant stride is an array access.
-                if let Some((a, b)) = self
-                    .sum_of
-                    .get(&(address.space.clone(), address.offset))
-                    .cloned()
-                {
+                if let Some((a, b)) = self.sum_of.get(&addr_var).copied() {
                     let pair = if self.scaled.contains_key(&b) {
                         Some((a, b))
                     } else if self.scaled.contains_key(&a) {
@@ -658,13 +668,18 @@ impl<'a> Collector<'a> {
                     } else {
                         None
                     };
-                    if let Some((base_key, idx_key)) = pair
-                        && let Some(stride) = self.scaled.get(&idx_key).copied()
+                    if let Some((base_var, idx_var)) = pair
+                        && let Some(stride) = self.scaled.get(&idx_var).copied()
                     {
-                        let bases: Vec<u64> = if base_key.0 == "register" {
-                            vec![base_key.1]
-                        } else {
-                            self.built_from.get(&base_key).cloned().unwrap_or_default().into_iter().collect()
+                        let bases: Vec<u64> = match self.resolve_var(base_var) {
+                            Some(origin) => vec![origin],
+                            None => self
+                                .built_from
+                                .get(&base_var)
+                                .cloned()
+                                .unwrap_or_default()
+                                .into_iter()
+                                .collect(),
                         };
                         let elem = op
                             .output
@@ -692,10 +707,8 @@ impl<'a> Collector<'a> {
                     && let Some(output) = &op.output
                 {
                     self.struct_bases.insert(base);
-                    self.pending.insert(
-                        (output.space.clone(), output.offset),
-                        (base, disp, output.size),
-                    );
+                    let out = self.out_value(output);
+                    self.pending.insert(out, (base, disp, output.size));
                     if !self.defined.contains(&base) {
                         let var = self.var(&PcodeVarnode {
                             space: "register".into(),
@@ -711,21 +724,19 @@ impl<'a> Collector<'a> {
 
     fn store(&mut self, op: &PcodeOp) {
         let Some(address) = op.inputs.get(1) else { return };
-        let key = self
-            .address_of
-            .get(&(address.space.clone(), address.offset))
-            .copied();
+        let addr_var = self.use_var(address);
+        let key = self.address_of.get(&addr_var).copied();
         match key {
             Some(key) => {
                 let is_struct_base = self.struct_bases.contains(&key.0);
                 if let Some(value) = op.inputs.get(2) {
-                    let origin = if value.space == "register" && !self.defined.contains(&value.offset)
+                    let origin = if value.space == "register"
+                        && !self.defined.contains(&value.offset)
                     {
                         Some(value.offset)
                     } else {
-                        self.alias
-                            .get(&(value.space.clone(), value.offset))
-                            .map(|(origin, _)| *origin)
+                        let vvar = self.use_var(value);
+                        self.resolve_var(vvar)
                     };
                     if !is_struct_base {
                         match origin {
@@ -742,13 +753,7 @@ impl<'a> Collector<'a> {
                     if is_struct_base || !self.spilled.contains_key(&key) {
                         let (base, disp) = key;
                         self.struct_bases.insert(base);
-                        let class = if value.space == "const" {
-                            Class::Num(value.size * 8)
-                        } else if value.space == "register" {
-                            Class::Num(value.size * 8)
-                        } else {
-                            Class::Num(value.size * 8)
-                        };
+                        let class = Class::Num(value.size * 8);
                         let base_var = self.var(&PcodeVarnode {
                             space: "register".into(),
                             offset: base,
@@ -769,7 +774,7 @@ impl<'a> Collector<'a> {
                 self.cap(address, Class::Ptr);
                 for origin in self
                     .built_from
-                    .get(&(address.space.clone(), address.offset))
+                    .get(&addr_var)
                     .cloned()
                     .unwrap_or_default()
                 {
