@@ -540,7 +540,7 @@ impl<'a> Collector<'a> {
             }
             "INT_EQUAL" | "INT_NOTEQUAL" | "INT_SLESS" | "INT_SLESSEQUAL"
             | "INT_LESS" | "INT_LESSEQUAL" | "INT_CARRY" | "INT_SCARRY"
-            | "INT_SBORROW" | "INT_AND" | "INT_OR" | "INT_XOR" | "INT_RIGHT"
+            | "INT_SBORROW" | "INT_RIGHT"
             | "INT_SRIGHT" | "INT_DIV" | "INT_SDIV" | "INT_REM" | "INT_SREM" => {
                 for input in &op.inputs {
                     let class = if opcode.starts_with("INT_S") {
@@ -549,6 +549,13 @@ impl<'a> Collector<'a> {
                         Class::Num(input.size * 8)
                     };
                     self.cap(input, class);
+                }
+            }
+            // A value you mask or XOR is conventionally unsigned; a 64-bit
+            // mask still joins with a pointer without losing it.
+            "INT_AND" | "INT_OR" | "INT_XOR" => {
+                for input in &op.inputs {
+                    self.cap(input, Class::Uint(input.size * 8));
                 }
             }
             "INT_SEXT" | "INT_ZEXT" | "INT_NEGATE" | "INT_2COMP" | "POPCOUNT" => {

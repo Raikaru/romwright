@@ -33,6 +33,10 @@ use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
 pub enum Class {
     /// No operation constrained it.
     Unknown,
+    /// A value of this width whose kind nothing proved — a `LOAD`'s result
+    /// before any use classifies it. Ghidra spells this `undefined<N>`;
+    /// carrying the width keeps a loaded return from reporting `unknown`.
+    Opaque(u32),
     /// A number of this width, with no evidence of sign.
     Num(u32),
     Int(u32),
@@ -57,6 +61,7 @@ impl Class {
     pub fn name(self) -> String {
         match self {
             Class::Unknown => "unknown".into(),
+            Class::Opaque(bits) => format!("opaque{bits}"),
             Class::Num(bits) => format!("num{bits}"),
             Class::Int(bits) => format!("int{bits}"),
             Class::Uint(bits) => format!("uint{bits}"),
@@ -71,8 +76,31 @@ impl Class {
     /// classes have no meaningful width, so they report a word.
     pub fn width(self) -> u32 {
         match self {
-            Class::Num(b) | Class::Int(b) | Class::Uint(b) | Class::Float(b) => b,
+            Class::Opaque(b) | Class::Num(b) | Class::Int(b) | Class::Uint(b)
+            | Class::Float(b) => b,
             _ => 64,
+        }
+    }
+
+    /// The C type a prototype renders. `num` and `opaque` carry no sign
+    /// evidence, so they take C's default — `int` and its width siblings —
+    /// which is what Ghidra prints for the same unproven slot. The analysis
+    /// fact stays `num`; this is only how it is spelled for a reader.
+    pub fn c_name(self) -> String {
+        match self {
+            Class::Unknown => "int".into(),
+            Class::Opaque(8) | Class::Num(8) | Class::Int(8) => "char".into(),
+            Class::Opaque(16) | Class::Num(16) | Class::Int(16) => "short".into(),
+            Class::Opaque(64) | Class::Num(64) | Class::Int(64) => "long".into(),
+            Class::Opaque(_) | Class::Num(_) | Class::Int(_) => "int".into(),
+            Class::Uint(8) => "unsigned char".into(),
+            Class::Uint(16) => "unsigned short".into(),
+            Class::Uint(64) => "unsigned long".into(),
+            Class::Uint(_) => "unsigned int".into(),
+            Class::Float(64) => "double".into(),
+            Class::Float(_) => "float".into(),
+            Class::Ptr | Class::Code => "void *".into(),
+            Class::Top => "int".into(),
         }
     }
 
@@ -83,6 +111,10 @@ impl Class {
         use Class::*;
         match (self, other) {
             (Unknown, value) | (value, Unknown) => value,
+            // Two opaque reads of one slot keep the narrower width; an
+            // opaque value otherwise yields to anything that classifies it.
+            (Opaque(left), Opaque(right)) => Opaque(left.min(right)),
+            (Opaque(_), value) | (value, Opaque(_)) => value,
             (left, right) if left == right => left,
             (Top, _) | (_, Top) => Top,
             // A number with no sign evidence yields to one that has it, and
@@ -170,6 +202,18 @@ impl Ty {
             Ty::Array { elem, stride } => format!("{}[stride {}]", elem.name(), stride),
         }
     }
+
+    /// The C type a prototype renders. A proven struct or array pointer is
+    /// still a pointer to a reader — `struct Point *` is recoverable from
+    /// the layout, so the signature spells it `void *` and keeps the
+    /// structural detail in the analysis fields.
+    pub fn c_name(&self) -> String {
+        match self {
+            Ty::Unknown => "int".into(),
+            Ty::Scalar(class) => class.c_name(),
+            Ty::Ptr(_) | Ty::Struct(_) | Ty::Array { .. } => "void *".into(),
+        }
+    }
 }
 
 impl Ty {
@@ -235,6 +279,10 @@ pub struct Facts {
     /// type is read from, since the value a function returns is produced in
     /// the body rather than arriving in it.
     writes: BTreeMap<u64, Class>,
+    /// Every register the body wrote, whatever the class — including a
+    /// `LOAD` whose value's class is unproven. A return register in this
+    /// set carries a value; one absent returns `void`.
+    touched: BTreeSet<u64>,
     /// Registers read before any write defines them: the function's actual
     /// parameters, since a register the body only ever stores is not one.
     read_before_write: BTreeSet<u64>,
@@ -262,6 +310,13 @@ impl Facts {
     /// What is known about the register at `offset`.
     pub fn get(&self, offset: u64) -> Class {
         self.registers.get(&offset).copied().unwrap_or(Class::Unknown)
+    }
+
+    /// Whether the body wrote the register at `offset` at all — the
+    /// difference between a `void` return (never written) and a value
+    /// return whose class is unproven (written, e.g. by a `LOAD`).
+    pub fn touched(&self, offset: u64) -> bool {
+        self.touched.contains(&offset)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (u64, Class)> + '_ {
@@ -368,6 +423,13 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     // first use commits to, so a load records a pending read keyed by the
     // output temporary and the first consuming op resolves it.
     let mut fields: BTreeMap<(u64, i64), Field> = BTreeMap::new();
+    // (loaded-into register, base register, field offset) for each LOAD —
+    // the loaded value's class is the field's, known only after the pass.
+    let mut loads: Vec<(u64, u64, i64)> = Vec::new();
+    // A load's byte width keyed by its output varnode — `unique` temps
+    // included, so `movzx eax, byte[s]` reports the byte it loaded, not the
+    // register it widened into.
+    let mut load_width: BTreeMap<(String, u64), u32> = BTreeMap::new();
     let mut pending: BTreeMap<(String, u64), (u64, i64, u32)> = BTreeMap::new();
     // `base[index]` with a constant stride: base register -> (stride, elem).
     let mut arrays: BTreeMap<u64, (u64, Class)> = BTreeMap::new();
@@ -468,6 +530,18 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     address_of.insert((output.space.clone(), output.offset), pair);
                 }
             }
+            // A copy of a resolved address is the same address: MIPS SLEIGH
+            // computes `*(fp+disp)` as `t = fp+disp` then `u = t`, and the
+            // STORE reads `u` — without this the slot never resolves.
+            if opcode == "COPY"
+                && let Some(output) = &op.output
+                && let Some(input) = op.inputs.first()
+                && let Some(pair) = address_of
+                    .get(&(input.space.clone(), input.offset))
+                    .copied()
+            {
+                address_of.insert((output.space.clone(), output.offset), pair);
+            }
             // `t = index * stride` or `t = index << shift`: the scaled index
             // of an array access.
             if let Some(output) = &op.output {
@@ -532,8 +606,23 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 // a frame slot is not: a stack address is the frame, which
                 // says nothing about the type of anything.
                 "LOAD" => {
+                    if let Some(output) = &op.output {
+                        load_width.insert(
+                            (output.space.clone(), output.offset),
+                            output.size,
+                        );
+                    }
                     if let Some(address) = op.inputs.get(1) {
                         let slot = address_of.get(&(address.space.clone(), address.offset));
+                        // The loaded value's class is the field's class —
+                        // but the field is only classified by a later use,
+                        // so record the load and backfill after `fields`.
+                        if let (Some(output), Some((base, disp))) =
+                            (&op.output, slot.copied())
+                            && output.space == "register"
+                        {
+                            loads.push((output.offset, base, disp));
+                        }
                         match slot.and_then(|key| spilled.get(key)).copied() {
                             Some(origin) => {
                                 // The loaded value is the parameter that was
@@ -780,8 +869,16 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     }
                 }
                 // Plain arithmetic says the operand is a number of that
-                // width and nothing more.
-                "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_AND" | "INT_OR" | "INT_XOR"
+                // width and nothing more. A bitwise op is stronger: a value
+                // you mask or XOR is conventionally unsigned, and a 64-bit
+                // mask joins with a pointer without losing it.
+                "INT_AND" | "INT_OR" | "INT_XOR" => {
+                    for input in &op.inputs {
+                        let class = Class::Uint(input.size * 8);
+                        live(&mut facts, input, class);
+                    }
+                }
+                "INT_ADD" | "INT_SUB" | "INT_MULT"
                 | "INT_LEFT" | "INT_EQUAL" | "INT_NOTEQUAL" => {
                     for input in &op.inputs {
                         let class = Class::Num(input.size * 8);
@@ -796,7 +893,10 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 && output.space == "register"
             {
                 let produced = match opcode {
-                    "LOAD" => Class::Unknown,
+                    // A loaded value's kind is unproven until a use commits
+                    // to it, but its width is the load's — `opaque32`, not
+                    // `unknown`, so a returned load reports its size.
+                    "LOAD" => Class::Opaque(output.size * 8),
                     "INT_EQUAL" | "INT_NOTEQUAL" | "INT_LESS" | "INT_LESSEQUAL"
                     | "INT_SLESS" | "INT_SLESSEQUAL" | "BOOL_AND" | "BOOL_OR" | "BOOL_NEGATE"
                     | "FLOAT_EQUAL" | "FLOAT_NOTEQUAL" | "FLOAT_LESS" | "FLOAT_LESSEQUAL" => {
@@ -811,22 +911,34 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     // what was widened, at the width it was widened from.
                     "INT_ZEXT" | "INT_SEXT" => {
                         let source = op.inputs.first();
-                        let bits = source.map_or(output.size * 8, |input| input.size * 8);
-                        let carried = source
-                            .filter(|input| input.space == "register")
-                            .map(|input| self_written(&facts, input.offset))
-                            .unwrap_or(Class::Unknown);
-                        match carried {
-                            // Zero-extension is how a machine fills a wide
-                            // register with a narrow value; it is not a
-                            // claim about sign, and reading it as one made
-                            // every `int32` return come back `uint32`.
-                            Class::Unknown | Class::Num(_) if opcode == "INT_ZEXT" => {
-                                Class::Num(bits)
+                        // A widened load is the loaded value, at the load's
+                        // width: `movzx eax, byte[s]` is `opaque8`, not the
+                        // 32-bit register it lands in.
+                        if let Some(width) = source
+                            .and_then(|input| {
+                                load_width.get(&(input.space.clone(), input.offset))
+                            })
+                        {
+                            Class::Opaque(width * 8)
+                        } else {
+                            let bits =
+                                source.map_or(output.size * 8, |input| input.size * 8);
+                            let carried = source
+                                .filter(|input| input.space == "register")
+                                .map(|input| self_written(&facts, input.offset))
+                                .unwrap_or(Class::Unknown);
+                            match carried {
+                                // Zero-extension is how a machine fills a wide
+                                // register with a narrow value; it is not a
+                                // claim about sign, and reading it as one made
+                                // every `int32` return come back `uint32`.
+                                Class::Unknown | Class::Num(_) if opcode == "INT_ZEXT" => {
+                                    Class::Num(bits)
+                                }
+                                // Sign-extension is emitted for signed values.
+                                Class::Unknown | Class::Num(_) => Class::Int(bits),
+                                known => known,
                             }
-                            // Sign-extension is emitted for signed values.
-                            Class::Unknown | Class::Num(_) => Class::Int(bits),
-                            known => known,
                         }
                     }
                     _ if opcode.starts_with("FLOAT_") => Class::Float(output.size * 8),
@@ -849,6 +961,11 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         match carried {
                             Class::Unknown | Class::Top => Class::Num(output.size * 8),
                             Class::Ptr | Class::Code => carried,
+                            // An opaque value carried through keeps its own
+                            // width — `movzx eax, byte[s]` widens an 8-bit
+                            // load into a 32-bit register, but the value is
+                            // a byte, so the type is `opaque8` not 32.
+                            Class::Opaque(_) => carried,
                             // The result is as wide as the operation says,
                             // with the kind its operands had.
                             Class::Int(_) => Class::Int(output.size * 8),
@@ -864,6 +981,9 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 } else {
                     facts.writes.remove(&output.offset);
                 }
+                // Written at all — even a `LOAD` whose class is unproven —
+                // is what separates a value return from `void`.
+                facts.touched.insert(output.offset);
             }
             // A copy carries the source's identity forward, then the output
             // counts as defined: its later uses are not the entry value.
@@ -882,12 +1002,11 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     }
                 } else if opcode == "INT_ZEXT"
                     && let Some(input) = op.inputs.first()
-                    && output.space == input.space
-                    && output.offset == input.offset
                 {
-                    // The x86 `mov ecx,[m]` idiom emits `RCX = zext(ECX)`:
-                    // the extension is the machine's, and the value is the
-                    // parameter's.
+                    // A zero-extension carries the value's identity: the x86
+                    // `mov ecx,[m]` idiom emits `RCX = zext(ECX)`, and on
+                    // aarch64 a 32-bit reload is `w8 = zext(LOAD(...))` where
+                    // the loaded temp already aliases the spilled parameter.
                     alias.get(&(input.space.clone(), input.offset)).copied()
                 } else {
                     None
@@ -906,6 +1025,17 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     }
                 }
             }
+        }
+    }
+    // A value loaded from a field carries the field's class: `n->next` is a
+    // pointer, `p->x` a float. Backfill each load's destination register so
+    // a `return n->next` reports `ptr`, not `num64`.
+    for (dest, base, disp) in &loads {
+        if let Some(field) = fields.get(&(*base, *disp))
+            && field.class != Class::Unknown
+            && facts.writes.get(dest).is_none_or(|c| *c == Class::Unknown)
+        {
+            facts.writes.insert(*dest, field.class);
         }
     }
     // Fold the field accesses and array strides into a structural type per

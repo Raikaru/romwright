@@ -335,6 +335,14 @@ impl Bridge {
             stack_variables,
         ))
     }
+    /// Every function's signature, including the `DEFAULT`-sourced ones
+    /// `export_facts` drops — on a stripped binary the decompiler's inferred
+    /// prototype is exactly what a head-to-head type comparison needs.
+    pub fn oracle_signatures(&mut self, session: &str) -> Result<Vec<OracleSignature>> {
+        let v = self.call("export_facts", json!({"session": session}))?;
+        Self::parse_rows(v.get("functions").cloned().unwrap_or(Value::Null))
+    }
+
 
     /// Applies a function rename.
     pub fn rename(&mut self, session: &str, address: &str, name: &str) -> Result<()> {

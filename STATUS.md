@@ -6516,3 +6516,50 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   Gate `tests/m20-013_vector.py`: VU 19281/19281 mnemonics on real
   nightfire-ps2 code, GTE 328/328 on an exhaustive command+flag sweep.
   M-G vector units complete: RSP (m20-012) + VU + GTE (m20-013).
+
+
+- m16-002 (2026-09-13): type recovery scored head-to-head against stock
+  Ghidra across four processors, not just against DWARF on x86.
+  `benchmarks/type_headtohead.py` compiles a type-rich freestanding fixture
+  (`int`/`uint`/`float`/`double`/struct-ptr/array) for a `--target`, strips
+  it, and scores each tool's inferred parameter and return classes against
+  the unstripped twin's `DW_AT_type`. Ghidra's side is read through the
+  Stage-1 bridge's decompiler — its *inferred* prototype, not a DWARF-read
+  signature. clang is the cross-compiler (no sysroot needed freestanding).
+- m16-002 (2026-09-13): type recovery scored head-to-head against stock
+  Ghidra **and IDA Pro 9.4** (Hex-Rays via idalib) on a stripped fixture,
+  truth from the unstripped twin's DWARF. Scores (exact + 0.5·partial over
+  ~37 slots):
+
+  | target | romwright | Ghidra | IDA |
+  |---|---|---|---|
+  | x86_64 | 26.5 | 26.5 | 20.0 |
+  | mips32le | 24.5 | 24.0 | 23.0 |
+  | mips32be | 24.5 | 24.0 | 23.0 |
+  | aarch64 | 25.0 | 25.5 | 20.0 |
+
+  romwright beats IDA on every target and ties-or-beats Ghidra on three of
+  four. IDA's loss is structural: Hex-Rays reports the *register* width for
+  nearly every return (`__int64` where truth is `int32`) and reports pointer
+  parameters as `__int64`, not `ptr` — it never narrows a return and never
+  proves a pointer. Ghidra's remaining edge is the signedness convention
+  (`int`/`uint` where we report sign-unproven `num`/`opaque`); we win every
+  pointer and aggregate slot on every architecture.
+  `long`); there is no other capability gap — we win every pointer and
+  aggregate slot on every arch. Cross-arch work exposed and fixed five real
+  bugs the x86-only gate hid: `address_of` now propagates through `COPY`
+  (MIPS computes `*(fp+disp)` as `t=fp+disp` then `u=t`), `INT_ZEXT` carries
+  any input's alias (aarch64 reloads a spilled param via `w8 = zext(LOAD)`),
+  `integer_entries`/`float_entries` skip `storage="float"`/`hiddenret`
+  pentries (aarch64's x8/q0-q7 polluted the integer model), a float slot
+  resolves to the pair's offset for a `double` *and* the first single's for
+  a `float` (big-endian MIPS puts the single at the pair's high offset), and
+  a `LOAD` produces `Opaque(width)` — Ghidra's `undefined<N>` — so a
+  returned load reports its size rather than `unknown`, and a `movzx` of a
+  byte load reports `opaque8` not the register's 32. `void` return requires
+  the return register be *untouched*, not merely unclassified. A `signature`
+  field now renders the C prototype a reader sees — `num`/`opaque` take C's
+  signed default (`int`/`short`/`long`/`char`), a proven struct/array
+  pointer spells `void *`, arity is the highest parameter register the body
+  read — while `parameters`/`structural`/`returns` keep the honest classes.
+  Reports: `benchmarks/reports/type-headtohead-*.json`.

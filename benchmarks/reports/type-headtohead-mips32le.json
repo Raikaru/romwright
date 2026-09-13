@@ -1,0 +1,1231 @@
+{
+ "id": "type-headtohead",
+ "slots": 37,
+ "ours": {
+  "exact": 18,
+  "partial": 13,
+  "wrong": 6,
+  "score": 24.5
+ },
+ "ghidra": {
+  "exact": 23,
+  "partial": 2,
+  "wrong": 12,
+  "score": 24.0
+ },
+ "ida": {
+  "exact": 23,
+  "partial": 0,
+  "wrong": 14,
+  "score": 23.0
+ },
+ "rows": [
+  {
+   "entry": "000201d0",
+   "name": "add_ints",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0002020c",
+   "name": "sub_ints",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020248",
+   "name": "mix_uint",
+   "ours": [
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "uint32",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "int __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0002028c",
+   "name": "shift_ul",
+   "ours": [
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint32",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "uint32",
+     "got": "unsigned int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "char",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "unsigned int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "000202c8",
+   "name": "scale",
+   "ours": [
+    {
+     "truth": "float32",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float32",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020304",
+   "name": "widen",
+   "ours": [
+    {
+     "truth": "float64",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "float64",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020340",
+   "name": "deref",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "undefined4",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020374",
+   "name": "point_x",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "void",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "undefined4 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "undefined4",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "000203a8",
+   "name": "sum_arr",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "num32",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020444",
+   "name": "field2",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*struct{+0x4: num32, +0x8: num32}",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020488",
+   "name": "next_node",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "opaque32",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "undefined4 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "undefined4",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "int __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "000204bc",
+   "name": "node_val",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "undefined4",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "000204f0",
+   "name": "first_char",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*int8",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int8",
+     "got": "opaque8",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "char *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int8",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "char *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int8",
+     "got": "int __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020524",
+   "name": "is_neg",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "uint32",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint32",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "uint",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "unsigned int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "unsigned int __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020558",
+   "name": "noop",
+   "ours": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00020580",
+   "name": "main",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int processEntry",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  }
+ ]
+}

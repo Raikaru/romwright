@@ -1337,15 +1337,37 @@ impl Core {
             return Ok(Vec::new());
         };
         let slot = |name: &str| conventions.registers.get(name).map(|(offset, _)| *offset);
+        // A float parameter slot is the register the cspec names — a pair
+        // like `f12_13` for a `double`, a single like `f12` for a `float`.
+        // On big-endian MIPS the single sits at the pair's high offset, so
+        // both offsets are slots: the pair for a double, the first single
+        // for a float.
+        let float_offsets = |name: &str| {
+            let mut offsets = Vec::new();
+            if let Some(offset) = slot(name) {
+                offsets.push(offset);
+            }
+            if let Some(single) = name.split('_').next().filter(|s| *s != name)
+                && let Some(offset) = slot(single)
+                && !offsets.contains(&offset)
+            {
+                offsets.push(offset);
+            }
+            offsets
+        };
         let parameter_slots: Vec<(String, u64)> = model
             .registers
             .iter()
             .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
             .collect();
-        let float_slots: Vec<(String, u64)> = model
+        // One entry per logical float parameter; each carries the offsets a
+        // value of that slot could occupy — the pair for a `double`, the
+        // first single for a `float` (which sits at the pair's high offset
+        // on big-endian MIPS).
+        let float_slots: Vec<(String, Vec<u64>)> = model
             .float_registers
             .iter()
-            .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
+            .map(|name| (name.clone(), float_offsets(name)))
             .collect();
         // A float result arrives in a float register and an integer one in
         // an integer register, but the integer register is written on the
@@ -1354,7 +1376,7 @@ impl Core {
         let float_return_slots: Vec<u64> = model
             .float_returns
             .iter()
-            .filter_map(|name| slot(name))
+            .flat_map(|name| float_offsets(name))
             .collect();
         let return_slots: Vec<(String, u64)> = model
             .returns
@@ -1418,7 +1440,8 @@ impl Core {
             // a function the decompiler declines keeps its inferred
             // signature.
             let int_slots: Vec<u64> = parameter_slots.iter().map(|(_, o)| *o).collect();
-            let float_slot_offsets: Vec<u64> = float_slots.iter().map(|(_, o)| *o).collect();
+            let float_slot_offsets: Vec<u64> =
+                float_slots.iter().flat_map(|(_, o)| o.iter().copied()).collect();
             let int_ret: Vec<u64> = return_slots.iter().map(|(_, o)| *o).collect();
             for (entry_offset, _, _) in &lifted {
                 let address = romwright_model::Address {
@@ -1499,9 +1522,10 @@ impl Core {
                     .map(|(_, offset)| facts.get(*offset).name())
                     .collect();
                 // The return value is whatever the result register was last
-                // constrained to; a register the body never touches says
-                // nothing, which is `unknown` rather than `void`.
-                let returns = float_return_slots
+                // constrained to. A function that returns without writing a
+                // result register returns void; one that writes it — even a
+                // `LOAD` whose class is unproven — carries a value.
+                let return_class = float_return_slots
                     .iter()
                     .map(|offset| facts.written(*offset))
                     .find(|class| matches!(class, crate::types_infer::Class::Float(_)))
@@ -1510,12 +1534,34 @@ impl Core {
                             .iter()
                             .map(|(_, offset)| facts.written(*offset))
                             .find(|class| *class != crate::types_infer::Class::Unknown)
-                    })
-                    .unwrap_or(crate::types_infer::Class::Unknown)
-                    .name();
+                    });
+                let returns = return_class
+                    .map(|class| class.name())
+                    .unwrap_or_else(|| {
+                        if return_slots.iter().any(|(_, o)| facts.touched(*o)) {
+                            "unknown".into()
+                        } else {
+                            "void".into()
+                        }
+                    });
+                // The C spelling of the return: `void` stays `void`, an
+                // unproven value takes the signed default.
+                let return_c = match returns.as_str() {
+                    "void" => "void".to_string(),
+                    _ => return_class
+                        .map(|class| class.c_name())
+                        .unwrap_or_else(|| "int".into()),
+                };
                 let float_parameters: Vec<String> = float_slots
                     .iter()
-                    .map(|(_, offset)| facts.get(*offset).name())
+                    .map(|(_, offsets)| {
+                        offsets
+                            .iter()
+                            .map(|offset| facts.get(*offset))
+                            .find(|class| *class != crate::types_infer::Class::Unknown)
+                            .unwrap_or(crate::types_infer::Class::Unknown)
+                            .name()
+                    })
                     .collect();
                 // The structural type each parameter register's accesses
                 // prove — `*struct{+0x34: float32}` for a register
@@ -1524,21 +1570,78 @@ impl Core {
                 // structure along `src <: dst` copy edges to a fixpoint, and
                 // a call asserts the callee's signature onto the argument
                 // and return registers — the interprocedural direction.
-                let structural: Vec<String> = parameter_slots
+                // A float parameter lives in a float register, so the
+                // structural slot falls back to it when the integer side
+                // proved nothing.
+                let structural: Vec<(crate::types_infer::Ty, String)> = parameter_slots
                     .iter()
-                    .map(|(_, offset)| {
-                        solution
-                            .types
-                            .get(offset)
-                            .map(|ty| ty.name())
-                            .unwrap_or_else(|| facts.get(*offset).name())
+                    .enumerate()
+                    .map(|(i, (_, offset))| {
+                        // The solver's structural types (pointer, struct,
+                        // array) are the ones only it can prove; for a bare
+                        // scalar the alias-aware `facts` is more accurate —
+                        // it follows a spilled parameter back to its
+                        // register where the solver only sees the temp.
+                        let solved = solution.types.get(offset);
+                        let scalar = facts.get(*offset);
+                        let ty = match solved {
+                            Some(ty) if !matches!(ty, crate::types_infer::Ty::Scalar(_)
+                                | crate::types_infer::Ty::Unknown) => ty.clone(),
+                            _ => crate::types_infer::Ty::Scalar(scalar),
+                        };
+                        let ty = if matches!(ty, crate::types_infer::Ty::Scalar(
+                            crate::types_infer::Class::Unknown)) {
+                            float_parameters
+                                .get(i)
+                                .filter(|f| f.as_str() != "unknown")
+                                .map(|_| ty.clone())
+                                .unwrap_or(ty)
+                        } else {
+                            ty
+                        };
+                        let name = ty.name();
+                        (ty, name)
                     })
                     .collect();
+                let structural_names: Vec<String> =
+                    structural.iter().map(|(_, n)| n.clone()).collect();
+                // The C prototype a reader sees: `num`/`opaque` take C's
+                // signed default, a proven struct/array pointer spells
+                // `void *`. The analysis fields keep the honest classes.
+                // Arity is the highest parameter register the body actually
+                // read — a callee never touches the slots past its last
+                // argument.
+                let arity = parameter_slots
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .find(|(_, (_, offset))| {
+                        facts.read_before_write(*offset)
+                            || facts.get(*offset) != crate::types_infer::Class::Unknown
+                            || solution.types.get(offset).is_some_and(|ty| {
+                                !matches!(ty, crate::types_infer::Ty::Unknown)
+                            })
+                    })
+                    .map(|(i, _)| i + 1)
+                    .unwrap_or(0);
+                let params_c = if arity == 0 {
+                    "void".to_string()
+                } else {
+                    structural
+                        .iter()
+                        .take(arity)
+                        .map(|(ty, _)| ty.c_name())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                };
+                let signature =
+                    format!("{} FUN_{:08x}({})", return_c, entry_offset, params_c);
                 rows.push(serde_json::json!({
                     "entry": format!("{:08x}", entry_offset),
                     "model": model.name,
+                    "signature": signature,
                     "parameters": parameters,
-                    "structural": structural,
+                    "structural": structural_names,
                     "float_parameters": float_parameters,
                     "returns": returns,
                     "instructions": instructions,

@@ -1,0 +1,1231 @@
+{
+ "id": "type-headtohead",
+ "slots": 37,
+ "ours": {
+  "exact": 18,
+  "partial": 14,
+  "wrong": 5,
+  "score": 25.0
+ },
+ "ghidra": {
+  "exact": 24,
+  "partial": 3,
+  "wrong": 10,
+  "score": 25.5
+ },
+ "ida": {
+  "exact": 20,
+  "partial": 0,
+  "wrong": 17,
+  "score": 20.0
+ },
+ "rows": [
+  {
+   "entry": "0021042c",
+   "name": "add_ints",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0021044c",
+   "name": "sub_ints",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0021046c",
+   "name": "mix_uint",
+   "ours": [
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "uint",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "uint32",
+     "got": "int",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "unsigned int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint32",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0021049c",
+   "name": "shift_ul",
+   "ours": [
+    {
+     "truth": "uint64",
+     "got": "uint64",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint32",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint64",
+     "got": "uint64",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "uint64",
+     "got": "ulong",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "uint",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint64",
+     "got": "ulong",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "uint64",
+     "got": "unsigned __int64",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "char",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "uint64",
+     "got": "unsigned __int64 __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002104bc",
+   "name": "scale",
+   "ours": [
+    {
+     "truth": "float32",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float32",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002104dc",
+   "name": "widen",
+   "ours": [
+    {
+     "truth": "float64",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "float64",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "undefined1  [16]",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float64",
+     "got": "double __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002104fc",
+   "name": "deref",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*struct{+0x8: num32}",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "opaque32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "long",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "undefined4",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00210514",
+   "name": "point_x",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "void",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "undefined4 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "undefined4",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "float32",
+     "got": "float __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0021052c",
+   "name": "sum_arr",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "num64[stride 8]",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int32",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "opaque64",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "long",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "long",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "__int64 __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00210590",
+   "name": "field2",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*struct{+0x4: num32, +0x8: num32}",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "long",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002105b8",
+   "name": "next_node",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "opaque64",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "undefined8 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "undefined8",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "ptr",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002105d0",
+   "name": "node_val",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "num64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "opaque64",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "long",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "undefined8",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ]
+    },
+    {
+     "truth": "int64",
+     "got": "__int64 __fastcall",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "002105e8",
+   "name": "first_char",
+   "ours": [
+    {
+     "truth": "ptr",
+     "got": "*unknown",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint8",
+     "got": "opaque8",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "ptr",
+     "got": "undefined1 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint8",
+     "got": "undefined1",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "ptr",
+     "got": "unsigned __int8 *",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "uint8",
+     "got": "__int64 __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00210600",
+   "name": "is_neg",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "num8",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "bool",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ]
+    },
+    {
+     "truth": "int32",
+     "got": "bool __fastcall",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "0021061c",
+   "name": "noop",
+   "ours": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "void",
+     "got": "void",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ]
+  },
+  {
+   "entry": "00210620",
+   "name": "main",
+   "ours": [
+    {
+     "truth": "int32",
+     "got": "num32",
+     "score": [
+      0,
+      1,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ghidra": [
+    {
+     "truth": "int32",
+     "got": "int",
+     "score": [
+      1,
+      0,
+      0
+     ],
+     "return": true
+    }
+   ],
+   "ida": [
+    {
+     "truth": "int32",
+     "got": "__int64",
+     "score": [
+      0,
+      0,
+      1
+     ],
+     "return": true
+    }
+   ]
+  }
+ ]
+}

@@ -314,7 +314,11 @@ fn elements<'a>(text: &'a str, name: &str) -> Vec<Element<'a>> {
 fn float_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     let mut registers = Vec::new();
     for entry in elements(body, "pentry") {
-        if attribute(entry.header, "metatype").as_deref() != Some("float") {
+        // Specs spell the float marker two ways: `metatype="float"` (MIPS)
+        // and `storage="float"` (aarch64).
+        if attribute(entry.header, "metatype").as_deref() != Some("float")
+            && attribute(entry.header, "storage").as_deref() != Some("float")
+        {
             continue;
         }
         let names = register_names(entry.body, by_offset);
@@ -328,7 +332,13 @@ fn float_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
 fn integer_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     let mut registers = Vec::new();
     for entry in elements(body, "pentry") {
-        if attribute(entry.header, "metatype").as_deref() == Some("float") {
+        // A float or hidden-return pentry is not an integer parameter slot.
+        // aarch64's `hiddenret` x8 is a return-slot register, never an
+        // argument, and its `storage="float"` q0-q7 are not integers.
+        let storage = attribute(entry.header, "storage");
+        if attribute(entry.header, "metatype").as_deref() == Some("float")
+            || matches!(storage.as_deref(), Some("float") | Some("hiddenret"))
+        {
             continue;
         }
         let names = register_names(entry.body, by_offset);
