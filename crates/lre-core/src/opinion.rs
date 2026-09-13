@@ -107,6 +107,9 @@ fn offline_selection(image: ElfMachine) -> Option<Selection> {
         (0x08, 32) => (format!("MIPS:{order}:32:default"), "default"),
         (0x14, 32) => (format!("PowerPC:{order}:32:default"), "default"),
         (0x15, 64) => (format!("PowerPC:{order}:64:default"), "default"),
+        // Cell SPU: e_machine 23, a 128-bit big-endian standalone core
+        // (GhidraSPU spu.opinion: primary 23, size 128).
+        (0x17, _) if image.big_endian => ("SPU:BE:128:default".to_string(), "default"),
         (0xf3, 64) if !image.big_endian => ("RISCV:LE:64:default".to_string(), "gcc"),
         (0xf3, 32) if !image.big_endian => ("RISCV:LE:32:default".to_string(), "gcc"),
         _ => return None,

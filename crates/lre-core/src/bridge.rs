@@ -193,11 +193,27 @@ impl Bridge {
     }
 
     /// Imports and analyzes a binary, returning its summary.
+    /// `language`/`compiler` override Ghidra's opinion when both are given
+    /// (e.g. forcing `PowerPC:BE:64:default` where the opinion prefers a
+    /// variant like `A2ALT`).
     pub fn import(&mut self, session: &str, path: &Path) -> Result<ProgramSummary> {
-        let v = self.call(
-            "import",
-            json!({"session": session, "path": path.display().to_string()}),
-        )?;
+        self.import_as(session, path, None, None)
+    }
+
+    /// Imports with an explicit language/compiler pair.
+    pub fn import_as(
+        &mut self,
+        session: &str,
+        path: &Path,
+        language: Option<&str>,
+        compiler: Option<&str>,
+    ) -> Result<ProgramSummary> {
+        let mut params = json!({"session": session, "path": path.display().to_string()});
+        if let (Some(language), Some(compiler)) = (language, compiler) {
+            params["language"] = json!(language);
+            params["compiler"] = json!(compiler);
+        }
+        let v = self.call("import", params)?;
         Self::parse(v)
     }
 

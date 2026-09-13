@@ -1226,9 +1226,18 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .ok_or("import --oracle needs a binary path")?
                 .clone();
             let name = flag(args, "--name");
+            let language = flag(args, "--language");
+            let compiler = flag(args, "--compiler");
             let mut bridge = launch_bridge(args)?;
             let summary = core
-                .import_program(&mut bridge, "main", Path::new(&binary), name.as_deref())
+                .import_program_as(
+                    &mut bridge,
+                    "main",
+                    Path::new(&binary),
+                    name.as_deref(),
+                    language.as_deref(),
+                    compiler.as_deref(),
+                )
                 .map_err(|e| e.to_string())?;
             println!(
                 "imported {} ({} functions, {})",

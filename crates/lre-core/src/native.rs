@@ -439,6 +439,11 @@ fn u32_be_at(b: &[u8], o: usize) -> Result<u32> {
         .map(|s| u32::from_be_bytes([s[0], s[1], s[2], s[3]]))
         .ok_or(ImportError::Bad("truncated".into()))
 }
+fn u64_be_at(b: &[u8], o: usize) -> Result<u64> {
+    b.get(o..o + 8)
+        .map(|s| u64::from_be_bytes(s.try_into().unwrap()))
+        .ok_or(ImportError::Bad("truncated".into()))
+}
 
 // ---- ELF32 ----------------------------------------------------------------
 
@@ -730,37 +735,46 @@ fn collect_elf_section_starts(sections: &[ElfSection], functions: &mut Vec<Nativ
     }
 }
 
-fn parse_elf_sections(data: &[u8]) -> Result<(Vec<ElfSection>, Vec<u8>)> {
-    let shentsize = u16_at(data, 58)? as usize;
-    let shnum = u16_at(data, 60)? as usize;
-    let shoff = u64_at(data, 40)? as usize;
-    let shstrndx = u16_at(data, 62)? as usize;
+fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>)> {
+    let rd16 = |o: usize| -> Result<u16> {
+        if be { u16_be_at(data, o) } else { u16_at(data, o) }
+    };
+    let rd32 = |o: usize| -> Result<u32> {
+        if be { u32_be_at(data, o) } else { u32_at(data, o) }
+    };
+    let rd64 = |o: usize| -> Result<u64> {
+        if be { u64_be_at(data, o) } else { u64_at(data, o) }
+    };
+    let shentsize = rd16(58)? as usize;
+    let shnum = rd16(60)? as usize;
+    let shoff = rd64(40)? as usize;
+    let shstrndx = rd16(62)? as usize;
     let mut sections = Vec::new();
     for i in 0..shnum {
         let hdr = shoff + i * shentsize;
         sections.push(ElfSection {
             name: String::new(),
-            typ: u32_at(data, hdr + 4)?,
-            flags: u64_at(data, hdr + 8)?,
-            addr: u64_at(data, hdr + 16)?,
-            off: u64_at(data, hdr + 24)?,
-            size: u64_at(data, hdr + 32)?,
-            link: u32_at(data, hdr + 40)?,
-            entry_size: u64_at(data, hdr + 56)?,
+            typ: rd32(hdr + 4)?,
+            flags: rd64(hdr + 8)?,
+            addr: rd64(hdr + 16)?,
+            off: rd64(hdr + 24)?,
+            size: rd64(hdr + 32)?,
+            link: rd32(hdr + 40)?,
+            entry_size: rd64(hdr + 56)?,
         });
     }
     // fetch shstrtab content
     let shstr = {
         let hdr = shoff + shstrndx * shentsize;
-        let off = u64_at(data, hdr + 24)? as usize;
-        let sz = u64_at(data, hdr + 32)? as usize;
+        let off = rd64(hdr + 24)? as usize;
+        let sz = rd64(hdr + 32)? as usize;
         data.get(off..off + sz).unwrap_or(&[]).to_vec()
     };
     // names assigned from shstrtab after fetching; store raw offsets
     let mut name_offs = Vec::new();
     for i in 0..shnum {
         let hdr = shoff + i * shentsize;
-        name_offs.push(u32_at(data, hdr)? as usize);
+        name_offs.push(rd32(hdr)? as usize);
     }
     for (s, no) in sections.iter_mut().zip(name_offs) {
         s.name = shstr
@@ -841,18 +855,28 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         // ELF32: GameCube/PS2-class images (PowerPC/MIPS, either endian).
         return import_elf32(data, data[5] == 2);
     }
-    if data[4] != 2 || data[5] != 1 {
-        return err("ELF64 little-endian expected");
+    if data[4] != 2 || !matches!(data[5], 1 | 2) {
+        return err("ELF64 expected");
     }
-    let elf_machine = crate::opinion::ElfMachine {
-        machine: u16_at(data, 18)?,
-        flags: u32_at(data, 48)?,
-        bits: 64,
-        big_endian: false,
+    let be = data[5] == 2;
+    let rd16 = |o: usize| -> Result<u16> {
+        if be { u16_be_at(data, o) } else { u16_at(data, o) }
     };
-    let entry = u64_at(data, 24)?;
-    let process_entry = elf_process_entry(data, entry, u16_at(data, 16)?);
-    let (mut sections, _shstr) = parse_elf_sections(data)?;
+    let rd32 = |o: usize| -> Result<u32> {
+        if be { u32_be_at(data, o) } else { u32_at(data, o) }
+    };
+    let rd64 = |o: usize| -> Result<u64> {
+        if be { u64_be_at(data, o) } else { u64_at(data, o) }
+    };
+    let elf_machine = crate::opinion::ElfMachine {
+        machine: rd16(18)?,
+        flags: rd32(48)?,
+        bits: 64,
+        big_endian: be,
+    };
+    let entry = rd64(24)?;
+    let process_entry = elf_process_entry(data, entry, rd16(16)?);
+    let (mut sections, _shstr) = parse_elf_sections(data, be)?;
 
     // Mappings: SHF_ALLOC sections carrying file bytes (SHT_PROGBITS etc).
     let mut mappings = Vec::new();
@@ -874,6 +898,46 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if mappings.is_empty() {
         return err("ELF has no allocated sections");
     }
+
+    // PPC64 function descriptors: a function symbol's `st_value` names a
+    // `.opd` entry `{func_ptr, toc_ptr}`, not the code. Ghidra's
+    // `PowerPC64_ElfExtension.processOPDSection`/`markupDescriptorEntry`
+    // (:449-647) reads each descriptor, creates the function at `func_ptr`,
+    // and sets `r2 = toc_ptr` over the function's range. We mirror that:
+    // `opd` maps a descriptor vaddr to `(func_ptr, toc_ptr)` so the symtab
+    // loop below can remap `value` to the real entry and seed the TOC.
+    // `.opd` is a non-executable data section; a stripped image has no name,
+    // so fall back to the section `e_entry` lands in (Ghidra :458-475).
+    let opd: std::collections::HashMap<u64, (u64, u64)> = if elf_machine.machine == 21 {
+        let opd_section = sections
+            .iter()
+            .find(|s| s.name == ".opd")
+            .or_else(|| {
+                sections.iter().find(|s| {
+                    s.flags & 0x2 != 0 && s.flags & 0x4 == 0
+                        && entry >= s.addr && entry < s.addr + s.size
+                })
+            });
+        let mut map = std::collections::HashMap::new();
+        if let Some(s) = opd_section {
+            let base = s.off as usize;
+            let count = (s.size as usize) / 16;
+            for i in 0..count {
+                let o = base + i * 16;
+                if o + 16 > data.len() { break; }
+                let func = rd64(o)?;
+                let toc = rd64(o + 8)?;
+                if func != 0 {
+                    map.insert(s.addr + (i * 16) as u64, (func, toc));
+                }
+            }
+        }
+        map
+    } else {
+        std::collections::HashMap::new()
+    };
+    // TOC values to seed as `r2` register contexts, keyed by function entry.
+    let mut opd_toc: Vec<(u64, u64)> = Vec::new();
 
     // Symbols: the SHT_SYMTAB (type 2) and its sh_link strtab.
     let mut functions = Vec::new();
@@ -901,22 +965,31 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             if hdr + 24 > data.len() {
                 break;
             }
-            let name_off = u32_at(data, hdr)? as usize;
+            let name_off = rd32(hdr)? as usize;
             let info = data[hdr + 4];
             // ELF64_Sym: st_name(0,4) st_info(4) st_other(5) st_shndx(6,2)
             // st_value(8,8) st_size(16,8)
-            let value = u64_at(data, hdr + 8)?;
-            let shndx = u16_at(data, hdr + 6)?;
-            let size = u64_at(data, hdr + 16)?;
+            let value = rd64(hdr + 8)?;
+            let shndx = rd16(hdr + 6)?;
+            let size = rd64(hdr + 16)?;
             let name = strtab
                 .get(name_off..)
                 .and_then(|r| r.split(|c| *c == 0).next())
                 .map(|r| String::from_utf8_lossy(r).into_owned())
                 .unwrap_or_default();
             let typ = info & 0xf;
-            if typ == 2 && value != 0 && !name.is_empty() {
+            // PPC64: `value` may be a `.opd` descriptor; the real entry is
+            // `func_ptr` and `toc_ptr` becomes the function's `r2` context.
+            let (entry_addr, toc) = opd
+                .get(&value)
+                .map(|&(func, toc)| (func, Some(toc)))
+                .unwrap_or((value, None));
+            if let Some(toc) = toc {
+                opd_toc.push((entry_addr, toc));
+            }
+            if typ == 2 && entry_addr != 0 && !name.is_empty() {
                 let rank = symbol_rank(info, &name);
-                let slot = symbol_functions.entry(value).or_insert((rank, name.clone(), size.max(1)));
+                let slot = symbol_functions.entry(entry_addr).or_insert((rank, name.clone(), size.max(1)));
                 if rank < slot.0 {
                     *slot = (rank, name.clone(), size.max(1));
                 }
@@ -955,16 +1028,25 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             if hdr + 24 > data.len() {
                 break;
             }
-            let name_off = u32_at(data, hdr)? as usize;
+            let name_off = rd32(hdr)? as usize;
             let info = data[hdr + 4];
-            let shndx = u16_at(data, hdr + 6)?;
-            let value = u64_at(data, hdr + 8)?;
-            let size = u64_at(data, hdr + 16)?;
+            let shndx = rd16(hdr + 6)?;
+            let value = rd64(hdr + 8)?;
+            let size = rd64(hdr + 16)?;
             let name = strtab
                 .get(name_off..)
                 .and_then(|r| r.split(|c| *c == 0).next())
                 .map(|r| String::from_utf8_lossy(r).into_owned())
                 .unwrap_or_default();
+            // PPC64: a defined dynamic function's `value` may be a `.opd`
+            // descriptor; remap to `func_ptr` and seed `r2 = toc_ptr`.
+            let (entry_addr, toc) = opd
+                .get(&value)
+                .map(|&(func, toc)| (func, Some(toc)))
+                .unwrap_or((value, None));
+            if let Some(toc) = toc {
+                opd_toc.push((entry_addr, toc));
+            }
             // A copy-relocated object is *defined* in the executable's own
             // dynamic table, with the size the library declares.
             if info & 0xf == 1 && shndx != 0 && value != 0 && size > 0 {
@@ -975,12 +1057,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             // spelling; among dynsym spellings of one address the rank
             // decides, as in the symtab loop, so an unversioned name beats
             // `name@@VERSION`.
-            if info & 0xf == 2 && shndx != 0 && value != 0 && !name.is_empty() {
+            if info & 0xf == 2 && shndx != 0 && entry_addr != 0 && !name.is_empty() {
                 let rank = symbol_rank(info, &name);
                 let slot = symbol_functions
-                    .entry(value)
+                    .entry(entry_addr)
                     .or_insert((rank, name.clone(), size.max(1)));
-                if !symtab_named.contains(&value) && rank < slot.0 {
+                if !symtab_named.contains(&entry_addr) && rank < slot.0 {
                     *slot = (rank, name.clone(), size.max(1));
                 }
             }
@@ -993,7 +1075,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     // procedures the symtab may have stripped. The symtab's spelling
     // wins where both exist; debug info only adds coverage.
     let mdebug_started = std::time::Instant::now();
-    let mdebug_functions = mdebug::collect(data, &sections, false);
+    let mdebug_functions = mdebug::collect(data, &sections, be);
     for f in &mdebug_functions {
         symbol_functions
             .entry(f.entry)
@@ -1017,6 +1099,22 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         &functions,
         &mut register_contexts,
     );
+    // PPC64 OPD: each descriptor's `toc_ptr` is the function's `r2` value.
+    // Ghidra sets it over the function's range (markupDescriptorEntry
+    // :636-644); we seed one range per function the descriptor named.
+    for (entry_addr, toc) in &opd_toc {
+        let end = functions
+            .iter()
+            .find(|f| f.entry == *entry_addr)
+            .map(|f| f.entry + f.size.max(1))
+            .unwrap_or(*entry_addr + 1);
+        register_contexts.push(NativeRegisterContext {
+            start: *entry_addr,
+            end,
+            register: "r2".into(),
+            value: *toc,
+        });
+    }
     let mut import = NativeImport {
         mappings,
         functions,
@@ -1035,12 +1133,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         phase(&mut import, "mdebug", mdebug_started);
     }
     import.toolchain = detect_toolchain(data, &sections, &import);
-    elf_image::prepare(data, &mut sections, &mut import, 8, false)?;
+    elf_image::prepare(data, &mut sections, &mut import, 8, be)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
-    elf_pointers::collect(data, &sections, &mut import, 8, false, bias)?;
-    elf_pointers::collect_got(data, &sections, &mut import, 8, false, bias)?;
-    elf_unwind::collect(data, &sections, &mut import, 8, false);
-    elf_exception::collect(data, &sections, &mut import, 8, false);
+    elf_pointers::collect(data, &sections, &mut import, 8, be, bias)?;
+    elf_pointers::collect_got(data, &sections, &mut import, 8, be, bias)?;
+    elf_unwind::collect(data, &sections, &mut import, 8, be);
+    elf_exception::collect(data, &sections, &mut import, 8, be);
     Ok(import)
 }
 
@@ -1392,9 +1490,9 @@ fn elf_bases(data: &[u8]) -> Option<(u64, u64)> {
     }
     // ET_DYN: find minimum PT_LOAD vaddr from program headers if any non-zero.
     let (phoff, phentsize, phnum) = if is_64 {
-        let off = u64_at(data, 32).ok()? as usize;
-        let esz = u16_at(data, 54).ok()? as usize;
-        let num = u16_at(data, 56).ok()? as usize;
+        let off = if is_be { u64_be_at(data, 32).ok()? } else { u64_at(data, 32).ok()? } as usize;
+        let esz = if is_be { u16_be_at(data, 54).ok()? } else { u16_at(data, 54).ok()? } as usize;
+        let num = if is_be { u16_be_at(data, 56).ok()? } else { u16_at(data, 56).ok()? } as usize;
         (off, esz, num)
     } else {
         let off = if is_be { u32_be_at(data, 28).ok()? } else { u32_at(data, 28).ok()? } as usize;
@@ -1412,7 +1510,7 @@ fn elf_bases(data: &[u8]) -> Option<(u64, u64)> {
         if p_type == 1 {
             // PT_LOAD
             let p_vaddr = if is_64 {
-                u64_at(data, hdr + 16).ok()?
+                if is_be { u64_be_at(data, hdr + 16).ok()? } else { u64_at(data, hdr + 16).ok()? }
             } else if is_be {
                 u32_be_at(data, hdr + 8).ok()? as u64
             } else {
