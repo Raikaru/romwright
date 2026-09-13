@@ -46,6 +46,8 @@ pub(crate) mod xbox_3ds;
 pub(crate) mod irx;
 pub(crate) mod nes;
 pub(crate) mod genesis;
+pub(crate) mod gameboy;
+pub(crate) mod snes;
 mod mdebug;
 pub(crate) mod nonreturn;
 use lre_model::{
@@ -540,6 +542,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         flags: rd32(36)?,
         bits: 32,
         big_endian: be,
+        e_type: rd16(16)?,
     };
     let entry = rd32(24)? as u64;
     let process_entry = elf_process_entry(data, entry, rd16(16)?);
@@ -875,6 +878,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         flags: rd32(48)?,
         bits: 64,
         big_endian: be,
+        e_type: rd16(16)?,
     };
     let entry = rd64(24)?;
     let process_entry = elf_process_entry(data, entry, rd16(16)?);
@@ -1560,6 +1564,10 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
         rel::import(data)
     } else if nes::is_rom(data) {
         nes::import(data)
+    } else if gameboy::is_rom(data) {
+        gameboy::import(data)
+    } else if snes::is_rom(data) {
+        snes::import(data)
     } else if genesis::is_rom(data) {
         genesis::import(data)
     } else {
@@ -4611,6 +4619,7 @@ mod tests {
                 flags: 0x0580_0000,
                 bits: 32,
                 big_endian: false,
+                e_type: 2,
             })
         );
         assert!(import.language.is_empty() && import.compiler.is_none());
@@ -4630,6 +4639,7 @@ mod tests {
             flags: 0,
             bits: 32,
             big_endian: false,
+            e_type: 0,
         });
         assert!(select_language(&mut unknown, &cfg).is_err());
     }

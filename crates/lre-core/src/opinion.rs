@@ -46,6 +46,10 @@ pub struct ElfMachine {
     pub bits: u32,
     /// Data order from `EI_DATA`.
     pub big_endian: bool,
+    /// `e_type`: a PSP image is a MIPS ELF whose `e_type` is the SCE
+    /// processor-specific `0xffa0` (ET_SCE_PSP_RELEXEC), which is what
+    /// distinguishes it from a generic MIPS binary for Allegrex.
+    pub e_type: u16,
 }
 
 /// The language id and compiler spec id a load selects.
@@ -104,6 +108,9 @@ fn offline_selection(image: ElfMachine) -> Option<Selection> {
             ("ARM:LEBE:32:v8LEInstruction".to_string(), "default")
         }
         (0x28, 32) => (format!("ARM:{order}:32:v8"), "default"),
+        // A PSP image is a MIPS ELF whose e_type is SCE's 0xffa0; it decodes
+        // as Allegrex (MIPS + VFPU), not generic MIPS.
+        (0x08, 32) if image.e_type == 0xffa0 => ("Allegrex:LE:32:default".to_string(), "default"),
         (0x08, 32) => (format!("MIPS:{order}:32:default"), "default"),
         (0x14, 32) => (format!("PowerPC:{order}:32:default"), "default"),
         (0x15, 64) => (format!("PowerPC:{order}:64:default"), "default"),
@@ -119,6 +126,15 @@ fn offline_selection(image: ElfMachine) -> Option<Selection> {
 
 /// Selects the language and compiler spec for one ELF image.
 pub fn elf_selection(install: &Path, image: ElfMachine) -> Result<Selection> {
+    // A PSP image is a MIPS ELF whose e_type is SCE's 0xffa0. No generic ELF
+    // opinion names it (the Allegrex extension keys its opinion to a custom
+    // "PSP Executable" loader), so it is resolved here, before the install.
+    if image.machine == 0x08 && image.e_type == 0xffa0 {
+        return Ok(Selection {
+            language: "Allegrex:LE:32:default".to_string(),
+            compiler: "default".to_string(),
+        });
+    }
     if !install.join("Ghidra/Processors").is_dir() {
         return offline_selection(image).ok_or_else(|| {
             OpinionError::Unsupported(format!(
@@ -544,7 +560,7 @@ mod tests {
 </language_definitions>"#;
 
     fn machine(flags: u32, big_endian: bool) -> ElfMachine {
-        ElfMachine { machine: 40, flags, bits: 32, big_endian }
+        ElfMachine { machine: 40, flags, bits: 32, big_endian , e_type: 0}
     }
 
     #[test]
@@ -643,14 +659,14 @@ mod tests {
 </opinions>"#,
             LANGUAGES,
         );
-        let unknown = ElfMachine { machine: 0xfff, flags: 0, bits: 32, big_endian: true };
+        let unknown = ElfMachine { machine: 0xfff, flags: 0, bits: 32, big_endian: true, e_type: 0 };
         assert!(matches!(
             elf_selection(&root, unknown),
             Err(OpinionError::Unsupported(_))
         ));
         // Another loader's constraint is not an ELF answer, and the only
         // language this ELF constraint pins is deprecated.
-        let other = ElfMachine { machine: 99, flags: 0, bits: 32, big_endian: true };
+        let other = ElfMachine { machine: 99, flags: 0, bits: 32, big_endian: true, e_type: 0 };
         assert!(matches!(
             elf_selection(&root, other),
             Err(OpinionError::Unsupported(_))
@@ -686,14 +702,14 @@ mod tests {
             (0xf3, 0, 64, false, "RISCV:LE:64:default", "gcc"),
         ];
         for (machine, flags, bits, big_endian, language, compiler) in cases {
-            let image = ElfMachine { machine, flags, bits, big_endian };
+            let image = ElfMachine { machine, flags, bits, big_endian , e_type: 0};
             assert_eq!(
                 elf_selection(&install, image).unwrap(),
                 Selection { language: language.into(), compiler: compiler.into() },
                 "machine {machine:#x} flags {flags:#x}"
             );
         }
-        let unsupported = ElfMachine { machine: 0xfffe, flags: 0, bits: 32, big_endian: false };
+        let unsupported = ElfMachine { machine: 0xfffe, flags: 0, bits: 32, big_endian: false, e_type: 0 };
         assert!(elf_selection(&install, unsupported).is_err());
     }
 
@@ -724,7 +740,7 @@ mod tests {
             (0xf3, 0, 32, false),
         ];
         for (machine, flags, bits, big_endian) in rows {
-            let image = ElfMachine { machine, flags, bits, big_endian };
+            let image = ElfMachine { machine, flags, bits, big_endian , e_type: 0};
             let offline = offline_selection(image)
                 .unwrap_or_else(|| panic!("no offline row for {machine:#x}/{bits}"));
             assert_eq!(
@@ -737,12 +753,12 @@ mod tests {
         // A machine with no offline row and no install is refused, not guessed.
         let nowhere = Path::new("/ventris/does/not/exist");
         assert!(elf_selection(nowhere, ElfMachine {
-            machine: 0xfffe, flags: 0, bits: 32, big_endian: false
+            machine: 0xfffe, flags: 0, bits: 32, big_endian: false, e_type: 0
         })
         .is_err());
         assert_eq!(
             elf_selection(nowhere, ElfMachine {
-                machine: 0x3e, flags: 0, bits: 64, big_endian: false
+                machine: 0x3e, flags: 0, bits: 64, big_endian: false, e_type: 0
             })
             .unwrap()
             .language,

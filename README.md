@@ -1983,6 +1983,11 @@ imported nds.arm7 natively (3 functions, ARM:LE:32:v4t) | `tests/m5-002_nds.py` 
 | NDS cartridge (ARM9 + ARM7) | supported | **gated**: DWARF recall nds.arm9 1.0000 over 5 functions on `ARM:LE:32:v5t`; nds.arm7 0.7500 over 4 functions on `ARM:LE:32:v4t` with 1 recorded deficit (`tests/m5-002_nds.py`) |
 | PlayStation PS-EXE | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:LE:32:default` (`tests/m5-003_psx.py`) |
 | Nintendo 64 ROM (`.z64`) | supported | **gated**: DWARF recall 1.0000 over 5 functions on `MIPS:BE:64:64-32addr` (`tests/m5-004_n64.py`) |
+| NES iNES ROM (`.nes`) | supported | decodes on `6502:LE:16:default`; PRG at `0x8000`, vectors seeded |
+| Genesis / Mega Drive ROM (`.gen`) | supported | decodes on `68000:BE:32:default`; vectors + entry seeded |
+| Game Boy ROM (`.gb`) | supported | decodes on `GameBoy:LE:16:default`; header-checksum detection, banks at `0x0000`/`0x4000` |
+| SNES LoROM (`.sfc`) | supported | decodes on `65816:LE:16:default`; checksum+complement detection, 32 KiB chunks at `bank:0x8000` |
+| Sony PSP ELF (`e_type=0xffa0`) | supported | decodes on `Allegrex:LE:32:default`; VFPU ops surface as named `CALLOTHER`s (the Java inject library is not vendored) |
 
 **Not supported.** Each row names the fact that blocks it, and where
 that fact was checked.
@@ -1992,7 +1997,6 @@ that fact was checked.
 | PS Vita and Nintendo 3DS (encrypted containers) | Retail images are encrypted, and the keys are not in this repository or in the pinned Ghidra install. Fetching them would require a network call at runtime, which AGENTS.md II.1 reserves to the human and the project's offline guarantee forbids. Decrypted input supplied by the user is a separate, smaller task: it still needs a loader and a gate. | AGENTS.md II.1 row 'Any network call at runtime (signature DB fetch, model download)'; no key material or decryption code exists in this repository. |
 | PlayStation 2 (R5900 ELF) | The Emotion Engine's 128-bit multimedia instructions (MMI) and VU macro-mode operations do not decode: the pinned MIPS language mentions r5900 only as an IDA-PRO name mapping and defines no R5900 variant. Importing a PS2 ELF would decode the scalar subset and silently drop the rest. | MIPS/data/languages/mips.ldefs:127 external_name tool="IDA-PRO" name="r5900r" with no matching variant; zero matches for PADDW, PSUBW, QFSRV or PMFHL across MIPS/data/languages/*.sinc. |
 | PlayStation 3 (Cell SPU objects) | There is no SPU processor at all in the pinned tree, so SPU modules have no decoder. The PPU side is PowerPC, but an RE platform that decompiles only the PPU half of a PS3 title would misrepresent what it recovered. | Ghidra/Processors contains no SPU or Cell directory; zero .ldefs files declare an SPU processor. |
-| Sony PSP (Allegrex ELF/PBP) | The Allegrex core's VFPU is not modelled by any pinned SLEIGH language, so PSP code that uses vector instructions cannot be decoded, let alone decompiled. Adding it means writing a SLEIGH extension, which is its own task with its own gate. | Ghidra/Processors: zero files match 'allegrex' or 'vfpu'; MIPS/data/languages/mips.ldefs offers variants default, R6, micro, 16e, 64-32addr only. |
 | Xbox 360 (XEX) | VMX128 is not modelled: the pinned PowerPC language defines 64 VSX registers and no VMX128 variant, while the Xenon core exposes 128 vector registers with different encodings. Retail XEX images are also encrypted and compressed, which the encrypted-container row also covers. | PowerPC/data/languages/ppc_common.sinc:150 defines vs0..vs63; zero matches for 'vmx128' anywhere under Ghidra/Processors; ppc.ldefs offers Altivec variants only. |
 **Disassembly failure classes.** Instances observed over the measured corpus; zero is the gate, so any row with a count is a recorded defect.
 
