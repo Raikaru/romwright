@@ -141,9 +141,22 @@ pub(crate) fn is_prx(data: &[u8]) -> bool {
 /// Loads the image. `None` means "not a PSP module"; encrypted images are
 /// recognized but refused with a decrypt-first error.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
+    import_with(data, &super::keys::KeyStore::empty())
+}
+
+/// `import` with a user-supplied key store. PSP encryption is KIRK — a
+/// hardware crypto engine driven by device keys, not a file-supplied AES
+/// key — so no `prod.keys`-style dump can drive it. The keystore is accepted
+/// for interface uniformity; a `~PSP`/scrambled image still reports the
+/// decrypt-first gap (the honest answer: pre-decrypt with prxtool/PPSSPP).
+pub(crate) fn import_with(
+    data: &[u8],
+    _keys: &super::keys::KeyStore,
+) -> Option<Result<Vec<(String, NativeImport)>>> {
     if is_encrypted(data) {
         return Some(super::err(
-            "encrypted PSP module (~PSP/KIRK): decrypt first with prxtool, prxdecrypt or PPSSPP; the KIRK device keys are not public constants",
+            "encrypted PSP module (~PSP/KIRK): KIRK is device-key crypto with no \
+             file-supplied key; decrypt first with prxtool, prxdecrypt or PPSSPP",
         ));
     }
     if !is_prx(data) {

@@ -102,7 +102,7 @@ impl LiveProgram {
         // The loader's answer only: parsing is what makes the image usable,
         // and analysing it here would pay for exactly the whole-image pass
         // this module exists to avoid.
-        let import = native::load_container_with(binary, false, None, None)?
+        let import = native::load_container_with(binary, false, None, None, &native::keys::KeyStore::empty())?
             .into_iter()
             .map(|(_, import)| import)
             .next()

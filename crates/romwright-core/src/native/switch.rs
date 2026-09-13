@@ -246,7 +246,7 @@ fn header_magic(buf: &[u8]) -> bool {
 /// trial-decrypted as XTS sectors 0-1 under the header key (hactool
 /// `nca_decrypt_header`) plus each present FsHeader block as its own
 /// sector. None when neither form carries the magic.
-fn header_bytes(data: &[u8]) -> Option<Vec<u8>> {
+fn header_bytes(data: &[u8], header_key: &[u8; 32]) -> Option<Vec<u8>> {
     if data.len() < NCA_ENC_HDR_LEN {
         return None;
     }
@@ -256,21 +256,23 @@ fn header_bytes(data: &[u8]) -> Option<Vec<u8>> {
         return Some(buf);
     }
     let mut head = buf[..NCA_ENC_HDR_LEN].to_vec();
-    xts_data(&HEADER_KEY, 0, &mut head).ok()?;
+    xts_data(header_key, 0, &mut head).ok()?;
     buf[..NCA_ENC_HDR_LEN].copy_from_slice(&head);
     for i in 0..4 {
         let off = NCA_FSHDR_OFF + i * NCA_FSHDR_LEN;
         if buf.len() >= off + NCA_FSHDR_LEN {
-            xts_data(&HEADER_KEY, off, &mut buf[off..off + NCA_FSHDR_LEN]).ok()?;
+            xts_data(header_key, off, &mut buf[off..off + NCA_FSHDR_LEN]).ok()?;
         }
     }
     header_magic(&buf).then_some(buf)
 }
 
-fn read_header(data: &[u8]) -> Result<Vec<u8>> {
-    header_bytes(data)
+fn read_header(data: &[u8], header_key: &[u8; 32]) -> Result<Vec<u8>> {
+    header_bytes(data, header_key)
         .ok_or_else(|| super::ImportError::Bad("NCA header magic missing".into()))
 }
+
+
 
 /// One populated section-table entry: a byte range plus its FsHeader
 /// encryption type.
@@ -312,12 +314,12 @@ fn sections(hdr: &[u8]) -> Result<Vec<Section>> {
 
 /// The four section keys: the key area unwrapped with the key-area key
 /// (hactool `nca_decrypt_key_area`).
-fn section_keys(hdr: &[u8]) -> Result<[[u8; 16]; 4]> {
+fn section_keys(hdr: &[u8], key_area_key: &[u8; 16]) -> Result<[[u8; 16]; 4]> {
     let area = hdr
         .get(NCA_KEYAREA_OFF..NCA_KEYAREA_OFF + NCA_KEYAREA_LEN)
         .ok_or_else(|| super::ImportError::Bad("NCA key area outside header".into()))?;
     let mut raw = area.to_vec();
-    ecb_decrypt(&KEY_AREA_KEY, &mut raw)?;
+    ecb_decrypt(key_area_key, &mut raw)?;
     let mut keys = [[0u8; 16]; 4];
     for (i, key) in keys.iter_mut().enumerate() {
         key.copy_from_slice(&raw[i * 16..(i + 1) * 16]);
@@ -464,11 +466,10 @@ fn import_main(bytes: &[u8]) -> Result<NativeImport> {
     Ok(imp)
 }
 
-/// Imports an NCA: every section whose crypto resolves is searched for a
-/// PFS0 ExeFS holding `main`, which maps as the AARCH64 image.
-pub(crate) fn import_nca(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
-    let hdr = read_header(data)?;
-    let keys = section_keys(&hdr)?;
+pub(crate) fn import_nca(data: &[u8], header_key: &[u8; 32], key_area_key: &[u8; 16]) -> Result<Vec<(String, NativeImport)>> {
+    let hdr = read_header(data, header_key)?;
+    let keys = section_keys(&hdr, key_area_key)?;
+
     let mut out = Vec::new();
     for sec in sections(&hdr)? {
         let Some(raw) = section_bytes(data, &sec, &keys)? else {
@@ -592,8 +593,8 @@ fn parse_hfs0(data: &[u8], base: usize) -> Result<Vec<HfsFile>> {
 
 /// Imports an XCI: the root HFS0 names the partitions; `secure` holds the
 /// game NCAs (an HFS0 of NCAs, or a bare NCA chain stepped by content
-/// size), each imported like a standalone NCA.
-pub(crate) fn import_xci(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+pub(crate) fn import_xci(data: &[u8], header_key: &[u8; 32], key_area_key: &[u8; 16]) -> Result<Vec<(String, NativeImport)>> {
+
     let base = card_base(data)
         .ok_or_else(|| super::ImportError::Bad("XCI has no HEAD header".into()))?;
     // PartitionFsHeaderAddress: CardHeader+0x130, an absolute file offset.
@@ -621,7 +622,7 @@ pub(crate) fn import_xci(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
     if sbytes.len() >= 4 && &sbytes[0..4] == b"HFS0" {
         for file in parse_hfs0(sbytes, 0)? {
             let slice = sbytes.get(file.off..file.off + file.size).unwrap_or(&[]);
-            if file.name.ends_with(".nca") || header_bytes(slice).is_some() {
+            if file.name.ends_with(".nca") || header_bytes(slice, header_key).is_some() {
                 ncas.push((file.name, file.off, file.size));
             }
         }
@@ -630,7 +631,7 @@ pub(crate) fn import_xci(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
         let mut at = 0usize;
         for _ in 0..64 {
             let rest = sbytes.get(at..).unwrap_or(&[]);
-            let Some(hdr) = header_bytes(rest) else {
+            let Some(hdr) = header_bytes(rest, header_key) else {
                 break;
             };
             let size: usize = u64_le(&hdr, NCA_SIZE_OFF)?
@@ -659,7 +660,7 @@ pub(crate) fn import_xci(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
         let bytes = sbytes
             .get(off..off + size)
             .ok_or_else(|| super::ImportError::Bad("XCI NCA outside secure partition".into()))?;
-        for (suffix, imp) in import_nca(bytes)? {
+        for (suffix, imp) in import_nca(bytes, header_key, key_area_key)? {
             out.push((format!("{name}/{suffix}"), imp));
         }
     }
@@ -670,11 +671,29 @@ pub(crate) fn import_xci(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
 /// encrypted NCA hides its magic, so the NCA arm also pays for one header
 /// trial-decrypt before declining.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
-    if is_nca(data) || (data.len() >= NCA_ENC_HDR_LEN && header_bytes(data).is_some()) {
-        return Some(import_nca(data));
+    import_with(data, &super::keys::KeyStore::empty())
+}
+
+/// `import` with a user-supplied key store. `header_key` (32-byte XTS) and
+/// `key_area_key_application_00`/`key_area_key` (16-byte) come from the
+/// user's `prod.keys`; absent, the test stand-ins are used so fixtures still
+/// decrypt and a retail image reports its key gap rather than misdecrypt.
+pub(crate) fn import_with(
+    data: &[u8],
+    keys: &super::keys::KeyStore,
+) -> Option<Result<Vec<(String, NativeImport)>>> {
+    let header_key: [u8; 32] = keys
+        .get_array::<32>("header_key")
+        .unwrap_or(HEADER_KEY);
+    let key_area_key: [u8; 16] = keys
+        .get_array::<16>("key_area_key_application_00")
+        .or_else(|| keys.get_array::<16>("key_area_key"))
+        .unwrap_or(KEY_AREA_KEY);
+    if is_nca(data) || (data.len() >= NCA_ENC_HDR_LEN && header_bytes(data, &header_key).is_some()) {
+        return Some(import_nca(data, &header_key, &key_area_key));
     }
     if is_xci(data) {
-        return Some(import_xci(data));
+        return Some(import_xci(data, &header_key, &key_area_key));
     }
     if is_exefs(data) {
         return Some(import_exefs(data));
@@ -777,6 +796,18 @@ mod tests {
     /// Minimal Program NCA: one PartitionFS section holding `section`,
     /// encrypted per `enc`; the header is XTS-wrapped when asked.
     fn build_nca(section: &[u8], enc: u8, encrypt_header: bool) -> Vec<u8> {
+        build_nca_keyed(section, enc, encrypt_header, &HEADER_KEY, &KEY_AREA_KEY)
+    }
+
+    /// `build_nca` under caller-chosen header/key-area keys, so a test can
+    /// encrypt with a "retail" key and prove the KeyStore supplies it.
+    fn build_nca_keyed(
+        section: &[u8],
+        enc: u8,
+        encrypt_header: bool,
+        header_key: &[u8; 32],
+        key_area_key: &[u8; 16],
+    ) -> Vec<u8> {
         let mut body = section.to_vec();
         while body.len() % MEDIA_UNIT != 0 {
             body.push(0);
@@ -810,14 +841,14 @@ mod tests {
         for (i, key) in keys.iter().enumerate() {
             area[i * 16..(i + 1) * 16].copy_from_slice(key);
         }
-        ecb_encrypt(&KEY_AREA_KEY, &mut area);
+        ecb_encrypt(key_area_key, &mut area);
         hdr[NCA_KEYAREA_OFF..NCA_KEYAREA_OFF + NCA_KEYAREA_LEN].copy_from_slice(&area);
         hdr[NCA_FSHDR_OFF..NCA_FSHDR_OFF + 2].copy_from_slice(&2u16.to_le_bytes());
         hdr[NCA_FSHDR_OFF + 2] = 1; // PartitionFS
         hdr[NCA_FSHDR_OFF + 4] = enc;
         if encrypt_header {
-            xts_encrypt_sectors(&HEADER_KEY, 0, &mut hdr[..NCA_ENC_HDR_LEN]);
-            xts_encrypt_sectors(&HEADER_KEY, NCA_FSHDR_OFF, &mut hdr[NCA_FSHDR_OFF..NCA_HDR_LEN]);
+            xts_encrypt_sectors(header_key, 0, &mut hdr[..NCA_ENC_HDR_LEN]);
+            xts_encrypt_sectors(header_key, NCA_FSHDR_OFF, &mut hdr[NCA_FSHDR_OFF..NCA_HDR_LEN]);
         }
         hdr.extend_from_slice(&body);
         hdr
@@ -963,6 +994,39 @@ mod tests {
     }
 
     #[test]
+    fn nca_retail_keys_come_from_the_keystore() {
+        // A "retail" NCA encrypted under keys that are NOT the compiled-in
+        // stand-ins: without a KeyStore the import must fail (the stand-ins
+        // don't decrypt it); with the user's prod.keys values it must yield
+        // the main image. This is the whole point of the key channel.
+        let retail_header: [u8; 32] = *b"retail-switch-header-key-000000!";
+        let retail_area: [u8; 16] = *b"retail-keyarea-0";
+        let main = b"\x1f\x20\x03\xd5retail-main-payload-xyz".to_vec();
+        let pfs0 = build_pfs0(&[("main", &main)]);
+        let nca = build_nca_keyed(&pfs0, ENC_CTR, true, &retail_header, &retail_area);
+
+        // No keys supplied: the stand-ins cannot open it — the header magic
+        // never decrypts, so the NCA is not even recognised (None), and it
+        // must certainly not import.
+        assert!(
+            !matches!(import(&nca), Some(Ok(_))),
+            "retail NCA must not import under the test stand-ins"
+        );
+
+        // The user supplies their dumped prod.keys.
+        let mut store = crate::native::keys::KeyStore::empty();
+        store.parse_text_for_test(
+            "header_key = 72657461696c2d7377697463682d6865616465722d6b65792d30303030303021\n\
+             key_area_key_application_00 = 72657461696c2d6b6579617265612d30\n",
+        );
+        let Some(Ok(images)) = import_with(&nca, &store) else {
+            panic!("retail NCA with user keys was not imported");
+        };
+        assert_eq!(images.len(), 1);
+        assert_eq!(images[0].1.mappings[0].bytes, main);
+    }
+
+    #[test]
     fn nca_nso_main_uses_nso_loader() {
         let nso = build_nso();
         let pfs0 = build_pfs0(&[("main", &nso)]);
@@ -981,7 +1045,7 @@ mod tests {
     fn nca_without_main_errors() {
         let nca = build_nca(&vec![0u8; MEDIA_UNIT], ENC_NONE, false);
         assert!(matches!(import(&nca), Some(Err(_))));
-        assert!(matches!(import_nca(&vec![0u8; NCA_HDR_LEN]), Err(_)));
+        assert!(matches!(import_nca(&vec![0u8; NCA_HDR_LEN], &HEADER_KEY, &KEY_AREA_KEY), Err(_)));
     }
 
     #[test]

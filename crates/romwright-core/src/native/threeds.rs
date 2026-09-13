@@ -140,14 +140,25 @@ pub(crate) fn is_cia(data: &[u8]) -> bool {
 
 /// Tries each 3DS container in turn; None means none matched.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
+    import_with(data, &super::keys::KeyStore::empty())
+}
+
+/// `import` with a user-supplied key store. A `slot0xNN`/`slotNN` key (the
+/// bootrom keyslot the ncchflag selects) or `fixed_system` (the system fixed
+/// key) from an `aes_keys.txt`/`boot9` dump reaches the NCCH decrypt; absent,
+/// the console-provisioned key-gap error is unchanged.
+pub(crate) fn import_with(
+    data: &[u8],
+    keys: &super::keys::KeyStore,
+) -> Option<Result<Vec<(String, NativeImport)>>> {
     if is_cia(data) {
-        return Some(import_cia(data));
+        return Some(import_cia(data, keys));
     }
     if is_ncsd(data) {
-        return Some(import_ncsd(data));
+        return Some(import_ncsd_with(data, keys));
     }
     if is_ncch(data) {
-        return Some(import_ncch(data));
+        return Some(import_ncch_with(data, keys));
     }
     None
 }
@@ -365,7 +376,7 @@ fn parse_exefs(exefs: &[u8]) -> Result<Vec<ExefsFile>> {
 /// well-formed NCCH that carries no ARM11 `.code` (a CFA data archive):
 /// container walkers skip those, while a lone CFA is reported by the
 /// single-image wrapper.
-fn import_ncch_slice(ncch: &[u8], base: u64) -> Result<Option<NativeImport>> {
+fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Result<Option<NativeImport>> {
     let header = parse_ncch_header(ncch)?;
     let unit = ncch_media_unit(&header)?;
     let mul = |units: u32| -> Result<u64> {
@@ -403,32 +414,49 @@ fn import_ncch_slice(ncch: &[u8], base: u64) -> Result<Option<NativeImport>> {
     } else {
         None
     };
-
-    // Key selection mirrors ctrtool `ncch_determine_key`, minus the
-    // user-supplied keyfile: an exheader whose ARM11 program id already
-    // matches the header is an already-decrypted dump, then NoCrypto,
-    // then the zeros fixed key for non-system titles. Anything else needs
-    // console-provisioned keys this loader will not invent.
+    // Key selection mirrors ctrtool `ncch_determine_key`: an exheader whose
+    // ARM11 program id already matches the header is an already-decrypted
+    // dump, then NoCrypto, then the zeros fixed key for non-system titles.
+    // Slot-key and system-fixed content resolve through `keys` when the user
+    // supplied them.
     let raw_program_id_matches = exheader_raw.map_or(false, |raw| {
         ncch.len() >= 0x408 && raw.len() >= 0x208 && raw[0x200..0x208] == header.program_id
     });
+
     let key: Option<[u8; 16]> = if raw_program_id_matches || header.flags[7] & FLAG_NOCRYPTO != 0 {
         None
     } else if header.flags[7] & FLAG_FIXEDKEY != 0 {
         if program_id_is_system(&header.program_id) {
-            return err(
-                "NCCH uses the system fixed key, which is console-provisioned \
-                 and not embedded in this loader",
-            );
+            // The system fixed key is console-provisioned; a user's
+            // `fixed_system`/`slot0x..` dump supplies it when present.
+            match keys.get_array::<16>("fixed_system")
+                .or_else(|| keys.get_array::<16>("system_fixed_key"))
+            {
+                Some(k) => Some(k),
+                None => return err(
+                    "NCCH uses the system fixed key, which is console-provisioned; \
+                     supply it via --keys (fixed_system = <hex>)",
+                ),
+            }
+        } else {
+            Some(ZEROS_KEY)
         }
-        Some(ZEROS_KEY)
     } else {
-        return err(format!(
-            "NCCH uses secure slot crypto (ncchflag[3] selects keyslot {:#04x}); \
-             bootrom slot keys are console-provisioned and not embedded in this loader",
-            header.flags[3]
-        ));
+        // Secure slot crypto: the ncchflag[3] keyslot. A user's aes_keys.txt
+        // names it `slot0xNN` (boot9 dump convention).
+        let slot = header.flags[3];
+        let named = keys.get_array::<16>(&format!("slot0x{slot:02x}"))
+            .or_else(|| keys.get_array::<16>(&format!("slot{slot:02x}")))
+            .or_else(|| keys.get_array::<16>(&format!("slot0x{slot:02X}")));
+        match named {
+            Some(k) => Some(k),
+            None => return err(format!(
+                "NCCH uses secure slot crypto (keyslot {slot:#04x}); \
+                 supply the bootrom slot key via --keys (slot0x{slot:02x} = <hex>)",
+            )),
+        }
     };
+
     let exefs_start = mul(header.exefs_off_units)?;
     let exefs_len = mul(header.exefs_size_units)?;
     if header.exefs_size_units != 0 {
@@ -529,7 +557,11 @@ fn import_ncch_slice(ncch: &[u8], base: u64) -> Result<Option<NativeImport>> {
 
 /// Imports a lone NCCH image.
 fn import_ncch(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
-    match import_ncch_slice(data, 0)? {
+    import_ncch_with(data, &super::keys::KeyStore::empty())
+}
+
+fn import_ncch_with(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
+    match import_ncch_slice(data, 0, keys)? {
         Some(imp) => Ok(vec![(".code".into(), imp)]),
         None => err("NCCH carries no ARM11 .code (CFA data archive?)"),
     }
@@ -554,6 +586,10 @@ fn ncsd_media_unit(data: &[u8]) -> Result<u64> {
 /// skipped; a partition that is recognised but corrupt is remembered, and
 /// only fails the import when nothing else yielded an image.
 fn import_ncsd(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    import_ncsd_with(data, &super::keys::KeyStore::empty())
+}
+
+fn import_ncsd_with(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     if data.len() < 0x160 || data[0x100..0x104] != *b"NCSD" {
         return err("not an NCSD image");
     }
@@ -587,7 +623,7 @@ fn import_ncsd(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
         if !is_ncch(slice) {
             continue;
         }
-        match import_ncch_slice(slice, off) {
+        match import_ncch_slice(slice, off, keys) {
             Ok(Some(imp)) => out.push((format!("partition{i}"), imp)),
             Ok(None) => {}
             Err(e) => {
@@ -675,7 +711,7 @@ fn parse_tmd(tmd: &[u8]) -> Result<Vec<TmdContent>> {
 /// recurses into the NCCH it holds. Titlekey-encrypted content needs the
 /// ticket title key plus the console common key, so it is reported instead
 /// of guessed at.
-fn import_cia(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+fn import_cia(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     if data.len() < 0x20 {
         return err("CIA header too short");
     }
@@ -749,7 +785,7 @@ fn import_cia(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
         }
         return err("CIA main content is not an NCCH image");
     }
-    match import_ncch_slice(blob, off)? {
+    match import_ncch_slice(blob, off, keys)? {
         Some(imp) => Ok(vec![(".code".into(), imp)]),
         None => err("CIA content NCCH carries no ARM11 .code"),
     }
