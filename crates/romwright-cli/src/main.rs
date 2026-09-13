@@ -1388,6 +1388,28 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!("-- {} functions", rows.len());
             }
         }
+        "oracle-signatures" => {
+            // Dump the oracle's recovered signatures as JSON — the head-to-head
+            // type gate scores these against DWARF truth.
+            let program = args.get(2).ok_or("oracle-signatures needs a program name")?.clone();
+            let mut bridge = launch_bridge(args)?;
+            let session = format!("cli-{program}");
+            bridge.open(&session, &program).map_err(|e| e.to_string())?;
+            let sigs = bridge.oracle_signatures(&session).map_err(|e| e.to_string())?;
+            let out: Vec<serde_json::Value> = sigs
+                .iter()
+                .map(|s| {
+                    serde_json::json!({
+                        "entry": s.entry,
+                        "signature": s.signature,
+                        "return_type": s.return_type,
+                        "signature_source": s.signature_source,
+                    })
+                })
+                .collect();
+            println!("{}", serde_json::to_string(&out).map_err(|e| e.to_string())?);
+            bridge.shutdown().map_err(|e| e.to_string())?;
+        }
         "status" => {
             let program = args.get(2).ok_or("status needs a program name")?.clone();
             let status = core.analysis_status(&program).map_err(|e| e.to_string())?;
