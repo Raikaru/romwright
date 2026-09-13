@@ -1,0 +1,19 @@
+# Xenon (Xbox 360) — PowerPC A2 core + VMX128 (128-register vector unit).
+# Base is the PowerISA A2/AltiVec spec; VMX128 replaces plain AltiVec with
+# the 128-register extension. Encoding per Biallas vmx128.txt rev 1.2.
+
+@define ENDIAN "big"
+@define IS_ISA "1"
+@define NoLegacyIntegerMultiplyAccumulate "1"
+@define REGISTER_SIZE "8"
+@define BIT_64 "64"
+@define EATRUNC "ea"
+@define CTR_OFFSET "32"
+
+@include "ppc_common_vmx.sinc"
+@include "ppc_isa.sinc"
+@include "ppc_a2.sinc"
+@include "quicciii.sinc"
+@include "FPRC.sinc"
+@include "altivec_xenon.sinc"
+@include "vmx128.sinc"

@@ -1,0 +1,259 @@
+# VMX128 — Xbox 360 Xenon 128-register vector extension.
+# Encoding per Biallas vmx128.txt rev 1.2 + xenia ppc_opcode_table_gen.cc.
+# Register operands are split fields; the high bits live inside the low-11
+# opcode region, so each operand is a sub-table over 4 display/variable
+# field pairs (one per 32-reg bank).
+
+define register offset=0x5000 size=16 [
+  vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63
+];
+define register offset=0x5400 size=16 [
+  vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127
+];
+
+define pcodeop vaddfp128Op;
+define pcodeop vsubfp128Op;
+define pcodeop vmulfp128Op;
+define pcodeop vmaddfp128Op;
+define pcodeop vmaddcfp128Op;
+define pcodeop vnmsubfp128Op;
+define pcodeop vmsum3fp128Op;
+define pcodeop vmsum4fp128Op;
+define pcodeop vand128Op;
+define pcodeop vandc128Op;
+define pcodeop vnor128Op;
+define pcodeop vor128Op;
+define pcodeop vxor128Op;
+define pcodeop vsel128Op;
+define pcodeop vslo128Op;
+define pcodeop vsro128Op;
+define pcodeop vpkshss128Op;
+define pcodeop vpkshus128Op;
+define pcodeop vpkswss128Op;
+define pcodeop vpkswus128Op;
+define pcodeop vpkuhum128Op;
+define pcodeop vpkuhus128Op;
+define pcodeop vpkuwum128Op;
+define pcodeop vpkuwus128Op;
+define pcodeop vrlw128Op;
+define pcodeop vslw128Op;
+define pcodeop vsraw128Op;
+define pcodeop vsrw128Op;
+define pcodeop vmaxfp128Op;
+define pcodeop vminfp128Op;
+define pcodeop vmrghw128Op;
+define pcodeop vmrglw128Op;
+define pcodeop vupkhsb128Op;
+define pcodeop vupklsb128Op;
+define pcodeop vcmpeqfp128Op;
+define pcodeop vcmpgefp128Op;
+define pcodeop vcmpgtfp128Op;
+define pcodeop vcmpbfp128Op;
+define pcodeop vcmpequw128Op;
+define pcodeop vcfpsxws128Op;
+define pcodeop vcfpuxws128Op;
+define pcodeop vcsxwfp128Op;
+define pcodeop vcuxwfp128Op;
+define pcodeop vrefp128Op;
+define pcodeop vrfim128Op;
+define pcodeop vrfin128Op;
+define pcodeop vrfip128Op;
+define pcodeop vrfiz128Op;
+define pcodeop vrsqrtefp128Op;
+define pcodeop vexptefp128Op;
+define pcodeop vlogefp128Op;
+define pcodeop vspltw128Op;
+define pcodeop vspltisw128Op;
+define pcodeop vupkd3d128Op;
+define pcodeop vpermwi128Op;
+define pcodeop vpkd3d128Op;
+define pcodeop vrlimi128Op;
+define pcodeop lvsl128Op;
+define pcodeop lvsr128Op;
+define pcodeop lvewx128Op;
+define pcodeop lvx128Op;
+define pcodeop lvxl128Op;
+define pcodeop lvlx128Op;
+define pcodeop lvrx128Op;
+define pcodeop lvlxl128Op;
+define pcodeop lvrxl128Op;
+define pcodeop stvewx128Op;
+define pcodeop stvx128Op;
+define pcodeop stvxl128Op;
+define pcodeop stvlx128Op;
+define pcodeop stvrx128Op;
+define pcodeop stvlxl128Op;
+define pcodeop stvrxl128Op;
+define pcodeop vperm128Op;
+define pcodeop vsldoi128Op;
+
+# vmxD: 128 regs via 4 slices (high=VDh)
+attach names [ VDd0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach variables [ VDv0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach names [ VDd1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach variables [ VDv1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach names [ VDd2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach variables [ VDv2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach names [ VDd3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+attach variables [ VDv3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+vmxD: VDd0	is VDh=0 & VDd0 & VDv0 { export VDv0; }
+vmxD: VDd1	is VDh=1 & VDd1 & VDv1 { export VDv1; }
+vmxD: VDd2	is VDh=2 & VDd2 & VDv2 { export VDv2; }
+vmxD: VDd3	is VDh=3 & VDd3 & VDv3 { export VDv3; }
+# vmxS: 128 regs via 4 slices (high=VDh)
+attach names [ VSd0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach variables [ VSv0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach names [ VSd1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach variables [ VSv1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach names [ VSd2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach variables [ VSv2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach names [ VSd3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+attach variables [ VSv3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+vmxS: VSd0	is VDh=0 & VSd0 & VSv0 { export VSv0; }
+vmxS: VSd1	is VDh=1 & VSd1 & VSv1 { export VSv1; }
+vmxS: VSd2	is VDh=2 & VSd2 & VSv2 { export VSv2; }
+vmxS: VSd3	is VDh=3 & VSd3 & VSv3 { export VSv3; }
+# vmxA: 128 regs via 4 slices (high=VA_A:VA_a)
+attach names [ VAd0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach variables [ VAv0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach names [ VAd1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach variables [ VAv1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach names [ VAd2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach variables [ VAv2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach names [ VAd3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+attach variables [ VAv3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+vmxA: VAd0	is VA_A=0 & VA_a=0 & VAd0 & VAv0 { export VAv0; }
+vmxA: VAd1	is VA_A=0 & VA_a=1 & VAd1 & VAv1 { export VAv1; }
+vmxA: VAd2	is VA_A=1 & VA_a=0 & VAd2 & VAv2 { export VAv2; }
+vmxA: VAd3	is VA_A=1 & VA_a=1 & VAd3 & VAv3 { export VAv3; }
+# vmxB: 128 regs via 4 slices (high=VBh)
+attach names [ VBd0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach variables [ VBv0 ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 vmx8 vmx9 vmx10 vmx11 vmx12 vmx13 vmx14 vmx15 vmx16 vmx17 vmx18 vmx19 vmx20 vmx21 vmx22 vmx23 vmx24 vmx25 vmx26 vmx27 vmx28 vmx29 vmx30 vmx31 ];
+attach names [ VBd1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach variables [ VBv1 ]
+	[ vmx32 vmx33 vmx34 vmx35 vmx36 vmx37 vmx38 vmx39 vmx40 vmx41 vmx42 vmx43 vmx44 vmx45 vmx46 vmx47 vmx48 vmx49 vmx50 vmx51 vmx52 vmx53 vmx54 vmx55 vmx56 vmx57 vmx58 vmx59 vmx60 vmx61 vmx62 vmx63 ];
+attach names [ VBd2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach variables [ VBv2 ]
+	[ vmx64 vmx65 vmx66 vmx67 vmx68 vmx69 vmx70 vmx71 vmx72 vmx73 vmx74 vmx75 vmx76 vmx77 vmx78 vmx79 vmx80 vmx81 vmx82 vmx83 vmx84 vmx85 vmx86 vmx87 vmx88 vmx89 vmx90 vmx91 vmx92 vmx93 vmx94 vmx95 ];
+attach names [ VBd3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+attach variables [ VBv3 ]
+	[ vmx96 vmx97 vmx98 vmx99 vmx100 vmx101 vmx102 vmx103 vmx104 vmx105 vmx106 vmx107 vmx108 vmx109 vmx110 vmx111 vmx112 vmx113 vmx114 vmx115 vmx116 vmx117 vmx118 vmx119 vmx120 vmx121 vmx122 vmx123 vmx124 vmx125 vmx126 vmx127 ];
+vmxB: VBd0	is VBh=0 & VBd0 & VBv0 { export VBv0; }
+vmxB: VBd1	is VBh=1 & VBd1 & VBv1 { export VBv1; }
+vmxB: VBd2	is VBh=2 & VBd2 & VBv2 { export VBv2; }
+vmxB: VBd3	is VBh=3 & VBd3 & VBv3 { export VBv3; }
+attach names [ VMXCn ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 ];
+attach variables [ VMXC ]
+	[ vmx0 vmx1 vmx2 vmx3 vmx4 vmx5 vmx6 vmx7 ];
+vmxC: VMXCn	is VMXCn & VMXC { export VMXC; }
+
+# ---- 3-operand ALU/logical (opcode = XOP4 + VMXB4) ----
+:vaddfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=0 & VMXB4=1 { vaddfp128Op(vmxD,vmxA,vmxB); }
+:vsubfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=1 & VMXB4=1 { vsubfp128Op(vmxD,vmxA,vmxB); }
+:vmulfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=2 & VMXB4=1 { vmulfp128Op(vmxD,vmxA,vmxB); }
+:vmaddfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=3 & VMXB4=1 { vmaddfp128Op(vmxD,vmxA,vmxB); }
+:vmaddcfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=4 & VMXB4=1 { vmaddcfp128Op(vmxD,vmxA,vmxB); }
+:vnmsubfp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=5 & VMXB4=1 { vnmsubfp128Op(vmxD,vmxA,vmxB); }
+:vmsum3fp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=6 & VMXB4=1 { vmsum3fp128Op(vmxD,vmxA,vmxB); }
+:vmsum4fp128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=7 & VMXB4=1 { vmsum4fp128Op(vmxD,vmxA,vmxB); }
+:vand128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=8 & VMXB4=1 { vand128Op(vmxD,vmxA,vmxB); }
+:vandc128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=9 & VMXB4=1 { vandc128Op(vmxD,vmxA,vmxB); }
+:vnor128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=10 & VMXB4=1 { vnor128Op(vmxD,vmxA,vmxB); }
+:vor128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=11 & VMXB4=1 { vor128Op(vmxD,vmxA,vmxB); }
+:vxor128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=12 & VMXB4=1 { vxor128Op(vmxD,vmxA,vmxB); }
+:vsel128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=13 & VMXB4=1 { vsel128Op(vmxD,vmxA,vmxB); }
+:vslo128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=14 & VMXB4=1 { vslo128Op(vmxD,vmxA,vmxB); }
+:vsro128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=15 & VMXB4=1 { vsro128Op(vmxD,vmxA,vmxB); }
+:vpkshss128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=8 & VMXB4=0 { vpkshss128Op(vmxD,vmxA,vmxB); }
+:vpkshus128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=9 & VMXB4=0 { vpkshus128Op(vmxD,vmxA,vmxB); }
+:vpkswss128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=10 & VMXB4=0 { vpkswss128Op(vmxD,vmxA,vmxB); }
+:vpkswus128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=11 & VMXB4=0 { vpkswus128Op(vmxD,vmxA,vmxB); }
+:vpkuhum128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=12 & VMXB4=0 { vpkuhum128Op(vmxD,vmxA,vmxB); }
+:vpkuhus128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=13 & VMXB4=0 { vpkuhus128Op(vmxD,vmxA,vmxB); }
+:vpkuwum128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=14 & VMXB4=0 { vpkuwum128Op(vmxD,vmxA,vmxB); }
+:vpkuwus128 vmxD,vmxA,vmxB	is OP=5 & vmxD & vmxA & vmxB & XOP4=15 & VMXB4=0 { vpkuwus128Op(vmxD,vmxA,vmxB); }
+:vrlw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=1 & VMXB4=1 { vrlw128Op(vmxD,vmxA,vmxB); }
+:vslw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=3 & VMXB4=1 { vslw128Op(vmxD,vmxA,vmxB); }
+:vsraw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=5 & VMXB4=1 { vsraw128Op(vmxD,vmxA,vmxB); }
+:vsrw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=7 & VMXB4=1 { vsrw128Op(vmxD,vmxA,vmxB); }
+:vmaxfp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=10 & VMXB4=0 { vmaxfp128Op(vmxD,vmxA,vmxB); }
+:vminfp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=11 & VMXB4=0 { vminfp128Op(vmxD,vmxA,vmxB); }
+:vmrghw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=12 & VMXB4=0 { vmrghw128Op(vmxD,vmxA,vmxB); }
+:vmrglw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=13 & VMXB4=0 { vmrglw128Op(vmxD,vmxA,vmxB); }
+:vupkhsb128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=14 & VMXB4=0 { vupkhsb128Op(vmxD,vmxA,vmxB); }
+:vupklsb128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=15 & VMXB4=0 { vupklsb128Op(vmxD,vmxA,vmxB); }
+# ---- compares ----
+:vcmpeqfp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=0 & VMXB4=0 { vcmpeqfp128Op(vmxD,vmxA,vmxB); }
+:vcmpgefp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=2 & VMXB4=0 { vcmpgefp128Op(vmxD,vmxA,vmxB); }
+:vcmpgtfp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=4 & VMXB4=0 { vcmpgtfp128Op(vmxD,vmxA,vmxB); }
+:vcmpbfp128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=6 & VMXB4=0 { vcmpbfp128Op(vmxD,vmxA,vmxB); }
+:vcmpequw128 vmxD,vmxA,vmxB	is OP=6 & vmxD & vmxA & vmxB & XOP4=8 & VMXB4=0 { vcmpequw128Op(vmxD,vmxA,vmxB); }
+# ---- 2-operand / immediate (opcode = XOP7) ----
+:vcfpsxws128 vmxD,vmxB,SIMM	is OP=6 & vmxD & SIMM & vmxB & XOP7=35 { vcfpsxws128Op(vmxD,vmxB,SIMM:4); }
+:vcfpuxws128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=39 { vcfpuxws128Op(vmxD,vmxB,UIMM:4); }
+:vcsxwfp128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=43 { vcsxwfp128Op(vmxD,vmxB,UIMM:4); }
+:vcuxwfp128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=47 { vcuxwfp128Op(vmxD,vmxB,UIMM:4); }
+:vrefp128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=99 { vrefp128Op(vmxD,vmxB); }
+:vrfim128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=51 { vrfim128Op(vmxD,vmxB); }
+:vrfin128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=55 { vrfin128Op(vmxD,vmxB); }
+:vrfip128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=59 { vrfip128Op(vmxD,vmxB); }
+:vrfiz128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=63 { vrfiz128Op(vmxD,vmxB); }
+:vrsqrtefp128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=103 { vrsqrtefp128Op(vmxD,vmxB); }
+:vexptefp128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=107 { vexptefp128Op(vmxD,vmxB); }
+:vlogefp128 vmxD,vmxB	is OP=6 & vmxD & vmxB & XOP7=111 { vlogefp128Op(vmxD,vmxB); }
+:vspltw128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=115 { vspltw128Op(vmxD,vmxB,UIMM:4); }
+:vspltisw128 vmxD,vmxB,SIMM	is OP=6 & vmxD & SIMM & vmxB & XOP7=119 { vspltisw128Op(vmxD,vmxB,SIMM:4); }
+:vupkd3d128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=127 { vupkd3d128Op(vmxD,vmxB,UIMM:4); }
+:vpermwi128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=33 { vpermwi128Op(vmxD,vmxB,UIMM:4); }
+:vpkd3d128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=97 { vpkd3d128Op(vmxD,vmxB,UIMM:4); }
+:vrlimi128 vmxD,vmxB,UIMM	is OP=6 & vmxD & UIMM & vmxB & XOP7=113 { vrlimi128Op(vmxD,vmxB,UIMM:4); }
+# ---- load/store (opcode = XOP9, VBh=3) ----
+:lvsl128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=0 & VBh=3 { lvsl128Op(vmxD,RA_OR_ZERO,B); }
+:lvsr128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=16 & VBh=3 { lvsr128Op(vmxD,RA_OR_ZERO,B); }
+:lvewx128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=32 & VBh=3 { lvewx128Op(vmxD,RA_OR_ZERO,B); }
+:lvx128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=48 & VBh=3 { lvx128Op(vmxD,RA_OR_ZERO,B); }
+:lvxl128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=176 & VBh=3 { lvxl128Op(vmxD,RA_OR_ZERO,B); }
+:lvlx128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=256 & VBh=3 { lvlx128Op(vmxD,RA_OR_ZERO,B); }
+:lvrx128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=272 & VBh=3 { lvrx128Op(vmxD,RA_OR_ZERO,B); }
+:lvlxl128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=384 & VBh=3 { lvlxl128Op(vmxD,RA_OR_ZERO,B); }
+:lvrxl128 vmxD,RA_OR_ZERO,B	is OP=4 & vmxD & RA_OR_ZERO & B & XOP9=400 & VBh=3 { lvrxl128Op(vmxD,RA_OR_ZERO,B); }
+:stvewx128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=96 & VBh=3 { stvewx128Op(vmxS,RA_OR_ZERO,B); }
+:stvx128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=112 & VBh=3 { stvx128Op(vmxS,RA_OR_ZERO,B); }
+:stvxl128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=240 & VBh=3 { stvxl128Op(vmxS,RA_OR_ZERO,B); }
+:stvlx128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=320 & VBh=3 { stvlx128Op(vmxS,RA_OR_ZERO,B); }
+:stvrx128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=336 & VBh=3 { stvrx128Op(vmxS,RA_OR_ZERO,B); }
+:stvlxl128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=448 & VBh=3 { stvlxl128Op(vmxS,RA_OR_ZERO,B); }
+:stvrxl128 vmxS,RA_OR_ZERO,B	is OP=4 & vmxS & RA_OR_ZERO & B & XOP9=464 & VBh=3 { stvrxl128Op(vmxS,RA_OR_ZERO,B); }
+# ---- special ----
+:vperm128 vmxD,vmxA,vmxB,vmxC	is OP=5 & vmxD & vmxA & vmxB & vmxC & XOP4=0 & VMXB4=0 { vperm128Op(vmxD,vmxA,vmxB,vmxC); }
+:vsldoi128 vmxD,vmxA,vmxB,SHB	is OP=4 & vmxD & vmxA & vmxB & SHB & XOP9=4 { vsldoi128Op(vmxD,vmxA,vmxB,SHB:1); }

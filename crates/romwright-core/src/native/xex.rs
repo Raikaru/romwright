@@ -1,4 +1,4 @@
-//! Xbox 360 XEX2 images (Xenon = PowerPC A2, `PowerPC:BE:64:A2L-32addr`).
+//! Xbox 360 XEX2 images (Xenon = PowerPC A2, `PowerPC:BE:64:Xenon-32addr`).
 //!
 //! A `.xex` is a big-endian container wrapping an encrypted, optionally
 //! LZX-compressed PE image. The format is ported from zeroKilo/XEXLoaderWV
@@ -328,7 +328,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         mappings,
         mapping_names: names,
         format: "xex".into(),
-        language: "PowerPC:BE:64:A2ALT-32addr".into(),
+        language: "PowerPC:BE:64:Xenon-32addr".into(),
         process_entry: Some(entry_addr),
         ..Default::default()
     };
