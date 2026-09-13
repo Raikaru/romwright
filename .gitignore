@@ -59,3 +59,4 @@ __pycache__/
 
 # Compiled SLEIGH artifacts (regenerate via native/languages/*/install.sh)
 native/languages/**/*.sla
+project.sqlite
