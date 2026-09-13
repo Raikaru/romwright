@@ -268,6 +268,7 @@ fn signatures(args: &[String]) -> Result<(), String> {
                             flags,
                             bits: if class64 { 64 } else { 32 },
                             big_endian,
+                            e_type: 0,
                         },
                     )
                     .ok()
