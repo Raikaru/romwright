@@ -164,4 +164,21 @@ mod tests {
         assert!(languages.join("ARM.ldefs").is_file());
         fs::remove_dir_all(root).unwrap();
     }
+
+    #[test]
+    fn resolves_installed_xenon_language() {
+        let install = std::path::Path::new(&std::env::var("HOME").unwrap())
+            .join("ghidra_12.1.3_PUBLIC");
+        if !install.is_dir() {
+            eprintln!("skipping: no Ghidra install at {}", install.display());
+            return;
+        }
+        let dir = directory_for_id(&install, "PowerPC:BE:64:Xenon-32addr")
+            .unwrap()
+            .expect("Xenon-32addr not installed; run native/languages/xenon/install.sh");
+        let sla = slafile_for_id(&dir, "PowerPC:BE:64:Xenon-32addr")
+            .unwrap()
+            .expect("no slafile in xenon.ldefs");
+        assert!(dir.join(sla).is_file(), "xenon.sla missing in {}", dir.display());
+    }
 }

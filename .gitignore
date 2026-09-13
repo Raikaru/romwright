@@ -60,3 +60,33 @@ __pycache__/
 # Compiled SLEIGH artifacts (regenerate via native/languages/*/install.sh)
 native/languages/**/*.sla
 project.sqlite
+# Xenon language: stock PowerPC sincs are symlinked in by install.sh at
+# build time (absolute paths into the Ghidra install); only the xenon-local
+# copies (ppc_common_vmx, altivec_xenon, vmx128) are committed.
+native/languages/xenon/4xx.sinc
+native/languages/xenon/FPRC.sinc
+native/languages/xenon/SPEF_SCR.sinc
+native/languages/xenon/SPE_APU.sinc
+native/languages/xenon/SPE_EFSD.sinc
+native/languages/xenon/SPE_EFV.sinc
+native/languages/xenon/SPE_FloatMulAdd.sinc
+native/languages/xenon/Scalar_SPFP.sinc
+native/languages/xenon/altivec.sinc
+native/languages/xenon/evx.sinc
+native/languages/xenon/g2.sinc
+native/languages/xenon/lmwInstructions.sinc
+native/languages/xenon/lswInstructions.sinc
+native/languages/xenon/mulhwInstructions.sinc
+native/languages/xenon/ppc_a2.sinc
+native/languages/xenon/ppc_common.sinc
+native/languages/xenon/ppc_embedded.sinc
+native/languages/xenon/ppc_instructions.sinc
+native/languages/xenon/ppc_isa.sinc
+native/languages/xenon/ppc_vle.sinc
+native/languages/xenon/quicciii.sinc
+native/languages/xenon/stmwInstructions.sinc
+native/languages/xenon/stswiInstructions.sinc
+native/languages/xenon/vsx.sinc
+# Build artifact from the disasm harness.
+third_party/ghidra/decompiler/libsla.a
+third_party/ghidra/decompiler/com_opt/
