@@ -49,13 +49,17 @@ struct Node {
 pub struct Solution {
     /// Register offset (or unique id) -> resolved type.
     pub types: BTreeMap<u64, Ty>,
+    /// What each call site passed: callee address -> (param register,
+    /// observed argument type). This is the caller→callee direction — the
+    /// caller's solved argument type refines the callee's parameter.
+    pub calls: BTreeMap<u64, Vec<(u64, Ty)>>,
 }
 
 /// A callee's recovered signature, asserted into a caller's solve so the
 /// argument registers and the return value take the callee's types. This
 /// is the interprocedural half of BinSub: the callee's `Fact` flows into
 /// the caller as a constraint.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Signature {
     /// Parameter register offset -> the callee's solved type for it.
     pub params: Vec<(u64, Ty)>,
@@ -177,6 +181,9 @@ struct Collector<'a> {
     /// the destination register hold the source's var; a CALL makes the
     /// return register hold a fresh var carrying the callee's return type.
     holding: BTreeMap<u64, Var>,
+    /// (callee address, param register, argument var) at each call — the
+    /// caller→callee observations the fixpoint feeds back.
+    call_args: Vec<(u64, u64, Var)>,
 }
 
 impl<'a> Collector<'a> {
@@ -197,6 +204,7 @@ impl<'a> Collector<'a> {
             spill_alias: None,
             callees,
             holding: BTreeMap::new(),
+            call_args: Vec::new(),
         }
     }
 
@@ -419,6 +427,9 @@ impl<'a> Collector<'a> {
                             }),
                         };
                         self.assert_ty(var, ty);
+                        // The caller→callee observation: the type this var
+                        // resolves to refines the callee's parameter.
+                        self.call_args.push((target.offset, *reg, var));
                     }
                     for (reg, ty) in &sig.returns {
                         // The return register holds a fresh value after the
@@ -774,13 +785,10 @@ impl<'a> Collector<'a> {
             }
         }
 
-        // Resolve each variable to a structural type.
-        let mut types = BTreeMap::new();
+        // Resolve each variable to a structural type — keyed by var so a
+        // call argument that is a temp (not a register) still resolves.
+        let mut var_types: BTreeMap<Var, Ty> = BTreeMap::new();
         for (var, node) in &nodes {
-            let (space, offset) = &self.names[*var as usize];
-            if space != "register" {
-                continue;
-            }
             let ty = if !node.fields.is_empty() {
                 if node.fields.len() == 1 && node.fields.contains_key(&0) {
                     Ty::Ptr(Box::new(Ty::Scalar(node.fields[&0].class)))
@@ -794,9 +802,25 @@ impl<'a> Collector<'a> {
             } else {
                 Ty::Scalar(node.cap)
             };
-            types.insert(*offset, ty);
+            var_types.insert(*var, ty);
         }
-        Solution { types }
+        // The register-offset view callers read.
+        let mut types = BTreeMap::new();
+        for (var, ty) in &var_types {
+            let (space, offset) = &self.names[*var as usize];
+            if space == "register" {
+                types.insert(*offset, ty.clone());
+            }
+        }
+        // The caller→callee observations: each call's argument var resolves
+        // to the type the caller actually passed.
+        let mut calls: BTreeMap<u64, Vec<(u64, Ty)>> = BTreeMap::new();
+        for (callee, reg, var) in &self.call_args {
+            if let Some(ty) = var_types.get(var) {
+                calls.entry(*callee).or_default().push((*reg, ty.clone()));
+            }
+        }
+        Solution { types, calls }
     }
 }
 
@@ -935,6 +959,63 @@ mod tests {
                 other => panic!("expected a struct, got {other:?}"),
             },
             other => panic!("expected a pointer, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_call_records_the_argument_type_the_caller_observed() {
+        // The caller dereferences rdi at +0x34 (making it a struct
+        // pointer), then passes it to a callee whose signature is still
+        // unknown. `calls` should record the struct type so the callee's
+        // inferred signature refines — the caller→callee direction.
+        let mut callees = BTreeMap::new();
+        callees.insert(
+            0x2000u64,
+            Signature {
+                params: vec![(0x38, Ty::Scalar(Class::Unknown))],
+                returns: vec![],
+            },
+        );
+        let solution = solve_with(
+            &[
+                // *(rdi + 0x34) = 1.0f — rdi is a struct pointer.
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0x34, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![
+                            varnode("const", 0x1b1, 4),
+                            varnode("unique", 0x100, 8),
+                            varnode("const", 0x3f800000, 4),
+                        ],
+                    ),
+                ]),
+                instruction(vec![op(
+                    "CALL",
+                    None,
+                    vec![varnode("ram", 0x2000, 8)],
+                )]),
+            ],
+            &callees,
+        );
+        let observed = solution
+            .calls
+            .get(&0x2000)
+            .and_then(|args| args.iter().find(|(r, _)| *r == 0x38))
+            .map(|(_, ty)| ty);
+        match observed {
+            Some(Ty::Ptr(inner)) => match inner.as_ref() {
+                Ty::Struct(fields) => {
+                    assert!(fields.contains_key(&0x34), "observed field: {fields:?}");
+                }
+                other => panic!("expected a struct, got {other:?}"),
+            },
+            other => panic!("expected a pointer observation, got {other:?}"),
         }
     }
 }

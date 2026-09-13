@@ -172,6 +172,53 @@ impl Ty {
     }
 }
 
+impl Ty {
+    /// The least type above both — the join a caller's observed argument
+    /// type makes with a callee's inferred parameter type. Scalars join on
+    /// their class; structs union their fields (a field either side saw is
+    /// evidence); pointers join their pointees; a conflict falls back to
+    /// the wider claim rather than collapsing to Top.
+    pub fn join(&self, other: &Ty) -> Ty {
+        match (self, other) {
+            (Ty::Unknown, t) | (t, Ty::Unknown) => t.clone(),
+            (Ty::Scalar(a), Ty::Scalar(b)) => Ty::Scalar(a.join(*b)),
+            (Ty::Ptr(a), Ty::Ptr(b)) => Ty::Ptr(Box::new(a.join(b))),
+            (Ty::Struct(a), Ty::Struct(b)) => {
+                let mut fields = a.clone();
+                for (off, f) in b {
+                    fields
+                        .entry(*off)
+                        .and_modify(|e| {
+                            e.class = e.class.join(f.class);
+                            e.size = e.size.max(f.size);
+                        })
+                        .or_insert(*f);
+                }
+                Ty::Struct(fields)
+            }
+            (
+                Ty::Array { elem: ae, stride: as_ },
+                Ty::Array { elem: be, stride: bs },
+            ) => Ty::Array {
+                elem: Box::new(ae.join(be)),
+                stride: (*as_).max(*bs),
+            },
+            // A pointer and a scalar disagree: the pointer is the more
+            // informative claim (a scalar use of a pointer is a width, not
+            // a refutation).
+            (Ty::Ptr(_), _) | (_, Ty::Ptr(_)) => {
+                if matches!(self, Ty::Ptr(_)) { self.clone() } else { other.clone() }
+            }
+            (Ty::Struct(_), _) | (_, Ty::Struct(_)) => {
+                if matches!(self, Ty::Struct(_)) { self.clone() } else { other.clone() }
+            }
+            (Ty::Array { .. }, _) | (_, Ty::Array { .. }) => {
+                if matches!(self, Ty::Array { .. }) { self.clone() } else { other.clone() }
+            }
+        }
+    }
+}
+
 /// A storage location an inference tracks: a register, by its offset and
 /// size in the register space.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
