@@ -9,6 +9,9 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 pub mod adapters;
+pub mod pine;
+pub mod ppsspp;
+pub mod trace;
 
 
 const MAX_OUTPUT_BYTES: usize = 4 * 1024 * 1024;
@@ -108,6 +111,24 @@ pub enum DebugError {
     Failed { status: i32, stderr: String },
     #[error("debugger output exceeded {0} bytes")]
     OutputTooLarge(usize),
+    #[error("operation not supported by this backend: {0}")]
+    Unsupported(String),
+    #[error("PCSX2 PINE connection failed: {0}")]
+    PineConnect(#[source] std::io::Error),
+    #[error("PCSX2 PINE I/O failed: {0}")]
+    PineIo(#[source] std::io::Error),
+    #[error("PCSX2 PINE protocol error: {0}")]
+    PineProtocol(String),
+    #[error("PCSX2 PINE target error: {0}")]
+    PineTarget(String),
+    #[error("PPSSPP debugger connection failed: {0}")]
+    PpssppConnect(#[source] std::io::Error),
+    #[error("PPSSPP debugger I/O failed: {0}")]
+    PpssppIo(#[source] std::io::Error),
+    #[error("PPSSPP debugger protocol error: {0}")]
+    PpssppProtocol(String),
+    #[error("PPSSPP debugger target error: {0}")]
+    PpssppTarget(String),
 
 }
 pub type Result<T> = std::result::Result<T, DebugError>;

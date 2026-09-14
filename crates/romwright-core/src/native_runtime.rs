@@ -553,7 +553,7 @@ pub fn decompile_native_doc(
 
 /// The lowest address the store records for `program`, when the program is
 /// already imported. A platform image has no header to read a base from.
-fn program_image_base(program: &str, project_dir: &Path) -> Option<u64> {
+pub(crate) fn program_image_base(program: &str, project_dir: &Path) -> Option<u64> {
     let db = crate::ProjectDb::open(&project_dir.join("project.sqlite")).ok()?;
     let id = db.program_id(program).ok()?;
     db.memory_regions(id)

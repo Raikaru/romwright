@@ -5976,6 +5976,48 @@ runtime fetch.
 
 
 
+### m20-014 evidence (console-support expansion: the P-gap closure)
+The console-support sweep closed the remaining P-items, each proven by a
+test that exercises the behaviour rather than the source:
+
+- **P1.6 DS overlays** — `native/nds_overlays.rs` walks the ARM9 OVT and
+  FAT, mints one `ov<N>` module per overlay (RAM addr + zero-filled bss),
+  and binds `(overlay-id, addr)` to module/file offset. Wired into
+  `native/nds.rs`; 7 tests.
+- **P2.2 shared fact database** — `romwright-facts` (new crate) is the
+  hosted store `fact_sync` pushes to: SQLite-backed, keyed by
+  `binary_sha256` for exact matches and indexed by per-function semantic
+  signature for cross-build transfer. `pull_facts` returns the bundle that
+  best covers the query's signatures at `MATCH_FLOOR`. JSON-line TCP
+  server (`serve_tcp`); 5 tests.
+- **P2.3 MWCC prologue/epilogue** — the worker injects `_savegpr_N`/
+  `_restgpr_N` callfixups into a PowerPC cspec so a `bl _savegpr_14` reads
+  as callee-saved stores, not an opaque call. Proven by a test over the
+  injected pcode (all 18 save + 18 restore helpers, correct offsets).
+- **P2.4 IDO o32 cspec** — the MIPS bundles (`MIPS-LE-32-default`,
+  `MIPS-BE-64-64-32addr`) carry the o32 convention: integer args in
+  a0..a3, FP args in the f12/f14 family independent of the integer slots.
+  Proven by a `register_params` test over the shipped cspecs.
+- **P3.4 RVZ** — `native/wii.rs` decompresses RVZ (header + per-chunk
+  codec) and imports the recovered ISO; round-trip test per codec.
+- **P3.11 emulator adapters** — `romwright-debug` gains `pine` (PCSX2),
+  `ppsspp` (WebSocket), and `trace` (shared TraceHit→CSV) clients; 22
+  tests over mock servers.
+- **P4.2 Gekko paired-singles** — `gekko.rs` decodes every `ps_*`/`psq_*`
+  opcode and renders lane-wise float C; 9 tests.
+- **P4.3 VU0-macro semantics** — `vuupper.sinc` is `@include`d via
+  `cop2.sinc`; the installed `r5900.sla` was rebuilt (43 KB → 53 KB) so the
+  VU macro set is compiled in.
+- **P4.4 RSP parity + GBI** — `rsp_parity.rs` sweeps the decoder against
+  the slaspec (1344/1344) and `gbi.rs` annotates F3DEX2 display lists.
+- **P4.5 VU-micro finder + parity** — `vif.rs` finds MPG uploads + MSCAL
+  calls and decodes VU LIWs with reserved-encoding rejection; 9 tests.
+- **P4.6 m2c-parity emission** — `emit_m2c.rs` renders a `DecompDoc` token
+  stream as m2c-shaped C; 7 tests.
+
+Regression: `cargo test --release --workspace` — 407 lib + all crate
+suites pass, 0 failures.
+
 ## Next task
 Every task the previous list named has landed (m4-037, m4-038, m5-014,
 m11-002, m12-001, m5-017, m13-001; evidence above). What the measurements now

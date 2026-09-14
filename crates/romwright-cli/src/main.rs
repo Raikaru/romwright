@@ -837,6 +837,34 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 units.len()
             );
         }
+        // `export-c <binary> <program> <outdir> [--splits splits.txt]`:
+        // decompile every function and write m2c-shaped C — the source
+        // tree `export-objdiff`'s project compiles. With --splits the
+        // functions group into one <tu>.c per translation unit so the
+        // files line up with objdiff's target/base objects; without it,
+        // one <name>.c per function.
+        "export-c" => {
+            let binary = args.get(2).ok_or("export-c needs a binary")?.clone();
+            let program = args.get(3).ok_or("export-c needs a program")?.clone();
+            let outdir = Path::new(args.get(4).ok_or("export-c needs an outdir")?);
+            let splits = flag(args, "--splits")
+                .map(|p| -> Result<Vec<romwright_core::native::linkmap::SplitExtent>, String> {
+                    let text = std::fs::read_to_string(&p)
+                        .map_err(|e| format!("{p}: {e}"))?;
+                    Ok(romwright_core::native::linkmap::parse_splits(&text))
+                })
+                .transpose()?;
+            let report = core
+                .export_m2c(
+                    Path::new(&binary),
+                    &program,
+                    outdir,
+                    splits.as_deref(),
+                    &romwright_core::emit_m2c::M2cOptions::default(),
+                )
+                .map_err(|e| e.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?);
+        }
         // `export-scratch <program> <addr> <binary> [--compiler ID]
         // [--c-flags FLAGS]`: emit a decomp.me scratch payload —
         // target_asm.s (the function's disassembly), ctx.c (context

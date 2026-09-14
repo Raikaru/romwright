@@ -737,3 +737,51 @@ fn run(
     println!("{c_text}");
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{mwcc_callfixups, with_mwcc_callfixups};
+
+    /// MWCC prologue/epilogue helpers (`_savegpr_N`/`_restgpr_N`) must be
+    /// injected for PowerPC so a `bl _savegpr_14` reads as callee-saved
+    /// stores, not an opaque call (P2.3).
+    #[test]
+    fn mwcc_callfixups_cover_every_gpr_helper() {
+        let fixups = mwcc_callfixups();
+        for n in 14..32 {
+            assert!(
+                fixups.contains(&format!("name=\"_savegpr_{n}\"")),
+                "missing _savegpr_{n}"
+            );
+            assert!(
+                fixups.contains(&format!("name=\"_restgpr_{n}\"")),
+                "missing _restgpr_{n}"
+            );
+        }
+        // _savegpr_14 stores r14..r31 at -4*(32-r) below the frame.
+        assert!(fixups.contains("*(r1 - 0x48) = r14;"));
+        assert!(fixups.contains("*(r1 - 0x04) = r31;"));
+        // _restgpr_14 loads them back.
+        assert!(fixups.contains("r14 = *(r1 - 0x48);"));
+        assert!(fixups.contains("r31 = *(r1 - 0x04);"));
+    }
+
+    #[test]
+    fn mwcc_callfixups_inject_only_for_powerpc_and_skip_present() {
+        let ppc = "PowerPC-BE-32-Gekko_Broadway";
+        let mips = "MIPS-BE-64-64-32addr";
+        let bare = "<compiler_spec>\n</compiler_spec>";
+
+        // PowerPC gets the helpers; a non-PowerPC lang_dir is untouched.
+        let injected = with_mwcc_callfixups(bare, ppc);
+        assert!(injected.contains("name=\"_savegpr_14\""));
+        assert!(injected.contains("name=\"_restgpr_31\""));
+        assert_eq!(with_mwcc_callfixups(bare, mips), bare);
+
+        // A cspec that already ships a helper keeps its own (no duplicate).
+        let already = "<compiler_spec>\n  <callfixup name=\"_savegpr_14\"/>\n</compiler_spec>";
+        let merged = with_mwcc_callfixups(already, ppc);
+        assert_eq!(merged.matches("name=\"_savegpr_14\"").count(), 1);
+        assert!(merged.contains("name=\"_savegpr_15\""));
+    }
+}

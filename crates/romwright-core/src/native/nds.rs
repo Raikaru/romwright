@@ -267,13 +267,18 @@ fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> Nat
 }
 
 /// Loads both processors' images. The first is the ARM9, which the console
-/// boots; each carries its own language, mapping and entry seed.
+/// boots; each carries its own language, mapping and entry seed. ARM9
+/// overlays (P1.6) join the ARM9 program as extra `ov<N>` mappings, so
+/// `store_import` mints one `modules` row per overlay.
 pub(crate) fn import(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
     let Some((arm9, arm7)) = parse(data) else {
         return super::err("not a Nintendo DS cartridge");
     };
+    let mut arm9_import = image(data, "arm9", "ARM:LE:32:v5t", &arm9);
+    let overlays = super::nds_overlays::parse(data);
+    super::nds_overlays::append_to_import(data, &overlays, &mut arm9_import);
     Ok(vec![
-        ("arm9".into(), image(data, "arm9", "ARM:LE:32:v5t", &arm9)),
+        ("arm9".into(), arm9_import),
         ("arm7".into(), image(data, "arm7", "ARM:LE:32:v4t", &arm7)),
     ])
 }

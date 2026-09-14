@@ -15,6 +15,7 @@ use std::path::Path;
 mod gba;
 mod n64;
 mod nds;
+pub mod nds_overlays;
 mod psx;
 pub(crate) mod dol;
 mod discovery;
