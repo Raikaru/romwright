@@ -8,7 +8,7 @@ use romwright_model::ClassRow;
 
 mod itanium;
 mod msvc;
-mod mwcc;
+pub(crate) mod mwcc;
 
 /// Counts from one recovery pass. `anchors` counts the ABI structures that
 /// start each chain: bound `__cxxabiv1` type_info vtables for Itanium, proven

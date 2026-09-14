@@ -41,7 +41,7 @@ const VECTOR_FUNCT: [Option<&str>; 64] = [
     /* 28 */ Some("vand"),  Some("vnand"), Some("vor"),   Some("vnor"),
     /* 2c */ Some("vxor"),  Some("vnxor"), None,          None,
     /* 30 */ Some("vrcp"),  Some("vrcpl"), Some("vrcph"), Some("vmov"),
-    /* 34 */ Some("vrsq"),  Some("vrsql"), Some("vrsqh"), None,
+    /* 34 */ Some("vrsq"),  Some("vrsql"), Some("vrsqh"), Some("vnop"),
     /* 38 */ None,          None,          None,          None,
     /* 3c */ None,          None,          None,          None,
 ];
@@ -190,9 +190,12 @@ pub fn decode(word: u32, address: u64) -> RspInsn {
                 let funct = word & 0x3f;
                 match VECTOR_FUNCT[funct as usize] {
                     Some(name) => {
+                        // vnop is the vector nop: it takes no operands.
+                        if name == "vnop" {
+                            (name.to_string(), String::new())
                         // vrcp/vrsq family and vmov take vd[e], vt.
-                        if matches!(name, "vrcp" | "vrcpl" | "vrcph" | "vmov"
-                                    | "vrsq" | "vrsql" | "vrsqh" | "vnop") {
+                        } else if matches!(name, "vrcp" | "vrcpl" | "vrcph" | "vmov"
+                                    | "vrsq" | "vrsql" | "vrsqh") {
                             (name.to_string(), format!("{}[{}], {}", vr(vd), e, vr(vt)))
                         } else {
                             (name.to_string(),

@@ -23,7 +23,7 @@ pub const SOURCE: &str = "mwcc-rtti-less";
 /// `UberBond::UberBond()`, `__dt__8UberBondFv` the dtor. The class name is
 /// the length-prefixed segment between `__ct__`/`__dt__` and the `F`
 /// signature start.
-fn member_class(mangled: &str) -> Option<(&str, &str)> {
+pub(crate) fn member_class(mangled: &str) -> Option<(&str, &str)> {
     for marker in ["__ct__", "__dt__"] {
         if let Some(rest) = mangled.strip_prefix(marker) {
             // Length-prefixed class name: digits then that many chars.

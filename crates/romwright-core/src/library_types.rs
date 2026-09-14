@@ -18,6 +18,14 @@ pub const SOURCE: &str = "native-import:type-archive";
 /// signature fails the decompile rather than improving it.
 
 /// One declaration: what it returns, what it takes, whether it is variadic.
+///
+/// `scope` names the namespace or class that owns the function, so a table
+/// built from SDK headers can declare `Update` once with `scope: "UberBond"`
+/// (or key it directly as `"UberBond::Update"`). `calling_convention` is a
+/// decompiler prototype-model name (e.g. `__thiscall`) the declaration
+/// requires; it is recorded, never invented, because a model the language
+/// does not declare makes the worker skip the fact. `this_type` is the C
+/// type of the receiver; when scoped and unset it derives as `{scope} *`.
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Declaration {
     pub return_type: String,
@@ -25,6 +33,49 @@ pub struct Declaration {
     pub varargs: bool,
     #[serde(default)]
     pub parameters: Vec<Parameter>,
+    /// Namespace/class scope, e.g. `"UberBond"` or `"app::Widget"`.
+    #[serde(default)]
+    pub scope: Option<String>,
+    /// Decompiler calling-convention model, e.g. `"__thiscall"`.
+    #[serde(default)]
+    pub calling_convention: Option<String>,
+    /// C type of `this`; derived as `"{scope} *"` when scoped and unset.
+    #[serde(default)]
+    pub this_type: Option<String>,
+}
+
+impl Declaration {
+    /// The `Class::method` name for a table `key`: already-qualified keys
+    /// pass through, bare keys gain the declaration's scope, unscoped keys
+    /// are unchanged.
+    pub fn qualified_name(&self, key: &str) -> String {
+        if key.contains("::") {
+            return key.to_string();
+        }
+        match &self.scope {
+            Some(scope) if !scope.is_empty() => format!("{scope}::{key}"),
+            _ => key.to_string(),
+        }
+    }
+
+    /// The bare function name: whatever follows the last `::`, or the whole
+    /// key when unqualified.
+    pub fn bare_name(key: &str) -> &str {
+        key.rsplit("::").next().unwrap_or(key)
+    }
+
+    /// The receiver type for `qualified` (a `qualified_name` result): the
+    /// explicit `this_type`, else `{scope} *` when the name is scoped.
+    pub fn this_type_for(&self, qualified: &str) -> Option<String> {
+        if let Some(explicit) = &self.this_type {
+            if !explicit.is_empty() {
+                return Some(explicit.clone());
+            }
+        }
+        qualified
+            .rfind("::")
+            .map(|split| format!("{} *", &qualified[..split]))
+    }
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -137,8 +188,7 @@ pub fn language_base_types(specs: &Path) -> BTreeMap<String, BaseType> {
 /// a shape its C parser accepts. Pointer depth is not a limit -- the parser's
 /// `pointer` rule is recursive and stock applies `char **__endptr` -- but the
 /// base type has to be one this language declares.
-fn representable(declaration: &Declaration, known_types: &std::collections::HashSet<String>) -> bool {
-    // Pointer depth is not a limit the decompiler has: its own C parser takes
+pub(crate) fn representable(declaration: &Declaration, known_types: &std::collections::HashSet<String>) -> bool {
     // `char * *` (`grammar.y`'s `pointer` rule is recursive), and stock applies
     // exactly that declaration to `strtol`. What has to be known is the base
     // type the pointers end at.
@@ -218,6 +268,9 @@ mod tests {
                 name: "__format".into(),
                 data_type: "char *".into(),
             }],
+            scope: None,
+            calling_convention: None,
+            this_type: None,
         }
     }
 
@@ -235,6 +288,9 @@ mod tests {
             return_type: "int".into(),
             varargs: false,
             parameters: Vec::new(),
+            scope: None,
+            calling_convention: None,
+            this_type: None,
         };
         assert_eq!(signature("getpid", &declaration), "int getpid(void)");
     }
@@ -294,6 +350,9 @@ mod tests {
                 name: "endptr".into(),
                 data_type: "char * *".into(),
             }],
+            scope: None,
+            calling_convention: None,
+            this_type: None,
         };
         let table = Table {
             archive: "a".into(),
@@ -350,6 +409,9 @@ mod tests {
                 name: "stream".into(),
                 data_type: "FILE *".into(),
             }],
+            scope: None,
+            calling_convention: None,
+            this_type: None,
         };
         let table = Table {
             archive: "a".into(),
@@ -359,6 +421,7 @@ mod tests {
                 ("printf".into(), printf()),
             ]),
         };
+
         let applied = declared_for(&table, [(0x10u64, "fclose"), (0x20u64, "printf")],
                                    &types(&["int", "char"]));
         assert_eq!(
@@ -368,5 +431,31 @@ mod tests {
                 .collect::<Vec<_>>(),
             vec![(0x20, "int printf(char * __format, ...)".to_string())]
         );
+    }
+    #[test]
+    fn scope_qualifies_bare_keys_and_derives_the_receiver() {
+        let declaration = Declaration {
+            return_type: "int".into(),
+            varargs: false,
+            parameters: Vec::new(),
+            scope: Some("UberBond".into()),
+            calling_convention: Some("__thiscall".into()),
+            this_type: None,
+        };
+        assert_eq!(declaration.qualified_name("Update"), "UberBond::Update");
+        assert_eq!(
+            declaration.qualified_name("UberBond::Update"),
+            "UberBond::Update"
+        );
+        assert_eq!(Declaration::bare_name("UberBond::Update"), "Update");
+        assert_eq!(
+            declaration.this_type_for("UberBond::Update"),
+            Some("UberBond *".into())
+        );
+        assert_eq!(declaration.this_type_for("Update"), None);
+        // An unscoped declaration neither qualifies nor invents a receiver.
+        let free = Declaration { scope: None, ..declaration.clone() };
+        assert_eq!(free.qualified_name("Update"), "Update");
+        assert_eq!(free.this_type_for("Update"), None);
     }
 }

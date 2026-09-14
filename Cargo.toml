@@ -12,6 +12,7 @@ members = [
     "crates/romwright-debug",
     "crates/romwright-sig",
     "crates/romwright-diff",
+    "crates/romwright-facts",
 ]
 
 [workspace.package]

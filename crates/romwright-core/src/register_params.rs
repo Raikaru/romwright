@@ -480,4 +480,45 @@ mod tests {
         assert_eq!(observed, ["EDX", "ECX"]);
         assert!(conventions.matching_model(&observed).is_none());
     }
+
+    /// IDO (the SGI/MIPS compiler behind N64 and PS1) implements the o32
+    /// ABI: the first two floating-point arguments travel in dedicated FP
+    /// registers (f12/f14, or the f12_13/f14_15 pairs on a 32-bit float
+    /// unit) independently of the integer argument registers a0..a3. The
+    /// shipped MIPS bundles must declare that split so a float parameter
+    /// does not consume an a-register slot (P2.4).
+    #[test]
+    fn mips_bundles_carry_the_o32_float_argument_registers() {
+        let specs = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../native/specs");
+        for bundle in ["MIPS-LE-32-default", "MIPS-BE-64-64-32addr"] {
+            let dir = specs.join(bundle);
+            let cspec = std::fs::read_to_string(dir.join("cspec.xml"))
+                .unwrap_or_else(|e| panic!("{bundle} cspec.xml: {e}"));
+            let table = std::fs::read_to_string(dir.join("registers.txt"))
+                .unwrap_or_else(|e| panic!("{bundle} registers.txt: {e}"));
+            let conventions = Conventions::parse(&cspec, &table);
+            let model = conventions
+                .default()
+                .unwrap_or_else(|| panic!("{bundle} has no default prototype"));
+            // Integer args in a0..a3.
+            assert_eq!(
+                model.registers,
+                ["a0", "a1", "a2", "a3"],
+                "{bundle} integer argument registers"
+            );
+            // FP args in the o32 float registers (f12/f14, or the
+            // f12_13/f14_15 pairs on a 32-bit float unit), independent of
+            // a0..a3. The first is always f12-derived.
+            let floats = &model.float_registers;
+            assert!(
+                !floats.is_empty() && floats[0].starts_with("f12"),
+                "{bundle} o32 float argument registers: {floats:?}"
+            );
+            assert!(
+                floats.iter().all(|r| r.starts_with('f')),
+                "{bundle} float args must not alias integer registers: {floats:?}"
+            );
+        }
+    }
 }

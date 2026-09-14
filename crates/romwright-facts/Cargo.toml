@@ -1,0 +1,15 @@
+[package]
+name = "romwright-facts"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Hosted shared-fact store: ingests fact bundles, serves them back by binary hash or semantic signature"
+
+[dependencies]
+romwright-model = { path = "../romwright-model" }
+romwright-diff = { path = "../romwright-diff" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+rusqlite = { workspace = true }

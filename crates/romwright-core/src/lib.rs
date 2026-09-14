@@ -9,6 +9,7 @@ pub mod demand;
 pub mod import_cache;
 pub(crate) mod sha256;
 pub mod gte;
+pub mod gte_lift;
 pub mod library_types;
 pub mod demangle;
 pub mod bridge;
@@ -30,12 +31,19 @@ pub mod facts;
 pub mod subtype;
 pub mod types_infer;
 mod prototypes;
+pub mod qualified_prototypes;
 pub mod register_params;
 mod nonreturn;
 mod signatures;
 pub mod rtti;
 pub mod sdk_types;
 pub mod cross_module;
+pub mod emit_m2c;
+pub mod fact_sync;
+pub mod gbi;
+pub mod gekko;
+pub mod rsp_parity;
+pub mod vif;
 pub use nonreturn::NonReturnInferenceReport;
 
 use romwright_db::ProjectDb;
@@ -2408,6 +2416,163 @@ impl Core {
             register_params::augment(&self.config, &language, prototype, &doc.storage);
         }
         Ok(doc)
+    }
+
+    /// Decompiles every function and writes m2c-shaped C to `outdir`,
+    /// producing the source tree `export-objdiff`'s project compiles.
+    ///
+    /// With `splits` (dtk `splits.txt`), functions are grouped into one
+    /// `<tu>.c` per translation unit so the files line up with objdiff's
+    /// `target_path`/`base_path` objects; without it, one `<name>.c` per
+    /// function. Returns a JSON report: files written, per-function temp
+    /// renames, canonicalizer rewrites, and which bodies were irregular.
+    pub fn export_m2c(
+        &self,
+        binary: &Path,
+        program: &str,
+        outdir: &Path,
+        splits: Option<&[crate::native::linkmap::SplitExtent]>,
+        opts: &emit_m2c::M2cOptions,
+    ) -> Result<serde_json::Value> {
+        let functions = self.functions(program)?;
+        if functions.is_empty() {
+            return Err(CoreError::Io(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("program {program} has no functions"),
+            )));
+        }
+        let id = self.db.program_id(program)?;
+        let language = self.db.program_language(id)?;
+        let base = native_runtime::program_image_base(program, &self.db_path);
+
+        // Names that must never be renamed: every function and symbol.
+        let mut keep: Vec<String> = functions.iter().map(|f| f.name.clone()).collect();
+        let mut globals: Vec<emit_m2c::GlobalRef> = Vec::new();
+        for sym in self.symbols(program)? {
+            keep.push(sym.name.clone());
+            if !sym.external {
+                globals.push(emit_m2c::GlobalRef {
+                    name: sym.name.clone(),
+                    type_name: None,
+                    address: Some(sym.address.offset),
+                });
+            }
+        }
+
+        // Batch-decompile every function to a DecompDoc.
+        let addresses: Vec<String> = functions
+            .iter()
+            .map(|f| format!("{:x}", f.entry.offset))
+            .collect();
+        let mut docs = native_runtime::decompile_native_docs(
+            &self.config,
+            binary,
+            &addresses,
+            program,
+            &self.db_path,
+            base,
+        )?;
+
+        // Per-function unstructured edges come from our own walk of the
+        // same body the decompiler saw.
+        let mut unstructured: std::collections::HashMap<u64, Vec<(usize, usize)>> =
+            std::collections::HashMap::new();
+        self.live.with(binary, program, |live| {
+            for f in &functions {
+                if let Ok(walk) = live.walk(f.entry.offset) {
+                    let (blocks, edges) = walk.basic_blocks();
+                    if !blocks.is_empty() {
+                        unstructured.insert(
+                            f.entry.offset,
+                            crate::structuring::structure(blocks.len(), &edges).unstructured,
+                        );
+                    }
+                }
+            }
+            Ok(())
+        })?;
+
+        std::fs::create_dir_all(outdir).map_err(CoreError::Io)?;
+
+        // Group functions into output units: by TU when splits are given,
+        // else one unit per function.
+        let mut units: Vec<(String, Vec<&FunctionRow>)> = Vec::new();
+        for f in &functions {
+            let unit = splits
+                .and_then(|extents| {
+                    extents
+                        .iter()
+                        .find(|e| f.entry.offset >= e.start && f.entry.offset < e.end)
+                        .map(|e| {
+                            e.tu.trim_end_matches(".c")
+                                .trim_end_matches(".cpp")
+                                .to_string()
+                        })
+                })
+                .filter(|name| !name.is_empty())
+                .unwrap_or_else(|| f.name.clone());
+            if let Some((_, list)) = units.iter_mut().find(|(n, _)| *n == unit) {
+                list.push(f);
+            } else {
+                units.push((unit, vec![f]));
+            }
+        }
+
+        let mut files = Vec::new();
+        let mut irregular_count = 0usize;
+        let mut rewrite_count = 0usize;
+        for (unit, fns) in &units {
+            let mut text = String::new();
+            for f in fns {
+                let key = format!("{:08x}", f.entry.offset);
+                let Some(doc) = docs.get_mut(&key) else { continue };
+                doc.address = f.entry.clone();
+                doc.revision = self.db.revision(id)?;
+                if let Some(prototype) = doc.prototype.as_mut() {
+                    register_params::augment(
+                        &self.config,
+                        &language,
+                        prototype,
+                        &doc.storage,
+                    );
+                }
+                let stack = self.db.stack_variables(id, Some(&f.entry))?;
+                let empty_unstructured: Vec<(usize, usize)> = Vec::new();
+                let inputs = emit_m2c::FuncInputs {
+                    stack: &stack,
+                    globals: &globals,
+                    unstructured: unstructured
+                        .get(&f.entry.offset)
+                        .unwrap_or(&empty_unstructured),
+                    generated_extra: &[],
+                    keep: &keep,
+                };
+                let emitted = emit_m2c::emit_doc(doc, &inputs, opts);
+                if emitted.irregular {
+                    irregular_count += 1;
+                }
+                rewrite_count += emitted.rewrites.len();
+                text.push_str(&emitted.text);
+                text.push_str("\n\n");
+            }
+            if text.trim().is_empty() {
+                continue;
+            }
+            let path = outdir.join(format!("{unit}.c"));
+            std::fs::write(&path, &text).map_err(CoreError::Io)?;
+            files.push(serde_json::json!({
+                "file": path.display().to_string(),
+                "functions": fns.len(),
+            }));
+        }
+
+        Ok(serde_json::json!({
+            "program": program,
+            "files": files,
+            "functions": functions.len(),
+            "irregular": irregular_count,
+            "canonical_rewrites": rewrite_count,
+        }))
     }
 
     /// Bytes at `vaddr` from the binary's mappings (native memory inspection).
