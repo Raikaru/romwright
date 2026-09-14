@@ -5951,11 +5951,28 @@ the key is supplied:
 - PS3 NPDRM SELF: a `.rap` derives the per-title key (RAP→klic→content key,
   public RPCS3 constants) that unwraps the metadata.
 - Vita NPDRM SELF: a `.klic` unwraps the per-title metadata key.
-- PSP `~PSP`: KIRK is device-key crypto no file can drive — it stays a
-  decrypt-first error, the honest answer.
+- PSP `~PSP`: KIRK is device-key crypto no file can drive — it stayed a
+  decrypt-first error at m18-002. m18-003 corrects that: the KIRK keys are
+  long-public constants, so `~PSP` now decrypts with no file at all.
 
-336 lib tests + 27/27 console-gate rows pass. II.1 is untouched: keys come
-only from a file the user dumps, never a runtime fetch.
+### m18-003 evidence (PSP ~PSP/KIRK decryption)
+The m18-002 claim that PSP KIRK was unreachable device-key crypto was wrong.
+The KIRK key vault (128×16), the CMD1 master key, and the ~18 tag→key table
+entries are dumped console secrets that have been public for ~15 years
+(PSARDUMPER/JPCSP) — the same class as the Xbox 360 XEX retail key already
+embedded. `native/kirk.rs` ports the algorithm as facts (no code copied):
+`pspDecryptPRX` tries types 0/1/2/5/6/9, each looks the 0xD0 tag up in a
+public table, unscrambles the key/id fields with `kirk7` (AES-128-CBC, zero
+IV, keyed by the vault), SHA-1-verifies the rearranged header, then KIRK
+CMD1 AES-decrypts the payload. `native/kirk_tables.rs` holds the generated
+constants. A KL4E/KL3E/KL2E payload is zlib-inflated before import. The
+decrypted PRX feeds the existing `import_prx`. Proven by a type-2
+round-trip test that encrypts a known PRX and decrypts+imports it with
+exact names; garbage/truncated/scrambled inputs error cleanly. 340 lib
+tests + 27/27 console-gate rows pass.
+
+II.1 is untouched: keys come only from a file the user dumps, never a
+runtime fetch.
 
 
 
@@ -6141,8 +6158,6 @@ point at, none reserved:
   chained record continues a function that already has a start
   (`pe_unwind.rs`, unit-tested; m8-001 promotes the 192 plain
   records). Low recall against that denominator is a truth-set
-  mismatch with a deliberate promotion rule, not an unimplemented
-  pass; (2) delay-load import thunks split mid-stub, producing
   spurious entries. Both are format properties, not image
   properties: any SEH or delay-load PE should reproduce them.
   (verified by double import).
@@ -6166,8 +6181,9 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   (3DS CIA, PS3/Vita SELF, Switch NCA/XCI). II.1 forbids the runtime fetch,
   so the loaders take a user-supplied KeyStore (`--keys <file>`): a Switch
   prod.keys, a PS3 .rap, a Vita .klic, or a 3DS aes_keys.txt now decrypts on
-  import (m18-002). PSP KIRK is device-key crypto no file can drive — it
-  stays decrypt-first.
+  import (m18-002). PSP ~PSP/KIRK now decrypts too — the KIRK vault and tag
+  keys are long-public constants (PSARDUMPER/JPCSP), embedded in
+  native/kirk_tables.rs like the XEX retail key (m18-003).
 - Rule for every platform: it is "supported" only with a loader, a language
   mapping proven by decoding, and a gate row scoring it. No platform is
   claimed from a successful import alone.

@@ -19,4 +19,5 @@ memmap2 = "0.9"
 aes = "0.9.3"
 cbc = "0.2.1"
 lzxd = "0.2.7"
+miniz_oxide = "0.9.1"
 
