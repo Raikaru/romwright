@@ -571,6 +571,22 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // fewer. Batch stays the truth until that gap closes (m14-001).
     let resuming = !imp.walk_visited.is_empty()
         && std::env::var_os("ROMWRIGHT_INCREMENTAL_ROUNDS").is_some();
+    // A resumed round still validates candidates against every instruction
+    // ever decoded, not only the ones this round re-walks: the mid-instruction
+    // and pattern-prerequisite checks read `instruction_extents`, which starts
+    // empty each call. `flow_shapes` is the per-instruction record the earlier
+    // rounds accumulated, so it seeds the extents and the index here.
+    if resuming {
+        for shape in &imp.flow_shapes {
+            let length = u64::from(shape.length);
+            instruction_extents.push((shape.address, length));
+            extent_index
+                .entry(shape.address)
+                .and_modify(|size| *size = (*size).max(length))
+                .or_insert(length);
+            max_extent = max_extent.max(length);
+        }
+    }
     let mut walked_entries: HashSet<u64> = std::mem::take(&mut imp.walk_entries);
     let mut flowed_modes: HashMap<u64, u64> = HashMap::new();
     // Entries a data pointer proposed, as opposed to a seed the loader

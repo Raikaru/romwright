@@ -184,13 +184,15 @@ fn slot(varnode: &PcodeVarnode) -> Slot {
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 struct State {
     values: BTreeMap<Slot, Value>,
-    /// Booleans whose meaning is "this slot is at most this constant".
+    /// Booleans whose meaning is "these slots are at most these constants".
     /// They travel with the state because a comparison and the branch that
     /// reads it are often in different blocks -- a flag set before a call
-    /// and tested after it is ordinary code. The trailing `u32` is the
-    /// compared operand's width: a bound on `al` is a bound on one byte,
-    /// whatever wider slot it was copied from.
-    predicates: BTreeMap<Slot, (Slot, u64, bool, bool, u32)>,
+    /// and tested after it is ordinary code. One boolean can carry several
+    /// bounds: a range check `lo <= x && x < hi` is two comparisons ANDed,
+    /// and keeping only the first loses the bound the dispatch needs. The
+    /// trailing `u32` of each bound is the compared operand's width: a bound
+    /// on `al` is a bound on one byte, whatever wider slot it was copied from.
+    predicates: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32)>>,
     /// Affine provenance: `slot = origin + off`, narrowed by the smallest
     /// width crossed, plus the origin's own width. A copy in one block and
     /// the compare in the next are ordinary code, so the links travel with
@@ -456,8 +458,26 @@ pub fn analyse<I: Image>(
             }
         }
     }
+    // The reaching-definitions index is built only when a dispatch the
+    // forward pass could not answer needs it -- the slice is the
+    // `findDeterminingVarnodes` fallback for a target that stayed `Top`.
+    let mut defs: Option<DefIndex> = None;
     for (branch, (target, index)) in dispatches {
-        match materialise(image, target, index, extent) {
+        let mut result = materialise(image, target.clone(), index, extent);
+        if matches!(result, Err(Reason::Unknown)) && matches!(target, Value::Top) {
+            // The forward domain lost the bound entirely. Slice the
+            // branch's address input back through the reaching
+            // definitions to its table and bound the index there.
+            let defs = defs.get_or_insert_with(|| DefIndex::build(blocks));
+            let sliced = slice_dispatch(image, defs, blocks, branch, extent);
+            if std::env::var_os("ROMWRIGHT_TRACE_SLICE").is_some() {
+                eprintln!("SJA-SLICE {branch:#x}: {sliced:?}");
+            }
+            if let Some(sliced) = sliced {
+                result = sliced;
+            }
+        }
+        match result {
             Ok(table) => analysis.tables.push(SwitchTable {
                 branch,
                 span: table.len() as u64,
@@ -486,6 +506,7 @@ pub fn analyse<I: Image>(
     analysis
 }
 
+#[derive(Debug)]
 enum Reason {
     Unknown,
     Unbounded,
@@ -590,12 +611,13 @@ fn run_block<I: Image>(
     let mut edges: BTreeMap<usize, Vec<(Slot, Value)>> = BTreeMap::new();
     // The comparison that produced each boolean, so a branch reading it can
     // refine the operand.
-    // Boolean -> (the compared slot, the constant, inclusive, which side
-    // the constant sat on, and the operand's width). The side decides which
+    // Boolean -> [(the compared slot, the constant, inclusive, which side
+    // the constant sat on, and the operand's width)]. The side decides which
     // *edge* learns the bound: `cmp idx, n; jbe body` bounds the taken
     // edge, and the far more common `cmp idx, n; ja default` bounds the
-    // fallthrough.
-    let mut comparisons: BTreeMap<Slot, (Slot, u64, bool, bool, u32)> = state.predicates.clone();
+    // fallthrough. A boolean built from several comparisons -- a range
+    // check `lo <= x && x < hi` -- carries every bound, not just the first.
+    let mut comparisons: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32)>> = state.predicates.clone();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
     // of the switch variable and then dispatches on the original, and the
@@ -654,7 +676,10 @@ fn run_block<I: Image>(
                 let preserves = matches!(opcode, crate::ir::Opcode::Copy | crate::ir::Opcode::IntZExt | crate::ir::Opcode::IntSExt)
                     && op.inputs.first().is_some_and(|src| slot(src) == key);
                 if !preserves {
-                    comparisons.retain(|_, (operand, ..)| *operand != key);
+                    comparisons.retain(|_, bounds| {
+                        bounds.retain(|(operand, ..)| *operand != key);
+                        !bounds.is_empty()
+                    });
                 }
                 origins.remove(&key)
             });
@@ -765,8 +790,7 @@ fn run_block<I: Image>(
                         let negated = match (right, op.inputs.get(1)) {
                             (Value::Const(_), Some(konst)) if konst.space == "const" =>
                                 Value::Const(sign_extend(konst.offset, konst.size).wrapping_neg()),
-                            (Value::Const(value), _) => Value::Const(value.wrapping_neg()),
-                            _ => Value::Top,
+                            (value, _) => negate_interval(value.clone()),
                         };
                         state.set(output, add(left.clone(), negated));
                     }
@@ -847,26 +871,29 @@ fn run_block<I: Image>(
                 | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
-                    let mut carried: Option<(Slot, u64, bool, bool, u32)> = None;
+                    let mut carried: Vec<(Slot, u64, bool, bool, u32)> = Vec::new();
                     for input in &op.inputs {
-                        if let Some(found) = comparisons.get(&slot(input)).cloned() {
-                            carried = Some(match carried {
+                        if let Some(found) = comparisons.get(&slot(input)) {
+                            for bound in found {
                                 // Two bounds on one slot: the looser one is
                                 // what the combination admits.
-                                Some((existing, limit, inclusive, left, width))
-                                    if existing == found.0 =>
+                                match carried
+                                    .iter_mut()
+                                    .find(|existing| existing.0 == bound.0)
                                 {
-                                    (existing, limit.max(found.1), inclusive || found.2, left, width)
+                                    Some(existing) => {
+                                        existing.1 = existing.1.max(bound.1);
+                                        existing.2 = existing.2 || bound.2;
+                                    }
+                                    None => carried.push(bound.clone()),
                                 }
-                                Some(existing) => existing,
-                                None => found,
-                            });
+                            }
                         }
                     }
-                    if let (Some(output), Some(found)) = (&op.output, carried) {
-                        comparisons.insert(slot(output), found);
-                    }
                     if let Some(output) = &op.output {
+                        if !carried.is_empty() {
+                            comparisons.insert(slot(output), carried);
+                        }
                         state.set(output, Value::Top);
                     }
                 }
@@ -881,12 +908,12 @@ fn run_block<I: Image>(
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), (slot(left), limit, inclusive, false, left.size));
+                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size)]);
                             }
                             // `n < index`: the *fallthrough* is in range.
                             (Value::Const(limit), _) if left.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), (slot(right), limit, inclusive, true, right.size));
+                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size)]);
                             }
                             _ => {}
                         }
@@ -896,220 +923,19 @@ fn run_block<I: Image>(
                     // Slot 0 of a block's successors is the fallthrough in
                     // our own construction, slot 1 the taken edge, so the
                     // refinement is applied to whichever assumes the test.
+                    // A boolean built from several comparisons carries every
+                    // bound; each refines the edge it holds on.
                     if let Some(condition) = op.inputs.get(1)
-                        && let Some((operand, limit, inclusive, constant_left, operand_size)) =
-                            comparisons.get(&slot(condition)).cloned()
+                        && let Some(bounds) = comparisons.get(&slot(condition)).cloned()
                     {
-                        // `index < n` taken means index <= n-1; `n < index`
-                        // *not* taken means index <= n.
-                        let high = if constant_left {
-                            if inclusive { limit as i64 - 1 } else { limit as i64 }
-                        } else if inclusive {
-                            limit as i64
-                        } else {
-                            limit as i64 - 1
-                        };
-                        let edge = usize::from(constant_left);
-                        if high >= 0 {
-                            // The bound belongs to the value, wherever it
-                            // lives: the compared slot and whatever it was
-                            // copied from. A temp `t = origin + off` bounded
-                            // to [0, high] bounds the origin to
-                            // [-off, high - off].
-                            let mut targets = vec![(operand.clone(), 0i64)];
-                            // Follow the origin chain transitively: `dl`
-                            // came from `edx`, which came from `r15`, so a
-                            // bound on the compared temp is a bound on each
-                            // link, shifted by the accumulated offset. One
-                            // hop (the first version) stopped at `edx`, and
-                            // the `movzbl %r15b,%edx` that overwrote it
-                            // carried the bound nowhere. A hop that fails
-                            // `usable` is skipped, not terminal: the bound
-                            // still reaches the wider origin past it.
-                            {
-                                let mut current = operand.clone();
-                                let mut accumulated = 0i64;
-                                // The narrowest width crossed *so far*: a
-                                // bound on `al` that came through `eax` is
-                                // still a byte bound when it reaches `rax`,
-                                // so the running minimum, not this hop's
-                                // `narrow`, is what the origin must fit.
-                                let mut narrowest = operand_size;
-                                let mut seen: std::collections::HashSet<Slot> =
-                                    [current.clone()].into_iter().collect();
-                                while let Some((origin, off, narrow, origin_size)) =
-                                    origins.get(&current)
-                                {
-                                    narrowest = narrow.map_or(narrowest, |w| w.min(narrowest));
-                                    let effective = narrowest;
-                                    // The origin's own width, not its current
-                                    // value, decides: `mov %ebx,%r11d` copies
-                                    // all of ebx, so a bound on the copy is a
-                                    // bound on ebx whatever ebx holds.
-                                    let usable = if effective >= 8 || *origin_size <= effective {
-                                        true
-                                    } else {
-                                        let mask = (1u64 << (effective * 8)) - 1;
-                                        match state.values.get(origin) {
-                                            Some(Value::Top) | None => false,
-                                            Some(Value::Const(c)) => *c <= mask,
-                                            Some(Value::Strided { base: 0, stride: 1, lo, hi, .. }) =>
-                                                *lo >= 0 && *hi >= *lo && (*hi as u64) <= mask,
-                                            _ => false,
-                                        }
-                                    };
-                                    let next_off = accumulated + off;
-                                    // The shifted bound must fit the narrow
-                                    // width too: `lea -0xf0(%r15),%eax; cmp
-                                    // $0x5a,%al` wraps inside the byte, and
-                                    // the interval would drop the wrapped
-                                    // half.
-                                    let fits = effective >= 8
-                                        || (high - next_off) as u64
-                                            <= (1u64 << (effective * 8)) - 1;
-                                    if usable && fits {
-                                        targets.push((origin.clone(), next_off));
-                                    }
-                                    accumulated = next_off;
-                                    current = origin.clone();
-                                    if !seen.insert(current.clone()) {
-                                        break;
-                                    }
-                                }
-                            }
-                            // And the other direction: `mov %ebx,%r11d`
-                            // before the compare means r11's origin is the
-                            // bounded slot, so the bound belongs to r11
-                            // too. Walk the links to a fixpoint: a slot
-                            // whose origin is already targeted gets the
-                            // bound shifted by its own offset. Only exact
-                            // copies and shifts propagate -- a subpiece
-                            // (narrow set) truncates, and a bound on the
-                            // whole says nothing about the piece.
-                            let mut reached: Vec<(Slot, i64)> = targets.clone();
-                            loop {
-                                let mut grew = false;
-                                for (slot, (origin, off, narrow, _)) in &origins {
-                                    if reached.iter().any(|(s, _)| s == slot) {
-                                        continue;
-                                    }
-                                    if let Some((_, bound)) = reached.iter().find(|(s, _)| s == origin) {
-                                        // The entry is an offset: `(s, o)`
-                                        // means `s <= high - o`. `slot =
-                                        // origin + off` and `origin <=
-                                        // high - o` bound the slot to
-                                        // `high - (o - off)`, so the slot's
-                                        // entry is `o - off`.
-                                        let shifted = bound - off;
-                                        // A slot that is a truncation of its
-                                        // origin still admits the bound when
-                                        // the bound on it fits the truncated
-                                        // width: `rax = zext(eax)` is a
-                                        // 4-byte piece of `r14 - 0x20`, and
-                                        // `eax <= 0x5a` bounds `rax` to
-                                        // `0x5a` because `0x5a` fits the
-                                        // piece. A bound that does not fit
-                                        // wraps inside the piece and states
-                                        // nothing.
-                                        if let Some(width) = narrow {
-                                            let hi = high - shifted;
-                                            if *width < 8
-                                                && (hi < 0
-                                                    || (hi as u64) > (1u64 << (*width * 8)) - 1)
-                                            {
-                                                continue;
-                                            }
-                                        }
-                                        reached.push((slot.clone(), shifted));
-                                        grew = true;
-                                    }
-                                }
-                                if !grew {
-                                    break;
-                                }
-                            }
-                            targets = reached;
-                            // The taken edge is the one the comparison holds
-                            // on; our block successors list the taken target
-                            // first (`Block::successors`). Which side of the
-                            // branch the bound belongs to depends on how the
-                            // flags were combined and negated, and getting
-                            // that wrong silently is worse than trying both:
-                            // a bound applied to the wrong edge produces
-                            // targets that do not decode inside the function,
-                            // and `materialise` refuses those. So both edges
-                            // get the candidate and the check decides.
-                            let trace_cbranch = std::env::var("ROMWRIGHT_TRACE_SJA_CBRANCH")
-                                .ok()
-                                .and_then(|raw| {
-                                    u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok()
-                                })
-                                == Some(instruction.address);
-                            if trace_cbranch {
-                                eprintln!(
-                                    "CBRANCH {:#x}: operand={:?} high={} targets={:?}",
-                                    instruction.address, operand, high, targets
-                                );
-                            }
-                            for (target, off) in targets {
-                                let bounded = match state.values.get(&target).cloned() {
-                                    // Intersect, not overwrite: a bound on
-                                    // `t = origin + off` narrows the origin
-                                    // to [lo.max(-off), hi.min(high-off)].
-                                    // Only a plain index-space value
-                                    // (base 0, stride 1) shifts this way.
-                                    // The refined floor can still go
-                                    // negative: `lea 0x10(%rax),%rdx;
-                                    // cmp $0x20,%rdx` bounds eax to
-                                    // [-0x10, 3-0x10]. No compiler indexes
-                                    // a table negatively, so the guard was
-                                    // never stated.
-                                    Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
-                                        let floor = lo.max(-off);
-                                        Value::Strided { base: 0, stride: 1, lo: floor, hi: old_hi.min(high - off), guarded: floor >= 0 }
-                                    }
-                                    // A fresh bound on an unknown value.
-                                    // `lea 0x10(%r8),%rax; cmp $0x20,%rax`
-                                    // bounds r8 to [-0x10, 0xf]: the floor
-                                    // went negative, so no guard was ever
-                                    // stated and the read must refuse.
-                                    Some(Value::Top) | None =>
-                                        Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: -off >= 0 },
-                                    // A set filters to the members the
-                                    // bound admits: sound, and keeps the
-                                    // precision the set already had.
-                                    Some(Value::Set(values)) => {
-                                        let kept: Vec<u64> = values.iter().copied()
-                                            .filter(|v| (*v as i64) >= -off && (*v as i64) <= high - off)
-                                            .collect();
-                                        if kept.is_empty() {
-                                            continue;
-                                        }
-                                        Value::Set(std::rc::Rc::new(kept))
-                                    }
-                                    // A constant outside the bound means
-                                    // this edge is infeasible; a Strided
-                                    // with a different base or stride is a
-                                    // different value set entirely. Both
-                                    // are left alone rather than refined
-                                    // into an index-space bound.
-                                    _ => continue,
-                                };
-                                if trace_cbranch {
-                                    eprintln!(
-                                        "  -> {:?} off={} bounded={:?}",
-                                        target, off, bounded
-                                    );
-                                }
-                                edges
-                                    .entry(edge)
-                                    .or_default()
-                                    .push((target.clone(), bounded.clone()));
-                                edges
-                                    .entry(1 - edge)
-                                    .or_default()
-                                    .push((target, bounded));
-                            }
+                        for bound in bounds {
+                            apply_guard_bound(
+                                &state.values,
+                                &origins,
+                                &mut edges,
+                                instruction.address,
+                                bound,
+                            );
                         }
                     }
                 }
@@ -1239,7 +1065,40 @@ fn add(left: Value, right: Value) -> Value {
             hi,
             guarded,
         },
+        // Two index-space intervals add pointwise: `[la,ha] + [lb,hb]` is
+        // `[la+lb, ha+hb]`, and stays guarded only when both sides were.
+        // This is the half of `a - b` the negation arm feeds: a PIC index
+        // computed as `x - y` over two masked values lands here.
+        (
+            Strided { base: 0, stride: 1, lo: left_lo, hi: left_hi, guarded: left_guarded },
+            Strided { base: 0, stride: 1, lo: right_lo, hi: right_hi, guarded: right_guarded },
+        ) => Strided {
+            base: 0,
+            stride: 1,
+            lo: left_lo.wrapping_add(right_lo),
+            hi: left_hi.wrapping_add(right_hi),
+            guarded: left_guarded && right_guarded,
+        },
         _ => Top,
+    }
+}
+
+/// `0 - value` over the domain: a constant negates, and an index-space
+/// interval `[lo, hi]` negates to `[-hi, -lo]`. Anything else is unknown.
+/// This is what `a - b` needs when `b` is a bounded index rather than a
+/// constant: a PIC table index computed as `x - y` over two masked values
+/// stays an interval instead of collapsing to top.
+fn negate_interval(value: Value) -> Value {
+    match value {
+        Value::Const(raw) => Value::Const(raw.wrapping_neg()),
+        Value::Strided { base: 0, stride: 1, lo, hi, guarded } => Value::Strided {
+            base: 0,
+            stride: 1,
+            lo: -hi,
+            hi: -lo,
+            guarded,
+        },
+        _ => Value::Top,
     }
 }
 
@@ -1360,6 +1219,1025 @@ fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
     }
 }
 
+/// Applies one comparison bound to both edges of a conditional branch.
+///
+/// `bound` is `(operand, limit, inclusive, constant_left, operand_size)`:
+/// the compared slot, the constant it was compared against, whether the
+/// compare was `<=`, which side the constant sat on, and the operand's
+/// width. `values` is the abstract state at the branch, `origins` the
+/// affine provenance map, `edges` the per-successor refinements this block
+/// produces, and `branch` the branch's own address for tracing.
+#[allow(clippy::too_many_arguments)]
+fn apply_guard_bound(
+    values: &BTreeMap<Slot, Value>,
+    origins: &BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
+    edges: &mut BTreeMap<usize, Vec<(Slot, Value)>>,
+    branch: u64,
+    bound: (Slot, u64, bool, bool, u32),
+) {
+    let (operand, limit, inclusive, constant_left, operand_size) = bound;
+    // `index < n` taken means index <= n-1; `n < index`
+    // *not* taken means index <= n.
+    let high = if constant_left {
+        if inclusive { limit as i64 - 1 } else { limit as i64 }
+    } else if inclusive {
+        limit as i64
+    } else {
+        limit as i64 - 1
+    };
+    let edge = usize::from(constant_left);
+    if high < 0 {
+        return;
+    }
+    // The bound belongs to the value, wherever it
+    // lives: the compared slot and whatever it was
+    // copied from. A temp `t = origin + off` bounded
+    // to [0, high] bounds the origin to
+    // [-off, high - off].
+    let mut targets = vec![(operand.clone(), 0i64)];
+    // Follow the origin chain transitively: `dl`
+    // came from `edx`, which came from `r15`, so a
+    // bound on the compared temp is a bound on each
+    // link, shifted by the accumulated offset. One
+    // hop (the first version) stopped at `edx`, and
+    // the `movzbl %r15b,%edx` that overwrote it
+    // carried the bound nowhere. A hop that fails
+    // `usable` is skipped, not terminal: the bound
+    // still reaches the wider origin past it.
+    {
+        let mut current = operand.clone();
+        let mut accumulated = 0i64;
+        // The narrowest width crossed *so far*: a
+        // bound on `al` that came through `eax` is
+        // still a byte bound when it reaches `rax`,
+        // so the running minimum, not this hop's
+        // `narrow`, is what the origin must fit.
+        let mut narrowest = operand_size;
+        let mut seen: std::collections::HashSet<Slot> =
+            [current.clone()].into_iter().collect();
+        while let Some((origin, off, narrow, origin_size)) =
+            origins.get(&current)
+        {
+            narrowest = narrow.map_or(narrowest, |w| w.min(narrowest));
+            let effective = narrowest;
+            // The origin's own width, not its current
+            // value, decides: `mov %ebx,%r11d` copies
+            // all of ebx, so a bound on the copy is a
+            // bound on ebx whatever ebx holds.
+            let usable = if effective >= 8 || *origin_size <= effective {
+                true
+            } else {
+                let mask = (1u64 << (effective * 8)) - 1;
+                match values.get(origin) {
+                    Some(Value::Top) | None => false,
+                    Some(Value::Const(c)) => *c <= mask,
+                    Some(Value::Strided { base: 0, stride: 1, lo, hi, .. }) =>
+                        *lo >= 0 && *hi >= *lo && (*hi as u64) <= mask,
+                    _ => false,
+                }
+            };
+            let next_off = accumulated + off;
+            // The shifted bound must fit the narrow
+            // width too: `lea -0xf0(%r15),%eax; cmp
+            // $0x5a,%al` wraps inside the byte, and
+            // the interval would drop the wrapped
+            // half.
+            let fits = effective >= 8
+                || (high - next_off) as u64
+                    <= (1u64 << (effective * 8)) - 1;
+            if usable && fits {
+                targets.push((origin.clone(), next_off));
+            }
+            accumulated = next_off;
+            current = origin.clone();
+            if !seen.insert(current.clone()) {
+                break;
+            }
+        }
+    }
+    // And the other direction: `mov %ebx,%r11d`
+    // before the compare means r11's origin is the
+    // bounded slot, so the bound belongs to r11
+    // too. Walk the links to a fixpoint: a slot
+    // whose origin is already targeted gets the
+    // bound shifted by its own offset. Only exact
+    // copies and shifts propagate -- a subpiece
+    // (narrow set) truncates, and a bound on the
+    // whole says nothing about the piece.
+    let mut reached: Vec<(Slot, i64)> = targets.clone();
+    loop {
+        let mut grew = false;
+        for (slot, (origin, off, narrow, _)) in origins {
+            if reached.iter().any(|(s, _)| s == slot) {
+                continue;
+            }
+            if let Some((_, bound)) = reached.iter().find(|(s, _)| s == origin) {
+                // The entry is an offset: `(s, o)`
+                // means `s <= high - o`. `slot =
+                // origin + off` and `origin <=
+                // high - o` bound the slot to
+                // `high - (o - off)`, so the slot's
+                // entry is `o - off`.
+                let shifted = bound - off;
+                // A slot that is a truncation of its
+                // origin still admits the bound when
+                // the bound on it fits the truncated
+                // width: `rax = zext(eax)` is a
+                // 4-byte piece of `r14 - 0x20`, and
+                // `eax <= 0x5a` bounds `rax` to
+                // `0x5a` because `0x5a` fits the
+                // piece. A bound that does not fit
+                // wraps inside the piece and states
+                // nothing.
+                if let Some(width) = narrow {
+                    let hi = high - shifted;
+                    if *width < 8
+                        && (hi < 0
+                            || (hi as u64) > (1u64 << (*width * 8)) - 1)
+                    {
+                        continue;
+                    }
+                }
+                reached.push((slot.clone(), shifted));
+                grew = true;
+            }
+        }
+        if !grew {
+            break;
+        }
+    }
+    targets = reached;
+    // The taken edge is the one the comparison holds
+    // on; our block successors list the taken target
+    // first (`Block::successors`). Which side of the
+    // branch the bound belongs to depends on how the
+    // flags were combined and negated, and getting
+    // that wrong silently is worse than trying both:
+    // a bound applied to the wrong edge produces
+    // targets that do not decode inside the function,
+    // and `materialise` refuses those. So both edges
+    // get the candidate and the check decides.
+    let trace_cbranch = std::env::var("ROMWRIGHT_TRACE_SJA_CBRANCH")
+        .ok()
+        .and_then(|raw| {
+            u64::from_str_radix(raw.trim_start_matches("0x"), 16).ok()
+        })
+        == Some(branch);
+    if trace_cbranch {
+        eprintln!(
+            "CBRANCH {:#x}: operand={:?} high={} targets={:?}",
+            branch, operand, high, targets
+        );
+    }
+    for (target, off) in targets {
+        let bounded = match values.get(&target).cloned() {
+            // Intersect, not overwrite: a bound on
+            // `t = origin + off` narrows the origin
+            // to [lo.max(-off), hi.min(high-off)].
+            // Only a plain index-space value
+            // (base 0, stride 1) shifts this way.
+            // The refined floor can still go
+            // negative: `lea 0x10(%rax),%rdx;
+            // cmp $0x20,%rdx` bounds eax to
+            // [-0x10, 3-0x10]. No compiler indexes
+            // a table negatively, so the guard was
+            // never stated.
+            Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
+                let floor = lo.max(-off);
+                Value::Strided { base: 0, stride: 1, lo: floor, hi: old_hi.min(high - off), guarded: floor >= 0 }
+            }
+            // A fresh bound on an unknown value.
+            // `lea 0x10(%r8),%rax; cmp $0x20,%rax`
+            // bounds r8 to [-0x10, 0xf]: the floor
+            // went negative, so no guard was ever
+            // stated and the read must refuse.
+            Some(Value::Top) | None =>
+                Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: -off >= 0 },
+            // A set filters to the members the
+            // bound admits: sound, and keeps the
+            // precision the set already had.
+            Some(Value::Set(values)) => {
+                let kept: Vec<u64> = values.iter().copied()
+                    .filter(|v| (*v as i64) >= -off && (*v as i64) <= high - off)
+                    .collect();
+                if kept.is_empty() {
+                    continue;
+                }
+                Value::Set(std::rc::Rc::new(kept))
+            }
+            // A constant outside the bound means
+            // this edge is infeasible; a Strided
+            // with a different base or stride is a
+            // different value set entirely. Both
+            // are left alone rather than refined
+            // into an index-space bound.
+            _ => continue,
+        };
+        if trace_cbranch {
+            eprintln!(
+                "  -> {:?} off={} bounded={:?}",
+                target, off, bounded
+            );
+        }
+        edges
+            .entry(edge)
+            .or_default()
+            .push((target.clone(), bounded.clone()));
+        edges
+            .entry(1 - edge)
+            .or_default()
+            .push((target, bounded));
+    }
+}
+
+// ---- Backward slice: findDeterminingVarnodes ----
+//
+// Ghidra's `JumpBasic::findDeterminingVarnodes` (jumptable.cc:554) walks a
+// branch's address input back through the SSA def-use graph, descending
+// `curvn->getDef()` while a varnode has one reaching definition and
+// pruning where it does not -- a live-in, a merge of reaching defs, or a
+// call/marker result (`isprune`, :424). A pruned varnode that is not a
+// constant or a read-only is a candidate switch variable (`ispoint`,
+// :436), and the ops common to every path form the address model
+// (`pathMeld`). Our `PcodeVarnode` carries no def link and the p-code is
+// not in SSA, so the reaching definitions are computed over the block
+// graph first; the slice then descends a varnode with one reaching def
+// and stops at one with none or several.
+
+/// A position in the block graph: (block, instruction, op).
+type DefPos = (usize, usize, usize);
+
+/// What reaches a slot at a program point: one defining op, several
+/// merged definitions, or a live-in value no in-function op defines.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Reach {
+    /// No in-function definition reaches: the value is live-in.
+    LiveIn,
+    /// Exactly one op's output reaches.
+    One(DefPos),
+    /// Distinct definitions reach on different paths: a merge.
+    Many,
+}
+
+impl Reach {
+    /// Merges two incoming reaching definitions: same source stays, any
+    /// difference -- including one path live-in and one defined -- is a
+    /// merge the slice cannot descend through.
+    fn merge(self, other: Reach) -> Reach {
+        if self == other {
+            self
+        } else {
+            Reach::Many
+        }
+    }
+}
+
+/// Reaching definitions over the block graph: the `getDef()` the slice
+/// needs, computed once per function.
+struct DefIndex {
+    /// Reaching definitions at each block's entry.
+    reach_in: Vec<BTreeMap<Slot, Reach>>,
+}
+
+impl DefIndex {
+    fn build(blocks: &[Block]) -> DefIndex {
+        let n = blocks.len();
+        let mut preds = vec![Vec::new(); n];
+        for (index, block) in blocks.iter().enumerate() {
+            for &successor in &block.successors {
+                if successor < n {
+                    preds[successor].push(index);
+                }
+            }
+        }
+        // The last write each block makes to each slot, as its DefPos: a
+        // later write kills the incoming definition.
+        let mut last: Vec<BTreeMap<Slot, DefPos>> = vec![BTreeMap::new(); n];
+        for (index, block) in blocks.iter().enumerate() {
+            for (insn, instruction) in block.instructions.iter().enumerate() {
+                for (op_idx, op) in instruction.ops.iter().enumerate() {
+                    if let Some(out) = &op.output {
+                        if !out.is_const() {
+                            last[index].insert(slot(out), (index, insn, op_idx));
+                        }
+                    }
+                }
+            }
+        }
+        let mut reach_in: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        let mut reach_out: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        // Forward fixpoint. A slot a predecessor does not define is live-in
+        // on that edge, which merges as a distinct source -- so a slot
+        // defined on one incoming path and live-in on another is `Many`,
+        // not `One`. Absent from the map means `LiveIn`.
+        for _ in 0..=n {
+            let mut changed = false;
+            for index in 0..n {
+                let mut keys: std::collections::BTreeSet<Slot> =
+                    std::collections::BTreeSet::new();
+                for &pred in &preds[index] {
+                    keys.extend(reach_out[pred].keys().cloned());
+                }
+                let mut merged: BTreeMap<Slot, Reach> = BTreeMap::new();
+                for key in keys {
+                    let mut reach: Option<Reach> = None;
+                    for &pred in &preds[index] {
+                        let incoming = reach_out[pred]
+                            .get(&key)
+                            .copied()
+                            .unwrap_or(Reach::LiveIn);
+                        reach = Some(match reach {
+                            None => incoming,
+                            Some(prior) => prior.merge(incoming),
+                        });
+                    }
+                    if let Some(reach) = reach {
+                        if reach != Reach::LiveIn {
+                            merged.insert(key, reach);
+                        }
+                    }
+                }
+                if merged != reach_in[index] {
+                    reach_in[index] = merged.clone();
+                    changed = true;
+                }
+                let mut out = merged;
+                for (key, def) in &last[index] {
+                    out.insert(key.clone(), Reach::One(*def));
+                }
+                if out != reach_out[index] {
+                    reach_out[index] = out;
+                    changed = true;
+                }
+            }
+            if !changed {
+                break;
+            }
+        }
+        DefIndex { reach_in }
+    }
+
+    /// The reaching definition of `key` read at `upto` (instruction, op)
+    /// in `block`: the last in-block write before the point, else the
+    /// merged reaching definition at the block's entry.
+    fn reaching_def(
+        &self,
+        blocks: &[Block],
+        block: usize,
+        key: &Slot,
+        upto: (usize, usize),
+    ) -> Reach {
+        let mut found: Option<DefPos> = None;
+        'outer: for (insn, instruction) in blocks[block].instructions.iter().enumerate() {
+            for (op_idx, op) in instruction.ops.iter().enumerate() {
+                if (insn, op_idx) >= upto {
+                    break 'outer;
+                }
+                if let Some(out) = &op.output {
+                    if !out.is_const() && slot(out) == *key {
+                        found = Some((block, insn, op_idx));
+                    }
+                }
+            }
+        }
+        if let Some(def) = found {
+            return Reach::One(def);
+        }
+        self.reach_in[block]
+            .get(key)
+            .copied()
+            .unwrap_or(Reach::LiveIn)
+    }
+}
+
+/// The expression a backward slice recovers, in the shape `pathMeld`
+/// keeps: the ops common to every path to the address. A `Point` is a
+/// pruned varnode -- one with no single reaching definition -- which is
+/// where a switch variable lives.
+#[derive(Clone, Debug)]
+enum Sliced {
+    /// A constant.
+    Const(u64),
+    /// A pruned varnode: live-in, merged, or call/marker-defined. A
+    /// candidate switch variable.
+    Point(Slot),
+    /// A varnode the slice could not descend into but that is not a
+    /// switch-variable candidate (a unique temporary, a read-only).
+    Opaque,
+    /// `load(addr)` of `size` bytes.
+    Load(Box<Sliced>, u32),
+    /// `a + b`.
+    Add(Box<Sliced>, Box<Sliced>),
+    /// `a - b`.
+    Sub(Box<Sliced>, Box<Sliced>),
+    /// `a * b`.
+    Mult(Box<Sliced>, Box<Sliced>),
+    /// `a & b`.
+    And(Box<Sliced>, Box<Sliced>),
+    /// `a | b`.
+    Or(Box<Sliced>, Box<Sliced>),
+    /// `a << b`.
+    Left(Box<Sliced>, Box<Sliced>),
+    /// Sign-extend `a` from `width` bytes.
+    SExt(Box<Sliced>, u32),
+    /// Zero-extend `a` from `width` bytes.
+    ZExt(Box<Sliced>, u32),
+}
+
+/// The slice depth bound: a switch address is a short chain, and a bound
+/// stops a malformed or cyclic def graph from recursing forever.
+const SLICE_DEPTH: u32 = 24;
+
+/// Resolves `varnode` read at `upto` in `block` into its sliced
+/// expression, descending through single reaching definitions and
+/// stopping at pruned varnodes.
+fn slice_expr(
+    defs: &DefIndex,
+    blocks: &[Block],
+    block: usize,
+    varnode: &PcodeVarnode,
+    upto: (usize, usize),
+    depth: u32,
+) -> Sliced {
+    if varnode.is_const() {
+        return Sliced::Const(varnode.offset);
+    }
+    if depth == 0 {
+        return Sliced::Opaque;
+    }
+    let key = slot(varnode);
+    match defs.reaching_def(blocks, block, &key, upto) {
+        Reach::One((b, insn, op_idx)) => {
+            let op = &blocks[b].instructions[insn].ops[op_idx];
+            slice_op(defs, blocks, b, op, (insn, op_idx), depth - 1)
+        }
+        // A merge or a live-in: a pruned varnode. A persistent one is a
+        // switch-variable candidate; a unique temporary is not.
+        Reach::Many | Reach::LiveIn => {
+            if varnode.is_persistent() {
+                Sliced::Point(key)
+            } else {
+                Sliced::Opaque
+            }
+        }
+    }
+}
+
+/// Slices one defining op's output into its expression, recursing on its
+/// inputs. `upto` is the op's own position, so its inputs are read just
+/// before it.
+fn slice_op(
+    defs: &DefIndex,
+    blocks: &[Block],
+    block: usize,
+    op: &crate::native_runtime::PcodeOp,
+    upto: (usize, usize),
+    depth: u32,
+) -> Sliced {
+    use crate::ir::Opcode as O;
+    let opcode = op.opcode.parse::<O>().unwrap_or(O::Other);
+    // `isprune`: a call, a marker, or an input-free op ends the descent and
+    // its output is a point, not an expression.
+    let prunes = matches!(
+        opcode,
+        O::Call | O::CallInd | O::CallOther | O::Branch | O::CBranch | O::BranchInd | O::Return
+    ) || op.inputs.is_empty();
+    if prunes {
+        return match &op.output {
+            Some(out) if out.is_persistent() => Sliced::Point(slot(out)),
+            _ => Sliced::Opaque,
+        };
+    }
+    let input = |index: usize| -> Sliced {
+        op.inputs
+            .get(index)
+            .map(|v| slice_expr(defs, blocks, block, v, upto, depth - 1))
+            .unwrap_or(Sliced::Opaque)
+    };
+    match opcode {
+        O::Copy | O::Cast => input(0),
+        O::Load => Sliced::Load(Box::new(input(1)), op.output.as_ref().map_or(8, |o| o.size)),
+        O::IntAdd => Sliced::Add(Box::new(input(0)), Box::new(input(1))),
+        O::IntSub => Sliced::Sub(Box::new(input(0)), Box::new(input(1))),
+        O::IntMult => Sliced::Mult(Box::new(input(0)), Box::new(input(1))),
+        O::IntAnd => Sliced::And(Box::new(input(0)), Box::new(input(1))),
+        O::IntOr => Sliced::Or(Box::new(input(0)), Box::new(input(1))),
+        O::IntLeft => Sliced::Left(Box::new(input(0)), Box::new(input(1))),
+        O::IntSExt => Sliced::SExt(
+            Box::new(input(0)),
+            op.inputs.first().map_or(8, |v| v.size),
+        ),
+        O::IntZExt => Sliced::ZExt(
+            Box::new(input(0)),
+            op.inputs.first().map_or(8, |v| v.size),
+        ),
+        // A low-piece extraction is a quasi-copy: `subpiece(x, 0)` keeps
+        // x's low bits, so the slice follows it.
+        O::Subpiece
+            if matches!(op.inputs.get(1), Some(k) if k.is_const() && k.offset == 0) =>
+        {
+            input(0)
+        }
+        _ => Sliced::Opaque,
+    }
+}
+
+/// The table a dispatch reads: where entry 0 sits, how wide each entry
+/// is, the index expression, and whether entries are absolute targets or
+/// signed offsets from a base.
+struct TableSlice {
+    /// Address of entry 0.
+    table_base: u64,
+    /// Bytes per entry.
+    entry_size: u32,
+    /// Address step per index: `table_base + index * stride`.
+    stride: u64,
+    /// The index expression, for bound evaluation.
+    index: Sliced,
+    /// For a PIC table, the base the signed offset is added to; `None`
+    /// for an absolute-target table.
+    offset_base: Option<u64>,
+}
+
+/// Finds the table read inside a sliced dispatch target and pulls out its
+/// descriptor. Returns `None` when the target is not a table read.
+fn match_table(expr: &Sliced) -> Option<TableSlice> {
+    // Peel the additive constants and no-op wrappers around the load,
+    // accumulating the PIC offset base. `Add(Const, rest)` and
+    // `Mult(x, 1)` are transparent; a non-constant addend means the target
+    // is not purely the loaded value.
+    let mut offset_base = 0u64;
+    let mut current = expr;
+    let load = loop {
+        match current {
+            Sliced::Load(_, _) => break current,
+            Sliced::Add(a, b) => {
+                if let Sliced::Const(k) = **a {
+                    offset_base = offset_base.wrapping_add(k);
+                    current = b;
+                } else if let Sliced::Const(k) = **b {
+                    offset_base = offset_base.wrapping_add(k);
+                    current = a;
+                } else {
+                    return None;
+                }
+            }
+            Sliced::Mult(a, b) => {
+                if matches!(**a, Sliced::Const(1)) {
+                    current = b;
+                } else if matches!(**b, Sliced::Const(1)) {
+                    current = a;
+                } else {
+                    return None;
+                }
+            }
+            Sliced::SExt(inner, _) | Sliced::ZExt(inner, _) => current = inner,
+            _ => return None,
+        }
+    };
+    let Sliced::Load(addr, entry_size) = load else {
+        unreachable!()
+    };
+    let (table_base, index, stride) = split_affine(addr)?;
+    if table_base == 0 {
+        return None;
+    }
+    Some(TableSlice {
+        table_base,
+        entry_size: *entry_size,
+        stride,
+        index,
+        offset_base: (offset_base != 0).then_some(offset_base),
+    })
+}
+
+/// Splits `base + index * stride` into `(base, index, stride)`, folding
+/// nested additive constants into the base. Returns `None` when the sum
+/// has more than one non-constant term.
+fn split_affine(expr: &Sliced) -> Option<(u64, Sliced, u64)> {
+    fn walk<'a>(
+        expr: &'a Sliced,
+        konst: &mut u64,
+        index: &mut Option<&'a Sliced>,
+    ) -> bool {
+        match expr {
+            Sliced::Const(k) => {
+                *konst = konst.wrapping_add(*k);
+                true
+            }
+            Sliced::Add(a, b) => walk(a, konst, index) && walk(b, konst, index),
+            other => {
+                if index.is_some() {
+                    return false;
+                }
+                *index = Some(other);
+                true
+            }
+        }
+    }
+    let mut konst = 0u64;
+    let mut index = None;
+    if !walk(expr, &mut konst, &mut index) {
+        return None;
+    }
+    let index = index?;
+    // `index * stride`: a multiply by a constant is the stride; anything
+    // else is the index itself at stride 1.
+    let (index, stride) = match index {
+        Sliced::Mult(a, b) => {
+            if let Sliced::Const(s) = **a {
+                ((**b).clone(), s)
+            } else if let Sliced::Const(s) = **b {
+                ((**a).clone(), s)
+            } else {
+                (index.clone(), 1)
+            }
+        }
+        other => (other.clone(), 1),
+    };
+    Some((konst, index, stride))
+}
+
+/// Evaluates a sliced expression into the abstract `Value` domain, so a
+/// mask or width bound on the index resolves to its interval. `bound`
+/// substitutes a guard's upper bound for one point leaf: the switch
+/// variable the guard compared, so the expression's own arithmetic (a
+/// shift, a mask) applies to the bounded value, not to `Top`.
+fn eval_sliced<I: Image>(image: &I, expr: &Sliced, bound: Option<(&Slot, u64)>) -> Value {
+    match expr {
+        Sliced::Const(k) => Value::Const(*k),
+        Sliced::Point(key) => match bound {
+            Some((slot, high)) if slot == key => Value::Strided {
+                base: 0,
+                stride: 1,
+                lo: 0,
+                hi: high as i64,
+                guarded: true,
+            },
+            _ => Value::Top,
+        },
+        Sliced::Opaque => Value::Top,
+        Sliced::Load(addr, size) => load(image, eval_sliced(image, addr, bound), *size),
+        Sliced::Add(a, b) => add(
+            eval_sliced(image, a, bound),
+            eval_sliced(image, b, bound),
+        ),
+        Sliced::Sub(a, b) => {
+            let right = eval_sliced(image, b, bound);
+            add(eval_sliced(image, a, bound), negate_interval(right))
+        }
+        Sliced::Mult(a, b) => multiply(
+            eval_sliced(image, a, bound),
+            eval_sliced(image, b, bound),
+        ),
+        Sliced::And(a, b) => match (
+            eval_sliced(image, a, bound),
+            eval_sliced(image, b, bound),
+        ) {
+            (Value::Const(l), Value::Const(r)) => Value::Const(l & r),
+            (value, Value::Const(mask)) | (Value::Const(mask), value) => {
+                bound_by_mask(value, mask)
+            }
+            _ => Value::Top,
+        },
+        Sliced::Or(a, b) => match (
+            eval_sliced(image, a, bound),
+            eval_sliced(image, b, bound),
+        ) {
+            (Value::Const(l), Value::Const(r)) => Value::Const(l | r),
+            _ => Value::Top,
+        },
+        Sliced::Left(a, b) => match (
+            eval_sliced(image, a, bound),
+            eval_sliced(image, b, bound),
+        ) {
+            (value, Value::Const(shift)) => {
+                let factor = 1u64.checked_shl(shift as u32).unwrap_or(0);
+                multiply(value, Value::Const(factor))
+            }
+            _ => Value::Top,
+        },
+        Sliced::SExt(inner, width) => map_values(
+            &eval_sliced(image, inner, bound),
+            |raw| sign_extend(raw, *width),
+        ),
+        Sliced::ZExt(inner, width) => map_values(
+            &eval_sliced(image, inner, bound),
+            |raw| truncate(raw, *width),
+        ),
+    }
+}
+/// The earliest slot a varnode is quasi-copied from: through copies,
+/// extensions, low-piece extractions, and mask/or operations that keep its
+/// low bits. This is `GuardRecord::quasiCopy` (jumptable.cc:719): a guard
+/// compares a *copy* of the switch variable, and matching the base slot is
+/// what connects them.
+fn quasi_copy(
+    defs: &DefIndex,
+    blocks: &[Block],
+    block: usize,
+    varnode: &PcodeVarnode,
+    upto: (usize, usize),
+) -> Slot {
+    let mut current = slot(varnode);
+    let mut at = upto;
+    let mut in_block = block;
+    for _ in 0..SLICE_DEPTH {
+        let Reach::One((b, insn, op_idx)) =
+            defs.reaching_def(blocks, in_block, &current, at)
+        else {
+            break;
+        };
+        let op = &blocks[b].instructions[insn].ops[op_idx];
+        use crate::ir::Opcode as O;
+        let opcode = op.opcode.parse::<O>().unwrap_or(O::Other);
+        let next = match opcode {
+            O::Copy | O::Cast | O::IntSExt | O::IntZExt => op.inputs.first(),
+            O::Subpiece
+                if matches!(op.inputs.get(1), Some(k) if k.is_const() && k.offset == 0) =>
+            {
+                op.inputs.first()
+            }
+            _ => None,
+        };
+        let Some(source) = next else { break };
+        if source.is_const() {
+            break;
+        }
+        current = slot(source);
+        in_block = b;
+        at = (insn, op_idx);
+    }
+    current
+}
+
+/// The bound a CBRANCH states: the compared varnode, the block and op
+/// position of the comparison (for quasi-copy resolution), the limit, and
+/// whether the compare was `<=`. Only `index < limit` (constant on the
+/// right) yields an upper bound a table can use; `limit < index` is a
+/// lower bound and bounds nothing here.
+fn cbranch_bound(
+    defs: &DefIndex,
+    blocks: &[Block],
+    block: usize,
+    insn: usize,
+    op_idx: usize,
+) -> Option<(PcodeVarnode, usize, (usize, usize), u64, bool)> {
+    use crate::ir::Opcode as O;
+    let op = &blocks[block].instructions[insn].ops[op_idx];
+    if op.opcode.parse::<O>().unwrap_or(O::Other) != O::CBranch {
+        return None;
+    }
+    let condition = op.inputs.get(1)?;
+    // The condition's reaching def is the comparison op.
+    let Reach::One((b, ci, co)) =
+        defs.reaching_def(blocks, block, &slot(condition), (insn, op_idx))
+    else {
+        return None;
+    };
+    let cmp = &blocks[b].instructions[ci].ops[co];
+    let cmp_op = cmp.opcode.parse::<O>().unwrap_or(O::Other);
+    let inclusive = matches!(cmp_op, O::IntLessEqual | O::IntSLessEqual);
+    if !matches!(
+        cmp_op,
+        O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual
+    ) {
+        return None;
+    }
+    let left = cmp.inputs.first()?;
+    let right = cmp.inputs.get(1)?;
+    // `index < limit`: the index is the non-constant left operand.
+    if right.is_const() && !left.is_const() {
+        Some((left.clone(), b, (ci, co), right.offset, inclusive))
+    } else {
+        None
+    }
+}
+
+/// Reads a recovered table into its targets. A bounded index reads at
+/// `table_base + index * stride`; a guard-less one scans the table
+/// linearly by entry position -- Ghidra's memory-scan bound
+/// (`JumpBasic::sanityCheck`, jumptable.cc:1592), which stops at the
+/// first entry that does not read, does not decode as code, or lands in
+/// another function. For a PIC table the next table's offsets resolve
+/// against *this* base, so an over-read produces a wrong address and
+/// stops the scan on its own; for an absolute table the in-extent and
+/// owner checks are what keep a wrong bound from inventing cases.
+fn read_table<I: Image>(
+    image: &I,
+    table: &TableSlice,
+    index: &Value,
+    extent: (u64, u64),
+) -> Result<Vec<u64>, Reason> {
+    // The addresses to probe. A `Strided` whose lowest value is negative
+    // was shifted below zero by the index's own arithmetic -- that reads
+    // the preceding table, not a dispatch.
+    let addresses: Vec<u64> = match index {
+        Value::Const(k) => {
+            vec![table.table_base.wrapping_add(k.wrapping_mul(table.stride))]
+        }
+        Value::Set(values) => values
+            .iter()
+            .map(|i| table.table_base.wrapping_add(i.wrapping_mul(table.stride)))
+            .collect(),
+        Value::Strided {
+            base,
+            stride,
+            lo,
+            hi,
+            ..
+        } => {
+            if hi < lo || hi - lo >= MAX_TABLE {
+                return Err(Reason::TooWide);
+            }
+            let first = base.wrapping_add(stride.wrapping_mul(*lo as u64));
+            if (first as i64) < 0 {
+                return Err(Reason::Unknown);
+            }
+            (*lo..=*hi)
+                .map(|i| {
+                    let idx = base.wrapping_add(stride.wrapping_mul(i as u64));
+                    table.table_base.wrapping_add(idx.wrapping_mul(table.stride))
+                })
+                .collect()
+        }
+        // Guard-less: scan the table linearly by entry position until an
+        // invalid entry -- Ghidra's memory-scan bound
+        // (`JumpBasic::sanityCheck`, jumptable.cc:1592). Only sound when
+        // the index is dense: the entry step equals the entry size, or
+        // the index is already scaled (stride 1 means the expression
+        // carries the `<<3` itself).
+        Value::Top => {
+            if table.stride != table.entry_size as u64 && table.stride != 1 {
+                return Err(Reason::Unknown);
+            }
+            (0..MAX_TABLE as u64)
+                .map(|k| table.table_base.wrapping_add(k.wrapping_mul(table.entry_size as u64)))
+                .collect()
+        }
+    };
+    let mut targets = Vec::new();
+    for at in addresses {
+        let Some(entry) = image.read(at, table.entry_size) else {
+            break;
+        };
+        let target = match table.offset_base {
+            Some(base) => base.wrapping_add(sign_extend(entry, table.entry_size)),
+            None => entry,
+        };
+        if !image.executable(target) {
+            break;
+        }
+        if target < extent.0 || target >= extent.1 {
+            match image.owner(target) {
+                Some(owner) if owner != extent => break,
+                _ => {}
+            }
+        }
+        targets.push(target);
+    }
+    let mut distinct = targets.clone();
+    distinct.sort_unstable();
+    distinct.dedup();
+    if distinct.len() < 2 {
+        return Err(Reason::TooFew);
+    }
+    Ok(targets)
+}
+
+/// Recovers a dispatch the forward pass left unknown, by slicing the
+/// branch's address input back to its table and bounding the index -- the
+/// `findDeterminingVarnodes` path. Returns the table's targets when the
+/// slice finds a readable table and a bound for its index.
+fn slice_dispatch<I: Image>(
+    image: &I,
+    defs: &DefIndex,
+    blocks: &[Block],
+    branch: u64,
+    extent: (u64, u64),
+) -> Option<Result<Vec<u64>, Reason>> {
+    use crate::ir::Opcode as O;
+    // Locate the BRANCHIND op and its block.
+    let (block, insn, op_idx) = blocks.iter().enumerate().find_map(|(b, block)| {
+        block.instructions.iter().enumerate().find_map(|(i, instruction)| {
+            if instruction.address != branch {
+                return None;
+            }
+            instruction.ops.iter().enumerate().find_map(|(o, op)| {
+                (op.opcode.parse::<O>().unwrap_or(O::Other) == O::BranchInd)
+                    .then_some((b, i, o))
+            })
+        })
+    })?;
+    let op = &blocks[block].instructions[insn].ops[op_idx];
+    let target = op.inputs.first()?;
+    let expr = slice_expr(defs, blocks, block, target, (insn, op_idx), SLICE_DEPTH);
+
+    // A table read (`jmp *(table + index*stride)`) and a computed goto
+    // (`jmp *(base + index*stride)`, no load) share the guard search; they
+    // differ only in what the bound feeds. The table's index is the
+    // expression's own; the goto's target is the whole expression.
+    match match_table(&expr) {
+        Some(table) => {
+            // Bound the index. First the expression's own structure: a
+            // mask or a width already bounds it (the PIC masked-difference
+            // class).
+            let index_value = eval_sliced(image, &table.index, None);
+            let index_value = if index_value.bounded() {
+                index_value
+            } else if let Some((point, high)) = guard_bound(defs, blocks, &table.index) {
+                // The guard the forward pass could not connect bounds a
+                // point leaf of the index. Substituting it back into the
+                // expression applies the index's own arithmetic to the
+                // bounded value: `r8 - 0x10` under `r8 < 0x20` is
+                // `[-0x10, 0xf]`, and the negative low end refuses it.
+                eval_sliced(image, &table.index, Some((&point, high)))
+            } else if table.offset_base.is_some() {
+                // No comparison, mask, or width bounds the index: scan a
+                // PIC table linearly until an invalid entry -- Ghidra's
+                // memory-scan bound (`JumpBasic::sanityCheck`). Sound only
+                // for PIC: the next table's offsets resolve against *this*
+                // base, so an over-read produces a wrong address and stops
+                // the scan. An absolute table's neighbours are valid code,
+                // so the scan would over-read into them -- refused.
+                Value::Top
+            } else {
+                return None;
+            };
+            Some(read_table(image, &table, &index_value, extent))
+        }
+        None => {
+            // A computed goto: the sliced expression is the target. Bound
+            // a point leaf through the guard and materialise the result.
+            let target_value = eval_sliced(image, &expr, None);
+            let target_value = if target_value.bounded() {
+                target_value
+            } else {
+                let (point, high) = guard_bound(defs, blocks, &expr)?;
+                eval_sliced(image, &expr, Some((&point, high)))
+            };
+            Some(materialise(image, target_value, Value::Top, extent))
+        }
+    }
+}
+
+
+/// Finds a CBRANCH whose compared varnode is a quasi-copy of a point leaf
+/// of `expr` -- the guard the forward pass could not connect -- returning
+/// the point and the bound's high value. `index < limit` bounds the index
+/// to `0..=limit-1` (`<=` to `0..=limit`).
+fn guard_bound(defs: &DefIndex, blocks: &[Block], expr: &Sliced) -> Option<(Slot, u64)> {
+    let mut points: Vec<Slot> = Vec::new();
+    collect_points(expr, &mut points);
+    for (b, blk) in blocks.iter().enumerate() {
+        for (i, instruction) in blk.instructions.iter().enumerate() {
+            for (o, _) in instruction.ops.iter().enumerate() {
+                let Some((compared, cmp_block, cmp_at, limit, inclusive)) =
+                    cbranch_bound(defs, blocks, b, i, o)
+                else {
+                    continue;
+                };
+                // The guard applies when the compared varnode is a
+                // quasi-copy of a switch-variable point: same base slot,
+                // or the compared varnode itself is a point.
+                let base = quasi_copy(defs, blocks, cmp_block, &compared, cmp_at);
+                if let Some(point) = points
+                    .iter()
+                    .find(|point| **point == base || **point == slot(&compared))
+                {
+                    let high = if inclusive {
+                        limit
+                    } else {
+                        limit.saturating_sub(1)
+                    };
+                    return Some((point.clone(), high));
+                }
+            }
+        }
+    }
+    None
+}
+fn collect_points(expr: &Sliced, out: &mut Vec<Slot>) {
+    match expr {
+        Sliced::Point(key) => {
+            if !out.contains(key) {
+                out.push(key.clone());
+            }
+        }
+        Sliced::Load(addr, _) => collect_points(addr, out),
+        Sliced::Add(a, b)
+        | Sliced::Sub(a, b)
+        | Sliced::Mult(a, b)
+        | Sliced::And(a, b)
+        | Sliced::Or(a, b)
+        | Sliced::Left(a, b) => {
+            collect_points(a, out);
+            collect_points(b, out);
+        }
+        Sliced::SExt(inner, _) | Sliced::ZExt(inner, _) => collect_points(inner, out),
+        _ => {}
+    }
+}
 fn reverse_post_order(blocks: &[Block]) -> Vec<usize> {
     let mut seen = vec![false; blocks.len()];
     let mut order = Vec::with_capacity(blocks.len());
@@ -1589,16 +2467,81 @@ mod tests {
         assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
 
+    /// `cmp $8,%r8; cmp $4,%rcx` combined into one flag by BOOL_AND, then
+    /// `ja default` -- a bound on a different variable ANDed with the index
+    /// bound. The dispatch reads the index; a guard that kept only the first
+    /// comparison's bound dropped the one the dispatch needs.
+    fn and_guard_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    // A bound on a different variable, combined into the flag.
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x40, 8), varnode("const", 8, 8)],
+                    ),
+                    // The index bound the dispatch needs.
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x18, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "BOOL_AND",
+                        Some(varnode("unique", 0x20, 1)),
+                        vec![varnode("unique", 0x10, 1), varnode("unique", 0x18, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x20, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        vec![guard, dispatch]
+    }
+
     #[test]
     fn a_dispatch_no_comparison_bounds_is_refused() {
         let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
         let mut blocks = switch_blocks();
-        // Remove the guard's comparison: nothing states the range.
+        // Remove the guard's comparison: nothing states the range, and an
+        // absolute table's neighbours are valid code, so no scan can bound
+        // it soundly.
         blocks[0].instructions[0].ops.remove(0);
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
         assert!(found.tables.is_empty());
         assert_eq!(found.refusals.unknown_target, 1);
     }
+
 
     #[test]
     fn a_target_outside_the_function_is_refused() {
@@ -2441,5 +3384,242 @@ mod tests {
         ];
         let found = analyse(&image, &blocks, (0x1000, 0x2000));
         assert_eq!(found.tables.len(), 1, "{found:?}");
+    }
+
+    /// The PIC dispatch libc's SIMD string functions use: the index is a
+    /// *difference of two masked values* (`(a & 0xf) + 0xf - (b & 0xf)`),
+    /// and the table holds 32-bit signed offsets added back to the table
+    /// base. There is no comparison guard -- the mask is the bound -- so
+    /// the index only resolves if the domain can subtract one bounded
+    /// interval from another.
+    fn pic_table_blocks() -> Vec<Block> {
+        vec![Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    // ecx = rcx & 0xf  -> [0,15]
+                    op(
+                        "INT_AND",
+                        Some(varnode("register", 0x8, 8)),
+                        vec![varnode("register", 0x8, 8), varnode("const", 0xf, 8)],
+                    ),
+                    // eax = rax & 0xf  -> [0,15]
+                    op(
+                        "INT_AND",
+                        Some(varnode("register", 0x10, 8)),
+                        vec![varnode("register", 0x10, 8), varnode("const", 0xf, 8)],
+                    ),
+                    // r9 = rax + 0xf   -> [15,30]
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("register", 0x10, 8), varnode("const", 0xf, 8)],
+                    ),
+                    // r9 = r9 - rcx    -> [15,30] - [0,15] = [0,30]
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("register", 0x48, 8), varnode("register", 0x8, 8)],
+                    ),
+                    // r10 = table base
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("const", 0x9000, 8)],
+                    ),
+                    // r9 = sext(load4(r10 + r9*4))  -- the PIC offset
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x48, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("unique", 0x20, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op(
+                        "INT_SEXT",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("unique", 0x30, 4)],
+                    ),
+                    // r10 = r10 + r9  -> table_base + offset = target
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x38, 8)),
+                        vec![varnode("register", 0x48, 8), varnode("const", 1, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x40, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("unique", 0x38, 8)],
+                    ),
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("unique", 0x40, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("register", 0x50, 8)]),
+                ],
+            )],
+            successors: vec![],
+        }]
+    }
+
+    #[test]
+    fn a_pic_table_indexed_by_a_masked_difference_is_recovered() {
+        // 31 entries (the [0,30] interval), each a signed 32-bit offset
+        // from the table base 0x9000 to a distinct in-extent target.
+        let mut memory = HashMap::new();
+        let mut expected = Vec::new();
+        for index in 0..31u64 {
+            let target = 0x1400 + index * 4;
+            let offset = (target as i64 - 0x9000) as i32 as u32 as u64;
+            memory.insert(0x9000 + index * 4, offset);
+            expected.push(target);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &pic_table_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].branch, 0x1000);
+        assert_eq!(found.tables[0].targets, expected);
+    }
+
+    /// `jmp [table + r38*4]` where r38 is live-in and *no* guard bounds it:
+    /// the index is `Top`, so the only bound is the memory scan -- read
+    /// entries until one resolves outside code.
+    fn pic_guardless_blocks() -> Vec<Block> {
+        vec![Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    // r10 = table base
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("const", 0x9000, 8)],
+                    ),
+                    // r9 = sext(load4(r10 + r38*4))  -- the PIC offset
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("unique", 0x20, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op(
+                        "INT_SEXT",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("unique", 0x30, 4)],
+                    ),
+                    // r10 = r10 + r9  -> table_base + offset = target
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("register", 0x48, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("register", 0x50, 8)]),
+                ],
+            )],
+            successors: vec![],
+        }]
+    }
+
+    #[test]
+    fn a_guardless_pic_table_is_scanned_to_its_first_invalid_entry() {
+        // Four valid signed offsets from base 0x9000, then an entry whose
+        // target lands outside code -- the scan stops there and recovers
+        // the four, where no comparison ever stated the count.
+        let mut memory = HashMap::new();
+        let mut expected = Vec::new();
+        for index in 0..4u64 {
+            let target = 0x1400 + index * 8;
+            let offset = (target as i64 - 0x9000) as i32 as u32 as u64;
+            memory.insert(0x9000 + index * 4, offset);
+            expected.push(target);
+        }
+        // Terminator: an offset that resolves to a non-executable address.
+        memory.insert(0x9010, (0xdead0000u64 - 0x9000) as i32 as u32 as u64);
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &pic_guardless_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, expected);
+    }
+
+    #[test]
+    fn a_live_in_index_is_bounded_by_a_guard_through_the_slice() {
+        // `jmp [table + r38*8]` where r38 is live-in (a Point the forward
+        // pass sees as Top), and a predecessor guards `r38 < 4`. The slice
+        // finds the table and the guard's bound.
+        let image = table(&[0x1100, 0x1108, 0x1110, 0x1118]);
+        let blocks = vec![
+            Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![
+                        op(
+                            "INT_LESS",
+                            Some(varnode("unique", 0x10, 1)),
+                            vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                        ),
+                        op(
+                            "CBRANCH",
+                            None,
+                            vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                        ),
+                    ],
+                )],
+                successors: vec![1],
+            },
+            Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![
+                        op(
+                            "INT_MULT",
+                            Some(varnode("unique", 0x20, 8)),
+                            vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                        ),
+                        op(
+                            "INT_ADD",
+                            Some(varnode("unique", 0x28, 8)),
+                            vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                        ),
+                        op(
+                            "LOAD",
+                            Some(varnode("unique", 0x30, 8)),
+                            vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                        ),
+                        op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                    ],
+                )],
+                successors: vec![],
+            },
+        ];
+        let defs = DefIndex::build(&blocks);
+        let result = slice_dispatch(&image, &defs, &blocks, 0x1010, (0x1000, 0x2000));
+        let targets = result
+            .expect("the slice found a table")
+            .expect("the table read");
+        assert_eq!(targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
 }

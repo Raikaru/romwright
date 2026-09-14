@@ -6035,6 +6035,14 @@ point at, none reserved:
   decompiler at no less than its 0.9989 soundness, at which point the
   decompiler leaves the switch round. The interpreter also has to come inside
   `m2-016`'s 5 s phase budget before it can be the default; it is at 12.4 s.
+  (2026-09-14 partial: `State.predicates`/`comparisons` now carry a Vec of
+  bounds per boolean instead of one, so a `BOOL_AND`/`BOOL_OR` combining
+  comparisons on different slots keeps every bound rather than dropping all
+  but the first; the CBranch body extracted to `apply_guard_bound` and runs
+  per bound. Regression test `a_guard_anded_with_another_bound_still_bounds
+  _the_index` fails pre-fix, passes post. Measured on libc: SJA resolved 30
+  dispatches both before and after -- the remaining `unknown` class is the
+  backward-slice gap below, not the guard-combination drop this fixed.)
 - m12-002: the propagated class is 0.878 on the module pair and 0.469 recall
   on zlib `-O0` against `-O2`. Both matchers see the same content features,
   and the content score is what the alignment's commit rule turns on, so the
@@ -6043,10 +6051,15 @@ point at, none reserved:
   TIKNIB measured as competitive with learned models, IEEE TSE 2022). The
   console reports flow kinds but not mnemonics; acceptance is the propagated
   class above 0.93 on the module pair with anchors still exactly 1.0.
-- m12-003: name a retail image from a decompilation that has symbols -- the
-  case m12-001 was built for. Perfect Dark, Pokemon Emerald and Silent Hill 1
-  are on the workstation with decomps; acceptance is a scored port onto the
-  retail ROM, truth being the decomp's own symbol table.
+- m12-003: DONE (2026-09-14). Named a retail image from a decompilation
+  with symbols: `diff retail --reference <decomp-ELF project> --apply`
+  on Pokemon Emerald (retail .gba vs the decomp's own .elf) matched 14210
+  of 16167 target functions (13372 body-digest anchors) and applied 14067
+  names. Scored against the decomp's `pokeemerald.map` truth: 4507 of 4550
+  scored ports correct (99.05%); the 43 misses are propagated
+  (alignment/context) pairs, not anchors. Perfect Dark's .z64 is on disk
+  but has no companion decomp ELF in the corpus, so Emerald carried the
+  acceptance; the mechanism is format-agnostic.
 - m5-015: the eleven DS entries whose recorded instruction set disagrees with
   the ELF's mapping symbols (was 116). Each is an ARM function inside a
   stretch a Thumb pattern painted to the next change point; the console's
@@ -6701,3 +6714,67 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   pointer spells `void *`, arity is the highest parameter register the body
   read — while `parameters`/`structural`/`returns` keep the honest classes.
   Reports: `benchmarks/reports/type-headtohead-*.json`.
+
+- m13-002 progress (2026-09-14): the backward slice landed -- the
+  `findDeterminingVarnodes` fallback the refusal accounting named. A
+  `DefIndex` (reaching definitions per block, built lazily on the first
+  dispatch the forward pass leaves `Top`) backs `slice_expr`, which walks
+  a `BRANCHIND`'s address input back through the SSA def-use graph into a
+  `Sliced` expression. `match_table` pulls the `Load` out of it; the index
+  is bounded by the expression's own structure (a mask or width) or by a
+  `CBRANCH` whose compared varnode is a `quasi_copy` of a point leaf --
+  the guard the forward pass could not connect. The bound is substituted
+  back into the index expression before evaluation, so `r8 - 0x10` under
+  `r8 < 0x20` resolves to `[-0x10, 0xf]` and the negative low end refuses
+  it (the over-read the old code claimed). `read_table` scans to the first
+  entry that does not read/decode/stay in-extent rather than requiring all
+  `entry_count`, which keeps a loose bound from reading into the next
+  table -- and for a PIC table the next table's offsets resolve against
+  *this* base, so an over-read self-corrects. libc: SJA resolved 30 -> 49
+  (interval-subtraction, then the slice, then bound-substitution), unknown
+  133 -> 118, outside 8 -> 8, at 1.0 soundness. The remaining 131
+  `None` slice attempts are a mix: real guard-less dispatches (computed
+  gotos, unbounded indexes no `CBRANCH` bounds) and non-switch BRANCHINDs
+  (UD2 traps and the like) that are correctly refused -- so the true gap
+  is smaller than 131. Ghidra answers the guard-less real switches through
+  `SwitchNormalisation` (bounds from the CFG's case-block count and the
+  default edge), not a comparison -- a different mechanism than the slice,
+  and the named next capability (m13-002b). Acceptance unmet: 49 of the
+  142 the decompiler recovers, bar 103.
+
+- m13-002b scoping (2026-09-14): the guard-less bound mechanism is
+  `JumpBasic::calcRange` (jumptable.cc:1135), not a comparison. For a
+  switch variable with no guard the range is `getMaxValue(vn)` -- the
+  `INT_AND` covering mask, or the varnode's own width -- intersected with
+  whatever guards apply, then `findSmallestNormal` (jumptable.cc:1180)
+  picks the smallest-range varnode on the path and accepts a 1-byte
+  variable only when a guard or a load sits in the path
+  (`isLoadInPath`). Two slice-level pieces of that landed: the width
+  bound a `movzbl`/`movzwl` index states is now honoured for PIC tables
+  (`index_width_bound`, PIC-only because an over-read there self-corrects
+  through wrong-base offsets; an absolute table has no such check). On
+  libc it gained nothing -- the 128 remaining `None` dispatches are not
+  narrow-indexed PIC reads; their index points are already wide registers
+  with no mask, no guard, no narrow width. Ghidra bounds those through
+  `matchsize` -- the case-block count recovered from the decompiler's
+  CFG -- which is not reachable at the slice level: it needs the
+  recovered switch CFG, a milestone-scale mechanism, not a slice fix.
+  The honest boundary: the slice answers every dispatch whose bound a
+  comparison, mask, or narrow width states; the rest need the CFG.
+
+  A second slice-level piece landed the same day: the guard-less PIC table
+  whose index is `Top` outright -- no comparison, mask, or width anywhere.
+  Ghidra's bound there is the memory scan in `JumpBasic::sanityCheck`
+  (jumptable.cc:1592): read entries until one does not decode as in-extent
+  code. `read_table` now takes a `Value::Top` index as exactly that scan,
+  by entry position (`table_base + k*entry_size`), and `slice_dispatch`
+  reaches it only for `offset_base.is_some()` -- PIC-only, because the
+  next table's offsets resolve against *this* base so an over-read
+  self-corrects, while an absolute table's neighbours are valid code and
+  the scan would over-read into them (the `a_dispatch_no_comparison_bounds
+  _is_refused` / `a_zero_extended_index_without_a_guard_is_refused` tests
+  pin that refusal). On libc it recovered nothing -- every PIC table there
+  carries a guard, so the `Top` arm never fires; the new
+  `a_guardless_pic_table_is_scanned_to_its_first_invalid_entry` test
+  exercises it. The capability is real but the corpus that needs it is
+  embedded (game) images, not PIC-guarded libc.
