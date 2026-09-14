@@ -20,9 +20,10 @@
 //!   0xFFA0, not the usual 0x0002.
 //! - psdevwiki "PRX File Format" and PPSSPP `Core/HLE/sceKernelModule.cpp`:
 //!   shipped modules arrive wrapped in a `~PSP` header and KIRK-encrypted.
-//!   KIRK uses device keys, so there is no public constant to embed the
-//!   way the XEX retail key embeds — encrypted images get a decrypt-first
-//!   error instead of silent garbage.
+//!   The KIRK key vault, the CMD1 master key, and the tag tables are
+//!   long-public constants (PSARDUMPER/JPCSP dumps), embedded in
+//!   `super::kirk_tables`; `import_with` decrypts `~PSP` images through the
+//!   KIRK algorithm (`super::kirk`) and imports the resulting PRX.
 //! - The language is the one `opinion::elf_selection` keys a 0xFFA0 MIPS
 //!   ELF to: `Allegrex:LE:32:default`.
 //!
@@ -139,25 +140,26 @@ pub(crate) fn is_prx(data: &[u8]) -> bool {
 }
 
 /// Loads the image. `None` means "not a PSP module"; encrypted images are
-/// recognized but refused with a decrypt-first error.
+/// decrypted first and import as the PRX they carry.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }
 
-/// `import` with a user-supplied key store. PSP encryption is KIRK — a
-/// hardware crypto engine driven by device keys, not a file-supplied AES
-/// key — so no `prod.keys`-style dump can drive it. The keystore is accepted
-/// for interface uniformity; a `~PSP`/scrambled image still reports the
-/// decrypt-first gap (the honest answer: pre-decrypt with prxtool/PPSSPP).
+/// `import` with a user-supplied key store. PSP encryption is KIRK driven
+/// by embedded public tables (`super::kirk`), not by a file-supplied key,
+/// so the keystore is accepted for interface uniformity and ignored: a
+/// `~PSP`/scrambled image decrypts in-loader, then imports as a PRX. What
+/// no decrypt type accepts still errors instead of importing garbage.
 pub(crate) fn import_with(
     data: &[u8],
     _keys: &super::keys::KeyStore,
 ) -> Option<Result<Vec<(String, NativeImport)>>> {
     if is_encrypted(data) {
-        return Some(super::err(
-            "encrypted PSP module (~PSP/KIRK): KIRK is device-key crypto with no \
-             file-supplied key; decrypt first with prxtool, prxdecrypt or PPSSPP",
-        ));
+        let plain = match super::kirk::decrypt_prx(data) {
+            Ok(plain) => plain,
+            Err(e) => return Some(Err(e)),
+        };
+        return Some(import_prx(&plain).map(|imp| vec![(String::new(), imp)]));
     }
     if !is_prx(data) {
         return None;
@@ -789,18 +791,142 @@ mod tests {
         assert_eq!(images[0].1.language, "Allegrex:LE:32:default");
     }
 
-    #[test]
-    fn encrypted_prx_reports_decrypt_first() {
-        for magic in [b"~PSP".as_slice(), b"PSP\x00".as_slice()] {
-            let mut data = magic.to_vec();
-            data.resize(0x100, 0);
-            assert!(is_prx(&data));
-            let err = import(&data).expect("recognized").expect_err("encrypted");
-            assert!(
-                err.to_string().contains("decrypt"),
-                "unexpected error: {err}"
-            );
+    /// Encrypts `prx` into a `~PSP` image with the type-2 path run backwards
+    /// (tag 0, the first `g_tagInfo2` entry): payload under a fixed AES key,
+    /// keypair under the CMD1 master key, header SHA-1, then the kirk7
+    /// layers. Asserts the loader's decrypt side by construction.
+    fn encrypt_type2(prx: &[u8]) -> Vec<u8> {
+        use super::super::crypto::{aes128_cbc_encrypt, sha1};
+        use super::super::kirk::expand_seed;
+        use super::super::kirk_tables::{KEYVAULT, KEY_21C0, KIRK1_KEY};
+
+        const CODE: u8 = 0x42;
+        let vault_key = &KEYVAULT[CODE as usize];
+        let size = prx.len();
+        let aligned = size.next_multiple_of(16);
+
+        // Payload ciphertext under a fixed test AES key.
+        let aes_key = [0x11u8; 16];
+        let mut padded = vec![0u8; aligned];
+        padded[..size].copy_from_slice(prx);
+        aes128_cbc_encrypt(&aes_key, &mut padded).unwrap();
+
+        // Keypair plaintext (AES key plus a CMAC key the loader never
+        // checks), encrypted with the CMD1 master key.
+        let mut pair = [0u8; 32];
+        pair[..16].copy_from_slice(&aes_key);
+        pair[16..32].copy_from_slice(&[0x22u8; 16]);
+        aes128_cbc_encrypt(&KIRK1_KEY, &mut pair).unwrap();
+
+        // Plaintext key header: encrypted pair, zero hash slots.
+        let mut kh = [0u8; 0x40];
+        kh[..32].copy_from_slice(&pair);
+
+        // Outer-layer inverse of `decrypt_kirk_header`.
+        let xor = expand_seed(&KEY_21C0, CODE, None).unwrap();
+        let mut t = [0u8; 0x40];
+        for i in 0..0x40 {
+            t[i] = kh[i] ^ xor[0x50 + i];
         }
+        aes128_cbc_encrypt(vault_key, &mut t).unwrap();
+        let mut fp = [0u8; 0x40];
+        for i in 0..0x40 {
+            fp[i] = t[i] ^ xor[0x10 + i];
+        }
+
+        // Prefix copy and metadata (size + data offset 0x80).
+        let mut prefix = [0u8; 0x80];
+        prefix[..4].copy_from_slice(b"~PSP");
+        let mut meta = [0u8; 0x10];
+        meta[..4].copy_from_slice(&(size as u32).to_le_bytes());
+        meta[4..8].copy_from_slice(&0x80u32.to_le_bytes());
+
+        // Header hash over the rearranged-plaintext fields.
+        let id = [0x33u8; 16];
+        let digest = sha1(&[
+            &[0u8; 4],
+            &xor[..0x10],
+            &[0u8; 0x58],
+            &id,
+            &fp,
+            &meta,
+            &prefix,
+        ]);
+
+        // id-run inverse: id ++ hash ++ key-head, CBC-encrypted.
+        let mut b = [0u8; 0x60];
+        b[..0x10].copy_from_slice(&id);
+        b[0x10..0x24].copy_from_slice(&digest);
+        b[0x24..0x60].copy_from_slice(&fp[..0x3C]);
+        aes128_cbc_encrypt(vault_key, &mut b).unwrap();
+
+        // Scatter into the file: prefix, key header, metadata, tag (zero),
+        // hash slot, id slot, then the payload ciphertext.
+        let mut file = vec![0u8; 0x150 + aligned];
+        file[..0x80].copy_from_slice(&prefix);
+        file[0x80..0xB0].copy_from_slice(&b[0x24..0x54]);
+        file[0xB0..0xC0].copy_from_slice(&meta);
+        file[0xC0..0xCC].copy_from_slice(&b[0x54..0x60]);
+        file[0xCC..0xD0].copy_from_slice(&fp[0x3C..0x40]);
+        file[0x12C..0x140].copy_from_slice(&b[0x10..0x24]);
+        file[0x140..0x150].copy_from_slice(&b[..0x10]);
+        file[0x150..].copy_from_slice(&padded);
+        file
+    }
+
+    #[test]
+    fn encrypted_psp_round_trip_decrypts_and_imports() {
+        let plain = prx();
+        let data = encrypt_type2(&plain);
+        assert!(is_prx(&data));
+        let images = import(&data).expect("recognized").expect("decryptable");
+        assert_eq!(images.len(), 1);
+        let imp = &images[0].1;
+        assert_eq!(imp.format, "PRX");
+        assert_eq!(imp.language, "Allegrex:LE:32:default");
+        // The decrypted bytes are the original PRX: same entry, same names.
+        let names: std::collections::HashMap<u64, &str> = imp
+            .functions
+            .iter()
+            .map(|f| (f.entry, f.name.as_str()))
+            .collect();
+        assert_eq!(
+            names.get(&((BASE + 8) as u64)),
+            Some(&"TestLib_12345678")
+        );
+        assert_eq!(
+            names.get(&((BASE + 0x200) as u64)),
+            Some(&"TestLib_11111111")
+        );
+        assert_eq!(imp.process_entry, Some(BASE as u64));
+    }
+
+    #[test]
+    fn undecryptable_psp_errors_cleanly() {
+        // Zero-filled wrapper: known tag, failing header check.
+        let mut zeroed = b"~PSP".to_vec();
+        zeroed.resize(0x200, 0);
+        assert!(is_prx(&zeroed));
+        let err = import(&zeroed).expect("recognized").expect_err("no match");
+        assert!(
+            err.to_string().contains("decrypt"),
+            "unexpected error: {err}"
+        );
+        // Unknown tag with junk behind it.
+        let mut junk = vec![0xA5u8; 0x200];
+        junk[..4].copy_from_slice(b"~PSP");
+        junk[0xD0..0xD4].copy_from_slice(&0xDEAD_BEEFu32.to_le_bytes());
+        assert!(import(&junk).expect("recognized").is_err());
+        // Truncated below the header: an error, never a panic.
+        let mut short = b"~PSP".to_vec();
+        short.resize(0x40, 0);
+        assert!(import(&short).expect("recognized").is_err());
+        // Scrambled prefix without KIRK bytes behind it still refuses.
+        let mut scrambled = b"PSP\x00".to_vec();
+        scrambled.resize(0x100, 0);
+        assert!(import(&scrambled).expect("recognized").is_err());
+        // A non-module blob is not recognized at all.
+        assert!(import(b"definitely not a module image").is_none());
     }
 
     #[test]

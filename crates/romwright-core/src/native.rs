@@ -53,6 +53,8 @@ pub(crate) mod crypto;
 pub(crate) mod threeds;
 pub(crate) mod ps3;
 pub(crate) mod vita;
+mod kirk_tables;
+mod kirk;
 pub(crate) mod psp;
 pub mod keys;
 mod mdebug;
@@ -1593,8 +1595,9 @@ pub(crate) fn parse_container(data: &[u8]) -> Result<Vec<(String, NativeImport)>
 
 /// `parse_container` with a user-supplied key store: the console loaders
 /// that can use a dumped key (Switch NCA/XCI, 3DS slot-key content, PS3
-/// NPDRM/RAP, Vita klic, PSP KIRK) read it from `keys`; an absent key leaves
-/// the loader's existing key-gap error unchanged.
+/// NPDRM/RAP, Vita klic) read it from `keys`; an absent key leaves the
+/// loader's existing key-gap error unchanged. PSP KIRK needs no dumped key:
+/// its tables are public constants embedded in the loader.
 pub(crate) fn parse_container_with(
     data: &[u8],
     keys: &keys::KeyStore,
