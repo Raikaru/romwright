@@ -48,9 +48,10 @@ fn load(paths: &[std::path::PathBuf]) -> crate::Result<Vec<SignatureDb>> {
     let mut databases = Vec::with_capacity(paths.len());
     for path in paths {
         let bytes = std::fs::read(path)?;
-        databases.push(SignatureDb::decode(&bytes).map_err(|error| {
-            ImportError::Bad(format!("{}: {error}", path.display()))
-        })?);
+        databases.push(
+            SignatureDb::decode(&bytes)
+                .map_err(|error| ImportError::Bad(format!("{}: {error}", path.display())))?,
+        );
     }
     Ok(databases)
 }
@@ -73,12 +74,13 @@ impl crate::Core {
         databases: &[std::path::PathBuf],
     ) -> crate::Result<SignatureReport> {
         use romwright_model::{Address, AddressSpace, FactKind, FactProvenance, SignatureMatchRow};
+        let request = self.execution_request(binary, program, None, crate::exec::DEFAULT_BUDGET)?;
         let databases = load(databases)?;
         let index = MatchIndex::build(&databases);
         let id = self.db.program_id(program)?;
         let language = self.db.program_language(id)?;
-        let mut import = native::parse_native(&std::fs::read(binary)?)?;
-        native::select_language(&mut import, &self.config)?;
+        let (_, mut import) = crate::inputs::parse(self.db_path(), &request.input)?;
+        native::select_language(&mut import, &request.config)?;
         if import.language != language {
             return Err(
                 ImportError::Bad("signature input and stored language differ".into()).into(),
@@ -89,10 +91,11 @@ impl crate::Core {
             records: index.records(),
             ..Default::default()
         };
-        let mut functions = self.db.functions(id)?;
+        let functions = self.db.functions(id)?;
         let mut rows = Vec::new();
         let mut renamed = Vec::new();
         for function in functions.iter() {
+            request.cancel.checkpoint(request.deadline)?;
             if function.entry.space != AddressSpace::Ram {
                 continue;
             }
@@ -117,6 +120,7 @@ impl crate::Core {
                         license: signature.license.clone(),
                         compared_bytes: signature.compared_bytes() as u64,
                         confidence: matcher::confidence(signature),
+                        input: Some(request.input.clone()),
                         provenance: FactProvenance {
                             kind: FactKind::Inferred,
                             source: SOURCE.into(),
@@ -126,25 +130,16 @@ impl crate::Core {
                     // A generated name carries no information; anything else
                     // came from a symbol table or an analyst and stays.
                     if function.name.starts_with("FUN_") {
-                        renamed.push((entry, signature.name.clone()));
+                        renamed.push((function.entry.clone(), signature.name.clone()));
                     }
                 }
             }
         }
-        self.db.replace_signature_matches(id, SOURCE, &rows)?;
-        if !renamed.is_empty() {
-            for (entry, name) in renamed {
-                if let Some(function) = functions
-                    .iter_mut()
-                    .find(|function| function.entry.offset == entry)
-                {
-                    function.name = name;
-                    report.renamed += 1;
-                }
-            }
-            self.db.replace_functions(id, &functions)?;
-        }
-        report.revision = self.db.revision(id)?;
+        (report.revision, report.renamed) = request.cancel.publish(request.deadline, || {
+            Ok(self
+                .db
+                .replace_signature_matches(id, request.revision, SOURCE, &rows, &renamed)?)
+        })?;
         Ok(report)
     }
 
@@ -161,7 +156,10 @@ impl crate::Core {
         map: Option<&Path>,
         raw: Option<(u64, &str)>,
         keys: &crate::native::keys::KeyStore,
-    ) -> crate::Result<(Vec<romwright_model::ProgramSummary>, Option<SignatureReport>)> {
+    ) -> crate::Result<(
+        Vec<romwright_model::ProgramSummary>,
+        Option<SignatureReport>,
+    )> {
         // A matched signature renames functions in the store, so which
         // databases were applied is part of what the import produced and
         // belongs in the reuse key. Without it a later import with no

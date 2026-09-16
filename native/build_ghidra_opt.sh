@@ -10,6 +10,7 @@
 #
 # Usage: native/build_ghidra_opt.sh [--jobs N] [OUTDIR]
 #   OUTDIR default: native/build; produces OUTDIR/ghidra_opt
+#   TMPDIR controls scratch directories and the build log (default: /tmp).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,7 +24,7 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-BUILD=$(mktemp -d /tmp/ghidra-opt-build.XXXXXX)
+BUILD=$(mktemp -d "${TMPDIR:-/tmp}/ghidra-opt-build.XXXXXX")
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
 cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
@@ -32,6 +33,7 @@ cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
    "$ROOT/native/romwright_x86_references.hh" \
    "$ROOT/native/romwright_callfixups.hh" \
    "$ROOT/native/romwright_nonreturn.hh" \
+   "$ROOT/native/romwright_ir.hh" "$ROOT/native/romwright_ir_state.hh" \
    "$ROOT/native/romwright_constants.hh" "$BUILD/decompiler/"
 
 cp "$PATCH" "$BUILD/apply.patch"
@@ -40,8 +42,17 @@ git -C "$BUILD" add -A
 git -C "$BUILD" apply --whitespace=nowarn --ignore-space-change "$BUILD/apply.patch"
 
 cd "$BUILD/decompiler"
-make ghidra_opt -j"$JOBS" > /tmp/ghidra-opt-build.log 2>&1
+make ghidra_opt -j"$JOBS" > "${TMPDIR:-/tmp}/ghidra-opt-build.log" 2>&1
+# Exercise the shipped hash codec, including legacy and SIMD-sized collision sets.
+GC_SECTIONS="-Wl,--gc-sections"
+if [ "$(uname -s)" = Darwin ]; then GC_SECTIONS="-Wl,-dead_strip"; fi
+c++ -std=c++11 -O2 -ffunction-sections -fdata-sections -I. \
+    dynamic.cc "$ROOT/native/dynamic_hash_test.cc" "$GC_SECTIONS" -o "$BUILD/hash-test"
+"$BUILD/hash-test"
 mkdir -p "$OUT"
-cp ghidra_opt "$OUT/ghidra_opt"
+TEMP_BINARY=$(mktemp "$OUT/.ghidra_opt.XXXXXX")
+trap 'rm -rf "$BUILD"; rm -f "$TEMP_BINARY"' EXIT
+cp -p ghidra_opt "$TEMP_BINARY"
+mv -f "$TEMP_BINARY" "$OUT/ghidra_opt"
 echo "built: $OUT/ghidra_opt"
 echo "runtime: ROMWRIGHT_SLA=/path/to/x86-64.sla $OUT/ghidra_opt"

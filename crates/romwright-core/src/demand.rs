@@ -32,6 +32,7 @@ pub struct LiveProgram {
     /// it. One process each, opened once and kept warm.
     flow: ConsoleSession,
     references: Option<ConsoleSession>,
+    control: Option<(crate::exec::CancelToken, std::time::Instant)>,
 }
 
 /// What one demand-driven analysis did.
@@ -56,70 +57,137 @@ pub struct FunctionAnalysis {
     pub phases: Vec<(String, f64)>,
 }
 
-/// Warm images, keyed by the binary that produced them.
-#[derive(Default)]
+/// Bounded warm consoles. Each program has at most one current artifact;
+/// replacing its input evicts the old parse and both native children.
 pub struct LiveImages {
-    programs: Mutex<HashMap<String, LiveProgram>>,
+    programs: Mutex<HashMap<String, WarmImage>>,
+    project: PathBuf,
+    config: crate::session::RuntimeConfig,
+}
+
+struct WarmImage {
+    input: romwright_model::ProgramInput,
+    used: std::time::Instant,
+    live: LiveProgram,
 }
 
 impl LiveImages {
+    pub fn new(project: &Path, config: &crate::session::RuntimeConfig) -> Self {
+        Self {
+            programs: Mutex::new(HashMap::new()),
+            project: project.to_path_buf(),
+            config: config.clone(),
+        }
+    }
+
     /// Runs `work` against a warm image, opening one if this is the first
     /// request for it. The console is a child process, so it is held under
     /// the same lock as the import it was loaded from.
     pub fn with<T>(
         &self,
-        binary: &Path,
+        input: &romwright_model::ProgramInput,
         program: &str,
+        request: Option<&crate::exec::ExecutionRequest>,
         work: impl FnOnce(&mut LiveProgram) -> Result<T>,
     ) -> Result<T> {
-        let key = format!("{}|{program}", binary.display());
-        let mut live = self
-            .programs
-            .lock()
-            .map_err(|_| CoreError::NativeRuntime(NativeRuntimeError("live image lock poisoned".into())))?;
-        if !live.contains_key(&key) {
-            live.insert(key.clone(), LiveProgram::open(binary)?);
+        let poisoned =
+            || CoreError::NativeRuntime(NativeRuntimeError("live image lock poisoned".into()));
+        let mut live = if let Some(request) = request {
+            loop {
+                request.cancel.checkpoint(request.deadline)?;
+                match self.programs.try_lock() {
+                    Ok(guard) => break guard,
+                    Err(std::sync::TryLockError::Poisoned(_)) => return Err(poisoned()),
+                    Err(std::sync::TryLockError::WouldBlock) => {
+                        std::thread::sleep(std::time::Duration::from_millis(5))
+                    }
+                }
+            }
+        } else {
+            self.programs.lock().map_err(|_| poisoned())?
+        };
+        let control = request.map(|request| (request.cancel.clone(), request.deadline));
+        let hit = live.get(program).is_some_and(|entry| &entry.input == input);
+        if !hit {
+            live.remove(program);
+            const CAPACITY: usize = 4;
+            if live.len() >= CAPACITY {
+                let oldest = live
+                    .iter()
+                    .min_by_key(|(_, entry)| entry.used)
+                    .map(|(key, _)| key.clone())
+                    .expect("full cache");
+                live.remove(&oldest);
+            }
+            let opened = LiveProgram::open(&self.project, input, &self.config, control.clone())?;
+            live.insert(
+                program.to_string(),
+                WarmImage {
+                    input: input.clone(),
+                    used: std::time::Instant::now(),
+                    live: opened,
+                },
+            );
         }
-        let entry = live
-            .get_mut(&key)
-            .expect("live image was just inserted under this key");
-        work(entry)
+        let entry = live.get_mut(program).expect("opened image");
+        if hit {
+            entry.live.set_control(control);
+        }
+        entry.used = std::time::Instant::now();
+        let result = work(&mut entry.live);
+        entry.live.set_control(None);
+        let result = if let Some(request) = request {
+            request.cancel.checkpoint(request.deadline).and(result)
+        } else {
+            result
+        };
+        // A killed or failed protocol session must never re-enter the cache.
+        if result.is_err() {
+            live.remove(program);
+        }
+        result
     }
 
     /// Drops a warm image, so the next request re-reads the file. An edit to
     /// the binary invalidates everything this image asserted.
-    pub fn forget(&self, binary: &Path, program: &str) {
-        let key = format!("{}|{program}", binary.display());
+    pub fn forget(&self, program: &str) {
         if let Ok(mut live) = self.programs.lock() {
-            live.remove(&key);
+            live.remove(program);
         }
     }
 }
 
 impl LiveProgram {
-    /// Parses the image without analysing it and loads it into a console.
-    fn open(binary: &Path) -> Result<Self> {
-        // The loader's answer only: parsing is what makes the image usable,
-        // and analysing it here would pay for exactly the whole-image pass
-        // this module exists to avoid.
-        let import = native::load_container_with(binary, false, None, None, &native::keys::KeyStore::empty())?
-            .into_iter()
-            .map(|(_, import)| import)
-            .next()
-            .ok_or_else(|| {
-                CoreError::NativeRuntime(NativeRuntimeError(format!(
-                    "{}: no image to analyse",
-                    binary.display()
-                )))
-            })?;
-        let mut flow = ConsoleSession::new(&import.cfg).map_err(CoreError::NativeRuntime)?;
-        flow.load_mapped(&import).map_err(CoreError::NativeRuntime)?;
+    /// The selected image and all loader options come from the import record.
+    fn open(
+        project: &Path,
+        input: &romwright_model::ProgramInput,
+        config: &crate::session::RuntimeConfig,
+        control: Option<(crate::exec::CancelToken, std::time::Instant)>,
+    ) -> Result<Self> {
+        let import = crate::inputs::load(project, input, config)?;
+        if let Some((cancel, deadline)) = &control {
+            cancel.checkpoint(*deadline)?;
+        }
+        let mut flow = ConsoleSession::launch(&import.cfg, control.clone())
+            .map_err(CoreError::NativeRuntime)?;
+        flow.load_mapped(&import)
+            .map_err(CoreError::NativeRuntime)?;
         Ok(Self {
-            binary: binary.to_path_buf(),
+            binary: import.binary.clone(),
             import,
             flow,
             references: None,
+            control,
         })
+    }
+
+    fn set_control(&mut self, control: Option<(crate::exec::CancelToken, std::time::Instant)>) {
+        self.flow.set_control(control.clone());
+        if let Some(references) = &mut self.references {
+            references.set_control(control.clone());
+        }
+        self.control = control;
     }
 
     /// Every entry the image declares: the shared-return rule needs to know
@@ -290,7 +358,12 @@ impl LiveProgram {
     /// A byte run that decodes to nothing is skipped one unit at a time,
     /// because a stripped image's padding and data are inside the same
     /// mapping as its code.
-    pub fn sweep(&mut self, start: u64, end: u64, unit: u64) -> Result<Vec<crate::cfg_functions::Step>> {
+    pub fn sweep(
+        &mut self,
+        start: u64,
+        end: u64,
+        unit: u64,
+    ) -> Result<Vec<crate::cfg_functions::Step>> {
         use crate::cfg_functions::Step;
         let mut steps = Vec::new();
         let mut address = start;
@@ -373,8 +446,8 @@ impl LiveProgram {
     pub fn references(&mut self, start: u64, end: u64) -> Result<Vec<NativeXref>> {
         let mappings = self.import.mappings.clone();
         if self.references.is_none() {
-            let mut session =
-                ConsoleSession::new(&self.import.cfg).map_err(CoreError::NativeRuntime)?;
+            let mut session = ConsoleSession::launch(&self.import.cfg, self.control.clone())
+                .map_err(CoreError::NativeRuntime)?;
             session
                 .load_mapped(&self.import)
                 .map_err(CoreError::NativeRuntime)?;
@@ -415,7 +488,10 @@ impl LiveProgram {
                     && left.value == right.value
             });
             let targets = session.adopt_reference_contexts(discovered);
-            if !targets.iter().any(|target| *target >= start && *target < end) {
+            if !targets
+                .iter()
+                .any(|target| *target >= start && *target < end)
+            {
                 break;
             }
             let again = session

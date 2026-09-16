@@ -4,8 +4,11 @@
 //! cannot name overlays, registers, or split spaces, and Ghidra's own model
 //! does not pretend they can. Entities use compact stable IDs (spec 8.2).
 
+pub mod function_ir;
+pub mod matching;
 /// Stable ID for a program inside a project.
 pub mod provenance;
+pub mod type_evidence;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ProgramId(pub u64);
@@ -342,24 +345,6 @@ pub enum TokenKind {
     Other,
 }
 
-/// The p-code object reference carried by a specialized Clang token.
-///
-/// `id` is the decompiler's per-response PcodeFactory index. It is not a
-/// durable database id or an address; consumers must treat it as scoped to
-/// this decompiler document.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub struct DecompReference {
-    pub kind: DecompReferenceKind,
-    pub id: u64,
-}
-
-/// Which p-code object a decompiler token references.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
-pub enum DecompReferenceKind {
-    Varnode,
-    Operation,
-}
-
 /// One structured decompiler token: text + kind + any entity mapping the
 /// packed document carried (WORKER-004).
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -370,10 +355,14 @@ pub struct DecompToken {
     pub color: u8,
     /// Entity name when the token carried ATTRIB_NAME.
     pub symbol: Option<String>,
+    /// Native symbol identity inherited from a declaration's SYMREF.
+    pub symbol_id: Option<u64>,
     /// Entity address when the token carried space+off attributes.
     pub address: Option<Address>,
-    /// Per-response p-code reference from ATTRIB_VARREF/ATTRIB_OPREF.
-    pub reference: Option<DecompReference>,
+    /// Both native identities may occur on one token. They are response-local,
+    /// not database IDs; attribute order must not discard either identity.
+    pub varnode: Option<function_ir::ValueId>,
+    pub operation: Option<function_ir::OperationId>,
     /// Data-type id carried by ClangTypeToken/ClangFieldToken.
     pub datatype_id: Option<u64>,
     /// Number of characters of indentation carried by ClangBreak.
@@ -446,6 +435,12 @@ pub struct DecompDoc {
     /// Recovered native facts; absent for legacy or incomplete documents.
     #[serde(default)]
     pub prototype: Option<FuncProto>,
+    /// Native call-site signatures keyed by p-code operation, not guessed from C.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub call_prototypes: std::collections::BTreeMap<function_ir::OperationId, FuncProto>,
+    /// Native callee entry addresses; absent for unresolved indirect calls.
+    #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+    pub call_targets: std::collections::BTreeMap<function_ir::OperationId, Address>,
     /// None means unavailable metadata; an empty list means no recovered tables.
     #[serde(default)]
     pub jump_tables: Option<Vec<JumpTable>>,
@@ -455,6 +450,9 @@ pub struct DecompDoc {
     /// storage capture or the function has none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub storage: Vec<StorageSymbol>,
+    /// Native typed SSA and ordered basic-block graph; never inferred from C.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub function_ir: Option<function_ir::FunctionIr>,
 }
 
 /// Structural row kinds emitted by the core listing source.
@@ -945,6 +943,80 @@ pub struct SignatureMatchRow {
     pub compared_bytes: u64,
     pub confidence: f64,
     pub provenance: FactProvenance,
+    /// Exact imported image and loader inputs compared by the signature pass.
+    /// Older unbound matches are display evidence, not rewrite authority.
+    pub input: Option<ProgramInput>,
+}
+
+/// An explicit compiler invocation. Arguments are passed directly, never to a
+/// shell. Source and output operands are supplied by the matching runner.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct BuildRecipe {
+    pub compiler: String,
+    pub arguments: Vec<String>,
+    pub environment: std::collections::BTreeMap<String, String>,
+}
+
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum MatchingStatus {
+    CompileFailed,
+    DiffFailed,
+    Compared,
+}
+
+/// Immutable evidence for a source-to-object comparison. Every digest names
+/// captured bytes in the project's artifact store, not a mutable source path.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct MatchingRunRecord {
+    pub revision: u64,
+    pub target_digest: String,
+    pub candidate_digest: Option<String>,
+    pub source_digest: String,
+    pub context_digest: String,
+    pub compiler_digest: String,
+    pub compiler_version: String,
+    pub recipe: BuildRecipe,
+    /// Complete arguments used, including source/output operands.
+    #[serde(default)]
+    pub compile_arguments: Vec<String>,
+    #[serde(default)]
+    pub version_arguments: Vec<String>,
+    #[serde(default)]
+    pub source_path: String,
+    #[serde(default)]
+    pub working_directory: String,
+    /// Workspace-relative input paths and their immutable contents.
+    #[serde(default)]
+    pub files: std::collections::BTreeMap<String, String>,
+    #[serde(default)]
+    pub tools: std::collections::BTreeMap<String, matching::ToolRequirement>,
+    pub objdiff_digest: String,
+    pub objdiff_version: String,
+    pub raw_result: serde_json::Value,
+    pub status: MatchingStatus,
+    pub diagnostics: String,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct MatchingRun {
+    pub id: u64,
+    pub created_at: String,
+    #[serde(default)]
+    pub imported: bool,
+    pub record: MatchingRunRecord,
+}
+
+/// Loader inputs captured when a program is imported. The selector is the
+/// exact container image id, independent of the editable program name or base.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
+pub struct ProgramInput {
+    pub source_path: String,
+    pub binary_digest: String,
+    pub image_selector: String,
+    pub map_digest: Option<String>,
+    pub raw: Option<(u64, String)>,
+    pub keys_digest: Option<String>,
 }
 
 /// Which Itanium ABI type_info shape described a class, and therefore what
@@ -993,13 +1065,13 @@ pub struct ClassBase {
     pub public_base: bool,
 }
 
-/// A polymorphic class recovered from its Itanium type_info and vtable.
+/// A recovered class. RTTI-less membership does not imply ABI metadata exists.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct ClassRow {
-    pub typeinfo: Address,
-    /// Primary vtable start: the `offset_to_top` word, two pointers before the
-    /// address point objects hold.
-    pub vtable: Address,
+    /// ABI type descriptor, absent for classes known only through members.
+    pub typeinfo: Option<Address>,
+    /// Proven primary vtable start; absent until its binding is established.
+    pub vtable: Option<Address>,
     /// Demangled name where the Itanium grammar this build parses covers it,
     /// otherwise the mangled form.
     pub name: String,

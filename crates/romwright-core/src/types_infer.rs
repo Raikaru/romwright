@@ -26,139 +26,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
-
-/// What one operand can be, as a class an inference can be scored on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum Class {
-    /// No operation constrained it.
-    Unknown,
-    /// A value of this width whose kind nothing proved — a `LOAD`'s result
-    /// before any use classifies it. Ghidra spells this `undefined<N>`;
-    /// carrying the width keeps a loaded return from reporting `unknown`.
-    Opaque(u32),
-    /// A number of this width, with no evidence of sign.
-    Num(u32),
-    Int(u32),
-    Uint(u32),
-    Float(u32),
-    /// A pointer to data.
-    Ptr,
-    /// A pointer to code, which an indirect call proves.
-    Code,
-    /// Two facts that cannot both hold.
-    Top,
-}
-
-impl Default for Class {
-    fn default() -> Self {
-        Class::Unknown
-    }
-}
-
-impl Class {
-    /// The name the DWARF truth uses, so the two are directly comparable.
-    pub fn name(self) -> String {
-        match self {
-            Class::Unknown => "unknown".into(),
-            Class::Opaque(bits) => format!("opaque{bits}"),
-            Class::Num(bits) => format!("num{bits}"),
-            Class::Int(bits) => format!("int{bits}"),
-            Class::Uint(bits) => format!("uint{bits}"),
-            Class::Float(bits) => format!("float{bits}"),
-            Class::Ptr => "ptr".into(),
-            Class::Code => "code".into(),
-            Class::Top => "top".into(),
-        }
-    }
-
-    /// The bit width a sized class carries; pointer-ish and unknown
-    /// classes have no meaningful width, so they report a word.
-    pub fn width(self) -> u32 {
-        match self {
-            Class::Opaque(b) | Class::Num(b) | Class::Int(b) | Class::Uint(b)
-            | Class::Float(b) => b,
-            _ => 64,
-        }
-    }
-
-    /// The C type a prototype renders. `num` and `opaque` carry no sign
-    /// evidence, so they take C's default — `int` and its width siblings —
-    /// which is what Ghidra prints for the same unproven slot. The analysis
-    /// fact stays `num`; this is only how it is spelled for a reader.
-    pub fn c_name(self) -> String {
-        match self {
-            Class::Unknown => "int".into(),
-            Class::Opaque(8) | Class::Num(8) | Class::Int(8) => "char".into(),
-            Class::Opaque(16) | Class::Num(16) | Class::Int(16) => "short".into(),
-            Class::Opaque(64) | Class::Num(64) | Class::Int(64) => "long".into(),
-            Class::Opaque(_) | Class::Num(_) | Class::Int(_) => "int".into(),
-            Class::Uint(8) => "unsigned char".into(),
-            Class::Uint(16) => "unsigned short".into(),
-            Class::Uint(64) => "unsigned long".into(),
-            Class::Uint(_) => "unsigned int".into(),
-            Class::Float(64) => "double".into(),
-            Class::Float(_) => "float".into(),
-            Class::Ptr | Class::Code => "void *".into(),
-            Class::Top => "int".into(),
-        }
-    }
-
-    /// The least class above both. A width joins with a width of the same
-    /// size; two different widths keep the wider, because the narrower use
-    /// is a truncation of the same storage.
-    pub fn join(self, other: Class) -> Class {
-        use Class::*;
-        match (self, other) {
-            (Unknown, value) | (value, Unknown) => value,
-            // Two opaque reads of one slot keep the narrower width; an
-            // opaque value otherwise yields to anything that classifies it.
-            (Opaque(left), Opaque(right)) => Opaque(left.min(right)),
-            (Opaque(_), value) | (value, Opaque(_)) => value,
-            (left, right) if left == right => left,
-            (Top, _) | (_, Top) => Top,
-            // A number with no sign evidence yields to one that has it, and
-            // the width is the wider of the two: one storage location is
-            // read at several widths on any machine with subregisters --
-            // `EDI` and `RDI` are the same bytes, and treating a 32-bit
-            // signed read of a 64-bit slot as a contradiction reported every
-            // x86-64 first parameter as conflicting evidence.
-            //
-            // The width kept is the *narrowest* read, not the widest: a
-            // 32-bit parameter arrives in a 64-bit slot and every ABI
-            // permits the callee to use the whole register, so the wide use
-            // is the slot and the narrow one is the type. Measured on the
-            // type fixture, `max` reported `int64` where the source said
-            // `int32` on every 32-bit parameter.
-            (Num(left), Int(right)) | (Int(right), Num(left)) => Int(left.min(right)),
-            (Num(left), Uint(right)) | (Uint(right), Num(left)) => Uint(left.min(right)),
-            (Num(left), Float(right)) | (Float(right), Num(left)) => Float(left.min(right)),
-            // A pointer read as an integer of pointer width is a pointer:
-            // address arithmetic is integer arithmetic on every machine.
-            (Ptr, Num(_)) | (Num(_), Ptr) => Ptr,
-            (Code, Num(_)) | (Num(_), Code) => Code,
-            // Address arithmetic is unsigned arithmetic: a slot read as an
-            // unsigned 64-bit value and dereferenced is a pointer, and the
-            // dereference is the stronger fact.
-            (Ptr, Uint(64)) | (Uint(64), Ptr) => Ptr,
-            (Code, Uint(64)) | (Uint(64), Code) => Code,
-            (Code, Ptr) | (Ptr, Code) => Code,
-            (Num(left), Num(right)) => Num(left.min(right)),
-            (Int(left), Int(right)) => Int(left.min(right)),
-            (Uint(left), Uint(right)) => Uint(left.min(right)),
-            (Float(left), Float(right)) => Float(left.min(right)),
-            // Signed and unsigned readings of one storage location disagree
-            // about the sign and agree about everything else. Without SSA
-            // the two readings may belong to different values in the same
-            // register -- a compiler implements signed division by a
-            // constant with unsigned multiplies and shifts -- so the honest
-            // answer is the width, not a contradiction.
-            (Int(left), Uint(right)) | (Uint(right), Int(left)) => Num(left.min(right)),
-            // Anything else really is evidence in conflict.
-            _ => Top,
-        }
-    }
-}
+use romwright_model::type_evidence::Class;
 
 /// A field recovered at one offset of a struct: the access width and the
 /// scalar class the value's first use proved.
@@ -182,7 +50,10 @@ pub enum Ty {
     /// offset -> field; the layout the accesses proved.
     Struct(BTreeMap<i64, Field>),
     /// `base[index]` with a constant stride.
-    Array { elem: Box<Ty>, stride: u64 },
+    Array {
+        elem: Box<Ty>,
+        stride: u64,
+    },
 }
 
 impl Ty {
@@ -241,8 +112,14 @@ impl Ty {
                 Ty::Struct(fields)
             }
             (
-                Ty::Array { elem: ae, stride: as_ },
-                Ty::Array { elem: be, stride: bs },
+                Ty::Array {
+                    elem: ae,
+                    stride: as_,
+                },
+                Ty::Array {
+                    elem: be,
+                    stride: bs,
+                },
             ) => Ty::Array {
                 elem: Box::new(ae.join(be)),
                 stride: (*as_).max(*bs),
@@ -251,13 +128,25 @@ impl Ty {
             // informative claim (a scalar use of a pointer is a width, not
             // a refutation).
             (Ty::Ptr(_), _) | (_, Ty::Ptr(_)) => {
-                if matches!(self, Ty::Ptr(_)) { self.clone() } else { other.clone() }
+                if matches!(self, Ty::Ptr(_)) {
+                    self.clone()
+                } else {
+                    other.clone()
+                }
             }
             (Ty::Struct(_), _) | (_, Ty::Struct(_)) => {
-                if matches!(self, Ty::Struct(_)) { self.clone() } else { other.clone() }
+                if matches!(self, Ty::Struct(_)) {
+                    self.clone()
+                } else {
+                    other.clone()
+                }
             }
             (Ty::Array { .. }, _) | (_, Ty::Array { .. }) => {
-                if matches!(self, Ty::Array { .. }) { self.clone() } else { other.clone() }
+                if matches!(self, Ty::Array { .. }) {
+                    self.clone()
+                } else {
+                    other.clone()
+                }
             }
         }
     }
@@ -303,13 +192,19 @@ impl Facts {
         if varnode.space != "register" {
             return;
         }
-        let slot = self.registers.entry(varnode.offset).or_insert(Class::Unknown);
+        let slot = self
+            .registers
+            .entry(varnode.offset)
+            .or_insert(Class::Unknown);
         *slot = slot.join(class);
     }
 
     /// What is known about the register at `offset`.
     pub fn get(&self, offset: u64) -> Class {
-        self.registers.get(&offset).copied().unwrap_or(Class::Unknown)
+        self.registers
+            .get(&offset)
+            .copied()
+            .unwrap_or(Class::Unknown)
     }
 
     /// Whether the body wrote the register at `offset` at all — the
@@ -320,7 +215,9 @@ impl Facts {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (u64, Class)> + '_ {
-        self.registers.iter().map(|(offset, class)| (*offset, *class))
+        self.registers
+            .iter()
+            .map(|(offset, class)| (*offset, *class))
     }
 
     /// The class last written to the register at `offset`.
@@ -496,8 +393,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         sources.push(origin);
                     } else if input.space == "register" && input.size == 8 {
                         sources.push(input.offset);
-                    } else if let Some(more) =
-                        built_from.get(&(input.space.clone(), input.offset))
+                    } else if let Some(more) = built_from.get(&(input.space.clone(), input.offset))
                     {
                         sources.extend(more.iter().copied());
                     }
@@ -549,8 +445,13 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 if opcode == "INT_MULT"
                     && let (Some(a), Some(b)) = (op.inputs.first(), op.inputs.get(1))
                 {
-                    let stride = if b.space == "const" { Some(b.offset) }
-                        else if a.space == "const" { Some(a.offset) } else { None };
+                    let stride = if b.space == "const" {
+                        Some(b.offset)
+                    } else if a.space == "const" {
+                        Some(a.offset)
+                    } else {
+                        None
+                    };
                     if let Some(stride) = stride {
                         scaled.insert(key.clone(), stride);
                     }
@@ -563,7 +464,8 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 // `t = a + b` with no constant: a base-plus-index sum.
                 if opcode == "INT_ADD"
                     && let (Some(a), Some(b)) = (op.inputs.first(), op.inputs.get(1))
-                    && a.space != "const" && b.space != "const"
+                    && a.space != "const"
+                    && b.space != "const"
                 {
                     sum_of.insert(
                         key,
@@ -579,13 +481,16 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 {
                     let class = match opcode {
                         "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SBORROW" | "INT_SRIGHT"
-                        | "INT_SDIV" | "INT_SREM" | "INT_SEXT" => Class::Int(size * 8),
-                        "INT_LESS" | "INT_LESSEQUAL" | "INT_CARRY" | "INT_RIGHT"
-                        | "INT_DIV" | "INT_REM" | "INT_ZEXT" => Class::Uint(size * 8),
+                        | "INT_SDIV" | "INT_SREM" | "INT_SEXT" | "FLOAT_INT2FLOAT" => {
+                            Class::Int(size * 8)
+                        }
+                        "INT_LESS" | "INT_LESSEQUAL" | "INT_CARRY" | "INT_RIGHT" | "INT_DIV"
+                        | "INT_REM" | "INT_ZEXT" => Class::Uint(size * 8),
                         _ if opcode.starts_with("FLOAT_") => Class::Float(size * 8),
-                        "COPY" | "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_AND"
-                        | "INT_OR" | "INT_XOR" | "INT_LEFT" | "INT_EQUAL"
-                        | "INT_NOTEQUAL" => Class::Num(size * 8),
+                        "COPY" | "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_AND" | "INT_OR"
+                        | "INT_XOR" | "INT_LEFT" | "INT_EQUAL" | "INT_NOTEQUAL" => {
+                            Class::Num(size * 8)
+                        }
                         _ => Class::Unknown,
                     };
                     if class != Class::Unknown {
@@ -607,18 +512,14 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 // says nothing about the type of anything.
                 "LOAD" => {
                     if let Some(output) = &op.output {
-                        load_width.insert(
-                            (output.space.clone(), output.offset),
-                            output.size,
-                        );
+                        load_width.insert((output.space.clone(), output.offset), output.size);
                     }
                     if let Some(address) = op.inputs.get(1) {
                         let slot = address_of.get(&(address.space.clone(), address.offset));
                         // The loaded value's class is the field's class —
                         // but the field is only classified by a later use,
                         // so record the load and backfill after `fields`.
-                        if let (Some(output), Some((base, disp))) =
-                            (&op.output, slot.copied())
+                        if let (Some(output), Some((base, disp))) = (&op.output, slot.copied())
                             && output.space == "register"
                         {
                             loads.push((output.offset, base, disp));
@@ -718,7 +619,9 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 }
                 "STORE" => {
                     if let Some(address) = op.inputs.get(1) {
-                        let key = address_of.get(&(address.space.clone(), address.offset)).copied();
+                        let key = address_of
+                            .get(&(address.space.clone(), address.offset))
+                            .copied();
                         match key {
                             Some(key) => {
                                 // A store into `*(base+disp)` where `base`
@@ -768,13 +671,11 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                         } else {
                                             Class::Num(value.size * 8)
                                         };
-                                        let entry = fields
-                                            .entry((base, disp))
-                                            .or_insert(Field {
-                                                offset: disp,
-                                                size: value.size,
-                                                class: Class::Unknown,
-                                            });
+                                        let entry = fields.entry((base, disp)).or_insert(Field {
+                                            offset: disp,
+                                            size: value.size,
+                                            class: Class::Unknown,
+                                        });
                                         entry.class = entry.class.join(class);
                                         entry.size = entry.size.max(value.size);
                                         if !defined.contains(&base) {
@@ -817,9 +718,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         live(&mut facts, target, Class::Code);
                     }
                 }
-                "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SBORROW"
-                    if !signed_evidence(op) =>
-                {
+                "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SBORROW" if !signed_evidence(op) => {
                     // A flag nothing branches on is not evidence.
                     for input in &op.inputs {
                         let class = Class::Num(input.size * 8);
@@ -860,6 +759,17 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         live(&mut facts, input, class);
                     }
                 }
+                // `int2float` consumes a *signed* integer — Ghidra's
+                // `opInt2Float` sign-extends its input (float.cc:614) — so
+                // the generic FLOAT_ rule would misclassify it as a float.
+                "FLOAT_INT2FLOAT" => {
+                    for input in &op.inputs {
+                        if input.size == 4 || input.size == 8 {
+                            let class = Class::Int(input.size * 8);
+                            live(&mut facts, input, class);
+                        }
+                    }
+                }
                 _ if opcode.starts_with("FLOAT_") => {
                     for input in &op.inputs {
                         if input.size == 4 || input.size == 8 || input.size == 10 {
@@ -878,8 +788,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         live(&mut facts, input, class);
                     }
                 }
-                "INT_ADD" | "INT_SUB" | "INT_MULT"
-                | "INT_LEFT" | "INT_EQUAL" | "INT_NOTEQUAL" => {
+                "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_LEFT" | "INT_EQUAL" | "INT_NOTEQUAL" => {
                     for input in &op.inputs {
                         let class = Class::Num(input.size * 8);
                         live(&mut facts, input, class);
@@ -897,9 +806,9 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     // to it, but its width is the load's — `opaque32`, not
                     // `unknown`, so a returned load reports its size.
                     "LOAD" => Class::Opaque(output.size * 8),
-                    "INT_EQUAL" | "INT_NOTEQUAL" | "INT_LESS" | "INT_LESSEQUAL"
-                    | "INT_SLESS" | "INT_SLESSEQUAL" | "BOOL_AND" | "BOOL_OR" | "BOOL_NEGATE"
-                    | "FLOAT_EQUAL" | "FLOAT_NOTEQUAL" | "FLOAT_LESS" | "FLOAT_LESSEQUAL" => {
+                    "INT_EQUAL" | "INT_NOTEQUAL" | "INT_LESS" | "INT_LESSEQUAL" | "INT_SLESS"
+                    | "INT_SLESSEQUAL" | "BOOL_AND" | "BOOL_OR" | "BOOL_NEGATE" | "FLOAT_EQUAL"
+                    | "FLOAT_NOTEQUAL" | "FLOAT_LESS" | "FLOAT_LESSEQUAL" => {
                         Class::Num(output.size * 8)
                     }
                     "INT_SDIV" | "INT_SREM" | "INT_SRIGHT" => Class::Int(output.size * 8),
@@ -915,14 +824,11 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         // width: `movzx eax, byte[s]` is `opaque8`, not the
                         // 32-bit register it lands in.
                         if let Some(width) = source
-                            .and_then(|input| {
-                                load_width.get(&(input.space.clone(), input.offset))
-                            })
+                            .and_then(|input| load_width.get(&(input.space.clone(), input.offset)))
                         {
                             Class::Opaque(width * 8)
                         } else {
-                            let bits =
-                                source.map_or(output.size * 8, |input| input.size * 8);
+                            let bits = source.map_or(output.size * 8, |input| input.size * 8);
                             let carried = source
                                 .filter(|input| input.space == "register")
                                 .map(|input| self_written(&facts, input.offset))
@@ -941,6 +847,12 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                             }
                         }
                     }
+                    // `trunc` produces a signed integer — Ghidra's `opTrunc`
+                    // casts to `intb` (float.cc:635) — and `nan` produces a
+                    // boolean; neither is a float, so they precede the
+                    // generic FLOAT_ output rule.
+                    "FLOAT_TRUNC" => Class::Int(output.size * 8),
+                    "FLOAT_NAN" => Class::Num(8),
                     _ if opcode.starts_with("FLOAT_") => Class::Float(output.size * 8),
                     "COPY" | "INT_ADD" | "INT_SUB" | "INT_MULT" | "INT_AND" | "INT_OR"
                     | "INT_XOR" | "INT_LEFT" | "INT_2COMP" | "INT_NEGATE" => {
@@ -970,6 +882,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                             // with the kind its operands had.
                             Class::Int(_) => Class::Int(output.size * 8),
                             Class::Uint(_) => Class::Uint(output.size * 8),
+                            Class::IntOrUint(_) => Class::IntOrUint(output.size * 8),
                             Class::Float(_) => Class::Float(output.size * 8),
                             Class::Num(_) => Class::Num(output.size * 8),
                         }
@@ -1056,10 +969,10 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
         facts.structural.insert(base, ty);
     }
     for (base, (stride, elem)) in arrays {
-        facts
-            .structural
-            .entry(base)
-            .or_insert(Ty::Array { elem: Box::new(Ty::Scalar(elem)), stride });
+        facts.structural.entry(base).or_insert(Ty::Array {
+            elem: Box::new(Ty::Scalar(elem)),
+            stride,
+        });
     }
     facts
 }
@@ -1101,6 +1014,34 @@ mod tests {
             output,
             inputs,
         }
+    }
+
+    #[test]
+    fn converting_a_loaded_integer_does_not_make_the_field_float() {
+        let facts = infer(&[instruction(vec![
+            op(
+                "INT_ADD",
+                Some(varnode("unique", 0x100, 8)),
+                vec![varnode("register", 0x38, 8), varnode("const", 0x34, 8)],
+            ),
+            op(
+                "LOAD",
+                Some(varnode("unique", 0x200, 4)),
+                vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 8)],
+            ),
+            op(
+                "FLOAT_INT2FLOAT",
+                Some(varnode("unique", 0x300, 4)),
+                vec![varnode("unique", 0x200, 4)],
+            ),
+        ])]);
+        let Ty::Ptr(inner) = facts.structural(0x38).unwrap() else {
+            panic!("expected pointer")
+        };
+        let Ty::Struct(fields) = inner.as_ref() else {
+            panic!("expected structure")
+        };
+        assert_eq!(fields[&0x34].class, Class::Int(32));
     }
 
     #[test]
@@ -1277,7 +1218,8 @@ mod tests {
     fn a_disputed_sign_degrades_to_a_width() {
         // Two branches, one on a signed test and one on an unsigned test of
         // the same storage: without SSA these may be different values in
-        // one register, so the answer is the width they agree on.
+        // one register, so the answer is the width they agree on with the
+        // sign unresolved — `IntOrUint`, the join of `Int` and `Uint`.
         let facts = infer(&[instruction(vec![
             op(
                 "INT_SLESS",
@@ -1300,7 +1242,7 @@ mod tests {
                 vec![varnode("ram", 0x1200, 8), varnode("unique", 0x201, 1)],
             ),
         ])]);
-        assert_eq!(facts.get(0x38), Class::Num(32));
+        assert_eq!(facts.get(0x38), Class::IntOrUint(32));
     }
 
     #[test]
@@ -1324,7 +1266,10 @@ mod tests {
             op(
                 "INT_ADD",
                 Some(varnode("unique", 0x300, 8)),
-                vec![varnode("register", 0x28, 8), varnode("const", 0xfffffff8, 8)],
+                vec![
+                    varnode("register", 0x28, 8),
+                    varnode("const", 0xfffffff8, 8),
+                ],
             ),
             // Store xmm0 to the slot.
             op(
@@ -1363,5 +1308,60 @@ mod tests {
         ])]);
         assert_eq!(facts.get(0x200), Class::Float(64));
         assert!(facts.read_before_write(0x200));
+    }
+
+    /// The join must be a semilattice join: commutative, associative,
+    /// idempotent, and an upper bound. The `Num`/`Int`/`Uint` collapse that
+    /// `IntOrUint` replaced broke associativity — the same evidence gave
+    /// different answers by accumulation order, and the subtype solver's
+    /// fixpoint diverged on it.
+    #[test]
+    fn join_is_a_semilattice_join() {
+        use Class::*;
+        let elements = [
+            Unknown,
+            Opaque(8),
+            Opaque(64),
+            Num(32),
+            Num(64),
+            Int(32),
+            Int(64),
+            Uint(32),
+            Uint(64),
+            IntOrUint(32),
+            IntOrUint(64),
+            Float(32),
+            Float(64),
+            Ptr,
+            Code,
+            Top,
+        ];
+        // The order `join` induces: `a <= b` iff `a.join(b) == b`.
+        let leq = |a: Class, b: Class| a.join(b) == b;
+        for &a in &elements {
+            // Idempotent.
+            assert_eq!(a.join(a), a, "idempotent: {a:?}");
+            for &b in &elements {
+                // Commutative.
+                assert_eq!(a.join(b), b.join(a), "commutative: {a:?} {b:?}");
+                // Upper bound: the join is at or above each operand.
+                assert!(leq(a, a.join(b)), "upper bound a: {a:?} {b:?}");
+                assert!(leq(b, a.join(b)), "upper bound b: {a:?} {b:?}");
+                for &c in &elements {
+                    // Associative.
+                    assert_eq!(
+                        a.join(b).join(c),
+                        a.join(b.join(c)),
+                        "associative: {a:?} {b:?} {c:?}"
+                    );
+                }
+            }
+        }
+        // The counterexample that broke it: sign-conflict then float must
+        // not depend on which side the float joined from.
+        assert_eq!(
+            Int(32).join(Uint(32)).join(Float(32)),
+            Int(32).join(Uint(32).join(Float(32))),
+        );
     }
 }

@@ -7,7 +7,6 @@
 use romwright_core::Core;
 use romwright_debug::{BackendKind, DebugBackend, DebugCommand};
 use romwright_model::{Address, AddressSpace};
-use romwright_worker_client::WorkerPoolManager;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -51,23 +50,31 @@ struct ResponseEnvelope {
     error: Option<ErrorEnvelope>,
 }
 
-/// One Core-backed API endpoint. Core remains the semantic owner; the
-/// supervised worker manager owns warm decompiler sessions and their status.
+/// One Core-backed API endpoint. Core remains the semantic owner; the job
+/// executor runs long analysis off the request path on its own `Core`s.
+///
+/// `core` is behind a mutex because `Core` is not `Sync` (its store holds a
+/// SQLite connection) yet `serve_tcp` handles each connection on its own
+/// thread. The lock is taken per call, so requests interleave; the long
+/// worker jobs never touch it — they run on the executor's own `Core`s.
 pub struct ApiService {
-    core: Core,
-    worker_pool: Mutex<WorkerPoolManager>,
+    core: Mutex<Core>,
+    executor: romwright_worker_client::JobExecutor,
 }
 
 impl ApiService {
     pub fn new(core: Core) -> Self {
+        let executor = romwright_worker_client::JobExecutor::new(core.runtime_config().job_workers);
         Self {
-            core,
-            worker_pool: Mutex::new(WorkerPoolManager::default()),
+            core: Mutex::new(core),
+            executor,
         }
     }
 
-    pub fn core(&self) -> &Core {
-        &self.core
+    /// Each request owns its store connection and shares only the warm
+    /// runtime caches. No analysis holds the service mutex while it runs.
+    pub fn core(&self) -> romwright_core::Result<Core> {
+        self.core.lock().unwrap_or_else(|e| e.into_inner()).fork()
     }
 
     /// Handles one versioned JSON request and always returns a versioned JSON
@@ -118,12 +125,12 @@ impl ApiService {
     fn dispatch(&self, method: &str, params: &Value) -> Result<Value, DispatchError> {
         match method {
             "ping" => Ok(json!({"service": "romwright-core", "api": API_VERSION})),
-            "architectures" => value(self.core.architectures()),
-            "programs" => value(self.core.programs()),
-            "locate" => value(self.core.locate(&address_param(params, "address")?)),
+            "architectures" => value(self.core()?.architectures()),
+            "programs" => value(self.core()?.programs()),
+            "locate" => value(self.core()?.locate(&address_param(params, "address")?)),
             "open" => {
                 let program = string_param(params, "program")?;
-                value(self.core.open_program(&program))
+                value(self.core()?.open_program(&program))
             }
             "import_native" => {
                 let binary = path_param(params, "binary")?;
@@ -149,15 +156,17 @@ impl ApiService {
                 let keys = romwright_core::native::keys::KeyStore::load_all(&key_paths)
                     .map_err(|e| DispatchError::Request(e.to_string()))?;
                 let (stored, signatures) = self
-                    .core
-                    .import_native_with_signatures(&binary, name, &databases, analyse, None, None, &keys)
+                    .core()?
+                    .import_native_with_signatures(
+                        &binary, name, &databases, analyse, None, None, &keys,
+                    )
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
                 // The primary program stays at the top level so existing
                 // consumers keep working; a container's other processors
                 // are listed beside it rather than hidden.
-                let primary = stored.first().ok_or_else(|| {
-                    DispatchError::Request("import produced no program".into())
-                })?;
+                let primary = stored
+                    .first()
+                    .ok_or_else(|| DispatchError::Request("import produced no program".into()))?;
                 Ok(json!({
                     "program": primary.program,
                     "functions": primary.functions,
@@ -171,7 +180,7 @@ impl ApiService {
                 let program = string_param(params, "program")?;
                 let address = address_param(params, "address")?;
                 let done = self
-                    .core
+                    .core()?
                     .analyse_function(&binary, &program, &address)
                     .map_err(|error| DispatchError::Request(error.to_string()))?;
                 serde_json::to_value(done)
@@ -179,16 +188,16 @@ impl ApiService {
             }
             "classes" => {
                 let program = string_param(params, "program")?;
-                value(self.core.classes(&program))
+                value(self.core()?.classes(&program))
             }
             "recover_classes" => {
                 let binary = path_param(params, "binary")?;
                 let program = string_param(params, "program")?;
-                value(self.core.recover_classes(&binary, &program))
+                value(self.core()?.recover_classes(&binary, &program))
             }
             "signature_matches" => {
                 let program = string_param(params, "program")?;
-                value(self.core.signature_matches(&program))
+                value(self.core()?.signature_matches(&program))
             }
             "apply_signatures" => {
                 let binary = path_param(params, "binary")?;
@@ -197,31 +206,38 @@ impl ApiService {
                     .into_iter()
                     .map(std::path::PathBuf::from)
                     .collect::<Vec<_>>();
-                value(self.core.apply_signatures(&binary, &program, &databases))
+                value(self.core()?.apply_signatures(&binary, &program, &databases))
             }
             "functions" => {
                 let program = string_param(params, "program")?;
-                value(self.core.functions(&program))
+                value(self.core()?.functions(&program))
+            }
+            "function_at" => {
+                let program = string_param(params, "program")?;
+                let address = u64_param(params, "address")?
+                    .ok_or_else(|| DispatchError::Request("params.address is required".into()))?;
+                value(self.core()?.function_at(&program, address))
             }
             "functions_page" => {
                 let program = string_param(params, "program")?;
                 let filter = params.get("filter").and_then(Value::as_str);
                 let sort = params.get("sort").and_then(Value::as_str);
-                value(self.core.functions_page(
+                value(self.core()?.functions_page(
                     &program,
                     u64_param(params, "offset")?.unwrap_or(0),
                     u64_param(params, "limit")?.unwrap_or(256),
                     filter,
                     sort,
+                    u64_param(params, "address")?,
                 ))
             }
             "symbols" => {
                 let program = string_param(params, "program")?;
-                value(self.core.symbols(&program))
+                value(self.core()?.symbols(&program))
             }
             "symbols_page" => {
                 let program = string_param(params, "program")?;
-                value(self.core.symbols_page(
+                value(self.core()?.symbols_page(
                     &program,
                     u64_param(params, "offset")?.unwrap_or(0),
                     u64_param(params, "limit")?.unwrap_or(256),
@@ -236,15 +252,15 @@ impl ApiService {
                     .and_then(Value::as_bool)
                     .unwrap_or(true)
                 {
-                    value(self.core.xrefs_to(&program, &address))
+                    value(self.core()?.xrefs_to(&program, &address))
                 } else {
-                    value(self.core.xrefs_from(&program, &address))
+                    value(self.core()?.xrefs_from(&program, &address))
                 }
             }
             "xrefs_page" => {
                 let program = string_param(params, "program")?;
                 value(
-                    self.core.xrefs_page(
+                    self.core()?.xrefs_page(
                         &program,
                         &address_param(params, "address")?,
                         params
@@ -259,32 +275,33 @@ impl ApiService {
             }
             "comments" => {
                 let program = string_param(params, "program")?;
-                value(self.core.comments(&program))
+                value(self.core()?.comments(&program))
             }
             "datatypes" => {
                 let program = string_param(params, "program")?;
-                value(self.core.datatypes(&program))
+                value(self.core()?.datatypes(&program))
             }
             "strings" => {
                 let program = string_param(params, "program")?;
-                value(self.core.strings(&program))
+                value(self.core()?.strings(&program))
             }
             "search" => {
                 let program = string_param(params, "program")?;
                 let term = string_param(params, "term")?;
-                value(
-                    self.core
-                        .search(&program, &term, u64_param(params, "limit")?.unwrap_or(256)),
-                )
+                value(self.core()?.search(
+                    &program,
+                    &term,
+                    u64_param(params, "limit")?.unwrap_or(256),
+                ))
             }
             "function_graph" => {
                 let program = string_param(params, "program")?;
-                let (nodes, edges) = self.core.function_graph(&program)?;
+                let (nodes, edges) = self.core()?.function_graph(&program)?;
                 Ok(json!({"nodes": nodes, "edges": edges}))
             }
             "memory_regions" => {
                 let program = string_param(params, "program")?;
-                value(self.core.memory_regions(&program))
+                value(self.core()?.memory_regions(&program))
             }
             "memory" => {
                 let binary = path_param(params, "binary")?;
@@ -292,7 +309,7 @@ impl ApiService {
                 require_ram(&address)?;
                 let size = usize::try_from(u64_param(params, "size")?.unwrap_or(64))
                     .map_err(|_| DispatchError::Request("size is too large".into()))?;
-                let bytes = self.core.mem_native(&binary, address.offset, size)?;
+                let bytes = self.core()?.mem_native(&binary, address.offset, size)?;
                 Ok(json!({
                     "address": address,
                     "size": bytes.len(),
@@ -306,7 +323,7 @@ impl ApiService {
                 let size = usize::try_from(u64_param(params, "size")?.unwrap_or(64))
                     .map_err(|_| DispatchError::Request("size is too large".into()))?;
                 let bytes = self
-                    .core
+                    .core()?
                     .read_memory_live(&endpoint, address.offset, size)?;
                 Ok(json!({
                     "address": address,
@@ -321,7 +338,7 @@ impl ApiService {
                 let count = u32::try_from(u64_param(params, "count")?.unwrap_or(64))
                     .map_err(|_| DispatchError::Request("count is too large".into()))?;
                 value(
-                    self.core.listing_window(
+                    self.core()?.listing_window(
                         &binary,
                         &start,
                         count,
@@ -335,15 +352,67 @@ impl ApiService {
             "jobs_page" => {
                 let offset = u64_param(params, "offset")?.unwrap_or(0);
                 let limit = u64_param(params, "limit")?.unwrap_or(64);
-                let pool = self
-                    .worker_pool
-                    .lock()
-                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
-                Ok(json!(pool.jobs_page(
-                    self.core.runtime_config().worker_memory_cap,
-                    offset,
-                    limit,
-                )))
+                Ok(self.executor.jobs_page(offset, limit))
+            }
+            "job_submit" => {
+                // Long analysis off the request path: resolve the request,
+                // enqueue it, and return the id for status/cancel polling.
+                let req = self.job_request(params)?;
+                let kind = match string_param(params, "op")?.as_str() {
+                    "decompile_doc" => romwright_worker_client::JobKind::DecompileDoc {
+                        address: address_param(params, "address")?.offset,
+                    },
+                    "infer_prototypes" => romwright_worker_client::JobKind::InferPrototypes,
+                    "infer_nonreturning" => romwright_worker_client::JobKind::InferNonreturning,
+                    "match_source" => Self::matching_job(params, &req)?,
+                    "matching" => romwright_worker_client::JobKind::Matching {
+                        operation: from_param(params, "operation")?,
+                    },
+                    other => {
+                        return Err(DispatchError::Request(format!(
+                            "unsupported job operation {other:?}"
+                        )));
+                    }
+                };
+                let id = self.executor.submit(kind, req);
+                Ok(json!({"job": id}))
+            }
+            "job_status" => {
+                let id = u64_param(params, "job")?
+                    .ok_or_else(|| DispatchError::Request("params.job is required".into()))?;
+                self.executor
+                    .status(id)
+                    .ok_or_else(|| DispatchError::Request(format!("unknown job {id}")))
+            }
+            "job_cancel" => {
+                let id = u64_param(params, "job")?
+                    .ok_or_else(|| DispatchError::Request("params.job is required".into()))?;
+                Ok(json!({"job": id, "cancelled": self.executor.cancel(id)}))
+            }
+            "matching_workspace" => {
+                let program = string_param(params, "program")?;
+                let operation = from_param(params, "operation")?;
+                let core = self.core()?;
+                core.run_matching_workspace_operation(&program, operation).map_err(DispatchError::Core)
+            }
+            "matching_run" => {
+                let req = self.job_request(params)?;
+                let operation = from_param(params, "operation")?;
+                let id = self.executor.submit(romwright_worker_client::JobKind::Matching { operation }, req);
+                self.job_result(id)
+            }
+            "matching_runs" => {
+                let program = string_param(params, "program")?;
+                let after = u64_param(params, "after")?.unwrap_or(0);
+                let limit = usize::try_from(u64_param(params, "limit")?.unwrap_or(64))
+                    .map_err(|_| DispatchError::Request("limit is too large".into()))?;
+                value(self.core()?.matching_runs(&program, after, limit))
+            }
+            "match_source" => {
+                let req = self.job_request(params)?;
+                let kind = Self::matching_job(params, &req)?;
+                let id = self.executor.submit(kind, req);
+                self.job_result(id)
             }
             "disasm_native" => {
                 let binary = path_param(params, "binary")?;
@@ -351,65 +420,47 @@ impl ApiService {
                 require_ram(&address)?;
                 let count = u32::try_from(u64_param(params, "count")?.unwrap_or(16))
                     .map_err(|_| DispatchError::Request("count is too large".into()))?;
-                value(self.core.disasm_native(&binary, &address.hex(), count))
+                value(self.core()?.disasm_native(&binary, &address.hex(), count))
             }
             "return_behaviors" => {
                 let program = string_param(params, "program")?;
-                value(self.core.return_behaviors(&program))
+                value(self.core()?.return_behaviors(&program))
             }
             "thunks" => {
                 let program = string_param(params, "program")?;
-                value(self.core.thunks(&program))
+                value(self.core()?.thunks(&program))
             }
             "infer_nonreturning" => {
-                let binary = path_param(params, "binary")?;
-                let program = string_param(params, "program")?;
-                let mut pool = self.worker_pool.lock()
-                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
-                let report = pool.infer_nonreturning(&self.core, &binary, &program)
-                    .map_err(|error| DispatchError::Worker(error.to_string()))?;
-                Ok(json!(report))
+                let req = self.job_request(params)?;
+                let id = self
+                    .executor
+                    .submit(romwright_worker_client::JobKind::InferNonreturning, req);
+                self.job_result(id)
             }
             "infer_prototypes" => {
-                let binary = path_param(params, "binary")?;
-                let program = string_param(params, "program")?;
-                let base = u64_param(params, "base")?;
-                let budget = std::time::Duration::from_millis(
-                    u64_param(params, "budget_ms")?.unwrap_or(60000),
-                );
-                let deadline = std::time::Instant::now()
-                    .checked_add(budget)
-                    .ok_or_else(|| DispatchError::Request("budget_ms is too large".into()))?;
-                let mut pool = self
-                    .worker_pool
-                    .lock()
-                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
-                let report = pool
-                    .infer_prototypes(&self.core, &binary, &program, base, deadline)
-                    .map_err(|error| DispatchError::Worker(error.to_string()))?;
-                Ok(json!(report))
+                let req = self.job_request(params)?;
+                let id = self
+                    .executor
+                    .submit(romwright_worker_client::JobKind::InferPrototypes, req);
+                self.job_result(id)
             }
             "decompile_doc" => {
-                let binary = path_param(params, "binary")?;
-                let program = string_param(params, "program")?;
                 let address = address_param(params, "address")?;
                 require_ram(&address)?;
-                let base = u64_param(params, "base")?;
-                let mut pool = self
-                    .worker_pool
-                    .lock()
-                    .map_err(|_| DispatchError::Worker("worker pool mutex poisoned".into()))?;
-                let doc = pool
-                    .decompile_doc(&self.core, &binary, &address, &program, base)
-                    .map_err(|error| DispatchError::Worker(error.to_string()))?;
-                serde_json::to_value(doc)
-                    .map_err(|error| DispatchError::Request(format!("encode result: {error}")))
+                let req = self.job_request(params)?;
+                let id = self.executor.submit(
+                    romwright_worker_client::JobKind::DecompileDoc {
+                        address: address.offset,
+                    },
+                    req,
+                );
+                self.job_result(id)
             }
             "rename" => {
                 let program = string_param(params, "program")?;
                 let address = address_param(params, "address")?;
                 let name = string_param(params, "name")?;
-                self.core.rename_command(&program, &address, &name)?;
+                self.core()?.rename_command(&program, &address, &name)?;
                 Ok(json!({"address": address, "name": name}))
             }
             "comment" => {
@@ -425,48 +476,48 @@ impl ApiService {
                     .unwrap_or_else(|| address.clone());
                 let kind = params.get("kind").and_then(Value::as_str).unwrap_or("eol");
                 let text = string_param(params, "text")?;
-                self.core
+                self.core()?
                     .comment_command(&program, &address, &function, kind, &text)?;
                 Ok(json!({"address": address, "kind": kind, "text": text}))
             }
             "undo" => {
                 let program = string_param(params, "program")?;
-                Ok(json!({"message": self.core.undo_last(&program)?}))
+                Ok(json!({"message": self.core()?.undo_last(&program)?}))
             }
             "bookmarks" => {
                 let program = string_param(params, "program")?;
-                value(self.core.bookmarks(&program))
+                value(self.core()?.bookmarks(&program))
             }
             "set_bookmark" => {
                 let program = string_param(params, "program")?;
                 let row = from_param(params, "bookmark")?;
-                self.core.set_bookmark(&program, &row)?;
+                self.core()?.set_bookmark(&program, &row)?;
                 Ok(json!({"address": row.address, "label": row.label}))
             }
             "patches" => {
                 let program = string_param(params, "program")?;
-                value(self.core.patches(&program))
+                value(self.core()?.patches(&program))
             }
             "set_patch" => {
                 let program = string_param(params, "program")?;
                 let row = from_param(params, "patch")?;
-                self.core.set_patch(&program, &row)?;
+                self.core()?.set_patch(&program, &row)?;
                 Ok(json!({"address": row.address, "enabled": row.enabled}))
             }
             "type_defs" => {
                 let program = string_param(params, "program")?;
-                value(self.core.type_defs(&program))
+                value(self.core()?.type_defs(&program))
             }
             "type_fields" => {
                 let program = string_param(params, "program")?;
                 value(
-                    self.core
+                    self.core()?
                         .type_fields(&program, params.get("type_name").and_then(Value::as_str)),
                 )
             }
             "prototypes" => {
                 let program = string_param(params, "program")?;
-                value(self.core.prototypes(&program))
+                value(self.core()?.prototypes(&program))
             }
             "stack_variables" => {
                 let program = string_param(params, "program")?;
@@ -477,20 +528,20 @@ impl ApiService {
                     .map_err(|error| {
                         DispatchError::Request(format!("function is invalid: {error}"))
                     })?;
-                value(self.core.stack_variables(&program, function.as_ref()))
+                value(self.core()?.stack_variables(&program, function.as_ref()))
             }
             "type_graph" => {
                 let program = string_param(params, "program")?;
-                let (nodes, edges) = self.core.type_graph(&program)?;
+                let (nodes, edges) = self.core()?.type_graph(&program)?;
                 Ok(json!({"nodes": nodes, "edges": edges}))
             }
             "propagate_type_links" => {
                 let program = string_param(params, "program")?;
-                value(self.core.propagate_type_links(&program))
+                value(self.core()?.propagate_type_links(&program))
             }
             "trace_events" => {
                 let program = string_param(params, "program")?;
-                value(self.core.trace_events(
+                value(self.core()?.trace_events(
                     &program,
                     u64_param(params, "since")?.unwrap_or(0),
                     u64_param(params, "limit")?.unwrap_or(256),
@@ -499,17 +550,17 @@ impl ApiService {
             "append_trace_event" => {
                 let program = string_param(params, "program")?;
                 let row: romwright_model::TraceEvent = from_param(params, "event")?;
-                value(self.core.append_trace_event(&program, &row))
+                value(self.core()?.append_trace_event(&program, &row))
             }
             "collab_ops" => {
                 let program = string_param(params, "program")?;
-                value(self.core.collaboration_ops(&program))
+                value(self.core()?.collaboration_ops(&program))
             }
             "append_collab_op" => {
                 let program = string_param(params, "program")?;
                 let row: romwright_model::CollaborationOp = from_param(params, "operation")?;
                 let op_id = row.op_id.clone();
-                let inserted = self.core.append_collaboration_op(&program, &row)?;
+                let inserted = self.core()?.append_collaboration_op(&program, &row)?;
                 Ok(json!({"op_id": op_id, "inserted": inserted}))
             }
             "apply_collab_op" => {
@@ -517,7 +568,7 @@ impl ApiService {
                 let op_id = string_param(params, "op_id")?;
                 Ok(json!({
                     "op_id": op_id,
-                    "applied": self.core.apply_collaboration_op(&program, &op_id)?,
+                    "applied": self.core()?.apply_collaboration_op(&program, &op_id)?,
                 }))
             }
             "debug_backtrace" => debug_output(params, DebugCommand::Backtrace),
@@ -535,11 +586,56 @@ impl ApiService {
             "events_since" => {
                 let program = string_param(params, "program")?;
                 value(
-                    self.core
+                    self.core()?
                         .events_since(&program, u64_param(params, "since")?.unwrap_or(0)),
                 )
             }
             _ => Err(DispatchError::UnknownMethod(method.into())),
+        }
+    }
+
+    fn matching_job(
+        params: &Value,
+        request: &romwright_core::exec::ExecutionRequest,
+    ) -> Result<romwright_worker_client::JobKind, DispatchError> {
+        let target = path_param(params, "target")?;
+        let source = path_param(params, "source")?;
+        let context = params
+            .get("context")
+            .filter(|value| !value.is_null())
+            .map(|_| path_param(params, "context"))
+            .transpose()?;
+        let recipe = from_param(params, "recipe")?;
+        let prepared =
+            Core::prepare_matching(request, &target, &source, context.as_deref(), recipe)?;
+        Ok(romwright_worker_client::JobKind::MatchSource { prepared })
+    }
+
+    /// Resolves one execution request for a worker job: the program's current
+    /// revision, a deadline `budget_ms` from now, and a cancellation token.
+    /// Core owns this resolution so the job's inputs are fixed at submit time.
+    fn job_request(
+        &self,
+        params: &Value,
+    ) -> Result<romwright_core::exec::ExecutionRequest, DispatchError> {
+        let binary = path_param(params, "binary")?;
+        let program = string_param(params, "program")?;
+        let base = u64_param(params, "base")?;
+        let budget = u64_param(params, "budget_ms")?
+            .map(Duration::from_millis)
+            .unwrap_or(romwright_core::exec::DEFAULT_BUDGET);
+        self.core()?
+            .execution_request(&binary, &program, base, budget)
+            .map_err(|error| DispatchError::Request(error.to_string()))
+    }
+
+    /// Blocks until a submitted job finishes and returns its result, mapping a
+    /// job failure to a worker error and a missing id to a request error.
+    fn job_result(&self, id: u64) -> Result<Value, DispatchError> {
+        match self.executor.wait(id) {
+            Some(Ok(result)) => Ok(result),
+            Some(Err(error)) => Err(DispatchError::Worker(error)),
+            None => Err(DispatchError::Request(format!("unknown job {id}"))),
         }
     }
 }
@@ -712,22 +808,33 @@ pub fn serve_stdio(service: &ApiService) -> Result<(), ApiError> {
 /// Serves one versioned API endpoint per TCP connection. Requests are
 /// ordinary HTTP/1.1 POSTs to `/v2`; the server is intended for localhost and
 /// does not expose an authentication boundary by itself.
-pub fn serve_tcp(service: &ApiService, listener: TcpListener) -> Result<(), ApiError> {
+///
+/// Each connection is handled on its own thread so a long-running request
+/// (a decompilation, an inference pass) does not serialize the others. The
+/// service is `Sync`: `Core` is behind a mutex taken per call, and the long
+/// worker jobs run on the executor's own `Core`s, not this one.
+pub fn serve_tcp(
+    service: std::sync::Arc<ApiService>,
+    listener: TcpListener,
+) -> Result<(), ApiError> {
     for stream in listener.incoming() {
         let mut stream = stream?;
-        if let Err(error) = handle_http(service, &mut stream) {
-            let body = serde_json::to_string(&ResponseEnvelope {
-                api: API_VERSION,
-                id: Value::Null,
-                result: None,
-                error: Some(ErrorEnvelope {
-                    code: "http_request".into(),
-                    message: error.to_string(),
-                }),
-            })
-            .unwrap_or_else(|_| format!("{{\"api\":{API_VERSION},\"id\":null}}"));
-            let _ = write_http(&mut stream, "400 Bad Request", &body);
-        }
+        let service = std::sync::Arc::clone(&service);
+        std::thread::spawn(move || {
+            if let Err(error) = handle_http(&service, &mut stream) {
+                let body = serde_json::to_string(&ResponseEnvelope {
+                    api: API_VERSION,
+                    id: Value::Null,
+                    result: None,
+                    error: Some(ErrorEnvelope {
+                        code: "http_request".into(),
+                        message: error.to_string(),
+                    }),
+                })
+                .unwrap_or_else(|_| format!("{{\"api\":{API_VERSION},\"id\":null}}"));
+                let _ = write_http(&mut stream, "400 Bad Request", &body);
+            }
+        });
     }
     Ok(())
 }
@@ -909,7 +1016,7 @@ mod tests {
     }
 
     #[test]
-    fn jobs_page_reports_pool_limits_before_first_job() {
+    fn jobs_page_reports_empty_history_before_first_job() {
         let service = service();
         let response: Value = serde_json::from_str(
             &service.handle_line(
@@ -925,13 +1032,30 @@ mod tests {
         .unwrap();
         assert!(response.get("error").is_none());
         assert_eq!(response["result"]["total"], 0);
-        assert_eq!(response["result"]["pool"]["idle_workers"], 0);
-        assert_eq!(response["result"]["pool"]["busy_workers"], 0);
-        assert_eq!(response["result"]["pool"]["restarts"], 0);
-        assert_eq!(response["result"]["pool"]["memory_cap_hits"], 0);
-        assert_eq!(
-            response["result"]["pool"]["memory_cap_bytes"],
-            service.core().runtime_config().worker_memory_cap
-        );
+        assert_eq!(response["result"]["rows"], serde_json::json!([]));
+    }
+
+    #[test]
+    fn job_status_and_cancel_report_unknown_ids() {
+        let service = service();
+        for method in ["job_status", "job_cancel"] {
+            let response: Value = serde_json::from_str(
+                &service.handle_line(
+                    &serde_json::json!({
+                        "api": 2,
+                        "id": method,
+                        "method": method,
+                        "params": {"job": 999}
+                    })
+                    .to_string(),
+                ),
+            )
+            .unwrap();
+            if method == "job_status" {
+                assert!(response.get("error").is_some(), "{response}");
+            } else {
+                assert_eq!(response["result"]["cancelled"], false);
+            }
+        }
     }
 }

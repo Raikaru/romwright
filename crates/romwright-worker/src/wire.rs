@@ -182,6 +182,15 @@ pub mod elem {
     pub const TRACKED_POINTSET: u32 = 125;
     /// ELEM_HOLE (database.cc:36).
     pub const HOLE: u32 = 74;
+    /// ELEM_READONLY (architecture.cc:72), used by OptionReadOnly.
+    pub const READONLY: u32 = 151;
+    /// ELEM_OPTIONSLIST (options.cc:50).
+    pub const OPTIONSLIST: u32 = 201;
+    /// Action selection and parameters (options.cc).
+    pub const CURRENTACTION: u32 = 182;
+    pub const PARAM1: u32 = 202;
+    pub const PARAM2: u32 = 203;
+    pub const PARAM3: u32 = 204;
     /// ELEM_PARENT (database.cc:39).
     pub const PARENT: u32 = 77;
     /// `<val>` (marshal.cc: shared vocabulary), a namespace path component.
@@ -497,6 +506,19 @@ pub(crate) fn encode_function_element(
     encode_header(out, ELEMENT_END, elem::FUNCTION);
 }
 
+/// An anonymous address still has memory properties. Keep the negative-symbol
+/// cache to this address so the answer cannot hide neighboring stored facts.
+/// `ScopeGhidra::dump2Cache` expects this element at the root, not inside DOC.
+pub(crate) fn encode_hole(out: &mut Vec<u8>, space: u32, address: u64, read_only: bool) {
+    encode_header(out, ELEMENT_START, elem::HOLE);
+    encode_attribute(out, attr::SPACE, attr_type::SPACE, u64::from(space));
+    encode_attribute(out, attr::FIRST, attr_type::UNSIGNED_INT, address);
+    encode_attribute(out, attr::LAST, attr_type::UNSIGNED_INT, address);
+    encode_header(out, ATTRIBUTE, attr::READONLY);
+    out.push((attr_type::BOOLEAN << 4) | u8::from(read_only));
+    encode_header(out, ELEMENT_END, elem::HOLE);
+}
+
 /// A named location the store holds a fact for, in the shape
 /// `Scope::addMapSym` accepts: `<mapsym><symbol …><type …/></symbol><addr/>
 /// <rangelist/></mapsym>` (database.cc:1564-1606, SymbolEntry::decode:206).
@@ -580,13 +602,23 @@ pub(crate) fn encode_namespace_path(out: &mut Vec<u8>, components: &[(u64, Strin
     encode_header(out, ELEMENT_END, elem::PARENT);
 }
 
-pub(crate) fn encode_label_symbol(out: &mut Vec<u8>, space: u32, address: u64, name: &str) {
+pub(crate) fn encode_label_symbol(
+    out: &mut Vec<u8>,
+    space: u32,
+    address: u64,
+    name: &str,
+    read_only: bool,
+) {
     encode_header(out, ELEMENT_START, elem::MAPSYM);
     encode_header(out, ELEMENT_START, elem::LABELSYM);
     encode_attribute(out, attr::ID, attr_type::UNSIGNED_INT, 0);
     encode_string_attribute(out, attr::NAME, name.as_bytes());
     encode_header(out, ATTRIBUTE, attr::NAMELOCK);
     out.push((attr_type::BOOLEAN << 4) | 1);
+    if read_only {
+        encode_header(out, ATTRIBUTE, attr::READONLY);
+        out.push((attr_type::BOOLEAN << 4) | 1);
+    }
     encode_header(out, ELEMENT_END, elem::LABELSYM);
     encode_addr_element(out, space, address);
     encode_header(out, ELEMENT_START, elem::RANGELIST);

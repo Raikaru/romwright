@@ -12,57 +12,55 @@
 use romwright_db::ProjectDb;
 use std::collections::HashSet;
 use std::path::Path;
+mod discovery;
+pub(crate) mod dol;
 mod gba;
 mod n64;
 mod nds;
 pub mod nds_overlays;
 mod psx;
-pub(crate) mod dol;
-mod discovery;
 pub(crate) use discovery::BRANCH_PROVENANCE;
-mod features;
-mod nso;
-pub(crate) mod sja;
-pub(crate) mod vsa;
+pub(crate) mod binmap;
+pub(crate) mod containers;
+pub(crate) mod crypto;
 mod elf_exception;
+mod elf_image;
 mod elf_pointers;
 mod elf_unwind;
-mod elf_image;
+mod features;
+pub(crate) mod gameboy;
+pub(crate) mod genesis;
+pub(crate) mod irx;
+mod iso9660;
+pub mod keys;
+mod kirk;
+mod kirk_tables;
+pub mod linkmap;
+mod mdebug;
+pub mod n64_overlays;
+pub(crate) mod nes;
+pub mod nid;
+pub(crate) mod nonreturn;
+mod nso;
 mod pe_roots;
 mod pe_unwind;
-mod strings;
-mod iso9660;
-mod sce;
-pub(crate) mod binmap;
-pub mod linkmap;
-pub(crate) mod psyq_sym;
-pub(crate) mod containers;
-pub(crate) mod rel;
-pub mod psx_overlays;
-pub mod n64_overlays;
-pub(crate) mod wii;
-pub mod nid;
-pub(crate) mod switch;
-pub(crate) mod xbox_3ds;
-pub(crate) mod irx;
-pub(crate) mod nes;
-pub(crate) mod genesis;
-pub(crate) mod gameboy;
-pub(crate) mod snes;
-pub(crate) mod xex;
-pub(crate) mod crypto;
-pub(crate) mod threeds;
 pub(crate) mod ps3;
-pub(crate) mod vita;
-mod kirk_tables;
-mod kirk;
 pub(crate) mod psp;
-pub mod keys;
-mod mdebug;
-pub(crate) mod nonreturn;
-use romwright_model::{
-    FunctionRow, MemoryRegion, Provenance, ProgramSummary, XrefRow,
-};
+pub mod psx_overlays;
+pub(crate) mod psyq_sym;
+pub(crate) mod rel;
+mod sce;
+pub(crate) mod sja;
+pub(crate) mod snes;
+mod strings;
+pub(crate) mod switch;
+pub(crate) mod threeds;
+pub(crate) mod vita;
+pub(crate) mod vsa;
+pub(crate) mod wii;
+pub(crate) mod xbox_3ds;
+pub(crate) mod xex;
+use romwright_model::{FunctionRow, MemoryRegion, ProgramSummary, Provenance, XrefRow};
 /// Errors from a native import.
 #[derive(Debug, thiserror::Error)]
 pub enum ImportError {
@@ -134,7 +132,12 @@ impl NativeXref {
         }
     }
 
-    pub fn with_provenance(from: u64, to: u64, kind: impl Into<String>, provenance: impl Into<String>) -> Self {
+    pub fn with_provenance(
+        from: u64,
+        to: u64,
+        kind: impl Into<String>,
+        provenance: impl Into<String>,
+    ) -> Self {
         Self {
             from,
             to,
@@ -217,6 +220,8 @@ pub struct FlowShape {
 /// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
+    /// Captured loader identity available to analysis-time worker staging.
+    pub input_context: Option<std::sync::Arc<(std::path::PathBuf, romwright_model::ProgramInput)>>,
     pub mappings: Vec<Mapping>,
     pub string_tables: Vec<NativeStringTable>,
     pub functions: Vec<NativeFunction>,
@@ -570,8 +575,11 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         if s.flags & 0x2 == 0 || s.size == 0 {
             continue;
         }
-        let b = if s.typ == 8 { &[] } else {
-            data.get(s.off as usize..s.off as usize + s.size as usize).unwrap_or(&[])
+        let b = if s.typ == 8 {
+            &[]
+        } else {
+            data.get(s.off as usize..s.off as usize + s.size as usize)
+                .unwrap_or(&[])
         };
         mappings.push(Mapping {
             vaddr: s.addr,
@@ -627,9 +635,17 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             let arm = elf_machine.machine == 0x28;
             if arm {
                 if name == "$t" || name.starts_with("$t.") {
-                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 1 });
+                    contexts.push(NativeContext {
+                        name: "TMode".into(),
+                        address: value,
+                        value: 1,
+                    });
                 } else if name == "$a" || name.starts_with("$a.") {
-                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 0 });
+                    contexts.push(NativeContext {
+                        name: "TMode".into(),
+                        address: value,
+                        value: 0,
+                    });
                 }
             }
             let (value, thumb) = if arm && typ == 2 && value & 1 != 0 {
@@ -637,12 +653,19 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             } else {
                 (value, false)
             };
-            if typ == 2 && shndx != 0 && value != 0 && !name.is_empty() {
+            if typ == 2 && shndx != 0 && !name.is_empty() {
                 if thumb {
-                    contexts.push(NativeContext { name: "TMode".into(), address: value, value: 1 });
+                    contexts.push(NativeContext {
+                        name: "TMode".into(),
+                        address: value,
+                        value: 1,
+                    });
                 }
                 let rank = symbol_rank(info, &name);
-                let slot = symbol_functions.entry(value).or_insert((rank, name.clone(), size.max(1)));
+                let slot =
+                    symbol_functions
+                        .entry(value)
+                        .or_insert((rank, name.clone(), size.max(1)));
                 if rank < slot.0 {
                     *slot = (rank, name.clone(), size.max(1));
                 }
@@ -651,7 +674,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             // data of exactly that size there
             // (`ElfProgramBuilder.processSymbols`, :1703-1706, and
             // `allocateUndefinedSymbolData`, :1358-1381).
-            if typ == 1 && shndx != 0 && value != 0 && size > 0 {
+            if typ == 1 && shndx != 0 && size > 0 {
                 object_sizes.push((value, size));
                 if !name.is_empty() {
                     object_names.push((value, name.clone()));
@@ -737,7 +760,11 @@ struct ElfSection {
 
 fn collect_elf_section_starts(sections: &[ElfSection], functions: &mut Vec<NativeFunction>) {
     for s in sections {
-        if s.flags & 4 == 0 || s.size == 0 || s.addr == 0 || functions.iter().any(|f| f.entry == s.addr) {
+        if s.flags & 4 == 0
+            || s.size == 0
+            || s.addr == 0
+            || functions.iter().any(|f| f.entry == s.addr)
+        {
             continue;
         }
         let (name, size) = match s.name.as_str() {
@@ -746,19 +773,35 @@ fn collect_elf_section_starts(sections: &[ElfSection], functions: &mut Vec<Nativ
             ".plt" => ("_plt", 1),
             _ => continue,
         };
-        functions.push(NativeFunction { entry: s.addr, name: name.into(), size });
+        functions.push(NativeFunction {
+            entry: s.addr,
+            name: name.into(),
+            size,
+        });
     }
 }
 
 fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>)> {
     let rd16 = |o: usize| -> Result<u16> {
-        if be { u16_be_at(data, o) } else { u16_at(data, o) }
+        if be {
+            u16_be_at(data, o)
+        } else {
+            u16_at(data, o)
+        }
     };
     let rd32 = |o: usize| -> Result<u32> {
-        if be { u32_be_at(data, o) } else { u32_at(data, o) }
+        if be {
+            u32_be_at(data, o)
+        } else {
+            u32_at(data, o)
+        }
     };
     let rd64 = |o: usize| -> Result<u64> {
-        if be { u64_be_at(data, o) } else { u64_at(data, o) }
+        if be {
+            u64_be_at(data, o)
+        } else {
+            u64_at(data, o)
+        }
     };
     let shentsize = rd16(58)? as usize;
     let shnum = rd16(60)? as usize;
@@ -807,11 +850,7 @@ fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>
 /// linkers stamp it; 14.x = MSVC 2015+). DOL: the mwcc runtime symbols
 /// (`__init_registers`, `__start`, `__ppc_eabi_init`) every CodeWarrior
 /// GC/Wii binary carries.
-fn detect_toolchain(
-    data: &[u8],
-    sections: &[ElfSection],
-    imp: &NativeImport,
-) -> Option<String> {
+fn detect_toolchain(data: &[u8], sections: &[ElfSection], imp: &NativeImport) -> Option<String> {
     // ELF .comment.
     for section in sections {
         if section.name == ".comment" && section.size > 0 {
@@ -847,7 +886,6 @@ fn elf_process_entry(data: &[u8], entry: u64, e_type: u16) -> Option<u64> {
     (entry != 0 && matches!(e_type, 2 | 3) && linux_or_unspecified).then_some(entry)
 }
 
-
 /// ELF64 parse. Returns (mappings, functions from symtab + entry, externals).
 /// ELF symbol preference for one address: exported before local, and an
 /// unversioned name before its `name@@VERSION` alias. Ghidra's analyzers read
@@ -875,13 +913,25 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     }
     let be = data[5] == 2;
     let rd16 = |o: usize| -> Result<u16> {
-        if be { u16_be_at(data, o) } else { u16_at(data, o) }
+        if be {
+            u16_be_at(data, o)
+        } else {
+            u16_at(data, o)
+        }
     };
     let rd32 = |o: usize| -> Result<u32> {
-        if be { u32_be_at(data, o) } else { u32_at(data, o) }
+        if be {
+            u32_be_at(data, o)
+        } else {
+            u32_at(data, o)
+        }
     };
     let rd64 = |o: usize| -> Result<u64> {
-        if be { u64_be_at(data, o) } else { u64_at(data, o) }
+        if be {
+            u64_be_at(data, o)
+        } else {
+            u64_at(data, o)
+        }
     };
     let elf_machine = crate::opinion::ElfMachine {
         machine: rd16(18)?,
@@ -900,8 +950,11 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         if s.flags & 0x2 == 0 || s.size == 0 {
             continue;
         }
-        let b = if s.typ == 8 { &[] } else {
-            data.get(s.off as usize..s.off as usize + s.size as usize).unwrap_or(&[])
+        let b = if s.typ == 8 {
+            &[]
+        } else {
+            data.get(s.off as usize..s.off as usize + s.size as usize)
+                .unwrap_or(&[])
         };
         mappings.push(Mapping {
             vaddr: s.addr,
@@ -925,22 +978,23 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     // `.opd` is a non-executable data section; a stripped image has no name,
     // so fall back to the section `e_entry` lands in (Ghidra :458-475).
     let opd: std::collections::HashMap<u64, (u64, u64)> = if elf_machine.machine == 21 {
-        let opd_section = sections
-            .iter()
-            .find(|s| s.name == ".opd")
-            .or_else(|| {
-                sections.iter().find(|s| {
-                    s.flags & 0x2 != 0 && s.flags & 0x4 == 0
-                        && entry >= s.addr && entry < s.addr + s.size
-                })
-            });
+        let opd_section = sections.iter().find(|s| s.name == ".opd").or_else(|| {
+            sections.iter().find(|s| {
+                s.flags & 0x2 != 0
+                    && s.flags & 0x4 == 0
+                    && entry >= s.addr
+                    && entry < s.addr + s.size
+            })
+        });
         let mut map = std::collections::HashMap::new();
         if let Some(s) = opd_section {
             let base = s.off as usize;
             let count = (s.size as usize) / 16;
             for i in 0..count {
                 let o = base + i * 16;
-                if o + 16 > data.len() { break; }
+                if o + 16 > data.len() {
+                    break;
+                }
                 let func = rd64(o)?;
                 let toc = rd64(o + 8)?;
                 if func != 0 {
@@ -1003,14 +1057,17 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             if let Some(toc) = toc {
                 opd_toc.push((entry_addr, toc));
             }
-            if typ == 2 && entry_addr != 0 && !name.is_empty() {
+            if typ == 2 && shndx != 0 && !name.is_empty() {
                 let rank = symbol_rank(info, &name);
-                let slot = symbol_functions.entry(entry_addr).or_insert((rank, name.clone(), size.max(1)));
+                let slot =
+                    symbol_functions
+                        .entry(entry_addr)
+                        .or_insert((rank, name.clone(), size.max(1)));
                 if rank < slot.0 {
                     *slot = (rank, name.clone(), size.max(1));
                 }
             }
-            if typ == 1 && value != 0 && size > 0 {
+            if typ == 1 && shndx != 0 && size > 0 {
                 object_sizes.push((value, size));
                 if !name.is_empty() {
                     object_names.push((value, name.clone()));
@@ -1019,7 +1076,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             if shndx == 0xfff1 && !name.is_empty() {
                 abs_symbols.push((name.clone(), value));
             }
-            if value == 0 && typ == 1 && !name.is_empty() {
+            if shndx == 0 && !name.is_empty() {
                 externals.push((0, name));
             }
         }
@@ -1027,8 +1084,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     // Dynamic symbols: undefined entries name externals (elf_image collects
     // their loaded relocation slots); defined functions fill addresses the
     // symtab never named.
-    let symtab_named: std::collections::HashSet<u64> =
-        symbol_functions.keys().copied().collect();
+    let symtab_named: std::collections::HashSet<u64> = symbol_functions.keys().copied().collect();
     for s in sections.iter().filter(|s| s.typ == 11) {
         let strtab = sections
             .get(s.link as usize)
@@ -1065,7 +1121,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             }
             // A copy-relocated object is *defined* in the executable's own
             // dynamic table, with the size the library declares.
-            if info & 0xf == 1 && shndx != 0 && value != 0 && size > 0 {
+            if info & 0xf == 1 && shndx != 0 && size > 0 {
                 object_sizes.push((value, size));
             }
             // A defined dynamic function names what the stripped symtab no
@@ -1073,11 +1129,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             // spelling; among dynsym spellings of one address the rank
             // decides, as in the symtab loop, so an unversioned name beats
             // `name@@VERSION`.
-            if info & 0xf == 2 && shndx != 0 && entry_addr != 0 && !name.is_empty() {
+            if info & 0xf == 2 && shndx != 0 && !name.is_empty() {
                 let rank = symbol_rank(info, &name);
-                let slot = symbol_functions
-                    .entry(entry_addr)
-                    .or_insert((rank, name.clone(), size.max(1)));
+                let slot =
+                    symbol_functions
+                        .entry(entry_addr)
+                        .or_insert((rank, name.clone(), size.max(1)));
                 if !symtab_named.contains(&entry_addr) && rank < slot.0 {
                     *slot = (rank, name.clone(), size.max(1));
                 }
@@ -1170,7 +1227,11 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     let (is_64, language) = match machine {
         0x8664 => (true, "x86:LE:64:default"),
         0x014c => (false, "x86:LE:32:default"),
-        other => return err(format!("unsupported PE machine {other:#x} (AMD64 0x8664 or i386 0x14c expected)")),
+        other => {
+            return err(format!(
+                "unsupported PE machine {other:#x} (AMD64 0x8664 or i386 0x14c expected)"
+            ));
+        }
     };
     let num_sections = u16_at(data, pe_off + 6)? as usize;
     let opt_size = u16_at(data, pe_off + 20)? as usize;
@@ -1182,11 +1243,20 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
 
     // Exception directory (index 3) carries RUNTIME_FUNCTION bounds, but only
     // the AMD64 records have the layout the unwind pass reads.
-    let (entry_rva, image_base, reloc_dir_offset, unwind_dir_offset, export_dir_offset,
-         import_dir_offset, tls_dir_offset) = match (machine, magic) {
+    let (
+        entry_rva,
+        image_base,
+        reloc_dir_offset,
+        unwind_dir_offset,
+        export_dir_offset,
+        import_dir_offset,
+        tls_dir_offset,
+    ) = match (machine, magic) {
         (0x8664, 0x20b) => {
             if opt_size < 112 {
-                return err(format!("PE32+ optional header size {opt_size} too small (>= 112 expected)"));
+                return err(format!(
+                    "PE32+ optional header size {opt_size} too small (>= 112 expected)"
+                ));
             }
             let entry_rva = u32_at(data, opt + 16)? as u64;
             let image_base = u64_at(data, opt + 24)?;
@@ -1204,12 +1274,21 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             let export_offset = (num_rva_sizes > 0 && opt_size >= 120).then_some(opt + 112);
             let import_offset = (num_rva_sizes > 1 && opt_size >= 128).then_some(opt + 120);
             let tls_offset = (num_rva_sizes > 9 && opt_size >= 192).then_some(opt + 184);
-            (entry_rva, image_base, reloc_offset, unwind_offset, export_offset,
-             import_offset, tls_offset)
+            (
+                entry_rva,
+                image_base,
+                reloc_offset,
+                unwind_offset,
+                export_offset,
+                import_offset,
+                tls_offset,
+            )
         }
         (0x014c, 0x10b) => {
             if opt_size < 96 {
-                return err(format!("PE32 optional header size {opt_size} too small (>= 96 expected)"));
+                return err(format!(
+                    "PE32 optional header size {opt_size} too small (>= 96 expected)"
+                ));
             }
             let entry_rva = u32_at(data, opt + 16)? as u64;
             let image_base = u32_at(data, opt + 28)? as u64;
@@ -1222,17 +1301,30 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             let export_offset = (num_rva_sizes > 0 && opt_size >= 104).then_some(opt + 96);
             let import_offset = (num_rva_sizes > 1 && opt_size >= 112).then_some(opt + 104);
             let tls_offset = (num_rva_sizes > 9 && opt_size >= 176).then_some(opt + 168);
-            (entry_rva, image_base, reloc_offset, None, export_offset, import_offset,
-             tls_offset)
+            (
+                entry_rva,
+                image_base,
+                reloc_offset,
+                None,
+                export_offset,
+                import_offset,
+                tls_offset,
+            )
         }
         (0x8664, other) => {
-            return err(format!("PE AMD64 requires PE32+ optional header magic 0x20b, got {other:#x}"));
+            return err(format!(
+                "PE AMD64 requires PE32+ optional header magic 0x20b, got {other:#x}"
+            ));
         }
         (0x014c, other) => {
-            return err(format!("PE i386 requires PE32 optional header magic 0x10b, got {other:#x}"));
+            return err(format!(
+                "PE i386 requires PE32 optional header magic 0x10b, got {other:#x}"
+            ));
         }
         (other, _) => {
-            return err(format!("unsupported PE machine {other:#x} (AMD64 0x8664 or i386 0x14c expected)"));
+            return err(format!(
+                "unsupported PE machine {other:#x} (AMD64 0x8664 or i386 0x14c expected)"
+            ));
         }
     };
     let sec_table = opt + opt_size;
@@ -1329,13 +1421,20 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
                 let target_rva = page_rva + r_offset;
                 let loc = image_base + target_rva;
 
-                if let Some(m) = mappings.iter().find(|m| loc >= m.vaddr && loc < m.vaddr + m.size) {
+                if let Some(m) = mappings
+                    .iter()
+                    .find(|m| loc >= m.vaddr && loc < m.vaddr + m.size)
+                {
                     let off = (loc - m.vaddr) as usize;
                     match r_type {
-                        10 => { // IMAGE_REL_BASED_DIR64
+                        10 => {
+                            // IMAGE_REL_BASED_DIR64
                             if off + 8 <= m.bytes.len() {
-                                let ptr = u64::from_le_bytes(m.bytes[off..off + 8].try_into().unwrap());
-                                let in_mem = mappings.iter().any(|cm| ptr >= cm.vaddr && ptr < cm.vaddr + cm.size);
+                                let ptr =
+                                    u64::from_le_bytes(m.bytes[off..off + 8].try_into().unwrap());
+                                let in_mem = mappings
+                                    .iter()
+                                    .any(|cm| ptr >= cm.vaddr && ptr < cm.vaddr + cm.size);
                                 if in_mem {
                                     xrefs.push(NativeXref::with_provenance(
                                         loc,
@@ -1345,17 +1444,24 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
                                     ));
                                 }
                                 let in_code = mappings.iter().any(|cm| {
-                                    cm.flags & 0x4 != 0 && ptr >= cm.vaddr && ptr < cm.vaddr + cm.size
+                                    cm.flags & 0x4 != 0
+                                        && ptr >= cm.vaddr
+                                        && ptr < cm.vaddr + cm.size
                                 });
                                 if in_code {
                                     reloc_candidates.push(ptr);
                                 }
                             }
                         }
-                        3 => { // IMAGE_REL_BASED_HIGHLOW
+                        3 => {
+                            // IMAGE_REL_BASED_HIGHLOW
                             if off + 4 <= m.bytes.len() {
-                                let ptr = u32::from_le_bytes(m.bytes[off..off + 4].try_into().unwrap()) as u64;
-                                let in_mem = mappings.iter().any(|cm| ptr >= cm.vaddr && ptr < cm.vaddr + cm.size);
+                                let ptr =
+                                    u32::from_le_bytes(m.bytes[off..off + 4].try_into().unwrap())
+                                        as u64;
+                                let in_mem = mappings
+                                    .iter()
+                                    .any(|cm| ptr >= cm.vaddr && ptr < cm.vaddr + cm.size);
                                 if in_mem {
                                     xrefs.push(NativeXref::with_provenance(
                                         loc,
@@ -1365,7 +1471,9 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
                                     ));
                                 }
                                 let in_code = mappings.iter().any(|cm| {
-                                    cm.flags & 0x4 != 0 && ptr >= cm.vaddr && ptr < cm.vaddr + cm.size
+                                    cm.flags & 0x4 != 0
+                                        && ptr >= cm.vaddr
+                                        && ptr < cm.vaddr + cm.size
                                 });
                                 if in_code {
                                     reloc_candidates.push(ptr);
@@ -1401,9 +1509,23 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         })
     };
     let (unwind_rva, unwind_size) = directory(unwind_dir_offset);
-    pe_unwind::collect(data, &raw_sections, &mut import, image_base, unwind_rva, unwind_size);
+    pe_unwind::collect(
+        data,
+        &raw_sections,
+        &mut import,
+        image_base,
+        unwind_rva,
+        unwind_size,
+    );
     let (export_rva, export_size) = directory(export_dir_offset);
-    pe_roots::collect_exports(data, &raw_sections, &mut import, image_base, export_rva, export_size);
+    pe_roots::collect_exports(
+        data,
+        &raw_sections,
+        &mut import,
+        image_base,
+        export_rva,
+        export_size,
+    );
     let (import_rva, import_size) = directory(import_dir_offset);
     pe_roots::collect_imports(
         data,
@@ -1506,14 +1628,38 @@ fn elf_bases(data: &[u8]) -> Option<(u64, u64)> {
     }
     // ET_DYN: find minimum PT_LOAD vaddr from program headers if any non-zero.
     let (phoff, phentsize, phnum) = if is_64 {
-        let off = if is_be { u64_be_at(data, 32).ok()? } else { u64_at(data, 32).ok()? } as usize;
-        let esz = if is_be { u16_be_at(data, 54).ok()? } else { u16_at(data, 54).ok()? } as usize;
-        let num = if is_be { u16_be_at(data, 56).ok()? } else { u16_at(data, 56).ok()? } as usize;
+        let off = if is_be {
+            u64_be_at(data, 32).ok()?
+        } else {
+            u64_at(data, 32).ok()?
+        } as usize;
+        let esz = if is_be {
+            u16_be_at(data, 54).ok()?
+        } else {
+            u16_at(data, 54).ok()?
+        } as usize;
+        let num = if is_be {
+            u16_be_at(data, 56).ok()?
+        } else {
+            u16_at(data, 56).ok()?
+        } as usize;
         (off, esz, num)
     } else {
-        let off = if is_be { u32_be_at(data, 28).ok()? } else { u32_at(data, 28).ok()? } as usize;
-        let esz = if is_be { u16_be_at(data, 42).ok()? } else { u16_at(data, 42).ok()? } as usize;
-        let num = if is_be { u16_be_at(data, 44).ok()? } else { u16_at(data, 44).ok()? } as usize;
+        let off = if is_be {
+            u32_be_at(data, 28).ok()?
+        } else {
+            u32_at(data, 28).ok()?
+        } as usize;
+        let esz = if is_be {
+            u16_be_at(data, 42).ok()?
+        } else {
+            u16_at(data, 42).ok()?
+        } as usize;
+        let num = if is_be {
+            u16_be_at(data, 44).ok()?
+        } else {
+            u16_at(data, 44).ok()?
+        } as usize;
         (off, esz, num)
     };
     let mut min_vaddr = u64::MAX;
@@ -1522,11 +1668,19 @@ fn elf_bases(data: &[u8]) -> Option<(u64, u64)> {
         if hdr.checked_add(if is_64 { 56 } else { 32 })? > data.len() {
             break;
         }
-        let p_type = if is_be { u32_be_at(data, hdr).ok()? } else { u32_at(data, hdr).ok()? };
+        let p_type = if is_be {
+            u32_be_at(data, hdr).ok()?
+        } else {
+            u32_at(data, hdr).ok()?
+        };
         if p_type == 1 {
             // PT_LOAD
             let p_vaddr = if is_64 {
-                if is_be { u64_be_at(data, hdr + 16).ok()? } else { u64_at(data, hdr + 16).ok()? }
+                if is_be {
+                    u64_be_at(data, hdr + 16).ok()?
+                } else {
+                    u64_at(data, hdr + 16).ok()?
+                }
             } else if is_be {
                 u32_be_at(data, hdr + 8).ok()? as u64
             } else {
@@ -1676,7 +1830,50 @@ pub fn select_language(imp: &mut NativeImport, cfg: &crate::session::RuntimeConf
 }
 
 pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
-    load_container_with(binary, true, None, None, &keys::KeyStore::empty())
+    let data = std::fs::read(binary).map_err(|error| ImportError::Bad(error.to_string()))?;
+    load_container_with(
+        binary,
+        &data,
+        true,
+        None,
+        None,
+        &keys::KeyStore::empty(),
+        &crate::session::RuntimeConfig::from_env(),
+    )
+}
+
+/// Parse captured bytes with explicit raw-image metadata and key material.
+pub(crate) fn parse_image_input(
+    data: &[u8],
+    raw: Option<(u64, &str)>,
+    keys: &keys::KeyStore,
+) -> Result<Vec<(String, NativeImport)>> {
+    let Some((base, language)) = raw else {
+        return parse_container_with(data, keys);
+    };
+    base.checked_add(data.len() as u64)
+        .ok_or_else(|| ImportError::Bad("raw image address overflow".into()))?;
+    Ok(vec![(
+        String::new(),
+        NativeImport {
+            mappings: vec![Mapping {
+                vaddr: base,
+                size: data.len() as u64,
+                file_off: 0,
+                flags: 7,
+                bytes: data.to_vec(),
+            }],
+            format: "raw".into(),
+            language: language.to_string(),
+            process_entry: Some(base),
+            functions: vec![NativeFunction {
+                entry: base,
+                name: "entry".into(),
+                size: 1,
+            }],
+            ..Default::default()
+        },
+    )])
 }
 
 /// Loads every image a container carries, running discovery only when asked.
@@ -1688,43 +1885,15 @@ pub fn load_container(binary: &Path) -> Result<Vec<(String, NativeImport)>> {
 /// interactive session needs before it can show anything at all.
 pub fn load_container_with(
     binary: &Path,
+    data: &[u8],
     analyse: bool,
     map: Option<&Path>,
     raw: Option<(u64, &str)>,
     keys: &keys::KeyStore,
+    config: &crate::session::RuntimeConfig,
 ) -> Result<Vec<(String, NativeImport)>> {
     let parse_started = std::time::Instant::now();
-    let data = std::fs::read(binary)
-        .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
-    let images = match raw {
-        // A raw dump has no container to parse: one mapping, the caller's
-        // base and language. `--raw` is how flat ROM/RAM images (3DS
-        // code.bin, overlay blobs) reach the pipeline at all.
-        Some((base, language)) => vec![(
-            String::new(),
-            NativeImport {
-                mappings: vec![Mapping {
-                    vaddr: base,
-                    size: data.len() as u64,
-                    file_off: 0,
-                    flags: 7,
-                    bytes: data.clone(),
-                }],
-                format: "raw".into(),
-                language: language.to_string(),
-                // A flat blob has no header to name an entry; the load base
-                // is the natural seed so discovery walks from it.
-                process_entry: Some(base),
-                functions: vec![NativeFunction {
-                    entry: base,
-                    name: "entry".into(),
-                    size: 1,
-                }],
-                ..Default::default()
-            },
-        )],
-        None => parse_container_with(&data, keys)?,
-    };
+    let images = parse_image_input(data, raw, keys)?;
     // A linker MAP is the image's own symbol table from the other side:
     // read once, applied to every image it names an address in, before
     // discovery so a seeded entry is walked rather than coined. Binary
@@ -1750,11 +1919,37 @@ pub fn load_container_with(
         )),
         (false, None) => None,
     };
-    let canonical = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
+    // Direct native callers get the same captured-input contract as Core.
+    // Core supplies its durable context after the loader-only phase instead.
+    let captured = if analyse {
+        let scratch = ScratchDir::new("romwright-input").ok_or_else(|| {
+            ImportError::Bad("native analysis has no input scratch directory".into())
+        })?;
+        let (_, input) = crate::inputs::capture(
+            &scratch.path,
+            binary,
+            data.to_vec().into(),
+            map_bytes.as_ref().map(|bytes| bytes.clone().into()),
+            raw,
+            keys,
+        )
+        .map_err(|error| ImportError::Bad(error.to_string()))?;
+        Some((scratch, input))
+    } else {
+        None
+    };
+    let canonical = binary
+        .canonicalize()
+        .unwrap_or_else(|_| binary.to_path_buf());
     let mut loaded = Vec::with_capacity(images.len());
     for (suffix, mut imp) in images {
+        if let Some((scratch, input)) = &captured {
+            let mut input = input.clone();
+            input.image_selector = suffix.clone();
+            imp.input_context = Some(std::sync::Arc::new((scratch.path.clone(), input)));
+        }
         imp.binary = canonical.clone();
-        imp.cfg = crate::session::RuntimeConfig::from_env();
+        imp.cfg = config.clone();
         let cfg = imp.cfg.clone();
         select_language(&mut imp, &cfg)?;
         imp.cfg.adopt_language(&imp.language);
@@ -1771,10 +1966,10 @@ pub fn load_container_with(
         imp.analysed = analyse;
         if analyse {
             discover(&mut imp)?;
+            imp.input_context = None;
         } else {
-            imp.discovery_note = Some(
-                "loaded without analysis: functions are the image's own symbols".into(),
-            );
+            imp.discovery_note =
+                Some("loaded without analysis: functions are the image's own symbols".into());
         }
         loaded.push((suffix, imp));
     }
@@ -1828,8 +2023,11 @@ fn const_data_targets(
     import: &mut NativeImport,
     session: &mut crate::native_runtime::ConsoleSession,
 ) -> Vec<u64> {
-    let entries: std::collections::HashSet<u64> =
-        import.functions.iter().map(|function| function.entry).collect();
+    let entries: std::collections::HashSet<u64> = import
+        .functions
+        .iter()
+        .map(|function| function.entry)
+        .collect();
     let in_code = |address: u64| {
         import.mappings.iter().any(|mapping| {
             mapping.flags & 4 != 0
@@ -1851,8 +2049,7 @@ fn const_data_targets(
         .collect();
     froms.sort_unstable();
     froms.dedup();
-    let mut uses: std::collections::HashMap<u64, Vec<String>> =
-        std::collections::HashMap::new();
+    let mut uses: std::collections::HashMap<u64, Vec<String>> = std::collections::HashMap::new();
     if let Ok(lifted) = session.pcode_batch(&froms) {
         for instruction in lifted {
             uses.insert(
@@ -1928,8 +2125,11 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
     by_from.sort_unstable_by_key(|&index| import.xrefs[index].from);
     let thunked: std::collections::HashSet<u64> =
         import.thunks.iter().map(|thunk| thunk.entry).collect();
-    let known: std::collections::HashSet<u64> =
-        import.functions.iter().map(|function| function.entry).collect();
+    let known: std::collections::HashSet<u64> = import
+        .functions
+        .iter()
+        .map(|function| function.entry)
+        .collect();
     let mut out = Vec::new();
     for function in import.functions.iter() {
         if function.size > STUB_BODY_MAX {
@@ -1971,8 +2171,11 @@ fn stub_jump_seeds(import: &NativeImport) -> Vec<(u64, u64)> {
 /// the low bit set on a low-bit-mode language is decoded in that mode from
 /// then on (`setTargetContextForDisassembly`: clear the bit, set the mode).
 fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
-    let entries: std::collections::HashSet<u64> =
-        import.functions.iter().map(|function| function.entry).collect();
+    let entries: std::collections::HashSet<u64> = import
+        .functions
+        .iter()
+        .map(|function| function.entry)
+        .collect();
     let in_code = |address: u64| {
         import.mappings.iter().any(|mapping| {
             mapping.flags & 4 != 0
@@ -1992,7 +2195,6 @@ fn computed_flow_targets(import: &mut NativeImport) -> Vec<u64> {
     targets
 }
 
-
 /// Ghidra's `DecompilerSwitchAnalyzer` runs the decompiler on every function
 /// holding an indirect jump, lays a reference from the jump to each table
 /// entry it recovers, and disassembles them; the case bodies then reach the
@@ -2005,13 +2207,23 @@ struct ScratchDir {
     path: std::path::PathBuf,
 }
 
+pub(crate) fn scratch_root() -> std::io::Result<std::path::PathBuf> {
+    let root = std::env::var_os("ROMWRIGHT_SCRATCH")
+        .filter(|value| !value.is_empty())
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| std::path::PathBuf::from(home).join(".cache/romwright/scratch")))
+        .ok_or_else(|| std::io::Error::other("set ROMWRIGHT_SCRATCH or HOME for native scratch storage"))?;
+    std::fs::create_dir_all(&root)?;
+    Ok(root)
+}
+
 impl ScratchDir {
     fn new(prefix: &str) -> Option<Self> {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .ok()?
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("{prefix}-{}-{nanos}", std::process::id()));
+        let path = scratch_root().ok()?.join(format!("{prefix}-{}-{nanos}", std::process::id()));
         std::fs::create_dir_all(&path).ok()?;
         Some(Self { path })
     }
@@ -2081,6 +2293,27 @@ impl vsa::Image for ImageView<'_> {
     }
 }
 
+/// Address index shared by every switch candidate in a discovery round.
+/// Discovery appends unsorted rounds; keep equal-address evidence in its
+/// original order without copying or reordering the underlying flow records.
+struct FlowShapeIndex<'a> {
+    by_address: Vec<&'a FlowShape>,
+}
+
+impl<'a> FlowShapeIndex<'a> {
+    fn new(shapes: &'a [FlowShape]) -> Self {
+        let mut by_address: Vec<_> = shapes.iter().collect();
+        by_address.sort_by_key(|shape| shape.address);
+        Self { by_address }
+    }
+
+    fn range(&self, entry: u64, end: u64) -> &[&'a FlowShape] {
+        let start = self.by_address.partition_point(|shape| shape.address < entry);
+        let remaining = &self.by_address[start..];
+        &remaining[..remaining.partition_point(|shape| shape.address < end)]
+    }
+}
+
 /// The straight-line window ending at `branch`, and the blocks that can
 /// reach it, which is where a guard lives.
 ///
@@ -2098,18 +2331,18 @@ impl vsa::Image for ImageView<'_> {
 /// conditional branch's *taken* edge first so an edge refinement lands on
 /// the side that assumes the test.
 fn function_blocks(
-    imp: &NativeImport,
+    shapes: &[&FlowShape],
     entry: u64,
     end: u64,
 ) -> Vec<(u64, Vec<u64>, Vec<usize>)> {
     use crate::native_runtime::FlowKind;
-    let mut shapes: Vec<&FlowShape> = imp
-        .flow_shapes
-        .iter()
-        .filter(|shape| shape.address >= entry && shape.address < end)
-        .collect();
-    shapes.sort_by_key(|shape| shape.address);
-    shapes.dedup_by_key(|shape| shape.address);
+    // The index preserves discovery order at equal addresses; retain the
+    // first shape, as the previous stable sort and deduplication did.
+    let unique_shapes = || {
+        shapes
+            .chunk_by(|left, right| left.address == right.address)
+            .map(|same_address| same_address[0])
+    };
     if shapes.is_empty() {
         return Vec::new();
     }
@@ -2122,7 +2355,7 @@ fn function_blocks(
     };
     let mut leaders: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
     leaders.insert(shapes[0].address);
-    for shape in &shapes {
+    for shape in unique_shapes() {
         if let Some(target) = shape.target
             && inside(target)
         {
@@ -2147,7 +2380,7 @@ fn function_blocks(
         .map(|start| (*start, Vec::new(), Vec::new()))
         .collect();
     let mut current = 0usize;
-    for shape in &shapes {
+    for shape in unique_shapes() {
         if let Some(found) = index_of(shape.address) {
             current = found;
         }
@@ -2250,16 +2483,11 @@ fn blocks_reaching(
 }
 
 fn switch_window(
-    imp: &NativeImport,
+    shapes: &[&FlowShape],
     branch: u64,
     entry: u64,
     end: u64,
 ) -> (Vec<u64>, Vec<Vec<u64>>) {
-    let shapes: Vec<&FlowShape> = imp
-        .flow_shapes
-        .iter()
-        .filter(|shape| shape.address >= entry && shape.address < end)
-        .collect();
     if shapes.is_empty() || !shapes.iter().any(|shape| shape.address == branch) {
         return (Vec::new(), Vec::new());
     }
@@ -2274,7 +2502,7 @@ fn switch_window(
     };
     let mut leaders: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
     leaders.insert(entry);
-    for shape in &shapes {
+    for shape in shapes {
         if let Some(target) = shape.target {
             if target >= entry && target < end {
                 leaders.insert(target);
@@ -2298,7 +2526,7 @@ fn switch_window(
     // Predecessors: a block whose last instruction branches to the dispatch,
     // and the block that falls into it.
     let mut predecessors: Vec<u64> = Vec::new();
-    for shape in &shapes {
+    for shape in shapes {
         let reaches = shape.target == Some(dispatch)
             || (!ends_block(shape.kind)
                 && shape.address.saturating_add(u64::from(shape.length)) == dispatch)
@@ -2398,8 +2626,11 @@ fn recover_switch_tables_native(
             .find(|f| f.size > 1 && f.entry <= branch && branch < f.entry + f.size)
             .map(|f| f.entry)
     };
+    let flow_shapes = FlowShapeIndex::new(&imp.flow_shapes);
     for &(branch, entry, end) in branches {
-        let (window_addresses, guard_addresses) = switch_window(imp, branch, entry, end);
+        let function_shapes = flow_shapes.range(entry, end);
+        let (window_addresses, guard_addresses) =
+            switch_window(function_shapes, branch, entry, end);
         if window_addresses.is_empty() {
             no_window += 1;
             unresolved.push(branch);
@@ -2417,7 +2648,10 @@ fn recover_switch_tables_native(
                 continue;
             }
         };
-        if decoded.iter().any(|instruction| instruction.error.is_some()) {
+        if decoded
+            .iter()
+            .any(|instruction| instruction.error.is_some())
+        {
             undecodable += 1;
             unresolved.push(branch);
             continue;
@@ -2438,7 +2672,10 @@ fn recover_switch_tables_native(
         {
             eprintln!(
                 "VSA at {branch:#x}: guard {:x?} window {:x?}",
-                guard.iter().map(|block| block.iter().map(|i| i.address).collect::<Vec<_>>()).collect::<Vec<_>>(),
+                guard
+                    .iter()
+                    .map(|block| block.iter().map(|i| i.address).collect::<Vec<_>>())
+                    .collect::<Vec<_>>(),
                 window.iter().map(|i| i.address).collect::<Vec<_>>(),
             );
             for instruction in window {
@@ -2447,7 +2684,9 @@ fn recover_switch_tables_native(
                         "  {:#x} {} {:?} <- {:?}",
                         instruction.address,
                         op.opcode,
-                        op.output.as_ref().map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size)),
+                        op.output
+                            .as_ref()
+                            .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size)),
                         op.inputs
                             .iter()
                             .map(|v| format!("{}:{:x}:{}", v.space, v.offset, v.size))
@@ -2479,7 +2718,8 @@ fn recover_switch_tables_native(
                     .filter(|&&(_, candidate_entry, _)| candidate_entry == entry)
                     .map(|&(candidate, _, _)| candidate)
                     .collect();
-                let blocks = blocks_reaching(&function_blocks(imp, entry, end), &dispatches);
+                let blocks =
+                    blocks_reaching(&function_blocks(function_shapes, entry, end), &dispatches);
                 let mut wanted: Vec<u64> = blocks
                     .iter()
                     .flat_map(|(_, addresses, _)| addresses.iter().copied())
@@ -2606,7 +2846,9 @@ fn recover_switch_tables_native(
             ));
         }
         let reaches_new = targets.iter().any(|&target| {
-            let index = imp.decoded_ranges.partition_point(|&(start, _)| start <= target);
+            let index = imp
+                .decoded_ranges
+                .partition_point(|&(start, _)| start <= target);
             !index
                 .checked_sub(1)
                 .is_some_and(|i| target < imp.decoded_ranges[i].1)
@@ -2690,7 +2932,12 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         .flow_overrides
         .iter()
         .map(|&(address, _)| address)
-        .chain(imp.xrefs.iter().filter(|xref| xref.kind == "COMPUTED_JUMP").map(|xref| xref.from))
+        .chain(
+            imp.xrefs
+                .iter()
+                .filter(|xref| xref.kind == "COMPUTED_JUMP")
+                .map(|xref| xref.from),
+        )
         .collect();
     let thunk_entries: std::collections::HashSet<u64> =
         imp.thunks.iter().map(|thunk| thunk.entry).collect();
@@ -2715,20 +2962,40 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         phase(imp, "switch", started);
         return 0;
     }
+    let Some(context) = &imp.input_context else {
+        imp.discovery_note = Some("switch recovery requires captured loader inputs".into());
+        return 0;
+    };
+    let (input_project, input) = context.as_ref();
     let scratch = ScratchDir::new("romwright-switch");
     let Some(scratch) = scratch else {
         imp.discovery_note = Some("switch recovery has no scratch dir".into());
         return 0;
     };
     let program = "switch-recovery";
-    let stored = ProjectDb::open(&scratch.path.join("project.sqlite"))
-        .map_err(|error| error.to_string())
-        .and_then(|db| {
-            store_import(&db, program, imp, declared_entry_model(&imp.cfg, &imp.language))
-                .map_err(|error| error.to_string())
-        });
+    let stored = (|| -> crate::Result<()> {
+        // All lanes read one immutable input set and one completed fact store.
+        for digest in std::iter::once(&input.binary_digest)
+            .chain(input.map_digest.iter())
+            .chain(input.keys_digest.iter())
+        {
+            let artifact = crate::artifact::Artifact::open(input_project, digest)?;
+            crate::artifact::Artifact::from_bytes(&scratch.path, artifact.bytes)?;
+        }
+        let db = ProjectDb::open(&scratch.path.join("project.sqlite"))?;
+        store_import(
+            &db,
+            program,
+            imp,
+            declared_entry_model(&imp.cfg, &imp.language),
+        )?;
+        db.set_program_input(db.program_id(program)?, input)?;
+        Ok(())
+    })();
     if let Err(error) = stored {
-        imp.discovery_note = Some(format!("switch recovery could not store the image: {error}"));
+        imp.discovery_note = Some(format!(
+            "switch recovery could not store the image: {error}"
+        ));
         return 0;
     }
     let addresses: Vec<String> = owners.iter().map(|entry| format!("{entry:#x}")).collect();
@@ -2744,34 +3011,36 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
     // cores and each got slower.
     let chunk_size = addresses.len().div_ceil(lanes).max(1);
     let chunks: Vec<&[String]> = addresses.chunks(chunk_size).collect();
-    // Each lane reads its own copy of the store: the worker opens it for
-    // writing, and two on one file lock each other out.
-    let mut lane_dirs = Vec::with_capacity(chunks.len());
-    for index in 0..chunks.len() {
-        let lane = scratch.path.join(format!("lane-{index}"));
-        if let Err(error) = std::fs::create_dir_all(&lane).and_then(|_| {
-            std::fs::copy(scratch.path.join("project.sqlite"), lane.join("project.sqlite"))
-        }) {
-            imp.discovery_note = Some(format!("switch recovery could not copy the store: {error}"));
-            return 0;
-        }
-        lane_dirs.push(lane);
-    }
+    let binary = scratch.path.join("artifacts").join(&input.binary_digest);
     let setup = started.elapsed().as_secs_f64();
     let lanes_started = std::time::Instant::now();
-    let outcomes: Vec<Result<std::collections::BTreeMap<String, romwright_model::DecompDoc>>> =
+    let outcomes: Vec<Result<crate::native_runtime::SwitchRecovery>> =
         std::thread::scope(|scope| {
             let handles: Vec<_> = chunks
                 .iter()
-                .zip(lane_dirs.iter())
-                .map(|(chunk, project)| {
+                .map(|chunk| {
+                    let project = &scratch.path;
                     let cfg = &imp.cfg;
-                    let binary = &imp.binary;
+                    let binary = &binary;
                     scope.spawn(move || {
-                        crate::native_runtime::decompile_native_docs(
-                            cfg, binary, chunk, program, project, None,
-                        )
-                        .map_err(|error| ImportError::Bad(error.to_string()))
+                        let outcome = (|| -> crate::Result<_> {
+                            let core = crate::Core::open_with_config(project, cfg.clone())?;
+                            let request = core.execution_request(
+                                binary,
+                                program,
+                                None,
+                                crate::exec::DEFAULT_BUDGET.saturating_mul(
+                                    u32::try_from(chunk.len())
+                                        .unwrap_or(u32::MAX)
+                                        .saturating_add(1),
+                                ),
+                            )?;
+                            let docs =
+                                crate::native_runtime::recover_native_switches(&request, chunk)?;
+                            core.check_execution(&request)?;
+                            Ok(docs)
+                        })();
+                        outcome.map_err(|error| ImportError::Bad(error.to_string()))
                     })
                 })
                 .collect();
@@ -2800,46 +3069,61 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
                 continue;
             }
         };
-        for doc in docs.values() {
-            for table in doc.jump_tables.iter().flatten() {
-                if table.branch.space != romwright_model::AddressSpace::Ram {
-                    continue;
-                }
-                let mut targets: Vec<u64> = table
-                    .targets
-                    .iter()
-                    .filter(|target| target.space == romwright_model::AddressSpace::Ram)
-                    .map(|target| target.offset)
-                    .collect();
-                targets.sort_unstable();
-                targets.dedup();
-                if targets.is_empty() {
-                    continue;
-                }
-                // The reference Ghidra's switch analyzer lays from the jump
-                // to each case (`COMPUTED_JUMP`), before the pattern analyzer
-                // runs: a case label is owned by flow from then on
-                // (`checkAlreadyInFunctionAbove`, 514-527).
-                for &target in &targets {
-                    imp.xrefs.push(NativeXref::with_provenance(
-                        table.branch.offset,
-                        target,
-                        "COMPUTED_JUMP",
-                        SWITCH_PROVENANCE,
-                    ));
-                }
-                // A table whose every case the walk already decoded changes
-                // no body; only one reaching bytes nothing read is a reason
-                // to walk again.
-                let reaches_new = targets.iter().any(|&target| {
-                    let index = imp.decoded_ranges.partition_point(|&(start, _)| start <= target);
-                    !index
-                        .checked_sub(1)
-                        .is_some_and(|i| target < imp.decoded_ranges[i].1)
-                });
-                if imp.switch_tables.insert(table.branch.offset, targets).is_none() && reaches_new {
-                    added += 1;
-                }
+        if !docs.failures.is_empty() {
+            let message = format!(
+                "switch recovery: {} completed, {} failures; {}",
+                docs.completed,
+                docs.failures.len(),
+                docs.failures.join("; "),
+            );
+            eprintln!("{message}");
+            imp.discovery_note = Some(message);
+        }
+        for table in &docs.tables {
+            if table.branch.space != romwright_model::AddressSpace::Ram {
+                continue;
+            }
+            let mut targets: Vec<u64> = table
+                .targets
+                .iter()
+                .filter(|target| target.space == romwright_model::AddressSpace::Ram)
+                .map(|target| target.offset)
+                .collect();
+            targets.sort_unstable();
+            targets.dedup();
+            if targets.is_empty() {
+                continue;
+            }
+            // The reference Ghidra's switch analyzer lays from the jump
+            // to each case (`COMPUTED_JUMP`), before the pattern analyzer
+            // runs: a case label is owned by flow from then on
+            // (`checkAlreadyInFunctionAbove`, 514-527).
+            for &target in &targets {
+                imp.xrefs.push(NativeXref::with_provenance(
+                    table.branch.offset,
+                    target,
+                    "COMPUTED_JUMP",
+                    SWITCH_PROVENANCE,
+                ));
+            }
+            // A table whose every case the walk already decoded changes
+            // no body; only one reaching bytes nothing read is a reason
+            // to walk again.
+            let reaches_new = targets.iter().any(|&target| {
+                let index = imp
+                    .decoded_ranges
+                    .partition_point(|&(start, _)| start <= target);
+                !index
+                    .checked_sub(1)
+                    .is_some_and(|i| target < imp.decoded_ranges[i].1)
+            });
+            if imp
+                .switch_tables
+                .insert(table.branch.offset, targets)
+                .is_none()
+                && reaches_new
+            {
+                added += 1;
             }
         }
     }
@@ -2886,7 +3170,7 @@ fn demote_case_blocks(imp: &mut NativeImport) {
 }
 
 /// Runs discovery and reference inference for one loaded image.
-fn discover(imp: &mut NativeImport) -> Result<()> {
+pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
     let mut lanes = if imp.format == "dol" {
         Some(discovery::discover_mapped(imp)?)
@@ -3131,18 +3415,23 @@ fn name_linkage_stubs(imp: &mut NativeImport) {
 
 /// Loads `<binary>` natively and closes its seeds through SLEIGH flow.
 pub fn load_native(binary: &Path) -> Result<NativeImport> {
-    let parse_started = std::time::Instant::now();
     let data = std::fs::read(binary)
         .map_err(|e| ImportError::Bad(format!("{}: {e}", binary.display())))?;
-    let mut imp = parse_native(&data)?;
-    imp.binary = binary.canonicalize().unwrap_or_else(|_| binary.to_path_buf());
-    imp.cfg = crate::session::RuntimeConfig::from_env();
-    let cfg = imp.cfg.clone();
-    select_language(&mut imp, &cfg)?;
-    imp.cfg.adopt_language(&imp.language);
-    phase(&mut imp, "parse", parse_started);
-    discover(&mut imp)?;
-    Ok(imp)
+    let mut images = load_container_with(
+        binary,
+        &data,
+        true,
+        None,
+        None,
+        &keys::KeyStore::empty(),
+        &crate::session::RuntimeConfig::from_env(),
+    )?;
+    if images.len() != 1 {
+        return Err(ImportError::Bad(
+            "native load requires exactly one selected image; use Core for containers".into(),
+        ));
+    }
+    Ok(images.pop().expect("one image").1)
 }
 
 /// MIPS calling code leaves a function's own address in `t9`, and every
@@ -3206,7 +3495,10 @@ pub(crate) fn seed_ppc_sda_registers(
     let block_base = |names: &[&str]| {
         let mut first = u64::MAX;
         let mut last = 0u64;
-        for section in sections.iter().filter(|section| names.contains(&section.name.as_str())) {
+        for section in sections
+            .iter()
+            .filter(|section| names.contains(&section.name.as_str()))
+        {
             first = first.min(section.addr);
             last = last.max(section.addr.saturating_add(section.size));
         }
@@ -3223,20 +3515,16 @@ pub(crate) fn seed_ppc_sda_registers(
     // A zero ABS is the linker leaving the slot: stock only establishes
     // a base while processing an SDA-relative relocation, so zero falls
     // through to sections (and to nothing when those are absent).
-    let abs_base =
-        |names: &[&str]| find(names).filter(|value| *value != 0);
+    let abs_base = |names: &[&str]| find(names).filter(|value| *value != 0);
     // Section convention is 32-bit EABI only: on 64-bit `r2` is the TOC
     // pointer and `r13` the thread pointer, and `.sdata` commonly exists.
     // A declared ABS symbol still wins at any width.
-    let conventional = |names: &[&str]| {
-        (machine == 20)
-            .then(|| block_base(names))
-            .flatten()
-    };
+    let conventional = |names: &[&str]| (machine == 20).then(|| block_base(names)).flatten();
     let r13 = abs_base(&["_SDA_BASE_"]).or_else(|| conventional(&[".sdata", ".sbss"]));
     let r2 = abs_base(&["_SDA2_BASE_"]).or_else(|| conventional(&[".sdata2", ".sbss2"]));
-    for (register, value) in
-        [("r13", r13), ("r2", r2)].into_iter().filter_map(|(r, v)| v.map(|v| (r, v)))
+    for (register, value) in [("r13", r13), ("r2", r2)]
+        .into_iter()
+        .filter_map(|(r, v)| v.map(|v| (r, v)))
     {
         register_contexts.extend(functions.iter().filter_map(|function| {
             Some(NativeRegisterContext {
@@ -3249,17 +3537,26 @@ pub(crate) fn seed_ppc_sda_registers(
     }
 }
 
-/// Points the worker needs from seeded register ranges: one decode point
-/// per range start, for the SDA registers only. `t9`/PLT ranges are
-/// console-only facts; as context rows the spec would reject them.
+/// Expand SDA register ranges at every recovered function entry. The console
+/// consumes the full ranges; the worker's tracked-register callback is keyed
+/// by entry, including functions discovered after the loader established them.
 pub(crate) fn sda_decode_points(
     register_contexts: &[NativeRegisterContext],
+    functions: &[NativeFunction],
 ) -> Vec<(u64, String, u64)> {
-    register_contexts
-        .iter()
+    let mut entries: Vec<_> = functions.iter().map(|function| function.entry).collect();
+    entries.sort_unstable();
+    entries.dedup();
+    let mut points = std::collections::BTreeMap::new();
+    for context in register_contexts.iter()
         .filter(|context| context.register == "r13" || context.register == "r2")
-        .map(|context| (context.start, context.register.clone(), context.value))
-        .collect()
+    {
+        let first = entries.partition_point(|entry| *entry < context.start);
+        for &entry in entries[first..].iter().take_while(|entry| **entry < context.end) {
+            points.insert((entry, context.register.as_str()), context.value);
+        }
+    }
+    points.into_iter().map(|((entry, register), value)| (entry, register.to_string(), value)).collect()
 }
 
 /// One console reference query. ConstantPropagationAnalyzer's default trusts
@@ -3373,16 +3670,29 @@ fn infer_data_references(
     lanes: Vec<crate::native_runtime::ConsoleSession>,
 ) -> Result<()> {
     use crate::native_runtime::ReferenceKind;
-    session.prepare_reference_context(import)
+    session
+        .prepare_reference_context(import)
         .map_err(|error| ImportError::Bad(format!("reference context: {error}")))?;
-    let functions = import.functions.iter().filter(|function| function.size > 1).map(|function| {
-        function.entry.checked_add(function.size)
-            .map(|end| (function.entry, end))
-            .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))
-    });
-    let roots = import.reference_roots.iter()
-        .filter(|&&(start, _)| !import.functions.iter()
-            .any(|function| function.entry == start && function.size > 1))
+    let functions = import
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| {
+            function
+                .entry
+                .checked_add(function.size)
+                .map(|end| (function.entry, end))
+                .ok_or_else(|| ImportError::Bad("reference function range overflows".into()))
+        });
+    let roots = import
+        .reference_roots
+        .iter()
+        .filter(|&&(start, _)| {
+            !import
+                .functions
+                .iter()
+                .any(|function| function.entry == start && function.size > 1)
+        })
         .copied();
     // Ranges the console could not answer. Counted, not hidden.
     let refused = std::sync::atomic::AtomicU64::new(0);
@@ -3423,8 +3733,10 @@ fn infer_data_references(
         }
         if shards.len() < wanted {
             let spec = session.reference_shard_spec();
-            let mut opened =
-                crate::native_runtime::ConsoleSession::open_image_shards(import, wanted - shards.len());
+            let mut opened = crate::native_runtime::ConsoleSession::open_image_shards(
+                import,
+                wanted - shards.len(),
+            );
             opened.retain_mut(|shard| shard.prepare_as_reference_shard(&spec, import).is_ok());
             shards.extend(opened);
         }
@@ -3448,25 +3760,27 @@ fn infer_data_references(
             // next range instead of taking a fixed stride: one huge function
             // must not decide the round's wall time.
             let cursor = std::sync::atomic::AtomicUsize::new(0);
-            let outcome: Result<Vec<_>> = std::thread::scope(|scope| {
-                let mut handles = Vec::with_capacity(shards.len());
-                for shard in shards.iter_mut() {
-                    let ranges = &ranges;
-                    let cursor = &cursor;
-                    let refused = &refused;
-                    handles.push(scope.spawn(move || {
-                        claim_references(shard, ranges, cursor, mappings, refused)
-                    }));
-                }
-                let mut collected =
-                    vec![claim_references(session, &ranges, &cursor, mappings, &refused)?];
-                for handle in handles {
-                    collected.push(handle.join().unwrap_or_else(|_| {
-                        Err(ImportError::Bad("reference shard panicked".into()))
-                    })?);
-                }
-                Ok(collected)
-            });
+            let outcome: Result<Vec<_>> =
+                std::thread::scope(|scope| {
+                    let mut handles = Vec::with_capacity(shards.len());
+                    for shard in shards.iter_mut() {
+                        let ranges = &ranges;
+                        let cursor = &cursor;
+                        let refused = &refused;
+                        handles.push(scope.spawn(move || {
+                            claim_references(shard, ranges, cursor, mappings, refused)
+                        }));
+                    }
+                    let mut collected = vec![claim_references(
+                        session, &ranges, &cursor, mappings, &refused,
+                    )?];
+                    for handle in handles {
+                        collected.push(handle.join().unwrap_or_else(|_| {
+                            Err(ImportError::Bad("reference shard panicked".into()))
+                        })?);
+                    }
+                    Ok(collected)
+                });
             for lane in outcome? {
                 results.extend(lane);
             }
@@ -3488,8 +3802,12 @@ fn infer_data_references(
         // Shard order must not decide the context list, so merge sorted.
         discovered.extend(session.drain_discovered_contexts(keep));
         discovered.sort_by(|left, right| {
-            (left.start, left.end, &left.register, left.value)
-                .cmp(&(right.start, right.end, &right.register, right.value))
+            (left.start, left.end, &left.register, left.value).cmp(&(
+                right.start,
+                right.end,
+                &right.register,
+                right.value,
+            ))
         });
         discovered.dedup_by(|left, right| {
             left.start == right.start
@@ -3515,14 +3833,20 @@ fn infer_data_references(
     // Propagated caller context can resolve a linkage whose base register was
     // unknown during discovery. Require the existing pure-linkage proof and
     // one consistent imported read slot within that exact instruction extent.
-    let imported: std::collections::HashMap<_, _> = import.externals.iter()
+    let imported: std::collections::HashMap<_, _> = import
+        .externals
+        .iter()
         .filter(|(address, _)| *address != 0)
         .map(|(address, name)| (*address, name.as_str()))
         .collect();
-    let candidates: Vec<_> = work[..function_count].iter().enumerate()
+    let candidates: Vec<_> = work[..function_count]
+        .iter()
+        .enumerate()
         .filter(|(_, (start, _, facts, _))| {
-            !imported.contains_key(start) && facts.iter()
-                .any(|fact| fact.kind == ReferenceKind::Read && imported.contains_key(&fact.to))
+            !imported.contains_key(start)
+                && facts
+                    .iter()
+                    .any(|fact| fact.kind == ReferenceKind::Read && imported.contains_key(&fact.to))
         })
         .map(|(index, _)| index)
         .collect();
@@ -3532,12 +3856,15 @@ fn infer_data_references(
     for chunk in candidates.chunks(1024) {
         addresses.clear();
         addresses.extend(chunk.iter().map(|&index| work[index].0));
-        let shapes = session.linkage_batch(&addresses)
+        let shapes = session
+            .linkage_batch(&addresses)
             .map_err(|error| ImportError::Bad(format!("propagated linkage: {error}")))?;
         for (&index, shape) in chunk.iter().zip(shapes) {
             let (start, end, facts, _) = &work[index];
-            let Some(limit) = start.checked_add(shape.length as u64)
-                .filter(|limit| shape.length != 0 && *limit <= *end) else {
+            let Some(limit) = start
+                .checked_add(shape.length as u64)
+                .filter(|limit| shape.length != 0 && *limit <= *end)
+            else {
                 continue;
             };
             let mut slot = None;
@@ -3554,7 +3881,9 @@ fn infer_data_references(
                 }
                 slot = Some(fact.to);
             }
-            if consistent && let Some((slot, name)) = slot.zip(slot.and_then(|slot| imported.get(&slot))) {
+            if consistent
+                && let Some((slot, name)) = slot.zip(slot.and_then(|slot| imported.get(&slot)))
+            {
                 linked.push((*start, (*name).to_owned()));
                 // The slot that names this stub is the destination it reaches,
                 // so the stub is a linkage thunk. Stock Ghidra converts the
@@ -3588,9 +3917,7 @@ fn infer_data_references(
                 .filter(|fact| fact.kind == ReferenceKind::Stack)
                 .map(|fact| (sign_extend(fact.to, pointer_bits), fact.size))
                 .collect();
-            import
-                .stack_variables
-                .extend(stack_frame(start, &accesses));
+            import.stack_variables.extend(stack_frame(start, &accesses));
         }
         let facts: Vec<crate::native_runtime::ReferenceFact> = facts
             .into_iter()
@@ -3649,15 +3976,13 @@ fn infer_data_references(
     Ok(())
 }
 
-
 /// Adds FUN_<hex> functions for every xref target inside a code mapping
 /// (the direct-call closure; mirrors Ghidra's FUN_ naming).
 pub fn close_call_targets(imp: &mut NativeImport) {
     // Membership mirror: one linear scan per call xref is O(xrefs) over
     // the function list, which never converges past a few hundred
     // thousand functions.
-    let mut known: std::collections::HashSet<u64> =
-        imp.functions.iter().map(|f| f.entry).collect();
+    let mut known: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
     for x in &imp.xrefs {
         if !x.kind.contains("CALL") {
             continue;
@@ -3723,7 +4048,10 @@ pub const ELF_EXCEPTION_SOURCE: &str = "native-import:elf-exception";
 /// (`processEntryPoints`, :666-672). An undeclared name would be worse than
 /// none: the decompiler answers an unrecognized model with a placeholder
 /// that has no parameter storage at all (`fspec.cc:4695-4698`).
-pub fn declared_entry_model(cfg: &crate::session::RuntimeConfig, language: &str) -> Option<&'static str> {
+pub fn declared_entry_model(
+    cfg: &crate::session::RuntimeConfig,
+    language: &str,
+) -> Option<&'static str> {
     let (_, specs, _, _) = crate::native_runtime::language_decompile_config(cfg, language).ok()?;
     let cspec = std::fs::read_to_string(specs.join("cspec.xml")).ok()?;
     crate::register_params::declares_model(&cspec, PROCESS_ENTRY_MODEL)
@@ -3746,6 +4074,7 @@ pub fn store_import(
     imp: &NativeImport,
     entry_model: Option<&str>,
 ) -> Result<ProgramSummary> {
+    db.invalidate_program_input(program)?;
     let mut functions = imp.functions.clone();
     functions.sort_by_key(|f| f.entry);
     // Fill sizes from the next function's entry only where none was proven.
@@ -3762,6 +4091,12 @@ pub fn store_import(
         }
     }
     let pid = db.upsert_program(program, &imp.language, &native_provenance())?;
+    // Publish the loader identity with the program itself: a native worker
+    // reopening this store must see the same immutable input the import
+    // analysed, so its answers are reproducible from the store alone.
+    if let Some((_, input)) = imp.input_context.as_deref() {
+        db.set_program_input(pid, input)?;
+    }
     if let Some(toolchain) = &imp.toolchain {
         db.set_program_compiler(pid, toolchain)?;
     }
@@ -3827,8 +4162,13 @@ pub fn store_import(
     }));
     db.replace_memory_regions(pid, &regions)?;
     let swept_strings = strings::discover(imp);
-    db.replace_strings(pid, imp.string_tables.iter().flat_map(|table| &table.strings)
-        .chain(&swept_strings))?;
+    db.replace_strings(
+        pid,
+        imp.string_tables
+            .iter()
+            .flat_map(|table| &table.strings)
+            .chain(&swept_strings),
+    )?;
     // Say what produced these rows. A loader-only import declares seeds that
     // nobody has walked; demand-driven analysis upgrades them one at a time.
     // And say *which pass* claimed each entry. One recall number over six
@@ -3855,10 +4195,8 @@ pub fn store_import(
         .chain(imp.initializer_slots.iter())
         .map(|(_, target)| *target)
         .collect();
-    let declared: std::collections::HashSet<u64> =
-        imp.symbol_named.iter().copied().collect();
-    let consted: std::collections::HashSet<u64> =
-        imp.const_data_starts.iter().copied().collect();
+    let declared: std::collections::HashSet<u64> = imp.symbol_named.iter().copied().collect();
+    let consted: std::collections::HashSet<u64> = imp.const_data_starts.iter().copied().collect();
     // A const-seeded entry whose body swallows better-evidenced entries is
     // a mid-body label mistaken for a start (libc: one swallowed 37
     // symtab functions into a 7KB body). Two functions cannot share code
@@ -3940,8 +4278,7 @@ pub fn store_import(
     // Features must reference stored functions: retracted const seeds stay
     // in `imp` (one function set feeds the rest of the pipeline) but their
     // rows never reach the table, so their measurements must not either.
-    let stored: std::collections::HashSet<u64> =
-        rows.iter().map(|row| row.entry.offset).collect();
+    let stored: std::collections::HashSet<u64> = rows.iter().map(|row| row.entry.offset).collect();
     let mut measured = features::measure(imp);
     measured.retain(|feature| stored.contains(&feature.function.offset));
     db.replace_function_features(pid, &measured)?;
@@ -3963,15 +4300,17 @@ pub fn store_import(
                 "TMode" | "ISA_MODE" => "LowBitCodeMode".to_string(),
                 other => other.to_string(),
             };
-            (romwright_model::Address::ram(context.address), name, context.value)
+            (
+                romwright_model::Address::ram(context.address),
+                name,
+                context.value,
+            )
         })
         .collect();
-    // Register values the worker needs as decode points, one per seeded
-    // range: SDA bases for r13/r2. The console takes the same facts from
-    // `register_contexts` directly; context-variable rows stay the only
-    // thing `imp.contexts` carries.
+    // Store each function's entry value, not merely each range's first address.
+    // The console takes the same facts directly from `register_contexts`.
     contexts.extend(
-        sda_decode_points(&imp.register_contexts)
+        sda_decode_points(&imp.register_contexts, &imp.functions)
             .into_iter()
             .map(|(address, name, value)| (romwright_model::Address::ram(address), name, value)),
     );
@@ -3981,7 +4320,9 @@ pub fn store_import(
     symbols.retain(|symbol| symbol.source != "native-import");
     symbols.retain(|symbol| symbol.source != DYNAMIC_LABEL_SOURCE);
     symbols.extend(
-        imp.externals.iter().filter(|(entry, _)| *entry != 0)
+        imp.externals
+            .iter()
+            .filter(|(entry, _)| *entry != 0)
             .map(|(entry, name)| romwright_model::SymbolRow {
                 name: name.clone(),
                 address: romwright_model::Address::ram(*entry),
@@ -4010,7 +4351,11 @@ pub fn store_import(
         .filter(|symbol| symbol.address.space == romwright_model::AddressSpace::Ram)
         .map(|symbol| symbol.address.offset)
         .collect();
-    symbols.extend(copied.into_iter().filter(|row| !already.contains(&row.address.offset)));
+    symbols.extend(
+        copied
+            .into_iter()
+            .filter(|row| !already.contains(&row.address.offset)),
+    );
     // A name the image's own dynamic table proves. Ghidra applies it beside
     // whatever else names the address rather than instead of it: at a
     // `DT_INIT` target the pinned install holds both the function `_DT_INIT`
@@ -4094,15 +4439,12 @@ pub fn store_import(
     let module_rows = db.modules(pid)?;
     if module_rows.len() > 1 {
         let module_of = |address: u64| -> Option<&romwright_model::ModuleRow> {
-            module_rows.iter().find(|m| {
-                m.load_vaddr.offset <= address
-                    && address - m.load_vaddr.offset < m.size
-            })
+            module_rows
+                .iter()
+                .find(|m| m.load_vaddr.offset <= address && address - m.load_vaddr.offset < m.size)
         };
         for x in &imp.xrefs {
-            let (Some(from), Some(to)) =
-                (module_of(x.from), module_of(x.to))
-            else {
+            let (Some(from), Some(to)) = (module_of(x.from), module_of(x.to)) else {
                 continue;
             };
             if from.module_id != to.module_id {
@@ -4136,8 +4478,11 @@ pub fn store_import(
             .collect();
         db.replace_inferred_flow_overrides(pid, source, &overrides)?;
     }
-    let tagged: std::collections::HashSet<u64> =
-        imp.dynamic_labels.iter().map(|(address, _)| *address).collect();
+    let tagged: std::collections::HashSet<u64> = imp
+        .dynamic_labels
+        .iter()
+        .map(|(address, _)| *address)
+        .collect();
     // What the *image* declares a slot points at, which is the only thing that
     // justifies typing one more strongly than stock -- whose loader types
     // every word it marks up a plain pointer
@@ -4148,10 +4493,16 @@ pub fn store_import(
     // *happens* to hold a function's entry -- a `.got` word, a referenced word
     // (m4-027) -- is a coincidence, not a declaration, and keeps the plain
     // pointer both stores give it.
-    let linkage_declared: std::collections::HashSet<u64> =
-        imp.function_slots.iter().map(|(address, _)| *address).collect();
-    let array_declared: std::collections::HashSet<u64> =
-        imp.initializer_slots.iter().map(|(address, _)| *address).collect();
+    let linkage_declared: std::collections::HashSet<u64> = imp
+        .function_slots
+        .iter()
+        .map(|(address, _)| *address)
+        .collect();
+    let array_declared: std::collections::HashSet<u64> = imp
+        .initializer_slots
+        .iter()
+        .map(|(address, _)| *address)
+        .collect();
     let pointee = |address: u64| -> String {
         // An initializer array's entries are function pointers by definition,
         // including the first one, which `DT_INIT_ARRAY` also names. A linkage
@@ -4223,7 +4574,11 @@ pub fn store_import(
         .iter()
         .map(|(address, size)| romwright_model::DataDefinitionRow {
             address: romwright_model::Address::ram(*address),
-            data_type: if *size > 8 { "undefined1[]".into() } else { "undefined".into() },
+            data_type: if *size > 8 {
+                "undefined1[]".into()
+            } else {
+                "undefined".into()
+            },
             size: *size,
             provenance: romwright_model::FactProvenance {
                 kind: romwright_model::FactKind::Inferred,
@@ -4241,7 +4596,9 @@ pub fn store_import(
         .reference_widths
         .iter()
         .filter(|(address, _)| {
-            !imp.plt_reserved_slots.iter().any(|(slot, _)| slot == address)
+            !imp.plt_reserved_slots
+                .iter()
+                .any(|(slot, _)| slot == address)
                 && !imp.pointer_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.got_slots.iter().any(|(slot, _)| slot == address)
                 && !imp.object_sizes.iter().any(|(slot, _)| slot == address)
@@ -4425,7 +4782,6 @@ fn mapping_permissions(flags: u64) -> String {
     )
 }
 
-
 /// Decoded/function extents indexed for containment tests: a linear scan
 /// per candidate is O(extents) each, which never converges when both
 /// number in the hundreds of thousands. Any extent covering an address
@@ -4497,11 +4853,10 @@ pub fn candidate_flow_is_valid(
                 .is_some_and(|fall| ctx.initial_seeds.contains(&fall)))
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::discovery::flow_discover_with_provider;
+    use super::*;
 
     #[test]
     fn a_slice_keeps_what_reaches_the_dispatch_and_drops_what_follows_it() {
@@ -4559,13 +4914,32 @@ mod tests {
         use crate::native_runtime::FlowKind;
         let imp = NativeImport {
             flow_shapes: vec![
-                FlowShape { address: 0x1000, length: 5, kind: FlowKind::Branch, conditional: false, target: Some(0x2000) },
-                FlowShape { address: 0x1010, length: 2, kind: FlowKind::CBranch, conditional: true, target: Some(0x3000) },
-                FlowShape { address: 0x1012, length: 4, kind: FlowKind::Fallthrough, conditional: false, target: None },
+                FlowShape {
+                    address: 0x1000,
+                    length: 5,
+                    kind: FlowKind::Branch,
+                    conditional: false,
+                    target: Some(0x2000),
+                },
+                FlowShape {
+                    address: 0x1010,
+                    length: 2,
+                    kind: FlowKind::CBranch,
+                    conditional: true,
+                    target: Some(0x3000),
+                },
+                FlowShape {
+                    address: 0x1012,
+                    length: 4,
+                    kind: FlowKind::Fallthrough,
+                    conditional: false,
+                    target: None,
+                },
             ],
             ..Default::default()
         };
-        let blocks = function_blocks(&imp, 0x1000, 0x2000);
+        let index = FlowShapeIndex::new(&imp.flow_shapes);
+        let blocks = function_blocks(index.range(0x1000, 0x2000), 0x1000, 0x2000);
         // Three blocks: the jmp's, the padding leader's (empty), and the
         // ja's. The jmp's block must not contain the ja.
         assert_eq!(blocks.len(), 3, "{blocks:?}");
@@ -4575,6 +4949,48 @@ mod tests {
         assert_eq!(blocks[1].2, vec![2]);
         assert_eq!(blocks[2].1, vec![0x1012]);
     }
+
+    #[test]
+    fn switch_analysis_indexes_unsorted_rounds_without_leaking_neighbours() {
+        use crate::native_runtime::FlowKind;
+        let shape = |address, kind, target| FlowShape {
+            address,
+            length: 2,
+            kind,
+            conditional: matches!(kind, FlowKind::CBranch),
+            target,
+        };
+        let shapes = [
+            shape(0x1004, FlowKind::BranchInd, None),
+            shape(0x0900, FlowKind::Branch, Some(0x1004)),
+            shape(0x1000, FlowKind::CBranch, Some(0x1004)),
+            shape(0x1008, FlowKind::Branch, Some(0x1004)),
+            shape(0x1006, FlowKind::Return, None),
+            shape(0x1002, FlowKind::Fallthrough, None),
+            shape(0x1004, FlowKind::Fallthrough, None),
+        ];
+        let index = FlowShapeIndex::new(&shapes);
+        let function = index.range(0x1000, 0x1008);
+        assert_eq!(
+            function_blocks(function, 0x1000, 0x1008),
+            vec![
+                (0x1000, vec![0x1000], vec![2, 1]),
+                (0x1002, vec![0x1002], vec![2]),
+                (0x1004, vec![0x1004], vec![]),
+                (0x1006, vec![0x1006], vec![]),
+            ]
+        );
+        assert_eq!(
+            switch_window(function, 0x1004, 0x1000, 0x1008),
+            (vec![0x1004], vec![vec![0x1000], vec![0x1002]])
+        );
+        assert!(function_blocks(index.range(0x1008, 0x1000), 0x1008, 0x1000).is_empty());
+        assert_eq!(
+            switch_window(index.range(0x1004, 0x1004), 0x1004, 0x1004, 0x1004),
+            (vec![], vec![])
+        );
+    }
+
     #[test]
     fn elf_data_pointer_waits_for_flow_and_walks_indirect_call_fallthrough() {
         use crate::native_runtime::{FlowKind, FlowResult};
@@ -4583,14 +4999,31 @@ mod tests {
         for (offset, value) in [(16, 2_u16), (18, 0x3e), (58, 64), (60, 4), (62, 3)] {
             bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
         }
-        for (offset, value) in [(24, 0x1000_u64), (40, 0x200),
-                                (0x248, 6), (0x250, 0x1000), (0x258, 0x100), (0x260, 0x80),
-                                (0x288, 3), (0x290, 0x2000), (0x298, 0x180), (0x2a0, 16),
-                                (0x2d8, 0x1a0), (0x2e0, 13),
-                                (0x180, 0x1020), (0x188, 0x1030)] {
+        for (offset, value) in [
+            (24, 0x1000_u64),
+            (40, 0x200),
+            (0x248, 6),
+            (0x250, 0x1000),
+            (0x258, 0x100),
+            (0x260, 0x80),
+            (0x288, 3),
+            (0x290, 0x2000),
+            (0x298, 0x180),
+            (0x2a0, 16),
+            (0x2d8, 0x1a0),
+            (0x2e0, 13),
+            (0x180, 0x1020),
+            (0x188, 0x1030),
+        ] {
             bytes[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
         }
-        for (offset, value) in [(0x240, 1_u32), (0x244, 1), (0x280, 7), (0x284, 1), (0x2c4, 3)] {
+        for (offset, value) in [
+            (0x240, 1_u32),
+            (0x244, 1),
+            (0x280, 7),
+            (0x284, 1),
+            (0x2c4, 3),
+        ] {
             bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
         }
         bytes[0x100..0x180].fill(1);
@@ -4599,21 +5032,44 @@ mod tests {
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1020));
         flow_discover_with_provider(&mut imp, |_| Vec::new());
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1020));
-        flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
-            let (kind, fallthrough, targets) = match address {
-                0x1020 => (FlowKind::CallInd, Some(0x1024), vec![]),
-                0x1024 => (FlowKind::Call, Some(0x1028), vec![0x1040]),
-                0x1030 => (FlowKind::Bad, None, vec![]),
-                _ => (FlowKind::Return, None, vec![]),
-            };
-            FlowResult { terminal: kind == FlowKind::Return, conditional: false, return_op: kind == FlowKind::Return, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough, targets, kind, mode: None, target_modes: Vec::new() }
-        }).collect());
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&address| {
+                    let (kind, fallthrough, targets) = match address {
+                        0x1020 => (FlowKind::CallInd, Some(0x1024), vec![]),
+                        0x1024 => (FlowKind::Call, Some(0x1028), vec![0x1040]),
+                        0x1030 => (FlowKind::Bad, None, vec![]),
+                        _ => (FlowKind::Return, None, vec![]),
+                    };
+                    FlowResult {
+                        terminal: kind == FlowKind::Return,
+                        conditional: false,
+                        return_op: kind == FlowKind::Return,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address,
+                        length: 4,
+                        fallthrough,
+                        targets,
+                        kind,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    }
+                })
+                .collect()
+        });
         assert!(imp.functions.iter().any(|f| f.entry == 0x1020));
-        assert!(imp.functions.iter().any(|f| f.entry == 0x1040),
-                "pointer-rooted traversal must continue after an indirect call");
+        assert!(
+            imp.functions.iter().any(|f| f.entry == 0x1040),
+            "pointer-rooted traversal must continue after an indirect call"
+        );
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1030));
-        assert!(imp.xrefs.iter().any(|x| x.from == 0x2000 && x.to == 0x1020
-                && x.kind == "DATA" && x.provenance == "native-import:elf-pointer"));
+        assert!(imp.xrefs.iter().any(|x| x.from == 0x2000
+            && x.to == 0x1020
+            && x.kind == "DATA"
+            && x.provenance == "native-import:elf-pointer"));
     }
 
     #[test]
@@ -4621,27 +5077,57 @@ mod tests {
         use crate::native_runtime::{FlowKind, FlowResult};
         let mut imp = NativeImport {
             mappings: vec![Mapping {
-                vaddr: 0x1000, size: 0x2010, file_off: 0, flags: 6,
+                vaddr: 0x1000,
+                size: 0x2010,
+                file_off: 0,
+                flags: 6,
                 bytes: vec![0x90; 0x2010],
             }],
-            functions: vec![NativeFunction { entry: 0x1000, name: "entry".into(), size: 1 }],
+            functions: vec![NativeFunction {
+                entry: 0x1000,
+                name: "entry".into(),
+                size: 1,
+            }],
             reloc_candidates: vec![0x2000, 0x3001],
             ..Default::default()
         };
-        flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
-            FlowResult { terminal: address != 0x1000, conditional: false, return_op: address != 0x1000, delay_slots: Vec::new(), no_op: false, pure_jump: false, address, length: 4, fallthrough: None,
-            targets: if address == 0x1000 { vec![0x3000] } else { vec![] },
-            kind: if address == 0x1000 { FlowKind::Branch } else { FlowKind::Return },
-            mode: None, target_modes: Vec::new(),
-            }
-        }).collect());
-        assert!(imp.functions.iter().any(|f| f.entry == 0x2000),
-                "a distant branch must not suppress a function in the unvisited gap");
-        assert!(!imp.functions.iter().any(|f| f.entry == 0x3001),
-                "an instruction-interior pointer must still be rejected");
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&address| FlowResult {
+                    terminal: address != 0x1000,
+                    conditional: false,
+                    return_op: address != 0x1000,
+                    delay_slots: Vec::new(),
+                    no_op: false,
+                    pure_jump: false,
+                    address,
+                    length: 4,
+                    fallthrough: None,
+                    targets: if address == 0x1000 {
+                        vec![0x3000]
+                    } else {
+                        vec![]
+                    },
+                    kind: if address == 0x1000 {
+                        FlowKind::Branch
+                    } else {
+                        FlowKind::Return
+                    },
+                    mode: None,
+                    target_modes: Vec::new(),
+                })
+                .collect()
+        });
+        assert!(
+            imp.functions.iter().any(|f| f.entry == 0x2000),
+            "a distant branch must not suppress a function in the unvisited gap"
+        );
+        assert!(
+            !imp.functions.iter().any(|f| f.entry == 0x3001),
+            "an instruction-interior pointer must still be rejected"
+        );
     }
-
-
 
     #[test]
     fn an_elf_records_the_machine_it_names_and_selects_no_language_alone() {
@@ -4691,9 +5177,18 @@ mod tests {
             let word = |v: u32| if be { v.to_be_bytes() } else { v.to_le_bytes() };
             let half = |v: u16| if be { v.to_be_bytes() } else { v.to_le_bytes() };
             let mut data = vec![0u8; 0x400];
-            data[..6].copy_from_slice(if be { b"\x7fELF\x01\x02" } else { b"\x7fELF\x01\x01" });
-            for (offset, value) in [(16, 2), (18, if be { 20 } else { 3 }),
-                                    (46, 40), (48, 5), (50, 4)] {
+            data[..6].copy_from_slice(if be {
+                b"\x7fELF\x01\x02"
+            } else {
+                b"\x7fELF\x01\x01"
+            });
+            for (offset, value) in [
+                (16, 2),
+                (18, if be { 20 } else { 3 }),
+                (46, 40),
+                (48, 5),
+                (50, 4),
+            ] {
                 data[offset..offset + 2].copy_from_slice(&half(value));
             }
             data[32..36].copy_from_slice(&word(0x100));
@@ -4706,14 +5201,24 @@ mod tests {
                 (4, 18, 3, 0, 0, 0x300, names.len() as u32),
             ] {
                 let start = 0x100 + index * 40;
-                for (field, value) in [name, typ, flags, addr, offset, size].into_iter().enumerate() {
+                for (field, value) in [name, typ, flags, addr, offset, size]
+                    .into_iter()
+                    .enumerate()
+                {
                     data[start + field * 4..start + field * 4 + 4].copy_from_slice(&word(value));
                 }
             }
             let import = import_elf(&data).unwrap();
-            let entries: Vec<_> = import.functions.iter().map(|f| (f.entry, f.name.as_str())).collect();
-            assert_eq!(entries, [(0x1000, "_init"), (0x2000, "_fini"), (0x3000, "_plt")],
-                       "stripped ELF32 must retain loader-declared executable starts");
+            let entries: Vec<_> = import
+                .functions
+                .iter()
+                .map(|f| (f.entry, f.name.as_str()))
+                .collect();
+            assert_eq!(
+                entries,
+                [(0x1000, "_init"), (0x2000, "_fini"), (0x3000, "_plt")],
+                "stripped ELF32 must retain loader-declared executable starts"
+            );
             // Section names alone do not make data executable.
             for index in 1..=3 {
                 let flags = 0x100 + index * 40 + 8;
@@ -4743,8 +5248,8 @@ mod tests {
         for (o, typ, flags, addr, off, size, link) in [
             (0x200usize, 0u32, 0u64, 0u64, 0u64, 0u64, 0u32),
             (0x240, 1, 0x2, 0x401000, 0x300, 0x10, 0), // .text
-            (0x280, 2, 0, 0, 0x400, 24, 3), // .symtab -> .strtab
-            (0x2c0, 3, 0, 0, 0x380, 8, 0), // .strtab
+            (0x280, 2, 0, 0, 0x400, 24, 3),            // .symtab -> .strtab
+            (0x2c0, 3, 0, 0, 0x380, 8, 0),             // .strtab
         ] {
             b[o..o + 4].copy_from_slice(&0u32.to_le_bytes());
             b[o + 4..o + 8].copy_from_slice(&typ.to_le_bytes());
@@ -4760,6 +5265,7 @@ mod tests {
         // st_size=4, st_value=0x401000
         b[0x400..0x404].copy_from_slice(&1u32.to_le_bytes());
         b[0x404] = 0x12;
+        b[0x406..0x408].copy_from_slice(&1u16.to_le_bytes());
         b[0x408..0x410].copy_from_slice(&0x401000u64.to_le_bytes());
         b[0x410..0x418].copy_from_slice(&4u64.to_le_bytes());
         // shstrtab for names: .text\0.symtab\0.strtab\0
@@ -4780,6 +5286,61 @@ mod tests {
         if cfg.ghidra_install.join("Ghidra/Processors").is_dir() {
             select_language(&mut imp, &cfg).unwrap();
             assert_eq!(imp.language, "x86:LE:64:default");
+        }
+        // Definition state, not a nonzero value, distinguishes a real symbol.
+        b[0x250..0x258].copy_from_slice(&0u64.to_le_bytes());
+        b[0x408..0x410].copy_from_slice(&0u64.to_le_bytes());
+        let zero = import_elf(&b).unwrap();
+        assert!(zero.functions.iter().any(|f| f.name == "add" && f.entry == 0));
+        b[0x406..0x408].copy_from_slice(&0u16.to_le_bytes());
+        let undefined = import_elf(&b).unwrap();
+        assert!(!undefined.functions.iter().any(|f| f.name == "add"));
+        assert!(undefined.externals.iter().any(|(_, name)| name == "add"));
+        b[0x406..0x408].copy_from_slice(&1u16.to_le_bytes());
+        b[0x404] = 0x11;
+        assert!(import_elf(&b).unwrap().object_names.contains(&(0, "add".into())));
+    }
+
+    #[test]
+    fn elf32_zero_address_definitions_keep_thumb_mode_and_exclude_undefined_symbols() {
+        for be in [false, true] {
+            let word = |value: u32| if be { value.to_be_bytes() } else { value.to_le_bytes() };
+            let half = |value: u16| if be { value.to_be_bytes() } else { value.to_le_bytes() };
+            let mut bytes = vec![0u8; 0x200];
+            bytes[..7].copy_from_slice(if be { b"\x7fELF\x01\x02\x01" } else { b"\x7fELF\x01\x01\x01" });
+            for (offset, value) in [(16, 1), (18, 40), (40, 52), (46, 40), (48, 4)] {
+                bytes[offset..offset + 2].copy_from_slice(&half(value));
+            }
+            bytes[32..36].copy_from_slice(&word(0x80));
+            for (index, fields) in [
+                (1, [0, 1, 6, 0, 0x140, 4, 0, 0, 2, 0]),
+                (2, [0, 2, 0, 0, 0x160, 32, 3, 1, 4, 16]),
+                (3, [0, 3, 0, 0, 0x190, 6, 0, 0, 1, 0]),
+            ] {
+                for (field, value) in fields.into_iter().enumerate() {
+                    let offset = 0x80 + index * 40 + field * 4;
+                    bytes[offset..offset + 4].copy_from_slice(&word(value));
+                }
+            }
+            bytes[0x140..0x142].copy_from_slice(&half(0x3001)); // adds r0,#1
+            bytes[0x142..0x144].copy_from_slice(&half(0x4770)); // bx lr
+            bytes[0x190..0x196].copy_from_slice(b"\0zero\0");
+            bytes[0x170..0x174].copy_from_slice(&word(1));
+            bytes[0x174..0x178].copy_from_slice(&word(1)); // Thumb at address zero.
+            bytes[0x178..0x17c].copy_from_slice(&word(4));
+            bytes[0x17c] = 0x12;
+            bytes[0x17e..0x180].copy_from_slice(&half(1));
+            let imported = import_elf(&bytes).unwrap();
+            assert!(imported.functions.iter().any(|f| f.name == "zero" && f.entry == 0 && f.size == 4));
+            assert!(imported.contexts.iter().any(|c| c.name == "TMode" && c.address == 0 && c.value == 1));
+            bytes[0x17e..0x180].copy_from_slice(&half(0));
+            let undefined = import_elf(&bytes).unwrap();
+            assert!(!undefined.functions.iter().any(|f| f.name == "zero"));
+            assert!(undefined.externals.iter().any(|(_, name)| name == "zero"));
+            bytes[0x17e..0x180].copy_from_slice(&half(1));
+            bytes[0x17c] = 0x11;
+            bytes[0x174..0x178].copy_from_slice(&word(0));
+            assert!(import_elf(&bytes).unwrap().object_names.contains(&(0, "zero".into())));
         }
     }
 
@@ -4821,6 +5382,7 @@ mod tests {
             let o = 0x400 + index * 24;
             b[o..o + 4].copy_from_slice(&name_off.to_le_bytes());
             b[o + 4] = info;
+            b[o + 6..o + 8].copy_from_slice(&1u16.to_le_bytes());
             b[o + 8..o + 16].copy_from_slice(&0x401000u64.to_le_bytes());
             b[o + 16..o + 24].copy_from_slice(&8u64.to_le_bytes());
         }
@@ -4836,7 +5398,8 @@ mod tests {
             .map(|f| f.name.as_str())
             .collect();
         assert_eq!(
-            named, ["abort"],
+            named,
+            ["abort"],
             "an internal alias must not shadow the exported name a name list matches"
         );
     }
@@ -4860,7 +5423,9 @@ mod tests {
         b[sec + 36..sec + 40].copy_from_slice(&0x40000000u32.to_le_bytes()); // READ only
         let imp = import_pe(&b).unwrap();
         let db = ProjectDb::open_in_memory().unwrap();
-        let pid = db.upsert_program("pe", &imp.language, &native_provenance()).unwrap();
+        let pid = db
+            .upsert_program("pe", &imp.language, &native_provenance())
+            .unwrap();
         store_import(&db, "pe", &imp, None).unwrap();
         assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "r--");
         // Executable, writable code retains all three permissions.
@@ -4884,7 +5449,14 @@ mod tests {
         // undefined import must stay an external, never a function.
         let mut b = vec![0u8; 0x340];
         b[..10].copy_from_slice(b"\x7fELF\x02\x01\x01\x00\x00\x00");
-        for (off, v) in [(16, 2_u16), (18, 0x3e), (54, 56), (58, 64), (60, 5), (62, 3)] {
+        for (off, v) in [
+            (16, 2_u16),
+            (18, 0x3e),
+            (54, 56),
+            (58, 64),
+            (60, 5),
+            (62, 3),
+        ] {
             b[off..off + 2].copy_from_slice(&v.to_le_bytes());
         }
         b[40..48].copy_from_slice(&0x200u64.to_le_bytes()); // e_shoff
@@ -4933,12 +5505,27 @@ mod tests {
         b[text + 32..text + 40].copy_from_slice(&16u64.to_le_bytes());
         b[0x190..0x1a0].fill(0x90);
         let imp = import_elf(&b).unwrap();
-        let named: Vec<_> = imp.functions.iter().filter(|f| f.entry == 0x401000).collect();
-        assert_eq!(named.len(), 1, "defined dynsym address must survive: {named:?}");
+        let named: Vec<_> = imp
+            .functions
+            .iter()
+            .filter(|f| f.entry == 0x401000)
+            .collect();
+        assert_eq!(
+            named.len(),
+            1,
+            "defined dynsym address must survive: {named:?}"
+        );
         assert_eq!(named[0].name, "dynfunc");
         assert!(!imp.functions.iter().any(|f| f.name.contains('@')));
-        assert!(imp.externals.iter().any(|e| e.1 == "puts"), "undefined import stays external");
-        assert!(!imp.externals.iter().any(|e| e.1 == "dynfunc" || e.1.contains('@')));
+        assert!(
+            imp.externals.iter().any(|e| e.1 == "puts"),
+            "undefined import stays external"
+        );
+        assert!(
+            !imp.externals
+                .iter()
+                .any(|e| e.1 == "dynfunc" || e.1.contains('@'))
+        );
         assert!(!imp.functions.iter().any(|f| f.name == "puts"));
     }
 
@@ -5014,12 +5601,26 @@ mod tests {
             language: "x86:LE:64:default".into(),
             ..Default::default()
         };
-        flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
-            crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
-                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
-                mode: None, target_modes: Vec::new(),
-            }
-        }).collect());
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&address| crate::native_runtime::FlowResult {
+                    terminal: true,
+                    conditional: false,
+                    return_op: true,
+                    delay_slots: Vec::new(),
+                    no_op: false,
+                    address,
+                    length: 1,
+                    fallthrough: None,
+                    targets: vec![],
+                    kind: crate::native_runtime::FlowKind::Return,
+                    pure_jump: false,
+                    mode: None,
+                    target_modes: Vec::new(),
+                })
+                .collect()
+        });
         assert!(!imp.functions.iter().any(|f| f.entry == 0x1040));
     }
 
@@ -5073,12 +5674,26 @@ mod tests {
             language: "x86:LE:64:default".into(),
             ..Default::default()
         };
-        flow_discover_with_provider(&mut imp, |addresses| addresses.iter().map(|&address| {
-            crate::native_runtime::FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, address, length: 1, fallthrough: None,
-                targets: vec![], kind: crate::native_runtime::FlowKind::Return, pure_jump: false,
-                mode: None, target_modes: Vec::new(),
-            }
-        }).collect());
+        flow_discover_with_provider(&mut imp, |addresses| {
+            addresses
+                .iter()
+                .map(|&address| crate::native_runtime::FlowResult {
+                    terminal: true,
+                    conditional: false,
+                    return_op: true,
+                    delay_slots: Vec::new(),
+                    no_op: false,
+                    address,
+                    length: 1,
+                    fallthrough: None,
+                    targets: vec![],
+                    kind: crate::native_runtime::FlowKind::Return,
+                    pure_jump: false,
+                    mode: None,
+                    target_modes: Vec::new(),
+                })
+                .collect()
+        });
         assert!(!imp.functions.iter().any(|f| f.entry == 0x99999));
     }
     #[test]
@@ -5116,7 +5731,8 @@ mod tests {
                     fallthrough: Some(0x1024),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
-            mode: None, target_modes: Vec::new(),
+                    mode: None,
+                    target_modes: Vec::new(),
                 },
             );
         assert!(
@@ -5169,7 +5785,8 @@ mod tests {
                     fallthrough: Some(0x2054),
                     targets: Vec::new(),
                     kind: crate::native_runtime::FlowKind::Fallthrough,
-            mode: None, target_modes: Vec::new(),
+                    mode: None,
+                    target_modes: Vec::new(),
                 },
             );
         assert!(
@@ -5233,28 +5850,52 @@ mod tests {
 
         let imp = import_pe(&b).unwrap();
         // 1. Data-to-data relocation must be emitted as DATA xref with pe-reloc provenance
-        let xref = imp.xrefs.iter().find(|x| x.from == 0x140002000 && x.to == 0x140002080);
-        assert!(xref.is_some(), "data-to-data relocation must be present in xrefs");
+        let xref = imp
+            .xrefs
+            .iter()
+            .find(|x| x.from == 0x140002000 && x.to == 0x140002080);
+        assert!(
+            xref.is_some(),
+            "data-to-data relocation must be present in xrefs"
+        );
         assert_eq!(xref.unwrap().kind, "DATA");
         assert_eq!(xref.unwrap().provenance, "native-import:pe-reloc");
 
         // 2. Data-to-data relocation must NOT be promoted as a function candidate
-        assert!(!imp.reloc_candidates.contains(&0x140002080), "data-to-data relocation must not be a function candidate");
+        assert!(
+            !imp.reloc_candidates.contains(&0x140002080),
+            "data-to-data relocation must not be a function candidate"
+        );
     }
 
     #[test]
     fn test_pe32_fixture_import_and_discovery() {
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
         let path = manifest_dir.join("../../tests/fixtures-src/tiny_pe32.exe");
-        assert!(path.is_file(), "committed fixture must exist at {}", path.display());
+        assert!(
+            path.is_file(),
+            "committed fixture must exist at {}",
+            path.display()
+        );
         let imp = load_native(&path).expect("tiny_pe32 must load cleanly");
         assert_eq!(imp.format, "PE");
         assert_eq!(imp.language, "x86:LE:32:default");
-        assert_eq!(pe_image_base(&std::fs::read(&path).unwrap()), Some(0x400000));
+        assert_eq!(
+            pe_image_base(&std::fs::read(&path).unwrap()),
+            Some(0x400000)
+        );
         assert!(imp.functions.iter().any(|f| f.entry == 0x401400));
-        assert!(imp.xrefs.iter().any(|x| x.provenance == "native-import:pe-reloc"));
+        assert!(
+            imp.xrefs
+                .iter()
+                .any(|x| x.provenance == "native-import:pe-reloc")
+        );
         if crate::native_runtime::find_console(&imp.cfg).is_ok() {
-            assert!(imp.functions.len() >= 10, "console discovery should find >= 10 functions, got {}", imp.functions.len());
+            assert!(
+                imp.functions.len() >= 10,
+                "console discovery should find >= 10 functions, got {}",
+                imp.functions.len()
+            );
         } else {
             assert!(!imp.functions.is_empty(), "entry function must be present");
         }
@@ -5269,12 +5910,18 @@ mod tests {
         let mut ncch = vec![0u8; 0x200];
         ncch[0x100..0x104].copy_from_slice(b"NCCH");
         assert!(threeds::is_ncch(&ncch), "NCCH magic must detect");
-        assert!(threeds::import(&ncch).is_some(), "NCCH must route to threeds");
+        assert!(
+            threeds::import(&ncch).is_some(),
+            "NCCH must route to threeds"
+        );
 
         let mut ncsd = vec![0u8; 0x200];
         ncsd[0x100..0x104].copy_from_slice(b"NCSD");
         assert!(threeds::is_ncsd(&ncsd));
-        assert!(threeds::import(&ncsd).is_some(), "NCSD must route to threeds");
+        assert!(
+            threeds::import(&ncsd).is_some(),
+            "NCSD must route to threeds"
+        );
 
         // CIA: header size 0x2020 + type/version fields.
         let mut cia = vec![0u8; 0x10];
@@ -5294,10 +5941,12 @@ mod tests {
         // either, which is why vita::import runs before ps3::import.
         let mut vita = vec![0u8; 0x80];
         vita[0..4].copy_from_slice(b"SCE\0");
-        vita[4..8].copy_from_slice(&3u32.to_le_bytes());   // version 3
+        vita[4..8].copy_from_slice(&3u32.to_le_bytes()); // version 3
         vita[10..12].copy_from_slice(&1u16.to_le_bytes()); // type SELF
-        assert!(!vita::is_self(&vita),
-                "a bare SCE\\0 header is not a complete Vita SELF");
+        assert!(
+            !vita::is_self(&vita),
+            "a bare SCE\\0 header is not a complete Vita SELF"
+        );
 
         // PSP PRX: ELF32 LE MIPS with e_type 0xFFA0 (ET_SCE_PSPRELEXEC).
         let mut prx = vec![0u8; 0x40];
@@ -5305,7 +5954,7 @@ mod tests {
         prx[4] = 1; // ELFCLASS32
         prx[5] = 1; // ELFDATA2LSB
         prx[16..18].copy_from_slice(&0xffa0u16.to_le_bytes()); // e_type
-        prx[18..20].copy_from_slice(&8u16.to_le_bytes());      // EM_MIPS
+        prx[18..20].copy_from_slice(&8u16.to_le_bytes()); // EM_MIPS
         assert!(psp::is_prx(&prx), "PSP PRX must detect");
     }
 
@@ -5351,78 +6000,176 @@ mod tests {
         };
 
         flow_discover_with_provider(&mut imp, |chunk| {
-            chunk.iter().map(|&addr| {
-                match addr {
-                    0x1000 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1000,
-                    length: 1,
-                    fallthrough: Some(0x1001),
-                    targets: Vec::new(),
-                    kind: FlowKind::Fallthrough,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1001 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1001,
-                    length: 3,
-                    fallthrough: Some(0x1004),
-                    targets: Vec::new(),
-                    kind: FlowKind::Fallthrough,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1004 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1004,
-                    length: 1,
-                    fallthrough: None,
-                    targets: Vec::new(),
-                    kind: FlowKind::Return,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1040 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1040,
-                    length: 1,
-                    fallthrough: Some(0x1041),
-                    targets: Vec::new(),
-                    kind: FlowKind::Fallthrough,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1041 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1041,
-                    length: 3,
-                    fallthrough: Some(0x1044),
-                    targets: Vec::new(),
-                    kind: FlowKind::Fallthrough,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1044 => FlowResult { terminal: false, conditional: false, return_op: false, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1044,
-                    length: 5,
-                    fallthrough: Some(0x1049),
-                    targets: vec![0x1080],
-                    kind: FlowKind::Call,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1049 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1049,
-                    length: 1,
-                    fallthrough: None,
-                    targets: Vec::new(),
-                    kind: FlowKind::Return,
-                    mode: None, target_modes: Vec::new(), },
-                    0x1080 => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: 0x1080,
-                    length: 1,
-                    fallthrough: None,
-                    targets: Vec::new(),
-                    kind: FlowKind::Return,
-                    mode: None, target_modes: Vec::new(), },
-                    other => FlowResult { terminal: true, conditional: false, return_op: true, delay_slots: Vec::new(), no_op: false, pure_jump: false, address: other,
-                    length: 1,
-                    fallthrough: None,
-                    targets: Vec::new(),
-                    kind: FlowKind::Return,
-                    mode: None, target_modes: Vec::new(), },
-                }
-            }).collect()
+            chunk
+                .iter()
+                .map(|&addr| match addr {
+                    0x1000 => FlowResult {
+                        terminal: false,
+                        conditional: false,
+                        return_op: false,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1000,
+                        length: 1,
+                        fallthrough: Some(0x1001),
+                        targets: Vec::new(),
+                        kind: FlowKind::Fallthrough,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1001 => FlowResult {
+                        terminal: false,
+                        conditional: false,
+                        return_op: false,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1001,
+                        length: 3,
+                        fallthrough: Some(0x1004),
+                        targets: Vec::new(),
+                        kind: FlowKind::Fallthrough,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1004 => FlowResult {
+                        terminal: true,
+                        conditional: false,
+                        return_op: true,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1004,
+                        length: 1,
+                        fallthrough: None,
+                        targets: Vec::new(),
+                        kind: FlowKind::Return,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1040 => FlowResult {
+                        terminal: false,
+                        conditional: false,
+                        return_op: false,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1040,
+                        length: 1,
+                        fallthrough: Some(0x1041),
+                        targets: Vec::new(),
+                        kind: FlowKind::Fallthrough,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1041 => FlowResult {
+                        terminal: false,
+                        conditional: false,
+                        return_op: false,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1041,
+                        length: 3,
+                        fallthrough: Some(0x1044),
+                        targets: Vec::new(),
+                        kind: FlowKind::Fallthrough,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1044 => FlowResult {
+                        terminal: false,
+                        conditional: false,
+                        return_op: false,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1044,
+                        length: 5,
+                        fallthrough: Some(0x1049),
+                        targets: vec![0x1080],
+                        kind: FlowKind::Call,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1049 => FlowResult {
+                        terminal: true,
+                        conditional: false,
+                        return_op: true,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1049,
+                        length: 1,
+                        fallthrough: None,
+                        targets: Vec::new(),
+                        kind: FlowKind::Return,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    0x1080 => FlowResult {
+                        terminal: true,
+                        conditional: false,
+                        return_op: true,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: 0x1080,
+                        length: 1,
+                        fallthrough: None,
+                        targets: Vec::new(),
+                        kind: FlowKind::Return,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                    other => FlowResult {
+                        terminal: true,
+                        conditional: false,
+                        return_op: true,
+                        delay_slots: Vec::new(),
+                        no_op: false,
+                        pure_jump: false,
+                        address: other,
+                        length: 1,
+                        fallthrough: None,
+                        targets: Vec::new(),
+                        kind: FlowKind::Return,
+                        mode: None,
+                        target_modes: Vec::new(),
+                    },
+                })
+                .collect()
         });
 
         // 1. Relocation-only code function at 0x1040 outside func_root's extent IS PROMOTED
-        assert!(imp.functions.iter().any(|f| f.entry == 0x1040), "0x1040 must be promoted to a function");
+        assert!(
+            imp.functions.iter().any(|f| f.entry == 0x1040),
+            "0x1040 must be promoted to a function"
+        );
 
         // 2. Call target 0x1080 remains a separate function
-        assert!(imp.functions.iter().any(|f| f.entry == 0x1080), "call target 0x1080 must remain a separate function");
+        assert!(
+            imp.functions.iter().any(|f| f.entry == 0x1080),
+            "call target 0x1080 must remain a separate function"
+        );
 
         // 3. Internal candidate 0x1044 reached through fallthrough from 0x1040 is merged/dropped
-        assert!(!imp.functions.iter().any(|f| f.entry == 0x1044), "internal candidate 0x1044 reached via fallthrough must be merged/dropped");
+        assert!(
+            !imp.functions.iter().any(|f| f.entry == 0x1044),
+            "internal candidate 0x1044 reached via fallthrough must be merged/dropped"
+        );
 
         // 4. Function size of 0x1040 covers the full span 0x1040..0x104a (size 0xa)
-        let f_1040 = imp.functions.iter().find(|f| f.entry == 0x1040).expect("0x1040 must be present");
-        assert_eq!(f_1040.size, 0xa, "0x1040 function size must be 0xa (0x1040..0x104a)");
+        let f_1040 = imp
+            .functions
+            .iter()
+            .find(|f| f.entry == 0x1040)
+            .expect("0x1040 must be present");
+        assert_eq!(
+            f_1040.size, 0xa,
+            "0x1040 function size must be 0xa (0x1040..0x104a)"
+        );
     }
     #[test]
     fn regression_load_native_pe32_data_to_data_relocation_never_becomes_function() {
@@ -5490,8 +6237,14 @@ mod tests {
         assert!(imp.functions.iter().any(|f| f.entry == 0x401000));
 
         // Proves data-to-data relocation remains an xref with pe-reloc provenance
-        let xref = imp.xrefs.iter().find(|x| x.from == 0x402000 && x.to == 0x402080);
-        assert!(xref.is_some(), "data-to-data relocation must be recorded in xrefs");
+        let xref = imp
+            .xrefs
+            .iter()
+            .find(|x| x.from == 0x402000 && x.to == 0x402080);
+        assert!(
+            xref.is_some(),
+            "data-to-data relocation must be recorded in xrefs"
+        );
         assert_eq!(xref.unwrap().kind, "DATA");
         assert_eq!(xref.unwrap().provenance, "native-import:pe-reloc");
 
@@ -5526,7 +6279,10 @@ mod tests {
         b2[0x94..0x96].copy_from_slice(&50u16.to_le_bytes()); // opt_size 50
         b2[0x98..0x9a].copy_from_slice(&0x20bu16.to_le_bytes()); // magic 0x20b
         let res2 = import_pe(&b2);
-        assert!(res2.is_err(), "undersized PE32+ optional header must return Err");
+        assert!(
+            res2.is_err(),
+            "undersized PE32+ optional header must return Err"
+        );
 
         // Also test opt_size too small for PE32 (e.g. 40 < 96)
         let mut b3 = vec![0u8; 0x200];
@@ -5537,7 +6293,10 @@ mod tests {
         b3[0x94..0x96].copy_from_slice(&40u16.to_le_bytes()); // opt_size 40 < 96
         b3[0x98..0x9a].copy_from_slice(&0x10bu16.to_le_bytes()); // magic 0x10b
         let res3 = import_pe(&b3);
-        assert!(res3.is_err(), "undersized PE32 optional header must return Err");
+        assert!(
+            res3.is_err(),
+            "undersized PE32 optional header must return Err"
+        );
     }
     #[test]
     fn regression_pe_truncated_section_table_returns_error() {
@@ -5602,8 +6361,14 @@ mod tests {
 
         let imp = import_pe(&b).expect("PE must parse cleanly");
         // Directory 5 is absent, so .reloc section MUST BE IGNORED
-        assert!(imp.xrefs.is_empty(), "xrefs must be empty when directory 5 is absent");
-        assert!(imp.reloc_candidates.is_empty(), "reloc_candidates must be empty when directory 5 is absent");
+        assert!(
+            imp.xrefs.is_empty(),
+            "xrefs must be empty when directory 5 is absent"
+        );
+        assert!(
+            imp.reloc_candidates.is_empty(),
+            "reloc_candidates must be empty when directory 5 is absent"
+        );
     }
 
     #[test]
@@ -5616,7 +6381,9 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "ARM:LE:32:v8".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/ARM/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/ARM/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -5632,8 +6399,8 @@ mod tests {
                 file_off: 0,
                 flags: 6,
                 bytes: vec![
-                    0x02, 0x8b, 0x2d, 0xed, 0x00, 0x8a, 0xb7, 0xee, 0x24, 0xd0, 0x4d, 0xe2,
-                    0x00, 0x70, 0xa0, 0xe1, 0x10, 0x60, 0x8d, 0xe2, 0x0d, 0x50, 0xa0, 0xe1,
+                    0x02, 0x8b, 0x2d, 0xed, 0x00, 0x8a, 0xb7, 0xee, 0x24, 0xd0, 0x4d, 0xe2, 0x00,
+                    0x70, 0xa0, 0xe1, 0x10, 0x60, 0x8d, 0xe2, 0x0d, 0x50, 0xa0, 0xe1,
                 ],
             }],
             contexts: vec![NativeContext {
@@ -5662,7 +6429,9 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "MIPS:LE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/MIPS/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -5701,7 +6470,9 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "MIPS:LE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/MIPS/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -5721,8 +6492,8 @@ mod tests {
                 // state, so SleighBuilder::delaySlot raises a plain
                 // LowlevelError (sleigh.cc:385) rather than BadDataError.
                 bytes: vec![
-                    0x82, 0x05, 0x0e, 0x46, 0x03, 0x52, 0x0c, 0x46,
-                    0x00, 0x45, 0x1a, 0x46, 0xda, 0x00, 0x04, 0x0c,
+                    0x82, 0x05, 0x0e, 0x46, 0x03, 0x52, 0x0c, 0x46, 0x00, 0x45, 0x1a, 0x46, 0xda,
+                    0x00, 0x04, 0x0c,
                 ],
             }],
             ..Default::default()
@@ -5736,9 +6507,21 @@ mod tests {
             asked,
             "one answer per requested address, in order"
         );
-        assert_eq!(flows[0].kind, FlowKind::Bad, "branch whose delay slot cannot be cached");
-        assert_eq!(flows[1].kind, FlowKind::Fallthrough, "the aligned instruction still decodes");
-        assert_eq!(flows[2].kind, FlowKind::Bad, "address the image does not map");
+        assert_eq!(
+            flows[0].kind,
+            FlowKind::Bad,
+            "branch whose delay slot cannot be cached"
+        );
+        assert_eq!(
+            flows[1].kind,
+            FlowKind::Fallthrough,
+            "the aligned instruction still decodes"
+        );
+        assert_eq!(
+            flows[2].kind,
+            FlowKind::Bad,
+            "address the image does not map"
+        );
     }
 
     #[test]
@@ -5746,21 +6529,36 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/x86/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
         let mut import = NativeImport {
-            language: cfg.language_id.clone(), compiler: Some("gcc".into()),
-            format: "elf".into(), cfg: cfg.clone(),
+            language: cfg.language_id.clone(),
+            compiler: Some("gcc".into()),
+            format: "elf".into(),
+            cfg: cfg.clone(),
             functions: vec![
-                NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() },
-                NativeFunction { entry: 0x1100, size: 4, name: "FUN_1100".into() },
+                NativeFunction {
+                    entry: 0x1000,
+                    size: 14,
+                    name: "FUN_1000".into(),
+                },
+                NativeFunction {
+                    entry: 0x1100,
+                    size: 4,
+                    name: "FUN_1100".into(),
+                },
             ],
             mappings: vec![
                 Mapping {
-                    vaddr: 0x1000, size: 14, file_off: 0, flags: 6,
+                    vaddr: 0x1000,
+                    size: 14,
+                    file_off: 0,
+                    flags: 6,
                     bytes: vec![
                         0xe8, 0xfb, 0, 0, 0, // call 0x1100
                         0x8d, 0x83, 0xfb, 0x2f, 0, 0, // lea eax,[ebx+0x2ffb]
@@ -5768,11 +6566,18 @@ mod tests {
                     ],
                 },
                 Mapping {
-                    vaddr: 0x1100, size: 4, file_off: 0, flags: 6,
+                    vaddr: 0x1100,
+                    size: 4,
+                    file_off: 0,
+                    flags: 6,
                     bytes: vec![0x8b, 0x1c, 0x24, 0xc3], // mov ebx,[esp]; ret
                 },
                 Mapping {
-                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                    vaddr: 0x4000,
+                    size: 16,
+                    file_off: 0,
+                    flags: 3,
+                    bytes: vec![0; 16],
                 },
             ],
             ..Default::default()
@@ -5780,10 +6585,16 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        let refs: Vec<_> = import.xrefs.iter()
-            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
-        assert_eq!(refs, vec![(0x1005, 0x4000, "DATA")],
-            "a recognized helper supplies the caller PC for address formation");
+        let refs: Vec<_> = import
+            .xrefs
+            .iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str()))
+            .collect();
+        assert_eq!(
+            refs,
+            vec![(0x1005, 0x4000, "DATA")],
+            "a recognized helper supplies the caller PC for address formation"
+        );
 
         import.xrefs.clear();
         import.mappings[0].bytes = vec![
@@ -5797,27 +6608,41 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        let refs: Vec<_> = import.xrefs.iter()
-            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
-        assert_eq!(refs, vec![(0x1008, 0x4000, "DATA")],
-            "stack realignment must retain a usable frame for the helper");
+        let refs: Vec<_> = import
+            .xrefs
+            .iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str()))
+            .collect();
+        assert_eq!(
+            refs,
+            vec![(0x1008, 0x4000, "DATA")],
+            "stack realignment must retain a usable frame for the helper"
+        );
 
         import.xrefs.clear();
         import.functions.truncate(1);
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        assert!(import.xrefs.is_empty(), "a pattern alone cannot establish a function");
+        assert!(
+            import.xrefs.is_empty(),
+            "a pattern alone cannot establish a function"
+        );
 
         import.functions.push(NativeFunction {
-            entry: 0x1100, size: 5, name: "FUN_1100".into(),
+            entry: 0x1100,
+            size: 5,
+            name: "FUN_1100".into(),
         });
         import.mappings[1].bytes = vec![0x8b, 0x5c, 0x24, 4, 0xc3]; // reads argument, not PC
         import.mappings[1].size = 5;
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        assert!(import.xrefs.is_empty(), "ordinary calls retain unknown register context");
+        assert!(
+            import.xrefs.is_empty(),
+            "ordinary calls retain unknown register context"
+        );
 
         import.mappings[0].bytes = vec![
             0xc7, 0x04, 0x24, 0, 0x40, 0, 0, // mov dword [esp],0x4000
@@ -5831,11 +6656,18 @@ mod tests {
         import.mappings[0].size = import.mappings[0].bytes.len() as u64;
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
-        let facts = session.constants(
-            0x1000, 0x1000 + import.mappings[0].size, &import.mappings, false,
-        ).unwrap();
-        assert!(facts.iter().all(|fact| fact.pc < 0x1009),
-            "realignment must not produce constants from stale frame aliases: {facts:?}");
+        let facts = session
+            .constants(
+                0x1000,
+                0x1000 + import.mappings[0].size,
+                &import.mappings,
+                false,
+            )
+            .unwrap();
+        assert!(
+            facts.iter().all(|fact| fact.pc < 0x1009),
+            "realignment must not produce constants from stale frame aliases: {facts:?}"
+        );
     }
 
     #[test]
@@ -5843,18 +6675,29 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/x86/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
         let mut import = NativeImport {
-            language: cfg.language_id.clone(), compiler: Some("gcc".into()),
-            format: "elf".into(), cfg: cfg.clone(),
-            functions: vec![NativeFunction { entry: 0x1000, size: 14, name: "FUN_1000".into() }],
+            language: cfg.language_id.clone(),
+            compiler: Some("gcc".into()),
+            format: "elf".into(),
+            cfg: cfg.clone(),
+            functions: vec![NativeFunction {
+                entry: 0x1000,
+                size: 14,
+                name: "FUN_1000".into(),
+            }],
             mappings: vec![
                 Mapping {
-                    vaddr: 0x1000, size: 14, file_off: 0, flags: 6,
+                    vaddr: 0x1000,
+                    size: 14,
+                    file_off: 0,
+                    flags: 6,
                     bytes: vec![
                         0x48, 0x8b, 0x04, 0x25, 0, 0x30, 0, 0, // mov rax,[0x3000]
                         0x48, 0x8b, 0x08, // mov rcx,[rax]
@@ -5862,11 +6705,18 @@ mod tests {
                     ],
                 },
                 Mapping {
-                    vaddr: 0x3000, size: 8, file_off: 0, flags: 3,
+                    vaddr: 0x3000,
+                    size: 8,
+                    file_off: 0,
+                    flags: 3,
                     bytes: 0x4000u64.to_le_bytes().to_vec(),
                 },
                 Mapping {
-                    vaddr: 0x4000, size: 16, file_off: 0, flags: 3, bytes: vec![0; 16],
+                    vaddr: 0x4000,
+                    size: 16,
+                    file_off: 0,
+                    flags: 3,
+                    bytes: vec![0; 16],
                 },
             ],
             ..Default::default()
@@ -5874,18 +6724,28 @@ mod tests {
         let mut session = ConsoleSession::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        let refs: Vec<_> = import.xrefs.iter()
-            .map(|xref| (xref.from, xref.to, xref.kind.as_str())).collect();
-        assert_eq!(refs, vec![(0x1000, 0x3000, "READ"), (0x1008, 0x4000, "READ")],
-            "reference inference follows the selected analyzer's writable-image policy");
-        let strict = session.constants(0x1000, 0x100e, &import.mappings, false).unwrap();
-        assert!(strict.iter().all(|fact| fact.value != 0x4000),
-            "strict constant queries must not inherit reference-inference heuristics: {strict:?}");
+        let refs: Vec<_> = import
+            .xrefs
+            .iter()
+            .map(|xref| (xref.from, xref.to, xref.kind.as_str()))
+            .collect();
+        assert_eq!(
+            refs,
+            vec![(0x1000, 0x3000, "READ"), (0x1008, 0x4000, "READ")],
+            "reference inference follows the selected analyzer's writable-image policy"
+        );
+        let strict = session
+            .constants(0x1000, 0x100e, &import.mappings, false)
+            .unwrap();
+        assert!(
+            strict.iter().all(|fact| fact.value != 0x4000),
+            "strict constant queries must not inherit reference-inference heuristics: {strict:?}"
+        );
     }
 
     #[test]
     fn stub_jump_seeds_promotes_only_bare_jump_stubs() {
-        use super::{stub_jump_seeds, Mapping, NativeFunction, NativeImport, NativeXref};
+        use super::{Mapping, NativeFunction, NativeImport, NativeXref, stub_jump_seeds};
         fn imp(functions: Vec<(u64, u64)>, xrefs: Vec<(u64, u64, &str)>) -> NativeImport {
             NativeImport {
                 mappings: vec![Mapping {
@@ -5919,14 +6779,13 @@ mod tests {
         let import = imp(vec![(0x1000, 64)], vec![code(0x1030, 0x1100)]);
         assert!(stub_jump_seeds(&import).is_empty());
         // A call inside disqualifies the stub shape.
-        let import =
-            imp(vec![(0x1000, 10)], vec![code(0x1004, 0x1100), call(0x1008, 0x1200)]);
+        let import = imp(
+            vec![(0x1000, 10)],
+            vec![code(0x1004, 0x1100), call(0x1008, 0x1200)],
+        );
         assert!(stub_jump_seeds(&import).is_empty());
         // Destination already an entry, or outside code: nothing to do.
-        let import = imp(
-            vec![(0x1000, 10), (0x1100, 20)],
-            vec![code(0x1004, 0x1100)],
-        );
+        let import = imp(vec![(0x1000, 10), (0x1100, 20)], vec![code(0x1004, 0x1100)]);
         assert!(stub_jump_seeds(&import).is_empty());
         let import = imp(vec![(0x1000, 10)], vec![code(0x1004, 0x9000)]);
         assert!(stub_jump_seeds(&import).is_empty());
@@ -5952,9 +6811,7 @@ mod tests {
     #[test]
     fn const_data_use_denied_refuses_compares_keeps_materialization() {
         let denied = |ops: &[&str]| {
-            super::const_data_use_denied(
-                &ops.iter().map(|op| op.to_string()).collect::<Vec<_>>(),
-            )
+            super::const_data_use_denied(&ops.iter().map(|op| op.to_string()).collect::<Vec<_>>())
         };
         // Measured libc shapes: comparison immediates must not seed.
         assert!(denied(&["INT_EQUAL"]));
@@ -5974,10 +6831,22 @@ mod tests {
     fn pattern_labels_need_a_body_and_a_generated_name() {
         let mut imp = NativeImport {
             functions: vec![
-                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
-                NativeFunction { entry: 0x1004, size: 4, name: "frame_dummy".into() },
+                NativeFunction {
+                    entry: 0x1000,
+                    size: 4,
+                    name: "FUN_00001000".into(),
+                },
+                NativeFunction {
+                    entry: 0x1004,
+                    size: 4,
+                    name: "frame_dummy".into(),
+                },
                 // A one-byte stub is an address, not a proven body.
-                NativeFunction { entry: 0x1008, size: 1, name: "FUN_00001008".into() },
+                NativeFunction {
+                    entry: 0x1008,
+                    size: 1,
+                    name: "FUN_00001008".into(),
+                },
             ],
             pattern_labels: vec![
                 (0x1000, "__i686.get_pc_thunk.bx".into()),
@@ -6005,8 +6874,16 @@ mod tests {
     fn initializer_labels_replace_only_generated_names() {
         let mut imp = NativeImport {
             functions: vec![
-                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
-                NativeFunction { entry: 0x1004, size: 4, name: "frame_dummy".into() },
+                NativeFunction {
+                    entry: 0x1000,
+                    size: 4,
+                    name: "FUN_00001000".into(),
+                },
+                NativeFunction {
+                    entry: 0x1004,
+                    size: 4,
+                    name: "frame_dummy".into(),
+                },
             ],
             initializer_labels: vec![
                 (0x1000, "_INIT_0".into()),
@@ -6033,22 +6910,43 @@ mod tests {
     fn linkage_naming_replaces_only_generated_names() {
         let mut imp = NativeImport {
             functions: vec![
-                NativeFunction { entry: 0x1000, size: 4, name: "FUN_00001000".into() },
-                NativeFunction { entry: 0x1100, size: 4, name: "_init".into() },
-                NativeFunction { entry: 0x1200, size: 4, name: "FUN_00001200".into() },
+                NativeFunction {
+                    entry: 0x1000,
+                    size: 4,
+                    name: "FUN_00001000".into(),
+                },
+                NativeFunction {
+                    entry: 0x1100,
+                    size: 4,
+                    name: "_init".into(),
+                },
+                NativeFunction {
+                    entry: 0x1200,
+                    size: 4,
+                    name: "FUN_00001200".into(),
+                },
             ],
-            externals: vec![
-                (0x1000, "printf".into()),
-                (0x1100, "__cxa_finalize".into()),
-            ],
+            externals: vec![(0x1000, "printf".into()), (0x1100, "__cxa_finalize".into())],
             thunks: vec![
-                NativeThunk { entry: 0x1000, destination: 0x2000,
-                              kind: romwright_model::ThunkKind::Linkage, source: THUNK_SOURCE },
-                NativeThunk { entry: 0x1100, destination: 0x2008,
-                              kind: romwright_model::ThunkKind::Linkage, source: THUNK_SOURCE },
+                NativeThunk {
+                    entry: 0x1000,
+                    destination: 0x2000,
+                    kind: romwright_model::ThunkKind::Linkage,
+                    source: THUNK_SOURCE,
+                },
+                NativeThunk {
+                    entry: 0x1100,
+                    destination: 0x2008,
+                    kind: romwright_model::ThunkKind::Linkage,
+                    source: THUNK_SOURCE,
+                },
                 // A direct thunk carries no import evidence, so no name.
-                NativeThunk { entry: 0x1200, destination: 0x1000,
-                              kind: romwright_model::ThunkKind::Direct, source: THUNK_SOURCE },
+                NativeThunk {
+                    entry: 0x1200,
+                    destination: 0x1000,
+                    kind: romwright_model::ThunkKind::Direct,
+                    source: THUNK_SOURCE,
+                },
             ],
             ..Default::default()
         };
@@ -6073,8 +6971,16 @@ mod tests {
     fn initializer_arrays_name_their_targets_by_index() {
         let mut bytes = vec![0u8; 0x300];
         bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
-        for (offset, value) in [(16, 2u16), (18, 3), (40, 52), (42, 32), (44, 3),
-            (46, 40), (48, 5), (50, 4)] {
+        for (offset, value) in [
+            (16, 2u16),
+            (18, 3),
+            (40, 52),
+            (42, 32),
+            (44, 3),
+            (46, 40),
+            (48, 5),
+            (50, 4),
+        ] {
             bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
         }
         for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
@@ -6085,7 +6991,10 @@ mod tests {
             [1u32, 0x100, 0x1000, 0x1000, 0x20, 0x20, 5, 1],
             [1, 0x120, 0x3000, 0x3000, 0x10, 0x10, 6, 1],
             [2, 0x140, 0x3100, 0x3100, 0x28, 0x28, 6, 4],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 52 + index * 32 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
@@ -6111,14 +7020,22 @@ mod tests {
             [7, 14, 3, 0x3000, 0x120, 8, 0, 0, 4, 0],
             [19, 15, 3, 0x3008, 0x128, 4, 0, 0, 4, 0],
             [31, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 0x200 + (index + 1) * 40 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
             }
         }
         let import = import_elf(&bytes).expect("elf");
-        let base = import.mappings.iter().map(|mapping| mapping.vaddr).min().unwrap();
+        let base = import
+            .mappings
+            .iter()
+            .map(|mapping| mapping.vaddr)
+            .min()
+            .unwrap();
         let bias = base - 0x1000;
         assert_eq!(
             import.initializer_labels,
@@ -6137,8 +7054,16 @@ mod tests {
     fn elf32_with_pltgot(got_size: u32) -> Vec<u8> {
         let mut bytes = vec![0u8; 0x300];
         bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
-        for (offset, value) in [(16, 2u16), (18, 3), (40, 52), (42, 32), (44, 3),
-            (46, 40), (48, 5), (50, 4)] {
+        for (offset, value) in [
+            (16, 2u16),
+            (18, 3),
+            (40, 52),
+            (42, 32),
+            (44, 3),
+            (46, 40),
+            (48, 5),
+            (50, 4),
+        ] {
             bytes[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
         }
         for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
@@ -6148,7 +7073,10 @@ mod tests {
             [1u32, 0x100, 0x1000, 0x1000, 6, 6, 5, 1],
             [1, 0x120, 0x3000, 0x3000, 0x30, 0x30, 6, 1],
             [2, 0x140, 0x3020, 0x3020, 16, 16, 6, 4],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 52 + index * 32 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
@@ -6164,7 +7092,10 @@ mod tests {
             [6, 1, 3, 0x3000, 0x120, got_size, 0, 0, 4, 0],
             [11, 6, 3, 0x3020, 0x140, 16, 0, 0, 4, 8],
             [20, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 0x200 + (index + 1) * 40 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
@@ -6201,7 +7132,9 @@ mod tests {
         use crate::native_runtime::find_console;
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/x86/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -6214,19 +7147,38 @@ mod tests {
             let mut session = discovery::discover_seeded(&mut import).unwrap().session;
             import.xrefs.clear();
             infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-            let strict = session.constants(0x1000, 0x1006, &import.mappings, false).unwrap();
-            assert!(strict.is_empty(), "reference-only context must not seed strict queries: {strict:?}");
-            import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
+            let strict = session
+                .constants(0x1000, 0x1006, &import.mappings, false)
+                .unwrap();
+            assert!(
+                strict.is_empty(),
+                "reference-only context must not seed strict queries: {strict:?}"
+            );
+            import
+                .xrefs
+                .into_iter()
+                .map(|xref| (xref.from, xref.to, xref.kind))
                 .collect::<Vec<_>>()
         };
-        assert_eq!(analyze(&bytes), vec![(0x1000, 0x3004, "READ".into()),
-            (0x1003, 0x3008, "READ".into())],
-            "ELF PLT references use the loader-declared GOT register context");
+        assert_eq!(
+            analyze(&bytes),
+            vec![
+                (0x1000, 0x3004, "READ".into()),
+                (0x1003, 0x3008, "READ".into())
+            ],
+            "ELF PLT references use the loader-declared GOT register context"
+        );
         bytes[0x140..0x144].fill(0);
-        assert!(analyze(&bytes).is_empty(), "a GOT section cannot substitute for DT_PLTGOT");
+        assert!(
+            analyze(&bytes).is_empty(),
+            "a GOT section cannot substitute for DT_PLTGOT"
+        );
         bytes[0x140..0x144].copy_from_slice(&3u32.to_le_bytes());
         bytes[0x228..0x22c].copy_from_slice(&30u32.to_le_bytes()); // rename .plt to .text
-        assert!(analyze(&bytes).is_empty(), "PLT register context must not leak into ordinary code");
+        assert!(
+            analyze(&bytes).is_empty(),
+            "PLT register context must not leak into ordinary code"
+        );
     }
 
     #[test]
@@ -6234,15 +7186,25 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "PowerPC:BE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/PowerPC/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/PowerPC/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
         }
         let mut bytes = vec![0u8; 0x500];
         bytes[..7].copy_from_slice(b"\x7fELF\x01\x02\x01");
-        for (offset, value) in [(16, 2u16), (18, 20), (40, 52), (42, 32), (44, 3),
-            (46, 40), (48, 5), (50, 4)] {
+        for (offset, value) in [
+            (16, 2u16),
+            (18, 20),
+            (40, 52),
+            (42, 32),
+            (44, 3),
+            (46, 40),
+            (48, 5),
+            (50, 4),
+        ] {
             bytes[offset..offset + 2].copy_from_slice(&value.to_be_bytes());
         }
         for (offset, value) in [(20, 1u32), (24, 0x1100), (28, 52), (32, 0x400)] {
@@ -6252,18 +7214,26 @@ mod tests {
             [1u32, 0x100, 0x1000, 0x1000, 0x208, 0x208, 5, 4],
             [1, 0x320, 0x3000, 0x3000, 0x20, 0x20, 6, 4],
             [2, 0x330, 0x3010, 0x3010, 16, 16, 6, 4],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 52 + index * 32 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
             }
         }
         for (offset, instruction) in [
-            (0x100, 0x807e0004u32), (0x104, 0x4e800020), // lwz r3,4(r30); blr
-            (0x200, 0x3fc00000), (0x204, 0x63de3000), // lis/ori r30,0x3000
-            (0x208, 0x4bfffef9), (0x20c, 0x4e800020), // bl 0x1000; blr
-            (0x300, 0x807e0008), (0x304, 0x4e800020), // uncalled load
-            (0x330, 0x70000000), (0x334, 0x3000), // DT_PPC_GOT
+            (0x100, 0x807e0004u32),
+            (0x104, 0x4e800020), // lwz r3,4(r30); blr
+            (0x200, 0x3fc00000),
+            (0x204, 0x63de3000), // lis/ori r30,0x3000
+            (0x208, 0x4bfffef9),
+            (0x20c, 0x4e800020), // bl 0x1000; blr
+            (0x300, 0x807e0008),
+            (0x304, 0x4e800020), // uncalled load
+            (0x330, 0x70000000),
+            (0x334, 0x3000), // DT_PPC_GOT
         ] {
             bytes[offset..offset + 4].copy_from_slice(&instruction.to_be_bytes());
         }
@@ -6274,7 +7244,10 @@ mod tests {
             [7, 1, 3, 0x3000, 0x320, 16, 0, 0, 4, 0],
             [12, 6, 3, 0x3010, 0x330, 16, 0, 0, 4, 8],
             [21, 3, 0, 0, 0x360, names.len() as u32, 0, 0, 1, 0],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 0x400 + (index + 1) * 40 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
@@ -6284,49 +7257,90 @@ mod tests {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
             select_language(&mut import, &cfg).unwrap();
-            import.functions = [(0x1000, 8), (0x1100, 16), (0x1200, 8)].into_iter()
-                .map(|(entry, size)| NativeFunction { entry, size, name: format!("FUN_{entry:x}") })
+            import.functions = [(0x1000, 8), (0x1100, 16), (0x1200, 8)]
+                .into_iter()
+                .map(|(entry, size)| NativeFunction {
+                    entry,
+                    size,
+                    name: format!("FUN_{entry:x}"),
+                })
                 .collect();
-            if caller_first { import.functions.swap(0, 1); }
+            if caller_first {
+                import.functions.swap(0, 1);
+            }
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-            assert!(session.constants(0x1000, 0x1008, &import.mappings, false).unwrap().is_empty(),
-                "call-derived reference context must not enter strict constant queries");
+            assert!(
+                session
+                    .constants(0x1000, 0x1008, &import.mappings, false)
+                    .unwrap()
+                    .is_empty(),
+                "call-derived reference context must not enter strict constant queries"
+            );
             let mut data = Vec::new();
-            let reads = import.xrefs.into_iter().filter_map(|xref| {
-                if xref.kind == "DATA" { data.push((xref.from, xref.to)); }
-                (xref.kind == "READ").then_some((xref.from, xref.to))
-            }).collect::<Vec<_>>();
+            let reads = import
+                .xrefs
+                .into_iter()
+                .filter_map(|xref| {
+                    if xref.kind == "DATA" {
+                        data.push((xref.from, xref.to));
+                    }
+                    (xref.kind == "READ").then_some((xref.from, xref.to))
+                })
+                .collect::<Vec<_>>();
             (reads, data)
         };
-        assert_eq!(analyze(&bytes, false).0, vec![(0x1000, 0x3004)],
-            "only the called function inherits the actual r30 value, independent of query order");
+        assert_eq!(
+            analyze(&bytes, false).0,
+            vec![(0x1000, 0x3004)],
+            "only the called function inherits the actual r30 value, independent of query order"
+        );
         bytes[0x330..0x334].fill(0);
-        assert!(analyze(&bytes, false).0.is_empty(), "a GOT section alone cannot enable r30 propagation");
+        assert!(
+            analyze(&bytes, false).0.is_empty(),
+            "a GOT section alone cannot enable r30 propagation"
+        );
         bytes[0x330..0x334].copy_from_slice(&0x70000000u32.to_be_bytes());
         for offset in [0x200, 0x204] {
             bytes[offset..offset + 4].copy_from_slice(&0x60000000u32.to_be_bytes()); // nop
         }
-        assert!(analyze(&bytes, false).0.is_empty(), "unknown caller values must not invent a GOT context");
+        assert!(
+            analyze(&bytes, false).0.is_empty(),
+            "unknown caller values must not invent a GOT context"
+        );
         bytes[0x200..0x204].copy_from_slice(&0x3fc00000u32.to_be_bytes()); // lis r30,0
         bytes[0x100..0x104].copy_from_slice(&0x807e3004u32.to_be_bytes()); // lwz r3,0x3004(r30)
-        assert!(analyze(&bytes, false).0.is_empty(), "zero is not an established PIC register context");
+        assert!(
+            analyze(&bytes, false).0.is_empty(),
+            "zero is not an established PIC register context"
+        );
         bytes[0x204..0x208].copy_from_slice(&0x63de0004u32.to_be_bytes()); // ori r30,r30,4
         let (reads, data) = analyze(&bytes, false);
-        assert_eq!(reads, vec![(0x1000, 0x3008)], "use the actual caller value, not DT_PPC_GOT");
-        assert!(data.contains(&(0x1000, 0x3004)),
-            "call context adds precise accesses without erasing speculative offset DATA");
-        assert_eq!(analyze(&bytes, true), (reads, data),
-            "caller-first scheduling must retain the same local and contextual evidence");
+        assert_eq!(
+            reads,
+            vec![(0x1000, 0x3008)],
+            "use the actual caller value, not DT_PPC_GOT"
+        );
+        assert!(
+            data.contains(&(0x1000, 0x3004)),
+            "call context adds precise accesses without erasing speculative offset DATA"
+        );
+        assert_eq!(
+            analyze(&bytes, true),
+            (reads, data),
+            "caller-first scheduling must retain the same local and contextual evidence"
+        );
     }
 
     #[test]
     fn elf_linkage_references_do_not_require_functions() {
-        use crate::native_runtime::{find_console, ConsoleSession};
+        use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "PowerPC:BE:32:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/PowerPC/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/PowerPC/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -6340,17 +7354,37 @@ mod tests {
         ];
         let mut bytes = vec![0u8; 0x2a0];
         bytes[..7].copy_from_slice(b"\x7fELF\x01\x02\x01");
-        for (offset, value) in [(16, 2u16), (18, 20), (40, 52), (42, 32), (44, 2),
-            (46, 40), (48, 4), (50, 3)] {
+        for (offset, value) in [
+            (16, 2u16),
+            (18, 20),
+            (40, 52),
+            (42, 32),
+            (44, 2),
+            (46, 40),
+            (48, 4),
+            (50, 3),
+        ] {
             bytes[offset..offset + 2].copy_from_slice(&value.to_be_bytes());
         }
         for (offset, value) in [(20, 1u32), (24, 0x1000), (28, 52), (32, 0x200)] {
             bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
         }
         for (index, header) in [
-            [1u32, 0x100, 0x1000, 0x1000, code.len() as u32, code.len() as u32, 5, 4],
+            [
+                1u32,
+                0x100,
+                0x1000,
+                0x1000,
+                code.len() as u32,
+                code.len() as u32,
+                5,
+                4,
+            ],
             [1, 0x140, 0x3000, 0x3000, 16, 16, 6, 4],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 52 + index * 32 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
@@ -6363,7 +7397,10 @@ mod tests {
             [1u32, 1, 6, 0x1000, 0x100, code.len() as u32, 0, 0, 4, 0],
             [8, 1, 3, 0x3000, 0x140, 16, 0, 0, 4, 0],
             [14, 3, 0, 0, 0x180, names.len() as u32, 0, 0, 1, 0],
-        ].iter().enumerate() {
+        ]
+        .iter()
+        .enumerate()
+        {
             for (field, value) in header.iter().enumerate() {
                 let offset = 0x200 + (index + 1) * 40 + field * 4;
                 bytes[offset..offset + 4].copy_from_slice(&value.to_be_bytes());
@@ -6378,18 +7415,34 @@ mod tests {
             let mut session = ConsoleSession::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-            assert!(import.functions.is_empty(), "reference coverage must not manufacture functions");
-            import.xrefs.into_iter().map(|xref| (xref.from, xref.to, xref.kind))
+            assert!(
+                import.functions.is_empty(),
+                "reference coverage must not manufacture functions"
+            );
+            import
+                .xrefs
+                .into_iter()
+                .map(|xref| (xref.from, xref.to, xref.kind))
                 .collect::<Vec<_>>()
         };
         let expected = vec![(0x1004, 0x3004, "READ".into())];
-        assert_eq!(analyze(&bytes), expected,
-            "follow the section-address code root, not unseeded disconnected bytes");
+        assert_eq!(
+            analyze(&bytes),
+            expected,
+            "follow the section-address code root, not unseeded disconnected bytes"
+        );
         bytes[0x230..0x234].copy_from_slice(&2u32.to_be_bytes());
-        assert!(analyze(&bytes).is_empty(), "non-executable linkage data is not code");
+        assert!(
+            analyze(&bytes).is_empty(),
+            "non-executable linkage data is not code"
+        );
         bytes[0x230..0x234].copy_from_slice(&6u32.to_be_bytes());
         bytes[0x228..0x22c].copy_from_slice(&24u32.to_be_bytes());
-        assert_eq!(analyze(&bytes), expected, "section-address evidence is independent of its name");
+        assert_eq!(
+            analyze(&bytes),
+            expected,
+            "section-address evidence is independent of its name"
+        );
     }
 
     #[test]
@@ -6397,7 +7450,9 @@ mod tests {
         use crate::native_runtime::{ConsoleSession, find_console};
         let mut cfg = crate::session::RuntimeConfig::from_env();
         cfg.language_id = "x86:LE:64:default".into();
-        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/x86/data/languages");
+        cfg.language_dir = cfg
+            .ghidra_install
+            .join("Ghidra/Processors/x86/data/languages");
         if find_console(&cfg).is_err() {
             eprintln!("SKIP: SLEIGH console not available");
             return;
@@ -6415,8 +7470,20 @@ mod tests {
             language: cfg.language_id.clone(),
             format: "elf32".into(),
             mappings: vec![
-                Mapping { vaddr: 0x1000, size: 0x20, file_off: 0, flags: 6, bytes },
-                Mapping { vaddr: 0x3000, size: 8, file_off: 0, flags: 2, bytes: vec![0; 8] },
+                Mapping {
+                    vaddr: 0x1000,
+                    size: 0x20,
+                    file_off: 0,
+                    flags: 6,
+                    bytes,
+                },
+                Mapping {
+                    vaddr: 0x3000,
+                    size: 8,
+                    file_off: 0,
+                    flags: 2,
+                    bytes: vec![0; 8],
+                },
             ],
             reference_roots: vec![(0x1000, 0x1008), (0x1008, 0x1010)],
             ..Default::default()
@@ -6442,15 +7509,23 @@ mod tests {
         );
     }
 
-
     #[test]
     fn data_string_sweep_decodes_utf8_and_utf16() {
         for (language, big_endian) in [
-            ("x86:LE:64:default", false), ("PowerPC:BE:32:default", true),
+            ("x86:LE:64:default", false),
+            ("PowerPC:BE:32:default", true),
         ] {
             let wide = |value: &str| {
-                value.encode_utf16().chain(std::iter::once(0))
-                    .flat_map(|unit| if big_endian { unit.to_be_bytes() } else { unit.to_le_bytes() })
+                value
+                    .encode_utf16()
+                    .chain(std::iter::once(0))
+                    .flat_map(|unit| {
+                        if big_endian {
+                            unit.to_be_bytes()
+                        } else {
+                            unit.to_le_bytes()
+                        }
+                    })
                     .collect::<Vec<_>>()
             };
             let mappings = [
@@ -6461,17 +7536,36 @@ mod tests {
                 (0x3400, 2, "猫猫猫\0".as_bytes().to_vec()),
                 (0x3500, 2, wide("😀😀")),
                 (0x1000, 6, b"CODE\0".to_vec()),
-            ].into_iter().map(|(vaddr, flags, bytes)| Mapping {
-                vaddr, size: bytes.len() as u64, file_off: 0, flags, bytes,
-            }).collect();
-            let import = NativeImport { language: language.into(), mappings, ..Default::default() };
-            let mut strings: Vec<_> = strings::discover(&import).into_iter()
-                .map(|row| (row.address.offset, row.value)).collect();
+            ]
+            .into_iter()
+            .map(|(vaddr, flags, bytes)| Mapping {
+                vaddr,
+                size: bytes.len() as u64,
+                file_off: 0,
+                flags,
+                bytes,
+            })
+            .collect();
+            let import = NativeImport {
+                language: language.into(),
+                mappings,
+                ..Default::default()
+            };
+            let mut strings: Vec<_> = strings::discover(&import)
+                .into_iter()
+                .map(|row| (row.address.offset, row.value))
+                .collect();
             strings.sort_unstable();
-            assert_eq!(strings, vec![
-                (0x3000, "word".into()), (0x3100, "café".into()),
-                (0x3200, "wide text".into()), (0x3300, "A😀BC".into()),
-            ], "decode data strings in {language}; count characters, not encoded bytes or code units");
+            assert_eq!(
+                strings,
+                vec![
+                    (0x3000, "word".into()),
+                    (0x3100, "café".into()),
+                    (0x3200, "wide text".into()),
+                    (0x3300, "A😀BC".into()),
+                ],
+                "decode data strings in {language}; count characters, not encoded bytes or code units"
+            );
         }
     }
 }
@@ -6521,17 +7615,19 @@ fn apply_library_prototypes(
     }
     let rows: Vec<romwright_model::PrototypeRow> = applied
         .iter()
-        .map(|(address, signature, declaration)| romwright_model::PrototypeRow {
-            function: romwright_model::Address::ram(*address),
-            signature: signature.clone(),
-            calling_convention: None,
-            return_type: Some(declaration.return_type.clone()),
-            provenance: romwright_model::FactProvenance {
-                kind: romwright_model::FactKind::Inferred,
-                source: crate::library_types::SOURCE.into(),
-                confidence: None,
+        .map(
+            |(address, signature, declaration)| romwright_model::PrototypeRow {
+                function: romwright_model::Address::ram(*address),
+                signature: signature.clone(),
+                calling_convention: None,
+                return_type: Some(declaration.return_type.clone()),
+                provenance: romwright_model::FactProvenance {
+                    kind: romwright_model::FactKind::Inferred,
+                    source: crate::library_types::SOURCE.into(),
+                    confidence: None,
+                },
             },
-        })
+        )
         .collect();
     let revision = db.revision(pid)?;
     db.merge_inferred_prototypes(pid, revision, &rows)?;
@@ -6541,8 +7637,8 @@ fn apply_library_prototypes(
 #[cfg(test)]
 mod ppc_sda_tests {
     use super::{
-        sda_decode_points, seed_ppc_sda_registers, ElfSection, NativeFunction,
-        NativeRegisterContext,
+        ElfSection, NativeFunction, NativeRegisterContext, sda_decode_points,
+        seed_ppc_sda_registers,
     };
 
     fn section(name: &str, addr: u64, size: u64) -> ElfSection {
@@ -6560,12 +7656,24 @@ mod ppc_sda_tests {
 
     fn functions() -> Vec<NativeFunction> {
         vec![
-            NativeFunction { entry: 0x10000, name: "f".into(), size: 0x40 },
-            NativeFunction { entry: 0x10100, name: "g".into(), size: 0x40 },
+            NativeFunction {
+                entry: 0x10000,
+                name: "f".into(),
+                size: 0x40,
+            },
+            NativeFunction {
+                entry: 0x10100,
+                name: "g".into(),
+                size: 0x40,
+            },
         ]
     }
 
-    fn seed(machine: u16, abs: &[(String, u64)], sections: &[ElfSection]) -> Vec<NativeRegisterContext> {
+    fn seed(
+        machine: u16,
+        abs: &[(String, u64)],
+        sections: &[ElfSection],
+    ) -> Vec<NativeRegisterContext> {
         let mut out = Vec::new();
         seed_ppc_sda_registers(machine, abs, sections, &functions(), &mut out);
         out
@@ -6587,7 +7695,10 @@ mod ppc_sda_tests {
         // base.elf shape: `_SDA_BASE_` ABS 0x806b1880 beside a `.sdata`
         // that would conventionally give something else.
         let abs = vec![("_SDA_BASE_".to_string(), 0x806b1880)];
-        let sections = vec![section(".sdata", 0x806a9880, 0xe1), section(".sbss", 0x806a9980, 0x2c4)];
+        let sections = vec![
+            section(".sdata", 0x806a9880, 0xe1),
+            section(".sbss", 0x806a9980, 0x2c4),
+        ];
         let seeds = seed(20, &abs, &sections);
         assert_eq!(values(&seeds, "r13"), vec![0x806b1880]);
         assert_eq!(seeds.iter().filter(|s| s.register == "r13").count(), 2);
@@ -6596,7 +7707,10 @@ mod ppc_sda_tests {
 
     #[test]
     fn block_fallback_takes_the_least_start() {
-        let sections = vec![section(".sbss", 0x2000, 0x100), section(".sdata", 0x1000, 0x100)];
+        let sections = vec![
+            section(".sbss", 0x2000, 0x100),
+            section(".sdata", 0x1000, 0x100),
+        ];
         assert_eq!(values(&seed(20, &[], &sections), "r13"), vec![0x1000]);
     }
 
@@ -6604,7 +7718,10 @@ mod ppc_sda_tests {
     fn wide_range_falls_back_to_aligned_midpoint() {
         // Past fifteen bits half the range no longer reaches both ends
         // from one base, mirroring `getBaseOffset`.
-        let sections = vec![section(".sdata", 0x10000, 0x10), section(".sbss", 0x30000, 0x10)];
+        let sections = vec![
+            section(".sdata", 0x10000, 0x10),
+            section(".sbss", 0x30000, 0x10),
+        ];
         let seeds = seed(20, &[], &sections);
         let span = 0x30010u64 - 0x10000;
         assert_eq!(values(&seeds, "r13"), vec![0x10000 + ((span / 2) & !0x0f)]);
@@ -6675,9 +7792,17 @@ mod ppc_sda_tests {
                 value: 0x10000,
             },
         ];
+        let functions: Vec<_> = [0xfffc, 0x10000, 0x10010, 0x1003c, 0x10040]
+            .into_iter()
+            .map(|entry| NativeFunction { entry, name: String::new(), size: 4 })
+            .collect();
         assert_eq!(
-            sda_decode_points(&ranges),
-            vec![(0x10000, "r13".to_string(), 0x11000)]
+            sda_decode_points(&ranges, &functions),
+            vec![
+                (0x10000, "r13".to_string(), 0x11000),
+                (0x10010, "r13".to_string(), 0x11000),
+                (0x1003c, "r13".to_string(), 0x11000),
+            ]
         );
     }
 }

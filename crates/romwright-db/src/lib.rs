@@ -1,24 +1,27 @@
 //! SQLite persistence for durable facts (spec 13.1, 14.4).
 //!
 //! The database stores project-owned records: the program identity, functions,
-//! symbols, xrefs, and the provenance of whoever produced them. Every mutation
-//! runs in a transaction and bumps the program revision; bridge exports carry
-//! producer + upstream version so reopening never depends on the bridge.
+//! symbols, xrefs, and the provenance of whoever produced them. Fact mutations
+//! run in a transaction and bump the program revision. Matching workspaces have
+//! an independent revision so compiler experiments never invalidate analysis.
 
-use romwright_model::{
-    BookmarkRow, CollaborationOp, CommentRow, DataTypeRow, FunctionRow, GraphEdge, GraphNode,
-    JournalEntry, MemoryRegion, PatchRow, ProgramId, PrototypeRow, Provenance, RevisionEvent,
-    SearchHit, StackVariableRow, StringRow, SymbolRow, TraceEvent, TypeDefRow, TypeFieldRow,
-    TypeGraphNode, TypeLinkRow, XrefRow, FactKind, FactProvenance,
-};
 use romwright_model::provenance::EvidenceKind;
+use romwright_model::{
+    BookmarkRow, CollaborationOp, CommentRow, DataTypeRow, FactKind, FactProvenance, FunctionRow,
+    GraphEdge, GraphNode, JournalEntry, MemoryRegion, PatchRow, ProgramId, PrototypeRow,
+    Provenance, RevisionEvent, SearchHit, StackVariableRow, StringRow, SymbolRow, TraceEvent,
+    TypeDefRow, TypeFieldRow, TypeGraphNode, TypeLinkRow, XrefRow,
+};
 use rusqlite::types::Value;
-use rusqlite::{params, Connection, OptionalExtension, Row};
+use rusqlite::{Connection, OptionalExtension, Row, params};
 use std::path::Path;
 
 mod class;
-mod feature;
 mod convention;
+mod feature;
+mod input;
+mod matching;
+mod matching_workspace;
 mod return_behavior;
 mod semantic;
 mod signature;
@@ -26,7 +29,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 22;
+pub const SCHEMA_VERSION: i64 = 27;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -55,6 +58,10 @@ pub enum DbError {
     /// A structural feature row was missing a measurement it must carry.
     #[error("invalid function features: {0}")]
     InvalidFunctionFeatures(String),
+    #[error("invalid matching run: {0}")]
+    InvalidMatchingRun(String),
+    #[error("invalid program input: {0}")]
+    InvalidProgramInput(String),
 }
 /// Convenience alias with the error defaulted per project convention.
 pub type Result<T, E = DbError> = std::result::Result<T, E>;
@@ -68,20 +75,27 @@ pub enum FunctionSort {
 }
 
 impl FunctionSort {
-    /// SQL ORDER BY fragment. Fixed whitelist: never built from user text.
-    pub fn sql_column(self) -> &'static str {
+    /// SQL ordering from a fixed whitelist, with a numeric entry tie-break.
+    fn sql_order(self, ascending: bool) -> String {
+        let direction = if ascending { "ASC" } else { "DESC" };
         match self {
-            FunctionSort::Entry => "entry",
-            FunctionSort::Name => "name COLLATE NOCASE",
-            FunctionSort::Size => "size",
+            Self::Entry => format!("length(f.entry) {direction}, f.entry {direction}"),
+            Self::Name => format!(
+                "f.name COLLATE NOCASE {direction}, length(f.entry) {direction}, f.entry {direction}"
+            ),
+            Self::Size => format!(
+                "f.size {direction}, length(f.entry) {direction}, f.entry {direction}"
+            ),
         }
     }
 
-    fn compare(self, a: &FunctionRow, b: &FunctionRow) -> std::cmp::Ordering {
+    fn sort(self, rows: &mut [FunctionRow]) {
         match self {
-            FunctionSort::Entry => a.entry.offset.cmp(&b.entry.offset),
-            FunctionSort::Name => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-            FunctionSort::Size => a.size.cmp(&b.size),
+            Self::Entry => rows.sort_by_key(|row| row.entry.offset),
+            Self::Name => rows.sort_by_cached_key(|row| {
+                (row.name.to_ascii_lowercase(), row.entry.offset)
+            }),
+            Self::Size => rows.sort_by_key(|row| (row.size, row.entry.offset)),
         }
     }
 
@@ -137,22 +151,20 @@ impl ProjectDb {
     /// Opens (creating if needed) a project database at `path`.
     pub fn open(path: &Path) -> Result<Self> {
         let conn = Connection::open(path)?;
+        conn.busy_timeout(std::time::Duration::from_secs(15))?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
         // WAL: durable enough for crash tests, allows concurrent readers while
         // the CLI writes (spec 13.1 leaves WAL vs rollback to measurement).
-        conn.pragma_update(None, "journal_mode", "WAL")?;
+        let journal: String = conn.pragma_query_value(None, "journal_mode", |row| row.get(0))?;
+        if !journal.eq_ignore_ascii_case("wal") {
+            conn.pragma_update(None, "journal_mode", "WAL")?;
+        }
         // Under WAL, NORMAL fsyncs at checkpoints rather than at every
         // commit. A crash can lose the most recent commits, never corrupt
         // the database (SQLite "PRAGMA synchronous"), and an import is
         // reproducible from the image, so the trade is a store that keeps
         // up with an interactive session: 45687 rows took 2.76 s at FULL.
         conn.pragma_update(None, "synchronous", "NORMAL")?;
-        // A reader must never fail because a background pass is committing.
-        // WAL lets readers run during a write, but the brief exclusive lock
-        // a commit takes still returns SQLITE_BUSY immediately without a
-        // timeout: a listing query failed outright while per-function
-        // analysis was committing beside it.
-        conn.busy_timeout(std::time::Duration::from_secs(15))?;
         let db = Self { conn };
         db.migrate()?;
         Ok(db)
@@ -167,10 +179,58 @@ impl ProjectDb {
         Ok(db)
     }
 
+    fn schema_version(&self) -> Result<Option<i64>> {
+        let exists: bool = self.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'meta')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !exists {
+            return Ok(None);
+        }
+        let text: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM meta WHERE key = 'schema_version'",
+                [],
+                |row| row.get(0),
+            )
+            .optional()?;
+        let version = text
+            .map(|text| {
+                text.parse::<i64>().map_err(|_| {
+                    DbError::Sqlite(rusqlite::Error::InvalidParameterName(
+                        "meta.schema_version not an integer".into(),
+                    ))
+                })
+            })
+            .transpose()?;
+        if version.is_some_and(|version| version > SCHEMA_VERSION) {
+            return Err(DbError::Sqlite(rusqlite::Error::InvalidParameterName(
+                format!(
+                    "database schema {} newer than supported {SCHEMA_VERSION}",
+                    version.unwrap()
+                ),
+            )));
+        }
+        Ok(version)
+    }
+
     fn migrate(&self) -> Result<()> {
+        if self.schema_version()? == Some(SCHEMA_VERSION) {
+            return Ok(());
+        }
+        let tx = rusqlite::Transaction::new_unchecked(
+            &self.conn,
+            rusqlite::TransactionBehavior::Immediate,
+        )?;
+        // Another opener may have migrated while this connection waited.
+        if self.schema_version()? == Some(SCHEMA_VERSION) {
+            tx.commit()?;
+            return Ok(());
+        }
         self.conn.execute_batch(
-            "BEGIN;
-             CREATE TABLE IF NOT EXISTS meta (
+            "CREATE TABLE IF NOT EXISTS meta (
                  key TEXT PRIMARY KEY,
                  value TEXT NOT NULL
              );
@@ -408,26 +468,14 @@ impl ProjectDb {
                  PRIMARY KEY (program_id, op_id)
              );
              CREATE INDEX IF NOT EXISTS idx_collaboration_order
-                 ON collaboration_ops(program_id, lamport, actor, op_id);
-             COMMIT;",
+                 ON collaboration_ops(program_id, lamport, actor, op_id);",
         )?;
-        let v_text: String = self
-            .conn
-            .query_row("SELECT value FROM meta WHERE key='schema_version'", [], |r| {
-                r.get(0)
-            })?;
-        let v: i64 = v_text.parse().map_err(|_| {
+        let v = self.schema_version()?.ok_or_else(|| {
             DbError::Sqlite(rusqlite::Error::InvalidParameterName(
-                "meta.schema_version not an integer".into(),
+                "missing schema version".into(),
             ))
         })?;
-        if v > SCHEMA_VERSION {
-            return Err(DbError::Sqlite(rusqlite::Error::InvalidParameterName(
-                format!("database schema {v} newer than supported {SCHEMA_VERSION}"),
-            )));
-        }
         if v < SCHEMA_VERSION {
-            let tx = self.conn.unchecked_transaction()?;
             if v < 5 {
                 let has_provenance: bool = tx.query_row(
                 "SELECT EXISTS(SELECT 1 FROM pragma_table_info('xrefs') WHERE name = 'provenance')",
@@ -592,7 +640,8 @@ impl ProjectDb {
                 let carried: bool = tx.query_row(
                     "SELECT EXISTS(SELECT 1 FROM pragma_table_info('functions')
                                    WHERE name = 'calling_convention')",
-                    [], |row| row.get(0),
+                    [],
+                    |row| row.get(0),
                 )?;
                 if carried {
                     tx.execute("ALTER TABLE functions DROP COLUMN calling_convention", [])?;
@@ -743,12 +792,120 @@ impl ProjectDb {
                     )?;
                 }
             }
+            if v < 23 {
+                tx.execute_batch(
+                    "CREATE TABLE matching_runs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        program_id INTEGER NOT NULL REFERENCES programs(id),
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        record TEXT NOT NULL
+                    );
+                    CREATE INDEX matching_runs_program ON matching_runs(program_id, id);
+                    CREATE TABLE program_inputs (
+                        program_id INTEGER PRIMARY KEY REFERENCES programs(id),
+                        record TEXT NOT NULL
+                    );",
+                )?;
+            }
+            if v < 24 {
+                tx.execute_batch("ALTER TABLE signature_matches ADD COLUMN input_record TEXT;")?;
+            }
+            if v < 25 {
+                tx.execute_batch(
+                    "CREATE TABLE classes_v25 (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         identity TEXT NOT NULL,
+                         typeinfo TEXT,
+                         vtable TEXT,
+                         name TEXT NOT NULL,
+                         mangled TEXT NOT NULL,
+                         kind TEXT NOT NULL CHECK(kind IN ('class', 'single_base', 'multiple_base')),
+                         vtable_slots INTEGER NOT NULL CHECK(vtable_slots >= 0),
+                         provenance TEXT NOT NULL,
+                         provenance_kind TEXT NOT NULL CHECK(provenance_kind IN ('asserted', 'inferred')),
+                         confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                         PRIMARY KEY(program_id, identity),
+                         UNIQUE(program_id, typeinfo)
+                     );
+                     INSERT INTO classes_v25
+                         SELECT program_id,
+                             CASE WHEN provenance IN ('mwcc-rtti-less', 'mwcc-ctor-dtor-listed')
+                                 THEN 'name:' || mangled ELSE 'typeinfo:' || typeinfo END,
+                             CASE WHEN provenance IN ('mwcc-rtti-less', 'mwcc-ctor-dtor-listed')
+                                 THEN NULL ELSE typeinfo END,
+                             CASE WHEN provenance IN ('mwcc-rtti-less', 'mwcc-ctor-dtor-listed')
+                                 THEN NULL ELSE vtable END,
+                             name, mangled, kind, vtable_slots, provenance, provenance_kind, confidence
+                         FROM classes;
+                     CREATE TABLE class_bases_v25 (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         identity TEXT NOT NULL,
+                         ordinal INTEGER NOT NULL CHECK(ordinal >= 0),
+                         base_typeinfo TEXT NOT NULL,
+                         base_mangled TEXT NOT NULL,
+                         base_offset INTEGER NOT NULL,
+                         virtual_base INTEGER NOT NULL CHECK(virtual_base IN (0, 1)),
+                         public_base INTEGER NOT NULL CHECK(public_base IN (0, 1)),
+                         PRIMARY KEY(program_id, identity, ordinal)
+                     );
+                     INSERT INTO class_bases_v25
+                         SELECT program_id, 'typeinfo:' || typeinfo, ordinal,
+                             base_typeinfo, base_mangled, base_offset, virtual_base, public_base
+                         FROM class_bases;
+                     DROP TABLE class_bases;
+                     DROP TABLE classes;
+                     ALTER TABLE classes_v25 RENAME TO classes;
+                     ALTER TABLE class_bases_v25 RENAME TO class_bases;",
+                )?;
+            }
+            if v < 26 {
+                tx.execute_batch(
+                    "ALTER TABLE matching_runs ADD COLUMN imported INTEGER NOT NULL DEFAULT 0;
+                    CREATE TABLE matching_workspaces (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        program_id INTEGER NOT NULL REFERENCES programs(id),
+                        revision INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        spec TEXT NOT NULL
+                    );
+                    CREATE INDEX matching_workspaces_program ON matching_workspaces(program_id, id);
+                    CREATE TABLE matching_candidates (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        workspace_id INTEGER NOT NULL REFERENCES matching_workspaces(id),
+                        parent_id INTEGER REFERENCES matching_candidates(id),
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        spec TEXT NOT NULL
+                    );
+                    CREATE INDEX matching_candidates_workspace ON matching_candidates(workspace_id, id);
+                    CREATE TABLE matching_trials (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        workspace_id INTEGER NOT NULL REFERENCES matching_workspaces(id),
+                        candidate_id INTEGER NOT NULL REFERENCES matching_candidates(id),
+                        run_id INTEGER REFERENCES matching_runs(id),
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        record TEXT NOT NULL
+                    );
+                    CREATE INDEX matching_trials_workspace ON matching_trials(workspace_id, id);",
+                )?;
+            }
+            if v < 27 {
+                tx.execute_batch(
+                    "CREATE TABLE matching_project_checks (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        workspace_id INTEGER NOT NULL REFERENCES matching_workspaces(id),
+                        candidate_id INTEGER NOT NULL REFERENCES matching_candidates(id),
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        record TEXT NOT NULL
+                    );
+                    CREATE INDEX matching_project_checks_workspace ON matching_project_checks(workspace_id, id);",
+                )?;
+            }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
                 params![SCHEMA_VERSION.to_string()],
             )?;
-            tx.commit()?;
         }
+        tx.commit()?;
         Ok(())
     }
 
@@ -757,10 +914,8 @@ impl ProjectDb {
     /// connection, so no handle has to be closed to make a durable copy.
     pub fn export_to(&self, path: &Path) -> Result<()> {
         let _ = std::fs::remove_file(path);
-        self.conn.execute(
-            "VACUUM INTO ?1",
-            params![path.to_string_lossy().as_ref()],
-        )?;
+        self.conn
+            .execute("VACUUM INTO ?1", params![path.to_string_lossy().as_ref()])?;
         Ok(())
     }
 
@@ -884,37 +1039,6 @@ impl ProjectDb {
         Ok(())
     }
 
-    /// Records one function's body as analysed at the current revision,
-    /// inserting it when demand-driven analysis found a function the loader
-    /// never declared.
-    pub fn upsert_analysed_function(
-        &self,
-        program: ProgramId,
-        row: &FunctionRow,
-        state: &str,
-    ) -> Result<()> {
-        let revision = self.revision(program)?;
-        self.conn.execute(
-            "INSERT INTO functions(program_id, entry, name, size, signature,
-                                   analysis_state, analysed_revision)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-             ON CONFLICT(program_id, entry) DO UPDATE SET
-                 size = excluded.size,
-                 analysis_state = excluded.analysis_state,
-                 analysed_revision = excluded.analysed_revision",
-            params![
-                program.0,
-                row.entry.to_string(),
-                row.name,
-                row.size as i64,
-                row.signature,
-                state,
-                revision as i64
-            ],
-        )?;
-        Ok(())
-    }
-
     /// Records which producer claimed each function entry.
     pub fn set_producers(&self, program: ProgramId, rows: &[(String, String)]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
@@ -1027,10 +1151,7 @@ impl ProjectDb {
     }
 
     /// Inserts one cross-module reference.
-    pub fn insert_module_xref(
-        &self,
-        xref: &romwright_model::ModuleXrefRow,
-    ) -> Result<()> {
+    pub fn insert_module_xref(&self, xref: &romwright_model::ModuleXrefRow) -> Result<()> {
         self.conn.execute(
             "INSERT INTO module_xrefs(
                  module_id, from_addr, to_module_id, to_addr, to_external, kind
@@ -1048,10 +1169,7 @@ impl ProjectDb {
     }
 
     /// Lists a module's outgoing cross-module references.
-    pub fn module_xrefs(
-        &self,
-        module_id: i64,
-    ) -> Result<Vec<romwright_model::ModuleXrefRow>> {
+    pub fn module_xrefs(&self, module_id: i64) -> Result<Vec<romwright_model::ModuleXrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT module_id, from_addr, to_module_id, to_addr, to_external, kind
              FROM module_xrefs WHERE module_id = ?1 ORDER BY from_addr",
@@ -1114,7 +1232,10 @@ impl ProjectDb {
 
     pub fn replace_functions(&self, program: ProgramId, rows: &[FunctionRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM functions WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM functions WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT INTO functions(program_id, entry, name, size, signature)
              VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -1148,7 +1269,12 @@ impl ProjectDb {
                 params![program.0, entry, name],
             )?;
         }
-        self.bump_and_record(&tx, program, "replace-functions", &format!("{}", rows.len()))?;
+        self.bump_and_record(
+            &tx,
+            program,
+            "replace-functions",
+            &format!("{}", rows.len()),
+        )?;
         tx.commit()?;
         Ok(())
     }
@@ -1186,7 +1312,10 @@ impl ProjectDb {
     /// Replaces the symbol set of a program inside one transaction.
     pub fn replace_symbols(&self, program: ProgramId, rows: &[SymbolRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM symbols WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM symbols WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT INTO symbols(program_id, address, name, external, source)
              VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -1199,10 +1328,16 @@ impl ProjectDb {
             if !seen.insert((r.address.clone(), r.name.clone())) {
                 continue;
             }
-            stmt.execute(params![program.0, addr_cell(&r.address), r.name, r.external as i64, r.source])?;
+            stmt.execute(params![
+                program.0,
+                addr_cell(&r.address),
+                r.name,
+                r.external as i64,
+                r.source
+            ])?;
         }
         drop(stmt);
-                self.bump_and_record(&tx, program, "replace-symbols", &format!("{}", rows.len()))?;
+        self.bump_and_record(&tx, program, "replace-symbols", &format!("{}", rows.len()))?;
         tx.commit()?;
         Ok(())
     }
@@ -1220,34 +1355,63 @@ impl ProjectDb {
         Ok(())
     }
 
-    /// Replaces the inferred references whose *source* lies in one address
-    /// range: what demand-driven analysis of a single body may overwrite.
-    /// References into the range are other functions' facts and survive.
-    pub fn replace_xrefs_from_range(
+    /// Publishes a demand walk and its outgoing references as one revision.
+    /// A stale walk cannot resize a function or replace newer references.
+    pub fn publish_function_analysis(
         &self,
         program: ProgramId,
-        start: &romwright_model::Address,
+        expected: u64,
+        row: &FunctionRow,
+        state: &str,
         end: &romwright_model::Address,
         rows: &[XrefRow],
-    ) -> Result<()> {
+    ) -> Result<u64> {
         let tx = self.conn.unchecked_transaction()?;
+        let actual = self.revision(program)?;
+        if actual != expected {
+            return Err(DbError::StaleRevision { expected, actual });
+        }
         tx.execute(
             "DELETE FROM xrefs WHERE program_id = ?1 AND provenance_kind = 'inferred'
                  AND src >= ?2 AND src < ?3",
-            params![program.0, start.to_string(), end.to_string()],
+            params![program.0, row.entry.to_string(), end.to_string()],
         )?;
         Self::insert_xrefs(&tx, program, rows, None)?;
-        self.bump_and_record(&tx, program, "analyse-function", &start.to_string())?;
+        self.bump_and_record(&tx, program, "analyse-function", &row.entry.to_string())?;
+        let revision = self.revision(program)?;
+        tx.execute(
+            "INSERT INTO functions(program_id, entry, name, size, signature,
+                                   analysis_state, analysed_revision)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(program_id, entry) DO UPDATE SET
+                 size = excluded.size,
+                 analysis_state = excluded.analysis_state,
+                 analysed_revision = excluded.analysed_revision",
+            params![
+                program.0,
+                row.entry.to_string(),
+                row.name,
+                row.size as i64,
+                row.signature,
+                state,
+                revision as i64
+            ],
+        )?;
         tx.commit()?;
-        Ok(())
+        Ok(revision)
     }
 
     /// Atomically replace one inference pass without deleting other producers.
     pub fn replace_inferred_xrefs(
-        &self, program: ProgramId, source: &str, rows: &[XrefRow],
+        &self,
+        program: ProgramId,
+        source: &str,
+        rows: &[XrefRow],
     ) -> Result<()> {
         if source.trim().is_empty() {
-            return Err(DbError::InvalidFactProvenance("inference source is empty".into()));
+            return Err(DbError::InvalidFactProvenance(
+                "inference source is empty".into(),
+            ));
         }
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
@@ -1262,7 +1426,9 @@ impl ProjectDb {
     }
 
     fn insert_xrefs(
-        tx: &rusqlite::Transaction<'_>, program: ProgramId, rows: &[XrefRow],
+        tx: &rusqlite::Transaction<'_>,
+        program: ProgramId,
+        rows: &[XrefRow],
         expected_source: Option<&str>,
     ) -> Result<()> {
         let mut stmt = tx.prepare(
@@ -1272,23 +1438,30 @@ impl ProjectDb {
                  provenance = excluded.provenance,
                  provenance_kind = excluded.provenance_kind,
                  confidence = excluded.confidence
-             WHERE xrefs.provenance_kind = 'inferred' OR excluded.provenance_kind = 'asserted'"
+             WHERE xrefs.provenance_kind = 'inferred' OR excluded.provenance_kind = 'asserted'",
         )?;
         let mut seen = std::collections::HashSet::new();
         for row in rows {
             let provenance = &row.provenance;
-            if expected_source.is_some_and(|source|
-                provenance.kind != FactKind::Inferred || provenance.source != source)
-            {
-                return Err(DbError::InvalidFactProvenance("row does not belong to the inference pass".into()));
+            if expected_source.is_some_and(|source| {
+                provenance.kind != FactKind::Inferred || provenance.source != source
+            }) {
+                return Err(DbError::InvalidFactProvenance(
+                    "row does not belong to the inference pass".into(),
+                ));
             }
             let ownership = validate_fact_provenance(provenance)?;
             if !seen.insert((&row.from, &row.to, row.kind.as_str(), provenance.kind)) {
                 continue;
             }
             stmt.execute(params![
-                program.0, addr_cell(&row.from), addr_cell(&row.to), row.kind,
-                provenance.source, ownership, provenance.confidence,
+                program.0,
+                addr_cell(&row.from),
+                addr_cell(&row.to),
+                row.kind,
+                provenance.source,
+                ownership,
+                provenance.confidence,
             ])?;
         }
         Ok(())
@@ -1296,7 +1469,12 @@ impl ProjectDb {
 
     /// Applies an analyst rename: bumps the program revision and rewrites the
     /// function name. Fails when the function is unknown.
-    pub fn rename_function(&self, program: ProgramId, entry: &romwright_model::Address, name: &str) -> Result<()> {
+    pub fn rename_function(
+        &self,
+        program: ProgramId,
+        entry: &romwright_model::Address,
+        name: &str,
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         let n = tx.execute(
             "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
@@ -1334,13 +1512,25 @@ impl ProjectDb {
             tx.execute(
                 "UPDATE comments SET function = ?4, text = ?5
                  WHERE program_id = ?1 AND address = ?2 AND type = ?3",
-                params![program.0, addr_cell(address), kind, addr_cell(function), text],
+                params![
+                    program.0,
+                    addr_cell(address),
+                    kind,
+                    addr_cell(function),
+                    text
+                ],
             )?;
         } else {
             tx.execute(
                 "INSERT INTO comments(program_id, address, function, type, text)
                  VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![program.0, addr_cell(address), addr_cell(function), kind, text],
+                params![
+                    program.0,
+                    addr_cell(address),
+                    addr_cell(function),
+                    kind,
+                    text
+                ],
             )?;
         }
         self.bump_and_record(&tx, program, "comment", text)?;
@@ -1380,7 +1570,13 @@ impl ProjectDb {
                  VALUES (?1, ?2, ?3, ?4, ?5)
                  ON CONFLICT(program_id, address, type)
                  DO UPDATE SET function = excluded.function, text = excluded.text",
-                params![program.0, addr_cell(address), addr_cell(function), kind, text],
+                params![
+                    program.0,
+                    addr_cell(address),
+                    addr_cell(function),
+                    kind,
+                    text
+                ],
             )?;
         } else {
             tx.execute(
@@ -1392,7 +1588,11 @@ impl ProjectDb {
             &tx,
             program,
             "comment-undo",
-            if previous.is_some() { "restore" } else { "delete" },
+            if previous.is_some() {
+                "restore"
+            } else {
+                "delete"
+            },
         )?;
         tx.execute(
             "UPDATE command_journal SET done = 1 WHERE program_id = ?1 AND seq = ?2",
@@ -1404,19 +1604,42 @@ impl ProjectDb {
 
     /// Lists functions of a program ordered by entry address.
     pub fn functions(&self, program: ProgramId) -> Result<Vec<FunctionRow>> {
-        let mut stmt = self.conn.prepare(
-            &format!("{FUNCTION_SELECT} WHERE f.program_id = ?1 ORDER BY f.entry"),
-        )?;
+        let mut stmt = self.conn.prepare(&format!(
+            "{FUNCTION_SELECT} WHERE f.program_id = ?1 ORDER BY f.entry"
+        ))?;
         let rows = stmt
             .query_map(params![program.0], map_function)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
 
+    /// Finds the nearest preceding RAM function when its recorded extent
+    /// covers `offset`. A zero-sized function owns only its entry address.
+    pub fn function_at(&self, program: ProgramId, offset: u64) -> Result<Option<FunctionRow>> {
+        let entry = addr_cell(&romwright_model::Address::ram(offset));
+        let row = self.conn.query_row(
+            &format!(
+                "{FUNCTION_SELECT} WHERE f.program_id = ?1 AND f.entry NOT LIKE '{{%'
+                 AND (length(f.entry) < length(?2)
+                      OR (length(f.entry) = length(?2) AND f.entry <= ?2))
+                 ORDER BY length(f.entry) DESC, f.entry DESC LIMIT 1"
+            ),
+            params![program.0, entry],
+            map_function,
+        ).optional()?;
+        Ok(row.filter(|row| {
+            offset == row.entry.offset
+                || offset.checked_sub(row.entry.offset).is_some_and(|distance| distance < row.size)
+        }))
+    }
+
     /// Paged functions (review CORE-004): a bounded window + total + the
     /// revision the window was read at. Views never preload. `filter`
     /// narrows by function name (case-insensitive substring, or a regex
     /// when the text carries a `re:` prefix); `sort` orders the window.
+    /// `address` selects the containing function's aligned page, or page zero
+    /// if absent from the result. Returns (rows, total, revision, offset) from
+    /// one read snapshot, so concurrent analysis cannot shift the anchor.
     pub fn functions_page(
         &self,
         program: ProgramId,
@@ -1424,49 +1647,83 @@ impl ProjectDb {
         limit: u64,
         filter: Option<&FunctionsFilter>,
         sort: Option<(FunctionSort, bool)>,
-    ) -> Result<(Vec<FunctionRow>, Option<u64>, u64)> {
+        address: Option<u64>,
+    ) -> Result<(Vec<FunctionRow>, Option<u64>, u64, u64)> {
+        let tx = self.conn.unchecked_transaction()?;
         let (sort_key, ascending) = sort.unwrap_or((FunctionSort::Entry, true));
-        match filter {
+        let anchor = address
+            .map(|address| self.function_at(program, address))
+            .transpose()?
+            .flatten()
+            .map(|row| row.entry);
+        let width = limit.max(1);
+        let (rows, total, offset) = match filter {
             None => {
-                let total: i64 = self.conn.query_row(
+                let total: u64 = self.conn.query_row(
                     "SELECT COUNT(*) FROM functions WHERE program_id = ?1",
                     params![program.0],
                     |r| r.get(0),
                 )?;
+                let order = sort_key.sql_order(ascending);
+                let offset = if address.is_some() {
+                    let rank: Option<u64> = match anchor.as_ref() {
+                        Some(entry) => self.conn.query_row(
+                            &format!(
+                                "SELECT position FROM (
+                                    SELECT f.entry, row_number() OVER (ORDER BY {order}) - 1 AS position
+                                    FROM functions f WHERE f.program_id = ?1
+                                 ) WHERE entry = ?2"
+                            ),
+                            params![program.0, addr_cell(entry)],
+                            |row| row.get(0),
+                        ).optional()?,
+                        None => None,
+                    };
+                    rank.unwrap_or(0) / width * width
+                } else {
+                    offset
+                };
                 let sql = format!(
                     "{FUNCTION_SELECT} WHERE f.program_id = ?1
-                     ORDER BY f.{} {} LIMIT ?2 OFFSET ?3",
-                    sort_key.sql_column(),
-                    if ascending { "ASC" } else { "DESC" }
+                     ORDER BY {order} LIMIT ?2 OFFSET ?3"
                 );
                 let mut stmt = self.conn.prepare(&sql)?;
                 let rows = stmt
                     .query_map(params![program.0, limit, offset], map_function)?
                     .collect::<std::result::Result<Vec<_>, _>>()?;
-                Ok((rows, Some(total as u64), self.revision(program)?))
+                (rows, total, offset)
             }
             Some(filter) => {
-                // Filtered path: scan, filter, sort, and paginate in Rust.
-                // SQLite cannot evaluate regex, and function tables are
-                // small (thousands of rows), so one code path keeps the
-                // total count consistent with the returned window.
-                let mut stmt = self.conn.prepare(
-                    &format!("{FUNCTION_SELECT} WHERE f.program_id = ?1"),
-                )?;
+                // Use the same Unicode substring/regex matching for the
+                // total, anchor rank, and returned window.
+                let mut stmt = self
+                    .conn
+                    .prepare(&format!("{FUNCTION_SELECT} WHERE f.program_id = ?1"))?;
                 let mut rows = stmt
                     .query_map(params![program.0], map_function)?
                     .collect::<std::result::Result<Vec<_>, _>>()?;
                 rows.retain(|row| filter.matches(&row.name));
-                rows.sort_by(|a, b| sort_key.compare(a, b));
+                sort_key.sort(&mut rows);
                 if !ascending {
                     rows.reverse();
                 }
+                let offset = if address.is_some() {
+                    let rank = anchor.as_ref()
+                        .and_then(|entry| rows.iter().position(|row| &row.entry == entry))
+                        .unwrap_or(0) as u64;
+                    rank / width * width
+                } else {
+                    offset
+                };
                 let total = rows.len() as u64;
-                let start = (offset as usize).min(rows.len());
-                let end = (start + limit as usize).min(rows.len());
-                Ok((rows[start..end].to_vec(), Some(total), self.revision(program)?))
+                let start = usize::try_from(offset).unwrap_or(usize::MAX).min(rows.len());
+                let count = usize::try_from(limit).unwrap_or(usize::MAX).min(rows.len() - start);
+                (rows.into_iter().skip(start).take(count).collect(), total, offset)
             }
-        }
+        };
+        let revision = self.revision(program)?;
+        tx.commit()?;
+        Ok((rows, Some(total), revision, offset))
     }
 
     /// Paged symbols (review CORE-004).
@@ -1483,7 +1740,8 @@ impl ProjectDb {
         let total: i64 = self.conn.query_row(
             &format!("SELECT COUNT(*) FROM symbols WHERE program_id = ?1{filter}"),
             rusqlite::params_from_iter(
-                std::iter::once(Value::Integer(program.0 as i64)).chain(bound.iter().cloned())),
+                std::iter::once(Value::Integer(program.0 as i64)).chain(bound.iter().cloned()),
+            ),
             |r| r.get(0),
         )?;
         let (filter, bound) = evidence_clause("source", evidence, 4);
@@ -1494,10 +1752,13 @@ impl ProjectDb {
         let rows = stmt
             .query_map(
                 rusqlite::params_from_iter(
-                    [Value::Integer(program.0 as i64), Value::Integer(limit as i64),
-                     Value::Integer(offset as i64)]
-                        .into_iter()
-                        .chain(bound),
+                    [
+                        Value::Integer(program.0 as i64),
+                        Value::Integer(limit as i64),
+                        Value::Integer(offset as i64),
+                    ]
+                    .into_iter()
+                    .chain(bound),
                 ),
                 map_symbol,
             )?
@@ -1533,7 +1794,11 @@ impl ProjectDb {
         )?;
         // The containing function resolves at query time: the function
         // whose [entry, entry+size) range holds the source address.
-        let (order, key) = if incoming { ("x.src", dst) } else { ("x.dst", src) };
+        let (order, key) = if incoming {
+            ("x.src", dst)
+        } else {
+            ("x.dst", src)
+        };
         let (filter, bound) = evidence_clause("x.provenance", evidence, 5);
         let mut stmt = self.conn.prepare(&format!(
             "SELECT x.src, x.dst, x.kind, \
@@ -1545,10 +1810,14 @@ impl ProjectDb {
         let mut rows = stmt
             .query_map(
                 rusqlite::params_from_iter(
-                    [Value::Integer(program.0 as i64), Value::Text(key),
-                     Value::Integer(limit as i64), Value::Integer(offset as i64)]
-                        .into_iter()
-                        .chain(bound),
+                    [
+                        Value::Integer(program.0 as i64),
+                        Value::Text(key),
+                        Value::Integer(limit as i64),
+                        Value::Integer(offset as i64),
+                    ]
+                    .into_iter()
+                    .chain(bound),
                 ),
                 map_xref,
             )?
@@ -1576,7 +1845,11 @@ impl ProjectDb {
                 let size: i64 = row.get(1)?;
                 let name: String = row.get(2)?;
                 let entry = addr_from_cell(entry, 0)?;
-                Ok((entry.offset, entry.offset.saturating_add(size.max(0) as u64), name))
+                Ok((
+                    entry.offset,
+                    entry.offset.saturating_add(size.max(0) as u64),
+                    name,
+                ))
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         extents.sort_unstable_by(|left, right| left.0.cmp(&right.0));
@@ -1603,7 +1876,11 @@ impl ProjectDb {
     }
 
     /// Lists xrefs pointing at `address`.
-    pub fn xrefs_to(&self, program: ProgramId, address: &romwright_model::Address) -> Result<Vec<XrefRow>> {
+    pub fn xrefs_to(
+        &self,
+        program: ProgramId,
+        address: &romwright_model::Address,
+    ) -> Result<Vec<XrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT x.src, x.dst, x.kind, \
               NULL, \
@@ -1618,7 +1895,11 @@ impl ProjectDb {
     }
 
     /// Lists xrefs leaving `address`.
-    pub fn xrefs_from(&self, program: ProgramId, address: &romwright_model::Address) -> Result<Vec<XrefRow>> {
+    pub fn xrefs_from(
+        &self,
+        program: ProgramId,
+        address: &romwright_model::Address,
+    ) -> Result<Vec<XrefRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT x.src, x.dst, x.kind, \
               NULL, \
@@ -1655,9 +1936,14 @@ impl ProjectDb {
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT src, dst FROM xrefs WHERE program_id = ?1 AND instr(kind, 'CALL') > 0",
         )?;
-        let mut edges = stmt.query_map(params![program.0], |row| {
-            Ok((addr_from_cell(row.get(0)?, 0)?, addr_from_cell(row.get(1)?, 1)?))
-        })?.collect::<std::result::Result<Vec<_>, _>>()?;
+        let mut edges = stmt
+            .query_map(params![program.0], |row| {
+                Ok((
+                    addr_from_cell(row.get(0)?, 0)?,
+                    addr_from_cell(row.get(1)?, 1)?,
+                ))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         // Hex cells can have different widths; SQL text order is not numeric.
         edges.sort_unstable_by_key(|(from, to)| (from.offset, to.offset));
         Ok(edges)
@@ -1952,7 +2238,10 @@ impl ProjectDb {
     /// Distinct destinations of data references, address spaces preserved.
     /// The decompiler names such a location on demand, so the worker needs
     /// the set rather than one edge at a time.
-    pub fn data_reference_targets(&self, program: ProgramId) -> Result<Vec<romwright_model::Address>> {
+    pub fn data_reference_targets(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<romwright_model::Address>> {
         let mut stmt = self.conn.prepare(
             "SELECT DISTINCT dst FROM xrefs
              WHERE program_id = ?1 AND kind IN ('DATA', 'READ', 'WRITE')",
@@ -1963,7 +2252,6 @@ impl ProjectDb {
         targets.sort_unstable_by_key(|address| address.offset);
         Ok(targets)
     }
-
 
     /// Lists symbols of a program ordered by address.
     pub fn symbols(&self, program: ProgramId) -> Result<Vec<SymbolRow>> {
@@ -1978,9 +2266,16 @@ impl ProjectDb {
     }
 
     /// Replaces discovered strings atomically.
-    pub fn replace_strings<'a>(&self, program: ProgramId, rows: impl IntoIterator<Item = &'a StringRow>) -> Result<()> {
+    pub fn replace_strings<'a>(
+        &self,
+        program: ProgramId,
+        rows: impl IntoIterator<Item = &'a StringRow>,
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM strings WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM strings WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT OR IGNORE INTO strings(program_id, address, value, kind)
              VALUES (?1, ?2, ?3, ?4)",
@@ -2134,7 +2429,10 @@ impl ProjectDb {
         }
         hits.sort_by_key(|hit| {
             (
-                hit.address.as_ref().map(|address| address.offset).unwrap_or(u64::MAX),
+                hit.address
+                    .as_ref()
+                    .map(|address| address.offset)
+                    .unwrap_or(u64::MAX),
                 hit.kind.clone(),
                 hit.name.clone(),
             )
@@ -2187,14 +2485,8 @@ impl ProjectDb {
         Ok((nodes, edges))
     }
 
-
-
     /// Replaces the memory map associated with a program.
-    pub fn replace_memory_regions(
-        &self,
-        program: ProgramId,
-        rows: &[MemoryRegion],
-    ) -> Result<()> {
+    pub fn replace_memory_regions(&self, program: ProgramId, rows: &[MemoryRegion]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "DELETE FROM memory_regions WHERE program_id = ?1",
@@ -2260,7 +2552,11 @@ impl ProjectDb {
     }
 
     /// Removes one bookmark and records the revision change.
-    pub fn delete_bookmark(&self, program: ProgramId, address: &romwright_model::Address) -> Result<()> {
+    pub fn delete_bookmark(
+        &self,
+        program: ProgramId,
+        address: &romwright_model::Address,
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "DELETE FROM bookmarks WHERE program_id = ?1 AND address = ?2",
@@ -2289,11 +2585,7 @@ impl ProjectDb {
     }
 
     /// Stores both the original bytes and the currently selected patch.
-    pub fn set_patch(
-        &self,
-        program: ProgramId,
-        row: &PatchRow,
-    ) -> Result<()> {
+    pub fn set_patch(&self, program: ProgramId, row: &PatchRow) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "INSERT INTO patches(program_id, address, original_hex, patched_hex, enabled)
@@ -2316,7 +2608,11 @@ impl ProjectDb {
     }
 
     /// Removes one patch record.
-    pub fn delete_patch(&self, program: ProgramId, address: &romwright_model::Address) -> Result<()> {
+    pub fn delete_patch(
+        &self,
+        program: ProgramId,
+        address: &romwright_model::Address,
+    ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "DELETE FROM patches WHERE program_id = ?1 AND address = ?2",
@@ -2358,7 +2654,10 @@ impl ProjectDb {
     /// Replaces the comment set of a program inside one transaction.
     pub fn replace_comments(&self, program: ProgramId, rows: &[CommentRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM comments WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM comments WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT INTO comments(program_id, address, function, type, text)
              VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -2373,7 +2672,7 @@ impl ProjectDb {
             ])?;
         }
         drop(stmt);
-                self.bump_and_record(&tx, program, "replace-comments", &format!("{}", rows.len()))?;
+        self.bump_and_record(&tx, program, "replace-comments", &format!("{}", rows.len()))?;
         tx.commit()?;
         Ok(())
     }
@@ -2381,7 +2680,10 @@ impl ProjectDb {
     /// Replaces the datatype set of a program inside one transaction.
     pub fn replace_datatypes(&self, program: ProgramId, rows: &[DataTypeRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM datatypes WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM datatypes WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT OR IGNORE INTO datatypes(program_id, name, definition)
              VALUES (?1, ?2, ?3)",
@@ -2390,7 +2692,12 @@ impl ProjectDb {
             stmt.execute(params![program.0, r.name, r.definition])?;
         }
         drop(stmt);
-                self.bump_and_record(&tx, program, "replace-datatypes", &format!("{}", rows.len()))?;
+        self.bump_and_record(
+            &tx,
+            program,
+            "replace-datatypes",
+            &format!("{}", rows.len()),
+        )?;
         tx.commit()?;
         Ok(())
     }
@@ -2489,7 +2796,10 @@ impl ProjectDb {
     /// Replaces the rich type definitions exported by a provider.
     pub fn replace_type_defs(&self, program: ProgramId, rows: &[TypeDefRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM type_defs WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM type_defs WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT INTO type_defs(
                  program_id, name, kind, definition, size, alignment, base_type, provenance,
@@ -2533,13 +2843,20 @@ impl ProjectDb {
                     alignment: row.get::<_, Option<i64>>(4)?.map(|value| value as u64),
                     base_type: row.get(5)?,
                     provenance: row.get(6)?,
-                    primitive: row.get::<_, Option<String>>(7)?.map(|value| {
-                        serde_json::from_value(serde_json::Value::String(value)).map_err(|error| {
-                            rusqlite::Error::FromSqlConversionFailure(
-                                7, rusqlite::types::Type::Text, Box::new(error),
+                    primitive: row
+                        .get::<_, Option<String>>(7)?
+                        .map(|value| {
+                            serde_json::from_value(serde_json::Value::String(value)).map_err(
+                                |error| {
+                                    rusqlite::Error::FromSqlConversionFailure(
+                                        7,
+                                        rusqlite::types::Type::Text,
+                                        Box::new(error),
+                                    )
+                                },
                             )
                         })
-                    }).transpose()?,
+                        .transpose()?,
                     element_count: row.get(8)?,
                 })
             })?
@@ -2549,7 +2866,10 @@ impl ProjectDb {
     /// Replaces all composite fields for a program.
     pub fn replace_type_fields(&self, program: ProgramId, rows: &[TypeFieldRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM type_fields WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM type_fields WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT INTO type_fields(
                  program_id, type_name, ordinal, field_name, offset, size, type_ref
@@ -2601,10 +2921,7 @@ impl ProjectDb {
     }
 
     /// Lists the type graph and its provenance-bearing edges.
-    pub fn type_graph(
-        &self,
-        program: ProgramId,
-    ) -> Result<(Vec<TypeGraphNode>, Vec<TypeLinkRow>)> {
+    pub fn type_graph(&self, program: ProgramId) -> Result<(Vec<TypeGraphNode>, Vec<TypeLinkRow>)> {
         let nodes = self
             .type_defs(program)?
             .into_iter()
@@ -2642,9 +2959,15 @@ impl ProjectDb {
     /// Merges one inference round against its input snapshot. Unchanged facts
     /// and assertion conflicts neither advance the revision nor notify callers.
     pub fn merge_inferred_prototypes(
-        &self, program: ProgramId, expected: u64, rows: &[PrototypeRow],
+        &self,
+        program: ProgramId,
+        expected: u64,
+        rows: &[PrototypeRow],
     ) -> Result<Vec<romwright_model::Address>> {
-        if rows.iter().any(|row| row.provenance.kind != FactKind::Inferred) {
+        if rows
+            .iter()
+            .any(|row| row.provenance.kind != FactKind::Inferred)
+        {
             return Err(DbError::InvalidFactProvenance(
                 "inference batches must contain only inferred facts".into(),
             ));
@@ -2664,7 +2987,9 @@ impl ProjectDb {
     }
 
     fn insert_prototypes(
-        tx: &rusqlite::Transaction<'_>, program: ProgramId, rows: &[PrototypeRow],
+        tx: &rusqlite::Transaction<'_>,
+        program: ProgramId,
+        rows: &[PrototypeRow],
         mut changed: Option<&mut Vec<romwright_model::Address>>,
     ) -> Result<()> {
         let mut stmt = tx.prepare(
@@ -2691,9 +3016,14 @@ impl ProjectDb {
         for row in rows {
             let ownership = validate_fact_provenance(&row.provenance)?;
             let count = stmt.execute(params![
-                program.0, addr_cell(&row.function), row.signature,
-                row.calling_convention, row.return_type, row.provenance.source,
-                ownership, row.provenance.confidence,
+                program.0,
+                addr_cell(&row.function),
+                row.signature,
+                row.calling_convention,
+                row.return_type,
+                row.provenance.source,
+                ownership,
+                row.provenance.confidence,
             ])?;
             if count != 0 {
                 if let Some(changed) = changed.as_mut() {
@@ -2736,7 +3066,10 @@ impl ProjectDb {
         rows: &[(romwright_model::Address, String, u64)],
     ) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM decode_contexts WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM decode_contexts WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT OR REPLACE INTO decode_contexts(program_id, address, name, value)
              VALUES (?1, ?2, ?3, ?4)",
@@ -2750,24 +3083,26 @@ impl ProjectDb {
     }
 
     /// The decode contexts recorded for a program, ascending by address.
-    pub fn decode_contexts(&self, program: ProgramId) -> Result<Vec<(romwright_model::Address, String, u64)>> {
+    pub fn decode_contexts(
+        &self,
+        program: ProgramId,
+    ) -> Result<Vec<(romwright_model::Address, String, u64)>> {
         let mut stmt = self.conn.prepare(
             "SELECT address, name, value FROM decode_contexts WHERE program_id = ?1 ORDER BY address",
         )?;
         let rows = stmt
             .query_map(params![program.0], |row| {
-                Ok((addr_from_cell(row.get(0)?, 0)?, row.get::<_, String>(1)?, row.get::<_, i64>(2)? as u64))
+                Ok((
+                    addr_from_cell(row.get(0)?, 0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, i64>(2)? as u64,
+                ))
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(rows)
     }
 
-
-    pub fn set_stack_variable(
-        &self,
-        program: ProgramId,
-        row: &StackVariableRow,
-    ) -> Result<()> {
+    pub fn set_stack_variable(&self, program: ProgramId, row: &StackVariableRow) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
         tx.execute(
             "INSERT INTO stack_variables(
@@ -2830,7 +3165,6 @@ impl ProjectDb {
         Ok(())
     }
 
-
     /// Lists stack variables, optionally restricted to a function.
     pub fn stack_variables(
         &self,
@@ -2844,7 +3178,9 @@ impl ProjectDb {
                  FROM stack_variables WHERE program_id = ?1 AND function = ?2
                  ORDER BY ordinal",
             )?;
-            for row in stmt.query_map(params![program.0, addr_cell(function)], map_stack_variable)? {
+            for row in
+                stmt.query_map(params![program.0, addr_cell(function)], map_stack_variable)?
+            {
                 rows.push(row?);
             }
         } else {
@@ -2862,7 +3198,10 @@ impl ProjectDb {
     /// Replaces type dependency edges and their provenance.
     pub fn replace_type_links(&self, program: ProgramId, rows: &[TypeLinkRow]) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
-        tx.execute("DELETE FROM type_links WHERE program_id = ?1", params![program.0])?;
+        tx.execute(
+            "DELETE FROM type_links WHERE program_id = ?1",
+            params![program.0],
+        )?;
         let mut stmt = tx.prepare(
             "INSERT OR IGNORE INTO type_links(program_id, source, target, kind, provenance)
              VALUES (?1, ?2, ?3, ?4, ?5)",
@@ -2913,13 +3252,7 @@ impl ProjectDb {
              VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(program_id, source, target, kind) DO UPDATE SET
                  provenance = excluded.provenance",
-            params![
-                program.0,
-                row.source,
-                row.target,
-                row.kind,
-                row.provenance
-            ],
+            params![program.0, row.source, row.target, row.kind, row.provenance],
         )?;
         self.bump_and_record(
             &tx,
@@ -2949,12 +3282,14 @@ impl ProjectDb {
             .collect::<std::result::Result<Vec<_>, _>>()?)
     }
 
-
     /// Every program mapping `address`, with the region that maps it and the
     /// function containing it. A project holds more than one image -- a DS
     /// pair, an executable and its overlays -- and those images overlap, so
     /// the answer is a list rather than one program.
-    pub fn locate(&self, address: &romwright_model::Address) -> Result<Vec<romwright_model::LocationRow>> {
+    pub fn locate(
+        &self,
+        address: &romwright_model::Address,
+    ) -> Result<Vec<romwright_model::LocationRow>> {
         let mut found = Vec::new();
         for program in self.programs()? {
             let id = self.program_id(&program.program)?;
@@ -3062,7 +3397,8 @@ impl ProjectDb {
                     sequence: row.get::<_, i64>(0)? as u64,
                     at: row.get(1)?,
                     thread: row.get(2)?,
-                    address: address.and_then(|value| romwright_model::Address::parse_ram_hex(&value)),
+                    address: address
+                        .and_then(|value| romwright_model::Address::parse_ram_hex(&value)),
                     kind: row.get(4)?,
                     payload: row.get(5)?,
                     provenance: row.get(6)?,
@@ -3221,12 +3557,10 @@ impl ProjectDb {
         let tx = self.conn.unchecked_transaction()?;
         let mut applied: Vec<(String, String, String)> = Vec::with_capacity(renames.len());
         {
-            let mut read = tx.prepare(
-                "SELECT name FROM functions WHERE program_id = ?1 AND entry = ?2",
-            )?;
-            let mut write = tx.prepare(
-                "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
-            )?;
+            let mut read =
+                tx.prepare("SELECT name FROM functions WHERE program_id = ?1 AND entry = ?2")?;
+            let mut write =
+                tx.prepare("UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2")?;
             for (entry, name) in renames {
                 let cell = addr_cell(entry);
                 let old: String = match read.query_row(params![program.0, &cell], |row| row.get(0))
@@ -3276,9 +3610,8 @@ impl ProjectDb {
         let tx = self.conn.unchecked_transaction()?;
         let mut restored = 0u64;
         {
-            let mut write = tx.prepare(
-                "UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2",
-            )?;
+            let mut write =
+                tx.prepare("UPDATE functions SET name = ?3 WHERE program_id = ?1 AND entry = ?2")?;
             for (entry, name) in renames {
                 restored += write.execute(params![program.0, addr_cell(entry), name])? as u64;
             }
@@ -3409,7 +3742,6 @@ impl ProjectDb {
         Ok(rev as u64)
     }
 
-
     /// Language ID recorded for a program.
     pub fn program_language(&self, program: ProgramId) -> Result<String> {
         let lang = self.conn.query_row(
@@ -3437,8 +3769,7 @@ fn hex_decode(value: &str) -> Result<Vec<u8>> {
     let mut out = Vec::with_capacity(value.len() / 2);
     for pair in value.as_bytes().chunks_exact(2) {
         let text = std::str::from_utf8(pair).map_err(|_| DbError::InvalidHex(value.into()))?;
-        let byte = u8::from_str_radix(text, 16)
-            .map_err(|_| DbError::InvalidHex(value.into()))?;
+        let byte = u8::from_str_radix(text, 16).map_err(|_| DbError::InvalidHex(value.into()))?;
         out.push(byte);
     }
     Ok(out)
@@ -3464,14 +3795,24 @@ fn addr_cell(a: &romwright_model::Address) -> String {
 }
 fn addr_from_cell(s: String, column: usize) -> rusqlite::Result<romwright_model::Address> {
     if s.starts_with('{') {
-        return serde_json::from_str(&s).map_err(|error| rusqlite::Error::FromSqlConversionFailure(
-            column, rusqlite::types::Type::Text, Box::new(error),
-        ));
+        return serde_json::from_str(&s).map_err(|error| {
+            rusqlite::Error::FromSqlConversionFailure(
+                column,
+                rusqlite::types::Type::Text,
+                Box::new(error),
+            )
+        });
     }
-    romwright_model::Address::parse_ram_hex(&s).ok_or_else(|| rusqlite::Error::FromSqlConversionFailure(
-        column, rusqlite::types::Type::Text,
-        Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid hexadecimal address")),
-    ))
+    romwright_model::Address::parse_ram_hex(&s).ok_or_else(|| {
+        rusqlite::Error::FromSqlConversionFailure(
+            column,
+            rusqlite::types::Type::Text,
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "invalid hexadecimal address",
+            )),
+        )
+    })
 }
 
 /// A function row with its convention fact joined in: `calling_conventions`
@@ -3495,10 +3836,17 @@ fn map_function(r: &Row<'_>) -> rusqlite::Result<FunctionRow> {
 
 fn validate_fact_provenance(provenance: &FactProvenance) -> Result<&'static str> {
     if provenance.kind == FactKind::Inferred && provenance.source.trim().is_empty() {
-        return Err(DbError::InvalidFactProvenance("inference source is empty".into()));
+        return Err(DbError::InvalidFactProvenance(
+            "inference source is empty".into(),
+        ));
     }
-    if provenance.confidence.is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value)) {
-        return Err(DbError::InvalidFactProvenance("confidence must be finite and within [0, 1]".into()));
+    if provenance
+        .confidence
+        .is_some_and(|value| !value.is_finite() || !(0.0..=1.0).contains(&value))
+    {
+        return Err(DbError::InvalidFactProvenance(
+            "confidence must be finite and within [0, 1]".into(),
+        ));
     }
     Ok(match provenance.kind {
         FactKind::Inferred => "inferred",
@@ -3526,7 +3874,10 @@ fn evidence_clause(
         .collect();
     (
         format!(" AND {column} IN ({})", placeholders.join(", ")),
-        sources.into_iter().map(|source| Value::Text(source.to_owned())).collect(),
+        sources
+            .into_iter()
+            .map(|source| Value::Text(source.to_owned()))
+            .collect(),
     )
 }
 
@@ -3535,10 +3886,16 @@ fn map_fact_provenance(r: &Row<'_>, source_index: usize) -> rusqlite::Result<Fac
     let kind = match ownership.as_str() {
         "inferred" => FactKind::Inferred,
         "asserted" => FactKind::Asserted,
-        _ => return Err(rusqlite::Error::FromSqlConversionFailure(
-            source_index + 1, rusqlite::types::Type::Text,
-            Box::new(std::io::Error::new(std::io::ErrorKind::InvalidData, "unknown fact ownership")),
-        )),
+        _ => {
+            return Err(rusqlite::Error::FromSqlConversionFailure(
+                source_index + 1,
+                rusqlite::types::Type::Text,
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "unknown fact ownership",
+                )),
+            ));
+        }
     };
     Ok(FactProvenance {
         source: r.get(source_index)?,
@@ -3592,18 +3949,89 @@ mod tests {
     }
 
     #[test]
+    fn opening_current_schema_does_not_wait_for_a_writer() {
+        let stamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let directory =
+            std::env::temp_dir().join(format!("romwright-open-{}-{stamp}", std::process::id()));
+        std::fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("project.sqlite");
+        let db = ProjectDb::open(&path).unwrap();
+        let writer = rusqlite::Transaction::new_unchecked(
+            &db.conn,
+            rusqlite::TransactionBehavior::Immediate,
+        )
+        .unwrap();
+        let (send, receive) = std::sync::mpsc::channel();
+        let opener = std::thread::spawn(move || {
+            send.send(
+                ProjectDb::open(&path)
+                    .map(|_| ())
+                    .map_err(|error| error.to_string()),
+            )
+            .unwrap();
+        });
+        let opened = receive.recv_timeout(std::time::Duration::from_secs(2));
+        writer.rollback().unwrap();
+        opener.join().unwrap();
+        drop(db);
+        std::fs::remove_dir_all(directory).unwrap();
+        assert!(
+            matches!(opened, Ok(Ok(()))),
+            "reader blocked on an unrelated writer: {opened:?}"
+        );
+    }
+
+    #[test]
+    fn reimport_invalidates_reader_identity_before_fact_changes() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let program = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
+        let input = romwright_model::ProgramInput {
+            source_path: "/source".into(),
+            binary_digest: "a".repeat(64),
+            image_selector: String::new(),
+            map_digest: None,
+            raw: None,
+            keys_digest: None,
+        };
+        db.set_program_input(program, &input).unwrap();
+        let submitted_revision = db.revision(program).unwrap();
+        db.invalidate_program_input("p").unwrap();
+        assert!(
+            db.program_input(program).is_err(),
+            "readers must not pair old bytes with partially imported facts"
+        );
+        assert_ne!(
+            db.revision(program).unwrap(),
+            submitted_revision,
+            "submitted work must become stale"
+        );
+        db.set_program_input(program, &input).unwrap();
+        assert_eq!(db.program_input(program).unwrap(), input);
+    }
+
+    #[test]
     fn program_roundtrip_and_revision_bump() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("smoke_bin", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("smoke_bin", "x86:LE:64:default", &prov())
+            .unwrap();
         assert_eq!(db.revision(id).unwrap(), 1);
-        db.upsert_program("smoke_bin", "x86:LE:64:default", &prov()).unwrap();
+        db.upsert_program("smoke_bin", "x86:LE:64:default", &prov())
+            .unwrap();
         assert_eq!(db.revision(id).unwrap(), 2, "upsert bumps revision");
     }
 
     #[test]
     fn functions_replaced_atomically() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let rows = vec![FunctionRow {
             entry: romwright_model::Address::ram(0x400466),
             name: "add".into(),
@@ -3625,7 +4053,7 @@ mod tests {
                 size: 300,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             },
             FunctionRow {
                 entry: romwright_model::Address::ram(0x400000),
@@ -3633,7 +4061,7 @@ mod tests {
                 size: 20,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             },
             FunctionRow {
                 entry: romwright_model::Address::ram(0x400100),
@@ -3641,7 +4069,7 @@ mod tests {
                 size: 80,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             },
             FunctionRow {
                 entry: romwright_model::Address::ram(0x400200),
@@ -3649,7 +4077,7 @@ mod tests {
                 size: 120,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             },
         ];
         db.replace_functions(id, &rows).unwrap();
@@ -3658,11 +4086,13 @@ mod tests {
     #[test]
     fn functions_page_filter_substring_is_case_insensitive() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         seed_functions(&db, id);
         let filter = FunctionsFilter::parse("ADD").unwrap();
-        let (rows, total, _) = db
-            .functions_page(id, 0, 256, filter.as_ref(), None)
+        let (rows, total, _, _) = db
+            .functions_page(id, 0, 256, filter.as_ref(), None, None)
             .unwrap();
         assert_eq!(total, Some(2));
         assert_eq!(rows.len(), 2);
@@ -3672,11 +4102,13 @@ mod tests {
     #[test]
     fn functions_page_filter_regex_with_prefix() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         seed_functions(&db, id);
         let filter = FunctionsFilter::parse("re:^(add|malloc)$").unwrap();
-        let (rows, total, _) = db
-            .functions_page(id, 0, 256, filter.as_ref(), None)
+        let (rows, total, _, _) = db
+            .functions_page(id, 0, 256, filter.as_ref(), None, None)
             .unwrap();
         assert_eq!(total, Some(2));
         let mut names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
@@ -3693,10 +4125,12 @@ mod tests {
     #[test]
     fn functions_page_sort_by_size_desc_paginates() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         seed_functions(&db, id);
-        let (rows, total, _) = db
-            .functions_page(id, 1, 2, None, Some((FunctionSort::Size, false)))
+        let (rows, total, _, _) = db
+            .functions_page(id, 1, 2, None, Some((FunctionSort::Size, false)), None)
             .unwrap();
         assert_eq!(total, Some(4));
         let sizes: Vec<u64> = rows.iter().map(|r| r.size).collect();
@@ -3706,10 +4140,12 @@ mod tests {
     #[test]
     fn functions_page_sort_by_name_case_insensitive() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         seed_functions(&db, id);
-        let (rows, _, _) = db
-            .functions_page(id, 0, 256, None, Some((FunctionSort::Name, true)))
+        let (rows, _, _, _) = db
+            .functions_page(id, 0, 256, None, Some((FunctionSort::Name, true)), None)
             .unwrap();
         let names: Vec<&str> = rows.iter().map(|r| r.name.as_str()).collect();
         assert_eq!(names, vec!["add", "AddEntry", "handle_request", "malloc"]);
@@ -3718,9 +4154,11 @@ mod tests {
     #[test]
     fn functions_page_unfiltered_default_sort_is_entry_asc() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         seed_functions(&db, id);
-        let (rows, total, _) = db.functions_page(id, 0, 256, None, None).unwrap();
+        let (rows, total, _, _) = db.functions_page(id, 0, 256, None, None, None).unwrap();
         assert_eq!(total, Some(4));
         let entries: Vec<u64> = rows.iter().map(|r| r.entry.offset).collect();
         let mut sorted = entries.clone();
@@ -3729,9 +4167,76 @@ mod tests {
     }
 
     #[test]
-    fn rename_updates_name_and_revision() {
+    fn function_at_respects_extents_and_wide_address_order() {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let rows: Vec<_> = [(0xffff_fff0, 8), (0x1_0000_0000, 16), (0x1_0000_0100, 0)]
+            .into_iter()
+            .map(|(offset, size)| FunctionRow {
+                entry: romwright_model::Address::ram(offset),
+                name: format!("function_{offset:x}"),
+                size,
+                signature: None,
+                traced: false,
+                calling_convention: None,
+            })
+            .collect();
+        db.replace_functions(id, &rows).unwrap();
+        let owner = |address| db.function_at(id, address).unwrap().map(|row| row.entry.offset);
+        assert_eq!(owner(0xffff_fff4), Some(0xffff_fff0));
+        assert_eq!(owner(0xffff_fff8), None, "the function end is exclusive");
+        assert_eq!(owner(0x1_0000_0008), Some(0x1_0000_0000));
+        assert_eq!(owner(0x1_0000_0100), Some(0x1_0000_0100));
+        assert_eq!(owner(0x1_0000_0101), None, "unknown size must not absorb following data");
+        let (page, _, _, offset) = db
+            .functions_page(id, 0, 1, None, None, Some(0x1_0000_0008))
+            .unwrap();
+        assert_eq!(offset, 1, "numeric ordering crosses hexadecimal widths");
+        assert_eq!(page[0].entry.offset, 0x1_0000_0000);
+    }
+
+    #[test]
+    fn functions_page_anchor_tracks_filter_sort_and_ties() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let rows: Vec<_> = (0..600u64).map(|i| FunctionRow {
+            entry: romwright_model::Address::ram(0x400000 + i * 16),
+            name: format!("group{}", i % 3),
+            size: 16,
+            signature: None,
+            traced: false,
+            calling_convention: None,
+        }).collect();
+        db.replace_functions(id, &rows).unwrap();
+        let entry = 0x400000 + 513 * 16;
+        let (page, _, _, offset) = db
+            .functions_page(id, 0, 128, None, None, Some(entry + 3)).unwrap();
+        assert_eq!(offset, 512);
+        assert_eq!(page[1].entry.offset, entry);
+        let descending = Some((FunctionSort::Name, false));
+        let (page, _, _, offset) = db
+            .functions_page(id, 0, 128, None, descending, Some(entry)).unwrap();
+        assert_eq!(offset, 384);
+        assert_eq!(page[44].entry.offset, entry, "equal names use descending entry order");
+        let filter = FunctionsFilter::parse("re:^group0$").unwrap();
+        let (page, total, _, offset) = db
+            .functions_page(id, 0, 128, filter.as_ref(), descending, Some(entry)).unwrap();
+        assert_eq!(total, Some(200));
+        assert_eq!(offset, 0);
+        assert_eq!(page[28].entry.offset, entry, "the anchor rank is relative to filtered rows");
+        let filter = FunctionsFilter::parse("group1").unwrap();
+        let (page, _, _, offset) = db
+            .functions_page(id, 512, 128, filter.as_ref(), None, Some(entry)).unwrap();
+        assert_eq!(offset, 0);
+        assert!(page.iter().all(|row| row.name == "group1"), "anchoring must not bypass the filter");
+    }
+
+    #[test]
+    fn rename_updates_name_and_revision() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let rows = vec![FunctionRow {
             entry: romwright_model::Address::ram(0x400000),
             name: "FUN_00400000".into(),
@@ -3742,7 +4247,8 @@ mod tests {
         }];
         db.replace_functions(id, &rows).unwrap();
         let before = db.revision(id).unwrap();
-        db.rename_function(id, &romwright_model::Address::ram(0x400000), "main").unwrap();
+        db.rename_function(id, &romwright_model::Address::ram(0x400000), "main")
+            .unwrap();
         assert_eq!(db.revision(id).unwrap(), before + 1);
         assert_eq!(db.functions(id).unwrap()[0].name, "main");
     }
@@ -3753,7 +4259,9 @@ mod tests {
     #[test]
     fn xref_names_the_function_that_contains_its_source() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         db.replace_functions(
             id,
             &[
@@ -3763,7 +4271,7 @@ mod tests {
                     size: 27,
                     signature: None,
                     traced: false,
-            calling_convention: None,
+                    calling_convention: None,
                 },
                 FunctionRow {
                     entry: romwright_model::Address::ram(0x0040_047a),
@@ -3771,7 +4279,7 @@ mod tests {
                     size: 43,
                     signature: None,
                     traced: false,
-            calling_convention: None,
+                    calling_convention: None,
                 },
             ],
         )
@@ -3814,7 +4322,9 @@ mod tests {
     #[test]
     fn comments_and_types_replace_atomically() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let cmts = vec![CommentRow {
             address: romwright_model::Address::ram(0x400488),
             function: romwright_model::Address::ram(0x400466),
@@ -3836,7 +4346,9 @@ mod tests {
     #[test]
     fn an_analyst_rename_survives_the_next_import() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let entry = romwright_model::Address::ram(0x401000);
         let discovered = |name: &str| {
             vec![FunctionRow {
@@ -3845,22 +4357,26 @@ mod tests {
                 size: 32,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             }]
         };
-        db.replace_functions(id, &discovered("FUN_00401000")).unwrap();
+        db.replace_functions(id, &discovered("FUN_00401000"))
+            .unwrap();
         db.rename_command(id, &entry, "parse_header", "FUN_00401000")
             .unwrap();
         // The same image imported again: discovery names it by default once
         // more, and the analyst's name still wins.
-        db.replace_functions(id, &discovered("FUN_00401000")).unwrap();
+        db.replace_functions(id, &discovered("FUN_00401000"))
+            .unwrap();
         assert_eq!(db.functions(id).unwrap()[0].name, "parse_header");
     }
 
     #[test]
     fn an_undone_rename_is_not_reapplied_by_an_import() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let entry = romwright_model::Address::ram(0x401000);
         let rows = vec![FunctionRow {
             entry: entry.clone(),
@@ -3874,7 +4390,8 @@ mod tests {
         db.rename_command(id, &entry, "parse_header", "FUN_00401000")
             .unwrap();
         let journal = db.journal_latest(id).unwrap().unwrap();
-        db.undo_rename(id, &entry, "FUN_00401000", journal.seq).unwrap();
+        db.undo_rename(id, &entry, "FUN_00401000", journal.seq)
+            .unwrap();
         db.replace_functions(id, &rows).unwrap();
         assert_eq!(db.functions(id).unwrap()[0].name, "FUN_00401000");
     }
@@ -3882,16 +4399,20 @@ mod tests {
     #[test]
     fn comment_command_undo_roundtrip() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let address = romwright_model::Address::ram(0x400466);
-        db.comment_command(id, &address, &address, "eol", "first").unwrap();
+        db.comment_command(id, &address, &address, "eol", "first")
+            .unwrap();
         let after_add = db.revision(id).unwrap();
         assert_eq!(db.comments(id).unwrap()[0].text, "first");
         let journal = db.journal_latest(id).unwrap().unwrap();
         assert_eq!(journal.kind, "comment");
         let undo = serde_json::from_str::<serde_json::Value>(&journal.undo_payload).unwrap();
         assert_eq!(undo["exists"], false);
-        db.undo_comment(id, &address, "eol", None, journal.seq).unwrap();
+        db.undo_comment(id, &address, "eol", None, journal.seq)
+            .unwrap();
         assert!(db.comments(id).unwrap().is_empty());
         assert!(db.revision(id).unwrap() > after_add);
         assert!(db.journal_latest(id).unwrap().is_none());
@@ -3900,7 +4421,9 @@ mod tests {
     #[test]
     fn paged_functions_window() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let rows: Vec<FunctionRow> = (0..100u64)
             .map(|i| FunctionRow {
                 entry: romwright_model::Address::ram(0x400000 + i * 0x10),
@@ -3908,27 +4431,27 @@ mod tests {
                 size: 16,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             })
             .collect();
         db.replace_functions(id, &rows).unwrap();
-        let (p1, total, rev) = db.functions_page(id, 0, 10, None, None).unwrap();
+        let (p1, total, _, _) = db.functions_page(id, 0, 10, None, None, None).unwrap();
         assert_eq!(p1.len(), 10);
         assert_eq!(total, Some(100));
         assert_eq!(p1[0].entry.offset, 0x400000);
-        let (p2, _, _) = db.functions_page(id, 90, 10, None, None).unwrap();
+        let (p2, _, _, _) = db.functions_page(id, 90, 10, None, None, None).unwrap();
         assert_eq!(p2.len(), 10);
         assert_eq!(p2[0].entry.offset, 0x400000 + 90 * 0x10);
-        let (p3, _, _) = db.functions_page(id, 999, 10, None, None).unwrap();
+        let (p3, _, _, _) = db.functions_page(id, 999, 10, None, None, None).unwrap();
         assert!(p3.is_empty());
-        // replace bumps the revision (mutation event model: CORE-005)
-        assert!(rev >= 2);
     }
 
     #[test]
     fn rename_command_undo_roundtrip() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let rows = vec![FunctionRow {
             entry: romwright_model::Address::ram(0x400000),
             name: "FUN_00400000".into(),
@@ -3938,22 +4461,38 @@ mod tests {
             calling_convention: None,
         }];
         db.replace_functions(id, &rows).unwrap();
-        db.rename_command(id, &romwright_model::Address::ram(0x400000), "main", "FUN_00400000").unwrap();
+        db.rename_command(
+            id,
+            &romwright_model::Address::ram(0x400000),
+            "main",
+            "FUN_00400000",
+        )
+        .unwrap();
         assert_eq!(db.functions(id).unwrap()[0].name, "main");
         let latest = db.journal_latest(id).unwrap().unwrap();
         assert_eq!(latest.kind, "rename");
         assert!(!latest.done);
         assert!(latest.undo_payload.contains("FUN_00400000"));
-        db.undo_rename(id, &romwright_model::Address::ram(0x400000), "FUN_00400000", latest.seq)
-            .unwrap();
+        db.undo_rename(
+            id,
+            &romwright_model::Address::ram(0x400000),
+            "FUN_00400000",
+            latest.seq,
+        )
+        .unwrap();
         assert_eq!(db.functions(id).unwrap()[0].name, "FUN_00400000");
-        assert!(db.journal_latest(id).unwrap().is_none(), "entry marked done");
+        assert!(
+            db.journal_latest(id).unwrap().is_none(),
+            "entry marked done"
+        );
     }
 
     #[test]
     fn revision_events_recorded() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         assert!(db.events_since(id, 0).unwrap().is_empty());
         let rows = vec![FunctionRow {
             entry: romwright_model::Address::ram(0x400000),
@@ -3968,7 +4507,8 @@ mod tests {
         assert_eq!(evs.len(), 1);
         assert_eq!(evs[0].kind, "replace-functions");
         assert_eq!(evs[0].revision, 2, "upsert=1, replace bumps to 2");
-        db.rename_function(id, &romwright_model::Address::ram(0x400000), "main").unwrap();
+        db.rename_function(id, &romwright_model::Address::ram(0x400000), "main")
+            .unwrap();
         // after the replace (rev 2); the rename is rev 3
         let evs = db.events_since(id, 2).unwrap();
         assert_eq!(evs.len(), 1);
@@ -3982,7 +4522,9 @@ mod tests {
     #[test]
     fn xref_directional_queries() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let rows = vec![XrefRow {
             function: None,
             from: romwright_model::Address::ram(0x400488),
@@ -3991,9 +4533,23 @@ mod tests {
             provenance: FactProvenance::default(),
         }];
         db.replace_xrefs(id, &rows).unwrap();
-        assert_eq!(db.xrefs_to(id, &romwright_model::Address::ram(0x400466)).unwrap().len(), 1);
-        assert_eq!(db.xrefs_from(id, &romwright_model::Address::ram(0x400488)).unwrap().len(), 1);
-        assert!(db.xrefs_to(id, &romwright_model::Address::ram(0x400488)).unwrap().is_empty());
+        assert_eq!(
+            db.xrefs_to(id, &romwright_model::Address::ram(0x400466))
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            db.xrefs_from(id, &romwright_model::Address::ram(0x400488))
+                .unwrap()
+                .len(),
+            1
+        );
+        assert!(
+            db.xrefs_to(id, &romwright_model::Address::ram(0x400488))
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -4018,14 +4574,17 @@ mod tests {
         let foreign = db.replace_inferred_flow_overrides(id, "other-pass", &[row.clone()]);
         assert!(matches!(foreign, Err(DbError::InvalidFactProvenance(_))));
         // ...and replacing its own leaves the other producer's rows alone.
-        db.replace_inferred_flow_overrides(id, "other-pass", &[]).unwrap();
+        db.replace_inferred_flow_overrides(id, "other-pass", &[])
+            .unwrap();
         assert_eq!(db.flow_overrides(id).unwrap(), vec![row]);
     }
 
     #[test]
     fn call_edges_exclude_branches_and_data_and_deduplicate_kinds() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("calls", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("calls", "x86:LE:64:default", &prov())
+            .unwrap();
         let row = |from, to, kind: &str| XrefRow {
             from: romwright_model::Address::ram(from),
             to: romwright_model::Address::ram(to),
@@ -4033,29 +4592,50 @@ mod tests {
             function: None,
             provenance: FactProvenance::default(),
         };
-        db.replace_xrefs(id, &[
-            row(0x1000, 0x2000, "UNCONDITIONAL_CALL"),
-            row(0x1000, 0x2000, "CONDITIONAL_CALL"),
-            row(0x1010, 0x2000, "CONDITIONAL_JUMP"),
-            row(0x1020, 0x2000, "READ"),
-            row(0x1030, 0x2100, "COMPUTED_CALL"),
-            // Hex text order puts the wider address before 0x20000000.
-            row(0x1_0000_0000, 0x2200, "UNCONDITIONAL_CALL"),
-            row(0x2000_0000, 0x2200, "UNCONDITIONAL_CALL"),
-        ]).unwrap();
-        assert_eq!(db.call_edges(id).unwrap(), vec![
-            (romwright_model::Address::ram(0x1000), romwright_model::Address::ram(0x2000)),
-            (romwright_model::Address::ram(0x1030), romwright_model::Address::ram(0x2100)),
-            (romwright_model::Address::ram(0x2000_0000), romwright_model::Address::ram(0x2200)),
-            (romwright_model::Address::ram(0x1_0000_0000), romwright_model::Address::ram(0x2200)),
-        ]);
+        db.replace_xrefs(
+            id,
+            &[
+                row(0x1000, 0x2000, "UNCONDITIONAL_CALL"),
+                row(0x1000, 0x2000, "CONDITIONAL_CALL"),
+                row(0x1010, 0x2000, "CONDITIONAL_JUMP"),
+                row(0x1020, 0x2000, "READ"),
+                row(0x1030, 0x2100, "COMPUTED_CALL"),
+                // Hex text order puts the wider address before 0x20000000.
+                row(0x1_0000_0000, 0x2200, "UNCONDITIONAL_CALL"),
+                row(0x2000_0000, 0x2200, "UNCONDITIONAL_CALL"),
+            ],
+        )
+        .unwrap();
+        assert_eq!(
+            db.call_edges(id).unwrap(),
+            vec![
+                (
+                    romwright_model::Address::ram(0x1000),
+                    romwright_model::Address::ram(0x2000)
+                ),
+                (
+                    romwright_model::Address::ram(0x1030),
+                    romwright_model::Address::ram(0x2100)
+                ),
+                (
+                    romwright_model::Address::ram(0x2000_0000),
+                    romwright_model::Address::ram(0x2200)
+                ),
+                (
+                    romwright_model::Address::ram(0x1_0000_0000),
+                    romwright_model::Address::ram(0x2200)
+                ),
+            ]
+        );
     }
 
     #[test]
     fn inferred_xrefs_replace_only_their_pass_and_preserve_assertions() {
         use romwright_model::{FactKind, FactProvenance};
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("refs", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("refs", "x86:LE:64:default", &prov())
+            .unwrap();
         let source = "native-analysis:constant-propagation";
         let row = |from, kind, producer: &str| XrefRow {
             from: romwright_model::Address::ram(from),
@@ -4071,15 +4651,23 @@ mod tests {
         let asserted = row(0x1000, FactKind::Asserted, "analyst");
         let old = row(0x1010, FactKind::Inferred, source);
         let other = row(0x1020, FactKind::Inferred, "another-pass");
-        db.replace_xrefs(id, &[asserted.clone(), old, other.clone()]).unwrap();
+        db.replace_xrefs(id, &[asserted.clone(), old, other.clone()])
+            .unwrap();
         let conflict = row(0x1000, FactKind::Inferred, source);
         let mut fresh = row(0x1030, FactKind::Inferred, source);
         fresh.provenance.confidence = Some(0.9);
-        db.replace_inferred_xrefs(id, source, &[conflict, fresh.clone()]).unwrap();
-        assert_eq!(db.xrefs(id).unwrap(), vec![asserted.clone(), other.clone(), fresh]);
+        db.replace_inferred_xrefs(id, source, &[conflict, fresh.clone()])
+            .unwrap();
+        assert_eq!(
+            db.xrefs(id).unwrap(),
+            vec![asserted.clone(), other.clone(), fresh]
+        );
         let before = db.xrefs(id).unwrap();
         let revision = db.revision(id).unwrap();
-        assert!(db.replace_inferred_xrefs(id, source, &[other.clone()]).is_err());
+        assert!(
+            db.replace_inferred_xrefs(id, source, &[other.clone()])
+                .is_err()
+        );
         assert_eq!(db.xrefs(id).unwrap(), before);
         assert_eq!(db.revision(id).unwrap(), revision);
         // SQLite converts NaN to NULL; reject it before it can become "unknown".
@@ -4099,9 +4687,12 @@ mod tests {
     fn legacy_xref_migration_preserves_unknown_ownership_and_confidence() {
         use romwright_model::FactKind;
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("legacy", "x86:LE:64:default", &prov()).unwrap();
-        db.conn.execute_batch(
-            "DROP TABLE xrefs;
+        let id = db
+            .upsert_program("legacy", "x86:LE:64:default", &prov())
+            .unwrap();
+        db.conn
+            .execute_batch(
+                "DROP TABLE xrefs;
              CREATE TABLE xrefs (
                 program_id INTEGER NOT NULL REFERENCES programs(id),
                 src TEXT NOT NULL, dst TEXT NOT NULL, kind TEXT NOT NULL,
@@ -4113,13 +4704,22 @@ mod tests {
              ALTER TABLE type_defs DROP COLUMN primitive;
              ALTER TABLE type_defs DROP COLUMN element_count;
              DROP TABLE return_behaviors;
-             UPDATE meta SET value = '4' WHERE key = 'schema_version';"
-        ).unwrap();
+             DROP TABLE class_bases; DROP TABLE classes;
+             DROP TABLE matching_project_checks; DROP TABLE matching_trials;
+             DROP TABLE matching_candidates; DROP TABLE matching_workspaces;
+             DROP TABLE matching_runs;
+             DROP TABLE program_inputs;
+             ALTER TABLE signature_matches DROP COLUMN input_record;
+             UPDATE meta SET value = '4' WHERE key = 'schema_version';",
+            )
+            .unwrap();
         for (from, source) in [("00001000", "legacy-author"), ("00001010", "native-import")] {
-            db.conn.execute(
-                "INSERT INTO xrefs VALUES (?1, ?2, '00003000', 'DATA', ?3)",
-                params![id.0, from, source],
-            ).unwrap();
+            db.conn
+                .execute(
+                    "INSERT INTO xrefs VALUES (?1, ?2, '00003000', 'DATA', ?3)",
+                    params![id.0, from, source],
+                )
+                .unwrap();
         }
         db.migrate().unwrap();
         db.migrate().unwrap();
@@ -4137,28 +4737,38 @@ mod tests {
     #[test]
     fn prototype_inference_preserves_assertions_and_rolls_back_invalid_confidence() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("prototypes", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("prototypes", "x86:LE:64:default", &prov())
+            .unwrap();
         let row = |address, kind, source: &str| PrototypeRow {
             function: romwright_model::Address::ram(address),
             signature: format!("int {source}(void)"),
             return_type: Some("int".into()),
             calling_convention: None,
-            provenance: FactProvenance { kind, source: source.into(), confidence: None },
+            provenance: FactProvenance {
+                kind,
+                source: source.into(),
+                confidence: None,
+            },
         };
         let asserted = row(0x1000, FactKind::Asserted, "analyst");
         let old = row(0x1010, FactKind::Inferred, "analysis");
-        db.replace_prototypes(id, &[asserted.clone(), old.clone()]).unwrap();
+        db.replace_prototypes(id, &[asserted.clone(), old.clone()])
+            .unwrap();
         let mut invalid = row(0x1020, FactKind::Inferred, "analysis");
         invalid.provenance.confidence = Some(f64::NAN);
         let revision = db.revision(id).unwrap();
-        assert!(matches!(db.replace_prototypes(id, &[invalid]),
-            Err(DbError::InvalidFactProvenance(_))));
+        assert!(matches!(
+            db.replace_prototypes(id, &[invalid]),
+            Err(DbError::InvalidFactProvenance(_))
+        ));
         assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), old]);
         assert_eq!(db.revision(id).unwrap(), revision);
         let conflict = row(0x1000, FactKind::Inferred, "analysis");
         let mut fresh = row(0x1020, FactKind::Inferred, "analysis");
         fresh.provenance.confidence = Some(0.9);
-        db.replace_prototypes(id, &[conflict.clone(), fresh.clone()]).unwrap();
+        db.replace_prototypes(id, &[conflict.clone(), fresh.clone()])
+            .unwrap();
         db.set_prototype(id, &conflict).unwrap();
         assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), fresh]);
         db.replace_prototypes(id, &[]).unwrap();
@@ -4168,14 +4778,18 @@ mod tests {
     #[test]
     fn inferred_batches_are_revision_checked_atomic_and_idempotent() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("inference", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("inference", "x86:LE:64:default", &prov())
+            .unwrap();
         let inferred = |address, signature: &str| PrototypeRow {
             function: romwright_model::Address::ram(address),
             signature: signature.into(),
             return_type: Some("int".into()),
             calling_convention: None,
             provenance: FactProvenance {
-                kind: FactKind::Inferred, source: "native recovery".into(), confidence: None,
+                kind: FactKind::Inferred,
+                source: "native recovery".into(),
+                confidence: None,
             },
         };
         let mut asserted = inferred(0x1000, "int analyst(void)");
@@ -4185,41 +4799,132 @@ mod tests {
         let conflict = inferred(0x1000, "int conflict(int x)");
         let fresh = inferred(0x1010, "int recovered(int x)");
         let batch = [conflict, fresh.clone()];
-        assert_eq!(db.merge_inferred_prototypes(id, revision, &batch).unwrap(),
-            vec![fresh.function.clone()]);
+        assert_eq!(
+            db.merge_inferred_prototypes(id, revision, &batch).unwrap(),
+            vec![fresh.function.clone()]
+        );
         let updated = db.revision(id).unwrap();
         assert_eq!(updated, revision + 1);
-        assert_eq!(db.prototypes(id).unwrap(), vec![asserted.clone(), fresh.clone()]);
-        assert!(db.merge_inferred_prototypes(id, updated, &batch).unwrap().is_empty());
+        assert_eq!(
+            db.prototypes(id).unwrap(),
+            vec![asserted.clone(), fresh.clone()]
+        );
+        assert!(
+            db.merge_inferred_prototypes(id, updated, &batch)
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(db.revision(id).unwrap(), updated);
 
         let next = inferred(0x1020, "int next(void)");
-        assert!(matches!(db.merge_inferred_prototypes(id, revision, &[next.clone()]),
-            Err(DbError::StaleRevision { .. })));
+        assert!(matches!(
+            db.merge_inferred_prototypes(id, revision, &[next.clone()]),
+            Err(DbError::StaleRevision { .. })
+        ));
         let mut invalid = inferred(0x1030, "int invalid(void)");
         invalid.provenance.confidence = Some(f64::NAN);
-        assert!(matches!(db.merge_inferred_prototypes(id, updated, &[next, invalid]),
-            Err(DbError::InvalidFactProvenance(_))));
-        assert!(matches!(db.merge_inferred_prototypes(id, updated, &[asserted.clone()]),
-            Err(DbError::InvalidFactProvenance(_))));
+        assert!(matches!(
+            db.merge_inferred_prototypes(id, updated, &[next, invalid]),
+            Err(DbError::InvalidFactProvenance(_))
+        ));
+        assert!(matches!(
+            db.merge_inferred_prototypes(id, updated, &[asserted.clone()]),
+            Err(DbError::InvalidFactProvenance(_))
+        ));
         assert_eq!(db.prototypes(id).unwrap(), vec![asserted, fresh]);
         assert_eq!(db.revision(id).unwrap(), updated);
     }
 
     #[test]
+    fn demand_publication_rejects_stale_walks_and_stamps_the_committed_revision() {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db
+            .upsert_program("demand", "x86:LE:64:default", &prov())
+            .unwrap();
+        let entry = romwright_model::Address::ram(0x1000);
+        let mut function = FunctionRow {
+            entry: entry.clone(),
+            name: "seed".into(),
+            size: 4,
+            signature: Some("int seed(void)".into()),
+            traced: false,
+            calling_convention: None,
+        };
+        db.replace_functions(id, &[function.clone()]).unwrap();
+        let old = db.revision(id).unwrap();
+        db.rename_function(id, &entry, "analyst_name").unwrap();
+        let edited = db.revision(id).unwrap();
+        let state = db.function_analysis_state(id, &entry.to_string()).unwrap();
+        function.size = 16;
+        let end = romwright_model::Address::ram(0x1010);
+        let xref = XrefRow {
+            from: romwright_model::Address::ram(0x1004),
+            to: romwright_model::Address::ram(0x2000),
+            kind: "UNCONDITIONAL_CALL".into(),
+            function: Some("analyst_name".into()),
+            provenance: FactProvenance {
+                kind: FactKind::Inferred,
+                source: "demand".into(),
+                confidence: None,
+            },
+        };
+        assert!(
+            matches!(db.publish_function_analysis(id, old, &function, "walked", &end, &[xref.clone()]),
+            Err(DbError::StaleRevision { expected, actual }) if expected == old && actual == edited)
+        );
+        assert_eq!(db.functions(id).unwrap()[0].size, 4);
+        assert_eq!(
+            db.function_analysis_state(id, &entry.to_string()).unwrap(),
+            state
+        );
+        assert!(db.xrefs(id).unwrap().is_empty());
+        assert_eq!(db.revision(id).unwrap(), edited);
+        let committed = db
+            .publish_function_analysis(id, edited, &function, "walked", &end, &[xref.clone()])
+            .unwrap();
+        assert_eq!(
+            db.function_analysis_state(id, &entry.to_string()).unwrap(),
+            Some(("walked".into(), committed))
+        );
+        assert_eq!(db.revision(id).unwrap(), committed);
+        assert_eq!(db.xrefs(id).unwrap(), vec![xref]);
+        let stored = &db.functions(id).unwrap()[0];
+        assert_eq!(stored.name, "analyst_name");
+        assert_eq!(stored.signature, function.signature);
+        assert_eq!(stored.size, 16);
+    }
+
+    #[test]
     fn version_seven_migration_keeps_functions_and_starts_return_facts_unknown() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("return-migration", "x86:LE:64:default", &prov()).unwrap();
-        db.replace_functions(id, &[FunctionRow {
-            entry: romwright_model::Address::ram(0x1000), name: "analyst_name".into(), size: 9,
-            signature: Some("int analyst_name(void)".into()), traced: false,
-            calling_convention: None,
-        }]).unwrap();
+        let id = db
+            .upsert_program("return-migration", "x86:LE:64:default", &prov())
+            .unwrap();
+        db.replace_functions(
+            id,
+            &[FunctionRow {
+                entry: romwright_model::Address::ram(0x1000),
+                name: "analyst_name".into(),
+                size: 9,
+                signature: Some("int analyst_name(void)".into()),
+                traced: false,
+                calling_convention: None,
+            }],
+        )
+        .unwrap();
         let revision = db.revision(id).unwrap();
-        db.conn.execute_batch(
-            "DROP TABLE IF EXISTS return_behaviors;
-             UPDATE meta SET value = '7' WHERE key = 'schema_version';"
-        ).unwrap();
+        db.conn
+            .execute_batch(
+                "DROP TABLE IF EXISTS return_behaviors;
+             DROP TABLE class_bases; DROP TABLE classes;
+             DROP TABLE matching_project_checks; DROP TABLE matching_trials;
+             DROP TABLE matching_candidates; DROP TABLE matching_workspaces;
+             DROP TABLE matching_runs;
+             DROP TABLE program_inputs;
+             ALTER TABLE signature_matches DROP COLUMN input_record;
+             UPDATE meta SET value = '7' WHERE key = 'schema_version';",
+            )
+            .unwrap();
         db.migrate().unwrap();
         assert!(db.return_behaviors(id).unwrap().is_empty());
         let rows = db.functions(id).unwrap();
@@ -4232,11 +4937,16 @@ mod tests {
     #[test]
     fn return_behavior_assertions_override_inference_without_spurious_revisions() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("return-ownership", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("return-ownership", "x86:LE:64:default", &prov())
+            .unwrap();
         let inferred = romwright_model::ReturnBehaviorRow {
-            function: romwright_model::Address::ram(0x1000), no_return: true,
+            function: romwright_model::Address::ram(0x1000),
+            no_return: true,
             provenance: FactProvenance {
-                kind: FactKind::Inferred, source: "flow".into(), confidence: None,
+                kind: FactKind::Inferred,
+                source: "flow".into(),
+                confidence: None,
             },
         };
         db.set_return_behavior(id, &inferred).unwrap();
@@ -4251,17 +4961,22 @@ mod tests {
         assert_eq!(db.return_behaviors(id).unwrap(), vec![asserted.clone()]);
         assert_eq!(db.revision(id).unwrap(), revision);
         asserted.provenance.confidence = Some(f64::NAN);
-        assert!(matches!(db.set_return_behavior(id, &asserted),
-            Err(DbError::InvalidFactProvenance(_))));
+        assert!(matches!(
+            db.set_return_behavior(id, &asserted),
+            Err(DbError::InvalidFactProvenance(_))
+        ));
         assert_eq!(db.revision(id).unwrap(), revision);
     }
 
     #[test]
     fn version_six_migration_preserves_prototypes_and_structured_types() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("legacy-types", "x86:LE:64:default", &prov()).unwrap();
-        db.conn.execute_batch(
-            "DROP TABLE prototypes;
+        let id = db
+            .upsert_program("legacy-types", "x86:LE:64:default", &prov())
+            .unwrap();
+        db.conn
+            .execute_batch(
+                "DROP TABLE prototypes;
              CREATE TABLE prototypes (
                  program_id INTEGER NOT NULL REFERENCES programs(id),
                  function TEXT NOT NULL, signature TEXT NOT NULL,
@@ -4275,8 +4990,15 @@ mod tests {
                  provenance TEXT NOT NULL DEFAULT '',
                  PRIMARY KEY(program_id, name));
              DROP TABLE return_behaviors;
-             UPDATE meta SET value = '6' WHERE key = 'schema_version';"
-        ).unwrap();
+             DROP TABLE class_bases; DROP TABLE classes;
+             DROP TABLE matching_project_checks; DROP TABLE matching_trials;
+             DROP TABLE matching_candidates; DROP TABLE matching_workspaces;
+             DROP TABLE matching_runs;
+             DROP TABLE program_inputs;
+             ALTER TABLE signature_matches DROP COLUMN input_record;
+             UPDATE meta SET value = '6' WHERE key = 'schema_version';",
+            )
+            .unwrap();
         db.conn.execute(
             "INSERT INTO prototypes VALUES (?1, '00001000', 'unsigned int legacy(void)', 'cdecl', 'Count')",
             params![id.0],
@@ -4287,15 +5009,19 @@ mod tests {
             ("CountArray", "array", 12, 4, Some("Count")),
             ("Node", "structure", 16, 8, None),
         ] {
-            db.conn.execute(
-                "INSERT INTO type_defs VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, 'legacy-author')",
-                params![id.0, name, kind, size, alignment, base],
-            ).unwrap();
+            db.conn
+                .execute(
+                    "INSERT INTO type_defs VALUES (?1, ?2, ?3, '', ?4, ?5, ?6, 'legacy-author')",
+                    params![id.0, name, kind, size, alignment, base],
+                )
+                .unwrap();
         }
-        db.conn.execute(
-            "INSERT INTO type_fields VALUES (?1, 'Node', 0, 'next', 8, 8, 'CountPtr')",
-            params![id.0],
-        ).unwrap();
+        db.conn
+            .execute(
+                "INSERT INTO type_fields VALUES (?1, 'Node', 0, 'next', 8, 8, 'CountPtr')",
+                params![id.0],
+            )
+            .unwrap();
         db.migrate().unwrap();
         db.migrate().unwrap();
         let ownership: (String, String, Option<f64>) = db.conn.query_row(
@@ -4309,47 +5035,111 @@ mod tests {
         assert_eq!(prototype.calling_convention.as_deref(), Some("cdecl"));
         assert_eq!(prototype.return_type.as_deref(), Some("Count"));
         let types = db.type_defs(id).unwrap();
-        assert_eq!(types.iter().map(|row| (row.name.as_str(), row.kind.as_str(),
-            row.size, row.alignment, row.base_type.as_deref(), row.provenance.as_str()))
-            .collect::<Vec<_>>(), vec![
-                ("Count", "primitive", Some(4), Some(4), None, "legacy-author"),
-                ("CountArray", "array", Some(12), Some(4), Some("Count"), "legacy-author"),
-                ("CountPtr", "pointer", Some(8), Some(8), Some("Count"), "legacy-author"),
-                ("Node", "structure", Some(16), Some(8), None, "legacy-author"),
-            ]);
+        assert_eq!(
+            types
+                .iter()
+                .map(|row| (
+                    row.name.as_str(),
+                    row.kind.as_str(),
+                    row.size,
+                    row.alignment,
+                    row.base_type.as_deref(),
+                    row.provenance.as_str()
+                ))
+                .collect::<Vec<_>>(),
+            vec![
+                (
+                    "Count",
+                    "primitive",
+                    Some(4),
+                    Some(4),
+                    None,
+                    "legacy-author"
+                ),
+                (
+                    "CountArray",
+                    "array",
+                    Some(12),
+                    Some(4),
+                    Some("Count"),
+                    "legacy-author"
+                ),
+                (
+                    "CountPtr",
+                    "pointer",
+                    Some(8),
+                    Some(8),
+                    Some("Count"),
+                    "legacy-author"
+                ),
+                (
+                    "Node",
+                    "structure",
+                    Some(16),
+                    Some(8),
+                    None,
+                    "legacy-author"
+                ),
+            ]
+        );
         let fields = db.type_fields(id, None).unwrap();
-        assert_eq!(fields, vec![TypeFieldRow { type_name: "Node".into(), ordinal: 0,
-            field_name: "next".into(), offset: 8, size: Some(8), type_ref: Some("CountPtr".into()) }]);
+        assert_eq!(
+            fields,
+            vec![TypeFieldRow {
+                type_name: "Node".into(),
+                ordinal: 0,
+                field_name: "next".into(),
+                offset: 8,
+                size: Some(8),
+                type_ref: Some("CountPtr".into())
+            }]
+        );
         for mut row in types {
             let mut value = serde_json::to_value(&row).unwrap();
-            if row.name == "Count" { value["primitive"] = serde_json::json!("unsigned_integer"); }
-            if row.name == "CountArray" { value["element_count"] = serde_json::json!(3); }
+            if row.name == "Count" {
+                value["primitive"] = serde_json::json!("unsigned_integer");
+            }
+            if row.name == "CountArray" {
+                value["element_count"] = serde_json::json!(3);
+            }
             row = serde_json::from_value(value).unwrap();
             db.set_type_def(id, &row).unwrap();
         }
         let updated = db.type_defs(id).unwrap();
-        assert_eq!(serde_json::to_value(&updated[0]).unwrap()["primitive"], "unsigned_integer");
-        assert_eq!(serde_json::to_value(&updated[1]).unwrap()["element_count"], 3);
+        assert_eq!(
+            serde_json::to_value(&updated[0]).unwrap()["primitive"],
+            "unsigned_integer"
+        );
+        assert_eq!(
+            serde_json::to_value(&updated[1]).unwrap()["element_count"],
+            3
+        );
         let inferred: PrototypeRow = serde_json::from_value(serde_json::json!({
             "function": {"space": "Ram", "offset": 4112},
             "signature": "Count recovered(void)", "calling_convention": "cdecl",
             "return_type": "Count",
             "provenance": {"kind": "inferred", "source": "test-analysis", "confidence": 0.875}
-        })).unwrap();
+        }))
+        .unwrap();
         db.set_prototype(id, &inferred).unwrap();
         let stored = serde_json::to_value(&db.prototypes(id).unwrap()[1]).unwrap();
         // Provenance now serialises its explanation from the shared table; an
         // unknown source has none, and the rest of the object is unchanged.
-        assert_eq!(stored["provenance"], serde_json::json!({
-            "kind": "inferred", "source": "test-analysis", "confidence": 0.875,
-            "explanation": null, "evidence": null
-        }));
+        assert_eq!(
+            stored["provenance"],
+            serde_json::json!({
+                "kind": "inferred", "source": "test-analysis", "confidence": 0.875,
+                "explanation": null, "evidence": null
+            })
+        );
     }
 
     #[test]
     fn analysis_records_search_graph_memory_bookmarks_and_patches() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let entry = romwright_model::Address::ram(0x400000);
         db.replace_functions(
             id,
@@ -4359,7 +5149,7 @@ mod tests {
                 size: 8,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             }],
         )
         .unwrap();
@@ -4434,7 +5224,9 @@ mod tests {
     #[test]
     fn rich_types_and_provenance_roundtrip() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         db.replace_type_defs(
             id,
             &[TypeDefRow {
@@ -4498,15 +5290,23 @@ mod tests {
         )
         .unwrap();
         assert_eq!(db.type_defs(id).unwrap()[0].name, "struct point");
-        assert_eq!(db.type_fields(id, Some("struct point")).unwrap()[0].field_name, "x");
-        assert_eq!(db.type_graph(id).unwrap().1[0].provenance, "native-analysis");
+        assert_eq!(
+            db.type_fields(id, Some("struct point")).unwrap()[0].field_name,
+            "x"
+        );
+        assert_eq!(
+            db.type_graph(id).unwrap().1[0].provenance,
+            "native-analysis"
+        );
         assert_eq!(db.prototypes(id).unwrap()[0].signature, "int main(void)");
         assert_eq!(db.stack_variables(id, None).unwrap()[0].offset, Some(-16));
     }
     #[test]
     fn trace_and_collaboration_logs_are_ordered_and_idempotent() {
         let db = ProjectDb::open_in_memory().unwrap();
-        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let id = db
+            .upsert_program("p", "x86:LE:64:default", &prov())
+            .unwrap();
         let first = db
             .append_trace_event(
                 id,
@@ -4564,7 +5364,10 @@ mod tests {
         assert!(!db.append_collaboration_op(id, &op_a).unwrap());
         let operations = db.collaboration_ops(id).unwrap();
         assert_eq!(
-            operations.iter().map(|op| op.op_id.as_str()).collect::<Vec<_>>(),
+            operations
+                .iter()
+                .map(|op| op.op_id.as_str())
+                .collect::<Vec<_>>(),
             vec!["a-1", "b-2"]
         );
         assert!(db.apply_collaboration_op(id, "a-1").unwrap());

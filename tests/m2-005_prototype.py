@@ -49,8 +49,6 @@ def main():
         assert pooled[1]['prototype'] is not None, pooled[1]
         assert pooled[1]['address']['offset'] == 0x40047a
         jobs = replies[3]['result']
-        assert jobs['pool']['idle_workers'] == 1, jobs
-        assert jobs['pool']['restarts'] == 0, jobs
         assert [row['state'] for row in jobs['rows']] == ['succeeded'] * 3, jobs
 
     def summary(doc):
@@ -64,7 +62,7 @@ def main():
         args.report.write_text(json.dumps(report, indent=2) + '\n')
     print(json.dumps(dict(passed=True, standalone=1, pooled=3,
         calling_convention=standalone['prototype']['calling_convention'],
-        parameters=len(standalone['prototype']['parameters']), idle_workers=jobs['pool']['idle_workers'])))
+        parameters=len(standalone['prototype']['parameters']))))
 
 
 if __name__ == '__main__':

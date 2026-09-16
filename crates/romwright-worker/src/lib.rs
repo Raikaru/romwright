@@ -5,6 +5,8 @@
 pub mod doc;
 mod prototype;
 pub mod provider;
+mod semantic;
+pub mod specs;
 pub mod structure;
 pub mod wire;
 pub mod worker;
@@ -13,8 +15,7 @@ pub use doc::{
     DecodedDocument, decode_document_with_ram_space, decode_tokens, decode_tokens_with_ram_space,
 };
 pub use provider::{
-    BinaryBacking, ProgramProvider, c_identifier, decode_addr_element, parse_core_types,
-    spec_dir,
+    BinaryBacking, ProgramProvider, c_identifier, decode_addr_element, parse_core_types, spec_dir,
 };
 pub use worker::*;
 

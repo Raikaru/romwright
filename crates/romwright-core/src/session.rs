@@ -17,12 +17,14 @@ use std::sync::Arc;
 
 /// Immutable runtime configuration (built from env defaults or explicit
 /// values; services receive one instead of reading process-wide state).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RuntimeConfig {
     /// Path to the `romwright-worker` binary.
     pub worker_path: PathBuf,
     /// Path to the patched `ghidra_opt` (raw-SLEIGH mode).
     pub decompiler_path: PathBuf,
+    /// objdiff executable used by matching runs.
+    pub objdiff_path: PathBuf,
     /// Declarations exported from the pinned C library type archive.
     pub library_prototypes: PathBuf,
     /// Spec root directory (pspec/cspec/tspec/coretypes + registers.txt).
@@ -39,6 +41,10 @@ pub struct RuntimeConfig {
     pub ghidra_install: PathBuf,
     /// Peak RSS permitted for one worker process (bytes).
     pub worker_memory_cap: u64,
+    /// Maximum concurrent long-running jobs for a service using this Core.
+    pub job_workers: usize,
+    /// Semantic passes applied to live native SSA before printing C.
+    pub ir_passes: Vec<String>,
     /// True when `language_dir` came from an explicit pin; a pinned
     /// directory survives adopting an image's own language.
     pub language_dir_pinned: bool,
@@ -85,7 +91,9 @@ fn default_console_shards() -> usize {
             let mut cores = std::collections::BTreeSet::new();
             let mut package = None;
             for line in cpuinfo.lines() {
-                let Some((key, value)) = line.split_once(':') else { continue };
+                let Some((key, value)) = line.split_once(':') else {
+                    continue;
+                };
                 match key.trim() {
                     "physical id" => package = Some(value.trim().to_string()),
                     "core id" => {
@@ -105,19 +113,6 @@ impl Default for RuntimeConfig {
     fn default() -> Self {
         Self::from_env()
     }
-}
-
-/// Reads the stored language id for `program` from the project database.
-/// Used to drive per-language decompile resolution; falls back to the
-/// configured default when the store is unreachable.
-pub fn program_language(
-    cfg: &RuntimeConfig,
-    program: &str,
-    project_dir: &std::path::Path,
-) -> crate::Result<String> {
-    let db = crate::ProjectDb::open(&project_dir.join("project.sqlite"))?;
-    let id = db.program_id(program)?;
-    Ok(db.program_language(id)?)
 }
 
 /// The worker this build drives: an explicit pin, then the worker beside the
@@ -181,9 +176,11 @@ impl RuntimeConfig {
                     std::env::var("HOME").unwrap_or_default()
                 ))
             });
-        let language_id = std::env::var("ROMWRIGHT_LANGUAGE")
-            .unwrap_or_else(|_| "x86:LE:64:default".into());
-        let pinned_dir = std::env::var("ROMWRIGHT_LANGUAGE_DIR").ok().map(PathBuf::from);
+        let language_id =
+            std::env::var("ROMWRIGHT_LANGUAGE").unwrap_or_else(|_| "x86:LE:64:default".into());
+        let pinned_dir = std::env::var("ROMWRIGHT_LANGUAGE_DIR")
+            .ok()
+            .map(PathBuf::from);
         let language_dir_pinned = pinned_dir.is_some();
         let language_dir = pinned_dir
             .or_else(|| {
@@ -220,7 +217,8 @@ impl RuntimeConfig {
                     PathBuf::from("native/build/decomp_native"),
                     PathBuf::from("../../native/build/decomp_native"),
                     PathBuf::from("../native/build/decomp_native"),
-                    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../native/build/decomp_native"),
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                        .join("../../native/build/decomp_native"),
                 ] {
                     if candidate.is_file() {
                         return Some(candidate);
@@ -244,6 +242,9 @@ impl RuntimeConfig {
             library_prototypes,
             worker_path,
             decompiler_path,
+            objdiff_path: std::env::var_os("ROMWRIGHT_OBJDIFF")
+                .map(PathBuf::from)
+                .unwrap_or_else(|| PathBuf::from("objdiff-cli")),
             spec_root,
             language_id,
             language_dir,
@@ -254,6 +255,14 @@ impl RuntimeConfig {
             worker_memory_cap: worker_memory_cap(
                 std::env::var("ROMWRIGHT_WORKER_MEMORY_CAP").ok().as_deref(),
             ),
+            job_workers: std::thread::available_parallelism()
+                .map(|count| count.get())
+                .unwrap_or(2)
+                .min(8),
+            ir_passes: std::env::var("ROMWRIGHT_IR_PASSES")
+                .ok()
+                .map(|value| crate::func_ir::parse_pass_names(&value))
+                .unwrap_or_else(crate::func_ir::default_pass_names),
             console_shards,
             register_params: std::env::var_os("ROMWRIGHT_REGISTER_PARAMS").is_some(),
             promote_tailcalls: std::env::var_os("ROMWRIGHT_PROMOTE_TAILCALLS").is_some(),
@@ -299,23 +308,23 @@ pub struct MemoryRegion {
     pub flags: u64,
 }
 
-/// Read-only program image: one mmap + region map + sparse patch overlay.
+/// Owned program-byte snapshot, region map and sparse patch overlay.
 ///
-/// Reads land in a region's file range where file-backed, zero otherwise
-/// (BSS), with patch bytes taking precedence. The binary is mapped (not
-/// copied) so listing/hex/decompiler consumers share one view of the file.
+/// File-backed reads use immutable shared bytes; BSS reads return zeros and
+/// patch bytes take precedence. Replacing or truncating the source file cannot
+/// change an existing image or invalidate its backing storage.
 #[derive(Debug)]
 pub struct ProgramImage {
     path: PathBuf,
-    map: memmap2::Mmap,
+    map: Arc<[u8]>,
     regions: Vec<MemoryRegion>,
     relocations: Vec<crate::native::MemoryRelocation>,
     patches: BTreeMap<u64, Vec<u8>>,
 }
 
 impl ProgramImage {
-    /// Maps `binary` and derives regions from the existing native loader
-    /// (the loader's section/mapping knowledge, minus its discovery work).
+    /// Captures `binary` and derives regions from the existing native loader
+    /// without running discovery.
     pub fn open(binary: &Path) -> crate::Result<Self> {
         Self::open_with_raw_base(binary, None)
     }
@@ -323,76 +332,88 @@ impl ProgramImage {
     /// Native formats use loader addresses; unrecognized raw files may use
     /// an explicit base. A malformed ELF/PE never falls back to raw bytes.
     pub fn open_with_raw_base(binary: &Path, raw_base: Option<u64>) -> crate::Result<Self> {
-        let file = std::fs::File::open(binary).map_err(crate::CoreError::Io)?;
-        // SAFETY: the file handle stays alive for the mapping's lifetime
-        // (memmap2's `Mmap` keeps the mapping; the handle is only needed
-        // by the unsafe block below, which memmap2 requires us to allow —
-        // this is the single reviewed FFI-adjacent site).
-        // SAFETY: read-only mapping; no file can be written through it;
-        // the file content cannot change beneath us because we keep a
-        // separate read-only descriptor semantics and treat the absence
-        // of a mapping as a fixed snapshot of the open file's bytes.
-        let map = unsafe { memmap2::Mmap::map(&file) }.map_err(|e| {
-            crate::CoreError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                format!("mmap {}: {e}", binary.display()),
-            ))
-        })?;
-        // Region derivation reuses the native parser (sections -> ranges;
-        // flags preserved so discovery classification still sees them).
-        let mut patches = BTreeMap::new();
-        let (regions, relocations) = match crate::native::parse_container(&map) {
-            Ok(images) => {
-                // A container holds one image per processor at different
-                // addresses. `raw_base` names which program is being read,
-                // so the view is that program's image rather than the one
-                // the console boots.
-                let selected = raw_base
-                    .and_then(|base| {
-                        images.iter().find(|(_, import)| {
-                            import.mappings.iter().any(|mapping| {
-                                base >= mapping.vaddr
-                                    && base - mapping.vaddr < mapping.size.max(1)
-                            })
-                        })
-                    })
-                    .or_else(|| images.first());
-                let Some((_, import)) = selected else {
-                    return Err(crate::native::ImportError::Bad("empty container".into()).into());
-                };
-                let regions = import.mappings.iter().map(|m| {
-                    // A loader may hand over bytes the file does not hold at
-                    // that offset -- a DS ARM9 module unpacked the way crt0
-                    // unpacks it -- and those bytes, not the file's, are what
-                    // runs. They ride as a patch over the file-backed view.
-                    let stored = usize::try_from(m.file_off)
-                        .ok()
-                        .and_then(|off| map.get(off..off.checked_add(m.bytes.len())?));
-                    if stored != Some(m.bytes.as_slice()) {
-                        patches.insert(m.vaddr, m.bytes.clone());
-                    }
-                    MemoryRegion {
-                        vaddr: m.vaddr, size: m.size, file_off: m.file_off,
-                        file_size: m.bytes.len() as u64, flags: m.flags,
-                    }
-                }).collect();
-                (regions, import.relocations.clone())
-            }
-            Err(_) if raw_base.is_some() && !map.starts_with(b"\x7fELF") && !map.starts_with(b"MZ") => {
-                let vaddr = raw_base.unwrap();
-                let size = map.len() as u64;
-                vaddr.checked_add(size).ok_or_else(|| crate::native::ImportError::Bad("raw image overflow".into()))?;
-                (vec![MemoryRegion { vaddr, size, file_off: 0, file_size: size, flags: 6 }], Vec::new())
+        Self::open_for_program(binary, None, raw_base)
+    }
+
+    /// Selects a container image by the imported program identity, never by
+    /// address overlap (different processors can map the same addresses).
+    pub fn open_for_program(
+        binary: &Path,
+        program: Option<&str>,
+        raw_base: Option<u64>,
+    ) -> crate::Result<Self> {
+        let map: Arc<[u8]> = std::fs::read(binary)?.into();
+        let images = match crate::native::parse_container(&map) {
+            Ok(images) => images,
+            Err(_)
+                if raw_base.is_some()
+                    && !map.starts_with(b"\x7fELF")
+                    && !map.starts_with(b"MZ") =>
+            {
+                crate::native::parse_image_input(
+                    &map,
+                    raw_base.map(|base| (base, "raw")),
+                    &crate::native::keys::KeyStore::empty(),
+                )?
             }
             Err(error) => return Err(error.into()),
         };
-        Ok(Self {
-            path: binary.to_path_buf(),
+        let single = images.len() == 1;
+        let mut selected = images.into_iter().filter(|(suffix, _)| {
+            single
+                || (!suffix.is_empty()
+                    && program.is_some_and(|name| name.ends_with(&format!(".{suffix}"))))
+        });
+        let import = match (selected.next(), selected.next()) {
+            (Some((_, import)), None) => import,
+            _ => {
+                return Err(crate::native::ImportError::Bad(
+                    "container requires an unambiguous imported program identity".into(),
+                )
+                .into());
+            }
+        };
+        Ok(Self::from_import(binary.to_path_buf(), map, import))
+    }
+
+    pub fn open_input(
+        project: &Path,
+        input: &romwright_model::ProgramInput,
+    ) -> crate::Result<Self> {
+        let (artifact, import) = crate::inputs::parse(project, input)?;
+        Ok(Self::from_import(artifact.path, artifact.bytes, import))
+    }
+
+    fn from_import(path: PathBuf, map: Arc<[u8]>, import: crate::native::NativeImport) -> Self {
+        let mut patches = BTreeMap::new();
+        let regions = import
+            .mappings
+            .into_iter()
+            .map(|mapping| {
+                let file_size = mapping.bytes.len() as u64;
+                let stored = usize::try_from(mapping.file_off)
+                    .ok()
+                    .and_then(|offset| map.get(offset..offset.checked_add(mapping.bytes.len())?));
+                // Decompressed or loader-synthesized bytes override file contents.
+                if stored != Some(mapping.bytes.as_slice()) {
+                    patches.insert(mapping.vaddr, mapping.bytes);
+                }
+                MemoryRegion {
+                    vaddr: mapping.vaddr,
+                    size: mapping.size,
+                    file_off: mapping.file_off,
+                    file_size,
+                    flags: mapping.flags,
+                }
+            })
+            .collect();
+        Self {
+            path,
             map,
             regions,
-            relocations,
+            relocations: import.relocations,
             patches,
-        })
+        }
     }
 
     /// The mapped file path (diagnostics).
@@ -429,7 +450,9 @@ impl ProgramImage {
 
     fn region_for(&self, vaddr: u64, size: u64) -> Option<&MemoryRegion> {
         let end = vaddr.checked_add(size)?;
-        self.regions.iter().find(|r| vaddr >= r.vaddr && end <= r.vaddr + r.size)
+        self.regions
+            .iter()
+            .find(|r| vaddr >= r.vaddr && end <= r.vaddr + r.size)
     }
 
     fn read_region(&self, region: &MemoryRegion, vaddr: u64, out: &mut [u8]) -> Option<()> {
@@ -446,8 +469,13 @@ impl ProgramImage {
                 *b = 0;
             }
         }
-        let first = self.relocations.partition_point(|r| r.address < vaddr.saturating_sub(7));
-        for relocation in self.relocations[first..].iter().take_while(|r| r.address < vaddr + size) {
+        let first = self
+            .relocations
+            .partition_point(|r| r.address < vaddr.saturating_sub(7));
+        for relocation in self.relocations[first..]
+            .iter()
+            .take_while(|r| r.address < vaddr + size)
+        {
             let start = vaddr.max(relocation.address);
             let end = (vaddr + size).min(relocation.address + relocation.width as u64);
             if start < end {
@@ -496,13 +524,7 @@ pub struct SessionMetadata {
 impl SessionMetadata {
     /// Derives metadata from a loaded import (the session's one parse).
     pub fn from_import(imp: &NativeImport) -> Self {
-        let image_base = imp
-            .mappings
-            .iter()
-            .map(|m| m.vaddr)
-            .min()
-            .unwrap_or(0)
-            & !0xfff;
+        let image_base = imp.mappings.iter().map(|m| m.vaddr).min().unwrap_or(0) & !0xfff;
         Self {
             language: imp.language.clone(),
             format: imp.format.clone(),
@@ -518,7 +540,6 @@ pub struct SessionError(pub String);
 
 pub type Result<T> = std::result::Result<T, SessionError>;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -531,21 +552,31 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!("romwright-session-test-{}-{n}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("romwright-session-test-{}-{n}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("img.bin");
         let data: Vec<u8> = (0..0x1000u64).map(|i| (i % 251) as u8).collect();
         std::fs::write(&path, &data).unwrap();
-        let file = std::fs::File::open(&path).unwrap();
-        // SAFETY: read-only mapping of the test file; the file is not
-        // modified while the mmap lives (same contract as ProgramImage::open).
-        let map = unsafe { memmap2::Mmap::map(&file) }.unwrap();
+        let map: Arc<[u8]> = data.into();
         let mut img = ProgramImage {
             path,
             map,
             regions: vec![
-                MemoryRegion { vaddr: 0x400000, size: 0x100, file_off: 0, file_size: 0x100, flags: 0x6 },
-                MemoryRegion { vaddr: 0x400100, size: 0x200, file_off: 0x100, file_size: 0x40, flags: 0x2 },
+                MemoryRegion {
+                    vaddr: 0x400000,
+                    size: 0x100,
+                    file_off: 0,
+                    file_size: 0x100,
+                    flags: 0x6,
+                },
+                MemoryRegion {
+                    vaddr: 0x400100,
+                    size: 0x200,
+                    file_off: 0x100,
+                    file_size: 0x40,
+                    flags: 0x2,
+                },
             ],
             relocations: Vec::new(),
             patches: BTreeMap::new(),
@@ -585,6 +616,15 @@ mod tests {
         assert!(image.read(0x500000, 4).is_none());
         // Spanning two regions (0x4000ff..0x400103) -> None.
         assert!(image.read(0x4000ff, 4).is_none());
+    }
+
+    #[test]
+    fn source_truncation_does_not_change_open_image() {
+        let image = image();
+        let before = image.read(0x400000, 8).unwrap();
+        std::fs::write(image.path(), []).unwrap();
+        assert_eq!(image.read(0x400000, 8).unwrap(), before);
+        std::fs::remove_dir_all(image.path().parent().unwrap()).unwrap();
     }
 
     #[test]

@@ -163,7 +163,8 @@ impl crate::Core {
                 None => skipped += 1,
                 Some(current) if !is_generated(current) => skipped += 1,
                 Some(current) => {
-                    self.db.rename_command(id, &fact.function, &fact.name, current)?;
+                    self.db
+                        .rename_command(id, &fact.function, &fact.name, current)?;
                     local_name.insert(fact.function.clone(), fact.name.clone());
                     claimed.insert(fact.function.clone());
                     renamed += 1;
@@ -223,7 +224,8 @@ impl crate::Core {
                 continue;
             }
             let name = bundle_functions[index].name.clone();
-            self.db.rename_command(id, &entry, &name, local_name[&entry].as_str())?;
+            self.db
+                .rename_command(id, &entry, &name, local_name[&entry].as_str())?;
             local_name.insert(entry.clone(), name);
             claimed.insert(entry);
             signature_transferred += 1;
@@ -315,13 +317,18 @@ impl crate::Core {
                     skipped += 1;
                     continue;
                 }
+                // A remote claim is evidence, not a locally verified match
+                // against the captured bytes. Only the local matcher binds it.
+                let mut imported = row.clone();
+                imported.input = None;
                 by_source
                     .entry(row.provenance.source.clone())
                     .or_default()
-                    .push(row.clone());
+                    .push(imported);
             }
             for (source, rows) in &by_source {
-                self.db.replace_signature_matches(id, source, rows)?;
+                self.db
+                    .replace_signature_matches(id, self.db.revision(id)?, source, rows, &[])?;
                 applied_matches += rows.len();
             }
         }

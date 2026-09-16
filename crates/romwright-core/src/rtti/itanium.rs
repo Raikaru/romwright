@@ -115,8 +115,8 @@ pub fn recover(import: &NativeImport, image: &Image<'_>) -> (Vec<ClassRow>, Clas
         let bases = bases(&image, address, *kind, &typeinfo);
         report.bases += bases.len();
         rows.push(ClassRow {
-            typeinfo: Address::ram(address),
-            vtable: Address::ram(vtable),
+            typeinfo: Some(Address::ram(address)),
+            vtable: Some(Address::ram(vtable)),
             name: demangle_type(mangled),
             mangled: mangled.clone(),
             kind: *kind,

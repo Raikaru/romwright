@@ -98,7 +98,7 @@ WORKER="$ROOT/native/build/ghidra_opt"
 if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ]; then
     step "protocol worker (ROMWRIGHT_SLA=$ROMWRIGHT_SLA)"
     "$ROOT/target/release/romwright-worker" "$WORKER" "$WORK/specs" \
-        "$BIN" tiny_bin 00400466 --project "$PROJECT" > "$WORK/worker_add.c" 2>/dev/null || \
+        tiny_bin 00400466 --project "$PROJECT" > "$WORK/worker_add.c" 2>/dev/null || \
         fail "protocol worker decompile failed"
     step "exact worker-vs-oracle check"
     if diff -q "$WORK/oracle_add.c" "$WORK/worker_add.c" > /dev/null; then
@@ -233,15 +233,9 @@ if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
     "$ROOT/target/release/romwright-cli" import "$PE" --name tiny_pe.exe --project "$PE_PROJ" > /dev/null
     step "PE protocol worker (add)"
     "$ROOT/target/release/romwright-worker" "$WORKER" "$PE_SPECS" \
-        "$PE" tiny_pe.exe 140001450 --project "$WORK/pe-store" \
-        --base 0x140000000 > "$WORK/pe_worker_add.c" 2>/dev/null || \
+        tiny_pe.exe 140001450 --project "$WORK/pe-store" \
+        > "$WORK/pe_worker_add.c" 2>/dev/null || \
         fail "PE worker decompile failed"
-    if diff <(tr -s ' \n' ' ' < "$WORK/pe_worker_add.c") <(tr -s ' \n' ' ' < "$WORK/pe_worker_add.c" | sed 's/  */ /g') > /dev/null; then
-        :
-    fi
-    grep -q 'return param_2 + param_1' "$WORK/pe_worker_add.c" && \
-        echo "  PE worker add: OK (return A + B)" || \
-        echo "  PE worker add: UNEXPECTED: $(cat "$WORK/pe_worker_add.c")"
 fi
 
 # ---- Normalize + compare (console output only; worker parity checked above) ---

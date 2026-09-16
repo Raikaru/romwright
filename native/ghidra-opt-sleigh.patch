@@ -22,7 +22,15 @@ diff --git a/decompiler/consolemain.cc b/decompiler/consolemain.cc
 index 87c13b8..b1b59a7 100644
 --- a/decompiler/consolemain.cc
 +++ b/decompiler/consolemain.cc
-@@ -58,7 +58,11 @@ void IfcLoadFile::execute(istream &s)
+@@ -16,6 +16,7 @@
+ #include <iostream>
+ #include <cstdlib>
+ #include "libdecomp.hh"
++#include "romwright_parent.hh"
+ 
+ namespace ghidra {
+ 
+@@ -58,7 +59,11 @@ void IfcLoadFile::execute(istream &s)
    else
      target = "default";
  
@@ -35,6 +43,16 @@ index 87c13b8..b1b59a7 100644
    if (capa == (ArchitectureCapability *)0)
      throw IfaceExecutionError("Unable to recognize imagefile "+filename);
    dcp->conf = capa->buildArchitecture(filename,target,status->optr);
+@@ -178,6 +183,9 @@ int main(int argc,char **argv)
+ {
+   using namespace ghidra;
+ 
++#if defined(__unix__)
++  romwrightWatchParent();
++#endif
+   const char *initscript = (const char *)0;
+ 
+   {
 diff --git a/decompiler/context.hh b/decompiler/context.hh
 index 79fbe1e..3fcd269 100644
 --- a/decompiler/context.hh
@@ -133,7 +151,22 @@ index 813d955..0f81b9f 100644
  #include "inject_ghidra.hh"
  
  namespace ghidra {
-@@ -289,12 +291,66 @@ void ArchitectureGhidra::buildLoader(DocumentStorage &store)
+@@ -275,6 +277,14 @@ void ArchitectureGhidra::postSpecFile(void)
+ 
+ {
+   Architecture::postSpecFile();
++  // ARM's stock compiler spec omits the link register because Java's
++  // analyzer supplies return flow overrides. Raw SLEIGH needs this ABI
++  // fact for Funcdata::testForReturnAddress's existing SSA proof.
++  const char *language = getenv("ROMWRIGHT_LANGUAGE");
++  const char *rawsla = getenv("ROMWRIGHT_SLA");
++  if (defaultReturnAddr.space == nullptr && rawsla != nullptr && rawsla[0] != '\0' &&
++      language != nullptr && strncmp(language,"ARM:",4) == 0)
++    defaultReturnAddr = translate->getRegister("lr");
+   ScopeGhidra *scopeGhidra = (ScopeGhidra *)symboltab->getGlobalScope();
+   scopeGhidra->lockDefaultProperties();
+ }
+@@ -289,12 +291,68 @@ void ArchitectureGhidra::buildLoader(DocumentStorage &store)
  PcodeInjectLibrary *ArchitectureGhidra::buildPcodeInjectLibrary(void)
  
  {
@@ -195,6 +228,8 @@ index 813d955..0f81b9f 100644
 +    Document *doc = store.parseDocument(s);
 +    store.registerTag(doc->getRoot());
 +    Sleigh *trans = new Sleigh(loader, context);
++    const char *language = getenv("ROMWRIGHT_LANGUAGE");
++    trans->setPowerPcReturns(language != nullptr && strncmp(language,"PowerPC:",8) == 0);
 +    return trans;
 +  }
    return new GhidraTranslate(this);
@@ -242,12 +277,13 @@ diff --git a/decompiler/ghidra_process.cc b/decompiler/ghidra_process.cc
 index a93aa00..8f6415e 100644
 --- a/decompiler/ghidra_process.cc
 +++ b/decompiler/ghidra_process.cc
-@@ -14,6 +14,8 @@
+@@ -14,6 +14,9 @@
   * limitations under the License.
   */
  #include "ghidra_process.hh"
 +#include "database_ghidra.hh"
 +#include "romwright_nonreturn.hh"
++#include "romwright_ir.hh"
  #include "flow.hh"
  #include "blockaction.hh"
  
@@ -347,7 +383,7 @@ index a93aa00..8f6415e 100644
  void DeregisterProgram::loadParameters(void)
  
  {
-@@ -324,7 +401,10 @@ void DecompileAt::rawAction(void)
+@@ -324,7 +401,12 @@ void DecompileAt::rawAction(void)
  	ParamIDAnalysis pidanalysis( fd, false );
  	pidanalysis.encode( encoder, true );
        }
@@ -356,14 +392,17 @@ index a93aa00..8f6415e 100644
 +        RomwrightNoReturnHint hint(*fd);
 +        fd->encode(encoder,0,ghidra->getSendSyntaxTree());
 +      }
++      if (ghidra->getSendSyntaxTree())
++        romwrightEncodeCallPrototypes(*fd,encoder);
        if (ghidra->getSendCCode()&&
  	  (ghidra->allacts.getCurrentName() == "decompile"))
          ghidra->print->docFunction(fd);
-@@ -497,6 +577,7 @@ void GhidraDecompCapability::initialize(void)
+@@ -497,6 +578,8 @@ void GhidraDecompCapability::initialize(void)
  
  {
    commandmap["registerProgram"] = new RegisterProgram();
 +  commandmap["setFunctionSignature"] = new SetFunctionSignature();
++  commandmap["renderFunctionIR"] = new RenderFunctionIr();
    commandmap["deregisterProgram"] = new DeregisterProgram();
    commandmap["flushNative"] = new FlushNative();
    commandmap["decompileAt"] = new DecompileAt();
@@ -462,9 +501,10 @@ index e62ab6a..1486693 100644
    status->registerCom(new IfcDecompile(),"decompile");
    status->registerCom(new IfcDump(),"dump");
    status->registerCom(new IfcDumpbinary(),"binary");
-@@ -829,6 +841,18 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -829,6 +841,28 @@ void IfcPrintdisasm::execute(istream &s)
    }
    IfaceAssemblyEmit assem(status->fileoptr,10);
++  vector<uint1> instruction_bytes;
    while(size > 0) {
 +    if (dcp->fd != (Funcdata *)0) {
 +      const BlockGraph &basic_blocks = dcp->fd->getBasicBlocks();
@@ -480,8 +520,17 @@ index e62ab6a..1486693 100644
 +    }
      int4 sz;
      sz = glb->translate->printAssembly(assem,addr);
++    instruction_bytes.resize(sz);
++    glb->loader->loadFill(instruction_bytes.data(),sz,addr);
++    *status->fileoptr << "Bytes ";
++    addr.printRaw(*status->fileoptr);
++    *status->fileoptr << ": ";
++    static const char hex_digits[] = "0123456789abcdef";
++    for (uint1 byte : instruction_bytes)
++      *status->fileoptr << hex_digits[byte >> 4] << hex_digits[byte & 15];
++    *status->fileoptr << endl;
      addr = addr + sz;
-@@ -836,6 +860,191 @@ void IfcPrintdisasm::execute(istream &s)
+@@ -836,6 +870,191 @@ void IfcPrintdisasm::execute(istream &s)
    }
  }
  
@@ -826,15 +875,32 @@ index 0c56b2e..20e1bad 100644
        fallOffset += len;
        bytecount += len;
      } while(bytecount < pos->getDelaySlot());
-@@ -769,7 +810,7 @@ int4 Sleigh::oneInstruction(PcodeEmit &emit,const Address &baseaddr) const
+@@ -769,9 +810,23 @@ int4 Sleigh::oneInstruction(PcodeEmit &emit,const Address &baseaddr) const
    ParserWalker walker(pos);
    walker.baseState();
    pcode_cache.clear();
++  bool conditionalLrReturn = false;
++  if (powerpc_returns && pos->getLength() == 4) {
++    uint4 word = walker.getInstructionBytes(0,4);
++    if (!isBigEndian())
++      word = (word << 24) | ((word & 0xff00) << 8) | ((word >> 8) & 0xff00) | (word >> 24);
++    conditionalLrReturn = (word & 0xfc80ffff) == 0x4c000020;
++  }
 -  SleighBuilder builder(&walker,discache,&pcode_cache,getConstantSpace(),getUniqueSpace(),unique_allocatemask);
 +  SleighBuilder builder(&walker,discache,&pcode_cache,getConstantSpace(),getUniqueSpace(),unique_allocatemask,flow);
    try {
      builder.build(walker.getConstructor()->getTempl(),-1);
      pcode_cache.resolveRelatives();
+-    pcode_cache.emit(baseaddr,&emit);
++    if (conditionalLrReturn) {
++      PowerPcReturnEmit returns(emit,getRegister("LR"));
++      pcode_cache.emit(baseaddr,&returns);
++      if (flow != nullptr && returns.changed())
++        flow->flags = (flow->flags & ~InstructionFlow::BRANCH_INDIRECT) | InstructionFlow::RETURN;
++    } else {
++      pcode_cache.emit(baseaddr,&emit);
++    }
+   } catch(UnimplError &err) {
 diff --git a/decompiler/sleigh.hh b/decompiler/sleigh.hh
 index 5b82741..bee20a3 100644
 --- a/decompiler/sleigh.hh
@@ -860,21 +926,23 @@ index 5b82741..bee20a3 100644
    virtual void appendBuild(OpTpl *bld,int4 secnum);
    virtual void delaySlot(OpTpl *op);
    virtual void setLabel(OpTpl *op);
-@@ -166,6 +169,7 @@ class Sleigh : public SleighBase {
+@@ -166,6 +169,8 @@ class Sleigh : public SleighBase {
    mutable DisassemblyCache *discache;	///< Cache of recently parsed instructions
    mutable PcodeCacher pcode_cache;	///< Cache of p-code data just prior to emitting
    void clearForDelete(void);		///< Delete the context and disassembly caches
 +  int4 translateInstruction(PcodeEmit &emit,const Address &addr,InstructionFlow *flow) const;
++  bool powerpc_returns = false;
  protected:
    ParserContext *obtainContext(const Address &addr,int4 state) const;
    void resolve(ParserContext &pos) const;	///< Generate a parse tree suitable for disassembly
-@@ -180,6 +184,9 @@ public:
+@@ -180,6 +184,10 @@ public:
    virtual void allowContextSet(bool val) const;
    virtual int4 instructionLength(const Address &baseaddr) const;
    virtual int4 oneInstruction(PcodeEmit &emit,const Address &baseaddr) const;
 +  int4 oneInstructionFlow(PcodeEmit &emit,const Address &baseaddr,InstructionFlow &flow) const;
 +  void invalidateContextCache(void);
 +  const ParserContext *getInstructionContext(const Address &addr) const { return obtainContext(addr,ParserContext::pcode); }
++  void setPowerPcReturns(bool enabled) { powerpc_returns = enabled; }
    virtual int4 printAssembly(AssemblyEmit &emit,const Address &baseaddr) const;
  };
  
@@ -917,3 +985,315 @@ index e3be244..49487a5 100644
    const char *jumptab[] = { "base", "noproto", "localrecovery", "deadcode", "stackptrflow",
  			    "stackvars", "analysis", "segment", "subvar", "normalizebranches", "conditionalexe", "" };
    setGroup("jumptable",jumptab);
+--- a/decompiler/variable.cc
++++ b/decompiler/variable.cc
+@@ -847,7 +847,18 @@
+     if (symboloffset >= 0)
+       encoder.writeSignedInteger(ATTRIB_OFFSET, symboloffset);
+   }
+-  getType()->encodeRef(encoder);
++  getType()->encode(encoder);
++  if (symbol != (Symbol *)0) {
++    encoder.openElement(ELEM_SYMBOL);
++    encoder.writeString(ATTRIB_NAME, symbol->getName());
++    encoder.writeBool(ATTRIB_VOLATILE, symbol->isVolatile());
++    encoder.writeBool(ATTRIB_PERSISTS, symbol->getScope()->isGlobal());
++    symbol->getType()->encode(encoder);
++    SymbolEntry *entry = symbol->numEntries() == 0 ? (SymbolEntry *)0 : symbol->getFirstWholeMap();
++    if (entry != (SymbolEntry *)0 && !entry->getAddr().isInvalid())
++      entry->getAddr().encode(encoder);
++    encoder.closeElement(ELEM_SYMBOL);
++  }
+   for(int4 j=0;j<inst.size();++j) {
+     encoder.openElement(ELEM_ADDR);
+     encoder.writeUnsignedInteger(ATTRIB_REF, inst[j]->getCreateIndex());
+--- a/decompiler/op.cc
++++ b/decompiler/op.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "op.hh"
++#include "romwright_ir_state.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -390,7 +391,9 @@
+ 
+ {
+   encoder.openElement(ELEM_OP);
+-  encoder.writeSignedInteger(ATTRIB_CODE, (int4)code());
++  const auto projection = romwrightIrProjections().find(this);
++  bool projected = projection != romwrightIrProjections().end();
++  encoder.writeSignedInteger(ATTRIB_CODE, (int4)(projected ? projection->second : code()));
+   start.encode(encoder);
+   if (output==(Varnode *)0) {
+     encoder.openElement(ELEM_VOID);
+@@ -401,7 +404,7 @@
+     encoder.writeUnsignedInteger(ATTRIB_REF, output->getCreateIndex());
+     encoder.closeElement(ELEM_ADDR);
+   }
+-  for(int4 i=0;i<inrefs.size();++i) {
++  for(int4 i=projected ? 1 : 0;i<inrefs.size();++i) {
+     const Varnode *vn = getIn(i);
+     if (vn == (const Varnode *)0) {
+       encoder.openElement(ELEM_VOID);
+--- a/decompiler/printc.cc
++++ b/decompiler/printc.cc
+@@ -14,6 +14,7 @@
+  * limitations under the License.
+  */
+ #include "printc.hh"
++#include "romwright_ir_state.hh"
+ #include "funcdata.hh"
+ 
+ namespace ghidra {
+@@ -612,6 +613,14 @@
+ void PrintC::opCall(const PcodeOp *op)
+ 
+ {
++  const auto projection = romwrightIrProjections().find(op);
++  if (projection != romwrightIrProjections().end()) {
++    OpCode opcode = projection->second;
++    pushOp((opcode == CPUI_INT_DIV || opcode == CPUI_INT_SDIV) ? &divide : &modulo,op);
++    pushVn(op->getIn(2),op,mods);
++    pushVn(op->getIn(1),op,mods);
++    return;
++  }
+   pushOp(&function_call,op);
+   const Varnode *callpoint = op->getIn(0);
+   FuncCallSpecs *fc;
+diff --git a/decompiler/ifaceterm.cc b/decompiler/ifaceterm.cc
+--- a/decompiler/ifaceterm.cc
++++ b/decompiler/ifaceterm.cc
+@@ -124,6 +124,15 @@
+ void IfaceTerm::readLine(string &line)
+ 
+ {
++#ifdef __TERMINAL__
++  if (!is_terminal) {
++    std::getline(*sptr, line);
++    // Preserve the console protocol without flushing after every character.
++    *optr << line << endl;
++    return;
++  }
++#endif
++
+   char val;
+   int4 escval;
+   int4 cursor,lastlen,i;
+diff --git a/decompiler/dynamic.cc b/decompiler/dynamic.cc
+--- a/decompiler/dynamic.cc
++++ b/decompiler/dynamic.cc
+@@ -430,7 +430,9 @@
+   uint4 method;
+   uint8 tmphash;
+   Address tmpaddr;
+-  uint4 maxduplicates = 8;
++  uint8 championhash = 0;
++  Address championaddr;
++  uint4 maxduplicates = 128;
+ 
+   for(method=0;method<4;++method) {
+     clear();
+@@ -453,6 +455,8 @@
+     if (vnlist2.size() <= maxduplicates) {
+       if ((champion.size()==0)||(vnlist2.size() < champion.size())) {
+ 	champion = vnlist2;
++        championhash = tmphash;
++        championaddr = tmpaddr;
+ 	if (champion.size()==1) break; // Current hash is unique
+       }
+     }
+@@ -471,9 +475,8 @@
+     addrresult = Address();
+     return;
+   }
+-  hash = tmphash | ((uint8)pos << 49); // Store three bits for position with list of duplicate hashes
+-  hash |= ((uint8)total << 52);	// Store three bits for total number of duplicate hashes
+-  addrresult = tmpaddr;
++  hash = withTotalPosition(championhash,pos,total+1);
++  addrresult = championaddr;
+ }
+ 
+ /// Different hash methods are cycled through until a hash is found that distinguishes the given
+@@ -491,7 +494,9 @@
+   uint4 method;
+   uint8 tmphash;
+   Address tmpaddr;
+-  uint4 maxduplicates = 8;
++  uint8 championhash = 0;
++  Address championaddr;
++  uint4 maxduplicates = 128;
+ 
+   moveOffSkip(op, slot);
+   if (op == (const PcodeOp *)0) {
+@@ -506,7 +511,6 @@
+     if (hash == 0) return;	// Can't get a good hash
+     tmphash = hash;
+     tmpaddr = addrresult;
+-    oplist.clear();
+     oplist2.clear();
+     for(uint4 i=0;i<oplist.size();++i) {
+       PcodeOp *tmpop = oplist[i];
+@@ -522,6 +526,8 @@
+     if (oplist2.size() <= maxduplicates) {
+       if ((champion.size()==0)||(oplist2.size() < champion.size())) {
+ 	champion = oplist2;
++        championhash = tmphash;
++        championaddr = tmpaddr;
+ 	if (champion.size()==1)
+ 	  break; // Current hash is unique
+       }
+@@ -542,9 +548,8 @@
+     addrresult = Address();
+     return;
+   }
+-  hash = tmphash | ((uint8)pos << 49); // Store three bits for position with list of duplicate hashes
+-  hash |= ((uint8)total << 52);	// Store three bits for total number of duplicate hashes
+-  addrresult = tmpaddr;
++  hash = withTotalPosition(championhash,pos,total+1);
++  addrresult = championaddr;
+ }
+ 
+ /// \brief Given an address and hash, find the unique matching Varnode
+@@ -737,7 +742,7 @@
+ uint4 DynamicHash::getPositionFromHash(uint8 h)
+ 
+ {
+-  return (uint4)((h>>49)&7);
++  return (uint4)(((h>>49)&7) | (((h>>55)&15)<<3));
+ }
+ 
+ /// The hash encodes the total number of collisions for that hash
+@@ -746,7 +751,7 @@
+ uint4 DynamicHash::getTotalFromHash(uint8 h)
+ 
+ {
+-  return ((uint4)((h>>52)&7)+1);
++  return (uint4)(((h>>52)&7) | (((h>>59)&15)<<3)) + 1;
+ }
+ 
+ /// The hash encodes whether or not the root was directly attached to its PcodeOp
+@@ -764,10 +769,23 @@
+ void DynamicHash::clearTotalPosition(uint8 &h)
+ 
+ {
+-  uint8 val = 0x3f;
++  uint8 val = 0x3fff;
+   val <<= 49;
+   val = ~val;
+   h &= val;
+ }
+ 
++// Preserve the existing three-bit fields for collision sets of up to eight.
++// SIMD lane temporaries need larger sets: use previously unused bits for
++// four additional bits of position and total, keeping the formal hash intact.
++uint8 DynamicHash::withTotalPosition(uint8 h,uint4 position,uint4 total)
++{
++  if (total == 0 || total > 128 || position >= total)
++    throw LowlevelError("Invalid dynamic hash collision identity");
++  clearTotalPosition(h);
++  uint4 count = total - 1;
++  return h | ((uint8)(position&7)<<49) | ((uint8)(count&7)<<52)
++      | ((uint8)(position>>3)<<55) | ((uint8)(count>>3)<<59);
++}
++
+ } // End namespace ghidra
+diff --git a/decompiler/dynamic.hh b/decompiler/dynamic.hh
+--- a/decompiler/dynamic.hh
++++ b/decompiler/dynamic.hh
+@@ -100,6 +100,7 @@
+   static uint4 getTotalFromHash(uint8 h);		///< Retrieve the encoded collision total from a hash
+   static bool getIsNotAttached(uint8 h);		///< Retrieve the attachment boolean from a hash
+   static void clearTotalPosition(uint8 &h);		///< Clear the collision total and position fields within a hash
++  static uint8 withTotalPosition(uint8 h,uint4 position,uint4 total);
+   static uint4 getComparable(uint8 h) { return (uint4)h; }	///< Get only the formal hash for comparing
+   static const uint4 transtable[];				///< Translation of op-codes to hash values
+ };
+diff --git a/decompiler/sleigh_arch.cc b/decompiler/sleigh_arch.cc
+--- a/decompiler/sleigh_arch.cc
++++ b/decompiler/sleigh_arch.cc
+@@ -183,6 +183,7 @@ Translate *SleighArchitecture::buildTranslator(DocumentStorage &store)
+   }
+   pair<map<int4,Sleigh>::iterator,bool> res;
+   res = translators.emplace(piecewise_construct,forward_as_tuple(languageindex),forward_as_tuple(loader,context));
++  res.first->second.setPowerPcReturns(description[languageindex].getProcessor() == "PowerPC");
+   return &(*res.first).second;
+ }
+ 
+@@ -428,6 +429,16 @@ void SleighArchitecture::modifySpaces(Translate *trans)
+     trans->truncateSpace(language.getTruncation(i));
+   }
+ }
+ 
++void SleighArchitecture::postSpecFile(void)
++
++{
++  Architecture::postSpecFile();
++  // Match raw-worker ARM return recovery without replacing an explicit ABI.
++  if (defaultReturnAddr.space == nullptr &&
++      description[languageindex].getProcessor() == "ARM")
++    defaultReturnAddr = translate->getRegister("lr");
++}
++
+ /// Prepare \b this SleighArchitecture for analyzing the given executable image.
+ /// Full initialization, including creation of the Translate object, still must be
+diff --git a/decompiler/sleigh_arch.hh b/decompiler/sleigh_arch.hh
+--- a/decompiler/sleigh_arch.hh
++++ b/decompiler/sleigh_arch.hh
+@@ -128,6 +128,7 @@ protected:
+   virtual void buildSymbols(DocumentStorage &store);
+   virtual void buildSpecFile(DocumentStorage &store);
+   virtual void modifySpaces(Translate *trans);
++  virtual void postSpecFile(void);
+   virtual void resolveArchitecture(void);
+ public:
+   SleighArchitecture(const string &fname,const string &targ,ostream *estream);	///< Construct given executable file
+--- a/decompiler/printlanguage.cc
++++ b/decompiler/printlanguage.cc
+@@ -276,6 +276,22 @@
+   switch(topToken->type) {
+   case OpToken::space:
+   case OpToken::binary:
++    // Make mixed arithmetic/bitwise grouping explicit for C compilers'
++    // -Wparentheses without changing the native expression tree.
++    if (topToken->type == OpToken::binary && op2->type == OpToken::binary) {
++      const string &parent = topToken->print1;
++      const string &child = op2->print1;
++      if ((parent == "&" || parent == "^" || parent == "|") &&
++          (child == "+" || child == "-" || child == "*" || child == "/" || child == "%" ||
++           child == "<<" || child == ">>" || child == "==" || child == "!=" ||
++           child == "<" || child == "<=" || child == ">" || child == ">=" ||
++           child == "&&" || child == "||" ||
++           ((child == "&" || child == "^" || child == "|") && child != parent)))
++        return true;
++      if (((parent == "<<" || parent == ">>") && (child == "+" || child == "-")) ||
++          (parent == "||" && child == "&&"))
++        return true;
++    }
+     if (topToken->precedence > op2->precedence) return true;
+     if (topToken->precedence < op2->precedence) return false;
+     if (topToken->associative && (topToken == op2)) return false;
+diff --git a/decompiler/grammar.cc b/decompiler/grammar.cc
+--- a/decompiler/grammar.cc
++++ b/decompiler/grammar.cc
+@@ -2406,16 +2406,9 @@ bool TypeDeclarator::isValid(void) const
+   if (count > 1)
+     throw ParseError("Multiple storage specifiers");
+ 
+-  count = 0;
+-  if ((flags & CParse::f_const)!=0)
+-    count += 1;
+-  if ((flags & CParse::f_restrict)!=0)
+-    count += 1;
+-  if ((flags & CParse::f_volatile)!=0)
+-    count += 1;
+-  if (count > 1)
+-    throw ParseError("Multiple type qualifiers");
+-  
++  // C type qualifiers combine; unlike storage specifiers they are
++  // not mutually exclusive.
++
+   for(uint4 i=0;i<mods.size();++i) {
+     if (!mods[i]->isValid())
+       return false;

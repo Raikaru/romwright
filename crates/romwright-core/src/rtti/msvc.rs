@@ -158,8 +158,8 @@ pub fn recover(image: &Image<'_>) -> (Vec<ClassRow>, ClassReport) {
         let (bases, kind) = hierarchy(image, primary, descriptor, &typeinfo);
         report.bases += bases.len();
         rows.push(ClassRow {
-            typeinfo: Address::ram(descriptor),
-            vtable: Address::ram(vtable),
+            typeinfo: Some(Address::ram(descriptor)),
+            vtable: Some(Address::ram(vtable)),
             name: demangle_type(name),
             mangled: name.clone(),
             kind,

@@ -9,8 +9,8 @@
 use romwright_core::Core;
 use romwright_model::{Address, AddressSpace};
 use romwright_worker_client::WorkerPoolManager;
-use serde::{de::DeserializeOwned, Serialize};
-use serde_json::{json, Value};
+use serde::{Serialize, de::DeserializeOwned};
+use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -28,6 +28,7 @@ mod ffi {
 /// Core's one-entry native image cache while Qt may issue concurrent requests.
 /// The worker manager has a separate mutex because its warm process is mutable.
 pub struct CoreHandle {
+    executor: romwright_worker_client::JobExecutor,
     core: Mutex<Core>,
     worker_pool: Mutex<WorkerPoolManager>,
 }
@@ -37,13 +38,62 @@ pub fn core_open(project: &str) -> Result<Box<CoreHandle>, Box<dyn std::error::E
     Ok(Box::new(CoreHandle {
         core: Mutex::new(core),
         worker_pool: Mutex::new(WorkerPoolManager::default()),
+        executor: romwright_worker_client::JobExecutor::new(2),
     }))
+}
+
+impl CoreHandle {
+    fn matching_request(&self, mut request: Value) -> Result<Value, String> {
+        match request.get("method").and_then(Value::as_str) {
+            Some("matching_workspace") => {
+                let operation = serde_json::from_value(request.get_mut("operation").ok_or("request.operation is required")?.take())
+                    .map_err(|error| format!("invalid workspace operation: {error}"))?;
+                let program = required_string(&request, "program")?;
+                let core = self.core.lock().map_err(|_| "Core mutex poisoned")?
+                    .fork().map_err(|error| error.to_string())?;
+                core.run_matching_workspace_operation(&program, operation).map_err(|error| error.to_string())
+            }
+            Some("job_submit" | "matching_run") => {
+                let synchronous = request.get("method").and_then(Value::as_str) == Some("matching_run");
+                if !synchronous && request.get("op").and_then(Value::as_str) != Some("matching") {
+                    return Err("Qt job_submit requires op: matching".into());
+                }
+                let operation = serde_json::from_value(request.get_mut("operation").ok_or("request.operation is required")?.take())
+                    .map_err(|error| format!("invalid matching operation: {error}"))?;
+                let binary = required_path(&request, "binary")?;
+                let program = required_string(&request, "program")?;
+                let base = optional_u64(&request, "base")?;
+                let budget = std::time::Duration::from_millis(optional_u64(&request, "budget_ms")?.unwrap_or(120_000));
+                let execution = self.core.lock().map_err(|_| "Core mutex poisoned")?
+                    .execution_request(&binary, &program, base, budget).map_err(|error| error.to_string())?;
+                let id = self.executor.submit(romwright_worker_client::JobKind::Matching { operation }, execution);
+                if synchronous {
+                    self.executor.wait(id).ok_or_else(|| format!("unknown job {id}"))?
+                } else {
+                    Ok(json!({"job":id}))
+                }
+            }
+            Some("job_status") => {
+                let id = optional_u64(&request, "job")?.ok_or("request.job is required")?;
+                self.executor.status(id).ok_or_else(|| format!("unknown job {id}"))
+            }
+            Some("job_cancel") => {
+                let id = optional_u64(&request, "job")?.ok_or("request.job is required")?;
+                Ok(json!({"job":id,"cancelled":self.executor.cancel(id)}))
+            }
+            _ => Err("unknown matching request".into()),
+        }
+    }
 }
 
 pub fn core_request(core: &CoreHandle, request_json: &str) -> String {
     let result = (|| -> Result<Value, String> {
-        let request: Value = serde_json::from_str(request_json)
-            .map_err(|e| format!("invalid request JSON: {e}"))?;
+        let request: Value =
+            serde_json::from_str(request_json).map_err(|e| format!("invalid request JSON: {e}"))?;
+        if matches!(request.get("method").and_then(Value::as_str),
+            Some("matching_workspace" | "matching_run" | "job_submit" | "job_status" | "job_cancel")) {
+            return core.matching_request(request);
+        }
         let mut worker_pool = core
             .worker_pool
             .lock()
@@ -111,15 +161,26 @@ fn dispatch(
                 )
             }
         }
+        "function_at" => {
+            let program = required_string(request, "program")?;
+            let address = optional_u64(request, "address")?
+                .ok_or_else(|| "request.address is required".to_owned())?;
+            to_value(core.function_at(&program, address))
+        }
         "functions_page" => {
             let program = required_string(request, "program")?;
             let offset = optional_u64(request, "offset")?.unwrap_or(0);
             let limit = optional_u64(request, "limit")?.unwrap_or(256);
             let filter = request.get("filter").and_then(Value::as_str);
             let sort = request.get("sort").and_then(Value::as_str);
-            to_value(core.functions_page(&program, offset, limit, filter, sort))
+            let address = optional_u64(request, "address")?;
+            to_value(core.functions_page(&program, offset, limit, filter, sort, address))
         }
         "programs" => to_value(core.programs()),
+        "program_input" => {
+            let program = required_string(request, "program")?;
+            to_value(core.program_input(&program))
+        }
         "locate" => {
             let address = required_address(request, "address")?;
             to_value(core.locate(&address))
@@ -140,7 +201,12 @@ fn dispatch(
             let offset = optional_u64(request, "offset")?.unwrap_or(0);
             let limit = optional_u64(request, "limit")?.unwrap_or(256);
             to_value(core.xrefs_page(
-                &program, &address, incoming, offset, limit, evidence(request)?,
+                &program,
+                &address,
+                incoming,
+                offset,
+                limit,
+                evidence(request)?,
             ))
         }
         "comments" => {
@@ -224,7 +290,8 @@ fn dispatch(
         "set_type_def" => {
             let program = required_string(request, "program")?;
             let row: romwright_model::TypeDefRow = required_row(request, "row")?;
-            core.set_type_def(&program, &row).map_err(|e| e.to_string())?;
+            core.set_type_def(&program, &row)
+                .map_err(|e| e.to_string())?;
             Ok(json!({ "name": row.name }))
         }
         "set_type_field" => {
@@ -237,7 +304,8 @@ fn dispatch(
         "set_prototype" => {
             let program = required_string(request, "program")?;
             let row: romwright_model::PrototypeRow = required_row(request, "row")?;
-            core.set_prototype(&program, &row).map_err(|e| e.to_string())?;
+            core.set_prototype(&program, &row)
+                .map_err(|e| e.to_string())?;
             Ok(json!({ "function": row.function }))
         }
         "set_stack_variable" => {
@@ -250,7 +318,8 @@ fn dispatch(
         "set_type_link" => {
             let program = required_string(request, "program")?;
             let row: romwright_model::TypeLinkRow = required_row(request, "row")?;
-            core.set_type_link(&program, &row).map_err(|e| e.to_string())?;
+            core.set_type_link(&program, &row)
+                .map_err(|e| e.to_string())?;
             Ok(json!({ "source": row.source, "target": row.target }))
         }
         "strings" => {
@@ -282,9 +351,15 @@ fn dispatch(
         }
         "function_bb_graph" => {
             let binary = required_path(request, "binary")?;
-            let address = required_string(request, "address")?;
-            core.function_bb_graph(&binary, &address)
-                .map_err(|e| e.to_string())
+            let program = required_string(request, "program")?;
+            let address = required_address(request, "address")?;
+            require_ram(&address)?;
+            let req = core.execution_request(&binary, &program, None, std::time::Duration::from_secs(60))
+                .map_err(|error| error.to_string())?;
+            let doc = worker_pool.decompile_doc(core, &req, &address)
+                .map_err(|error| error.to_string())?;
+            let ir = doc.function_ir.as_ref().ok_or("native function CFG is unavailable")?;
+            Ok(romwright_core::graph::native_graph(ir))
         }
         "function_graph" => {
             let program = required_string(request, "program")?;
@@ -301,11 +376,11 @@ fn dispatch(
         }
         "set_bookmark" => {
             let program = required_string(request, "program")?;
-            let row: romwright_model::BookmarkRow = serde_json::from_value(
-                request.get("bookmark").cloned().unwrap_or(Value::Null),
-            )
-            .map_err(|e| format!("request.bookmark is invalid: {e}"))?;
-            core.set_bookmark(&program, &row).map_err(|e| e.to_string())?;
+            let row: romwright_model::BookmarkRow =
+                serde_json::from_value(request.get("bookmark").cloned().unwrap_or(Value::Null))
+                    .map_err(|e| format!("request.bookmark is invalid: {e}"))?;
+            core.set_bookmark(&program, &row)
+                .map_err(|e| e.to_string())?;
             Ok(json!({ "address": row.address, "label": row.label }))
         }
         "delete_bookmark" => {
@@ -445,11 +520,7 @@ fn dispatch(
                 })
                 .transpose()?
                 .unwrap_or_else(|| address.clone());
-            let kind = request
-
-                .get("kind")
-                .and_then(Value::as_str)
-                .unwrap_or("eol");
+            let kind = request.get("kind").and_then(Value::as_str).unwrap_or("eol");
             let text = required_string(request, "text")?;
             core.comment_command(&program, &address, &function, kind, &text)
                 .map_err(|e| e.to_string())?;
@@ -494,10 +565,44 @@ fn dispatch(
             let address = required_address(request, "address")?;
             require_ram(&address)?;
             let base = optional_u64(request, "base")?;
+            let req = core
+                .execution_request(&binary, &program, base, std::time::Duration::from_secs(60))
+                .map_err(|e| e.to_string())?;
             let doc = worker_pool
-                .decompile_doc(core, &binary, &address, &program, base)
+                .decompile_doc(core, &req, &address)
                 .map_err(|error| error.to_string())?;
-            serde_json::to_value(doc).map_err(|error| format!("encode result: {error}"))
+            let graph = doc.function_ir.as_ref().map(romwright_core::graph::native_graph);
+            let mut callees = std::collections::BTreeSet::new();
+            if let Some(ir) = &doc.function_ir {
+                use romwright_model::function_ir::{Opcode, Operand};
+                for operation in ir.blocks.iter().flat_map(|block| &block.operations) {
+                    if operation.opcode == Opcode::CALL {
+                        if let Some(Operand::Value(id)) = operation.inputs.first() {
+                            if let Some(offset) = ir.values.get(id).and_then(|value| value.offset) {
+                                callees.insert(offset);
+                            }
+                        }
+                    }
+                }
+            }
+            let signatures: std::collections::BTreeMap<_, _> = core.prototypes(&program)
+                .map_err(|error| error.to_string())?.into_iter()
+                .filter(|row| callees.contains(&row.function.offset))
+                .map(|row| (format!("0x{:x}", row.function.offset), row.signature)).collect();
+            // The first retained SSA operation need not be the function entry.
+            // Use the same nearest-entry/extent rule as the native provider.
+            let entry = core.functions(&program).map_err(|error| error.to_string())?
+                .into_iter().filter(|function| function.entry.space == address.space
+                    && function.entry.offset <= address.offset)
+                .max_by_key(|function| function.entry.offset)
+                .filter(|function| address.offset < function.entry.offset.saturating_add(function.size.max(1)))
+                .map(|function| function.entry);
+            core.check_execution(&req).map_err(|error| error.to_string())?;
+            let mut result = serde_json::to_value(doc).map_err(|error| format!("encode result: {error}"))?;
+            result["call_signatures"] = json!(signatures);
+            result["graph"] = json!(graph);
+            result["function_entry"] = json!(entry);
+            Ok(result)
         }
         _ => Err(format!("unknown Core API method: {method}")),
     }
@@ -576,7 +681,6 @@ fn required_bytes(request: &Value, key: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-
 fn required_address(request: &Value, key: &str) -> Result<Address, String> {
     let value = request
         .get(key)
@@ -597,11 +701,9 @@ where
     T: Serialize,
     E: std::fmt::Display,
 {
-    result
-        .map_err(|error| error.to_string())
-        .and_then(|value| {
-            serde_json::to_value(value).map_err(|error| format!("encode result: {error}"))
-        })
+    result.map_err(|error| error.to_string()).and_then(|value| {
+        serde_json::to_value(value).map_err(|error| format!("encode result: {error}"))
+    })
 }
 
 #[cfg(test)]
@@ -625,8 +727,8 @@ mod tests {
     #[test]
     fn ping_is_versioned_and_json_enveloped() {
         let handle = core_open(temp_project().to_str().unwrap()).unwrap();
-        let response: Value = serde_json::from_str(&core_request(&handle, r#"{"method":"ping"}"#))
-            .unwrap();
+        let response: Value =
+            serde_json::from_str(&core_request(&handle, r#"{"method":"ping"}"#)).unwrap();
         assert_eq!(response["ok"], true);
         assert_eq!(response["result"]["api"], 2);
     }
@@ -647,7 +749,10 @@ mod tests {
     #[test]
     fn address_parser_accepts_core_wire_forms() {
         let request = json!({"address": "ram:00400466"});
-        assert_eq!(required_address(&request, "address").unwrap(), Address::ram(0x400466));
+        assert_eq!(
+            required_address(&request, "address").unwrap(),
+            Address::ram(0x400466)
+        );
         let request = json!({"address": {"space": {"Other": "register"}, "offset": 8}});
         assert!(required_address(&request, "address").is_ok());
     }

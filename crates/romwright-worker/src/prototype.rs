@@ -5,31 +5,37 @@
 
 use crate::doc::Value;
 use crate::wire::attr::{NAME, OFFSET, SIZE, SPACE};
-use crate::wire::elem::{ADDR, DOC, FUNCTION, MAPSYM, PROTOTYPE, RETURNSYM, SYMBOL, TYPE, TYPEREF, VOID};
-use romwright_model::{DecompType, FuncParam, FuncProto, StorageSymbol};
+use crate::wire::elem::{
+    ADDR, DOC, FUNCTION, MAPSYM, PROTOTYPE, RETURNSYM, SYMBOL, TYPE, TYPEREF, VOID,
+};
+use romwright_model::function_ir::OperationId;
+use romwright_model::{Address, DecompType, FuncParam, FuncProto, StorageSymbol};
+use std::collections::BTreeMap;
 
 const DEF: u32 = 43;
 const INTERNALLIST: u32 = 161;
 const PARAM: u32 = 166;
 const LOCALDB: u32 = 228;
+// Private response metadata emitted by native/romwright_ir.hh.
+const CALLPROTOTYPE: u32 = 4090;
 
 #[derive(Default)]
-struct Node {
-    id: u32,
-    depth: usize,
-    attributes: Vec<(u32, Value)>,
-    children: Vec<Node>,
+pub(crate) struct Node {
+    pub(crate) id: u32,
+    pub(crate) depth: usize,
+    pub(crate) attributes: Vec<(u32, Value)>,
+    pub(crate) children: Vec<Node>,
 }
 
 impl Node {
-    fn value(&self, id: u32) -> Option<&Value> {
+    pub(crate) fn value(&self, id: u32) -> Option<&Value> {
         self.attributes
             .iter()
             .find(|(key, _)| *key == id)
             .map(|(_, value)| value)
     }
 
-    fn string(&mut self, id: u32) -> Option<String> {
+    pub(crate) fn string(&mut self, id: u32) -> Option<String> {
         let index = self.attributes.iter().position(|(key, _)| *key == id)?;
         match self.attributes.swap_remove(index).1 {
             Value::String(value) => Some(value),
@@ -37,11 +43,11 @@ impl Node {
         }
     }
 
-    fn unsigned(&self, id: u32) -> Option<u64> {
+    pub(crate) fn unsigned(&self, id: u32) -> Option<u64> {
         self.value(id)?.unsigned()
     }
 
-    fn boolean(&self, id: u32) -> Option<bool> {
+    pub(crate) fn boolean(&self, id: u32) -> Option<bool> {
         match self.value(id) {
             None => Some(false),
             Some(Value::Boolean(value)) => Some(*value),
@@ -49,12 +55,12 @@ impl Node {
         }
     }
 
-    fn take_child(&mut self, id: u32) -> Option<Node> {
+    pub(crate) fn take_child(&mut self, id: u32) -> Option<Node> {
         let index = self.children.iter().position(|node| node.id == id)?;
         Some(self.children.remove(index))
     }
 
-    fn take_type(&mut self) -> Option<DecompType> {
+    pub(crate) fn take_type(&mut self) -> Option<DecompType> {
         let index = self.children.iter().position(|node| is_type(node.id))?;
         decode_type(self.children.remove(index))
     }
@@ -148,6 +154,8 @@ fn decode_prototype(mut node: Node, mut parameters: Vec<FuncParam>) -> Option<Fu
 #[derive(Default)]
 pub(crate) struct Recovered {
     pub prototype: Option<FuncProto>,
+    pub call_prototypes: BTreeMap<OperationId, FuncProto>,
+    pub call_targets: BTreeMap<OperationId, Address>,
     pub storage: Vec<StorageSymbol>,
 }
 
@@ -169,6 +177,8 @@ pub(crate) struct Collector {
     parameters: Vec<FuncParam>,
     prototype: Option<Node>,
     result: Option<FuncProto>,
+    call_prototypes: BTreeMap<OperationId, FuncProto>,
+    call_targets: BTreeMap<OperationId, Node>,
     failed: bool,
     seen_prototype: bool,
 }
@@ -188,22 +198,22 @@ impl Collector {
             self.mapsym_depth = Some(depth);
             self.pending_input = None;
         }
-        if id == ADDR
-            && self.pending_input.is_some()
-            && self.mapsym_depth == depth.checked_sub(1)
-        {
+        if id == ADDR && self.pending_input.is_some() && self.mapsym_depth == depth.checked_sub(1) {
             self.addr_depth = Some(depth);
             self.addr_space = None;
             self.addr_offset = None;
             self.addr_size = None;
         }
         let root = (id == PROTOTYPE && self.function_depth == depth.checked_sub(1))
-            || (id == SYMBOL && self.localdb_depth.is_some());
+            || (id == SYMBOL && self.localdb_depth.is_some())
+            || (id == CALLPROTOTYPE && parent == Some(DOC));
         let child = self
             .capture
             .last()
             .is_some_and(|node| node.depth + 1 == depth)
-            && (is_type(id) || matches!(id, PROTOTYPE | RETURNSYM | INTERNALLIST | PARAM));
+            && (is_type(id)
+                || matches!(id, PROTOTYPE | RETURNSYM | INTERNALLIST | PARAM)
+                || (id == ADDR && parent == Some(CALLPROTOTYPE)));
         if root || child {
             // Bound recursive type projection and drop depth without constraining
             // the unrelated p-code AST. Do not publish an incomplete signature.
@@ -232,7 +242,12 @@ impl Collector {
         let Some(node) = self.capture.last_mut() else {
             return Some(value);
         };
-        if node.depth == depth && matches!(id, 9 | 10 | 12 | 13 | 14 | 19 | 48 | 61 | 115 | crate::wire::attr::NORETURN) {
+        if node.depth == depth
+            && (matches!(
+                id,
+                9 | 10 | 12 | 13 | 14 | 19 | 41 | 48 | 61 | 115 | crate::wire::attr::NORETURN
+            ) || (node.id == ADDR && matches!(id, SPACE | OFFSET)))
+        {
             node.attributes.push((id, value));
         }
         // Metadata is not a Clang token. Move its attributes instead of copying
@@ -254,6 +269,22 @@ impl Collector {
             }
             if let Some(parent) = self.capture.last_mut() {
                 parent.children.push(node);
+            } else if id == CALLPROTOTYPE {
+                let operation = node.unsigned(41).map(OperationId);
+                if let (Some(operation), Some(address)) = (operation, node.take_child(ADDR)) {
+                    self.call_targets.insert(operation, address);
+                }
+                let prototype = node
+                    .take_child(PROTOTYPE)
+                    .and_then(|node| decode_prototype(node, Vec::new()));
+                match (operation, prototype) {
+                    (Some(operation), Some(prototype)) => {
+                        if self.call_prototypes.insert(operation, prototype).is_some() {
+                            self.failed = true;
+                        }
+                    }
+                    _ => self.failed = true,
+                }
             } else if id == PROTOTYPE {
                 if self.prototype.replace(node).is_some() {
                     self.failed = true;
@@ -271,9 +302,7 @@ impl Collector {
             } else if id == SYMBOL && self.mapsym_depth.is_some() {
                 // An irregular input carries its evidence in its name; the
                 // storage arrives in the sibling `<addr>`.
-                self.pending_input = node
-                    .string(NAME)
-                    .filter(|name| name.starts_with("in_"));
+                self.pending_input = node.string(NAME).filter(|name| name.starts_with("in_"));
             }
         }
         if id == ADDR && self.addr_depth == Some(depth) {
@@ -312,11 +341,19 @@ impl Collector {
         }
     }
 
-    pub(crate) fn finish(self) -> Recovered {
+    pub(crate) fn finish(self, ram: Option<u64>) -> Recovered {
         if self.failed || self.function_depth.is_some() || !self.capture.is_empty() {
-            Recovered::default()
-        } else {
-            Recovered { prototype: self.result, storage: self.storage }
+            return Recovered::default();
+        }
+        let targets = self.call_targets.into_iter()
+            .map(|(operation, node)| crate::semantic::address(node, ram).map(|address| (operation, address)))
+            .collect::<Result<BTreeMap<_, _>, _>>();
+        let Ok(call_targets) = targets else { return Recovered::default() };
+        Recovered {
+            prototype: self.result,
+            call_prototypes: self.call_prototypes,
+            call_targets,
+            storage: self.storage,
         }
     }
 }

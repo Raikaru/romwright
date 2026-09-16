@@ -7,20 +7,15 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 pub(super) struct MappedImage {
     path: PathBuf,
-    /// The language the image's header/loader selected (`import.language`),
-    /// so the console is pointed at that language's `.sla` directory rather
-    /// than the session default.
-    pub(super) language: String,
 }
 
 impl MappedImage {
-    /// The console's loader needs the full `language:compiler` arch string, so
-    /// an ELF image is selected from the install's opinion data exactly as an
-    /// import selects it (`opinion::elf_selection`).
-    pub(super) fn for_elf_or_dol(
+    /// Keep loader mode facts beside the mappings until the console can
+    /// install them. XML byte chunks alone cannot distinguish ARM from Thumb.
+    pub(super) fn parse_binary(
         cfg: &crate::session::RuntimeConfig,
         binary: &Path,
-    ) -> Result<Option<Self>> {
+    ) -> Result<Option<NativeImport>> {
         let mut file = std::fs::File::open(binary)
             .map_err(|e| NativeRuntimeError(format!("image probe: {e}")))?;
         let mut prefix = [0; 4];
@@ -38,18 +33,19 @@ impl MappedImage {
                 .map_err(|e| NativeRuntimeError(format!("ELF image: {e}")))?;
             crate::native::select_language(&mut import, cfg)
                 .map_err(|e| NativeRuntimeError(format!("ELF image: {e}")))?;
-            return Self::new(&import).map(Some);
+            return Ok(Some(import));
         }
         // DOL has no magic. Non-DOL raw images remain valid console inputs.
         match crate::native::dol::import(&bytes) {
-            Ok(import) => Self::new(&import).map(Some),
+            Ok(import) => Ok(Some(import)),
             Err(_) => Ok(None),
         }
     }
 
     pub(super) fn new(import: &NativeImport) -> Result<Self> {
         static NEXT: AtomicU64 = AtomicU64::new(0);
-        let path = std::env::temp_dir().join(format!(
+        let path = crate::native::scratch_root()
+            .map_err(|e| NativeRuntimeError(format!("mapped image scratch: {e}")))?.join(format!(
             "romwright-image-{}-{}.xml",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
@@ -59,10 +55,7 @@ impl MappedImage {
             .create_new(true)
             .open(&path)
             .map_err(|e| NativeRuntimeError(format!("mapped image create: {e}")))?;
-        let image = Self {
-            path,
-            language: import.language.clone(),
-        };
+        let image = Self { path };
         let mut writer = std::io::BufWriter::new(file);
         let mut write_image = || -> std::io::Result<()> {
             // Full language + compiler id; resolveArchitecture uses loader.getArchType.
