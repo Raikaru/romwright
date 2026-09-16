@@ -20,6 +20,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import ghidra.app.decompiler.DecompInterface;
+import ghidra.app.decompiler.DecompileOptions;
 import ghidra.app.decompiler.DecompileResults;
 import ghidra.program.model.address.Address;
 import ghidra.app.plugin.processors.sleigh.UniqueLayout;
@@ -471,6 +472,11 @@ final class Dispatcher {
         Function f = session.functionAt(at);
         DecompInterface decompiler = new DecompInterface();
         try {
+            // Use stock desktop defaults, not the native process's unconfigured
+            // defaults (notably, read-only constant propagation is otherwise off).
+            DecompileOptions options = new DecompileOptions();
+            options.grabFromProgram(session.program());
+            decompiler.setOptions(options);
             if (!decompiler.openProgram(session.program())) {
                 throw new Main.RpcError(-32009, "decompiler refused to open program");
             }

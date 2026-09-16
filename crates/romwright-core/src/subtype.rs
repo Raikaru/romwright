@@ -16,7 +16,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::native_runtime::{PcodeInstruction, PcodeOp, PcodeVarnode};
-use crate::types_infer::{Class, Field, Ty};
+use crate::types_infer::{Field, Ty};
+use romwright_model::type_evidence::Class;
 
 /// A type variable: one storage location (register offset, or a unique
 /// temporary) whose type the solver determines.
@@ -67,7 +68,6 @@ pub struct Signature {
     pub returns: Vec<(u64, Ty)>,
 }
 
-
 /// A decompiler type as a structural `Ty` — the Ghidra/`Strong` direction,
 /// where a recovered `FuncProto` overrides the solver's inference.
 fn decomp_to_ty(ty: &romwright_model::DecompType) -> Ty {
@@ -83,13 +83,24 @@ fn decomp_to_ty(ty: &romwright_model::DecompType) -> Ty {
             _ => 64,
         }
     };
-    let bits = ty.size.map(|s| (s * 8) as u32).unwrap_or_else(|| name_bits(name));
+    let bits = ty
+        .size
+        .map(|s| (s * 8) as u32)
+        .unwrap_or_else(|| name_bits(name));
     match ty.metatype.as_deref() {
         Some("ptr") => Ty::Ptr(Box::new(
-            ty.target.as_deref().map(decomp_to_ty).unwrap_or(Ty::Unknown),
+            ty.target
+                .as_deref()
+                .map(decomp_to_ty)
+                .unwrap_or(Ty::Unknown),
         )),
         Some("array") => Ty::Array {
-            elem: Box::new(ty.target.as_deref().map(decomp_to_ty).unwrap_or(Ty::Unknown)),
+            elem: Box::new(
+                ty.target
+                    .as_deref()
+                    .map(decomp_to_ty)
+                    .unwrap_or(Ty::Unknown),
+            ),
             stride: ty.target.as_ref().and_then(|t| t.size).unwrap_or(1),
         },
         Some("float") => Ty::Scalar(Class::Float(bits)),
@@ -133,7 +144,11 @@ impl Signature {
         }
         let ret_ty = decomp_to_ty(&proto.return_type);
         let returns = if matches!(ret_ty, Ty::Scalar(Class::Float(_))) {
-            float_ret.first().map(|r| (*r, ret_ty)).into_iter().collect()
+            float_ret
+                .first()
+                .map(|r| (*r, ret_ty))
+                .into_iter()
+                .collect()
         } else {
             int_ret.first().map(|r| (*r, ret_ty)).into_iter().collect()
         };
@@ -142,18 +157,19 @@ impl Signature {
 }
 /// Solve a function in isolation — no callee facts.
 pub fn solve(instructions: &[PcodeInstruction]) -> Solution {
-    solve_with(instructions, &BTreeMap::new())
+    solve_with(instructions, &BTreeMap::new(), &BTreeSet::new())
 }
 
-/// Solve with callee signatures: at each `CALL`/`CALLIND` to a known
-/// address, the callee's parameter types constrain the caller's argument
-/// registers and the callee's return type constrains the caller's use of
-/// the return register.
+/// `solve` with callee signatures for interprocedural constraint injection
+/// and the register offsets a call destroys (`killedbycall` from the
+/// compiler spec). The killed set is what lets a call clobber the
+/// caller-saved registers it must not leave holding their pre-call values.
 pub fn solve_with(
     instructions: &[PcodeInstruction],
     callees: &BTreeMap<u64, Signature>,
+    killed: &BTreeSet<u64>,
 ) -> Solution {
-    let mut c = Collector::new(callees);
+    let mut c = Collector::new(callees, killed);
     c.collect(instructions);
     c.solve()
 }
@@ -201,10 +217,14 @@ struct Collector<'a> {
     output_versioned: bool,
     /// caller→callee observations the fixpoint feeds back.
     call_args: Vec<(u64, u64, Var)>,
+    /// Register offsets a call destroys — the compiler spec's
+    /// `killedbycall` set. A call gives each a fresh value so a post-call
+    /// read cannot resolve to the caller's pre-call value.
+    killed: &'a BTreeSet<u64>,
 }
 
 impl<'a> Collector<'a> {
-    fn new(callees: &'a BTreeMap<u64, Signature>) -> Self {
+    fn new(callees: &'a BTreeMap<u64, Signature>, killed: &'a BTreeSet<u64>) -> Self {
         Self {
             vars: BTreeMap::new(),
             names: Vec::new(),
@@ -224,6 +244,7 @@ impl<'a> Collector<'a> {
             output_held: false,
             output_versioned: false,
             call_args: Vec::new(),
+            killed,
         }
     }
 
@@ -304,7 +325,11 @@ impl<'a> Collector<'a> {
                         self.constraints.push(Constraint::Field(
                             var,
                             0,
-                            Field { offset: 0, size: class.width() / 8, class: *class },
+                            Field {
+                                offset: 0,
+                                size: class.width() / 8,
+                                class: *class,
+                            },
                         ));
                     }
                     Ty::Struct(fields) => {
@@ -339,6 +364,19 @@ impl<'a> Collector<'a> {
         }
     }
 
+    /// A call destroys every register the compiler spec marks
+    /// `killedbycall`: each gets a fresh value so a post-call read resolves
+    /// to the call's clobber, not the caller's pre-call value. This runs
+    /// before the return registers are set, so a return that is also
+    /// caller-saved still lands the callee's typed return.
+    fn clobber_call(&mut self) {
+        for &offset in self.killed.iter() {
+            self.defined.insert(offset);
+            let var = self.fresh();
+            self.holding.insert(offset, var);
+        }
+    }
+
     fn collect(&mut self, instructions: &[PcodeInstruction]) {
         for instruction in instructions {
             for op in &instruction.ops {
@@ -356,7 +394,11 @@ impl<'a> Collector<'a> {
             if !seen.insert(cur) {
                 break;
             }
-            cur = match self.names.iter().position(|n| *n == ("register".into(), origin)) {
+            cur = match self
+                .names
+                .iter()
+                .position(|n| *n == ("register".into(), origin))
+            {
                 Some(i) => i as Var,
                 None => return Some(origin),
             };
@@ -485,16 +527,18 @@ impl<'a> Collector<'a> {
             "LOAD" => self.load(op),
             "STORE" => self.store(op),
             "CALL" => {
-                // A direct call to a known callee: the callee's parameter
-                // types constrain the value each argument register holds,
-                // and the callee's return type constrains the caller's use
-                // of the return register. The argument is the *value* in
-                // the register — which `holding` tracks through copies —
-                // not the register's own var.
-                if let Some(target) = op.inputs.first()
-                    && (target.space == "ram" || target.space == "const")
-                    && let Some(sig) = self.callees.get(&target.offset)
-                {
+                // Arguments refer to pre-call values. Save the signature
+                // before killing registers, then install only return values.
+                let signature = op
+                    .inputs
+                    .first()
+                    .filter(|target| target.space == "ram" || target.space == "const")
+                    .and_then(|target| {
+                        self.callees
+                            .get(&target.offset)
+                            .map(|sig| (target.offset, sig.clone()))
+                    });
+                if let Some((target, sig)) = &signature {
                     for (reg, ty) in &sig.params {
                         let var = match self.holding.get(reg) {
                             Some(&v) => v,
@@ -507,8 +551,11 @@ impl<'a> Collector<'a> {
                         self.assert_ty(var, ty);
                         // The caller→callee observation: the type this var
                         // resolves to refines the callee's parameter.
-                        self.call_args.push((target.offset, *reg, var));
+                        self.call_args.push((*target, *reg, var));
                     }
+                }
+                self.clobber_call();
+                if let Some((_, sig)) = &signature {
                     for (reg, ty) in &sig.returns {
                         // The return register holds a fresh value after the
                         // call — a new var carrying the callee's return type.
@@ -525,6 +572,8 @@ impl<'a> Collector<'a> {
                 }
             }
             "CALLIND" | "BRANCHIND" => {
+                // An indirect call clobbers caller-saved registers exactly
+                // as a direct one does; a computed branch does not.
                 if let Some(target) = op.inputs.first() {
                     self.cap(target, Class::Code);
                     let origin = self.origin_of(target);
@@ -537,10 +586,12 @@ impl<'a> Collector<'a> {
                         self.constraints.push(Constraint::Cap(var, Class::Code));
                     }
                 }
+                if opcode == "CALLIND" {
+                    self.clobber_call();
+                }
             }
-            "INT_EQUAL" | "INT_NOTEQUAL" | "INT_SLESS" | "INT_SLESSEQUAL"
-            | "INT_LESS" | "INT_LESSEQUAL" | "INT_CARRY" | "INT_SCARRY"
-            | "INT_SBORROW" | "INT_RIGHT"
+            "INT_EQUAL" | "INT_NOTEQUAL" | "INT_SLESS" | "INT_SLESSEQUAL" | "INT_LESS"
+            | "INT_LESSEQUAL" | "INT_CARRY" | "INT_SCARRY" | "INT_SBORROW" | "INT_RIGHT"
             | "INT_SRIGHT" | "INT_DIV" | "INT_SDIV" | "INT_REM" | "INT_SREM" => {
                 for input in &op.inputs {
                     let class = if opcode.starts_with("INT_S") {
@@ -563,15 +614,22 @@ impl<'a> Collector<'a> {
                     self.cap(input, Class::Num(input.size * 8));
                 }
             }
-            "FLOAT_ADD" | "FLOAT_SUB" | "FLOAT_MULT" | "FLOAT_DIV" | "FLOAT_NEG"
-            | "FLOAT_ABS" | "FLOAT_SQRT" | "FLOAT_CEIL" | "FLOAT_FLOOR"
-            | "FLOAT_ROUND" | "FLOAT_EQUAL" | "FLOAT_NOTEQUAL" | "FLOAT_LESS"
-            | "FLOAT_LESSEQUAL" | "FLOAT_NAN" => {
+            "FLOAT_ADD" | "FLOAT_SUB" | "FLOAT_MULT" | "FLOAT_DIV" | "FLOAT_NEG" | "FLOAT_ABS"
+            | "FLOAT_SQRT" | "FLOAT_CEIL" | "FLOAT_FLOOR" | "FLOAT_ROUND" | "FLOAT_EQUAL"
+            | "FLOAT_NOTEQUAL" | "FLOAT_LESS" | "FLOAT_LESSEQUAL" | "FLOAT_NAN" => {
                 for input in &op.inputs {
                     self.cap(input, Class::Float(input.size * 8));
                 }
             }
-            "FLOAT_INT2FLOAT" | "FLOAT_FLOAT2FLOAT" | "FLOAT_TRUNC" => {
+            // `int2float` consumes a *signed* integer — Ghidra's
+            // `opInt2Float` sign-extends its input (float.cc:614) — so the
+            // generic conversion rule would misclassify it as a float.
+            "FLOAT_INT2FLOAT" => {
+                for input in &op.inputs {
+                    self.cap(input, Class::Int(input.size * 8));
+                }
+            }
+            "FLOAT_FLOAT2FLOAT" | "FLOAT_TRUNC" => {
                 for input in &op.inputs {
                     self.cap(input, Class::Float(input.size * 8));
                 }
@@ -591,8 +649,8 @@ impl<'a> Collector<'a> {
                     "FLOAT_ADD" | "FLOAT_SUB" | "FLOAT_MULT" | "FLOAT_DIV" => {
                         Class::Float(size * 8)
                     }
-                    "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SDIV" | "INT_SREM"
-                    | "INT_SRIGHT" | "INT_SEXT" => Class::Int(size * 8),
+                    "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SDIV" | "INT_SREM" | "INT_SRIGHT"
+                    | "INT_SEXT" => Class::Int(size * 8),
                     _ => Class::Num(size * 8),
                 };
                 let base_var = self.var(&PcodeVarnode {
@@ -603,7 +661,11 @@ impl<'a> Collector<'a> {
                 self.constraints.push(Constraint::Field(
                     base_var,
                     disp,
-                    Field { offset: disp, size, class },
+                    Field {
+                        offset: disp,
+                        size,
+                        class,
+                    },
                 ));
             }
         }
@@ -625,7 +687,9 @@ impl<'a> Collector<'a> {
     }
 
     fn load(&mut self, op: &PcodeOp) {
-        let Some(address) = op.inputs.get(1) else { return };
+        let Some(address) = op.inputs.get(1) else {
+            return;
+        };
         let addr_var = self.use_var(address);
         let slot = self.address_of.get(&addr_var).copied();
         match slot.and_then(|key| self.spilled.get(&key)).copied() {
@@ -651,12 +715,7 @@ impl<'a> Collector<'a> {
             }
             None if slot.is_none() => {
                 self.cap(address, Class::Ptr);
-                for origin in self
-                    .built_from
-                    .get(&addr_var)
-                    .cloned()
-                    .unwrap_or_default()
-                {
+                for origin in self.built_from.get(&addr_var).cloned().unwrap_or_default() {
                     if !self.defined.contains(&origin) {
                         let var = self.var(&PcodeVarnode {
                             space: "register".into(),
@@ -700,8 +759,7 @@ impl<'a> Collector<'a> {
                                     offset: base,
                                     size: 8,
                                 });
-                                self.constraints
-                                    .push(Constraint::Array(var, stride, elem));
+                                self.constraints.push(Constraint::Array(var, stride, elem));
                             }
                         }
                     }
@@ -730,21 +788,22 @@ impl<'a> Collector<'a> {
     }
 
     fn store(&mut self, op: &PcodeOp) {
-        let Some(address) = op.inputs.get(1) else { return };
+        let Some(address) = op.inputs.get(1) else {
+            return;
+        };
         let addr_var = self.use_var(address);
         let key = self.address_of.get(&addr_var).copied();
         match key {
             Some(key) => {
                 let is_struct_base = self.struct_bases.contains(&key.0);
                 if let Some(value) = op.inputs.get(2) {
-                    let origin = if value.space == "register"
-                        && !self.defined.contains(&value.offset)
-                    {
-                        Some(value.offset)
-                    } else {
-                        let vvar = self.use_var(value);
-                        self.resolve_var(vvar)
-                    };
+                    let origin =
+                        if value.space == "register" && !self.defined.contains(&value.offset) {
+                            Some(value.offset)
+                        } else {
+                            let vvar = self.use_var(value);
+                            self.resolve_var(vvar)
+                        };
                     if !is_struct_base {
                         match origin {
                             Some(origin) => {
@@ -769,7 +828,11 @@ impl<'a> Collector<'a> {
                         self.constraints.push(Constraint::Field(
                             base_var,
                             disp,
-                            Field { offset: disp, size: value.size, class },
+                            Field {
+                                offset: disp,
+                                size: value.size,
+                                class,
+                            },
                         ));
                         if !self.defined.contains(&base) {
                             self.constraints.push(Constraint::Cap(base_var, Class::Ptr));
@@ -779,12 +842,7 @@ impl<'a> Collector<'a> {
             }
             None => {
                 self.cap(address, Class::Ptr);
-                for origin in self
-                    .built_from
-                    .get(&addr_var)
-                    .cloned()
-                    .unwrap_or_default()
-                {
+                for origin in self.built_from.get(&addr_var).cloned().unwrap_or_default() {
                     if !self.defined.contains(&origin) {
                         let var = self.var(&PcodeVarnode {
                             space: "register".into(),
@@ -887,7 +945,6 @@ impl<'a> Collector<'a> {
             }
         }
 
-
         // Resolve each variable to a structural type — keyed by var so a
         // call argument that is a temp (not a register) still resolves.
         let mut var_types: BTreeMap<Var, Ty> = BTreeMap::new();
@@ -899,7 +956,10 @@ impl<'a> Collector<'a> {
                     Ty::Ptr(Box::new(Ty::Struct(node.fields.clone())))
                 }
             } else if let Some((stride, elem)) = node.array {
-                Ty::Array { elem: Box::new(Ty::Scalar(elem)), stride }
+                Ty::Array {
+                    elem: Box::new(Ty::Scalar(elem)),
+                    stride,
+                }
             } else if node.cap == Class::Ptr {
                 Ty::Ptr(Box::new(Ty::Scalar(Class::Unknown)))
             } else {
@@ -932,15 +992,28 @@ mod tests {
     use super::*;
 
     fn varnode(space: &str, offset: u64, size: u32) -> PcodeVarnode {
-        PcodeVarnode { space: space.to_string(), offset, size }
+        PcodeVarnode {
+            space: space.to_string(),
+            offset,
+            size,
+        }
     }
 
     fn instruction(ops: Vec<PcodeOp>) -> PcodeInstruction {
-        PcodeInstruction { address: 0x1000, length: 4, ops, error: None }
+        PcodeInstruction {
+            address: 0x1000,
+            length: 4,
+            ops,
+            error: None,
+        }
     }
 
     fn op(opcode: &str, output: Option<PcodeVarnode>, inputs: Vec<PcodeVarnode>) -> PcodeOp {
-        PcodeOp { opcode: opcode.to_string(), output, inputs }
+        PcodeOp {
+            opcode: opcode.to_string(),
+            output,
+            inputs,
+        }
     }
 
     #[test]
@@ -951,7 +1024,7 @@ mod tests {
         let solution = solve(&[
             instruction(vec![op(
                 "COPY",
-                Some(varnode("register", 0x0, 8)), // rax
+                Some(varnode("register", 0x0, 8)),  // rax
                 vec![varnode("register", 0x38, 8)], // rdi
             )]),
             instruction(vec![op(
@@ -982,7 +1055,10 @@ mod tests {
                 op(
                     "INT_ADD",
                     Some(varnode("unique", 0x8f00, 8)),
-                    vec![varnode("register", 0x28, 8), varnode("const", 0xfffffffffffffff8, 8)],
+                    vec![
+                        varnode("register", 0x28, 8),
+                        varnode("const", 0xfffffffffffffff8, 8),
+                    ],
                 ),
                 op(
                     "COPY",
@@ -1004,7 +1080,10 @@ mod tests {
                 op(
                     "INT_ADD",
                     Some(varnode("unique", 0x8f00, 8)),
-                    vec![varnode("register", 0x28, 8), varnode("const", 0xfffffffffffffff8, 8)],
+                    vec![
+                        varnode("register", 0x28, 8),
+                        varnode("const", 0xfffffffffffffff8, 8),
+                    ],
                 ),
                 op(
                     "LOAD",
@@ -1042,7 +1121,6 @@ mod tests {
             solution.types.get(&0x38)
         );
     }
-
 
     #[test]
     fn a_struct_base_recovers_its_fields() {
@@ -1103,7 +1181,11 @@ mod tests {
         let mut fields = BTreeMap::new();
         fields.insert(
             0x34i64,
-            Field { offset: 0x34, size: 4, class: Class::Float(32) },
+            Field {
+                offset: 0x34,
+                size: 4,
+                class: Class::Float(32),
+            },
         );
         callees.insert(
             0x2000u64,
@@ -1119,18 +1201,18 @@ mod tests {
                     Some(varnode("register", 0x38, 8)), // rdi = rdi (param)
                     vec![varnode("register", 0x38, 8)],
                 )]),
-                instruction(vec![op(
-                    "CALL",
-                    None,
-                    vec![varnode("ram", 0x2000, 8)],
-                )]),
+                instruction(vec![op("CALL", None, vec![varnode("ram", 0x2000, 8)])]),
             ],
             &callees,
+            &BTreeSet::new(),
         );
         match solution.types.get(&0x38) {
             Some(Ty::Ptr(inner)) => match inner.as_ref() {
                 Ty::Struct(fields) => {
-                    assert!(fields.contains_key(&0x34), "callee field at +0x34: {fields:?}");
+                    assert!(
+                        fields.contains_key(&0x34),
+                        "callee field at +0x34: {fields:?}"
+                    );
                 }
                 other => panic!("expected a struct, got {other:?}"),
             },
@@ -1171,13 +1253,10 @@ mod tests {
                         ],
                     ),
                 ]),
-                instruction(vec![op(
-                    "CALL",
-                    None,
-                    vec![varnode("ram", 0x2000, 8)],
-                )]),
+                instruction(vec![op("CALL", None, vec![varnode("ram", 0x2000, 8)])]),
             ],
             &callees,
+            &BTreeSet::from([0x38]),
         );
         let observed = solution
             .calls
@@ -1193,5 +1272,78 @@ mod tests {
             },
             other => panic!("expected a pointer observation, got {other:?}"),
         }
+    }
+
+    /// A spilled parameter reloaded and then used under both a signed and
+    /// an unsigned read: the reload's `Subtype` edge carries the conflict
+    /// back to the parameter. Under the old `Int join Uint = Num` collapse
+    /// the join was order-dependent and the fixpoint's answer depended on
+    /// which cap landed first; with `IntOrUint` the conflict resolves to
+    /// the sign-unresolved width regardless of order.
+    #[test]
+    fn a_reloaded_parameter_with_disputed_sign_converges_to_int_or_uint() {
+        let solution = solve(&[
+            // spill: [rbp-8] = edi
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x8f00, 8)),
+                    vec![
+                        varnode("register", 0x28, 8),
+                        varnode("const", 0xfffffffffffffff8, 8),
+                    ],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("unique", 0xd500, 4)),
+                    vec![varnode("register", 0x38, 4)],
+                ),
+                op(
+                    "STORE",
+                    None,
+                    vec![
+                        varnode("const", 0x1b1, 4),
+                        varnode("unique", 0x8f00, 8),
+                        varnode("unique", 0xd500, 4),
+                    ],
+                ),
+            ]),
+            // reload: eax = [rbp-8]  (a unique that aliases edi)
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x8f00, 8)),
+                    vec![
+                        varnode("register", 0x28, 8),
+                        varnode("const", 0xfffffffffffffff8, 8),
+                    ],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x23e00, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x8f00, 8)],
+                ),
+            ]),
+            // signed use of the reloaded value
+            instruction(vec![op(
+                "INT_SLESS",
+                Some(varnode("unique", 0x300, 1)),
+                vec![varnode("unique", 0x23e00, 4), varnode("const", 10, 4)],
+            )]),
+            // unsigned use of the same reloaded value: a mask is
+            // conventionally unsigned, so `INT_AND` caps it `Uint` where
+            // `INT_SLESS` capped it `Int` — the sign conflict.
+            instruction(vec![op(
+                "INT_AND",
+                Some(varnode("unique", 0x301, 4)),
+                vec![varnode("unique", 0x23e00, 4), varnode("const", 0xff, 4)],
+            )]),
+        ]);
+        assert_eq!(
+            solution.types.get(&0x38),
+            Some(&Ty::Scalar(Class::IntOrUint(32))),
+            "the sign-conflicted reload must converge to int-or-uint32, got {:?}",
+            solution.types.get(&0x38)
+        );
     }
 }

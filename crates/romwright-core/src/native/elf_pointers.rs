@@ -10,37 +10,73 @@ pub(super) fn collect(
     be: bool,
     bias: u64,
 ) -> Result<()> {
-    let relocated: HashMap<_, _> = import.xrefs.iter()
+    let relocated: HashMap<_, _> = import
+        .xrefs
+        .iter()
         .filter(|x| x.provenance == "native-import:elf-reloc")
-        .map(|x| (x.from, x.to)).collect();
+        .map(|x| (x.from, x.to))
+        .collect();
+    let arm = import
+        .elf_machine
+        .is_some_and(|machine| machine.machine == 0x28);
+    let (declared_entries, declared_bodies) = if arm {
+        (
+            import
+                .functions
+                .iter()
+                .map(|function| function.entry)
+                .collect::<std::collections::HashSet<_>>(),
+            super::ExtentIndex::build(
+                &import
+                    .functions
+                    .iter()
+                    .map(|function| (function.entry, function.size))
+                    .collect::<Vec<_>>(),
+            ),
+        )
+    } else {
+        (
+            std::collections::HashSet::new(),
+            super::ExtentIndex::build(&[]),
+        )
+    };
     for section in sections {
         // IDO emits switch jump tables into .late_rodata (P2.4): a
         // read-only section that is not .rodata by name, so it must be
         // selected explicitly or a table's code pointers are never scanned.
         let selected = matches!(section.typ, 14 | 15)
-            || section.name == ".data" || section.name.starts_with(".data.")
-            || section.name == ".rodata" || section.name.starts_with(".rodata.")
-            || section.name == ".late_rodata" || section.name.starts_with(".late_rodata.");
+            || section.name == ".data"
+            || section.name.starts_with(".data.")
+            || section.name == ".rodata"
+            || section.name.starts_with(".rodata.")
+            || section.name == ".late_rodata"
+            || section.name.starts_with(".late_rodata.");
         if !selected || section.flags & 2 == 0 || section.flags & 4 != 0 || section.typ == 8 {
             continue;
         }
         let Some(end) = section.off.checked_add(section.size) else {
             return err("ELF pointer section file range overflow");
         };
-        let Some(bytes) = usize::try_from(section.off).ok().zip(usize::try_from(end).ok())
-            .and_then(|(start, end)| data.get(start..end)) else {
+        let Some(bytes) = usize::try_from(section.off)
+            .ok()
+            .zip(usize::try_from(end).ok())
+            .and_then(|(start, end)| data.get(start..end))
+        else {
             return err("ELF pointer section outside file");
         };
         let skip = (section.addr.wrapping_neg() & (width as u64 - 1)) as usize;
-        let Some(bytes) = bytes.get(skip..) else { continue; };
+        let Some(bytes) = bytes.get(skip..) else {
+            continue;
+        };
         for (index, chunk) in bytes.chunks_exact(width).enumerate() {
             let Some(source) = section.addr.checked_add((skip + index * width) as u64) else {
                 return err("ELF pointer section address overflow");
             };
             let in_code = |target: u64| {
-                import.mappings.iter().any(|m| {
-                    m.flags & 4 != 0 && target >= m.vaddr && target - m.vaddr < m.size
-                })
+                import
+                    .mappings
+                    .iter()
+                    .any(|m| m.flags & 4 != 0 && target >= m.vaddr && target - m.vaddr < m.size)
             };
             // A relocated word already names loaded space. A raw word on a
             // slid (ET_DYN) image names link space: without the loader's
@@ -82,12 +118,12 @@ pub(super) fn collect(
             // Thumb there instead of rejecting an odd address as ARM. The
             // even case seeds TMode=0 too, or a Thumb range's mode would
             // bleed into the ARM function that follows it.
-            let arm = import
-                .elf_machine
-                .map(|machine| machine.machine == 0x28)
-                .unwrap_or(false);
             let entry = if arm { target & !1 } else { target };
-            if arm {
+            // Untyped data can name bytes inside code without being a code
+            // pointer. Such candidates cannot create functions downstream,
+            // and must not overwrite the loader's declared instruction set
+            // before that rejection (including at an existing entry).
+            if arm && !declared_entries.contains(&entry) && !declared_bodies.contains(entry) {
                 import.contexts.push(crate::native::NativeContext {
                     name: "TMode".into(),
                     address: entry,
@@ -100,7 +136,12 @@ pub(super) fn collect(
                 import.pointer_candidates.push(entry);
             }
             if !relocated.contains_key(&source) {
-                import.xrefs.push(NativeXref::with_provenance(source, entry, "DATA", "native-import:elf-pointer"));
+                import.xrefs.push(NativeXref::with_provenance(
+                    source,
+                    entry,
+                    "DATA",
+                    "native-import:elf-pointer",
+                ));
             }
         }
     }

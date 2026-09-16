@@ -142,5 +142,26 @@ struct InstructionFlow {
   }
 };
 
+// The stock PowerPC SLEIGH uses BRANCHIND for CTR-conditional LR exits.
+// Callers enable this adapter only for decoded bclr words with BO[2]=0,
+// BH=0 and LK=0. Keep the CTR update and conditional p-code unchanged.
+class PowerPcReturnEmit : public PcodeEmit {
+  PcodeEmit &destination;
+  const VarnodeData &lr;
+  bool converted = false;
+public:
+  PowerPcReturnEmit(PcodeEmit &emit, const VarnodeData &link) : destination(emit), lr(link) {}
+  bool changed() const { return converted; }
+  void dump(const Address &addr, OpCode opcode, VarnodeData *out,
+            VarnodeData *inputs, int4 count) override {
+    if (opcode == CPUI_BRANCHIND && count == 1 && inputs[0].space == lr.space
+        && inputs[0].offset == lr.offset && inputs[0].size == lr.size) {
+      opcode = CPUI_RETURN;
+      converted = true;
+    }
+    destination.dump(addr, opcode, out, inputs, count);
+  }
+};
+
 } // namespace ghidra
 #endif

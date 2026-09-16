@@ -7,7 +7,7 @@
 //! query function from ghidra_arch.cc.
 use crate::wire::{self, burst, encode_burst, encode_string_stream};
 use crate::{NativeWorker, Result, WorkerError};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -18,9 +18,18 @@ pub struct BinaryBacking {
 }
 
 impl BinaryBacking {
-    pub fn from_file(path: &Path, raw_base: u64) -> Result<Self> {
-        let image = romwright_core::session::ProgramImage::open_with_raw_base(path, Some(raw_base))
-            .map_err(|e| WorkerError::Setup(e.to_string()))?;
+    pub fn from_file(path: &Path, program: Option<&str>, raw_base: u64) -> Result<Self> {
+        let image =
+            romwright_core::session::ProgramImage::open_for_program(path, program, Some(raw_base))
+                .map_err(|e| WorkerError::Setup(e.to_string()))?;
+        Ok(Self {
+            image: Arc::new(image),
+        })
+    }
+
+    pub fn from_input(project: &Path, input: &romwright_model::ProgramInput) -> Result<Self> {
+        let image = romwright_core::session::ProgramImage::open_input(project, input)
+            .map_err(|error| WorkerError::Setup(error.to_string()))?;
         Ok(Self {
             image: Arc::new(image),
         })
@@ -73,6 +82,8 @@ pub struct ProgramProvider {
     pub function_names: HashMap<u64, String>,
     /// Entry address -> byte size (from the store).
     pub function_sizes: HashMap<u64, u64>,
+    /// Full-body signature identities bound to this immutable program input.
+    pub verified_helpers: HashMap<u64, String>,
     /// Symbol names at arbitrary addresses, including imported labels.
     pub symbol_names: HashMap<u64, String>,
     /// Function-address to comments exported from the durable store.
@@ -117,7 +128,7 @@ pub struct ProgramProvider {
     /// Mapped ranges the image marks unwritable, from the store's own map.
     pub read_only: Vec<(u64, u64)>,
     /// Locations the store types, address -> (type name, width).
-    pub data_definitions: HashMap<u64, (String, u64)>,
+    pub data_definitions: BTreeMap<u64, (String, u64)>,
     /// Function entry -> branch instructions the store proves transfer
     /// control the way a call does (a thunk's jump).
     pub call_return_branches: HashMap<u64, Vec<u64>>,
@@ -203,6 +214,7 @@ impl ProgramProvider {
             functions,
             function_names: HashMap::new(),
             function_sizes: HashMap::new(),
+            verified_helpers: HashMap::new(),
             symbol_names: HashMap::new(),
             comments: HashMap::new(),
             datatypes: HashMap::new(),
@@ -220,7 +232,7 @@ impl ProgramProvider {
             register_space_index: 4,
             read_only: Vec::new(),
             executable: Vec::new(),
-            data_definitions: HashMap::new(),
+            data_definitions: BTreeMap::new(),
             call_return_branches: HashMap::new(),
             core_types: HashMap::new(),
             base_types: std::collections::BTreeMap::new(),
@@ -233,6 +245,257 @@ impl ProgramProvider {
         }
     }
 
+    /// Materializes the resolved image and one set of store facts for every
+    /// native frontend; transport choices cannot change decompiler inputs.
+    pub fn from_store(
+        project: &std::path::Path,
+        input: &romwright_model::ProgramInput,
+        specs: &std::path::Path,
+        db: &romwright_db::ProjectDb,
+        pid: romwright_model::ProgramId,
+        asserted_returns_only: bool,
+    ) -> Result<Self> {
+        let mut provider = Self::new(BinaryBacking::from_input(project, input)?, Vec::new());
+        provider.load_language_info(specs)?;
+        // Function entries from the project store.
+        for f in db.functions(pid)? {
+            let off = f.entry.offset;
+            provider.functions.push(off);
+            provider
+                .function_names
+                .insert(off, crate::c_identifier(&f.name));
+            provider.function_sizes.insert(off, f.size as u64);
+        }
+        let held = db.symbols(pid)?;
+        // Stock applies a demangled name as the *primary* symbol at its address
+        // (`DemangledAddressTable.applyTo`, :86, through
+        // `DemangledObject.applyDemangledName`, :551-554), and the primary is the
+        // name a decompiler prints. Which is why `_ZTIi` prints as `typeinfo`.
+        let primary: std::collections::HashMap<u64, String> = held
+            .iter()
+            .filter(|symbol| symbol.source == romwright_core::native::DEMANGLE_SOURCE)
+            .map(|symbol| (symbol.address.offset, crate::c_identifier(&symbol.name)))
+            .collect();
+        // A demangled name is applied inside the namespace the mangled name
+        // names -- `typeinfo` in `int` -- and the decompiler prints a symbol
+        // outside the global scope scope-qualified. The namespace is re-derived
+        // from the mangled name beside it, so one demangler answers both.
+        // Scope ids share one space with the function ids this session hands out
+        // in mapped-symbol answers (`index + 1`), and a collision makes the
+        // decompiler reuse the function's scope instead of asking for the
+        // namespace's path (`ScopeGhidra::reresolveScope`,
+        // database_ghidra.cc:48-61). Namespaces get their own high range.
+        const NAMESPACE_BASE: u64 = 1 << 48;
+        let mut next_namespace = NAMESPACE_BASE;
+        for symbol in &held {
+            if !primary.contains_key(&symbol.address.offset) {
+                continue;
+            }
+            if let Some(demangled) = romwright_core::demangle::demangle(&symbol.name) {
+                if !demangled.namespace.is_empty() {
+                    next_namespace += 1;
+                    provider.namespaces.insert(
+                        symbol.address.offset,
+                        (next_namespace, crate::c_identifier(&demangled.namespace)),
+                    );
+                }
+            }
+        }
+        for symbol in &held {
+            if symbol.source == romwright_core::native::DYNAMIC_LABEL_SOURCE
+                && symbol.address.space == romwright_model::AddressSpace::Ram
+            {
+                provider
+                    .tag_names
+                    .insert(symbol.address.offset, crate::c_identifier(&symbol.name));
+            }
+        }
+        // Which name an address answers with, in the order stock's primary symbol
+        // resolves: the demangled name first (it is applied primary,
+        // `DemangledAddressTable.applyTo`, :86), then a name the image gives the
+        // object, then the dynamic table's label -- which the pinned install keeps
+        // non-primary wherever something else names the address (measured at
+        // `_DT_INIT`) -- and last the import a linkage slot resolves to, which
+        // stock keeps in its EXTERNAL block rather than at the slot.
+        let rank = |symbol: &romwright_model::SymbolRow| match symbol.source.as_str() {
+            _ if primary.contains_key(&symbol.address.offset) => 0,
+            romwright_core::native::DYNAMIC_LABEL_SOURCE => 2,
+            _ if symbol.external => 3,
+            _ => 1,
+        };
+        let mut ordered: Vec<&romwright_model::SymbolRow> = held.iter().collect();
+        ordered.sort_by_key(|symbol| rank(symbol));
+        for symbol in ordered {
+            let rendered = primary
+                .get(&symbol.address.offset)
+                .cloned()
+                .unwrap_or_else(|| crate::c_identifier(&symbol.name));
+            provider
+                .symbol_names
+                .entry(symbol.address.offset)
+                .or_insert_with(|| rendered.clone());
+            if symbol.external {
+                provider
+                    .external_names
+                    .entry(symbol.address.offset)
+                    .or_insert(rendered);
+            }
+        }
+        for comment in db.comments(pid)? {
+            provider
+                .comments
+                .entry(comment.function.offset)
+                .or_default()
+                .push((comment.address.offset, comment.kind, comment.text));
+        }
+        // A protected call site is a fact with a range and a handler; the comment
+        // is its rendering, and it is Ghidra's: `GccExceptionAnalyzer` writes
+        // exactly this PRE comment at the range's first address (m4-024).
+        for site in db.exception_sites(pid)? {
+            provider
+                .comments
+                .entry(site.function.offset)
+                .or_default()
+                .push((
+                    site.start.offset,
+                    "pre".to_string(),
+                    format!(
+                        "try {{ // try from {:08x} to {:08x} has its CatchHandler @ {:08x}",
+                        site.start.offset, site.end.offset, site.landing_pad.offset
+                    ),
+                ));
+        }
+        for datatype in db.datatypes(pid)? {
+            provider
+                .datatypes
+                .insert(datatype.name, datatype.definition);
+        }
+        for prototype in db.prototypes(pid)? {
+            if !prototype.signature.is_empty() {
+                provider
+                    .prototypes
+                    .insert(prototype.function.offset, prototype);
+            }
+        }
+        for string in db
+            .strings(pid)?
+            .into_iter()
+            .filter(|string| string.address.space == romwright_model::AddressSpace::Ram)
+        {
+            provider.strings.insert(string.address.offset, string.value);
+        }
+        // Locations a stored data reference names and nothing else describes:
+        // the dynamic-label case (`SymbolUtilities.getDynamicName`).
+        // A thunk's jump transfers control the way a call does. The store proves
+        // both halves: the thunk row names entry and destination, and the xref
+        // row names the instruction that performs the transfer.
+        for region in db.memory_regions(pid)? {
+            if region.start.space == romwright_model::AddressSpace::Ram
+                && !region.permissions.contains('w')
+                && region.size > 0
+            {
+                provider
+                    .read_only
+                    .push((region.start.offset, region.start.offset + region.size));
+            }
+        }
+        for region in db.memory_regions(pid)? {
+            if region.start.space == romwright_model::AddressSpace::Ram
+                && region.permissions.contains('x')
+                && region.size > 0
+            {
+                provider
+                    .executable
+                    .push((region.start.offset, region.start.offset + region.size));
+            }
+        }
+        for row in db.data_definitions(pid)? {
+            if row.address.space == romwright_model::AddressSpace::Ram && row.size > 0 {
+                provider
+                    .data_definitions
+                    .insert(row.address.offset, (row.data_type, row.size));
+            }
+        }
+        // A stub's transfer is recorded as a flow override by the importer, which
+        // is where the branch instruction is known; nothing is derived here.
+        // Instruction flow the store corrects: each override belongs to the
+        // function that contains it, which is how the decompiler keys them.
+        for row in db.flow_overrides(pid)? {
+            if row.address.space != romwright_model::AddressSpace::Ram || row.kind != "callreturn" {
+                continue;
+            }
+            let address = row.address.offset;
+            let Some(index) = provider
+                .functions
+                .iter()
+                .rposition(|entry| *entry <= address)
+            else {
+                continue;
+            };
+            let entry = provider.functions[index];
+            let span = provider
+                .function_sizes
+                .get(&entry)
+                .copied()
+                .filter(|size| *size > 0)
+                .unwrap_or_else(|| {
+                    provider
+                        .functions
+                        .get(index + 1)
+                        .map_or(u64::MAX, |next| *next)
+                        .saturating_sub(entry)
+                });
+            if address < entry.saturating_add(span) {
+                provider
+                    .call_return_branches
+                    .entry(entry)
+                    .or_default()
+                    .push(address);
+            }
+        }
+        for target in db.data_reference_targets(pid)? {
+            if target.space == romwright_model::AddressSpace::Ram {
+                provider.data_targets.insert(target.offset);
+            }
+        }
+        // A pointer's label names its referent, so a pointer-typed slot's target
+        // has to travel with it. Which rule typed the slot does not matter: what
+        // the label needs is the address the slot holds (m4-027).
+        for xref in db.xrefs(pid)? {
+            let pointer = matches!(
+                provider.data_definitions.get(&xref.from.offset),
+                Some((kind, _)) if kind == "pointer" || kind == "code-pointer"
+            );
+            if pointer
+                && xref.kind == "DATA"
+                && xref.from.space == romwright_model::AddressSpace::Ram
+                && xref.to.space == romwright_model::AddressSpace::Ram
+            {
+                provider
+                    .pointer_targets
+                    .insert(xref.from.offset, xref.to.offset);
+            }
+        }
+        provider.load_call_edges(db, pid)?;
+        provider.load_return_behaviors(db, pid, asserted_returns_only)?;
+        provider.load_stack_frames(db, pid)?;
+        provider.load_calling_conventions(db, pid)?;
+        for row in db.signature_matches(pid)? {
+            let address = row.function.offset;
+            if row.function.space == romwright_model::AddressSpace::Ram
+                && row.input.as_ref() == Some(input)
+                && row.confidence == 1.0
+                && provider.function_sizes.get(&address) == Some(&row.compared_bytes)
+                && provider.function_names.get(&address) == Some(&row.name)
+                && !provider.non_returning.contains(&address)
+                && romwright_core::func_ir::helper_semantics(&row.name).is_some()
+            {
+                provider.verified_helpers.insert(address, row.name);
+            }
+        }
+        Ok(provider)
+    }
+
     pub fn load_call_edges(
         &mut self,
         db: &romwright_db::ProjectDb,
@@ -240,7 +503,8 @@ impl ProgramProvider {
     ) -> Result<()> {
         self.call_edges = db.call_edges(program)?;
         self.call_edges.retain(|(from, to)| {
-            from.space == romwright_model::AddressSpace::Ram && to.space == romwright_model::AddressSpace::Ram
+            from.space == romwright_model::AddressSpace::Ram
+                && to.space == romwright_model::AddressSpace::Ram
         });
         Ok(())
     }
@@ -248,7 +512,11 @@ impl ProgramProvider {
     /// The stack frame the store holds for each function, as the decompiler
     /// will be handed it: Ghidra's client sends every variable of the
     /// function's frame in `<localdb>` (`LocalSymbolMap.grabFromFunction`).
-    pub fn load_stack_frames(&mut self, db: &romwright_db::ProjectDb, pid: romwright_model::ProgramId) -> Result<()> {
+    pub fn load_stack_frames(
+        &mut self,
+        db: &romwright_db::ProjectDb,
+        pid: romwright_model::ProgramId,
+    ) -> Result<()> {
         let rows = db
             .stack_variables(pid, None)
             .map_err(|e| WorkerError::Setup(format!("stack variables: {e}")))?;
@@ -271,7 +539,11 @@ impl ProgramProvider {
     /// from the core types this language carries; a width the language has
     /// no undefined type for is left out rather than mistyped.
     pub fn stack_locals(&self, entry: u64) -> Vec<(String, u64, u64, String, u64)> {
-        let mask = if self.pointer_size >= 8 { u64::MAX } else { (1u64 << (self.pointer_size * 8)) - 1 };
+        let mask = if self.pointer_size >= 8 {
+            u64::MAX
+        } else {
+            (1u64 << (self.pointer_size * 8)) - 1
+        };
         self.stack_frames
             .get(&entry)
             .map(|frame| {
@@ -280,7 +552,13 @@ impl ProgramProvider {
                     .filter_map(|(name, offset, size)| {
                         let type_name = format!("undefined{size}");
                         let (type_id, _) = self.core_types.get(&type_name).copied()?;
-                        Some((name.clone(), (*offset as u64) & mask, *size, type_name, type_id))
+                        Some((
+                            name.clone(),
+                            (*offset as u64) & mask,
+                            *size,
+                            type_name,
+                            type_id,
+                        ))
                     })
                     .collect()
             })
@@ -296,7 +574,9 @@ impl ProgramProvider {
         self.non_returning = db
             .return_behaviors(program)?
             .into_iter()
-            .filter(|row| !asserted_only || row.provenance.kind == romwright_model::FactKind::Asserted)
+            .filter(|row| {
+                !asserted_only || row.provenance.kind == romwright_model::FactKind::Asserted
+            })
             .filter_map(|row| {
                 (row.function.space == romwright_model::AddressSpace::Ram && row.no_return)
                     .then_some(row.function.offset)
@@ -378,7 +658,8 @@ impl ProgramProvider {
             .functions
             .iter()
             .filter_map(|offset| {
-                self.call_fixup(*offset).map(|name| (*offset, name.to_string()))
+                self.call_fixup(*offset)
+                    .map(|name| (*offset, name.to_string()))
             })
             .collect();
         Ok(NativeWorker::encode_function_shell_doc(
@@ -461,8 +742,12 @@ fn call_fixup_targets(cspec: &str) -> HashMap<String, String> {
         rest = &body[1..];
         let end = body.find("</callfixup>").unwrap_or(body.len());
         let element = &body[..end];
-        let Some(header_end) = element.find('>') else { continue };
-        let Some(name) = tag_name(&element[..header_end]) else { continue };
+        let Some(header_end) = element.find('>') else {
+            continue;
+        };
+        let Some(name) = tag_name(&element[..header_end]) else {
+            continue;
+        };
         let mut targets = &element[header_end..];
         while let Some(at) = targets.find("<target ") {
             let tag = &targets[at..];
@@ -596,12 +881,16 @@ impl NativeWorker {
                     return Ok(text);
                 }
                 0x10 if in_response => {
-                    // Warning-only response: the command errored inside
-                    // rawAction (e.g. bad address) and sendResult carried
-                    // the message; surface it as the result.
+                    // A diagnostic-only reply is not a packed document.
+                    // Void commands may return an empty warnings frame.
                     let warnings = self.read_until(0x11)?;
                     self.expect_burst(burst::RESPONSE_CLOSE)?;
-                    return Ok(warnings);
+                    if warnings.is_empty() {
+                        return Ok(Vec::new());
+                    }
+                    return Err(WorkerError::Decompiler(
+                        String::from_utf8_lossy(&warnings).trim().to_owned(),
+                    ));
                 }
                 burst::EXCEP_OPEN => {
                     let tp = self.read_string_stream()?;
@@ -653,9 +942,7 @@ impl NativeWorker {
             | wire::query::GETPCODE
             | wire::query::GETPCODEEXECUTABLE => self.answer_empty(),
             wire::query::GETUSEROPNAME => self.answer_str(""),
-            wire::query::GETTRACKEDREGISTERS => {
-                self.answer_tracked_pointset(provider, &payload)
-            }
+            wire::query::GETTRACKEDREGISTERS => self.answer_tracked_pointset(provider, &payload),
             other => {
                 let msg = format!("romwright-worker: unsupported query id {other}");
                 let mut buf = Vec::new();
@@ -792,11 +1079,6 @@ impl NativeWorker {
         Ok(())
     }
 
-    /// getMappedSymbols (ArchitectureGhidra::getMappedSymbolsXML): the
-    /// answer for a function entry is the doc/mapsym/function encoding the
-    /// Java DecompCallback.getMappedSymbols writes (encodeResult +
-    /// HighSymbol.encodeMapSym); anything else answers an empty response,
-    /// which readAll treats as "no data" (a hole).
     /// Resolves labels from durable symbols and function names.
     /// getCodeLabel (`DecompileCallback.getCodeLabel`, :429-441) answers the
     /// primary symbol at a branch target. Ghidra's flow analysis leaves a
@@ -834,10 +1116,9 @@ impl NativeWorker {
         provider: &mut ProgramProvider,
         payload: &[u8],
     ) -> Result<()> {
-        let wanted = u64::try_from(
-            find_numeric_attribute(payload, wire::attr::ID).unwrap_or_default(),
-        )
-        .unwrap_or(0);
+        let wanted =
+            u64::try_from(find_numeric_attribute(payload, wire::attr::ID).unwrap_or_default())
+                .unwrap_or(0);
         let components: Vec<(u64, String)> = provider
             .namespaces
             .values()
@@ -863,10 +1144,9 @@ impl NativeWorker {
     /// (database_ghidra.cc:373-381) asks this before every insertion.
     fn answer_name_used(&mut self, provider: &mut ProgramProvider, payload: &[u8]) -> Result<()> {
         let name = find_name_attribute(payload).unwrap_or_default();
-        let start = u64::try_from(
-            find_numeric_attribute(payload, wire::attr::FIRST).unwrap_or_default(),
-        )
-        .unwrap_or(0);
+        let start =
+            u64::try_from(find_numeric_attribute(payload, wire::attr::FIRST).unwrap_or_default())
+                .unwrap_or(0);
         // Every namespace this session hands out is a child of the global
         // scope, so the path from one is that namespace alone.
         let used = start != 0
@@ -948,11 +1228,7 @@ impl NativeWorker {
                 wire::attr_type::POSITIVE_INT,
                 u64::from(base.size),
             );
-            wire::encode_string_attribute(
-                &mut doc,
-                wire::attr::METATYPE,
-                base.metatype.as_bytes(),
-            );
+            wire::encode_string_attribute(&mut doc, wire::attr::METATYPE, base.metatype.as_bytes());
             wire::encode_header(&mut doc, wire::ELEMENT_END, wire::elem::TYPE);
             encode_string_stream(&mut buf, &doc);
             encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
@@ -1032,13 +1308,15 @@ impl NativeWorker {
                 let owned = provider.stack_locals(vaddr);
                 let locals: Vec<wire::StackLocal> = owned
                     .iter()
-                    .map(|(name, offset, size, type_name, type_id)| wire::StackLocal {
-                        name,
-                        offset: *offset,
-                        size: *size,
-                        type_name,
-                        type_id: *type_id,
-                    })
+                    .map(
+                        |(name, offset, size, type_name, type_id)| wire::StackLocal {
+                            name,
+                            offset: *offset,
+                            size: *size,
+                            type_name,
+                            type_id: *type_id,
+                        },
+                    )
                     .collect();
                 wire::encode_function_element(
                     &mut doc,
@@ -1064,6 +1342,11 @@ impl NativeWorker {
                 // location, and Ghidra composes the label for it on demand
                 // (`DecompileCallback.encodeData`, DecompileCallback.java:835-855)
                 // rather than storing one.
+                // A cold query can first touch an interior field. Return its
+                // containing data object, not an unrelated address-named word.
+                let vaddr = provider.data_definitions.range(..=vaddr).next_back()
+                    .filter(|(start, (_, size))| vaddr - **start < *size)
+                    .map_or(vaddr, |(start, _)| *start);
                 let mut doc = Vec::new();
                 let core = |name: &str| provider.core_types.get(name).copied();
                 // Every mapped-symbol answer carries the namespace of the
@@ -1088,7 +1371,11 @@ impl NativeWorker {
                     let name = string_label(text, vaddr);
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
-                        &mut doc, space as u32, vaddr, &name, read_only,
+                        &mut doc,
+                        space as u32,
+                        vaddr,
+                        &name,
+                        read_only,
                         |out| wire::encode_array_type(out, ("char", char_id), count),
                     );
                     close_document(&mut doc);
@@ -1143,7 +1430,11 @@ impl NativeWorker {
 
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
-                        &mut doc, space as u32, vaddr, &name, read_only,
+                        &mut doc,
+                        space as u32,
+                        vaddr,
+                        &name,
+                        read_only,
                         |out| {
                             if proven_code {
                                 wire::encode_pointer_type(out, ("code", code_id), size)
@@ -1178,7 +1469,11 @@ impl NativeWorker {
                         .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
-                        &mut doc, space as u32, vaddr, &name, read_only,
+                        &mut doc,
+                        space as u32,
+                        vaddr,
+                        &name,
+                        read_only,
                         |out| wire::encode_array_type(out, ("undefined1", byte_id), count),
                     );
                     close_document(&mut doc);
@@ -1208,7 +1503,11 @@ impl NativeWorker {
                         .unwrap_or_else(|| format!("DAT_{vaddr:08x}"));
                     open_document_in(&mut doc, namespace);
                     wire::encode_data_symbol(
-                        &mut doc, space as u32, vaddr, &name, read_only,
+                        &mut doc,
+                        space as u32,
+                        vaddr,
+                        &name,
+                        read_only,
                         |out| wire::encode_typeref(out, &format!("undefined{width}"), type_id),
                     );
                     close_document(&mut doc);
@@ -1224,19 +1523,22 @@ impl NativeWorker {
                         .executable
                         .iter()
                         .any(|(start, end)| *start <= vaddr && vaddr < *end);
-                    let name = provider.symbol_names.get(&vaddr).cloned().unwrap_or_else(
-                        || {
+                    let name = provider
+                        .symbol_names
+                        .get(&vaddr)
+                        .cloned()
+                        .unwrap_or_else(|| {
                             let prefix = if code { "LAB" } else { "DAT" };
                             format!("{prefix}_{vaddr:08x}")
-                        },
-                    );
+                        });
                     open_document_in(&mut doc, namespace);
-                    wire::encode_label_symbol(&mut doc, space as u32, vaddr, &name);
+                    wire::encode_label_symbol(&mut doc, space as u32, vaddr, &name, read_only);
                     close_document(&mut doc);
                 }
-                if !doc.is_empty() {
-                    encode_string_stream(&mut buf, &doc);
+                if doc.is_empty() {
+                    wire::encode_hole(&mut doc, space as u32, vaddr, read_only);
                 }
+                encode_string_stream(&mut buf, &doc);
             }
         }
         encode_burst(&mut buf, burst::QRESPONSE_CLOSE);
@@ -1533,7 +1835,13 @@ pub fn find_numeric_attribute(data: &[u8], target: u32) -> Option<i64> {
 /// SymbolUtilities.java:401-419).
 pub fn c_identifier(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '_' {
+                c
+            } else {
+                '_'
+            }
+        })
         .collect()
 }
 
@@ -1568,7 +1876,12 @@ pub fn parse_core_types(xml: &str) -> HashMap<String, (u64, u64)> {
 /// zero is the global scope.
 fn open_document_in(out: &mut Vec<u8>, namespace: u64) {
     wire::encode_header(out, wire::ELEMENT_START, wire::elem::DOC);
-    wire::encode_attribute(out, wire::attr::ID, wire::attr_type::UNSIGNED_INT, namespace);
+    wire::encode_attribute(
+        out,
+        wire::attr::ID,
+        wire::attr_type::UNSIGNED_INT,
+        namespace,
+    );
 }
 
 fn close_document(out: &mut Vec<u8>) {

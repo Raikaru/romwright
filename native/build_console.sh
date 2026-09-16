@@ -13,6 +13,7 @@
 # Usage: native/build_console.sh [--jobs N] [OUTDIR]
 #   OUTDIR default: native/build; produces OUTDIR/decomp_native
 #   runtime: ROMWRIGHT_CONSOLE=$OUTDIR/decomp_native
+#   TMPDIR controls scratch directories and the build log (default: /tmp).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,7 +34,7 @@ while [ "${1:-}" != "" ]; do
     esac
 done
 
-BUILD=$(mktemp -d /tmp/ghidra-console-build.XXXXXX)
+BUILD=$(mktemp -d "${TMPDIR:-/tmp}/ghidra-console-build.XXXXXX")
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
 cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
@@ -41,6 +42,7 @@ cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
    "$ROOT/native/romwright_operand_refs.hh" \
    "$ROOT/native/romwright_x86_references.hh" \
    "$ROOT/native/romwright_callfixups.hh" \
+   "$ROOT/native/romwright_ir_state.hh" "$ROOT/native/romwright_parent.hh" \
    "$ROOT/native/romwright_constants.hh" "$BUILD/decompiler/"
 cp "$PATCH" "$BUILD/apply.patch"
 git -C "$BUILD" init -q
@@ -51,8 +53,11 @@ cd "$BUILD/decompiler"
 # Fedora's libbfd (binutils 2.4x) pulls in zstd for compressed sections;
 # the pinned Makefile's LNK only carries -lz. Command-line override appends
 # it without touching the pinned tree.
-make decomp_opt -j"$JOBS" LNK="-lz -lzstd" > /tmp/ghidra-console-build.log 2>&1
+make decomp_opt -j"$JOBS" LNK="-lz -lzstd" > "${TMPDIR:-/tmp}/ghidra-console-build.log" 2>&1
 mkdir -p "$OUT"
-cp decomp_opt "$OUT/decomp_native"
+TEMP_BINARY=$(mktemp "$OUT/.decomp_native.XXXXXX")
+trap 'rm -rf "$BUILD"; rm -f "$TEMP_BINARY"' EXIT
+cp -p decomp_opt "$TEMP_BINARY"
+mv -f "$TEMP_BINARY" "$OUT/decomp_native"
 echo "built: $OUT/decomp_native"
 echo "runtime: ROMWRIGHT_CONSOLE=$OUT/decomp_native"

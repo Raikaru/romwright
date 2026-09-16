@@ -90,13 +90,18 @@ def structure_shapes(environment) -> dict:
         json.dumps({"id": name, "blocks": list(range(blocks)), "edges": list(edges)}) + "\n"
         for name, blocks, edges, _ in SHAPES
     )
-    result = subprocess.run(
-        [str(WORKER), str(ROOT / "native/build/ghidra_opt"), str(SPECS),
-         str(ROOT / "tests/fixtures-src/tiny_bin"), "shapes", "--structure",
-         "--base", "0x400000"],
-        input=requests, text=True, capture_output=True, env=environment, cwd=ROOT, timeout=300)
-    if result.returncode:
-        raise RuntimeError(f"structuring worker failed: {result.stderr[-800:]}")
+    with tempfile.TemporaryDirectory(prefix="m15-shapes-") as project:
+        subprocess.run(
+            [str(CLI), "import", str(ROOT / "tests/fixtures-src/tiny_bin"),
+             "--name", "shapes", "--project", project, "--no-analysis"],
+            text=True, capture_output=True, env=environment, cwd=ROOT,
+            timeout=300, check=True)
+        result = subprocess.run(
+            [str(WORKER), str(ROOT / "native/build/ghidra_opt"), str(SPECS),
+             "shapes", "--structure", "--project", project],
+            input=requests, text=True, capture_output=True, env=environment, cwd=ROOT, timeout=300)
+        if result.returncode:
+            raise RuntimeError(f"structuring worker failed: {result.stderr[-800:]}")
     return {row["id"]: row
             for row in (json.loads(line) for line in result.stdout.splitlines()
                         if line.startswith("{"))}

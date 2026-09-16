@@ -4,14 +4,14 @@ use super::{
     DbError, ProjectDb, Result, addr_cell, addr_from_cell, map_fact_provenance,
     validate_fact_provenance,
 };
-use romwright_model::{FactKind, ProgramId, SignatureMatchRow};
+use romwright_model::{Address, FactKind, ProgramId, SignatureMatchRow};
 use rusqlite::params;
 
 impl ProjectDb {
     pub fn signature_matches(&self, program: ProgramId) -> Result<Vec<SignatureMatchRow>> {
         let mut statement = self.conn.prepare(
             "SELECT function, name, package, license, compared_bytes, match_confidence,
-                    provenance, provenance_kind, confidence
+                    provenance, provenance_kind, confidence, input_record
              FROM signature_matches WHERE program_id = ?1 ORDER BY function",
         )?;
         Ok(statement
@@ -24,6 +24,17 @@ impl ProjectDb {
                     compared_bytes: row.get(4)?,
                     confidence: row.get(5)?,
                     provenance: map_fact_provenance(row, 6)?,
+                    input: row
+                        .get::<_, Option<String>>(9)?
+                        .map(|encoded| serde_json::from_str(&encoded))
+                        .transpose()
+                        .map_err(|error| {
+                            rusqlite::Error::FromSqlConversionFailure(
+                                9,
+                                rusqlite::types::Type::Text,
+                                Box::new(error),
+                            )
+                        })?,
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?)
@@ -34,9 +45,11 @@ impl ProjectDb {
     pub fn replace_signature_matches(
         &self,
         program: ProgramId,
+        expected: u64,
         source: &str,
         rows: &[SignatureMatchRow],
-    ) -> Result<()> {
+        renames: &[(Address, String)],
+    ) -> Result<(u64, usize)> {
         if source.trim().is_empty() {
             return Err(DbError::InvalidFactProvenance(
                 "inference source is empty".into(),
@@ -67,6 +80,21 @@ impl ProjectDb {
             }
         }
         let tx = self.conn.unchecked_transaction()?;
+        let actual = self.revision(program)?;
+        if actual != expected {
+            return Err(DbError::StaleRevision { expected, actual });
+        }
+        if rows.iter().any(|row| row.input.is_some()) {
+            let input = self.program_input(program)?;
+            if rows
+                .iter()
+                .any(|row| row.input.as_ref().is_some_and(|claimed| claimed != &input))
+            {
+                return Err(DbError::InvalidFactProvenance(
+                    "signature input is not the current imported image".into(),
+                ));
+            }
+        }
         let before = owned(&tx, program, source)?;
         tx.execute(
             "DELETE FROM signature_matches WHERE program_id = ?1 AND provenance = ?2
@@ -76,8 +104,8 @@ impl ProjectDb {
         {
             let mut insert = tx.prepare(
                 "INSERT INTO signature_matches(program_id, function, name, package, license,
-                     compared_bytes, match_confidence, provenance, provenance_kind, confidence)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'inferred', ?9)
+                     compared_bytes, match_confidence, provenance, provenance_kind, confidence, input_record)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, 'inferred', ?9, ?10)
                  ON CONFLICT(program_id, function) DO NOTHING",
             )?;
             for row in rows {
@@ -91,28 +119,70 @@ impl ProjectDb {
                     row.confidence,
                     row.provenance.source,
                     row.provenance.confidence,
+                    row.input
+                        .as_ref()
+                        .map(serde_json::to_string)
+                        .transpose()
+                        .map_err(|error| DbError::InvalidFactProvenance(error.to_string()))?,
                 ])?;
             }
         }
-        if owned(&tx, program, source)? != before {
+        let asserted: std::collections::HashSet<_> = Self::asserted_names(&tx, program)?
+            .into_iter()
+            .map(|(entry, _)| entry)
+            .collect();
+        let mut renamed = 0;
+        for (address, name) in renames {
+            let entry = addr_cell(address);
+            if asserted.contains(&entry) {
+                continue;
+            }
+            renamed += tx.execute(
+                "UPDATE functions SET name = ?1 WHERE program_id = ?2 AND entry = ?3 AND name != ?1
+                 AND EXISTS (SELECT 1 FROM signature_matches s
+                     WHERE s.program_id = functions.program_id AND s.function = functions.entry
+                       AND s.name = ?1 AND s.provenance = ?4 AND s.provenance_kind = 'inferred')",
+                params![name, program.0, entry, source],
+            )?;
+        }
+        if owned(&tx, program, source)? != before || renamed != 0 {
             self.bump_and_record(&tx, program, "replace-signature-matches", source)?;
         }
+        let revision = self.revision(program)?;
         tx.commit()?;
-        Ok(())
+        Ok((revision, renamed))
     }
 }
 
-type Fact = (String, String, String, f64);
+type Fact = (
+    String,
+    String,
+    String,
+    String,
+    u64,
+    f64,
+    Option<f64>,
+    Option<String>,
+);
 
 fn owned(tx: &rusqlite::Transaction<'_>, program: ProgramId, source: &str) -> Result<Vec<Fact>> {
     let mut statement = tx.prepare(
-        "SELECT function, name, package, match_confidence FROM signature_matches
+        "SELECT function, name, package, license, compared_bytes, match_confidence, confidence, input_record FROM signature_matches
          WHERE program_id = ?1 AND provenance = ?2 AND provenance_kind = 'inferred'
          ORDER BY function",
     )?;
     Ok(statement
         .query_map(params![program.0, source], |row| {
-            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+            Ok((
+                row.get(0)?,
+                row.get(1)?,
+                row.get(2)?,
+                row.get(3)?,
+                row.get(4)?,
+                row.get(5)?,
+                row.get(6)?,
+                row.get(7)?,
+            ))
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?)
 }
@@ -124,7 +194,13 @@ mod tests {
 
     const SOURCE: &str = "signature:test-1.0";
 
-    fn row(entry: u64, name: &str, source: &str, asserted: bool, confidence: f64) -> SignatureMatchRow {
+    fn row(
+        entry: u64,
+        name: &str,
+        source: &str,
+        asserted: bool,
+        confidence: f64,
+    ) -> SignatureMatchRow {
         SignatureMatchRow {
             function: Address::ram(entry),
             name: name.into(),
@@ -132,6 +208,7 @@ mod tests {
             license: "MIT".into(),
             compared_bytes: 32,
             confidence,
+            input: None,
             provenance: FactProvenance {
                 kind: if asserted {
                     FactKind::Asserted
@@ -163,7 +240,7 @@ mod tests {
                 size: 32,
                 signature: None,
                 traced: false,
-            calling_convention: None,
+                calling_convention: None,
             }],
         )
         .unwrap();
@@ -176,12 +253,25 @@ mod tests {
         let id = program(&db);
         let mine = row(0x1000, "strlen", SOURCE, false, 1.0);
         let other = row(0x1010, "memcpy", "signature:other", false, 0.5);
-        db.replace_signature_matches(id, SOURCE, &[mine]).unwrap();
-        db.replace_signature_matches(id, "signature:other", &[other.clone()])
+        db.replace_signature_matches(id, db.revision(id).unwrap(), SOURCE, &[mine], &[])
             .unwrap();
+        db.replace_signature_matches(
+            id,
+            db.revision(id).unwrap(),
+            "signature:other",
+            &[other.clone()],
+            &[],
+        )
+        .unwrap();
         let replacement = row(0x1020, "memset", SOURCE, false, 0.75);
-        db.replace_signature_matches(id, SOURCE, &[replacement.clone()])
-            .unwrap();
+        db.replace_signature_matches(
+            id,
+            db.revision(id).unwrap(),
+            SOURCE,
+            &[replacement.clone()],
+            &[],
+        )
+        .unwrap();
         assert_eq!(db.signature_matches(id).unwrap(), vec![other, replacement]);
     }
 
@@ -190,10 +280,10 @@ mod tests {
         let db = ProjectDb::open_in_memory().unwrap();
         let id = program(&db);
         let fact = row(0x1000, "strlen", SOURCE, false, 0.9);
-        db.replace_signature_matches(id, SOURCE, &[fact.clone()])
+        db.replace_signature_matches(id, db.revision(id).unwrap(), SOURCE, &[fact.clone()], &[])
             .unwrap();
         let revision = db.revision(id).unwrap();
-        db.replace_signature_matches(id, SOURCE, &[fact.clone()])
+        db.replace_signature_matches(id, db.revision(id).unwrap(), SOURCE, &[fact.clone()], &[])
             .unwrap();
         assert_eq!(db.revision(id).unwrap(), revision);
         let mut nameless = fact.clone();
@@ -211,7 +301,7 @@ mod tests {
             vec![evidenceless],
         ] {
             assert!(matches!(
-                db.replace_signature_matches(id, SOURCE, &invalid),
+                db.replace_signature_matches(id, db.revision(id).unwrap(), SOURCE, &invalid, &[]),
                 Err(DbError::InvalidFactProvenance(_))
             ));
         }

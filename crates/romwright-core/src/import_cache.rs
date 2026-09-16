@@ -45,7 +45,7 @@ pub fn cache_root() -> Option<PathBuf> {
 }
 
 /// SHA-256 of a file's bytes, or `None` when it cannot be read.
-fn digest(path: &Path) -> Option<String> {
+pub fn digest(path: &Path) -> Option<String> {
     let bytes = std::fs::read(path).ok()?;
     Some(sha256(&bytes))
 }
@@ -94,7 +94,10 @@ pub fn key(binary: &Path, program: &str, config: &RuntimeConfig) -> Option<Strin
         "{}|{}|{}|{}|{}|{}|{}",
         config.language_id,
         config.language_dir.display(),
-        config.sla_path.as_ref().map_or_else(String::new, |p| p.display().to_string()),
+        config
+            .sla_path
+            .as_ref()
+            .map_or_else(String::new, |p| p.display().to_string()),
         config.register_params,
         config.promote_tailcalls,
         config.switch_vsa,

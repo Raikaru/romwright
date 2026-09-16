@@ -16,11 +16,15 @@
 //! `decompile`) are thin delegates to Core — the same methods a GUI
 //! consumes — so no consumer has to re-implement the spawn logic.
 
-use romwright_core::{bridge::Bridge, Core};
+use romwright_core::{Core, bridge::Bridge};
 use std::path::{Path, PathBuf};
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
+    if matches!(args.get(1).map(String::as_str), Some("help" | "-h" | "--help")) {
+        println!("{USAGE}");
+        return;
+    }
     if args.len() < 2 {
         usage();
     }
@@ -28,9 +32,7 @@ fn main() {
     std::process::exit(code);
 }
 
-fn usage() {
-    eprintln!(
-        "usage:
+const USAGE: &str = "usage:
   romwright-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--timings] [--project DIR]
   romwright-cli decompile <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   romwright-cli decompile-batch <binary> <addr,addr,...> [--name NAME] [--project DIR] [--base HEX]
@@ -68,6 +70,10 @@ fn usage() {
   romwright-cli signatures info --db DB
   romwright-cli mem <binary> <vaddr-hex> [size]
   romwright-cli provenance [<program>] [--project DIR] [--json]
+  romwright-cli matching-workspace <program> <request.json|-> [--project DIR]
+  romwright-cli matching-run <binary> <program> <request.json|-> [--budget-ms N] [--base HEX] [--project DIR]
+  romwright-cli export-c <binary> <program> <outdir> [--address HEX] [--splits FILE] [--transforms LIST] [--project DIR]
+  romwright-cli export-scratch <program> <address> <binary> --compiler ID --c-flags FLAGS [--target-object FILE] [--context FILE] [--out DIR] [--project DIR]
 
 oracle generation only (launches the Stage-1 Java bridge):
   romwright-cli import <binary> --oracle [--name NAME] [--project DIR] [--ghidra DIR]
@@ -76,11 +82,12 @@ oracle generation only (launches the Stage-1 Java bridge):
   romwright-cli disasm <program> <address> --oracle [-n N] [--ghidra DIR]
   romwright-cli dump-specs <program> --oracle --out <dir> [--ghidra DIR]
   romwright-cli lint-specs [--ghidra DIR]   (validate every language module's spec files)
-  romwright-cli ir-dump <binary> <addr,addr,...> [--base HEX]   (typed IR / normalized p-code)"
-        );
+  romwright-cli ir-dump <binary> <addr,addr,...> [--base HEX]   (typed IR / normalized p-code)";
+
+fn usage() {
+    eprintln!("{USAGE}");
     std::process::exit(2);
 }
-
 
 fn parse_bytes(value: &str) -> Result<Vec<u8>, String> {
     let value = value.trim_start_matches("0x");
@@ -174,8 +181,7 @@ fn jvm_opens() -> Vec<String> {
 fn find_ghidra_classpath(install: &Path) -> Result<String, String> {
     let pattern = install.join("Ghidra");
     let mut jars = Vec::new();
-    collect_jars(&pattern, &mut jars)
-        .map_err(|e| format!("classpath scan failed: {e}"))?;
+    collect_jars(&pattern, &mut jars).map_err(|e| format!("classpath scan failed: {e}"))?;
     // Installed extensions are modules like any other: their jars carry
     // loaders (a GameCube DOL, a Game Boy Advance cartridge) and languages
     // (`r5900`) that the install's own opinion data already points at.
@@ -294,8 +300,11 @@ fn signatures(args: &[String]) -> Result<(), String> {
                 "database_bytes": encoded.len(),
             });
             if let Some(path) = flag(args, "--report") {
-                std::fs::write(&path, serde_json::to_string_pretty(&summary).unwrap() + "\n")
-                    .map_err(|error| format!("{path}: {error}"))?;
+                std::fs::write(
+                    &path,
+                    serde_json::to_string_pretty(&summary).unwrap() + "\n",
+                )
+                .map_err(|error| format!("{path}: {error}"))?;
             }
             println!("{summary}");
             Ok(())
@@ -305,16 +314,22 @@ fn signatures(args: &[String]) -> Result<(), String> {
             let bytes = std::fs::read(&path).map_err(|error| format!("{path}: {error}"))?;
             let database = romwright_sig::SignatureDb::decode(&bytes).map_err(|e| e.to_string())?;
             let records = database.signatures();
-            let mut languages: Vec<_> =
-                records.iter().map(|record| record.language.clone()).collect();
+            let mut languages: Vec<_> = records
+                .iter()
+                .map(|record| record.language.clone())
+                .collect();
             languages.sort();
             languages.dedup();
-            let mut packages: Vec<_> =
-                records.iter().map(|record| record.package.clone()).collect();
+            let mut packages: Vec<_> = records
+                .iter()
+                .map(|record| record.package.clone())
+                .collect();
             packages.sort();
             packages.dedup();
-            let mut licenses: Vec<_> =
-                records.iter().map(|record| record.license.clone()).collect();
+            let mut licenses: Vec<_> = records
+                .iter()
+                .map(|record| record.license.clone())
+                .collect();
             licenses.sort();
             licenses.dedup();
             println!(
@@ -348,17 +363,13 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         // The user path is native. `--oracle` is the only way to the Stage-1
         // Java bridge, which exists to produce oracles, not to serve users.
         "import" if !has_flag(args, "--oracle") => {
-            let binary = args
-                .get(2)
-                .ok_or("import needs a binary path")?
-                .clone();
-            let program = flag(args, "--name")
-                .unwrap_or_else(|| {
-                    Path::new(&binary)
-                        .file_name()
-                        .map(|s| s.to_string_lossy().into_owned())
-                        .unwrap_or_else(|| "program".into())
-                });
+            let binary = args.get(2).ok_or("import needs a binary path")?.clone();
+            let program = flag(args, "--name").unwrap_or_else(|| {
+                Path::new(&binary)
+                    .file_name()
+                    .map(|s| s.to_string_lossy().into_owned())
+                    .unwrap_or_else(|| "program".into())
+            });
             let databases: Vec<PathBuf> = flag(args, "--signatures")
                 .into_iter()
                 .flat_map(|value| {
@@ -374,11 +385,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             // sniff, so the caller supplies where it loads and what runs it.
             let raw = match flag(args, "--raw") {
                 Some(base) => {
-                    let base = u64::from_str_radix(
-                        base.trim_start_matches("0x"),
-                        16,
-                    )
-                    .map_err(|e| format!("--raw base: {e}"))?;
+                    let base = u64::from_str_radix(base.trim_start_matches("0x"), 16)
+                        .map_err(|e| format!("--raw base: {e}"))?;
                     let language = flag(args, "--language")
                         .ok_or("--raw needs --language (e.g. ARM:LE:32:v6)")?;
                     Some((base, language))
@@ -406,7 +414,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     &databases,
                     !has_flag(args, "--no-analysis"),
                     map.as_deref(),
-                    raw.as_ref().map(|(base, language)| (*base, language.as_str())),
+                    raw.as_ref()
+                        .map(|(base, language)| (*base, language.as_str())),
                     &keys,
                 )
                 .map_err(|e| e.to_string())?;
@@ -505,8 +514,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .unwrap_or_default();
             let functions = core.functions(program).map_err(|e| e.to_string())?;
             let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            let data_definitions =
-                core.data_definitions(program).map_err(|e| e.to_string())?;
+            let data_definitions = core.data_definitions(program).map_err(|e| e.to_string())?;
             let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
             // Symbols outside every splits extent (unsplit TUs, gaps) still
             // need their real section name: name each memory region after the
@@ -528,9 +536,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 }
             }
             let section_of = |address: u64| -> &str {
-                if let Some(name) =
-                    romwright_core::native::linkmap::section_at(&splits, address)
-                {
+                if let Some(name) = romwright_core::native::linkmap::section_at(&splits, address) {
                     return name;
                 }
                 region_names
@@ -598,8 +604,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .unwrap_or_default();
             let functions = core.functions(program).map_err(|e| e.to_string())?;
             let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            let data_definitions =
-                core.data_definitions(program).map_err(|e| e.to_string())?;
+            let data_definitions = core.data_definitions(program).map_err(|e| e.to_string())?;
             let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
 
             // splits.txt: when the project's own file was given, copy it
@@ -629,8 +634,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 }
                 text
             };
-            std::fs::write(outdir.join("splits.txt"), &splits_text)
-                .map_err(|e| e.to_string())?;
+            std::fs::write(outdir.join("splits.txt"), &splits_text).map_err(|e| e.to_string())?;
 
             // Section names for symbols: splits extents first, then the
             // containing region's dominant extent name, then the region
@@ -650,9 +654,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 region_names.push((start, end, name));
             }
             let section_of = |address: u64| -> &str {
-                if let Some(name) =
-                    romwright_core::native::linkmap::section_at(&splits, address)
-                {
+                if let Some(name) = romwright_core::native::linkmap::section_at(&splits, address) {
                     return name;
                 }
                 region_names
@@ -687,8 +689,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     section_of(address)
                 ));
             }
-            std::fs::write(outdir.join("symbols.txt"), &symbols_text)
-                .map_err(|e| e.to_string())?;
+            std::fs::write(outdir.join("symbols.txt"), &symbols_text).map_err(|e| e.to_string())?;
             std::fs::write(
                 outdir.join("config.yml"),
                 format!(
@@ -733,24 +734,24 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 yaml.push_str(&format!(
                     "  - name: {}\n    type: {kind}\n    vram: {:#x}\n    \
                      start: {:#x}\n    files: []\n",
-                    region.name,
-                    region.start.offset,
-                    region.start.offset
+                    region.name, region.start.offset, region.start.offset
                 ));
             }
             std::fs::write(outdir.join(format!("{program}.yaml")), &yaml)
                 .map_err(|e| e.to_string())?;
             let mut addrs = String::new();
             for function in &functions {
-                addrs.push_str(&format!("{:#x} {};\n", function.entry.offset, function.name));
+                addrs.push_str(&format!(
+                    "{:#x} {};\n",
+                    function.entry.offset, function.name
+                ));
             }
             for symbol in &symbols {
                 if !symbol.external {
                     addrs.push_str(&format!("{:#x} {};\n", symbol.address.offset, symbol.name));
                 }
             }
-            std::fs::write(outdir.join("symbol_addrs.txt"), &addrs)
-                .map_err(|e| e.to_string())?;
+            std::fs::write(outdir.join("symbol_addrs.txt"), &addrs).map_err(|e| e.to_string())?;
             println!(
                 "wrote {} ({} segments, {} symbols)",
                 outdir.display(),
@@ -766,76 +767,42 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "export-objdiff" => {
             let program = args.get(2).ok_or("export-objdiff needs a program")?;
             let outdir = Path::new(args.get(3).ok_or("export-objdiff needs an outdir")?);
-            let splits_path = flag(args, "--splits")
-                .ok_or("export-objdiff needs --splits <splits.txt>")?;
+            let splits_path =
+                flag(args, "--splits").ok_or("export-objdiff needs --splits <splits.txt>")?;
+            let target_root =
+                flag(args, "--target-root").ok_or("export-objdiff needs --target-root")?;
+            let base_root = flag(args, "--base-root").unwrap_or_else(|| "build".into());
             let splits = romwright_core::native::linkmap::parse_splits(
-                &std::fs::read_to_string(&splits_path)
-                    .map_err(|e| format!("{splits_path}: {e}"))?,
+                &std::fs::read_to_string(&splits_path).map_err(|e| e.to_string())?,
             );
-            std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
-            let functions = core.functions(program).map_err(|e| e.to_string())?;
-
-            // Group extents by TU; a unit's address range is the union
-            // of its extents, its functions the store rows inside them.
-            let mut tus: Vec<(String, Vec<&romwright_core::native::linkmap::SplitExtent>)> =
-                Vec::new();
-            for extent in &splits {
-                if let Some((_, list)) =
-                    tus.iter_mut().find(|(name, _)| *name == extent.tu)
-                {
-                    list.push(extent);
-                } else {
-                    tus.push((extent.tu.clone(), vec![extent]));
-                }
-            }
-            let mut units = Vec::new();
-            for (tu, extents) in &tus {
-                if tu.is_empty() {
-                    continue;
-                }
-                let stem = tu.trim_end_matches(".c").trim_end_matches(".cpp");
-                let fns: Vec<serde_json::Value> = functions
-                    .iter()
-                    .filter(|f| {
-                        extents.iter().any(|e| {
-                            f.entry.offset >= e.start && f.entry.offset < e.end
-                        })
-                    })
-                    .map(|f| {
-                        serde_json::json!({
-                            "name": f.name,
-                            "vram": format!("{:#x}", f.entry.offset),
-                            "size": f.size,
-                        })
-                    })
-                    .collect();
-                units.push(serde_json::json!({
-                    "name": format!("{program}/{stem}"),
-                    "target_path": format!("build/{stem}.o"),
-                    "base_path": format!("build/{stem}.o"),
-                    "metadata": {
-                        "auto_generated": false,
-                        "source_path": tu,
-                        "functions": fns,
-                    }
-                }));
-            }
-            let doc = serde_json::json!({
-                "min_version": "2.0.0-beta.5",
-                "custom_make": "ninja",
-                "build_target": false,
-                "units": units,
-            });
-            std::fs::write(
-                outdir.join("objdiff.json"),
-                serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
-            )
-            .map_err(|e| e.to_string())?;
-            println!(
-                "wrote {} ({} units)",
-                outdir.join("objdiff.json").display(),
-                units.len()
-            );
+            let report = core
+                .export_objdiff(
+                    program,
+                    outdir,
+                    &splits,
+                    Path::new(&target_root),
+                    Path::new(&base_root),
+                )
+                .map_err(|e| e.to_string())?;
+            println!("{report}");
+        }
+        "matching-workspace" => {
+            let program = args.get(2).ok_or("matching-workspace needs a program")?;
+            let path = args.get(3).ok_or("matching-workspace needs a workspace-operation JSON file or -")?;
+            let operation = matching_request_json(path)?;
+            let result = core.run_matching_workspace_operation(program, operation).map_err(|error| error.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&result).map_err(|error| error.to_string())?);
+        }
+        "matching-run" => {
+            let binary = args.get(2).ok_or("matching-run needs a binary")?;
+            let program = args.get(3).ok_or("matching-run needs a program")?;
+            let path = args.get(4).ok_or("matching-run needs a matching-operation JSON file or -")?;
+            let operation = matching_request_json(path)?;
+            let milliseconds = flag(args, "--budget-ms").map(|value| value.parse::<u64>().map_err(|error| error.to_string())).transpose()?.unwrap_or(120_000);
+            let base = flag(args, "--base").map(|value| u64::from_str_radix(value.trim_start_matches("0x"), 16).map_err(|error| error.to_string())).transpose()?;
+            let request = core.execution_request(Path::new(binary), program, base, std::time::Duration::from_millis(milliseconds)).map_err(|error| error.to_string())?;
+            let result = core.run_matching_operation(&request, operation).map_err(|error| error.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&result).map_err(|error| error.to_string())?);
         }
         // `export-c <binary> <program> <outdir> [--splits splits.txt]`:
         // decompile every function and write m2c-shaped C — the source
@@ -848,74 +815,125 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let program = args.get(3).ok_or("export-c needs a program")?.clone();
             let outdir = Path::new(args.get(4).ok_or("export-c needs an outdir")?);
             let splits = flag(args, "--splits")
-                .map(|p| -> Result<Vec<romwright_core::native::linkmap::SplitExtent>, String> {
-                    let text = std::fs::read_to_string(&p)
-                        .map_err(|e| format!("{p}: {e}"))?;
-                    Ok(romwright_core::native::linkmap::parse_splits(&text))
-                })
+                .map(
+                    |p| -> Result<Vec<romwright_core::native::linkmap::SplitExtent>, String> {
+                        let text = std::fs::read_to_string(&p).map_err(|e| format!("{p}: {e}"))?;
+                        Ok(romwright_core::native::linkmap::parse_splits(&text))
+                    },
+                )
                 .transpose()?;
+            // `--transforms a,b,c` overrides the default pipeline so a
+            // transform's effect can be measured against a baseline; an
+            // empty list (`--transforms ""`) runs no transforms.
+            let mut opts = romwright_core::emit_m2c::M2cOptions::default();
+            if let Some(list) = flag(args, "--transforms") {
+                opts.transforms = if list.trim().is_empty() {
+                    Vec::new()
+                } else {
+                    list.split(',').map(|s| s.trim().to_string()).collect()
+                };
+            }
+            let entry = flag(args, "--address").map(|address| {
+                u64::from_str_radix(address.trim_start_matches("0x"), 16)
+                    .map_err(|error| format!("invalid function address: {error}"))
+            }).transpose()?;
             let report = core
                 .export_m2c(
                     Path::new(&binary),
                     &program,
                     outdir,
                     splits.as_deref(),
-                    &romwright_core::emit_m2c::M2cOptions::default(),
+                    entry,
+                    &opts,
                 )
                 .map_err(|e| e.to_string())?;
-            println!("{}", serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&report).map_err(|e| e.to_string())?
+            );
         }
-        // `export-scratch <program> <addr> <binary> [--compiler ID]
-        // [--c-flags FLAGS]`: emit a decomp.me scratch payload —
-        // target_asm.s (the function's disassembly), ctx.c (context
-        // stub), scratch.json (metadata). The POST to decomp.me is the
-        // caller's; we produce the payload it accepts.
         "export-scratch" => {
             let program = args.get(2).ok_or("export-scratch needs a program")?;
             let addr = args.get(3).ok_or("export-scratch needs a vaddr")?;
             let binary = args.get(4).ok_or("export-scratch needs a binary")?;
             let outdir = flag(args, "--out").unwrap_or_else(|| "scratch".into());
-            let compiler = flag(args, "--compiler")
-                .unwrap_or_else(|| "mwcc_233_163".into());
-            let c_flags = flag(args, "--c-flags")
-                .unwrap_or_else(|| "-O4,p -nodefaults -proc gekko".into());
+            let compiler = flag(args, "--compiler").ok_or("export-scratch needs --compiler ID")?;
+            let compiler_flags = flag(args, "--c-flags").ok_or("export-scratch needs --c-flags FLAGS (an explicitly empty value is allowed)")?;
+            let target = flag(args, "--target-object");
+            let context = flag(args, "--context");
             let address = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
                 .map_err(|e| e.to_string())?;
-            let functions = core.functions(program).map_err(|e| e.to_string())?;
-            let function = functions
-                .iter()
-                .find(|f| f.entry.offset == address)
-                .ok_or_else(|| format!("no function at {addr}"))?;
-            // PPC is fixed-width: size/4 instructions exactly.
-            let count = (function.size / 4).max(1) as u32;
-            let asm = core
-                .disasm_native(Path::new(binary), &format!("{:#x}", address), count)
-                .map_err(|e| e.to_string())?;
-            std::fs::create_dir_all(&outdir).map_err(|e| e.to_string())?;
-            std::fs::write(format!("{outdir}/target_asm.s"), &asm)
-                .map_err(|e| e.to_string())?;
-            std::fs::write(
-                format!("{outdir}/ctx.c"),
-                format!("/* context for {} */\n", function.name),
+            let options = romwright_core::matching::ScratchExportOptions {
+                compiler: &compiler,
+                compiler_flags: &compiler_flags,
+                target_object: target.as_deref().map(Path::new),
+                context: context.as_deref().map(Path::new),
+            };
+            let report = core.export_scratch(Path::new(binary), program, address, Path::new(&outdir), &options)
+                .map_err(|error| error.to_string())?;
+            println!("{}", serde_json::to_string_pretty(&report).map_err(|error| error.to_string())?);
+        }
+        "match-source" => {
+            let program = args.get(2).ok_or("match-source needs a program")?;
+            let target = Path::new(args.get(3).ok_or("match-source needs a target object")?);
+            let source = Path::new(args.get(4).ok_or("match-source needs source C")?);
+            let recipe_path =
+                flag(args, "--recipe").ok_or("match-source needs --recipe <recipe.json>")?;
+            let recipe = serde_json::from_slice(
+                &std::fs::read(recipe_path).map_err(|error| error.to_string())?,
             )
-            .map_err(|e| e.to_string())?;
-            let doc = serde_json::json!({
-                "name": function.name,
-                "compiler": compiler,
-                "c_flags": c_flags,
-                "target_asm": asm,
-                "context": format!("/* context for {} */", function.name),
-                "diff_label": function.name,
-            });
-            std::fs::write(
-                format!("{outdir}/scratch.json"),
-                serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
+            .map_err(|error| error.to_string())?;
+            let context = flag(args, "--context");
+            let budget = flag(args, "--budget-ms")
+                .map(|value| value.parse::<u64>())
+                .transpose()
+                .map_err(|error| error.to_string())?
+                .unwrap_or(60000);
+            let input = core
+                .program_input(program)
+                .map_err(|error| error.to_string())?;
+            let request = core
+                .execution_request(
+                    Path::new(&input.source_path),
+                    program,
+                    None,
+                    std::time::Duration::from_millis(budget),
+                )
+                .map_err(|error| error.to_string())?;
+            let prepared = Core::prepare_matching(
+                &request,
+                target,
+                source,
+                context.as_deref().map(Path::new),
+                recipe,
             )
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| error.to_string())?;
+            let run = core
+                .run_matching(&request, &prepared)
+                .map_err(|error| error.to_string())?;
             println!(
-                "wrote {outdir}/ ({} bytes asm, {} insns)",
-                asm.len(),
-                count
+                "{}",
+                serde_json::to_string_pretty(&run).map_err(|error| error.to_string())?
+            );
+        }
+        "matching-runs" => {
+            let program = args.get(2).ok_or("matching-runs needs a program")?;
+            let after = flag(args, "--after")
+                .map(|value| value.parse::<u64>())
+                .transpose()
+                .map_err(|error| error.to_string())?
+                .unwrap_or(0);
+            let limit = flag(args, "--limit")
+                .map(|value| value.parse::<usize>())
+                .transpose()
+                .map_err(|error| error.to_string())?
+                .unwrap_or(64);
+            let runs = core
+                .matching_runs(program, after, limit)
+                .map_err(|error| error.to_string())?;
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&runs).map_err(|error| error.to_string())?
             );
         }
         // `objdiff-report <report.json> [--frogress URL]`: roll up an
@@ -925,11 +943,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         // we flatten to one row per function and aggregate.
         "objdiff-report" => {
             let path = args.get(2).ok_or("objdiff-report needs a report.json")?;
-            let text = std::fs::read_to_string(path)
-                .map_err(|e| format!("{path}: {e}"))?;
-            let report: serde_json::Value = serde_json::from_str(&text)
-                .map_err(|e| format!("{path}: {e}"))?;
-            let units = report["units"].as_array()
+            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+            let report: serde_json::Value =
+                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
+            let units = report["units"]
+                .as_array()
                 .ok_or("report has no units array")?;
             let mut rows: Vec<serde_json::Value> = Vec::new();
             let mut total_code = 0u64;
@@ -961,10 +979,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             let matched_pct = if total_code > 0 {
                 (matched_code as f64 / total_code as f64) * 100.0
-            } else { 0.0 };
+            } else {
+                0.0
+            };
             let complete_pct = if total_code > 0 {
                 (complete_code as f64 / total_code as f64) * 100.0
-            } else { 0.0 };
+            } else {
+                0.0
+            };
             let out = serde_json::json!({
                 "functions": rows,
                 "measures": {
@@ -987,12 +1009,17 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     "version": report["version"].as_str().unwrap_or(""),
                     "measures": out["measures"],
                 });
-                std::fs::write(&out_path, serde_json::to_string_pretty(&payload)
-                    .map_err(|e| e.to_string())?)
-                    .map_err(|e| format!("{out_path}: {e}"))?;
+                std::fs::write(
+                    &out_path,
+                    serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?,
+                )
+                .map_err(|e| format!("{out_path}: {e}"))?;
                 println!("wrote frogress payload {out_path}");
             }
-            println!("{}", serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?);
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
+            );
         }
         // `import-score <program> <addr> <score.json>`: record a
         // decomp.me compile score against a function. Accepts either a
@@ -1006,16 +1033,17 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let path = args.get(4).ok_or("import-score needs a score.json")?;
             let address = u64::from_str_radix(addr.trim_start_matches("0x"), 16)
                 .map_err(|e| e.to_string())?;
-            let text = std::fs::read_to_string(path)
-                .map_err(|e| format!("{path}: {e}"))?;
-            let doc: serde_json::Value = serde_json::from_str(&text)
-                .map_err(|e| format!("{path}: {e}"))?;
+            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+            let doc: serde_json::Value =
+                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
             // decomp.me shape: score is a number; match_override flags a
             // manually-forced match. Local shape: {function, score}.
-            let score = doc["score"].as_f64()
+            let score = doc["score"]
+                .as_f64()
                 .or_else(|| doc["match_percent"].as_f64())
                 .ok_or("score.json has no score/match_percent")?;
-            let name = doc["name"].as_str()
+            let name = doc["name"]
+                .as_str()
                 .or_else(|| doc["function"].as_str())
                 .unwrap_or("");
             let slug = doc["slug"].as_str().unwrap_or("");
@@ -1026,17 +1054,17 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .ok_or_else(|| format!("no function at {addr}"))?;
             let body = format!(
                 "decomp.me score: {:.2}% (slug={}, name={}, match_override={})",
-                score, slug, name,
+                score,
+                slug,
+                name,
                 doc["match_override"].as_bool().unwrap_or(false)
             );
-            core.comment_command(
-                program,
-                &function.entry,
-                &function.entry,
-                "eol",
-                &body,
-            ).map_err(|e| e.to_string())?;
-            println!("recorded score {:.2}% on {} ({})", score, function.name, addr);
+            core.comment_command(program, &function.entry, &function.entry, "eol", &body)
+                .map_err(|e| e.to_string())?;
+            println!(
+                "recorded score {:.2}% on {} ({})",
+                score, function.name, addr
+            );
         }
         // `import-trace <program> <trace.csv>`: ingest an emulator trace
         // — one `addr,kind[,thread]` row per event, kind in
@@ -1045,8 +1073,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "import-trace" => {
             let program = args.get(2).ok_or("import-trace needs a program")?;
             let path = args.get(3).ok_or("import-trace needs a trace file")?;
-            let text = std::fs::read_to_string(path)
-                .map_err(|e| format!("{path}: {e}"))?;
+            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
             let db = core.store_handle().map_err(|e| e.to_string())?;
             let id = db.program_id(program).map_err(|e| e.to_string())?;
             let mut events = 0u64;
@@ -1057,13 +1084,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     continue;
                 }
                 let mut fields = line.split(',');
-                let Some(addr_field) = fields.next() else { continue };
+                let Some(addr_field) = fields.next() else {
+                    continue;
+                };
                 let Some(kind) = fields.next() else { continue };
                 let thread = fields.next().unwrap_or("").trim();
-                let address = u64::from_str_radix(
-                    addr_field.trim().trim_start_matches("0x"),
-                    16,
-                );
+                let address = u64::from_str_radix(addr_field.trim().trim_start_matches("0x"), 16);
                 let Ok(address) = address else { continue };
                 let kind = kind.trim();
                 let event = romwright_model::TraceEvent {
@@ -1075,7 +1101,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     payload: String::new(),
                     provenance: "import-trace".into(),
                 };
-                db.append_trace_event(id, &event).map_err(|e| e.to_string())?;
+                db.append_trace_event(id, &event)
+                    .map_err(|e| e.to_string())?;
                 events += 1;
                 if matches!(kind, "exec" | "call" | "bp") {
                     hit_entries.push(format!("{address:08x}"));
@@ -1091,15 +1118,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         }
         "mem" => {
             let binary = args.get(2).ok_or("mem needs a binary path")?.clone();
-            let vaddr = u64::from_str_radix(
-                args.get(3).ok_or("mem needs a vaddr (hex)")?,
-                16,
-            )
-            .map_err(|e| e.to_string())?;
-            let size: usize = args
-                .get(4)
-                .and_then(|s| s.parse().ok())
-                .unwrap_or(32);
+            let vaddr = u64::from_str_radix(args.get(3).ok_or("mem needs a vaddr (hex)")?, 16)
+                .map_err(|e| e.to_string())?;
+            let size: usize = args.get(4).and_then(|s| s.parse().ok()).unwrap_or(32);
             let bytes = core
                 .mem_native(Path::new(&binary), vaddr, size)
                 .map_err(|e| e.to_string())?;
@@ -1127,7 +1148,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .find_map(|a| a.strip_prefix("--ask="))
                 .map(|list| {
                     list.split(',')
-                        .filter_map(|h| u64::from_str_radix(h.trim().trim_start_matches("0x"), 16).ok())
+                        .filter_map(|h| {
+                            u64::from_str_radix(h.trim().trim_start_matches("0x"), 16).ok()
+                        })
                         .collect()
                 })
                 .unwrap_or_default();
@@ -1137,9 +1160,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             if has_flag(args, "--json") {
                 let asked: Vec<serde_json::Value> = answered
                     .iter()
-                    .map(|(a, l, f)| {
-                        serde_json::json!({"address": a, "len": l, "flow": f})
-                    })
+                    .map(|(a, l, f)| serde_json::json!({"address": a, "len": l, "flow": f}))
                     .collect();
                 println!(
                     "{}",
@@ -1154,9 +1175,13 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     })
                 );
             } else {
-                println!("sweep {size} bytes at {vaddr:#x}: {ms}ms digest {digest} decoded {decoded}");
-                println!("flows: Next={} Call={} Jump={} Jcc={} IndCall={} Ind={} Stop={} Bad={}",
-                    flows[0], flows[1], flows[2], flows[3], flows[4], flows[5], flows[6], flows[7]);
+                println!(
+                    "sweep {size} bytes at {vaddr:#x}: {ms}ms digest {digest} decoded {decoded}"
+                );
+                println!(
+                    "flows: Next={} Call={} Jump={} Jcc={} IndCall={} Ind={} Stop={} Bad={}",
+                    flows[0], flows[1], flows[2], flows[3], flows[4], flows[5], flows[6], flows[7]
+                );
                 for (address, len, flow) in &answered {
                     println!("{address:#x}: len {len} flow {flow}");
                 }
@@ -1202,14 +1227,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
         }
         "decompile" if !has_flag(args, "--oracle") => {
-            let binary = args
-                .get(2)
-                .ok_or("decompile needs a binary path")?
-                .clone();
-            let address = args
-                .get(3)
-                .ok_or("decompile needs a vaddr (hex)")?
-                .clone();
+            let binary = args.get(2).ok_or("decompile needs a binary path")?.clone();
+            let address = args.get(3).ok_or("decompile needs a vaddr (hex)")?.clone();
             let program = flag(args, "--name").unwrap_or_else(|| {
                 Path::new(&binary)
                     .file_name()
@@ -1219,12 +1238,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let base = flag(args, "--base")
                 .and_then(|b| u64::from_str_radix(b.trim_start_matches("0x"), 16).ok());
             let code = core
-                .decompile_native(
-                    Path::new(&binary),
-                    &address,
-                    &program,
-                    base,
-                )
+                .decompile_native(Path::new(&binary), &address, &program, base)
                 .map_err(|e| e.to_string())?;
             print!("{code}");
         }
@@ -1290,7 +1304,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     architecture.id,
                     architecture.processor,
                     architecture.endian,
-                    architecture.bits.map_or_else(|| "?".into(), |bits| bits.to_string()),
+                    architecture
+                        .bits
+                        .map_or_else(|| "?".into(), |bits| bits.to_string()),
                     architecture.sla_count
                 );
             }
@@ -1331,9 +1347,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "diff" => {
             // Whole-program structural diff: name the target program in this
             // project, and the project holding the reference program.
-            let target = args.get(2).ok_or("diff needs a target program name")?.clone();
-            let reference_project = flag(args, "--reference")
-                .ok_or("diff needs --reference <project dir>")?;
+            let target = args
+                .get(2)
+                .ok_or("diff needs a target program name")?
+                .clone();
+            let reference_project =
+                flag(args, "--reference").ok_or("diff needs --reference <project dir>")?;
             let reference = flag(args, "--reference-name");
             let mut options = romwright_diff::Options::default();
             if let Some(value) = flag(args, "--min-score").and_then(|v| v.parse().ok()) {
@@ -1371,8 +1390,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 for row in &report.matches {
                     println!(
                         "{}  {}  {:.3}  {:?}  {} -> {}",
-                        row.reference, row.target, row.score, row.evidence,
-                        row.reference_name, row.target_name
+                        row.reference,
+                        row.target,
+                        row.score,
+                        row.evidence,
+                        row.reference_name,
+                        row.target_name
                     );
                 }
                 println!(
@@ -1382,7 +1405,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     report.reference_functions,
                     report.anchors,
                     report.names.len(),
-                    if has_flag(args, "--apply") { "applied" } else { "portable" }
+                    if has_flag(args, "--apply") {
+                        "applied"
+                    } else {
+                        "portable"
+                    }
                 );
             }
         }
@@ -1403,19 +1430,34 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         }
         "functions" => {
             let program = args.get(2).ok_or("functions needs a program name")?.clone();
-            let offset: u64 = flag(args, "--offset").and_then(|v| v.parse().ok()).unwrap_or(0);
-            let limit: u64 = flag(args, "--limit").and_then(|v| v.parse().ok()).unwrap_or(0);
+            let offset: u64 = flag(args, "--offset")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0);
+            let limit: u64 = flag(args, "--limit")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0);
             let filter = flag(args, "--filter");
             let sort = flag(args, "--sort");
-            let rows = if limit > 0 {
-                let page = core
-                    .functions_page(&program, offset, limit, filter.as_deref(), sort.as_deref())
-                    .map_err(|e| e.to_string())?;
-                println!("-- paged {}..{} of {:?} (rev {})", page.offset, page.offset + page.rows.len() as u64, page.total, page.revision);
-                page.rows
-            } else {
-                core.functions(&program).map_err(|e| e.to_string())?
-            };
+            let page = core
+                .functions_page(
+                    &program,
+                    offset,
+                    if limit == 0 { i64::MAX as u64 } else { limit },
+                    filter.as_deref(),
+                    sort.as_deref(),
+                    None,
+                )
+                .map_err(|e| e.to_string())?;
+            if limit > 0 {
+                println!(
+                    "-- paged {}..{} of {:?} (rev {})",
+                    page.offset,
+                    page.offset + page.rows.len() as u64,
+                    page.total,
+                    page.revision
+                );
+            }
+            let rows = page.rows;
             for f in &rows {
                 // A convention is a fact about the function: show it where
                 // the function is listed, not only in decompiled text.
@@ -1433,11 +1475,16 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "oracle-signatures" => {
             // Dump the oracle's recovered signatures as JSON — the head-to-head
             // type gate scores these against DWARF truth.
-            let program = args.get(2).ok_or("oracle-signatures needs a program name")?.clone();
+            let program = args
+                .get(2)
+                .ok_or("oracle-signatures needs a program name")?
+                .clone();
             let mut bridge = launch_bridge(args)?;
             let session = format!("cli-{program}");
             bridge.open(&session, &program).map_err(|e| e.to_string())?;
-            let sigs = bridge.oracle_signatures(&session).map_err(|e| e.to_string())?;
+            let sigs = bridge
+                .oracle_signatures(&session)
+                .map_err(|e| e.to_string())?;
             let out: Vec<serde_json::Value> = sigs
                 .iter()
                 .map(|s| {
@@ -1449,7 +1496,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     })
                 })
                 .collect();
-            println!("{}", serde_json::to_string(&out).map_err(|e| e.to_string())?);
+            println!(
+                "{}",
+                serde_json::to_string(&out).map_err(|e| e.to_string())?
+            );
             bridge.shutdown().map_err(|e| e.to_string())?;
         }
         "status" => {
@@ -1498,7 +1548,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
         }
         "detect-functions" => {
-            let binary = args.get(2).ok_or("detect-functions needs a binary")?.clone();
+            let binary = args
+                .get(2)
+                .ok_or("detect-functions needs a binary")?
+                .clone();
             let program = args
                 .get(3)
                 .ok_or("detect-functions needs a program name")?
@@ -1529,7 +1582,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         }
         "infer-types" => {
             let binary = args.get(2).ok_or("infer-types needs a binary")?.clone();
-            let program = args.get(3).ok_or("infer-types needs a program name")?.clone();
+            let program = args
+                .get(3)
+                .ok_or("infer-types needs a program name")?
+                .clone();
             let entries = args
                 .get(4)
                 .ok_or("infer-types needs one or more addresses")?
@@ -1565,8 +1621,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
         }
         "prune-indirect-calls" => {
-            let binary = args.get(2).ok_or("prune-indirect-calls needs a binary")?.clone();
-            let program = args.get(3).ok_or("prune-indirect-calls needs a program name")?.clone();
+            let binary = args
+                .get(2)
+                .ok_or("prune-indirect-calls needs a binary")?
+                .clone();
+            let program = args
+                .get(3)
+                .ok_or("prune-indirect-calls needs a program name")?
+                .clone();
             let entry = args
                 .get(4)
                 .ok_or("prune-indirect-calls needs a function entry")?
@@ -1623,7 +1685,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
         }
         "analyse-function" => {
-            let binary = args.get(2).ok_or("analyse-function needs a binary")?.clone();
+            let binary = args
+                .get(2)
+                .ok_or("analyse-function needs a binary")?
+                .clone();
             let program = args
                 .get(3)
                 .ok_or("analyse-function needs a program name")?
@@ -1701,7 +1766,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let limit = flag(args, "--limit")
                 .and_then(|value| value.parse().ok())
                 .unwrap_or(256);
-            let rows = core.search(&program, &term, limit).map_err(|e| e.to_string())?;
+            let rows = core
+                .search(&program, &term, limit)
+                .map_err(|e| e.to_string())?;
             for row in &rows {
                 let address = row
                     .address
@@ -1716,21 +1783,24 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let program = args.get(2).ok_or("graph needs a program name")?.clone();
             let is_largest = args.iter().any(|a| a == "--largest");
             if is_largest {
-                let binary_arg = flag(args, "--binary")
-                    .ok_or("graph --largest requires --binary <path>")?;
+                let binary_arg =
+                    flag(args, "--binary").ok_or("graph --largest requires --binary <path>")?;
                 let binary_path = Path::new(&binary_arg);
                 let mut functions = core.functions(&program).map_err(|e| e.to_string())?;
                 functions.sort_by(|a, b| b.size.cmp(&a.size));
                 let mut best: Option<(usize, String, String, serde_json::Value)> = None;
                 for f in functions {
                     let addr_hex = format!("{:x}", f.entry.offset);
-                    if let Ok(graph_json) = core.function_bb_graph(binary_path, &addr_hex) {
+                    if let Ok(graph_json) = core.function_bb_graph(&program, binary_path, &addr_hex) {
                         let blocks = graph_json
                             .get("nodes")
                             .and_then(|n| n.as_array())
                             .map(|a| a.len())
                             .unwrap_or(0);
-                        let better = best.as_ref().map(|(count, _, _, _)| blocks > *count).unwrap_or(true);
+                        let better = best
+                            .as_ref()
+                            .map(|(count, _, _, _)| blocks > *count)
+                            .unwrap_or(true);
                         if better {
                             best = Some((blocks, f.name.clone(), f.entry.to_string(), graph_json));
                         }
@@ -1739,8 +1809,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         }
                     }
                 }
-                let (blocks, name, address, graph) = best
-                    .ok_or_else(|| format!("no recoverable basic-block graph for program {program}"))?;
+                let (blocks, name, address, graph) = best.ok_or_else(|| {
+                    format!("no recoverable basic-block graph for program {program}")
+                })?;
                 let out = serde_json::json!({
                     "program": program,
                     "name": name,
@@ -1763,7 +1834,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         "provenance" => {
             // Every fact names the pass that produced it; this prints what
             // those names mean. With a program, only the classes it holds.
-            let program = args.get(2).filter(|value| !value.starts_with("--")).cloned();
+            let program = args
+                .get(2)
+                .filter(|value| !value.starts_with("--"))
+                .cloned();
             let held: Option<std::collections::BTreeSet<String>> = match &program {
                 Some(program) => {
                     let mut names = std::collections::BTreeSet::new();
@@ -1793,11 +1867,18 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         })
                     })
                     .collect();
-                println!("{}", serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?);
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+                );
             } else {
                 for entry in &rows {
-                    println!("{} [{}]\n    {}", entry.source, entry.evidence.as_str(),
-                             entry.explanation);
+                    println!(
+                        "{} [{}]\n    {}",
+                        entry.source,
+                        entry.evidence.as_str(),
+                        entry.explanation
+                    );
                 }
                 println!("-- {} provenance classes", rows.len());
             }
@@ -1869,7 +1950,10 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             println!("-- {} programs map {}", rows.len(), address);
         }
         "memory-regions" => {
-            let program = args.get(2).ok_or("memory-regions needs a program name")?.clone();
+            let program = args
+                .get(2)
+                .ok_or("memory-regions needs a program name")?
+                .clone();
             let rows = core.memory_regions(&program).map_err(|e| e.to_string())?;
             for row in &rows {
                 println!(
@@ -1963,7 +2047,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         .ok_or_else(|| format!("bad address: {addr_str}"))?;
                     let incoming = args.iter().any(|a| a == "--to");
                     core.xrefs_page(
-                        &program, &address, incoming, 0, u64::from(u32::MAX), evidence,
+                        &program,
+                        &address,
+                        incoming,
+                        0,
+                        u64::from(u32::MAX),
+                        evidence,
                     )
                     .map(|page| page.rows)
                     .map_err(|e| e.to_string())?
@@ -1971,10 +2060,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 // Filtering the whole program has no window to page, and
                 // pretending otherwise would answer a question not asked.
                 (None, Some(kind)) => {
-                    return Err(format!(
-                        "--evidence {} needs --to or --from",
-                        kind.as_str()
-                    ))
+                    return Err(format!("--evidence {} needs --to or --from", kind.as_str()));
                 }
                 (None, None) => core.xrefs(&program).map_err(|e| e.to_string())?,
             };
@@ -2035,13 +2121,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             println!("{what}");
         }
         "dump-specs" if has_flag(args, "--oracle") => {
-            let program = args.get(2).ok_or("dump-specs needs a program name")?.clone();
+            let program = args
+                .get(2)
+                .ok_or("dump-specs needs a program name")?
+                .clone();
             let out = flag(args, "--out").ok_or("dump-specs needs --out DIR")?;
             let mut bridge = launch_bridge(args)?;
             let session = format!("cli-{program}");
-            bridge
-                .open(&session, &program)
-                .map_err(|e| e.to_string())?;
+            bridge.open(&session, &program).map_err(|e| e.to_string())?;
             bridge
                 .dump_specs(&session, &out)
                 .map_err(|e| e.to_string())?;
@@ -2063,7 +2150,13 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 if f.severity == romwright_core::speclint::Severity::Error {
                     errors += 1;
                 }
-                println!("{}: {}: {}: {}", f.severity, f.rule, f.path.display(), f.message);
+                println!(
+                    "{}: {}: {}: {}",
+                    f.severity,
+                    f.rule,
+                    f.path.display(),
+                    f.message
+                );
             }
             println!("{} finding(s), {} error(s)", findings.len(), errors);
             if errors > 0 {
@@ -2071,10 +2164,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
         }
         "decompile-batch" => {
-            let program = args
-                .get(2)
-                .ok_or("--oracle needs a program name")?
-                .clone();
+            let program = args.get(2).ok_or("--oracle needs a program name")?.clone();
             let addresses: Vec<String> = args
                 .get(3)
                 .ok_or("--oracle needs a comma-separated address list")?
@@ -2103,16 +2193,11 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             bridge.shutdown().map_err(|e| e.to_string())?;
         }
         "decompile" | "disasm" => {
-            let program = args
-                .get(2)
-                .ok_or("--oracle needs a program name")?
-                .clone();
+            let program = args.get(2).ok_or("--oracle needs a program name")?.clone();
             let address = args.get(3).ok_or("--oracle needs an address")?.clone();
             let mut bridge = launch_bridge(args)?;
             let session = format!("cli-{program}");
-            bridge
-                .open(&session, &program)
-                .map_err(|e| e.to_string())?;
+            bridge.open(&session, &program).map_err(|e| e.to_string())?;
             if cmd == "decompile" {
                 let code = core
                     .decompile(&mut bridge, &session, &address)
@@ -2132,4 +2217,17 @@ fn run_inner(args: &[String]) -> Result<(), String> {
         _ => return Err(format!("unknown command: {cmd}")),
     }
     Ok(())
+}
+
+fn matching_request_json<T: serde::de::DeserializeOwned>(path: &str) -> Result<T, String> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    if path == "-" {
+        std::io::stdin().lock().take(64 * 1024 * 1024 + 1).read_to_end(&mut bytes)
+    } else {
+        std::fs::File::open(path).map_err(|error| error.to_string())?
+            .take(64 * 1024 * 1024 + 1).read_to_end(&mut bytes)
+    }.map_err(|error| error.to_string())?;
+    if bytes.len() > 64 * 1024 * 1024 { return Err("matching request exceeds 64 MiB".into()); }
+    serde_json::from_slice(&bytes).map_err(|error| format!("invalid matching request: {error}"))
 }

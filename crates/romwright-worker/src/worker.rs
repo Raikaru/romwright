@@ -4,7 +4,7 @@
 //!
 //! Spawns the pinned `ghidra_opt` binary, speaks the burst/packed protocol
 //! on its stdio, and answers its program queries from the project store
-//! (`romwright-db`) plus the raw binary via a read-only file mapping. This is the
+//! (`romwright-db`) plus the selected immutable program input. This is the
 //! no-JVM replacement for the Stage-1 bridge, per ADR-0001.
 
 use romwright_db::ProjectDb;
@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use crate::provider::ProgramProvider;
-use crate::wire::{burst, decode_burst, encode_addr_element};
+use crate::wire::{self, burst, decode_burst, encode_addr_element};
 #[cfg(test)]
 use crate::wire::{encode_burst, encode_string_stream};
 
@@ -252,7 +252,46 @@ impl NativeWorker {
                 WorkerError::Protocol("registerProgram returned no architecture id".into())
             })?;
         self.applied_prototypes.clear();
+        self.configure_options(provider, false)
+    }
+
+    fn configure_options(&mut self, provider: &mut ProgramProvider, switches: bool) -> Result<()> {
+        // setOptions resets defaults: retain readonly propagation in both modes.
+        let mut options = Vec::new();
+        wire::encode_header(&mut options, wire::ELEMENT_START, wire::elem::OPTIONSLIST);
+        wire::encode_header(&mut options, wire::ELEMENT_START, wire::elem::READONLY);
+        wire::encode_string_attribute(&mut options, wire::attr::CONTENT, b"on");
+        wire::encode_header(&mut options, wire::ELEMENT_END, wire::elem::READONLY);
+        if switches {
+            wire::encode_header(&mut options, wire::ELEMENT_START, wire::elem::CURRENTACTION);
+            for (element, value) in [
+                (wire::elem::PARAM1, "decompile"),
+                (wire::elem::PARAM2, "unreachable"),
+                (wire::elem::PARAM3, "off"),
+            ] {
+                wire::encode_header(&mut options, wire::ELEMENT_START, element);
+                wire::encode_string_attribute(&mut options, wire::attr::CONTENT, value.as_bytes());
+                wire::encode_header(&mut options, wire::ELEMENT_END, element);
+            }
+            wire::encode_header(&mut options, wire::ELEMENT_END, wire::elem::CURRENTACTION);
+        }
+        wire::encode_header(&mut options, wire::ELEMENT_END, wire::elem::OPTIONSLIST);
+        let arch_id = self.arch_id.to_string();
+        let response = self.run_command(provider, "setOptions", &[arch_id.as_bytes(), &options])?;
+        if response != b"t" {
+            return Err(WorkerError::Protocol(
+                "setOptions rejected analysis options".into(),
+            ));
+        }
         Ok(())
+    }
+
+    /// Recover jump tables without rendering C or serializing the syntax tree.
+    pub fn configure_switch_recovery(&mut self, provider: &mut ProgramProvider) -> Result<()> {
+        self.configure_options(provider, true)?;
+        self.set_action(provider, "decompile", "noc")?;
+        self.set_action(provider, "", "notree")?;
+        self.set_action(provider, "", "jumpload")
     }
 
     /// Applies a C declaration to a preloaded function through the native
@@ -330,16 +369,21 @@ impl NativeWorker {
             let owned = locals_for(*offset);
             let locals: Vec<crate::wire::StackLocal> = owned
                 .iter()
-                .map(|(name, offset, size, type_name, type_id)| crate::wire::StackLocal {
-                    name,
-                    offset: *offset,
-                    size: *size,
-                    type_name,
-                    type_id: *type_id,
-                })
+                .map(
+                    |(name, offset, size, type_name, type_id)| crate::wire::StackLocal {
+                        name,
+                        offset: *offset,
+                        size: *size,
+                        type_name,
+                        type_id: *type_id,
+                    },
+                )
                 .collect();
-            if non_returning.contains(offset) || convention.is_some() || fixup.is_some()
-                || !branches.is_empty() || !locals.is_empty()
+            if non_returning.contains(offset)
+                || convention.is_some()
+                || fixup.is_some()
+                || !branches.is_empty()
+                || !locals.is_empty()
             {
                 crate::wire::encode_function_element(
                     &mut doc,
@@ -429,17 +473,178 @@ impl NativeWorker {
     ) -> Result<crate::structure::StructuredBlock> {
         let arch_id = self.arch_id.to_string();
         let encoded = graph.encode();
-        let response = self.run_command(
-            provider,
-            "structureGraph",
-            &[arch_id.as_bytes(), &encoded],
-        )?;
+        let response =
+            self.run_command(provider, "structureGraph", &[arch_id.as_bytes(), &encoded])?;
         crate::structure::decode(&response).ok_or_else(|| {
             WorkerError::Process(format!(
                 "structureGraph answered {} bytes this side cannot decode",
                 response.len()
             ))
         })
+    }
+
+    /// Applies semantic proposals while their native Funcdata is still live.
+    /// The returned tokens and SSA are decoded from the same native response.
+    pub fn finalize_document(
+        &mut self,
+        provider: &mut ProgramProvider,
+        raw: &[u8],
+        space: u32,
+        address: u64,
+        passes: &[String],
+        deadline: Option<std::time::Instant>,
+        cancel: Option<&romwright_core::exec::CancelToken>,
+    ) -> Result<crate::doc::DecodedDocument> {
+        use romwright_core::func_ir::{Pipeline, TransformContext};
+        let mut decoded = crate::doc::decode_document_with_ram_space(raw, Some(space as u64));
+        // Stored xrefs can be absent on an unanalysed import. Resolve the
+        // actual native calls before transforming their arguments, rather
+        // than treating the store's current call graph as exhaustive.
+        loop {
+            if let Some(error) = decoded.semantic_error.take() {
+                return Err(WorkerError::Decompiler(error));
+            }
+            if cancel.is_some_and(romwright_core::exec::CancelToken::is_cancelled) {
+                return Err(WorkerError::Process("execution cancelled".into()));
+            }
+            if deadline.is_some_and(|deadline| std::time::Instant::now() >= deadline) {
+                return Err(WorkerError::Timeout(0));
+            }
+            let mut callees = Vec::new();
+            if let Some(ir) = &decoded.function_ir {
+                use romwright_model::function_ir::{Opcode, Operand};
+                for op in ir.blocks.iter().flat_map(|block| &block.operations) {
+                    if op.opcode != Opcode::CALL {
+                        continue;
+                    }
+                    let Some(Operand::Value(target)) = op.inputs.first() else {
+                        continue;
+                    };
+                    let Some(callee) = ir.values.get(target).and_then(|value| value.offset) else {
+                        continue;
+                    };
+                    if provider.prototypes.contains_key(&callee)
+                        && !self.applied_prototypes.contains_key(&callee)
+                    {
+                        callees.push(callee);
+                    }
+                }
+            }
+            if callees.is_empty() {
+                break;
+            }
+            callees.sort_unstable();
+            callees.dedup();
+            let mut applied: Vec<_> = self
+                .applied_prototypes
+                .iter()
+                .map(|(&entry, &mode)| (entry, mode))
+                .collect();
+            applied.sort_unstable_by_key(|&(entry, _)| entry);
+            // The native caller already incorporated the old callee facts.
+            // Rebuild it, retaining the target's inferred/recovery mode.
+            // Each round adds a previously unapplied stored prototype.
+            self.flush_native(provider)?;
+            for (entry, mode) in applied {
+                self.apply_stored_prototype(provider, entry, mode == PrototypeMode::Recovery)?;
+            }
+            for callee in callees {
+                self.apply_stored_prototype(provider, callee, false)?;
+            }
+            let response = self.decompile_at(provider, space, address)?;
+            decoded = crate::doc::decode_document_with_ram_space(&response, Some(space as u64));
+        }
+        let pipeline = Pipeline::from_names(passes).map_err(WorkerError::Decompiler)?;
+        let mut plan = {
+            let ir = decoded.function_ir.as_ref().ok_or_else(|| {
+                WorkerError::Decompiler("native document has no semantic graph".into())
+            })?;
+            let context = TransformContext {
+                verified_helpers: Some(&provider.verified_helpers),
+                deadline,
+                cancel,
+            };
+            pipeline
+                .run(ir, &context)
+                .map_err(WorkerError::Decompiler)?
+        };
+        if !plan.edits.is_empty() || !plan.cuts.is_empty() {
+            use crate::wire::{
+                ELEMENT_END, ELEMENT_START, attr_type, encode_attribute, encode_header,
+                encode_string_attribute,
+            };
+            // Pinned ELEM_DOC/OP/EDGE and their native attributes.
+            let mut encoded = Vec::new();
+            encode_header(&mut encoded, ELEMENT_START, 229);
+            for edit in &plan.edits {
+                encode_header(&mut encoded, ELEMENT_START, 27);
+                for (attribute, value) in [
+                    (16, edit.address.offset),
+                    (18, edit.operation.0),
+                    (25, edit.constant),
+                ] {
+                    encode_attribute(&mut encoded, attribute, attr_type::UNSIGNED_INT, value);
+                }
+                for (attribute, value) in [
+                    (78, edit.before as u64),
+                    (43, edit.after as u64),
+                    (19, edit.width as u64),
+                ] {
+                    encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
+                }
+                encode_string_attribute(&mut encoded, 14, edit.helper.as_bytes());
+                encode_header(&mut encoded, ELEMENT_END, 27);
+            }
+            for cut in &plan.cuts {
+                encode_header(&mut encoded, ELEMENT_START, 105);
+                for (attribute, value) in [
+                    (10, cut.source.0),
+                    (79, cut.successor_slot as u64),
+                    (77, cut.target.0),
+                ] {
+                    encode_attribute(&mut encoded, attribute, attr_type::POSITIVE_INT, value);
+                }
+                encode_header(&mut encoded, ELEMENT_END, 105);
+            }
+            encode_header(&mut encoded, ELEMENT_END, 229);
+            let mut location = Vec::new();
+            encode_addr_element(&mut location, space, address);
+            let arch = self.arch_id.to_string();
+            let response = self.run_command(
+                provider,
+                "renderFunctionIR",
+                &[arch.as_bytes(), &location, &encoded],
+            )?;
+            decoded = crate::doc::decode_document_with_ram_space(&response, Some(space as u64));
+            if let Some(error) = decoded.semantic_error.take() {
+                return Err(WorkerError::Decompiler(error));
+            }
+        }
+        if decoded.cut_projection.len() != plan.cuts.len() {
+            return Err(WorkerError::Decompiler(
+                "native projection did not acknowledge every control-flow cut".into(),
+            ));
+        }
+        for (cut, (original, projected)) in plan.cuts.iter_mut().zip(decoded.cut_projection.drain(..)) {
+            if *cut != original || original.source != projected.source || original.target != projected.target {
+                return Err(WorkerError::Decompiler(
+                    "native projection changed a control-flow cut identity".into(),
+                ));
+            }
+            *cut = projected;
+        }
+        let ir = decoded.function_ir.as_mut().ok_or_else(|| {
+            WorkerError::Decompiler("native projection has no semantic graph".into())
+        })?;
+        let context = TransformContext {
+            verified_helpers: Some(&provider.verified_helpers),
+            deadline,
+            cancel,
+        };
+        pipeline
+            .finish(ir, plan, &context)
+            .map_err(WorkerError::Decompiler)?;
+        Ok(decoded)
     }
 
     /// Decompiles one address, killing the decompiler if it does not answer
@@ -460,43 +665,47 @@ impl NativeWorker {
         offset: u64,
         timeout: Option<std::time::Duration>,
     ) -> Result<Vec<u8>> {
-        let Some(timeout) = timeout else {
-            return self.decompile_at(provider, space_index, offset);
+        self.within_deadline(
+            timeout.map(|duration| std::time::Instant::now() + duration),
+            |worker| worker.decompile_at(provider, space_index, offset),
+        )
+    }
+
+    /// One absolute deadline covers protocol commands and semantic passes.
+    pub fn within_deadline<T>(
+        &mut self,
+        deadline: Option<std::time::Instant>,
+        operation: impl FnOnce(&mut Self) -> Result<T>,
+    ) -> Result<T> {
+        let Some(deadline) = deadline else {
+            return operation(self);
         };
-        use std::sync::atomic::{AtomicBool, Ordering};
+        let remaining = deadline.saturating_duration_since(std::time::Instant::now());
+        if remaining.is_zero() {
+            return Err(WorkerError::Timeout(0));
+        }
         let handle = self.kill_handle();
-        let fired = std::sync::Arc::new(AtomicBool::new(false));
-        let answered = std::sync::Arc::new(AtomicBool::new(false));
-        let watchdog = std::thread::spawn({
-            let fired = fired.clone();
-            let answered = answered.clone();
-            move || {
-                let deadline = std::time::Instant::now() + timeout;
-                while std::time::Instant::now() < deadline {
-                    if answered.load(Ordering::Relaxed) {
-                        return;
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(25));
-                }
-                if answered.load(Ordering::Relaxed) {
-                    return;
-                }
-                fired.store(true, Ordering::Relaxed);
-                // The read is blocked in the protocol, which is why the child
-                // is behind its own mutex.
+        let (answered, wait) = std::sync::mpsc::channel();
+        let watchdog = std::thread::spawn(move || {
+            if wait
+                .recv_timeout(deadline.saturating_duration_since(std::time::Instant::now()))
+                .is_err()
+            {
                 if let Ok(mut slot) = handle.lock() {
                     if let Some(child) = slot.as_mut() {
-                        let _ = child.kill();
+                        romwright_core::exec::kill_child(child);
                     }
                 }
             }
         });
-        let result = self.decompile_at(provider, space_index, offset);
-        answered.store(true, Ordering::Relaxed);
+        let result = operation(self);
+        let expired = std::time::Instant::now() >= deadline;
+        let _ = answered.send(());
         let _ = watchdog.join();
-        match result {
-            Err(_) if fired.load(Ordering::Relaxed) => Err(WorkerError::Timeout(timeout.as_secs())),
-            other => other,
+        if expired {
+            Err(WorkerError::Timeout(remaining.as_secs()))
+        } else {
+            result
         }
     }
 
@@ -726,7 +935,7 @@ impl Drop for NativeWorker {
         drop(self.stdin.take());
         if let Ok(mut guard) = self.child.lock() {
             if let Some(mut child) = guard.take() {
-                let _ = child.kill();
+                romwright_core::exec::kill_child(&mut child);
                 let _ = child.wait();
             }
         }
@@ -744,7 +953,7 @@ impl NativeWorker {
     pub fn kill(&mut self) -> Result<()> {
         if let Ok(mut guard) = self.child.lock() {
             if let Some(mut c) = guard.take() {
-                let _ = c.kill();
+                romwright_core::exec::kill_child(&mut c);
                 let _ = c.wait();
             }
         }

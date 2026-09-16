@@ -205,7 +205,7 @@ pub fn recover(import: &NativeImport) -> Recovery {
             .values()
             .any(|n| n.contains("__ct__") || n.contains("__dt__"));
         if has_mwcc_members {
-            let (classes, report) = mwcc::recover(import, &image, &symbols, &[], &[]);
+            let (classes, report) = mwcc::recover(&symbols);
             return Recovery {
                 source: mwcc::SOURCE,
                 classes,

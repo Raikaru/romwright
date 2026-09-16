@@ -42,7 +42,7 @@ fn err(message: impl Into<String>) -> ImportError {
 /// contributes one entry under its file name (and, for a `.rap`/`.klic`,
 /// under the extension-less stem too, so `title.rap` answers `rap` lookups
 /// scoped to that title).
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, serde::Serialize, serde::Deserialize)]
 pub struct KeyStore {
     /// `name -> key bytes`, lower-cased name.
     keys: BTreeMap<String, Vec<u8>>,
@@ -63,8 +63,7 @@ impl KeyStore {
     /// bare key blob). The format is sniffed: a file that parses as
     /// `name = hex` lines is text; anything else is raw.
     pub fn load(path: &Path) -> Result<Self, ImportError> {
-        let bytes = std::fs::read(path)
-            .map_err(|e| err(format!("{}: {e}", path.display())))?;
+        let bytes = std::fs::read(path).map_err(|e| err(format!("{}: {e}", path.display())))?;
         let mut store = Self::empty();
         if let Some(text) = Self::as_text(&bytes) {
             store.parse_text(&text, path)?;
@@ -164,9 +163,7 @@ impl KeyStore {
                 .collect();
             let Ok(bytes) = (0..hex.len())
                 .step_by(2)
-                .map(|i| {
-                    u8::from_str_radix(hex.get(i..i + 2).unwrap_or("0"), 16)
-                })
+                .map(|i| u8::from_str_radix(hex.get(i..i + 2).unwrap_or("0"), 16))
                 .collect::<Result<Vec<u8>, _>>()
             else {
                 continue; // not hex — a comment or header line, skip it
@@ -215,8 +212,10 @@ mod tests {
         let store = KeyStore::load(&path).unwrap();
         assert_eq!(
             store.get("HEADER_KEY").unwrap(),
-            &[0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
-              0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99]
+            &[
+                0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+                0x88, 0x99
+            ]
         );
         assert!(store.get("key_area_key_application_00").is_some());
         assert!(store.get("missing").is_none());

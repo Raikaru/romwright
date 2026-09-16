@@ -6,7 +6,12 @@
 
 pub mod cfg_functions;
 pub mod demand;
+pub mod matching;
 pub mod import_cache;
+pub mod artifact;
+pub mod exec;
+pub mod inputs;
+pub mod func_ir;
 pub(crate) mod sha256;
 pub mod gte;
 pub mod gte_lift;
@@ -128,18 +133,15 @@ struct LiveMemoryConnection {
 pub struct Core {
     db: ProjectDb,
     db_path: PathBuf,
-    /// Last mapped image for a binary path, so repeated `mem_native`
-    /// reads don't re-open/re-parse the file per call. One-entry cache:
-    /// the CLI's scroll pattern is single-binary; `ProgramSession` (the
-    /// sessionful image layer) supersedes it for interactive consumers.
-    native_cache: std::cell::RefCell<Option<(PathBuf, std::sync::Arc<session::ProgramImage>)>>,
+    /// Shared viewport snapshot; independent request connections reuse it.
+    native_cache: std::sync::Arc<std::sync::Mutex<Option<(PathBuf, std::sync::Arc<session::ProgramImage>)>>>,
     /// Reusable read-only Dolphin GDB connection for live-memory overlays.
-    live_memory: std::cell::RefCell<Option<LiveMemoryConnection>>,
+    live_memory: std::sync::Arc<std::sync::Mutex<Option<LiveMemoryConnection>>>,
     /// Immutable runtime configuration (env-derived by default).
     config: session::RuntimeConfig,
     /// Images kept parsed and loaded in a console between requests, so
     /// demand-driven analysis costs a walk and not a reload.
-    live: demand::LiveImages,
+    live: std::sync::Arc<demand::LiveImages>,
 }
 
 /// A diff failure, as a Core error: the reference project is an input like
@@ -154,16 +156,7 @@ fn diff_error(error: romwright_diff::DiffError) -> CoreError {
 impl Core {
     /// Opens (or creates) a project at `project_dir` holding `project.sqlite`.
     pub fn open(project_dir: &Path) -> Result<Self> {
-        std::fs::create_dir_all(project_dir)?;
-        let db = ProjectDb::open(&project_dir.join("project.sqlite"))?;
-        Ok(Self {
-            db,
-            db_path: project_dir.to_path_buf(),
-            native_cache: std::cell::RefCell::new(None),
-            live_memory: std::cell::RefCell::new(None),
-            config: session::RuntimeConfig::from_env(),
-            live: demand::LiveImages::default(),
-        })
+        Self::open_with_config(project_dir, session::RuntimeConfig::from_env())
     }
 
     /// Opens (or creates) a project with an explicit runtime configuration.
@@ -173,10 +166,23 @@ impl Core {
         Ok(Self {
             db,
             db_path: project_dir.to_path_buf(),
-            native_cache: std::cell::RefCell::new(None),
-            live_memory: std::cell::RefCell::new(None),
+            native_cache: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            live_memory: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            live: std::sync::Arc::new(demand::LiveImages::new(project_dir, &config)),
             config,
-            live: demand::LiveImages::default(),
+        })
+    }
+
+    /// Opens an independent store connection without discarding warm runtime
+    /// state. Long requests own this handle, not the service's Core mutex.
+    pub fn fork(&self) -> Result<Self> {
+        Ok(Self {
+            db: ProjectDb::open(&self.db_path.join("project.sqlite"))?,
+            db_path: self.db_path.clone(),
+            native_cache: self.native_cache.clone(),
+            live_memory: self.live_memory.clone(),
+            config: self.config.clone(),
+            live: self.live.clone(),
         })
     }
 
@@ -262,6 +268,10 @@ impl Core {
     pub fn functions(&self, program: &str) -> Result<Vec<FunctionRow>> {
         let id = self.db.program_id(program)?;
         Ok(self.db.functions(id)?)
+    }
+    /// Returns the stored function containing a RAM address.
+    pub fn function_at(&self, program: &str, offset: u64) -> Result<Option<FunctionRow>> {
+        Ok(self.db.function_at(self.db.program_id(program)?, offset)?)
     }
     /// One listing window (CORE-007): SLEIGH console rows when configured,
     /// bounded + overscan, stable ids. Errors honestly when the console is
@@ -357,21 +367,24 @@ impl Core {
             .collect())
     }
 
-    /// Basic-block graph of the function at `address` with layered layout
-    /// coordinates (Phase 2.1). Nodes carry block ranges; edges are typed
-    /// true/false/unconditional/call.
+    /// Complete native function CFG, keyed by block identity and laid out for
+    /// every frontend. Missing native IR is an error, never a bounded fallback.
     pub fn function_bb_graph(
         &self,
+        program: &str,
         binary: &std::path::Path,
         address: &str,
     ) -> Result<serde_json::Value> {
         let hex = address.trim_start_matches("0x");
         let offset = u64::from_str_radix(hex, 16)
             .map_err(|_| CoreError::Collaboration(format!("bad address: {address}")))?;
-        let reader = |off: u64, size: usize| self.mem_native(binary, off, size).ok();
-        let graph = graph::basic_blocks(&reader, offset, 4096);
-        let layout = graph::layered_layout(&graph);
-        Ok(graph::graph_wire(&graph, &layout))
+        let doc = self.decompile_native_doc(
+            binary, &Address { space: AddressSpace::Ram, offset }, program, None,
+        )?;
+        let ir = doc.function_ir.as_ref().ok_or_else(|| {
+            CoreError::Collaboration("native function CFG is unavailable".into())
+        })?;
+        Ok(graph::native_graph(ir))
     }
 
     /// Revision events after `since` for the program (CORE-005).
@@ -494,13 +507,13 @@ impl Core {
         limit: u64,
         filter: Option<&str>,
         sort: Option<&str>,
+        address: Option<u64>,
     ) -> Result<romwright_model::Page<FunctionRow>> {
         let id = self.db.program_id(program)?;
         let filter = romwright_db::FunctionsFilter::parse(filter.unwrap_or(""))?;
         let sort = sort.map(parse_function_sort).transpose()?;
-        let (rows, total, revision) =
-            self.db
-                .functions_page(id, offset, limit, filter.as_ref(), sort)?;
+        let (rows, total, revision, offset) =
+            self.db.functions_page(id, offset, limit, filter.as_ref(), sort, address)?;
         Ok(romwright_model::Page { rows, offset, total, revision })
     }
 
@@ -872,7 +885,7 @@ impl Core {
         let entries: Vec<romwright_model::Address> =
             self.db.functions(id)?.into_iter().map(|row| row.entry).collect();
         let mut rows: Vec<romwright_model::SemanticSignatureRow> = Vec::new();
-        self.live.with(binary, program, |live| {
+        self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
             for entry in &entries {
                 let walk = live.walk(entry.offset)?;
                 if walk.instructions == 0 {
@@ -940,9 +953,21 @@ impl Core {
         program: &str,
         entry: &romwright_model::Address,
     ) -> Result<demand::FunctionAnalysis> {
+        let request = self.execution_request(binary, program, None, exec::DEFAULT_BUDGET)?;
+        self.analyse_function_request(&request, entry)
+    }
+
+    /// Runs a demand walk under the caller's captured revision and job control.
+    pub fn analyse_function_request(
+        &self,
+        request: &exec::ExecutionRequest,
+        entry: &romwright_model::Address,
+    ) -> Result<demand::FunctionAnalysis> {
+        self.check_execution(request)?;
+        let program = request.program.as_str();
         let started = std::time::Instant::now();
         let id = self.db.program_id(program)?;
-        let revision = self.db.revision(id)?;
+        let revision = request.revision;
         let key = entry.to_string();
         let known = self.db.function_analysis_state(id, &key)?;
         if let Some((state, analysed)) = &known
@@ -977,7 +1002,7 @@ impl Core {
         let address = entry.offset;
         let mut phases = Vec::new();
         let opening = std::time::Instant::now();
-        let (walk, xrefs, transfers) = self.live.with(binary, program, |live| {
+        let (walk, xrefs, transfers) = self.live.with(&request.input, program, Some(request), |live| {
             phases.push(("open".to_string(), opening.elapsed().as_secs_f64()));
             let walking = std::time::Instant::now();
             let walk = live.walk(address)?;
@@ -1004,7 +1029,6 @@ impl Core {
         } else {
             "walked"
         };
-        self.db.upsert_analysed_function(id, &row, state)?;
         // The walk's own control flow is a fact too: the whole-image pass
         // writes one `UNCONDITIONAL_CALL` per direct call site, and a body
         // analysed on demand has exactly the same edges.
@@ -1018,9 +1042,12 @@ impl Core {
         // The body's own references replace whatever a previous walk of the
         // same range asserted; references from elsewhere into it are other
         // functions' facts and are left alone.
-        self.db.replace_xrefs_from_range(
+        request.cancel.checkpoint(request.deadline)?;
+        self.db.publish_function_analysis(
             id,
-            &romwright_model::Address::ram(walk.entry),
+            revision,
+            &row,
+            state,
             &romwright_model::Address::ram(walk.end),
             &facts
                 .iter()
@@ -1072,6 +1099,7 @@ impl Core {
         program: &str,
         entries: &[romwright_model::Address],
     ) -> Result<Vec<serde_json::Value>> {
+        let request = self.execution_request(binary, program, None, exec::DEFAULT_BUDGET)?;
         let mut requests = Vec::with_capacity(entries.len());
         // What the walk proved about each body travels with its answer: a
         // block count is only comparable to another producer's when both
@@ -1079,7 +1107,7 @@ impl Core {
         type WalkFacts = (u64, u64, Vec<u64>, usize, crate::structuring::Structured);
         let mut walked: std::collections::HashMap<String, WalkFacts> =
             std::collections::HashMap::new();
-        self.live.with(binary, program, |live| {
+        self.live.with(&request.input, program, Some(&request), |live| {
             for entry in entries {
                 let walk = live.walk(entry.offset)?;
                 let (blocks, edges) = walk.basic_blocks();
@@ -1105,13 +1133,8 @@ impl Core {
             }
             Ok(())
         })?;
-        let answers = native_runtime::structure_native(
-            &self.config,
-            binary,
-            program,
-            &self.db_path,
-            &requests,
-        )?;
+        let answers = native_runtime::structure_native(&request, &requests)?;
+        self.check_execution(&request)?;
         Ok(answers
             .iter()
             .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
@@ -1261,7 +1284,7 @@ impl Core {
         let started = std::time::Instant::now();
         let mut found = crate::cfg_functions::Clustered::default();
         let mut swept_bytes = 0u64;
-        self.live.with(binary, program, |live| {
+        self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
             for (start, end) in live.code_ranges() {
                 // The gaps between claimed bodies inside this range.
                 let mut cursor = start;
@@ -1331,8 +1354,7 @@ impl Core {
         program: &str,
         entries: &[romwright_model::Address],
     ) -> Result<Vec<serde_json::Value>> {
-        let language = session::program_language(&self.config, program, &self.db_path)
-            .unwrap_or_else(|_| self.config.language_id.clone());
+        let language = self.db.program_language(self.db.program_id(program)?)?;
         let (_, specs, _, _) =
             native_runtime::language_decompile_config(&self.config, &language)?;
         let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
@@ -1345,6 +1367,7 @@ impl Core {
             return Ok(Vec::new());
         };
         let slot = |name: &str| conventions.registers.get(name).map(|(offset, _)| *offset);
+        let killed: std::collections::BTreeSet<u64> = model.killed.iter().filter_map(|name| slot(name)).collect();
         // A float parameter slot is the register the cspec names — a pair
         // like `f12_13` for a `double`, a single like `f12` for a `float`.
         // On big-endian MIPS the single sits at the pair's high offset, so
@@ -1392,7 +1415,7 @@ impl Core {
             .filter_map(|name| slot(name).map(|offset| (name.clone(), offset)))
             .collect();
         let mut rows = Vec::with_capacity(entries.len());
-        self.live.with(binary, program, |live| {
+        self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
             // Pass 1: lift every function and solve it in isolation, so
             // each has a Signature the callers' second pass can consume.
             let mut lifted: Vec<(u64, usize, Vec<crate::native_runtime::PcodeInstruction>)> =
@@ -1419,7 +1442,7 @@ impl Core {
                     all
                 };
                 let pcode = live.pcode(&addresses)?;
-                let solution = crate::subtype::solve(&pcode);
+                let solution = crate::subtype::solve_with(&pcode, &std::collections::BTreeMap::new(), &killed);
                 let params = parameter_slots
                     .iter()
                     .filter_map(|(_, offset)| {
@@ -1492,7 +1515,7 @@ impl Core {
             for _round in 0..8 {
                 solutions = lifted
                     .iter()
-                    .map(|(_, _, pcode)| crate::subtype::solve_with(pcode, &callees))
+                    .map(|(_, _, pcode)| crate::subtype::solve_with(pcode, &callees, &killed))
                     .collect();
                 // caller→callee: join each observed argument type into the
                 // callee's inferred signature.
@@ -1536,12 +1559,12 @@ impl Core {
                 let return_class = float_return_slots
                     .iter()
                     .map(|offset| facts.written(*offset))
-                    .find(|class| matches!(class, crate::types_infer::Class::Float(_)))
+                    .find(|class| matches!(class, romwright_model::type_evidence::Class::Float(_)))
                     .or_else(|| {
                         return_slots
                             .iter()
                             .map(|(_, offset)| facts.written(*offset))
-                            .find(|class| *class != crate::types_infer::Class::Unknown)
+                            .find(|class| *class != romwright_model::type_evidence::Class::Unknown)
                     });
                 let returns = return_class
                     .map(|class| class.name())
@@ -1566,8 +1589,8 @@ impl Core {
                         offsets
                             .iter()
                             .map(|offset| facts.get(*offset))
-                            .find(|class| *class != crate::types_infer::Class::Unknown)
-                            .unwrap_or(crate::types_infer::Class::Unknown)
+                            .find(|class| *class != romwright_model::type_evidence::Class::Unknown)
+                            .unwrap_or(romwright_model::type_evidence::Class::Unknown)
                             .name()
                     })
                     .collect();
@@ -1598,7 +1621,7 @@ impl Core {
                             _ => crate::types_infer::Ty::Scalar(scalar),
                         };
                         let ty = if matches!(ty, crate::types_infer::Ty::Scalar(
-                            crate::types_infer::Class::Unknown)) {
+                            romwright_model::type_evidence::Class::Unknown)) {
                             float_parameters
                                 .get(i)
                                 .filter(|f| f.as_str() != "unknown")
@@ -1625,7 +1648,7 @@ impl Core {
                     .rev()
                     .find(|(_, (_, offset))| {
                         facts.read_before_write(*offset)
-                            || facts.get(*offset) != crate::types_infer::Class::Unknown
+                            || facts.get(*offset) != romwright_model::type_evidence::Class::Unknown
                             || solution.types.get(offset).is_some_and(|ty| {
                                 !matches!(ty, crate::types_infer::Ty::Unknown)
                             })
@@ -1675,8 +1698,7 @@ impl Core {
         program: &str,
         entry: &romwright_model::Address,
     ) -> Result<Vec<serde_json::Value>> {
-        let language = session::program_language(&self.config, program, &self.db_path)
-            .unwrap_or_else(|_| self.config.language_id.clone());
+        let language = self.db.program_language(self.db.program_id(program)?)?;
         let (_, specs, _, _) =
             native_runtime::language_decompile_config(&self.config, &language)?;
         let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
@@ -1730,7 +1752,7 @@ impl Core {
             .map(|xref| xref.from.offset)
             .collect();
         let mut rows = Vec::new();
-        self.live.with(binary, program, |live| {
+        self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
             let walk = live.walk(entry.offset)?;
             if walk.instructions == 0 {
                 return Ok(());
@@ -1772,11 +1794,11 @@ impl Core {
                 let facts = crate::types_infer::infer(&prefix);
                 // The site's signature is the class of the value last
                 // written to each argument register before the call.
-                let site_ints: Vec<crate::types_infer::Class> = parameter_slots
+                let site_ints: Vec<romwright_model::type_evidence::Class> = parameter_slots
                     .iter()
                     .map(|offset| facts.written(*offset))
                     .collect();
-                let site_floats: Vec<crate::types_infer::Class> = float_slots
+                let site_floats: Vec<romwright_model::type_evidence::Class> = float_slots
                     .iter()
                     .map(|offset| facts.written(*offset))
                     .collect();
@@ -1874,12 +1896,12 @@ impl Core {
                         let Some(candidate_facts) = candidate_facts else {
                             return true; // undecodable: nothing to contradict
                         };
-                        let candidate_ints: Vec<crate::types_infer::Class> =
+                        let candidate_ints: Vec<romwright_model::type_evidence::Class> =
                             parameter_slots
                                 .iter()
                                 .map(|offset| candidate_facts.get(*offset))
                                 .collect();
-                        let candidate_floats: Vec<crate::types_infer::Class> =
+                        let candidate_floats: Vec<romwright_model::type_evidence::Class> =
                             float_slots
                                 .iter()
                                 .map(|offset| candidate_facts.get(*offset))
@@ -1926,7 +1948,7 @@ impl Core {
                             .zip(candidate_ints.iter())
                             .chain(site_floats.iter().zip(candidate_floats.iter()))
                         {
-                            use crate::types_infer::Class;
+                            use romwright_model::type_evidence::Class;
                             let contradicts = matches!(
                                 (site_class, candidate_class),
                                 (Class::Float(_), Class::Int(_))
@@ -2187,6 +2209,12 @@ impl Core {
         raw: Option<(u64, &str)>,
         keys: &native::keys::KeyStore,
     ) -> Result<Vec<ProgramSummary>> {
+        let bytes = std::fs::read(binary)?;
+        let map_bytes = map.map(std::fs::read).transpose()?.map(Into::into);
+        let (artifact, input) = inputs::capture(&self.db_path, binary, bytes.into(), map_bytes, raw, keys)?;
+        let binary = artifact.path.as_path();
+        let map_path = input.map_digest.as_ref().map(|digest| self.db_path.join("artifacts").join(digest));
+        let map = map_path.as_deref();
         // Reuse first: the same bytes analysed by the same analyser produce
         // the same facts, and gates re-import the same corpus constantly.
         // Only a project this import would be the sole occupant of can be
@@ -2239,7 +2267,17 @@ impl Core {
                 }
             }
         }
-        let images = native::load_container_with(binary, analyse, map, raw, keys)?;
+        let mut images = native::load_container_with(binary, &artifact.bytes, false, map, raw, keys, &self.config)?;
+        for (suffix, imp) in &mut images {
+            let mut selected = input.clone();
+            selected.image_selector = suffix.clone();
+            imp.input_context = Some(std::sync::Arc::new((self.db_path.clone(), selected)));
+            if analyse {
+                imp.analysed = true;
+                imp.discovery_note = None;
+                native::discover(imp)?;
+            }
+        }
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {
@@ -2256,7 +2294,7 @@ impl Core {
             });
             stored.push(summary);
         }
-        if let Some(key) = cache_key.as_deref() {
+        if let Some(key) = cache_key.as_deref().filter(|_| !images.iter().any(|(_, imp)| imp.discovery_note.is_some())) {
             // Snapshot through the connection, then publish it under the key.
             let staging = self.db_path.join("project.cache-staging.sqlite");
             if self.db.export_to(&staging).is_ok() {
@@ -2339,9 +2377,11 @@ impl Core {
         Ok((digest, flows, ms as u64, decoded, answered))
     }
 
-    /// Native decompilation of one function at `address` (program must be in
-    /// `project_dir`'s store; `base` defaults to the PE image base or
-    /// 0x400000).
+    /// Native decompilation from the program's captured loader input. The
+    /// revision is captured *before* the worker runs and re-checked after: a
+    /// store edit during decompilation means the answer reflects a snapshot
+    /// that no longer exists, so it is rejected rather than stamped with a
+    /// revision it was not computed against.
     pub fn decompile_native(
         &self,
         binary: &Path,
@@ -2349,19 +2389,12 @@ impl Core {
         program: &str,
         base: Option<u64>,
     ) -> Result<String> {
-        Ok(native_runtime::decompile_native(
-            &self.config,
-            binary,
-            address,
-            program,
-            &self.db_path,
-            base,
-        )?)
+        let request = self.execution_request(binary, program, base, exec::DEFAULT_BUDGET)?;
+        let text = native_runtime::decompile_native(&request, address)?;
+        self.check_execution(&request)?;
+        Ok(text)
     }
 
-    /// Native structured decompilation for a typed RAM address. The document
-    /// is stamped with the durable store revision observed after the worker
-    /// returns, so a view can reject stale metadata.
     /// Native decompilation of several addresses from one worker launch. The
     /// decompiler loads its language once per launch, so a batch is what makes
     /// comparing a hundreds-of-functions image affordable. Keys are
@@ -2373,16 +2406,14 @@ impl Core {
         program: &str,
         base: Option<u64>,
     ) -> Result<std::collections::BTreeMap<String, String>> {
-        Ok(native_runtime::decompile_native_batch(
-            &self.config,
-            binary,
-            addresses,
-            program,
-            &self.db_path,
-            base,
-        )?)
+        let request = self.execution_request(binary, program, base, exec::DEFAULT_BUDGET)?;
+        let texts = native_runtime::decompile_native_batch(&request, addresses)?;
+        self.check_execution(&request)?;
+        Ok(texts)
     }
 
+    /// Structured decompilation for a typed RAM address. Tokens and semantic
+    /// IR are returned only for the captured revision.
     pub fn decompile_native_doc(
         &self,
         binary: &Path,
@@ -2397,102 +2428,73 @@ impl Core {
             )));
         }
         let address_hex = format!("{:x}", address.offset);
-        let mut doc = native_runtime::decompile_native_doc(
-            &self.config,
-            binary,
-            &address_hex,
-            program,
-            &self.db_path,
-            base,
-        )?;
+        let request = self.execution_request(binary, program, base, exec::DEFAULT_BUDGET)?;
+        let mut doc = native_runtime::decompile_native_doc(&request, &address_hex)?;
+        self.check_execution(&request)?;
         doc.address = address.clone();
-        let id = self.db.program_id(program)?;
-        doc.revision = self.db.revision(id)?;
+        doc.revision = request.revision;
         // Register-passed parameters are part of prototype recovery, so
         // every consumer of the document sees the same answer the
         // inference rounds persist. The pass is off unless asked.
         if let Some(prototype) = doc.prototype.as_mut() {
-            let language = self.db.program_language(id)?;
-            register_params::augment(&self.config, &language, prototype, &doc.storage);
+            register_params::augment(&request.config, &request.language, prototype, &doc.storage);
         }
         Ok(doc)
     }
 
-    /// Decompiles every function and writes m2c-shaped C to `outdir`,
+    /// Decompiles selected or all functions and writes m2c-shaped C to `outdir`,
     /// producing the source tree `export-objdiff`'s project compiles.
     ///
     /// With `splits` (dtk `splits.txt`), functions are grouped into one
     /// `<tu>.c` per translation unit so the files line up with objdiff's
     /// `target_path`/`base_path` objects; without it, one `<name>.c` per
-    /// function. Returns a JSON report: files written, per-function temp
-    /// renames, canonicalizer rewrites, and which bodies were irregular.
+    /// function. Returns a JSON report: files written, semantic rewrites,
+    /// native warnings, and which bodies were irregular. Every output belongs
+    /// to one captured revision; no file is published unless the whole batch
+    /// validates against it.
     pub fn export_m2c(
         &self,
         binary: &Path,
         program: &str,
         outdir: &Path,
         splits: Option<&[crate::native::linkmap::SplitExtent]>,
+        entry: Option<u64>,
         opts: &emit_m2c::M2cOptions,
     ) -> Result<serde_json::Value> {
-        let functions = self.functions(program)?;
+        let mut request = self.execution_request(binary, program, None, exec::DEFAULT_BUDGET)?;
+        let id = self.db.program_id(program)?;
+        let revision = request.revision;
+        let mut functions = self.functions(program)?;
         if functions.is_empty() {
             return Err(CoreError::Io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 format!("program {program} has no functions"),
             )));
         }
-        let id = self.db.program_id(program)?;
-        let language = self.db.program_language(id)?;
-        let base = native_runtime::program_image_base(program, &self.db_path);
 
         // Names that must never be renamed: every function and symbol.
         let mut keep: Vec<String> = functions.iter().map(|f| f.name.clone()).collect();
-        let mut globals: Vec<emit_m2c::GlobalRef> = Vec::new();
         for sym in self.symbols(program)? {
             keep.push(sym.name.clone());
-            if !sym.external {
-                globals.push(emit_m2c::GlobalRef {
-                    name: sym.name.clone(),
-                    type_name: None,
-                    address: Some(sym.address.offset),
-                });
+        }
+        if let Some(entry) = entry {
+            functions.retain(|function| function.entry.offset == entry);
+            if functions.is_empty() {
+                return Err(CoreError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput, format!("no function at {entry:#x} in {program}"),
+                )));
             }
         }
 
+        request.config.ir_passes = opts.transforms.clone();
+        crate::func_ir::Pipeline::from_names(&request.config.ir_passes)
+            .map_err(native::ImportError::Bad)?;
         // Batch-decompile every function to a DecompDoc.
         let addresses: Vec<String> = functions
             .iter()
             .map(|f| format!("{:x}", f.entry.offset))
             .collect();
-        let mut docs = native_runtime::decompile_native_docs(
-            &self.config,
-            binary,
-            &addresses,
-            program,
-            &self.db_path,
-            base,
-        )?;
-
-        // Per-function unstructured edges come from our own walk of the
-        // same body the decompiler saw.
-        let mut unstructured: std::collections::HashMap<u64, Vec<(usize, usize)>> =
-            std::collections::HashMap::new();
-        self.live.with(binary, program, |live| {
-            for f in &functions {
-                if let Ok(walk) = live.walk(f.entry.offset) {
-                    let (blocks, edges) = walk.basic_blocks();
-                    if !blocks.is_empty() {
-                        unstructured.insert(
-                            f.entry.offset,
-                            crate::structuring::structure(blocks.len(), &edges).unstructured,
-                        );
-                    }
-                }
-            }
-            Ok(())
-        })?;
-
-        std::fs::create_dir_all(outdir).map_err(CoreError::Io)?;
+        let mut docs = native_runtime::decompile_native_docs(&request, &addresses)?;
 
         // Group functions into output units: by TU when splits are given,
         // else one unit per function.
@@ -2518,51 +2520,83 @@ impl Core {
             }
         }
 
+        std::fs::create_dir_all(outdir).map_err(CoreError::Io)?;
+        let asserted_prototypes = emit_m2c::DeclaredPrototypes::new(self.db.prototypes(id)?);
         let mut files = Vec::new();
+        let mut pending = Vec::new();
         let mut irregular_count = 0usize;
         let mut rewrite_count = 0usize;
+        let mut warnings = Vec::new();
         for (unit, fns) in &units {
             let mut text = String::new();
+            let layouts = if opts.emit_globals {
+                emit_m2c::UnitLayouts::new(fns.iter().filter_map(|f| docs.get(&format!("{:08x}", f.entry.offset))))
+                    .map_err(native::ImportError::Bad)?
+            } else {
+                emit_m2c::UnitLayouts::default()
+            };
             for f in fns {
+                request.cancel.checkpoint(request.deadline)?;
                 let key = format!("{:08x}", f.entry.offset);
-                let Some(doc) = docs.get_mut(&key) else { continue };
+                let doc = docs.get_mut(&key).ok_or_else(|| {
+                    native_runtime::NativeRuntimeError(format!(
+                        "missing decompilation for {}",
+                        f.name
+                    ))
+                })?;
                 doc.address = f.entry.clone();
-                doc.revision = self.db.revision(id)?;
+                doc.revision = revision;
                 if let Some(prototype) = doc.prototype.as_mut() {
-                    register_params::augment(
-                        &self.config,
-                        &language,
-                        prototype,
-                        &doc.storage,
-                    );
+                    register_params::augment(&request.config, request.language.as_str(), prototype, &doc.storage);
                 }
                 let stack = self.db.stack_variables(id, Some(&f.entry))?;
-                let empty_unstructured: Vec<(usize, usize)> = Vec::new();
                 let inputs = emit_m2c::FuncInputs {
                     stack: &stack,
-                    globals: &globals,
-                    unstructured: unstructured
-                        .get(&f.entry.offset)
-                        .unwrap_or(&empty_unstructured),
                     generated_extra: &[],
                     keep: &keep,
+                    asserted_prototypes: Some(&asserted_prototypes),
                 };
-                let emitted = emit_m2c::emit_doc(doc, &inputs, opts);
+                let emitted =
+                    emit_m2c::emit_doc_in_unit(doc, &inputs, opts, &layouts).map_err(native::ImportError::Bad)?;
                 if emitted.irregular {
                     irregular_count += 1;
                 }
-                rewrite_count += emitted.rewrites.len();
+                for warning in &emitted.warnings {
+                    warnings.push(serde_json::json!({
+                        "function": f.name, "address": f.entry.offset, "message": warning,
+                    }));
+                }
+                rewrite_count += doc
+                    .function_ir
+                    .as_ref()
+                    .into_iter()
+                    .flat_map(|ir| &ir.passes)
+                    .filter(|pass| pass.role == romwright_model::function_ir::PassRole::Transform)
+                    .map(|pass| pass.items)
+                    .sum::<usize>();
                 text.push_str(&emitted.text);
                 text.push_str("\n\n");
             }
             if text.trim().is_empty() {
                 continue;
             }
+            if Path::new(unit).components().any(|part| !matches!(part, std::path::Component::Normal(_))) {
+                return Err(CoreError::Io(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput, format!("invalid output unit {unit:?}"))));
+            }
             let path = outdir.join(format!("{unit}.c"));
-            std::fs::write(&path, &text).map_err(CoreError::Io)?;
+            pending.push((path, text));
+        }
+        self.check_execution(&request)?;
+        // Every document and every store-derived input belongs to the same
+        // revision. No file is published until the complete batch validates.
+        for (path, text) in pending {
+            if let Some(parent) = path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(&path, text).map_err(CoreError::Io)?;
             files.push(serde_json::json!({
                 "file": path.display().to_string(),
-                "functions": fns.len(),
             }));
         }
 
@@ -2571,7 +2605,10 @@ impl Core {
             "files": files,
             "functions": functions.len(),
             "irregular": irregular_count,
-            "canonical_rewrites": rewrite_count,
+            "semantic_rewrites": rewrite_count,
+            "revision": revision,
+            "artifact_digest": request.artifact_digest,
+            "warnings": warnings,
         }))
     }
 
@@ -2582,7 +2619,10 @@ impl Core {
     pub fn mem_native(&self, binary: &Path, vaddr: u64, size: usize) -> Result<Vec<u8>> {
         let binary = binary.to_path_buf();
         let image = {
-            let mut cache = self.native_cache.borrow_mut();
+            let mut cache = self
+                .native_cache
+                .lock()
+                .map_err(|_| std::io::Error::other("native memory cache lock poisoned"))?;
             let hit = cache.as_ref().map(|(p, _)| p == &binary).unwrap_or(false);
             if !hit {
                 let opened = std::sync::Arc::new(session::ProgramImage::open(&binary)?);
@@ -2615,7 +2655,10 @@ impl Core {
         size: usize,
     ) -> Result<Vec<u8>> {
         let endpoint = endpoint.trim();
-        let mut cached = self.live_memory.borrow_mut();
+        let mut cached = self
+            .live_memory
+            .lock()
+            .map_err(|_| std::io::Error::other("live memory connection lock poisoned"))?;
         let reconnect = cached
             .as_ref()
             .map(|connection| connection.endpoint != endpoint)

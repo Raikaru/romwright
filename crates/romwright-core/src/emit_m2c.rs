@@ -25,12 +25,10 @@
 //! - **Stack-struct dump** ([`emit_stack_struct`]): the db's
 //!   `StackVariableRow`s rendered as a `{fn}_stack` struct whose fields
 //!   are named `sp<HEX>` so they line up with the renamed locals.
-//! - **Globals emission** ([`emit_globals`]): sorted `extern`
-//!   declarations with address comments.
-//! - **Canonicalizers** ([`canonicalize_helpers`]): software-division
-//!   helpers (`__divsi3`, `__aeabi_idiv`, …) fold to `/`/`%`, and every
-//!   `cntlzw` spelling (`CNTLZW`, `__builtin_clz`, …) folds to the
-//!   PPC `__cntlzw` intrinsic m2c emits.
+//! - **Globals emission**: native symbol declarations refined by whole-value
+//!   SSA evidence, never by address-looking identifier spelling.
+//! - Semantic helper canonicalization runs in the native backend before
+//!   printing. This formatter cannot rewrite calls from their names.
 //!
 //! Clean-room note: only m2c's *documented output conventions* (short
 //! `temp_*` stems, `sp<offset>` stack names, `/`/`%` for division,
@@ -47,37 +45,15 @@
 use std::collections::BTreeMap;
 
 use romwright_model::{DecompDoc, StackVariableRow, TokenKind};
+use romwright_model::function_ir::OperationId;
 
-/// Canonical software-division/modulo helpers folded to operators:
-/// (helper, operator). Covers the GCC libgcc si/di forms the decompiler
-/// leaves as calls on targets without hardware division (PSX MIPS,
-/// N64 MIPS, GBA ARM) and the ARM EABI forms agbcc-era code lowers to.
-pub const DIVMOD_HELPERS: &[(&str, &str)] = &[
-    ("__divsi3", "/"),
-    ("__modsi3", "%"),
-    ("__udivsi3", "/"),
-    ("__umodsi3", "%"),
-    ("__divdi3", "/"),
-    ("__moddi3", "%"),
-    ("__udivdi3", "/"),
-    ("__umoddi3", "%"),
-    ("__aeabi_idiv", "/"),
-    ("__aeabi_uidiv", "/"),
-];
-
-/// Spellings folded to [`CNTLZW_CANONICAL`]: the decompiler's raw
-/// case-preserved mnemonic, its zero-suffixed intrinsic form, and the
-/// GCC builtins compilers lower `cntlzw` source idioms to.
-pub const CNTLZW_ALIASES: &[&str] = &[
-    "cntlzw",
-    "CNTLZW",
-    "__cntlzw0",
-    "__builtin_clz",
-    "__builtin_clzl",
-];
-
-/// The canonical count-leading-zeros spelling m2c emits for PPC.
-pub const CNTLZW_CANONICAL: &str = "__cntlzw";
+mod declarations;
+pub use declarations::DeclaredPrototypes;
+mod dependencies;
+mod globals;
+mod storage;
+pub(crate) use storage::UnitLayouts;
+use globals::GlobalRef;
 
 /// Honesty marker stem emitted where structuring failed.
 pub const IRREGULAR_STEM: &str = "irregular";
@@ -85,35 +61,26 @@ pub const IRREGULAR_STEM: &str = "irregular";
 /// Options for [`emit_doc`]/[`emit_function_text`].
 #[derive(Clone, Debug)]
 pub struct M2cOptions {
-    /// Fold div/mod helpers and `cntlzw` spellings.
-    pub canonicalize: bool,
     /// Insert `/* irregular */` markers on unstructured flow.
     pub mark_irregular_flow: bool,
     /// Prepend the stack-struct dump.
     pub emit_stack_struct: bool,
     /// Prepend the globals block.
     pub emit_globals: bool,
+    /// Semantic passes the native backend must apply before presentation.
+    /// Unknown or unapplied passes fail emission instead of publishing C.
+    pub transforms: Vec<String>,
 }
 
 impl Default for M2cOptions {
     fn default() -> Self {
         Self {
-            canonicalize: true,
             mark_irregular_flow: true,
             emit_stack_struct: true,
             emit_globals: true,
+            transforms: crate::func_ir::default_pass_names(),
         }
     }
-}
-
-/// One global referenced by the function, for [`emit_globals`].
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GlobalRef {
-    pub name: String,
-    /// C type; `None` emits `s32` with an `unchecked type` marker.
-    pub type_name: Option<String>,
-    /// Link address for the trailing comment; `None` notes it unknown.
-    pub address: Option<u64>,
 }
 
 /// Store-supplied context [`emit_doc`] cannot read from the document.
@@ -121,19 +88,15 @@ pub struct GlobalRef {
 pub struct FuncInputs<'a> {
     /// The db's stack rows for this function.
     pub stack: &'a [StackVariableRow],
-    /// Globals to declare above the body.
-    pub globals: &'a [GlobalRef],
-    /// Unstructured `(from, to)` block edges from
-    /// `crate::structuring::Structured::unstructured`.
-    pub unstructured: &'a [(usize, usize)],
     /// Generated-local names the token scan cannot see (e.g. locals the
     /// decompiler declared but this body never uses), with optional C
     /// type hints for typed-temp classification.
     pub generated_extra: &'a [(String, Option<String>)],
     /// Names that must never be renamed (project symbols, macros).
     pub keep: &'a [String],
+    /// Authoritative C declarations, before native type recovery loses qualifiers.
+    pub asserted_prototypes: Option<&'a DeclaredPrototypes>,
 }
-
 /// What emission produced, besides the text itself.
 #[derive(Clone, Debug)]
 pub struct Emitted {
@@ -141,11 +104,9 @@ pub struct Emitted {
     pub text: String,
     /// Generated name → emitted temp, in allocation order.
     pub temps: BTreeMap<String, String>,
-    /// Canonicalizer rewrites applied, in [`DIVMOD_HELPERS`] then
-    /// [`CNTLZW_ALIASES`] order (e.g. `"__divsi3 -> /"`).
-    pub rewrites: Vec<String>,
-    /// True when an `/* irregular */` marker was inserted.
+    /// Unresolved flow, inputs or native warnings, independent of marker display.
     pub irregular: bool,
+    pub warnings: Vec<String>,
 }
 
 /// Render a document's tokens to C text: every non-break token appends
@@ -153,17 +114,206 @@ pub struct Emitted {
 /// `indent` spaces (negative indents clamp to zero; absurd indents cap
 /// at 256 columns so a corrupt document cannot blow up memory).
 pub fn render_doc_text(doc: &DecompDoc) -> String {
+    render_named_doc(doc, &BTreeMap::new(), &BTreeMap::new(), &BTreeMap::new())
+}
+
+fn render_named_doc(
+    doc: &DecompDoc,
+    names: &BTreeMap<String, String>,
+    intrinsics: &BTreeMap<OperationId, String>,
+    storage: &BTreeMap<usize, String>,
+) -> String {
+    let declarations = declaration_types(doc);
+    let type_names = primitive_types(doc);
     let mut out = String::new();
-    for token in &doc.tokens {
+    for (index, token) in doc.tokens.iter().enumerate() {
         if token.kind == TokenKind::Break {
             out.push('\n');
             let indent = token.indent.unwrap_or(0).clamp(0, 256) as usize;
             out.extend(std::iter::repeat_n(' ', indent));
         } else {
-            out.push_str(&token.text);
+            let replacement = match token.kind {
+                TokenKind::Variable => names.get(&token.text).map(String::as_str)
+                    .or_else(|| boolean_constant(doc, token)),
+                TokenKind::FuncName | TokenKind::Op if is_c_ident(&token.text) => token.operation
+                    .and_then(|operation| intrinsics.get(&operation).map(String::as_str)),
+                TokenKind::Type => token.symbol_id.zip(token.datatype_id)
+                    .and_then(|identity| declarations.get(&identity).map(String::as_str))
+                    .or_else(|| token.datatype_id.and_then(|id| type_names.get(&id).copied())),
+                _ => None,
+            };
+            out.push_str(storage.get(&index).map(String::as_str).or(replacement).unwrap_or(token.text.as_str()));
         }
     }
     out
+}
+
+fn boolean_constant(doc: &DecompDoc, token: &romwright_model::DecompToken) -> Option<&'static str> {
+    let (value, text) = match token.text.as_str() {
+        "false" => (0, "0"),
+        "true" => (1, "1"),
+        _ => return None,
+    };
+    let native = doc.function_ir.as_ref()?.values.get(&token.varnode?)?;
+    // Constant space is native space zero. An ordinary symbol named "true"
+    // must not be rewritten merely because it resembles a C++ keyword.
+    (native.space == romwright_model::function_ir::IrSpace::Index(0)
+        && native.size == Some(1)
+        && native.offset == Some(value))
+        .then_some(text)
+}
+
+fn primitive_types(doc: &DecompDoc) -> BTreeMap<u64, &'static str> {
+    fn collect(ty: &romwright_model::DecompType, result: &mut BTreeMap<u64, &'static str>, depth: usize) {
+        if depth > 32 { return; }
+        if let (Some(id), Some(name)) = (ty.id, globals::primitive(ty)) {
+            // Preserve user-defined typedef names; replace only native shorthand.
+            if ty.name.as_deref().is_some_and(|name| globals::primitive_name(name).is_some()) {
+                result.insert(id, name);
+            }
+        }
+        if let Some(target) = &ty.target { collect(target, result, depth + 1); }
+        if let Some(prototype) = &ty.prototype {
+            collect(&prototype.return_type, result, depth + 1);
+            for parameter in &prototype.parameters { collect(&parameter.data_type, result, depth + 1); }
+        }
+    }
+    let mut result = BTreeMap::new();
+    if let Some(prototype) = &doc.prototype {
+        collect(&prototype.return_type, &mut result, 0);
+        for parameter in &prototype.parameters { collect(&parameter.data_type, &mut result, 0); }
+    }
+    if let Some(ir) = &doc.function_ir {
+        for high in &ir.high_variables {
+            collect(&high.data_type, &mut result, 0);
+            if let Some(symbol) = &high.symbol { collect(&symbol.data_type, &mut result, 0); }
+        }
+    }
+    result
+}
+
+fn scalar_name(class: romwright_model::type_evidence::Class) -> Option<String> {
+    use romwright_model::type_evidence::Class;
+    match class {
+        Class::Int(8 | 16 | 32 | 64) | Class::Uint(8 | 16 | 32 | 64) | Class::Float(32 | 64) => {
+            Some(class.c_name())
+        }
+        _ => None,
+    }
+}
+
+/// Native stack symbols may remain undefined even after their SSA highs
+/// acquire scalar types. Refine only unlocked, whole scalar declarations,
+/// linked by symbol and datatype IDs rather than their printed spellings.
+fn declaration_types(doc: &DecompDoc) -> BTreeMap<(u64, u64), String> {
+    use romwright_model::type_evidence::Class;
+    let Some(ir) = &doc.function_ir else {
+        return BTreeMap::new();
+    };
+    let mut classes: BTreeMap<_, Class> = BTreeMap::new();
+    for high in &ir.high_variables {
+        let Some(symbol) = &high.symbol else { continue };
+        if symbol.global
+            || high.type_locked
+            || high.symbol_offset.unwrap_or(0) != 0
+            || symbol.data_type.metatype.as_deref() != Some("unknown")
+            || symbol.data_type.size != high.data_type.size
+        {
+            continue;
+        }
+        let (Some(type_id), Some(size)) = (symbol.data_type.id, symbol.data_type.size) else {
+            continue;
+        };
+        let class = high
+            .members
+            .iter()
+            .filter(|id| {
+                ir.values
+                    .get(id)
+                    .and_then(|value| value.size)
+                    .map(u64::from)
+                    == Some(size)
+            })
+            .filter_map(|id| ir.type_evidence.get(id))
+            .copied()
+            .fold(Class::Unknown, Class::join);
+        let class = if matches!(
+            class,
+            Class::Unknown | Class::Opaque(_) | Class::Num(_) | Class::IntOrUint(_)
+        ) {
+            let Some(bits) = size
+                .checked_mul(8)
+                .and_then(|bits| u32::try_from(bits).ok())
+            else {
+                continue;
+            };
+            match high.data_type.metatype.as_deref() {
+                Some("int") => Class::Int(bits),
+                Some("uint") => Class::Uint(bits),
+                Some("float") if !matches!(class, Class::IntOrUint(_)) => Class::Float(bits),
+                _ => continue,
+            }
+        } else {
+            class
+        };
+        let entry = classes.entry((symbol.id, type_id)).or_default();
+        *entry = entry.join(class);
+    }
+    classes
+        .into_iter()
+        .filter_map(|(identity, class)| scalar_name(class).map(|name| (identity, name)))
+        .collect()
+}
+
+fn unresolved_values(doc: &DecompDoc) -> Vec<String> {
+    use romwright_model::function_ir::{IrSpace, Opcode, Operand};
+    let Some(ir) = &doc.function_ir else { return Vec::new() };
+    let calls: std::collections::BTreeSet<_> = ir.blocks.iter().flat_map(|block| &block.operations)
+        .filter(|op| matches!(op.opcode, Opcode::CALL | Opcode::CALLIND)).map(|op| op.id).collect();
+    let clobbered: std::collections::BTreeSet<_> = ir.blocks.iter().flat_map(|block| &block.operations)
+        .filter(|op| op.opcode == Opcode::INDIRECT)
+        .filter(|op| matches!(op.inputs.get(1), Some(Operand::Operation(id)) if calls.contains(id)))
+        .filter(|op| matches!(op.inputs.first(), Some(Operand::Value(id))
+            if ir.values.get(id).is_some_and(|value| value.space == IrSpace::Index(0) && value.offset == Some(0))))
+        .filter_map(|op| op.output)
+        .filter(|id| ir.values.get(id).is_some_and(|value| !value.address_tied && !value.persistent))
+        .collect();
+    let unresolved: BTreeMap<_, _> = ir.high_variables.iter()
+        .filter(|high| high.class != "param" && high.class != "global")
+        .flat_map(|high| high.members.iter().filter_map(|id| {
+            let value = ir.values.get(id)?;
+            (clobbered.contains(id) || (value.input && !value.persistent))
+                .then_some((*id, clobbered.contains(id)))
+        })).collect();
+    doc.tokens.iter().filter_map(|token| {
+        let call = unresolved.get(&token.varnode?)?;
+        Some(format!("{} {} requires supplied context",
+            if *call { "unmodelled call-clobbered value" } else { "unresolved entry value" }, token.text))
+    }).collect::<std::collections::BTreeSet<_>>().into_iter().collect()
+}
+
+/// Formatting consumes the native projection of an already-applied semantic
+/// plan. It cannot substitute token guesses for a missing transformation.
+fn render_transformed(
+    doc: &DecompDoc,
+    opts: &M2cOptions,
+    names: &BTreeMap<String, String>,
+    intrinsics: &BTreeMap<OperationId, String>,
+    storage: &BTreeMap<usize, String>,
+) -> Result<String, String> {
+    crate::func_ir::Pipeline::from_names(&opts.transforms)?;
+    for name in &opts.transforms {
+        if !doc
+            .function_ir
+            .as_ref()
+            .is_some_and(|ir| ir.passes.iter().any(|pass| &pass.name == name))
+        {
+            return Err(format!(
+                "semantic pass {name:?} was not applied by the native backend"
+            ));
+        }
+    }
+    Ok(render_named_doc(doc, names, intrinsics, storage))
 }
 
 /// True for names the decompiler invents per-function (Ghidra's
@@ -173,8 +323,20 @@ pub fn render_doc_text(doc: &DecompDoc) -> String {
 /// meaning and pass through.
 pub fn is_generated_name(name: &str) -> bool {
     const PREFIXES: &[&str] = &[
-        "uVar", "iVar", "bVar", "cVar", "dVar", "fVar", "lVar", "pVar", "sVar", "auVar",
-        "local_", "auStack", "abStack", "extraout_",
+        "uVar",
+        "iVar",
+        "bVar",
+        "cVar",
+        "dVar",
+        "fVar",
+        "lVar",
+        "pVar",
+        "sVar",
+        "auVar",
+        "local_",
+        "auStack",
+        "abStack",
+        "extraout_",
     ];
     PREFIXES.iter().any(|p| name.starts_with(p))
 }
@@ -251,48 +413,9 @@ impl TempNamer {
         fresh
     }
 
-    /// Rename every whole-identifier occurrence of each mapped name in
-    /// `text`. Longest names first so `uVar1` never shadows `uVar10`.
-    pub fn apply(&self, text: &str) -> String {
-        let mut renamed: Vec<(&String, &String)> = self.map.iter().collect();
-        renamed.sort_by(|a, b| b.0.len().cmp(&a.0.len()).then(a.0.cmp(b.0)));
-        let mut out = text.to_string();
-        for (from, to) in renamed {
-            out = replace_ident(&out, from, to);
-        }
-        out
-    }
-
     pub fn mapping(&self) -> &BTreeMap<String, String> {
         &self.map
     }
-}
-
-/// Replace whole-identifier occurrences of `from` with `to`, skipping
-/// `//`/`/* */` comments and string/char literals.
-fn replace_ident(text: &str, from: &str, to: &str) -> String {
-    let bytes = text.as_bytes();
-    let mut out = String::with_capacity(text.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        if let Some(skip) = skip_trivia(text, i) {
-            out.push_str(&text[i..skip]);
-            i = skip;
-            continue;
-        }
-        if text[i..].starts_with(from)
-            && !is_ident_char(prev_char(text, i))
-            && !is_ident_char(next_char(&text[i + from.len()..]))
-        {
-            out.push_str(to);
-            i += from.len();
-        } else {
-            let len = text[i..].chars().next().map(|c| c.len_utf8()).unwrap_or(1);
-            out.push_str(&text[i..i + len]);
-            i += len;
-        }
-    }
-    out
 }
 
 fn is_ident_char(c: Option<char>) -> bool {
@@ -316,10 +439,7 @@ fn skip_trivia(text: &str, i: usize) -> Option<usize> {
         return Some(end);
     }
     if rest.starts_with("/*") {
-        let end = rest
-            .find("*/")
-            .map(|p| i + p + 2)
-            .unwrap_or(text.len());
+        let end = rest.find("*/").map(|p| i + p + 2).unwrap_or(text.len());
         return Some(end);
     }
     if rest.starts_with('"') || rest.starts_with('\'') {
@@ -343,16 +463,21 @@ fn skip_trivia(text: &str, i: usize) -> Option<usize> {
 /// Full `type name` declaration fragment for one stack field (arrays
 /// keep their length on the name: `u8 sp20[16]`).
 fn stack_field_decl(row: &StackVariableRow, field: &str) -> String {
-    if let Some(ty) = row.type_name.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
-        return format!("{ty} {field}");
+    if let Some(ty) = row
+        .type_name
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
+        return format!("{} {field}", globals::primitive_name(ty).unwrap_or(ty));
     }
     match row.size {
-        Some(1) => format!("s8 {field}"),
-        Some(2) => format!("s16 {field}"),
-        Some(4) => format!("s32 {field}"),
-        Some(8) => format!("s64 {field}"),
-        Some(n) => format!("u8 {field}[{n}] /* unchecked */"),
-        None => format!("s32 {field} /* unchecked */"),
+        Some(1) => format!("signed char {field}"),
+        Some(2) => format!("short {field}"),
+        Some(4) => format!("int {field}"),
+        Some(8) => format!("long long {field}"),
+        Some(n) => format!("unsigned char {field}[{n}] /* unchecked */"),
+        None => format!("int {field} /* unchecked */"),
     }
 }
 pub fn count_gotos(text: &str) -> usize {
@@ -385,8 +510,9 @@ pub fn irregular_marker(
     unstructured_edges: usize,
     goto_count: usize,
     irregular_inputs: &[&str],
+    warning_count: usize,
 ) -> Option<String> {
-    if unstructured_edges == 0 && goto_count == 0 && irregular_inputs.is_empty() {
+    if unstructured_edges == 0 && goto_count == 0 && irregular_inputs.is_empty() && warning_count == 0 {
         return None;
     }
     let mut parts = Vec::new();
@@ -397,7 +523,13 @@ pub fn irregular_marker(
         parts.push(format!("{goto_count} goto(s)"));
     }
     if !irregular_inputs.is_empty() {
-        parts.push(format!("irregular input(s): {}", irregular_inputs.join(", ")));
+        parts.push(format!(
+            "irregular input(s): {}",
+            irregular_inputs.join(", ")
+        ));
+    }
+    if warning_count > 0 {
+        parts.push(format!("{warning_count} native warning(s); review required"));
     }
     Some(format!("/* {IRREGULAR_STEM}: {} */", parts.join("; ")))
 }
@@ -438,10 +570,7 @@ pub fn emit_stack_struct(fn_name: &str, rows: &[StackVariableRow]) -> Option<Str
     }
     no_offset.sort_by_key(|row| row.ordinal);
 
-    let total: u64 = rows
-        .iter()
-        .filter_map(|row| row.size)
-        .sum();
+    let total: u64 = rows.iter().filter_map(|row| row.size).sum();
     let struct_name = sanitize_ident(&format!("{fn_name}_stack"));
     let mut out = format!(
         "/* stack frame of {fn_name}: {} slot(s), {total} byte(s) */\ntypedef struct {{\n",
@@ -452,11 +581,13 @@ pub fn emit_stack_struct(fn_name: &str, rows: &[StackVariableRow]) -> Option<Str
         let field = format!("sp{mag:X}");
         let mut comment = format!("/* {:#x}: {} */", mag, first.name);
         if group.len() > 1 {
-            let others: Vec<String> =
-                group[1..].iter().map(|row| row.name.clone()).collect();
+            let others: Vec<String> = group[1..].iter().map(|row| row.name.clone()).collect();
             comment.push_str(&format!(" /* also at {:#x}: {} */", mag, others.join(", ")));
         }
-        out.push_str(&format!("    {}; {comment}\n", stack_field_decl(first, &field)));
+        out.push_str(&format!(
+            "    {}; {comment}\n",
+            stack_field_decl(first, &field)
+        ));
     }
     for row in &no_offset {
         let field = format!("field_{}", row.ordinal);
@@ -468,44 +599,6 @@ pub fn emit_stack_struct(fn_name: &str, rows: &[StackVariableRow]) -> Option<Str
     }
     out.push_str(&format!("}} {struct_name};"));
     Some(out)
-}
-
-
-/// Emit sorted `extern` declarations for `globals`: by address (known
-/// first, ascending) then name. Unknown types become `s32` with an
-/// `unchecked type` note; non-C-identifier names are skipped with a
-/// comment so the output always parses.
-pub fn emit_globals(globals: &[GlobalRef]) -> String {
-    let mut sorted: Vec<&GlobalRef> = globals.iter().collect();
-    sorted.sort_by(|a, b| {
-        (a.address.is_none(), a.address.unwrap_or(u64::MAX), &a.name)
-            .cmp(&(b.address.is_none(), b.address.unwrap_or(u64::MAX), &b.name))
-    });
-    let mut out = String::new();
-    for global in sorted {
-        if !is_c_ident(&global.name) {
-            out.push_str(&format!("/* skipped non-C name: {} */\n", global.name));
-            continue;
-        }
-        let mut notes = Vec::new();
-        let ty = match global.type_name.as_deref().map(str::trim) {
-            Some(ty) if !ty.is_empty() => ty.to_string(),
-            _ => {
-                notes.push("unchecked type".to_string());
-                "s32".to_string()
-            }
-        };
-        match global.address {
-            Some(addr) => notes.push(format!("{addr:#x}")),
-            None => notes.push("address unknown".to_string()),
-        }
-        out.push_str(&format!(
-            "extern {ty} {}; /* {} */\n",
-            global.name,
-            notes.join(", ")
-        ));
-    }
-    out
 }
 
 fn is_c_ident(name: &str) -> bool {
@@ -537,169 +630,24 @@ fn sanitize_ident(name: &str) -> String {
     }
 }
 
-/// Split the argument list opened at `open` (index of `(`) into
-/// top-level arguments, comment/string aware. Returns the arguments
-/// (trimmed) and the index just past the closing `)`.
-fn split_call_args(text: &str, open: usize) -> Option<(Vec<String>, usize)> {
-    let bytes = text.as_bytes();
-    if bytes.get(open) != Some(&b'(') {
-        return None;
-    }
-    let mut args = Vec::new();
-    let mut depth = 0usize;
-    let mut start = open + 1;
-    let mut i = open;
-    while i < bytes.len() {
-        if let Some(skip) = skip_trivia(text, i) {
-            i = skip;
-            continue;
-        }
-        match bytes[i] {
-            b'(' => depth += 1,
-            b')' => {
-                depth -= 1;
-                if depth == 0 {
-                    args.push(text[start..i].trim().to_string());
-                    return Some((args, i + 1));
-                }
-            }
-            b',' if depth == 1 => {
-                args.push(text[start..i].trim().to_string());
-                start = i + 1;
-            }
-            _ => {}
-        }
-        i += 1;
-    }
-    None
-}
-
-/// Find the next whole-identifier call to `name` at or after `from`:
-/// returns the identifier start and the `(` index.
-fn find_ident_call(text: &str, name: &str, from: usize) -> Option<(usize, usize)> {
-    let mut i = from;
-    while i < text.len() {
-        if let Some(skip) = skip_trivia(text, i) {
-            i = skip;
-            continue;
-        }
-        if text[i..].starts_with(name)
-            && !is_ident_char(prev_char(text, i))
-        {
-            let mut j = i + name.len();
-            while text[j..].starts_with(|c: char| c.is_whitespace()) {
-                j += 1;
-            }
-            if text[j..].starts_with('(') {
-                return Some((i, j));
-            }
-            i += name.len();
-        } else {
-            let len = text[i..].chars().next().map(|c| c.len_utf8()).unwrap_or(1);
-            i += len;
-        }
-    }
-    None
-}
-
-/// Apply the div/mod + `cntlzw` canonicalizers to C text. Helpers fold
-/// inside-out (bounded fixpoint, 32 rounds) so nested calls like
-/// `__divsi3(__modsi3(a, b), c)` fully canonicalize. Returns the text
-/// plus one `"helper -> replacement"` entry per helper name applied.
-pub fn canonicalize_helpers(text: &str) -> (String, Vec<String>) {
-    let mut out = text.to_string();
-    let mut rewrites = Vec::new();
-    // Div/mod first (they take two args; a cntlzw arg may nest inside).
-    for (helper, op) in DIVMOD_HELPERS {
-        let mut changed = false;
-        for _ in 0..32 {
-            let Some((at, open)) = find_ident_call(&out, helper, 0) else {
-                break;
-            };
-            // Restart the scan past nothing: after a rewrite the text
-            // changed, so re-scan from the top; bail out if the call
-            // does not parse as exactly two arguments.
-            let (args, close) = match split_call_args(&out, open) {
-                Some(parsed) if parsed.0.len() == 2 => parsed,
-                _ => break,
-            };
-            // arg1 already parenthesises when it is itself a folded helper
-            // or a parenthesised expression; wrap only a bare operand so
-            // nested folds do not double-wrap.
-            let a1 = args[1].trim_start();
-            let self_paren = a1.starts_with('(')
-                || DIVMOD_HELPERS.iter().any(|(h, _)| a1.starts_with(h))
-                || CNTLZW_ALIASES.iter().any(|h| a1.starts_with(h));
-            let arg1 = if self_paren { args[1].clone() } else { format!("({})", args[1]) };
-            let replacement = format!("(({}) {op} {arg1})", args[0]);
-            out.replace_range(at..close, &replacement);
-            changed = true;
-        }
-        if changed {
-            rewrites.push(format!("{helper} -> {op}"));
-        }
-    }
-    for alias in CNTLZW_ALIASES {
-        if *alias == CNTLZW_CANONICAL {
-            continue;
-        }
-        let mut changed = false;
-        // One scan per alias, left to right: later matches shift as
-        // earlier ones are replaced, so resume past each replacement.
-        let mut from = 0;
-        while let Some((at, open)) = find_ident_call(&out, alias, from) {
-            let (args, close) = match split_call_args(&out, open) {
-                Some(parsed) if parsed.0.len() == 1 => parsed,
-                _ => break,
-            };
-            let replacement = format!("{CNTLZW_CANONICAL}({})", args[0]);
-            out.replace_range(at..close, &replacement);
-            from = at + replacement.len();
-            changed = true;
-        }
-        if changed {
-            rewrites.push(format!("{alias} -> {CNTLZW_CANONICAL}"));
-        }
-    }
-    (out, rewrites)
-}
-
-/// Emit one function body (already-rendered C) in m2c shape: rename
-/// generated locals, canonicalize helpers, mark irregular flow, and
-/// prepend the stack struct + globals blocks.
-pub fn emit_function_text(
-    body_c: &str,
-    params: &[String],
-    generated: &[(String, Option<String>)],
+/// Formats an already-transformed body and its proven declarations.
+fn emit_function_text(
+    mut body: String,
+    namer: TempNamer,
     stack: &[StackVariableRow],
     globals: &[GlobalRef],
+    dependencies: &str,
     unstructured: &[(usize, usize)],
     irregular_inputs: &[String],
-    keep: &[String],
+    warnings: Vec<String>,
     opts: &M2cOptions,
 ) -> Emitted {
-    let mut namer = TempNamer::new();
-    for (name, hint) in generated {
-        if params.iter().any(|p| p == name) || keep.iter().any(|k| k == name) {
-            continue;
-        }
-        namer.for_generated(name, hint.as_deref());
-    }
-    let mut body = namer.apply(body_c);
-    let mut rewrites = Vec::new();
-    if opts.canonicalize {
-        let (text, applied) = canonicalize_helpers(&body);
-        body = text;
-        rewrites = applied;
-    }
-    let mut irregular = false;
+    let inputs: Vec<&str> = irregular_inputs.iter().map(String::as_str).collect();
+    let marker = irregular_marker(unstructured.len(), count_gotos(&body), &inputs, warnings.len());
+    let irregular = marker.is_some();
     if opts.mark_irregular_flow {
-        let inputs: Vec<&str> = irregular_inputs.iter().map(String::as_str).collect();
-        if let Some(marker) =
-            irregular_marker(unstructured.len(), count_gotos(&body), &inputs)
-        {
+        if let Some(marker) = marker {
             body = mark_irregular(&body, &marker);
-            irregular = true;
         }
     }
     let mut out = String::new();
@@ -711,15 +659,19 @@ pub fn emit_function_text(
         }
     }
     if opts.emit_globals && !globals.is_empty() {
-        out.push_str(&emit_globals(globals));
+        out.push_str(&globals::render(globals));
+        out.push('\n');
+    }
+    if !dependencies.is_empty() {
+        out.push_str(dependencies);
         out.push('\n');
     }
     out.push_str(&body);
     Emitted {
         text: out,
-        temps: namer.mapping().clone(),
-        rewrites,
+        temps: namer.map,
         irregular,
+        warnings,
     }
 }
 
@@ -727,7 +679,21 @@ pub fn emit_function_text(
 /// generated locals from Variable tokens (first-use order), then run
 /// [`emit_function_text`]. `in_*` storage names count as irregular
 /// inputs and are never renamed.
-pub fn emit_doc(doc: &DecompDoc, inputs: &FuncInputs<'_>, opts: &M2cOptions) -> Emitted {
+pub fn emit_doc(
+    doc: &DecompDoc,
+    inputs: &FuncInputs<'_>,
+    opts: &M2cOptions,
+) -> Result<Emitted, String> {
+    let layouts = if opts.emit_globals { UnitLayouts::new([doc])? } else { UnitLayouts::default() };
+    emit_doc_in_unit(doc, inputs, opts, &layouts)
+}
+
+pub(crate) fn emit_doc_in_unit(
+    doc: &DecompDoc,
+    inputs: &FuncInputs<'_>,
+    opts: &M2cOptions,
+    layouts: &UnitLayouts,
+) -> Result<Emitted, String> {
     let params: Vec<String> = doc
         .prototype
         .as_ref()
@@ -736,7 +702,7 @@ pub fn emit_doc(doc: &DecompDoc, inputs: &FuncInputs<'_>, opts: &M2cOptions) -> 
     let mut generated: Vec<(String, Option<String>)> = Vec::new();
     let mut seen: BTreeMap<String, ()> = BTreeMap::new();
     for token in &doc.tokens {
-        if token.kind != TokenKind::Variable && token.kind != TokenKind::FuncName {
+        if token.kind != TokenKind::Variable {
             continue;
         }
         let name = token.text.trim();
@@ -755,7 +721,13 @@ pub fn emit_doc(doc: &DecompDoc, inputs: &FuncInputs<'_>, opts: &M2cOptions) -> 
             .generated_extra
             .iter()
             .find(|(n, _)| n == name)
-            .and_then(|(_, h)| h.clone());
+            .and_then(|(_, h)| h.clone())
+            .or_else(|| {
+                let id = token.varnode?;
+                let class = doc.function_ir.as_ref()?.type_evidence.get(&id)?;
+                matches!(class, romwright_model::type_evidence::Class::Float(_))
+                    .then(|| "float".into())
+            });
         generated.push((name.to_string(), hint));
     }
     for (name, hint) in inputs.generated_extra {
@@ -771,18 +743,84 @@ pub fn emit_doc(doc: &DecompDoc, inputs: &FuncInputs<'_>, opts: &M2cOptions) -> 
         .map(|s| s.name.clone())
         .filter(|n| n.starts_with("in_"))
         .collect();
-    let body = render_doc_text(doc);
-    emit_function_text(
-        &body,
-        &params,
-        &generated,
+    let global_names: std::collections::BTreeSet<_> = doc
+        .function_ir
+        .as_ref()
+        .into_iter()
+        .flat_map(|ir| &ir.high_variables)
+        .filter_map(|high| high.symbol.as_ref())
+        .filter(|symbol| symbol.global)
+        .map(|symbol| symbol.name.as_str())
+        .collect();
+    let mut namer = TempNamer::new();
+    for (name, hint) in &generated {
+        if !params.contains(name)
+            && !inputs.keep.contains(name)
+            && !global_names.contains(name.as_str())
+        {
+            namer.for_generated(name, hint.as_deref());
+        }
+    }
+    let dependencies = dependencies::from_doc(doc, inputs.keep, opts.emit_globals, inputs.asserted_prototypes)?;
+    let globals = if opts.emit_globals {
+        globals::from_doc(doc, layouts)?
+    } else {
+        globals::Globals::default()
+    };
+    let body = render_transformed(doc, opts, namer.mapping(), &dependencies.names, &globals.replacements)?;
+    let body = match inputs.asserted_prototypes {
+        Some(prototypes) => prototypes.definition(&doc.address, body)?,
+        None => body,
+    };
+    let cuts: Vec<_> = doc
+        .function_ir
+        .as_ref()
+        .into_iter()
+        .flat_map(|ir| &ir.control_flow_cuts)
+        .map(|cut| (cut.source.0 as usize, cut.target.0 as usize))
+        .collect();
+    // Native comments are tokenized word by word, with Syntax whitespace
+    // between them. Keep the complete diagnostic, not just "WARNING:".
+    let mut warnings: Vec<String> = doc.tokens.iter().enumerate()
+        .filter(|(_, token)| token.kind == TokenKind::Comment && token.text.contains("WARNING:"))
+        .map(|(index, first)| {
+            let mut warning = String::new();
+            for (offset, token) in doc.tokens[index..].iter().enumerate() {
+                if token.kind == TokenKind::Break {
+                    warning.push('\n');
+                    continue;
+                }
+                if token.kind != TokenKind::Comment && !token.text.trim().is_empty() {
+                    break;
+                }
+                let text = if offset == 0 {
+                    &first.text[first.text.find("WARNING:").unwrap()..]
+                } else {
+                    &token.text
+                };
+                if let Some(end) = text.find("*/") {
+                    warning.push_str(&text[..end]);
+                    break;
+                }
+                warning.push_str(text);
+            }
+            warning.truncate(warning.trim_end().len());
+            warning
+        }).collect();
+    warnings.extend(dependencies.warnings);
+    warnings.extend(globals.warnings);
+    warnings.extend(unresolved_values(doc));
+    Ok(emit_function_text(
+        body,
+        namer,
         inputs.stack,
-        inputs.globals,
-        inputs.unstructured,
+        &globals.refs,
+        &dependencies.text,
+        &cuts,
         &irregular_inputs,
-        inputs.keep,
+        warnings,
         opts,
-    )
+    ))
 }
 
 /// Best-effort function name for the stack-struct title: the last
@@ -798,195 +836,40 @@ fn fn_name_of(body: &str) -> String {
             name = std::mem::take(&mut word);
         }
     }
-    if name.is_empty() { "func".to_string() } else { name }
+    if name.is_empty() {
+        "func".to_string()
+    } else {
+        name
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use romwright_model::{
-        Address, DecompReference, DecompToken, FuncParam, FuncProto, StorageSymbol, TokenKind,
-    };
+    use romwright_model::Address;
 
-    fn tok(kind: TokenKind, text: &str) -> DecompToken {
-        DecompToken {
-            text: text.to_string(),
-            kind,
-            color: 0,
-            symbol: None,
-            address: None,
-            reference: None,
-            datatype_id: None,
-            indent: None,
-        }
-    }
-
-    fn brk(indent: i64) -> DecompToken {
-        DecompToken {
-            text: String::new(),
-            kind: TokenKind::Break,
-            color: 0,
-            symbol: None,
-            address: None,
-            reference: None,
-            datatype_id: None,
-            indent: Some(indent),
-        }
-    }
-
-    /// Synthetic decompiler output for:
-    /// `s32 demo(s32 param_1, s32 param_2)` whose body divides via a
-    /// libgcc helper and counts leading zeros via a raw-mnemonic
-    /// spelling — the P4.6 gate fixture.
-    fn synthetic_div_cntlzw_doc() -> DecompDoc {
-        use TokenKind as K;
-        let tokens = vec![
-            tok(K::Type, "s32"),
-            tok(K::Syntax, " "),
-            tok(K::FuncName, "demo"),
-            tok(K::Syntax, "(s32 param_1, s32 param_2)"),
-            brk(0),
-            tok(K::Syntax, "{"),
-            brk(4),
-            tok(K::Type, "s32"),
-            tok(K::Syntax, " "),
-            tok(K::Variable, "uVar1"),
-            tok(K::Syntax, ";"),
-            brk(4),
-            tok(K::Type, "s32"),
-            tok(K::Syntax, " "),
-            tok(K::Variable, "uVar2"),
-            tok(K::Syntax, ";"),
-            brk(4),
-            tok(K::Variable, "uVar1"),
-            tok(K::Syntax, " = "),
-            tok(K::FuncName, "__divsi3"),
-            tok(K::Syntax, "(param_1, param_2);"),
-            brk(4),
-            tok(K::Variable, "uVar2"),
-            tok(K::Syntax, " = "),
-            tok(K::FuncName, "CNTLZW"),
-            tok(K::Syntax, "(uVar1);"),
-            brk(4),
-            tok(K::Syntax, "return "),
-            tok(K::Variable, "uVar2"),
-            tok(K::Syntax, ";"),
-            brk(0),
-            tok(K::Syntax, "}"),
-        ];
-        DecompDoc {
-            tokens,
-            prototype: Some(FuncProto {
-                calling_convention: "default".to_string(),
-                return_type: romwright_model::DecompType {
-                    name: Some("s32".to_string()),
-                    id: None,
-                    size: Some(4),
-                    metatype: None,
-                    element_count: None,
-                    target: None,
-                    prototype: None,
-                },
-                parameters: vec![
-                    FuncParam {
-                        ordinal: 0,
-                        name: "param_1".to_string(),
-                        data_type: romwright_model::DecompType {
-                            name: Some("s32".to_string()),
-                            id: None,
-                            size: Some(4),
-                            metatype: None,
-                            element_count: None,
-                            target: None,
-                            prototype: None,
-                        },
-                    },
-                    FuncParam {
-                        ordinal: 1,
-                        name: "param_2".to_string(),
-                        data_type: romwright_model::DecompType {
-                            name: Some("s32".to_string()),
-                            id: None,
-                            size: Some(4),
-                            metatype: None,
-                            element_count: None,
-                            target: None,
-                            prototype: None,
-                        },
-                    },
-                ],
-                variadic: false,
-                no_return: false,
-                parameter_source: None,
-            }),
-            jump_tables: None,
-            address: Address::ram(0x8000_1000),
-            revision: 1,
-            storage: Vec::new(),
-        }
+    #[test]
+    fn warning_only_output_requires_review_even_when_markers_are_hidden() {
+        let opts = M2cOptions { mark_irregular_flow: false, ..Default::default() };
+        let emitted = emit_function_text(
+            "void sample(void) {}".into(), TempNamer::new(), &[], &[], "", &[], &[],
+            vec!["WARNING: Could not recover jumptable".into()], &opts,
+        );
+        assert!(emitted.irregular, "a native recovery warning must prevent a clean export verdict");
+        let clean = emit_function_text(
+            "void sample(void) {}".into(), TempNamer::new(), &[], &[], "", &[], &[], Vec::new(), &opts,
+        );
+        assert!(!clean.irregular);
     }
 
     #[test]
-    fn div_and_cntlzw_emit_canonical_m2c_shape() {
-        let doc = synthetic_div_cntlzw_doc();
-        let inputs = FuncInputs::default();
-        let opts = M2cOptions::default();
-        let first = emit_doc(&doc, &inputs, &opts);
-        let second = emit_doc(&doc, &inputs, &opts);
-        assert_eq!(first.text, second.text, "emission must be deterministic");
-        assert!(
-            first.text.contains("temp_v0 = ((param_1) / (param_2));"),
-            "div helper folds to /:\n{}",
-            first.text
-        );
-        assert!(
-            first.text.contains("temp_v1 = __cntlzw(temp_v0);"),
-            "cntlzw spelling canonicalizes:\n{}",
-            first.text
-        );
-        assert!(
-            first.text.contains("s32 temp_v0;") && first.text.contains("s32 temp_v1;"),
-            "generated locals renamed to typed temps:\n{}",
-            first.text
-        );
-        for leftover in ["uVar1", "uVar2", "__divsi3", "CNTLZW("] {
-            assert!(
-                !first.text.contains(leftover),
-                "no {leftover} survives:\n{}",
-                first.text
-            );
-        }
-        assert!(
-            first.text.contains("param_1") && first.text.contains("param_2"),
-            "prototype params pass through:\n{}",
-            first.text
-        );
-        assert_eq!(first.rewrites.len(), 2, "both rewrites reported: {:?}", first.rewrites);
-        assert!(!first.irregular, "structured flow stays unmarked");
-        assert_eq!(
-            first.temps.get("uVar1").map(String::as_str),
-            Some("temp_v0")
-        );
-    }
-
-    #[test]
-    fn temporaries_are_typed_stable_and_passthrough() {
+    fn temporaries_are_typed_and_stable() {
         let mut namer = TempNamer::new();
         assert_eq!(namer.for_generated("uVar1", None), "temp_v0");
         assert_eq!(namer.for_generated("fVar2", Some("float")), "temp_f0");
         assert_eq!(namer.for_generated("dVar3", Some("double")), "temp_f1");
         // Stable: re-request returns the same temp.
         assert_eq!(namer.for_generated("uVar1", Some("float")), "temp_v0");
-        let renamed = namer.apply("uVar1 = (float)fVar2 + dVar3; // uVar1 kept out");
-        assert!(
-            renamed.starts_with("temp_v0 = (float)temp_f0 + temp_f1;"),
-            "code renamed, comment kept: {renamed}"
-        );
-        // Prefix collisions rename longest-first.
-        let mut namer = TempNamer::new();
-        namer.for_generated("uVar1", None);
-        namer.for_generated("uVar10", None);
-        assert_eq!(namer.apply("uVar10 + uVar1"), "temp_v1 + temp_v0");
     }
 
     #[test]
@@ -1018,85 +901,9 @@ mod tests {
         let pos1c = dump.find("sp1C;").expect("sp1C field");
         assert!(pos8 < pos1c, "fields sorted by magnitude:\n{dump}");
         assert!(dump.contains("demo_stack"), "struct named for fn:\n{dump}");
-        assert!(dump.contains("0x8: local_8"), "original names kept:\n{dump}");
-    }
-
-    #[test]
-    fn irregular_marker_only_when_needed() {
-        assert_eq!(irregular_marker(0, 0, &[]), None);
-        let marker = irregular_marker(2, 1, &["in_r3"]).expect("marker");
-        assert!(marker.contains("irregular"), "stem present: {marker}");
-        assert!(marker.contains("2 unstructured edge(s)"), "edges: {marker}");
-        assert!(marker.contains("1 goto(s)"), "gotos: {marker}");
-        assert!(marker.contains("in_r3"), "inputs: {marker}");
-        let marked = mark_irregular("s32 f(void)\n{\nreturn 0;\n}", &marker);
         assert!(
-            marked.contains("{\n/* irregular:"),
-            "marker sits inside body:\n{marked}"
+            dump.contains("0x8: local_8"),
+            "original names kept:\n{dump}"
         );
-        assert_eq!(count_gotos("goto lab; /* goto */ \"goto\""), 1);
-    }
-
-    #[test]
-    fn in_storage_names_force_irregular_and_survive() {
-        let mut doc = synthetic_div_cntlzw_doc();
-        doc.storage.push(StorageSymbol {
-            name: "in_r3".to_string(),
-            space: "register".to_string(),
-            offset: 3,
-            size: 4,
-        });
-        let emitted = emit_doc(&doc, &FuncInputs::default(), &M2cOptions::default());
-        assert!(emitted.irregular, "irregular input marks body");
-        assert!(emitted.text.contains("/* irregular:"), "marker text:\n{}", emitted.text);
-        assert!(emitted.text.contains("in_r3"), "input name kept:\n{}", emitted.text);
-    }
-
-    #[test]
-    fn globals_emit_sorted_externs() {
-        let globals = vec![
-            GlobalRef {
-                name: "gScore".to_string(),
-                type_name: None,
-                address: Some(0x8000_2000),
-            },
-            GlobalRef {
-                name: "gFlags".to_string(),
-                type_name: Some("u32".to_string()),
-                address: Some(0x8000_1000),
-            },
-            GlobalRef {
-                name: "not an ident".to_string(),
-                type_name: None,
-                address: None,
-            },
-        ];
-        let text = emit_globals(&globals);
-        let pos_flags = text.find("gFlags").expect("flags");
-        let pos_score = text.find("gScore").expect("score");
-        assert!(pos_flags < pos_score, "sorted by address:\n{text}");
-        assert!(text.contains("extern u32 gFlags; /* 0x80001000 */"), "typed:\n{text}");
-        assert!(
-            text.contains("extern s32 gScore; /* unchecked type, 0x80002000 */"),
-            "unchecked type:\n{text}"
-        );
-        assert!(text.contains("skipped non-C name"), "bad names skipped:\n{text}");
-    }
-
-    #[test]
-    fn render_breaks_indent_and_helpers_nest() {
-        let (text, rewrites) =
-            canonicalize_helpers("x = __divsi3(__modsi3(a, b), __aeabi_uidiv(c, d));");
-        assert_eq!(text, "x = ((((a) % (b))) / ((c) / (d)));", "nested folds: {text}");
-        assert_eq!(rewrites.len(), 3, "each helper reported once: {rewrites:?}");
-
-        let doc = synthetic_div_cntlzw_doc();
-        let raw = render_doc_text(&doc);
-        assert!(raw.contains("\n    s32"), "break indents next line: {raw:?}");
-        // Reference-carrying tokens render by text; metadata is untouched.
-        let _ = DecompReference {
-            kind: romwright_model::DecompReferenceKind::Varnode,
-            id: 7,
-        };
     }
 }

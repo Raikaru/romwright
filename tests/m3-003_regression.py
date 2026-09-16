@@ -36,15 +36,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path, default=REPORT)
-    parser.add_argument("--refresh", action="store_true",
-                        help="re-measure native evidence instead of reusing it")
     arguments = parser.parse_args()
 
     command = [sys.executable, str(ROOT / "benchmarks/regression_gate.py"),
                "--corpus-dir", str(arguments.corpus_dir),
                "--report", str(arguments.report)]
-    if arguments.refresh:
-        command.append("--refresh")
     run = subprocess.run(command, cwd=ROOT, capture_output=True, text=True)
     print(run.stdout.strip())
     if run.returncode != 0:

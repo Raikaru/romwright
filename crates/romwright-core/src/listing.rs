@@ -30,8 +30,19 @@ fn parse_marker(rest: &str) -> Option<(u64, String)> {
 /// Parses the machine-readable structural lines emitted by the SLEIGH
 /// console alongside ordinary address-prefixed instructions.
 pub(crate) fn parse_console_listing(text: &str) -> Vec<ListingRow> {
-    let mut rows = Vec::new();
+    let mut rows: Vec<ListingRow> = Vec::new();
     for line in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
+        if let Some(rest) = line.strip_prefix("Bytes ") {
+            if let Some((address, bytes)) = rest.split_once(':') {
+                if let Some(row) = rows.last_mut().filter(|row| {
+                    row.kind == ListingRowKind::Instruction
+                        && parse_address(address) == Some(row.address.offset)
+                }) {
+                    row.bytes = bytes.trim().to_string();
+                }
+            }
+            continue;
+        }
         let (kind, rest) = if let Some(rest) = line.strip_prefix("Function ") {
             (ListingRowKind::FunctionHeader, rest)
         } else if let Some(rest) = line.strip_prefix("Block ") {

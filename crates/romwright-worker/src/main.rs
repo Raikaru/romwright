@@ -2,25 +2,25 @@
 //!
 //! Spawns the pinned `ghidra_opt` binary, speaks the burst/packed protocol
 //! on its stdio, and answers its program queries from the project store
-//! (`romwright-db`) plus the raw binary via a read-only file mapping. This is the
+//! (`romwright-db`) plus the selected immutable program input. This is the
 //! no-JVM replacement for the Stage-1 bridge, per ADR-0001.
 
 use std::io::Write;
 use std::path::Path;
 
-/// the spec dir, and decompiles one function of a program in the store.
+/// Decompiles stored program functions using the supplied native specification bundle.
 ///
 /// Usage:
-///   romwright-worker <ghidra_opt> <lang-dir> <binary> <program> <addr-hex> [--project DIR]
+///   romwright-worker <ghidra_opt> <lang-dir> <program> <addr-hex> [--project DIR]
 ///
 /// The language dir must contain the four spec documents (`dump_specs`
 /// output) plus registers.txt; the program and its functions come from the
 /// project store so the worker is the store-backed no-JVM decompiler.
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 6 {
+    if args.len() < 5 {
         eprintln!(
-            "usage: romwright-worker <ghidra_opt> <lang-dir> <binary> <program> <addr-hex>... [--project DIR] [--base HEX]"
+            "usage: romwright-worker <ghidra_opt> <lang-dir> <program> <addr-hex>... [--project DIR]"
         );
         std::process::exit(2);
     }
@@ -28,15 +28,10 @@ fn main() {
         .position(|a| a == "--project")
         .and_then(|i| std::env::args().nth(i + 1))
         .unwrap_or_else(|| ".romwright".into());
-    let base = std::env::args()
-        .position(|a| a == "--base")
-        .and_then(|i| std::env::args().nth(i + 1))
-        .and_then(|v| u64::from_str_radix(v.trim_start_matches("0x"), 16).ok())
-        .unwrap_or(0x400000);
     // Every positional after the program name is an address: one decompiler
     // launch answers a whole batch, which is what makes comparing a 400-row
     // corpus variant affordable (m4-022).
-    let addresses: Vec<String> = args[5..]
+    let addresses: Vec<String> = args[4..]
         .iter()
         .take_while(|argument| !argument.starts_with("--"))
         .cloned()
@@ -44,10 +39,11 @@ fn main() {
     // Structuring takes graphs on stdin instead of addresses: it needs the
     // language and the image, not the store's facts.
     let outcome = if args.iter().any(|argument| argument == "--structure") {
-        run_structure(&args[1], &args[2], &args[3], base)
+        run_structure(&args[1], &args[2], &args[3], &project)
     } else {
         run(
-            &args[1], &args[2], &args[3], &args[4], &addresses, &project, base,
+            &args[1], &args[2], &args[3], &addresses, &project,
+            args.iter().any(|argument| argument == "--switches"),
         )
     };
     if let Err(e) = outcome {
@@ -56,207 +52,17 @@ fn main() {
     }
 }
 
-/// The compiler spec, plus the tracked register a processor's ABI defines on
-/// entry to every function the store holds. Unchanged for every language that
-/// defines no such register.
-///
-/// Every entry, not just the one being asked for: the spec is pushed once per
-/// launch and a batch answers many functions from that launch, so a spec
-/// carrying one function's tracked set seeds the batch's first address and
-/// silently leaves the rest unseeded. Ghidra seeds each function the same way
-/// -- its MIPS analyzer writes the value at every function entry it evaluates
-/// (`MipsAddressAnalyzer`, `assumeT9EntryAddress`).
-fn with_entry_register_tracking(
-    cspec: &str,
-    provider: &romwright_worker::ProgramProvider,
-    lang_dir: &str,
-    contexts: &[(u64, String, u64)],
-) -> String {
-    let Some(close) = cspec.rfind("</compiler_spec>") else {
-        return cspec.to_string();
-    };
-    let mut data = String::new();
-    // The instruction set discovery settled at each point, replayed as the
-    // `<context_set>` ranges `ContextDatabase::decodeFromSpec` takes: a value
-    // holds from its address up to the next recorded point. This is the
-    // program context Ghidra's client carries for it; without it a Thumb
-    // function decoded as ARM and the decompiler reported bad instruction
-    // data (182 of 512 sampled DS functions).
-    let image_end = provider.backing.image_end();
-    // The SDA register values are not context fields: raw-SLEIGH
-    // resolves each `<context_set>` name against the `.sla`'s declared
-    // context variables, and a register (`r13`, `r2`) is rejected there --
-    // registers ride `<tracked_set>` and `getTrackedRegisters` instead
-    // (below, and `tracked_values`). Match exactly the names the importer
-    // seeds, not "is in registers.txt": ARM `TMode` mode rows share a
-    // name with an ARM register and must still decode. Folding ranges
-    // over the filtered rows keeps a skipped point from punching a
-    // one-address hole in its neighbour.
-    let fields: Vec<&(u64, String, u64)> = contexts
-        .iter()
-        .filter(|(_, name, _)| name != "r13" && name != "r2")
-        .collect();
-    for (index, (address, name, value)) in fields.iter().enumerate() {
-        let last = fields
-            .get(index + 1)
-            .map(|(next, _, _)| next.saturating_sub(1))
-            .unwrap_or(image_end.saturating_sub(1))
-            .max(*address);
-        data.push_str(&format!(
-            "<context_set space=\"ram\" first=\"0x{address:x}\" last=\"0x{last:x}\">\n\
-             <set name=\"{name}\" val=\"{value}\"/>\n\
-             </context_set>\n"
-        ));
+fn program_input(
+    db: &romwright_db::ProjectDb,
+    program: romwright_model::ProgramId,
+) -> romwright_worker::Result<romwright_model::ProgramInput> {
+    match std::env::var("ROMWRIGHT_PROGRAM_INPUT") {
+        Ok(record) => serde_json::from_str(&record).map_err(|error| {
+            romwright_worker::WorkerError::Setup(format!("captured input: {error}"))
+        }),
+        Err(std::env::VarError::NotPresent) => Ok(db.program_input(program)?),
+        Err(error) => Err(romwright_worker::WorkerError::Setup(error.to_string())),
     }
-    if lang_dir.contains("MIPS") {
-        if let Some(&(register_offset, register_size)) = provider.registers.get("t9") {
-            if register_size != 0 && register_size <= 8 {
-                let mut entries: Vec<u64> = provider.functions.clone();
-                entries.sort_unstable();
-                entries.dedup();
-                for entry in entries {
-                    data.push_str(&format!(
-                        "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{entry:x}\">\n\
-                         <set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{entry:x}\"/>\n\
-                         </tracked_set>\n"
-                    ));
-                }
-            }
-        }
-    }
-    // PowerPC EABI small-data-area bases over each function body the
-    // store holds: `r13` addresses `.sdata`, `r2` (32-bit EABI) `.sdata2`.
-    // Values come from the stored decode contexts (ABS symbols when
-    // declared, section convention otherwise), not from the entry address
-    // the way MIPS `t9` does. Ranges, not points: the decompiler paints a
-    // tracked set over exactly the range it names (`decodeTracked`), so a
-    // point seeds only its own byte -- the whole body must be covered, the
-    // way Ghidra paints execute blocks (`setRegisterContext`). Without them
-    // an `lwz` through `r13` decompiles as `in_r13 + offset` instead of the
-    // object it addresses.
-    if lang_dir.contains("PowerPC") {
-        let mut bases: std::collections::HashMap<(u64, &str), u64> =
-            std::collections::HashMap::new();
-        for (address, name, value) in contexts {
-            if name == "r13" || name == "r2" {
-                bases.insert((*address, name.as_str()), *value);
-            }
-        }
-        // One element per range holding every register set there: decoding
-        // a second element over a range clears the first
-        // (`ContextInternal::createSet`: `clearRange` plus `clear`), so a
-        // per-register loop leaves only the last register standing.
-        let mut points: Vec<u64> = bases.keys().map(|(address, _)| *address).collect();
-        points.sort_unstable();
-        points.dedup();
-        for entry in points {
-            let mut sets = String::new();
-            for register in ["r13", "r2"] {
-                let (Some(&value), Some(&(register_offset, register_size))) = (
-                    bases.get(&(entry, register)),
-                    provider.registers.get(register),
-                ) else {
-                    continue;
-                };
-                if register_size == 0 || register_size > 8 {
-                    continue;
-                }
-                sets.push_str(&format!(
-                    "<set space=\"register\" offset=\"0x{register_offset:x}\" size=\"{register_size}\" val=\"0x{value:x}\"/>\n"
-                ));
-            }
-            if sets.is_empty() {
-                continue;
-            }
-            let size = provider
-                .function_sizes
-                .get(&entry)
-                .copied()
-                .unwrap_or(1)
-                .max(1);
-            let last = entry
-                .saturating_add(size)
-                .saturating_sub(1)
-                .min(image_end.saturating_sub(1))
-                .max(entry);
-            data.push_str(&format!(
-                "<tracked_set space=\"ram\" first=\"0x{entry:x}\" last=\"0x{last:x}\">\n{sets}</tracked_set>\n"
-            ));
-        }
-    }
-    if data.is_empty() {
-        return cspec.to_string();
-    }
-    let mut out = String::with_capacity(cspec.len() + data.len() + 32);
-    out.push_str(&cspec[..close]);
-    out.push_str("<context_data>\n");
-    out.push_str(&data);
-    out.push_str("</context_data>\n");
-    out.push_str(&cspec[close..]);
-    out
-}
-
-/// MWCC prologue/epilogue helpers (P2.3): `_savegpr_N`/`_restgpr_N` save and
-/// restore rN..r31 across the frame. A `bl _savegpr_14` is an opaque call to
-/// the decompiler unless the cspec carries a `<callfixup>` that expands it to
-/// the per-register stores the helper performs. Injected for PowerPC so a
-/// MWCC binary's frames read as callee-saved setup, not an unknown call.
-/// Stack layout: r31 at -4(sp), r30 at -8, …, rN at -4*(32-N).
-fn mwcc_callfixups() -> String {
-    let mut out = String::new();
-    for n in 14..32u8 {
-        let mut body = String::new();
-        for reg in n..32u8 {
-            let off = 4 * (32 - reg);
-            body.push_str(&format!("      *(r1 - 0x{off:02x}) = r{reg};\n"));
-        }
-        out.push_str(&format!(
-            "  <callfixup name=\"_savegpr_{n}\">\n    <pcode><body><![CDATA[\n{body}    ]]></body></pcode>\n  </callfixup>\n"
-        ));
-    }
-    for n in 14..32u8 {
-        let mut body = String::new();
-        for reg in n..32u8 {
-            let off = 4 * (32 - reg);
-            body.push_str(&format!("      r{reg} = *(r1 - 0x{off:02x});\n"));
-        }
-        out.push_str(&format!(
-            "  <callfixup name=\"_restgpr_{n}\">\n    <pcode><body><![CDATA[\n{body}    ]]></body></pcode>\n  </callfixup>\n"
-        ));
-    }
-    out
-}
-
-/// Injects the MWCC callfixups into a cspec before `</compiler_spec>`,
-/// alongside the context_data the entry-tracking pass already adds. A cspec
-/// that already ships a helper (the Gekko/Broadway MWCC-aware spec carries
-/// every `_savegpr_N`/`_restgpr_N`) keeps its own — re-adding the name is a
-/// duplicate the decompiler rejects, so only absent fixups are injected.
-fn with_mwcc_callfixups(cspec: &str, lang_dir: &str) -> String {
-    if !lang_dir.contains("PowerPC") {
-        return cspec.to_string();
-    }
-    let Some(close) = cspec.rfind("</compiler_spec>") else {
-        return cspec.to_string();
-    };
-    // Keep only the fixups the cspec does not already declare.
-    let mut extra = String::new();
-    for line in mwcc_callfixups().split("</callfixup>") {
-        let Some(name) = line.split("name=\"").nth(1).and_then(|s| s.split('\"').next())
-        else {
-            continue;
-        };
-        let needle = format!("name=\"{name}\"");
-        if !cspec.contains(&needle) {
-            extra.push_str(line);
-            extra.push_str("</callfixup>\n");
-        }
-    }
-    let mut out = String::with_capacity(cspec.len() + extra.len() + 16);
-    out.push_str(&cspec[..close]);
-    out.push_str(&extra);
-    out.push_str(&cspec[close..]);
-    out
 }
 
 /// Structures control-flow graphs read from stdin, one JSON object per line:
@@ -270,18 +76,21 @@ fn with_mwcc_callfixups(cspec: &str, lang_dir: &str) -> String {
 fn run_structure(
     ghidra_opt: &str,
     lang_dir: &str,
-    binary: &str,
-    base: u64,
+    program: &str,
+    project: &str,
 ) -> romwright_worker::Result<()> {
     use std::io::BufRead as _;
+    let db = romwright_worker::open_store(Path::new(project))?;
+    let input = program_input(&db, db.program_id(program)?)?;
     let mut provider = romwright_worker::ProgramProvider::new(
-        romwright_worker::BinaryBacking::from_file(Path::new(binary), base)?,
+        romwright_worker::BinaryBacking::from_input(Path::new(project), &input)?,
         Vec::new(),
     );
     provider.load_language_info(Path::new(lang_dir))?;
     let specs = romwright_worker::load_specs(Path::new(lang_dir))?;
     provider.core_types = romwright_worker::parse_core_types(&specs.3);
-    let mut worker = romwright_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
+    let mut worker =
+        romwright_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
     worker.register_program_with_shell(
         &mut provider,
@@ -331,241 +140,36 @@ fn run_structure(
 fn run(
     ghidra_opt: &str,
     lang_dir: &str,
-    binary: &str,
     program: &str,
     addresses: &[String],
     project: &str,
-    base: u64,
+    switches: bool,
 ) -> romwright_worker::Result<()> {
-    let mut provider = romwright_worker::ProgramProvider::new(
-        romwright_worker::BinaryBacking::from_file(Path::new(binary), base)?,
-        Vec::new(),
-    );
-    provider.load_language_info(Path::new(lang_dir))?;
-
-    // Function entries from the project store.
+    // Ordinary decompilation shares one deadline; switch batches isolate functions.
+    let timeout = std::env::var("WORKER_DECOMPILE_TIMEOUT_SECS")
+        .ok()
+        .and_then(|value| value.parse::<u64>().ok())
+        .unwrap_or(romwright_core::exec::DEFAULT_BUDGET.as_secs());
+    let deadline =
+        (timeout > 0).then(|| std::time::Instant::now() + std::time::Duration::from_secs(timeout));
+    let checkpoint = || {
+        if deadline.is_some_and(|deadline| std::time::Instant::now() >= deadline) {
+            Err(romwright_worker::WorkerError::Timeout(timeout))
+        } else {
+            Ok(())
+        }
+    };
     let db = romwright_worker::open_store(Path::new(project))?;
     let pid = db.program_id(program)?;
-    for f in db.functions(pid)? {
-        let off = f.entry.offset;
-        provider.functions.push(off);
-        provider
-            .function_names
-            .insert(off, romwright_worker::c_identifier(&f.name));
-        provider.function_sizes.insert(off, f.size as u64);
-    }
-    let held = db.symbols(pid)?;
-    // Stock applies a demangled name as the *primary* symbol at its address
-    // (`DemangledAddressTable.applyTo`, :86, through
-    // `DemangledObject.applyDemangledName`, :551-554), and the primary is the
-    // name a decompiler prints. Which is why `_ZTIi` prints as `typeinfo`.
-    let primary: std::collections::HashMap<u64, String> = held
-        .iter()
-        .filter(|symbol| symbol.source == romwright_core::native::DEMANGLE_SOURCE)
-        .map(|symbol| (symbol.address.offset, romwright_worker::c_identifier(&symbol.name)))
-        .collect();
-    // A demangled name is applied inside the namespace the mangled name
-    // names -- `typeinfo` in `int` -- and the decompiler prints a symbol
-    // outside the global scope scope-qualified. The namespace is re-derived
-    // from the mangled name beside it, so one demangler answers both.
-    // Scope ids share one space with the function ids this session hands out
-    // in mapped-symbol answers (`index + 1`), and a collision makes the
-    // decompiler reuse the function's scope instead of asking for the
-    // namespace's path (`ScopeGhidra::reresolveScope`,
-    // database_ghidra.cc:48-61). Namespaces get their own high range.
-    const NAMESPACE_BASE: u64 = 1 << 48;
-    let mut next_namespace = NAMESPACE_BASE;
-    for symbol in &held {
-        if !primary.contains_key(&symbol.address.offset) {
-            continue;
-        }
-        if let Some(demangled) = romwright_core::demangle::demangle(&symbol.name) {
-            if !demangled.namespace.is_empty() {
-                next_namespace += 1;
-                provider.namespaces.insert(
-                    symbol.address.offset,
-                    (next_namespace, romwright_worker::c_identifier(&demangled.namespace)),
-                );
-            }
-        }
-    }
-    for symbol in &held {
-        if symbol.source == romwright_core::native::DYNAMIC_LABEL_SOURCE
-            && symbol.address.space == romwright_model::AddressSpace::Ram
-        {
-            provider
-                .tag_names
-                .insert(symbol.address.offset, romwright_worker::c_identifier(&symbol.name));
-        }
-    }
-    // Which name an address answers with, in the order stock's primary symbol
-    // resolves: the demangled name first (it is applied primary,
-    // `DemangledAddressTable.applyTo`, :86), then a name the image gives the
-    // object, then the dynamic table's label -- which the pinned install keeps
-    // non-primary wherever something else names the address (measured at
-    // `_DT_INIT`) -- and last the import a linkage slot resolves to, which
-    // stock keeps in its EXTERNAL block rather than at the slot.
-    let rank = |symbol: &romwright_model::SymbolRow| match symbol.source.as_str() {
-        _ if primary.contains_key(&symbol.address.offset) => 0,
-        romwright_core::native::DYNAMIC_LABEL_SOURCE => 2,
-        _ if symbol.external => 3,
-        _ => 1,
-    };
-    let mut ordered: Vec<&romwright_model::SymbolRow> = held.iter().collect();
-    ordered.sort_by_key(|symbol| rank(symbol));
-    for symbol in ordered {
-        let rendered = primary
-            .get(&symbol.address.offset)
-            .cloned()
-            .unwrap_or_else(|| romwright_worker::c_identifier(&symbol.name));
-        provider
-            .symbol_names
-            .entry(symbol.address.offset)
-            .or_insert_with(|| rendered.clone());
-        if symbol.external {
-            provider
-                .external_names
-                .entry(symbol.address.offset)
-                .or_insert(rendered);
-        }
-    }
-    for comment in db.comments(pid)? {
-        provider
-            .comments
-            .entry(comment.function.offset)
-            .or_default()
-            .push((comment.address.offset, comment.kind, comment.text));
-    }
-    // A protected call site is a fact with a range and a handler; the comment
-    // is its rendering, and it is Ghidra's: `GccExceptionAnalyzer` writes
-    // exactly this PRE comment at the range's first address (m4-024).
-    for site in db.exception_sites(pid)? {
-        provider
-            .comments
-            .entry(site.function.offset)
-            .or_default()
-            .push((
-                site.start.offset,
-                "pre".to_string(),
-                format!(
-                    "try {{ // try from {:08x} to {:08x} has its CatchHandler @ {:08x}",
-                    site.start.offset, site.end.offset, site.landing_pad.offset
-                ),
-            ));
-    }
-    for datatype in db.datatypes(pid)? {
-        provider
-            .datatypes
-            .insert(datatype.name, datatype.definition);
-    }
-    for prototype in db.prototypes(pid)? {
-        if !prototype.signature.is_empty() {
-            provider
-                .prototypes
-                .insert(prototype.function.offset, prototype);
-        }
-    }
-    for string in db
-        .strings(pid)?
-        .into_iter()
-        .filter(|string| string.address.space == romwright_model::AddressSpace::Ram)
-    {
-        provider.strings.insert(string.address.offset, string.value);
-    }
-    // Locations a stored data reference names and nothing else describes:
-    // the dynamic-label case (`SymbolUtilities.getDynamicName`).
-    // A thunk's jump transfers control the way a call does. The store proves
-    // both halves: the thunk row names entry and destination, and the xref
-    // row names the instruction that performs the transfer.
-    for region in db.memory_regions(pid)? {
-        if region.start.space == romwright_model::AddressSpace::Ram
-            && !region.permissions.contains('w')
-            && region.size > 0
-        {
-            provider
-                .read_only
-                .push((region.start.offset, region.start.offset + region.size));
-        }
-    }
-    for region in db.memory_regions(pid)? {
-        if region.start.space == romwright_model::AddressSpace::Ram
-            && region.permissions.contains('x')
-            && region.size > 0
-        {
-            provider
-                .executable
-                .push((region.start.offset, region.start.offset + region.size));
-        }
-    }
-    for row in db.data_definitions(pid)? {
-        if row.address.space == romwright_model::AddressSpace::Ram && row.size > 0 {
-            provider
-                .data_definitions
-                .insert(row.address.offset, (row.data_type, row.size));
-        }
-    }
-    // A stub's transfer is recorded as a flow override by the importer, which
-    // is where the branch instruction is known; nothing is derived here.
-    // Instruction flow the store corrects: each override belongs to the
-    // function that contains it, which is how the decompiler keys them.
-    for row in db.flow_overrides(pid)? {
-        if row.address.space != romwright_model::AddressSpace::Ram || row.kind != "callreturn" {
-            continue;
-        }
-        let address = row.address.offset;
-        let Some(index) = provider
-            .functions
-            .iter()
-            .rposition(|entry| *entry <= address)
-        else {
-            continue;
-        };
-        let entry = provider.functions[index];
-        let span = provider
-            .function_sizes
-            .get(&entry)
-            .copied()
-            .filter(|size| *size > 0)
-            .unwrap_or_else(|| {
-                provider
-                    .functions
-                    .get(index + 1)
-                    .map_or(u64::MAX, |next| *next)
-                    .saturating_sub(entry)
-            });
-        if address < entry.saturating_add(span) {
-            provider
-                .call_return_branches
-                .entry(entry)
-                .or_default()
-                .push(address);
-        }
-    }
-    for target in db.data_reference_targets(pid)? {
-        if target.space == romwright_model::AddressSpace::Ram {
-            provider.data_targets.insert(target.offset);
-        }
-    }
-    // A pointer's label names its referent, so a pointer-typed slot's target
-    // has to travel with it. Which rule typed the slot does not matter: what
-    // the label needs is the address the slot holds (m4-027).
-    for xref in db.xrefs(pid)? {
-        let pointer = matches!(
-            provider.data_definitions.get(&xref.from.offset),
-            Some((kind, _)) if kind == "pointer" || kind == "code-pointer"
-        );
-        if pointer
-            && xref.kind == "DATA"
-            && xref.from.space == romwright_model::AddressSpace::Ram
-            && xref.to.space == romwright_model::AddressSpace::Ram
-        {
-            provider.pointer_targets.insert(xref.from.offset, xref.to.offset);
-        }
-    }
-    provider.load_call_edges(&db, pid)?;
-    provider.load_return_behaviors(&db, pid, false)?;
-    provider.load_stack_frames(&db, pid)?;
-    provider.load_calling_conventions(&db, pid)?;
+    let input = program_input(&db, pid)?;
+    let mut provider = romwright_worker::ProgramProvider::from_store(
+        Path::new(project),
+        &input,
+        Path::new(lang_dir),
+        &db,
+        pid,
+        false,
+    )?;
 
     let offsets = addresses
         .iter()
@@ -575,58 +179,82 @@ fn run(
         })
         .collect::<romwright_worker::Result<Vec<u64>>>()?;
     let Some(&offset) = offsets.first() else {
-        return Err(romwright_worker::WorkerError::Setup("no address to decompile".into()));
+        return Err(romwright_worker::WorkerError::Setup(
+            "no address to decompile".into(),
+        ));
     };
-    let specs = romwright_worker::load_specs(Path::new(lang_dir))?;
-    provider.core_types = romwright_worker::parse_core_types(&specs.3);
-    // MIPS calling code leaves a function's own address in `t9`, and every
-    // position-independent load inside it is written relative to that
-    // register. Ghidra assumes it -- `MipsAddressAnalyzer` ships with "Assume
-    // T9 set to Function entry" on and writes the value into the program
-    // context (`unknownValue`, 462-504) -- and its decompiler reads it back as
-    // a tracked register, injected as a COPY at the entry block
-    // (`ActionConstbase::apply`, coreaction.cc:693-705). Raw-SLEIGH mode uses
-    // ContextInternal, which takes tracked sets from the compiler spec
-    // (`decodeFromSpec`, globalcontext.cc:531-552), so that is where it goes.
-    let mut contexts: Vec<(u64, String, u64)> = db
-        .decode_contexts(pid)?
-        .into_iter()
-        .filter(|(address, _, _)| address.space == romwright_model::AddressSpace::Ram)
-        .map(|(address, name, value)| (address.offset, name, value))
-        .collect();
-    contexts.sort_by(|left, right| left.0.cmp(&right.0));
-    // Loader-established register values travel in the decode contexts
-    // discovery stored (one point per function); the provider serves them
-    // back through `getTrackedRegisters` alongside conventional MIPS `t9`.
-    for (address, name, value) in &contexts {
-        if name == "r13" || name == "r2" {
-            provider
-                .tracked_values
-                .insert((*address, name.clone()), *value);
-        }
-    }
-    let cspec = with_entry_register_tracking(&specs.1, &provider, lang_dir, &contexts);
-    let cspec = with_mwcc_callfixups(&cspec, lang_dir);
-    let mut worker = romwright_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
+    let specs =
+        romwright_worker::specs::load_program_specs(&mut provider, Path::new(lang_dir), &db, pid)?;
+    let mut worker =
+        romwright_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
     let function_shell = provider.function_shell()?;
-    worker.register_program_with_shell(
-        &mut provider,
-        &specs.0,
-        &cspec,
-        &specs.2,
-        &specs.3,
-        &function_shell,
-    )?;
+    worker.within_deadline(deadline, |worker| {
+        worker.register_program_with_shell(
+            &mut provider,
+            &specs.0,
+            &specs.1,
+            &specs.2,
+            &specs.3,
+            &function_shell,
+        )
+    })?;
     let ram = provider.ram_space_index as u32;
-    // Ghidra's switch analyzer allows a function 60 seconds before it
-    // disposes of the decompiler; the same bound applies here, and a caller
-    // that wants none sets 0.
-    let decompile_timeout = std::env::var("WORKER_DECOMPILE_TIMEOUT_SECS")
-        .ok()
-        .and_then(|value| value.parse::<u64>().ok())
-        .unwrap_or(60);
-    let decompile_timeout = (decompile_timeout > 0)
-        .then(|| std::time::Duration::from_secs(decompile_timeout));
+    if switches {
+        worker.within_deadline(deadline, |worker| {
+            worker.configure_switch_recovery(&mut provider)
+        })?;
+        let mut restart = false;
+        let stdout = std::io::stdout();
+        let mut stdout = stdout.lock();
+        for offset in offsets {
+            let deadline = (timeout > 0)
+                .then(|| std::time::Instant::now() + std::time::Duration::from_secs(timeout));
+            if restart {
+                worker =
+                    romwright_worker::NativeWorker::launch(std::process::Command::new(ghidra_opt))?;
+                worker.within_deadline(deadline, |worker| {
+                    worker.register_program_with_shell(
+                        &mut provider,
+                        &specs.0,
+                        &specs.1,
+                        &specs.2,
+                        &specs.3,
+                        &function_shell,
+                    )?;
+                    worker.configure_switch_recovery(&mut provider)
+                })?;
+            }
+            let result = worker.within_deadline(deadline, |worker| {
+                worker.prepare_function(&mut provider, offset)?;
+                let raw = worker.decompile_at(&mut provider, ram, offset)?;
+                let decoded = romwright_worker::doc::decode_document_with_ram_space(
+                    &raw,
+                    Some(u64::from(ram)),
+                );
+                decoded.jump_tables.ok_or_else(|| {
+                    romwright_worker::WorkerError::Protocol(
+                        "switch response has no complete function".into(),
+                    )
+                })
+            });
+            // Never retry the failed function, or discard a completed table
+            // because clearing the session for the next function failed.
+            restart = result.is_err()
+                || worker
+                    .within_deadline(deadline, |worker| worker.flush_native(&mut provider))
+                    .is_err();
+            let result = result.map_err(|error| error.to_string());
+            let response = serde_json::json!({ "address": offset, "result": result });
+            writeln!(stdout, "{response}")?;
+            stdout.flush()?;
+        }
+        return Ok(());
+    }
+    let ir_passes = match std::env::var("ROMWRIGHT_IR_PASSES") {
+        Ok(value) => romwright_core::func_ir::parse_pass_names(&value),
+        Err(std::env::VarError::NotPresent) => romwright_core::func_ir::default_pass_names(),
+        Err(error) => return Err(romwright_worker::WorkerError::Setup(error.to_string())),
+    };
     // A batch answers every address from one launch, in one JSON object; a
     // single address keeps the plain-text answer every existing caller reads.
     if offsets.len() > 1 {
@@ -643,59 +271,68 @@ fn run(
             // raises for the address it cannot read. Ghidra's client keeps its
             // session and reports the one function as undecompiled, so the
             // batch omits the key and every other address still answers.
-            let raw = match worker
-                .prepare_function(&mut provider, offset)
-                .and_then(|()| worker.set_action(&mut provider, &action, ""))
-                .and_then(|()| {
-                    worker.decompile_at_within(&mut provider, ram, offset, decompile_timeout)
-                })
-            {
-                Ok(raw) => raw,
+            let decoded = match worker.within_deadline(deadline, |worker| {
+                worker.prepare_function(&mut provider, offset)?;
+                worker.set_action(&mut provider, &action, "")?;
+                let raw = worker.decompile_at(&mut provider, ram, offset)?;
+                let passes = if action == "decompile" {
+                    ir_passes.as_slice()
+                } else {
+                    &[]
+                };
+                worker.finalize_document(&mut provider, &raw, ram, offset, passes, deadline, None)
+            }) {
+                Ok(decoded) => decoded,
                 Err(error) => {
+                    checkpoint()?;
                     eprintln!("warning: {offset:08x}: {error}");
                     // The exception leaves the session's per-function state
                     // behind; if it cannot be cleared the process is gone and
                     // a fresh one takes over the rest of the batch.
-                    if worker.flush_native(&mut provider).is_err() {
-                        worker =
-                            romwright_worker::NativeWorker::launch(std::process::Command::new(
-                                ghidra_opt,
-                            ))?;
-                        worker.register_program_with_shell(
-                            &mut provider,
-                            &specs.0,
-                            &cspec,
-                            &specs.2,
-                            &specs.3,
-                            &function_shell,
+                    if worker
+                        .within_deadline(deadline, |worker| worker.flush_native(&mut provider))
+                        .is_err()
+                    {
+                        checkpoint()?;
+                        worker = romwright_worker::NativeWorker::launch(
+                            std::process::Command::new(ghidra_opt),
                         )?;
+                        worker.within_deadline(deadline, |worker| {
+                            worker.register_program_with_shell(
+                                &mut provider,
+                                &specs.0,
+                                &specs.1,
+                                &specs.2,
+                                &specs.3,
+                                &function_shell,
+                            )
+                        })?;
                     }
                     continue;
                 }
             };
-            // One launch, many functions: the decompiler's per-function
-            // caches have to be cleared between them exactly as Ghidra's
-            // client clears them.
-            worker.flush_native(&mut provider)?;
-            let value = if structured {
-                let decoded = romwright_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
-                serde_json::to_value(romwright_model::DecompDoc {
-                    tokens: decoded.tokens,
-                    prototype: decoded.prototype,
-                    jump_tables: decoded.jump_tables,
-                    address: romwright_model::Address::ram(offset),
-                    revision: 0,
-                    storage: decoded.storage,
-                })
-                .map_err(|e| romwright_worker::WorkerError::Setup(format!("encode document: {e}")))?
-            } else {
-                let tokens = romwright_worker::decode_tokens_with_ram_space(&raw, Some(ram as u64));
-                serde_json::Value::String(
-                    tokens.iter().map(|token| token.text.as_str()).collect::<String>(),
-                )
+            let doc = romwright_model::DecompDoc {
+                tokens: decoded.tokens,
+                prototype: decoded.prototype,
+                call_prototypes: decoded.call_prototypes,
+                call_targets: decoded.call_targets,
+                jump_tables: decoded.jump_tables,
+                address: romwright_model::Address::ram(offset),
+                revision: 0,
+                storage: decoded.storage,
+                function_ir: decoded.function_ir,
             };
+            let value = if structured {
+                serde_json::to_value(&doc).map_err(|e| {
+                    romwright_worker::WorkerError::Setup(format!("encode document: {e}"))
+                })?
+            } else {
+                serde_json::Value::String(romwright_core::emit_m2c::render_doc_text(&doc))
+            };
+            worker.within_deadline(deadline, |worker| worker.flush_native(&mut provider))?;
             answers.insert(format!("{offset:08x}"), value);
         }
+        checkpoint()?;
         println!(
             "{}",
             serde_json::to_string(&serde_json::Value::Object(answers))
@@ -703,85 +340,44 @@ fn run(
         );
         return Ok(());
     }
-    worker.prepare_function(&mut provider, offset)?;
-    let action = std::env::var("WORKER_ACTION").unwrap_or_else(|_| "decompile".to_string());
-    worker.set_action(&mut provider, &action, "")?;
-    let raw = worker.decompile_at_within(&mut provider, ram, offset, decompile_timeout)?;
-    // The packed response is the source of truth for both structured tokens
-    // and rendered compatibility text. `decode_tokens_with_ram_space` follows
-    // PackedDecode.java and preserves token metadata; concatenation is only
-    // the legacy CLI presentation boundary.
-    if std::env::var_os("WORKER_STRUCTURED").is_some() {
-        let decoded = romwright_worker::decode_document_with_ram_space(&raw, Some(ram as u64));
-        let doc = romwright_model::DecompDoc {
-            tokens: decoded.tokens,
-            prototype: decoded.prototype,
-            jump_tables: decoded.jump_tables,
-            address: romwright_model::Address::ram(offset),
-            revision: 0,
-            storage: decoded.storage,
+    let decoded = worker.within_deadline(deadline, |worker| {
+        worker.prepare_function(&mut provider, offset)?;
+        let action = std::env::var("WORKER_ACTION").unwrap_or_else(|_| "decompile".to_string());
+        worker.set_action(&mut provider, &action, "")?;
+        let raw = worker.decompile_at(&mut provider, ram, offset)?;
+        let passes = if action == "decompile" {
+            ir_passes.as_slice()
+        } else {
+            &[]
         };
+        worker.finalize_document(&mut provider, &raw, ram, offset, passes, deadline, None)
+    })?;
+    let doc = romwright_model::DecompDoc {
+        tokens: decoded.tokens,
+        prototype: decoded.prototype,
+        call_prototypes: decoded.call_prototypes,
+        call_targets: decoded.call_targets,
+        jump_tables: decoded.jump_tables,
+        address: romwright_model::Address::ram(offset),
+        revision: 0,
+        storage: decoded.storage,
+        function_ir: decoded.function_ir,
+    };
+    checkpoint()?;
+    if std::env::var_os("WORKER_STRUCTURED").is_some() {
         println!(
             "{}",
-            serde_json::to_string(&doc)
-                .map_err(|e| romwright_worker::WorkerError::Setup(format!("encode document: {e}")))?
+            serde_json::to_string(&doc).map_err(|e| romwright_worker::WorkerError::Setup(
+                format!("encode document: {e}")
+            ))?
         );
         return Ok(());
     }
-    let tokens = romwright_worker::decode_tokens_with_ram_space(&raw, Some(ram as u64));
-    let c_text: String = tokens.iter().map(|token| token.text.as_str()).collect();
+    let c_text = romwright_core::emit_m2c::render_doc_text(&doc);
     if std::env::var_os("WORKER_DUMP").is_some() {
         let mut f = std::fs::File::create("/tmp/ctext_dump.txt").unwrap();
         let _ = f.write_all(c_text.as_bytes());
     }
     println!("{c_text}");
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{mwcc_callfixups, with_mwcc_callfixups};
-
-    /// MWCC prologue/epilogue helpers (`_savegpr_N`/`_restgpr_N`) must be
-    /// injected for PowerPC so a `bl _savegpr_14` reads as callee-saved
-    /// stores, not an opaque call (P2.3).
-    #[test]
-    fn mwcc_callfixups_cover_every_gpr_helper() {
-        let fixups = mwcc_callfixups();
-        for n in 14..32 {
-            assert!(
-                fixups.contains(&format!("name=\"_savegpr_{n}\"")),
-                "missing _savegpr_{n}"
-            );
-            assert!(
-                fixups.contains(&format!("name=\"_restgpr_{n}\"")),
-                "missing _restgpr_{n}"
-            );
-        }
-        // _savegpr_14 stores r14..r31 at -4*(32-r) below the frame.
-        assert!(fixups.contains("*(r1 - 0x48) = r14;"));
-        assert!(fixups.contains("*(r1 - 0x04) = r31;"));
-        // _restgpr_14 loads them back.
-        assert!(fixups.contains("r14 = *(r1 - 0x48);"));
-        assert!(fixups.contains("r31 = *(r1 - 0x04);"));
-    }
-
-    #[test]
-    fn mwcc_callfixups_inject_only_for_powerpc_and_skip_present() {
-        let ppc = "PowerPC-BE-32-Gekko_Broadway";
-        let mips = "MIPS-BE-64-64-32addr";
-        let bare = "<compiler_spec>\n</compiler_spec>";
-
-        // PowerPC gets the helpers; a non-PowerPC lang_dir is untouched.
-        let injected = with_mwcc_callfixups(bare, ppc);
-        assert!(injected.contains("name=\"_savegpr_14\""));
-        assert!(injected.contains("name=\"_restgpr_31\""));
-        assert_eq!(with_mwcc_callfixups(bare, mips), bare);
-
-        // A cspec that already ships a helper keeps its own (no duplicate).
-        let already = "<compiler_spec>\n  <callfixup name=\"_savegpr_14\"/>\n</compiler_spec>";
-        let merged = with_mwcc_callfixups(already, ppc);
-        assert_eq!(merged.matches("name=\"_savegpr_14\"").count(), 1);
-        assert!(merged.contains("name=\"_savegpr_15\""));
-    }
 }
