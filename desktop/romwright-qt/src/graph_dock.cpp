@@ -1,60 +1,36 @@
 #include "graph_dock.h"
-
-#include "core_bridge.h"
 #include "graph_canvas.h"
-#include "json_util.h"
-
 #include <QJsonArray>
-#include <QJsonObject>
 
-GraphDock::GraphDock(CoreBridge *bridge, QWidget *parent)
-    : QDockWidget(QStringLiteral("Function graph"), parent),
-      bridge_(bridge) {
-    setObjectName(QStringLiteral("functionGraphDock"));
-    canvas_ = new GraphCanvas(this);
-    connect(canvas_, &GraphCanvas::addressSelected, this,
-            [this](const QString &address, bool record) {
-                emit addressSelected(address, record);
-            });
+GraphDock::GraphDock(QWidget *parent)
+    : QDockWidget(QStringLiteral("Function graph"), parent), canvas_(new GraphCanvas(this)) {
+    setObjectName("functionGraphDock");
+    connect(canvas_, &GraphCanvas::addressSelected, this, &GraphDock::addressSelected);
     setWidget(canvas_);
 }
 
-void GraphDock::loadGraph(const QString &binary, const QString &address) {
-    if (binary.isEmpty() || address.isEmpty()) {
-        return;
+void GraphDock::setGraph(const QJsonObject &graph) {
+    QVector<GraphCanvas::Node> nodes;
+    QVector<GraphCanvas::Edge> edges;
+    if (graph.value("complete").toBool()) {
+        for (const auto &value : graph.value("nodes").toArray()) {
+            const auto row = value.toObject();
+            GraphCanvas::Node node;
+            node.id = row.value("id").toString();
+            node.address = row.value("address").toString();
+            node.operations = row.value("operations").toVariant().toULongLong();
+            node.pos = QPointF(row.value("x").toDouble(), row.value("y").toDouble());
+            nodes.append(node);
+        }
+        for (const auto &value : graph.value("edges").toArray()) {
+            const auto row = value.toObject();
+            edges.append({row.value("from").toString(), row.value("to").toString(),
+                          row.value("kind").toString()});
+        }
     }
-    const QString job_name = QStringLiteral("function graph %1").arg(address);
-    emit jobStarted(job_name);
-    bridge_->request(QJsonObject{{"method", "function_bb_graph"},
-                                 {"binary", binary},
-                                 {"address", address}},
-                     [this, job_name](const QJsonObject &response) {
-                         QString error;
-                         if (!successful(response, &error)) {
-                             emit jobFinished(job_name, false, error);
-                             return;
-                         }
-                         const QJsonObject result = response.value("result").toObject();
-                         GraphCanvas::Node node;
-                         GraphCanvas::Edge edge;
-                         QVector<GraphCanvas::Node> nodes;
-                         QVector<GraphCanvas::Edge> edges;
-                         for (const QJsonValue &value : result.value("nodes").toArray()) {
-                             const QJsonObject row = value.toObject();
-                             node.address = row.value("address").toString();
-                             node.size = row.value("size").toVariant().toULongLong();
-                             node.pos = QPointF(row.value("x").toVariant().toDouble(),
-                                                row.value("y").toVariant().toDouble());
-                             nodes.append(node);
-                         }
-                         for (const QJsonValue &value : result.value("edges").toArray()) {
-                             const QJsonObject row = value.toObject();
-                             edge.from = row.value("from").toString();
-                             edge.to = row.value("to").toString();
-                             edge.kind = row.value("kind").toString();
-                             edges.append(edge);
-                         }
-                         canvas_->setGraph(nodes, edges);
-                         emit jobFinished(job_name, true, QStringLiteral("graph loaded"));
-                     });
+    canvas_->setGraph(nodes, edges);
+    setWindowTitle(nodes.isEmpty() ? QStringLiteral("Function graph — unavailable")
+                                   : QStringLiteral("Native CFG — %1 blocks, %2 edges")
+                                         .arg(nodes.size())
+                                         .arg(edges.size()));
 }

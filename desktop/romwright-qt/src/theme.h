@@ -1,8 +1,11 @@
 #pragma once
 
 #include <QColor>
+#include <QFont>
 #include <QSettings>
 #include <QString>
+
+class QApplication;
 
 /// The single color source for every paint site (Phase 3). Three palettes:
 /// dark (default), light, and high-contrast. The selection persists in
@@ -60,4 +63,6 @@ struct Theme {
     }
 
     static Theme make(const QString &name);
+    static void apply(QApplication &application);
+    static const QFont &codeFont();
 };

@@ -20,5 +20,6 @@ signals:
 
 private:
     CoreBridge *bridge_;
+    quint64 generation_ = 0;
     QTableWidget *vtables_ = nullptr;
 };

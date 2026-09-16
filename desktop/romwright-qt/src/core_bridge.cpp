@@ -39,23 +39,19 @@ void CoreBridge::request(const QJsonObject &request, ResponseCallback callback) 
         return;
     }
     const QByteArray encoded = QJsonDocument(request).toJson(QJsonDocument::Compact);
-    QFuture<QString> future = QtConcurrent::run(&pool_, [this, encoded]() {
-        rust::String response = romwright::core_request(
+    QFuture<QJsonObject> future = QtConcurrent::run(&pool_, [this, encoded]() {
+        const rust::String response = romwright::core_request(
             **core_, rust::Str(encoded.constData(), static_cast<std::size_t>(encoded.size())));
-        return QString::fromUtf8(response.data(), static_cast<int>(response.size()));
+        const auto document = QJsonDocument::fromJson(
+            QByteArray::fromRawData(response.data(), static_cast<int>(response.size())));
+        if (document.isObject())
+            return document.object();
+        return QJsonObject{{"ok", false}, {"error", "Rust bridge returned invalid JSON"}};
     });
-    auto *watcher = new QFutureWatcher<QString>(this);
-    connect(watcher, &QFutureWatcher<QString>::finished, this,
+    auto *watcher = new QFutureWatcher<QJsonObject>(this);
+    connect(watcher, &QFutureWatcher<QJsonObject>::finished, this,
             [watcher, callback = std::move(callback)]() mutable {
-                const QString response = watcher->result();
-                const QJsonDocument document =
-                    QJsonDocument::fromJson(response.toUtf8());
-                if (document.isObject()) {
-                    callback(document.object());
-                } else {
-                    callback(QJsonObject{{"ok", false},
-                                         {"error", "Rust bridge returned invalid JSON"}});
-                }
+                callback(watcher->result());
                 watcher->deleteLater();
             });
     watcher->setFuture(future);

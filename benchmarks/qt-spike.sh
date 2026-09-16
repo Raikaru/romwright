@@ -20,7 +20,7 @@ cmake -S "$ROOT/desktop/romwright-qt" -B "$BUILD" -DCMAKE_BUILD_TYPE=Release
 set +e
 QT_QPA_PLATFORM=offscreen /usr/bin/time -f '%e %M' -o "$BUILD/run-time.txt" \
   timeout --signal=TERM "${SMOKE_SECONDS:-3}" \
-  "$BUILD/romwright-qt" --project "$ROOT/.romwright" --name smoke_bin \
+  "$BUILD/romwright-qt" --project "$ROOT/.romwright" --program smoke_bin \
   --binary "$ROOT/tests/fixtures-src/tiny_bin" --address 00400466 \
   >"$BUILD/run.out" 2>"$BUILD/run.err"
 status=$?

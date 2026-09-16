@@ -14,6 +14,14 @@
 #include "xrefs_dock.h"
 
 #include <QApplication>
+#include <QAction>
+#include <QClipboard>
+#include <QKeyEvent>
+#include <QMimeData>
+#include <QMouseEvent>
+#include <QScopeGuard>
+#include <QTextBlock>
+#include <memory>
 #include <QCoreApplication>
 #include <QDir>
 #include <QJsonArray>
@@ -37,6 +45,14 @@ void GateRunner::run(bool store_only) {
     window_->functionsDock()->filterTimer()->setInterval(0);
     metrics_ = QJsonObject();
     address_.clear();
+    if (!sourceInteractions()) {
+        finish(false, QStringLiteral("Source interaction gate failed"));
+        return;
+    }
+    if (!graphInteractions()) {
+        finish(false, QStringLiteral("Graph interaction gate failed"));
+        return;
+    }
 
     const QString b = window_->binary();
     const QString p = window_->program();
@@ -136,6 +152,116 @@ void GateRunner::recordInstallFacts() {
     metrics_.insert(QStringLiteral("ui.install.store_only_ok"), !configured);
 }
 
+bool GateRunner::sourceInteractions() {
+    DecompilerView view;
+    view.resize(800, 400);
+    view.show();
+    auto saved = std::make_unique<QMimeData>();
+    auto *clipboard = QApplication::clipboard();
+    if (const auto *mime = clipboard->mimeData())
+        for (const auto &format : mime->formats()) saved->setData(format, mime->data(format));
+    auto restore = qScopeGuard([&] { clipboard->setMimeData(saved.release()); });
+    QVector<TokenView> tokens;
+    auto add = [&](const QString &text, const QString &kind, const QString &address = QString(),
+                   const QString &target = QString(), const QStringList &parameters = QStringList()) {
+        tokens.append(TokenView{text, kind, address, 0, target, parameters});
+    };
+    add("int ", "Type"); add("sample", "FuncName", "0x10", "0x10");
+    add("() {", "Syntax"); add("", "Break"); tokens.last().indent = 4;
+    add("use", "FuncName", "0x14", "0x20", {"int count"}); add("(", "Syntax");
+    add("42", "Constant", "0x14"); add("); /* } */", "Syntax");
+    add("", "Break"); add("}", "Syntax"); add("", "Break");
+    view.setTokens(TokenView::withArgumentHints(tokens));
+    const QString original = "int sample() {\n    use(42); /* } */\n}\n";
+    view.selectAll(); view.copy();
+    if (clipboard->text() != original) return false;
+    QTextCursor cursor(view.document());
+    cursor.setPosition(view.toPlainText().indexOf("42"));
+    view.setTextCursor(cursor);
+    QKeyEvent select(QEvent::KeyPress, Qt::Key_Right, Qt::ShiftModifier);
+    QApplication::sendEvent(&view, &select);
+    QApplication::sendEvent(&view, &select);
+    view.copy();
+    if (clipboard->text() != "42") return false;
+    view.setAddress("0x10");
+    if (view.textCursor().selectedText() != "42") return false;
+    QString followed, renamed;
+    connect(&view, &DecompilerView::functionFollowRequested, &view,
+            [&](const QString &address, bool) { followed = address; });
+    connect(&view, &DecompilerView::renameRequested, &view,
+            [&](const QString &address, const QString &) { renamed = address; });
+    cursor.setPosition(view.toPlainText().indexOf("use"));
+    cursor.select(QTextCursor::WordUnderCursor);
+    view.setTextCursor(cursor);
+    QKeyEvent follow(QEvent::KeyPress, Qt::Key_Return, Qt::ControlModifier);
+    QApplication::sendEvent(&view, &follow);
+    QKeyEvent rename(QEvent::KeyPress, Qt::Key_F2, Qt::NoModifier);
+    QApplication::sendEvent(&view, &rename);
+    if (followed != "0x20" || renamed != "0x20") return false;
+    cursor.movePosition(QTextCursor::Start);
+    view.setTextCursor(cursor);
+    view.findChild<QAction *>("sourceFoldBlock")->trigger();
+    if (view.document()->findBlockByNumber(1).isVisible()) return false;
+    view.setAddress("0x14");
+    if (!view.document()->findBlockByNumber(1).isVisible() || view.currentAddress() != "0x14") return false;
+    view.findChild<QAction *>("sourceArgumentHints")->trigger();
+    if (view.toPlainText() != original) return false;
+    const auto before = view.toPlainText();
+    QKeyEvent type(QEvent::KeyPress, Qt::Key_X, Qt::NoModifier, "x");
+    QApplication::sendEvent(&view, &type);
+    if (view.toPlainText() != before) return false;
+    metrics_.insert("ui.source.selection_copy", true);
+    metrics_.insert("ui.source.hints_excluded_from_copy", true);
+    metrics_.insert("ui.source.follow_rename", true);
+    metrics_.insert("ui.source.fold_reverse_sync", true);
+    metrics_.insert("ui.source.read_only", true);
+    return true;
+}
+
+bool GateRunner::graphInteractions() {
+    GraphCanvas view;
+    view.resize(700, 260);
+    const QVector<GraphCanvas::Node> nodes = {
+        {"a", "0x10", 1, {0, 0}}, {"b", "0x10", 1, {240, 0}}, {"empty", {}, 0, {480, 0}}};
+    view.setGraph(nodes, {});
+    view.show();
+    const QImage without_loop = view.grab().toImage();
+    if (!view.selectedNodeId().isEmpty()) return false;
+    QStringList selected, navigated;
+    connect(&view, &GraphCanvas::nodeSelected, &view,
+            [&](const QString &id) { selected.append(id); });
+    connect(&view, &GraphCanvas::addressSelected, &view, [&](const QString &address, bool) {
+        navigated.append(address);
+        view.setAddress(address);  // Cross-dock echo must not erase block identity.
+    });
+    auto click = [&](qreal x) {
+        const QPointF position(x, 130);
+        QMouseEvent press(QEvent::MouseButtonPress, position, view.mapToGlobal(position.toPoint()),
+                          Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent release(QEvent::MouseButtonRelease, position, view.mapToGlobal(position.toPoint()),
+                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(&view, &press);
+        QApplication::sendEvent(&view, &release);
+    };
+    click(110);
+    if (view.selectedNodeId() != "a") return false;
+    click(350);
+    if (view.selectedNodeId() != "b") return false;
+    click(590);
+    if (view.selectedNodeId() != "empty" || selected != QStringList{"a", "b", "empty"}
+        || navigated != QStringList{"0x10", "0x10"}) return false;
+    view.setGraph(nodes, {{"a", "a", "true"}});
+    if (!view.selectedNodeId().isEmpty()) return false;
+    // Other nodes enclose this loop's bounds, keeping the viewport identical.
+    // Its addition must change the rendered image, not just the model.
+    if (view.grab().toImage() == without_loop) return false;
+    metrics_.insert("ui.graph.distinct_block_selection", true);
+    metrics_.insert("ui.graph.empty_block_selection", true);
+    metrics_.insert("ui.graph.selection_reset", true);
+    metrics_.insert("ui.graph.self_loop_visible", true);
+    return true;
+}
+
 void GateRunner::startLargestFunction() {
     stage_ = Stage::Inactive;
     bridge_->request(
@@ -176,10 +302,7 @@ void GateRunner::startDecompile(const QString &addr) {
                 finish(false, err);
                 return;
             }
-            QVector<TokenView> tokens;
-            for (const QJsonValue &v : res.value("result").toObject().value("tokens").toArray()) {
-                tokens.append(TokenView::fromJson(v.toObject()));
-            }
+            QVector<TokenView> tokens = TokenView::fromDocument(res.value("result").toObject());
             bridge_->request(
                 QJsonObject{{"method", "listing"},
                             {"binary", window_->binary()},
@@ -210,6 +333,7 @@ void GateRunner::startGraph() {
     timer_.start();
     bridge_->request(
         QJsonObject{{"method", "function_bb_graph"},
+                    {"program", window_->program()},
                     {"binary", window_->binary()},
                     {"address", address_}},
         [this](const QJsonObject &res) {
@@ -227,7 +351,8 @@ void GateRunner::startGraph() {
                 const QJsonObject row = v.toObject();
                 GraphCanvas::Node n;
                 n.address = row.value("address").toString();
-                n.size = row.value("size").toVariant().toULongLong();
+                n.id = row.value("id").toString();
+                n.operations = row.value("operations").toVariant().toULongLong();
                 n.pos = QPointF(row.value("x").toVariant().toDouble(),
                                 row.value("y").toVariant().toDouble());
                 nodes.append(n);

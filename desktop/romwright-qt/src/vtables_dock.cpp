@@ -31,6 +31,8 @@ VtablesDock::VtablesDock(CoreBridge *bridge, QWidget *parent)
 }
 
 void VtablesDock::recoverVtables(const QString &binary) {
+    const quint64 generation = ++generation_;
+    vtables_->setRowCount(0);
     if (binary.isEmpty()) {
         return;
     }
@@ -39,7 +41,11 @@ void VtablesDock::recoverVtables(const QString &binary) {
         QJsonObject{{"method", "recover_vtables"},
                     {"binary", binary},
                     {"limit", 512}},
-        [this](const QJsonObject &response) {
+        [this, generation](const QJsonObject &response) {
+            if (generation != generation_) {
+                emit jobFinished(QStringLiteral("vtable recovery"), true, QStringLiteral("Superseded vtables"));
+                return;
+            }
             QString error;
             if (!successful(response, &error)) {
                 emit jobFinished(QStringLiteral("vtable recovery"), false, error);
@@ -61,6 +67,8 @@ void VtablesDock::recoverVtables(const QString &binary) {
                 vtables_->setItem(index, 2,
                                   new QTableWidgetItem(targets.join(QStringLiteral(", "))));
             }
+            show();
+            raise();
             emit jobFinished(QStringLiteral("vtable recovery"), true,
                              QStringLiteral("%1 vtables recovered").arg(rows.size()));
         });

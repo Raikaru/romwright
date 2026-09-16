@@ -24,6 +24,7 @@ signals:
 
 private:
     CoreBridge *bridge_;
+    quint64 generation_ = 0;
     QTableWidget *bookmarks_ = nullptr;
     QTableWidget *patches_ = nullptr;
 };

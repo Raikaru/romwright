@@ -180,7 +180,7 @@ jobs:
           distribution: temurin
           java-version: '25'
       - name: Install corpus and console build tools
-        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential binutils-dev zlib1g-dev libzstd-dev
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential binutils-dev zlib1g-dev libzstd-dev cmake qt6-base-dev
       - name: Install pinned Ghidra release
         run: |
           curl --fail --location --retry 3 https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.3_build/ghidra_12.1.3_PUBLIC_20260817.zip --output "$RUNNER_TEMP/ghidra.zip"
@@ -417,6 +417,11 @@ jobs:
           python3 tests/m17-001_cfg_functions.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/reports/m17-001.json"
+      - name: Build the native desktop analysis gate
+        run: |
+          bash native/build_ghidra_opt.sh --jobs 2
+          cmake -S desktop/romwright-qt -B build/romwright-qt -DCMAKE_BUILD_TYPE=Release
+          cmake --build build/romwright-qt --config Release --target romwright-qt --parallel 2
       - name: Answer every query now, and say what is missing
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
@@ -424,6 +429,13 @@ jobs:
           python3 tests/m14-003_facts_so_far.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/reports/m14-003.json"
+      - name: Show facts so far in the window, then fill them in
+        env:
+          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          python3 tests/m14-004_ui_progress.py \
+            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --report "$RUNNER_TEMP/reports/m14-004.json"
       - name: Infer parameter and return types from p-code
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
@@ -644,6 +656,7 @@ jobs:
           path: |
             ${{ runner.temp }}/discovery/*-report.json
             ${{ runner.temp }}/discovery/corpus/manifest.json
+            ${{ runner.temp }}/reports/m14-004.json
       - name: Retain data-reference evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -721,13 +734,6 @@ jobs:
           cmake -S desktop/romwright-qt -B build/romwright-qt -G Ninja -DCMAKE_BUILD_TYPE=Release "${EXTRA_CMAKE_ARGS[@]}"
       - name: Build desktop
         run: cmake --build build/romwright-qt --config Release --target romwright-qt
-      - name: Show facts so far in the window, then fill them in
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
-        run: |
-          python3 tests/m14-004_ui_progress.py \
-            --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
-            --report "$RUNNER_TEMP/reports/m14-004.json"
       - name: Build installer archive
         run: cmake --build build/romwright-qt --config Release --target package
       - name: Package, install and launch the desktop

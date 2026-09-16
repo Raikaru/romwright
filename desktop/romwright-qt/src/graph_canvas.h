@@ -2,13 +2,12 @@
 
 #include <QHash>
 #include <QPointF>
+#include <QPolygonF>
 #include <QVector>
 #include <QWidget>
 
-/// Paint-based function-graph view over the function_bb_graph request
-/// (Phase 2.1): layered layout computed in core, typed edges, pan/zoom/
-/// fit, node clicks navigate. Blocks render address + size; the Listing
-/// tokenizer arrives with per-block console text.
+/// Complete native CFG, keyed by block identity. Pan/zoom and node clicks
+/// navigate; distinct native blocks may share the same instruction address.
 class GraphCanvas final : public QWidget {
     Q_OBJECT
 
@@ -16,8 +15,9 @@ public:
     explicit GraphCanvas(QWidget *parent = nullptr);
 
     struct Node {
+        QString id;
         QString address;
-        quint64 size = 0;
+        quint64 operations = 0;
         QPointF pos;  // layout coordinates (core units)
     };
     struct Edge {
@@ -26,15 +26,17 @@ public:
         QString kind;
     };
 
-    /// Replaces the graph; resets zoom and fits to view.
+    /// Replaces the graph; large graphs open at a readable block scale.
     void setGraph(const QVector<Node> &nodes, const QVector<Edge> &edges);
-    /// Highlights the node containing `address` (reverse sync).
+    /// Reverse address sync preserves a specifically selected matching block.
     void setAddress(const QString &address);
+    QString selectedNodeId() const;
     void fitToView();
     QSize sizeHint() const override;
 
 signals:
     void addressSelected(const QString &address, bool record);
+    void nodeSelected(const QString &blockId);
 
 protected:
     void paintEvent(QPaintEvent *) override;
@@ -44,20 +46,26 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    void keyPressEvent(QKeyEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
-    QPointF nodeCenter(const Node &node) const;
-    QString nodeAt(const QPoint &pos) const;
+    int nodeAt(const QPoint &pos) const;
+    void initialView();
+    void focusCurrentBlock();
+    void selectNode(int index);
     struct ResolvedEdge {
         int from_index = -1;
         int to_index = -1;
         QString kind;
+        QPolygonF path;
     };
 
     QVector<Node> nodes_;
-    QVector<Edge> edges_;
     QVector<ResolvedEdge> resolved_edges_;
     QHash<QString, int> node_lookup_;
+    QRectF graph_bounds_;
+    int selected_node_ = -1;
     double zoom_ = 1.0;
     QPointF pan_;
     bool panning_ = false;

@@ -5,6 +5,9 @@
 
 #include <QLabel>
 #include <QListWidget>
+#include <QMessageBox>
+#include <QPointer>
+#include <QTimer>
 #include <QPushButton>
 #include <QVBoxLayout>
 
@@ -24,35 +27,52 @@ JobsDock::JobsDock(CoreBridge *bridge, QWidget *parent)
 
     jobs_ = new QListWidget(panel);
     jobs_->setObjectName(QStringLiteral("analysisJobs"));
+    jobs_->setUniformItemSizes(true);
+    jobs_->setTextElideMode(Qt::ElideRight);
+    connect(jobs_, &QListWidget::itemDoubleClicked, this, [this](QListWidgetItem *item) {
+        if (!item->data(Qt::UserRole + 3).isValid())
+            return;
+        QMessageBox details(this);
+        details.setWindowTitle(item->data(Qt::UserRole + 1).toString());
+        details.setTextFormat(Qt::PlainText);
+        details.setText(item->data(Qt::UserRole + 2).toString());
+        details.exec();
+    });
     layout->addWidget(jobs_, 1);
 
-    auto *cancel_btn = new QPushButton(QStringLiteral("Cancel selected"), panel);
-    connect(cancel_btn, &QPushButton::clicked, this, &JobsDock::cancelJob);
-    layout->addWidget(cancel_btn);
+    auto *dismiss = new QPushButton(QStringLiteral("Dismiss selected"), panel);
+    dismiss->setToolTip(QStringLiteral("Remove this log entry; native work continues. "
+                                      "Matching jobs have their own Cancel control."));
+    connect(dismiss, &QPushButton::clicked, this, &JobsDock::dismissJob);
+    layout->addWidget(dismiss);
 
     setWidget(panel);
 }
 
 int JobsDock::beginJob(const QString &label) {
-    auto *item = new QListWidgetItem(QStringLiteral("▶ ") + label, jobs_);
+    pruneFinished();
+    const int id = next_id_++;
+    auto *item = new QListWidgetItem(QStringLiteral("▶ ") + label.simplified(), jobs_);
+    item->setData(Qt::UserRole, id);
+    item->setData(Qt::UserRole + 1, label);
+    item->setToolTip(label);
     item->setForeground(QColor("#e5c07b"));
+    rows_.insert(id, item);
     jobs_->scrollToBottom();
-    return jobs_->count() - 1;
+    return id;
 }
 
-void JobsDock::finishJob(int index, bool ok, const QString &detail) {
-    if (auto *item = jobs_->item(index)) {
-        if (cancelled_jobs_.contains(index)) {
-            item->setText(QStringLiteral("✗ cancelled — ") + detail);
-            item->setForeground(QColor("#7e8996"));
-        } else if (ok) {
-            item->setText(QStringLiteral("✓ ") + detail);
-            item->setForeground(QColor("#98c379"));
-        } else {
-            item->setText(QStringLiteral("✗ ") + detail);
-            item->setForeground(QColor("#e06c75"));
-        }
+void JobsDock::finishJob(int id, bool ok, const QString &detail) {
+    if (auto *item = rows_.value(id, nullptr)) {
+        item->setData(Qt::UserRole + 2, detail);
+        item->setData(Qt::UserRole + 3, ok);
+        item->setText((ok ? QStringLiteral("✓ ") : QStringLiteral("✗ ")) +
+                      item->data(Qt::UserRole + 1).toString().simplified() +
+                      QStringLiteral(" · ") + detail.simplified());
+        item->setToolTip(detail);
+        item->setForeground(ok ? QColor("#98c379") : QColor("#e06c75"));
     }
+    pruneFinished();
     emit statusRequested(detail, !ok);
     refreshJobs();
 }
@@ -61,9 +81,21 @@ void JobsDock::refreshJobs() {
     if (jobs_summary_ == nullptr) {
         return;
     }
+    if (refresh_pending_) {
+        refresh_again_ = true;
+        return;
+    }
+    refresh_pending_ = true;
     bridge_->request(
         QJsonObject{{"method", "jobs_page"}, {"offset", 0}, {"limit", 64}},
-        [this](const QJsonObject &response) {
+        [this, guard = QPointer<JobsDock>(this)](const QJsonObject &response) {
+            if (!guard)
+                return;
+            refresh_pending_ = false;
+            if (refresh_again_) {
+                refresh_again_ = false;
+                QTimer::singleShot(0, this, &JobsDock::refreshJobs);
+            }
             QString error;
             if (!successful(response, &error)) {
                 jobs_summary_->setText(QStringLiteral("Worker pool unavailable: %1").arg(error));
@@ -98,15 +130,22 @@ void JobsDock::refreshJobs() {
         });
 }
 
-void JobsDock::cancelJob() {
+void JobsDock::dismissJob() {
     const int row = jobs_->currentRow();
-    if (row < 0) {
-        return;
-    }
     if (auto *item = jobs_->item(row)) {
-        if (item->text().startsWith(QStringLiteral("▶ "))) {
-            cancelled_jobs_.insert(row);
-            finishJob(row, false, QStringLiteral("cancelled by user"));
+        rows_.remove(item->data(Qt::UserRole).toInt());
+        delete jobs_->takeItem(row);
+    }
+}
+
+void JobsDock::pruneFinished() {
+    for (int row = 0; jobs_->count() >= 512 && row < jobs_->count();) {
+        auto *item = jobs_->item(row);
+        if (!item->data(Qt::UserRole + 3).isValid()) {
+            ++row;
+            continue;
         }
+        rows_.remove(item->data(Qt::UserRole).toInt());
+        delete jobs_->takeItem(row);
     }
 }

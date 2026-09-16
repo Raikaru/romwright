@@ -1,60 +1,61 @@
 #pragma once
 
-#include <QColor>
-#include <QPoint>
-#include <QVector>
-#include <QWidget>
-
 #include "views.h"
+#include <QPlainTextEdit>
+#include <QSet>
 
-class QKeyEvent;
-class QMouseEvent;
+class SourceGutter;
 
-/// Paint-based decompiler view over the WORKER-004 token stream. Tokens
-/// are laid out into lines (Break tokens end a line and indent the next);
-/// every token is hit-testable. Navigation and rename requests flow to
-/// the window owner through signals.
-class DecompilerView final : public QWidget {
+/// Read-only native text editor. Token spans retain semantic navigation while
+/// Qt owns selection, clipboard, accessibility and scrolling.
+class DecompilerView final : public QPlainTextEdit {
     Q_OBJECT
-
-public:
+  public:
     explicit DecompilerView(QWidget *parent = nullptr);
-
-    /// Lays out a decompiler document.
     void setTokens(const QVector<TokenView> &tokens);
-    /// Shown while a decompile request is in flight.
     void setPending(const QString &message);
-    /// Reverse sync: highlights every line holding a token at `address`.
     void setAddress(const QString &address);
     QString currentAddress() const;
-    QSize sizeHint() const override;
 
-signals:
+  signals:
     void addressSelected(const QString &address, bool record);
-    /// Double-click on a function-name token; the owner runs the rename
-    /// command (variable rename is engine-gated and never emitted).
+    void functionFollowRequested(const QString &address, bool record);
     void renameRequested(const QString &address, const QString &current_name);
 
-protected:
-    void paintEvent(QPaintEvent *) override;
+  protected:
+    void resizeEvent(QResizeEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
-    void mouseDoubleClickEvent(QMouseEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
+    QMimeData *createMimeDataFromSelection() const override;
 
-private:
-    struct Line {
-        QVector<TokenView> tokens;
-        quint64 indent = 0;
+  private:
+    friend class SourceGutter;
+    struct Span {
+        int start;
+        int length;
+        int token;
     };
-    int lineAt(int y) const;
-    void moveCursor(int delta);
-    const TokenView *tokenAt(const QPoint &pos, int *line_index) const;
+    const TokenView *tokenAtPosition(int position) const;
+    void cursorChanged();
+    void updateHighlights();
+    void paintGutter(QPaintEvent *event);
+    void clickGutter(const QPoint &position);
+    void updateGutter();
+    void toggleFold(int line);
+    void applyFolds();
+    void findFolds(const QString &text);
+    void followToken();
+    void renameToken();
 
-    QVector<Line> lines_;
-    int cursor_line_ = -1;
-    int scroll_line_ = 0;
+    SourceGutter *gutter_;
+    QVector<TokenView> tokens_;
+    QVector<Span> spans_;
+    QHash<QString, QVector<int>> addresses_;
+    QVector<int> fold_ends_;
+    QSet<int> folded_;
     QString highlight_address_;
-    QString highlight_symbol_;
-    QString pending_message_;
+    bool loading_ = false;
+    bool record_navigation_ = false;
+    bool hints_visible_ = true;
 };

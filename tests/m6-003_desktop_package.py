@@ -121,7 +121,7 @@ def run_gate(app: Path, project: Path, extra: dict[str, str],
                    if not key.startswith("ROMWRIGHT_")}
     environment["QT_QPA_PLATFORM"] = "offscreen"
     environment.update(extra)
-    command = [str(app), "--gate", "--project", str(project), "--name", "tiny",
+    command = [str(app), "--gate", "--project", str(project), "--program", "tiny",
                "--binary", str(FIXTURE), "--address", "00400466"]
     if store_only:
         command.append("--store-only")
@@ -192,7 +192,9 @@ def main() -> int:
     if arguments.report:
         report.update(status="pass", passed=True, summary=summary,
                       metrics={**{key: store[key] for key in MEASURED},
-                               **{key: store[key] for key in THRESHOLDS}},
+                               **{key: store[key] for key in THRESHOLDS},
+                               **{key: value for key, value in store.items()
+                                  if key.startswith("ui.source.")}},
                       package=archive.name)
         arguments.report.parent.mkdir(parents=True, exist_ok=True)
         arguments.report.write_text(json.dumps(report, indent=1) + "\n")

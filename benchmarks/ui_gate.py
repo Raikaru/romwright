@@ -157,7 +157,7 @@ def run_app(
         "--gate",
         "--project",
         str(project),
-        "--name",
+        "--program",
         program,
         "--binary",
         str(binary),

@@ -19,6 +19,8 @@ public:
 
 private:
     void recordInstallFacts();
+    bool sourceInteractions();
+    bool graphInteractions();
     void startLargestFunction();
     void startDecompile(const QString &address);
     void startGraph();
