@@ -6778,3 +6778,473 @@ The ten platforms recorded in "Reserved decisions" split by what can be
   `a_guardless_pic_table_is_scanned_to_its_first_invalid_entry` test
   exercises it. The capability is real but the corpus that needs it is
   embedded (game) images, not PIC-guarded libc.
+
+## Semantic IR, immutable execution, and matching runs (2026-09-14)
+
+This replaces the earlier token-backed transform prototype. It does not close
+the separate M1–M4 corpus acceptance gates.
+
+- `romwright-model::function_ir` owns the shared semantic graph: stable values
+  and operations, SSA ownership, predecessor/successor multiplicity, high
+  symbols, native types and joined storage. C tokens retain independent
+  varnode, operation, symbol and datatype references; they are not the IR.
+- Evidence, transform, structuring and diagnostic passes have distinct
+  contracts. Width-checked type evidence reaches emitted scalar declarations
+  and globals. Typed operation edits and original CFG edge cuts are replayed
+  into the live native function, then checked against the returned graph and C.
+  The unsafe `dat_literal` and text-only helper guessing paths are removed.
+- Helper identities require locally applied full-function signatures bound to
+  the captured input. Native argument/result width and signedness must agree.
+  Cold imports need no precomputed call xrefs: actual native calls activate
+  their stored prototypes before transformation, without parsing unrelated
+  declarations or relocking inferred recovery targets.
+- Schema **24** stores immutable program inputs, matching runs and input-bound
+  signature claims. Binary, mapping and key bytes are content-addressed;
+  in-memory images own immutable shared bytes. Workers select the imported
+  container image explicitly, not by overlapping addresses or source path.
+  Transferred signature claims do not acquire local byte-verification authority.
+- Core captures execution configuration, language, revision, cancellation and
+  one absolute deadline. Standalone and pooled native paths share provider and
+  specification construction, including core types and tracked ABI state.
+  Pooled sessions no longer carry a second binary/base mapping configuration.
+- Controlled demand analysis cancels native I/O and atomically publishes
+  function extents and references only at its captured revision. Its analysis
+  stamp is the committed revision, so subsequent unchanged requests reuse it.
+  Warm images use a four-entry LRU; obsolete input versions are evicted.
+- Native and compiler supervision handles descendants retaining pipes, not
+  just the direct driver process. Deadline/cancellation failures poison worker
+  sessions and cannot publish late facts. HTTP control reads remain responsive
+  while analysis or compilation is running.
+- Matching uses distinct validated target and candidate objects and captures
+  source/context, recipe, tool identity, diagnostics and objdiff output.
+  Successful and compile-failed runs survive reopening the project; cancelled
+  and stale-revision results do not publish a matching run. This is execution
+  supervision and reproducibility metadata, not a compiler sandbox.
+
+### Executed evidence
+
+- Signed 32/64-bit helper C compiled and matched the original executable across
+  **599 cases**, including negative and greater-than-32-bit operands.
+  Name-only identity, wrong width, wrong signedness and obsolete input bindings
+  all refused rewriting; reapplying signatures restored eligibility.
+- Inferred `float` global declaration: real **objdiff-cli 3.8.1** score **100%**
+  versus **0%** for the unchecked integer declaration. Emitted C also compiled,
+  linked and executed.
+- Native structural replay applied **three CFG cuts** to the captured loop
+  example; generated C agreed with the original for **169 cases**.
+- Actual native graph transport completed **100 requests / 280,490 input
+  bytes**, with matching IDs and zero gotos for the chain graphs.
+- The migrated stored-input `--structure` interface passed all five canonical
+  graph shapes, including the two irreducible/multiple-exit cases.
+- Controlled demand cancellation returned in **105 ms**, its 100 ms deadline
+  in **97 ms**, with unchanged facts. A concurrent edit rejected the stale
+  walk; a subsequent successful walk was reused without another revision bump.
+- Import-time native switch recovery, with VSA disabled, recovered the seven
+  case destinations plus the folded default destination from immutable staged
+  inputs. Pooled and standalone helper decompilation returned identical C
+  tokens; a second pooled request preserved the output.
+- Strengthened process regressions reproduced descendant leaks before the fix.
+  Afterward: **three Core supervision tests passed in 0.12 s** and the pooled
+  registration/deadline regression passed in **0.84 s**. The atomic demand
+  publication regression passed; all **three native prototype regressions**
+  passed, including compilation/execution of a cold caller with an unrelated
+  invalid prototype present.
+- Durable matching smoke measured **20%** for a changed candidate and **100%**
+  for identical bytes in distinct object files, retained real compile-failure
+  diagnostics, reopened five records, rejected stale publication, and enforced
+  a shared 2,000 ms budget in 2,017 ms. Control reads during compilation took
+  approximately 5 ms.
+- Final `cargo test --workspace`: **569 passed**, with three native tests
+  ignored by default. Those three then passed explicitly through
+  `cargo test -p romwright-worker --test prototype_recovery -- --ignored`
+  in **22.65 s**. Legacy migration fixtures now remove the new schema objects
+  before simulating older versions; production migration checks remain strict.
+- CLI, API, worker and native executables were rebuilt. The complete native
+  smoke passed after rebuilding, affected Rust files passed formatting checks,
+  and `tests/differential.sh` passed shell syntax checking. The throwaway
+  completion harness was removed.
+
+## M1–M4 and game-decomp P1–P4 acceptance audit (2026-09-14)
+
+This audit does **not** establish blanket completion. P1–P4 refer to
+`docs/game-decomp-plan.md`, not the historical JVM-removal stages. The
+item-by-item record and executed report payloads are in
+`benchmarks/reports/acceptance-audit.json`.
+
+### Fresh milestone evidence
+
+- **M1:** the locked 20-row ELF discovery gate passes with precision and
+  recall **1.0** throughout. The held Agent Under Fire DOL gate passes with
+  recall **0.993789**, precision **0.956652**. Its threshold is recall-only;
+  this is not a claim of 0.98 DOL precision.
+- **M2:** data-reference and string gates each pass **20/20**, without
+  skips. Prototype standalone/pooled checks and the positive switch gate
+  pass. This does not certify every C1 program-model parity requirement.
+- **M3:** the broader DWARF gate passes its existing explicit exemption
+  policy; Linux MSVC skips remain. The frozen 20-row stock baseline
+  reproduces byte-for-byte. Fresh regression scoring passes **20/20**,
+  retaining the documented default-off `i386_many_o2` arity deficit.
+- **M4:** fresh disabled/enabled register-parameter scoring improves
+  `i386_many_o2` arity from **0 to 1**, with no other row losing. The
+  aggregate improvement gate also passes. The approved passes remain
+  opt-in; no thresholds, frozen scores or default-enable decisions changed.
+
+The corpus was freshly generated, the release CLI/API/worker rebuilt,
+and the pinned Ghidra service rebuilt. Ghidra oracle runs used a temp path
+without dot-prefixed components; initial invalid-temp-path runs are not
+counted as product failures.
+
+### Confirmed phase blockers and narrower passes
+
+- **MWCC class identity is broken on the held mapped DOL.** The no-analysis
+  import fails with `duplicate class for one type_info`.
+  `crates/romwright-core/src/rtti/mwcc.rs` emits every recovered class with
+  default type-info/vtable addresses, while the database correctly rejects
+  duplicate identities. The held overlay gate fails during setup; the
+  chained trace/dtk gates were consequently not run. This is not fixed by
+  dropping classes or relaxing the database invariant.
+- **P3.3:** the N64 overlay importer maps caller-supplied slices but does
+  not parse the promised overlay table and apply R_MIPS relocations.
+- **P3.8:** the IRX importer delegates to ELF import without the promised
+  import/export ordinal module edges.
+- **P3.10:** SDK type input parses name/prototype pairs, not the promised
+  SDK struct/layout information.
+- **P4.5:** the actual VU-micro run reports `decompiler died`.
+  `tests/console_processors.py` still reports `ok(coproc)` because that
+  case accepts import-only success. It is not a decompilation/parity pass.
+- VU/GTE decoding passes **19,281/19,281** and **328/328** comparisons.
+  This does not establish lane-C semantics or named-call lifting.
+- Nightfire SYM ingestion recovers **8,054/8,054** code-range names; its
+  flat SYM format does not establish the plan's PSYQ MND acceptance.
+  Nightfire ISO ingestion exposes four programs and the correct boot
+  member; it does not establish every container format's equality gate.
+- **P4.6 remains unproved:** the preceding generic helper/float checks are
+  not the required m2c token-diff plus objdiff comparison on at least two
+  of IDO/agbcc/MWCC. Exact target/revision/compiler/flag choices remain
+  governed by the plan's reserved decisions.
+
+The JSON audit tracks every one of the plan's **36 items**, distinguishing
+confirmed incompleteness from acceptance not established by this audit.
+Implementation presence and narrower smokes are not superiority evidence.
+
+### Gate interface repairs
+
+- `tests/m2-005_prototype.py`: removed assertions/output tied to obsolete
+  private pool fields. Retained actual prototype equality and completed-job
+  checks. The repaired standalone/pooled scenario passed.
+- `tests/m3-003_regression.py`: removed the unsupported `--refresh`
+  forwarding; the underlying scorer already remeasures by default.
+  The repaired wrapper passed fresh full regression scoring.
+
+No production fixes for the phase blockers are claimed by this audit.
+
+Additional fresh M2 runs: signature construction passes **4/4** with
+byte-identical rebuilds; library identification passes all three
+architectures with **871 correct matches and zero false positives**.
+Itanium RTTI passes nine rows and MSVC RTTI ten, with respectively one and
+five absent Windows-MSVC corpus rows skipped. The native constant
+propagation filter executes two passing tests. Full switch comparison
+passes **20/20**, but all those rows have zero switch tables; the separate
+positive fixture verifies one table with seven distinct targets.
+
+The held HeartGold MAP gate **failed to finish import within its own
+1,800-second deadline**. No named-recall or MAP/ELF-agreement result was
+produced, so P1.5 remains unestablished. The initial audit attempt's shorter
+600-second outer cutoff is not counted as a separate product failure.
+A brief debugger sample located the wait in native reference analysis;
+worker CPU activity was observed, so this is not evidence of deadlock.
+Each timed-out attempt also left one native console process behind.
+Both were verified as audit-owned and terminated; the final process check
+found no remaining native consoles. The timeout cleanup gap remains unfixed.
+
+## Matching workstation delivery (2026-09-15)
+
+This delivers the six matching-workflow changes through the shared Core,
+Qt desktop, CLI and API. It does **not** close the broader M1–M4 or P1–P4
+acceptance audit above.
+
+- Mismatch evidence distinguishes normalized similarity, instruction bytes,
+  relocation identity, complete object bytes and configured final-output
+  equality. Ambiguous evidence stays unknown; source hints do not invent
+  filenames or ROM addresses.
+- Bounded search records immutable alternatives, failed compilations and
+  reversible source pins. Built-in cast/literal trials require no LLM.
+- Portable workspaces retain complete candidate/trial/check history. Private
+  inputs and tool executables are excluded; imported evidence is unverified
+  until replayed and imported projects are unbound by default.
+- Installed-toolchain calibration retains reference evidence and tied profiles.
+  Shared-context trials report per-function improvements and regressions
+  without publishing global analysis facts.
+- Real-project verification runs fresh baseline and candidate builds in a
+  private Linux bubblewrap tree. Scope checks include removed functions,
+  named/anonymous data, pointer relocations, BSS and undeclared objects even
+  beneath generated directories. Reviewed source application is journalled
+  and refuses stale preimages, tool changes and regressions.
+- The Qt gate drove the actual dialogs and widgets through creation, diagnosis,
+  search, Unicode pins, undo, calibration, context regression, source apply,
+  portable import and exact replay. CLI and HTTP exercised the same contracts.
+
+Measured local runs, not human-productivity estimates:
+
+| Workflow | Result |
+|---|---|
+| Clang workspace/search | 33 ms setup; 133 ms / two compilations; 80 → 100, exact object |
+| MWCC 2.4.2 build 81 | 86 ms setup; 143 ms / two compilations; 99.666664 → 100, exact object |
+| Context trials, both toolchains | −20 and +20 percentage-point outcomes retained |
+| Clang real-project adversarial scenarios | 11 checks in 4,052 ms; reviewed source apply passed |
+| MWCC two-function source project | 163 ms; actual compiler build and source apply passed |
+| Qt complete workflow | 2,793 ms; private-input exclusion and imported replay passed |
+| Actual AUF Ninja target | 9,712 ms; fresh baseline/candidate builds passed; original inputs unchanged |
+
+The AUF run used the real `src/cvar.c`, `q_shared.h`, wibo/sjiswrap/MWCC
+configuration and `ninja build/GQFE78/src/cvar.o`. It verified an equivalent
+edit to an already-matching `Cvar_VariableValue`: instruction similarity is
+100 and instruction bytes agree, but relocation and whole-object equality
+are false. No whole-game linked output was configured, so project exactness
+is unknown. This is not a newly achieved AUF match.
+
+Runtime/database corrections accompanying the workflow:
+
+- RTTI-less MWCC classes have name identity and absent, rather than fabricated,
+  RTTI/vtable addresses. Schema 27 preserves populated legacy RTTI/base rows;
+  old-version migration fixtures now recreate the actual historical tables.
+- The earlier HeartGold run imported 31,719 functions, with named recall and
+  MAP/ELF agreement 0.99455486 over 11,019 ELF symbols. The native input fast
+  path now preserves the console's line echo with one bulk write, not a flush
+  for every character. Persistent-flow regression tests pass. A later default-
+  path corpus invocation skipped because its inputs were absent; the earlier
+  corpus run is identified separately in the evidence report.
+- Native consoles terminate when their owner dies, including while blocked
+  inside `source` (25 ms in the final check). Matching executor shutdown joins
+  cancelled workers: both EOF and malformed-UTF-8 stdin kill the actual
+  compiler child and remove private work files (16 ms each). HTTP cancellation
+  also killed the child; abrupt hostile-process containment is not claimed.
+
+Final verification: **574 Rust tests passed, 3 ignored across 35 suites**;
+**14 documented API exchanges passed, none skipped**. Focused regressions
+cover private tool mutation, forged/duplicate imported history, relocation
+binding ambiguity, unauthorized data application and compiler ownership.
+The full suite caught and drove the persistent-console echo correction.
+
+Evidence: `benchmarks/reports/matching-workflow.json`. Usage and boundaries:
+`docs/desktop.md`, `docs/core-api.md`, `docs/toolchains.md`. Build isolation
+leaves network access and readable host files available; it is not a
+hostile-code sandbox or an automatically hermetic toolchain.
+
+## Dark Qt workbench (2026-09-15)
+
+The application now applies the shared theme to its complete Qt widget
+surface, not only custom-painted code views. The default layout places the
+function browser left, disassembly center, decompiler/graph right and detail
+panes below. Project and annotation forms move out of the code area into a
+separate dock. Existing layouts remain restorable; View offers an explicit
+reset to the new arrangement.
+
+Disassembly columns fit the loaded addresses and instruction bytes, with
+matching operand hit-test geometry and a visible byte-column toggle. The
+toolbar provides image/address navigation and embedded legible control icons.
+The Qt build now also rebuilds its Rust worker, preventing a stale worker
+schema from breaking decompilation after a bridge update.
+
+Verification used actual Qt renders and widget interactions with `tiny_bin`:
+populated assembly/decompiler panes, function filtering, compact byte display
+and the annotation dock. The analysis/navigation gate passed, as did the full
+matching gate (2,656 ms), including calibration, context regression, source
+apply, portable replay and Unicode pins. Host Wayland screenshot capture was
+unavailable; offscreen Qt captures were inspected instead.
+
+Preview and evidence: `benchmarks/reports/dark-workbench.png` and
+`benchmarks/reports/dark-workbench.json`. Usage: `docs/desktop.md`.
+
+## Qt workbench interaction redesign (2026-09-15)
+
+Live Ghidra 12.1.3 and IDA 9.4 windows on the same `ls` binary informed the
+navigation and pane hierarchy. Ghidra was inspected at the corresponding
+function; IDA comparison covered its live layout, not equivalent navigation
+workflow coverage. IDA automatic update checks and Lumina were disabled with
+explicit user approval. Approved native capture still timed out, so native
+visual checks used Spectacle and keyboard input used X11 fallback.
+
+Analysis and Matching are now separate workspace modes. Matching gives source
+and evidence the main window, with advanced setup hidden behind a disclosure,
+stable source visibility across evidence tabs and Ctrl+Enter compilation.
+Analysis restores its dock layout and active tabs. Listing selection no longer
+recenters the viewport; Home/End, select-versus-follow behavior, normalized
+addresses, current-function context and directional xref navigation are wired.
+Generation guards discard superseded filter/reference/code responses.
+
+Native testing found Qt consuming `--name`; the desktop interface and current
+launchers now use `--program`/`-n`. Initial navigation now loads listing,
+decompiler and references, after restoring the saved layout. The function
+browser has a readable minimum width. Overlapping jobs no longer complete an
+unrelated last row: a real-widget reproduction failed before the job fix with
+completed xrefs still marked running, then passed in 1.83 seconds afterward.
+
+The final matching gate passed in 2,980 ms: mismatch evidence, two search
+compiler invocations, Unicode pins, protected edits, undo, calibration,
+isolated context regression, verified source application, private-input
+exclusion and exact portable replay. The existing `tiny_bin` analysis gate
+exited successfully (12 analysed functions; 4.27 ms synchronization). Its
+legacy `ui.install.ok` flag was false; this is the unmeasured harness flag
+documented in `docs/desktop.md`, not an installation measurement.
+
+The wider `ls` analysis gate failed in the native worker with `incomplete
+packed semantic document` and `invalid original control-flow cut`. Actual
+`ls` listing/decompilation at `0x1039f0`, function navigation, filter races,
+xref races/activation, workspace restoration and listing interaction passed.
+This is Linux UI evidence, not whole-binary decompiler or cross-platform parity.
+
+Evidence: `benchmarks/reports/workbench-interactions.json`,
+`benchmarks/reports/workbench-analysis.png` and
+`benchmarks/reports/matching-workbench.png`. Usage: `docs/desktop.md`.
+
+## Native repair and expanded workbench acceptance (2026-09-15)
+
+Fixed both native failures recorded above. Final control-flow structuring now
+acknowledges original/projected cut edges by stable incoming edge identity;
+the worker validates the projection instead of accepting stale outgoing slots.
+The `ls` main failure was 16 indistinguishable SIMD varnodes exceeding Ghidra's
+eight-entry dynamic-hash collision encoding. The local native patch supports
+128 identities, preserves legacy encodings, and tests every ordinal at the
+1/8/9/16/128 boundaries before installation. Stock Ghidra cannot decode the
+extended hashes; the pinned upstream checkout remains unchanged.
+
+Native decompilation now succeeds for `ls` main at `0x101540` (361 blocks,
+47,220 operations, 117 cuts) and the large function at `0x1140b0` (547 blocks,
+3,893 operations, 198 cuts). The native build/codec regression and all 20
+worker library tests pass. The full `ls` Qt analysis gate now exits successfully:
+2.96 ms synchronization, five declared/rendered xrefs and zero unexplained rows.
+Its final provisional analysis state belongs to the second loader-only image;
+the legacy installation flag is still not an installation measurement.
+
+Acceptance also repaired source-navigation request storms, unbounded job-list
+growth, disconnected Types writes, coupled field/stack ordinals, inert Facts
+search, stale secondary-pane results, memory region/address state, project
+context isolation, dirty Matching close handling and compact/scaled sizing.
+The command palette and bounded byte-pattern search execute real operations.
+Jobs now honestly dismiss rows rather than presenting cosmetic cancellation.
+The source-shape/line-count-only `main_window_split_test.py` was retired.
+
+Measured scenarios:
+
+- 20 large-function switches over 84,615 ms; 2,200 Down/PageDown events plus
+  20 Home events, two cached native documents, source/listing settled each cycle.
+  The maximum heartbeat gap was 531 ms, not a low-latency certification.
+- Real MWCC GC/1.2.5n `PADClamp`: deliberate instruction regression from 100
+  to 99.98485 similarity, three-compilation bounded search back to 100, keyboard
+  compile and close Save/Discard/Cancel. Relocations/object bytes were not exact;
+  the user's game project was not modified.
+- Full synthetic matching/apply/portable-replay gate passed in 2,927 ms,
+  including protected edits, Unicode pins, calibration and isolated context.
+- Types persistence, facts/byte-search error/empty/capped results, program/history
+  isolation, graph/bookmark navigation, memory error recovery, vtable results,
+  independent project windows and 600-job pruning/details passed.
+- Analysis, Matching and Types retained requested bounds at 1024×768/100%,
+  1280×720/150%, 1440×900/200% and 1920×1080/100%. The compact run used the
+  existing Bytes toggle; long source remained horizontally readable.
+
+Live network-isolated IDA/Ghidra comparison does not establish interaction
+parity. IDA exposes source range selection, folding, gutters and inline argument
+hints absent here. Stock Ghidra reproduced the repaired main hash error and
+successfully navigated the other large function. At this stage the graph was
+bounded to 4096 decoded instructions (earlier described incorrectly as bytes);
+no running Dolphin, cross-platform or whole-game claim was made.
+
+Sanitized measurements and public-binary screenshots:
+`benchmarks/reports/workbench-acceptance.json`. Private game inputs/source
+screenshots remain outside the repository. Contracts and compatibility:
+`docs/desktop.md`, `docs/upstream-ghidra.md`.
+
+## Workbench latency, source editing and native CFG follow-up (2026-09-16)
+
+Response parsing, not source painting, dominated the measured GUI stall:
+29,648,559 bytes took 436.4 ms to parse, while each source document loaded and
+painted in under 9 ms. Bridge JSON parsing and token/address projection now run
+off-thread. The final source-navigation scenario completed 20 function switches
+and 2,220 key events in 89,847 ms with two cached native decompilations and a
+maximum 56 ms heartbeat gap, down from the earlier 531 ms. This is a measured
+scenario, not a no-stall or reference-tool-parity guarantee.
+
+The source pane is now a read-only native text editor with ordinary selection,
+word selection, clipboard copying, both scrollbars, line-number/folding gutters
+and known-signature argument hints. Hints never enter copied C. F2 and Ctrl+Enter
+rename/follow selected function names; plain double-click selects words.
+Reverse synchronization preserves selections and reveals enclosing folds.
+Function declarations use the store's containing-function entry, not the first
+retained SSA operation, which can lie after the actual entry.
+
+Source and graph share one native document and revision-aware cache. The old
+bounded x86 decoder is gone from the function CFG path. Native block IDs retain
+all blocks and successor edges, including shared addresses, empty/disconnected
+blocks and loops. Actual `ls` documents retained 368/618 and 555/927 blocks/edges;
+a linked PowerPC loop retained 7/8 through both Qt and CLI. Native screenshots
+verify source/listing synchronization at `0x101690`, folding from line 263 to
+631, inline hints, and the full graph fitting its viewport. Large graphs remain
+dense; node addresses are operation anchors, not machine-code extents.
+
+MWCC GC/1.2.5n `PADClamp` now reports instruction and relocation exactness at
+100 similarity. The regression first failed, then passed after normalizing only
+big-endian PPC32 SDA21 word-start versus low-halfword patch offsets. Whole-object
+equality remains false for different split metadata, flags and table ordering.
+Real-compiler regressions still reject binding/ambiguity changes, unrelated data
+application, modified private tools and inconsistent history.
+
+Actual Dolphin read two live pages over one connection, verified disc ID
+`GW7E69` against independent image metadata, and recovered file mode. This is
+not an identity claim for the separate matching workspace. The owned emulator
+instances exited and the debug port is closed; private RAM/source captures stay
+outside the repository.
+
+Qt, CLI and API builds and both focused Rust regressions pass. The full `ls`
+analysis gate passes. The extracted Linux package passes source interactions
+and installation checks without `ROMWRIGHT_*` configuration. A CI prerequisite
+error was corrected: native UI progress now belongs to the Linux corpus job,
+which builds Qt/native prerequisites and retains its report, not the portable
+Qt matrix. Its local run progressed from 405 pending functions to 405 analysed
+over 22 polls in 2.345 seconds. Windows/macOS package jobs retain the same source
+checks, but their updated binaries were not executed here: native runners or
+separately authorized remote publication/CI dispatch remain required.
+
+Sanitized evidence: `benchmarks/reports/workbench-quality.json` and its three
+public-binary native screenshots. The earlier reports remain historical evidence.
+
+## Recovery verification (2026-09-16)
+
+The restored core integration and native scratch repair were exercised again.
+The recorded uncached Emerald import changed from a quota-degraded run (15,857
+functions, no flow statistics) to 16,028 functions in 507.848 seconds in the debug
+build, including 66,392 flow requests across four rounds and switch recovery.
+Native staging and mapped-image XML now use `ROMWRIGHT_SCRATCH`, defaulting to
+`$HOME/.cache/romwright/scratch`. This does not relocate every temporary file in
+the application.
+
+The release CRC bounded search reproduced the recorded similarity sequence
+62.45238 / 69.833336 / 84.833336 in four compilations (811 ms). Candidate IDs
+changed with appended evidence; the three new candidate specifications and
+parent/workspace identities equal their recorded counterparts. No deduplication
+or matching algorithm change was introduced during this recovery acceptance.
+
+A pre-rename CMake cache in `desktop/romwright-qt/build` referenced the obsolete
+source path. `cmake --fresh -S desktop/romwright-qt -B desktop/romwright-qt/build`
+followed by `cmake --build desktop/romwright-qt/build -j 4` succeeds; a subsequent
+ordinary build also succeeds. CTest registers no tests in that tree.
+
+The rebuilt Qt matching gate passed locally in 3,071 ms on an isolated fixture
+with an imported program and objdiff available on PATH. All 15 nonvolatile report
+fields equal the prior successful gate: bounded two-compile search, exact replay,
+calibration, Unicode pins, rejected protected edits, undo, isolated context
+regression, private-input exclusion, verified project application and unchanged
+analysis revision. Screenshot paths and elapsed time were excluded from that
+comparison. Evidence is retained in
+`/home/raikaru/tmp/romwright-product-20260916/recovery-matching-smoke/`.
+
+Limits: this Qt matching gate is not invoked by the current CI workflow; no remote
+CI result is claimed. The rebuilt Emerald app exposed the correct ARM image in
+a 1440×920 accessible XWayland window, but fresh live navigation, scaling and
+reference comparison were not completed. Wayland full-screen capture was
+unavailable in the harness. Earlier comparative and desktop reports remain
+historical evidence, not a new full acceptance or best-in-class claim.
+
+The Rust CI command `cargo test --workspace` also passed on the repaired working
+tree: 583 passed across 36 suites, 15 ignored (47.26 seconds command wall time).
+This is local execution of the CI command, not a remote CI run.

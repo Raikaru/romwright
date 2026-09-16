@@ -26,16 +26,18 @@ Include:
 
 The security review covers the shipped runtime surfaces:
 
-- the Rust workspace (romwright-model, romwright-db, romwright-core, romwright-cli, romwright-worker)
-  keeps third-party runtime dependencies to serde/rusqlite/thiserror/base64,
-  and its library crates forbid `unsafe_code` where reviewed constructs are
-  not required;
+- Rust runtime dependency versions are recorded in `Cargo.lock`. Library crates
+  forbid `unsafe_code` where reviewed native interfaces are not required;
 - binary parsing and analysis are bounded by the selected image and function
   range; truncated or malformed ELF/PE input must return a typed error, never
   panic or execute bytes from the target file;
 - the native worker and SLEIGH console are spawned as child processes without
   a shell (`Command` with argv only); user-supplied paths and addresses are
   passed as arguments, never interpolated into a shell command line;
+- matching runs execute explicitly configured local compiler recipes and objdiff.
+  Recipes and toolchains must be trusted: process-group deadlines and cancellation
+  do not isolate filesystem, network or memory access. Untrusted compilation
+  requires external sandboxing;
 - the Java bridge (a development-only oracle path, never a supported runtime
   surface for the JVM-free workflow) loads Ghidra's own jars from the pinned
   install and is not exposed to untrusted input directly.

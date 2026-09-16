@@ -2,6 +2,63 @@
 
 Pinned toolchain configuration for multi-architecture corpus generation (`m1-006`).
 
+## User-owned matching profiles
+
+Matching workspaces use installed toolchains, not a compiler-download service.
+Supply source/header inputs and target objects that you are entitled to use.
+Inputs default to private; mark them redistributable only when authorized.
+Compiler and declared tool bytes are never included in workspace exports.
+Bundles retain recipe paths, arguments and environment, so review metadata
+before sharing.
+
+A profile records the launcher hash, declared tool hashes, version command,
+compiler flags and environment. `compile_arguments` are appended to
+`recipe.arguments`; `version_arguments` are the complete version-query argv.
+`{source}`, `{output}`, `{root}` and `{tool:NAME}` expand as argv operands,
+not shell code. Declare required headers, wrappers and support files explicitly:
+implicit external dependencies are not discovered automatically.
+
+For MWCC with wibo and sjiswrap, the profile template is:
+
+```text
+{
+  "name": "configured-MWCC",
+  "recipe": {"compiler": "/local/wibo", "arguments": [], "environment": {}},
+  "tools": {
+    "compiler": {"path": "/local/mwcceppc.exe", "digest": ""},
+    "sjiswrap": {"path": "/local/sjiswrap.exe", "digest": ""}
+  },
+  "compile_arguments": [
+    "{tool:sjiswrap}", "{tool:compiler}", "-nodefaults", "-proc", "gekko",
+    "-O4,p", "-enum", "int", "-nosyspath", "-c", "{source}", "-o", "{output}"
+  ],
+  "version_arguments": ["{tool:compiler}", "-version"]
+}
+```
+
+Setup fills the empty hashes from local files. Use the project's actual flags
+and include inputs, not this illustrative profile, when reproducing a game
+build. Profiles may name different compiler versions or flag combinations;
+calibration ranks their measured reference results and preserves ties.
+Portable import permits local path remaps but requires matching tool hashes.
+Replay provides fresh local evidence rather than trusting imported history.
+
+Instruction, relocation and whole-object equality are separate results.
+For big-endian 32-bit PowerPC `R_PPC_EMB_SDA21`, MWCC can record the low-halfword
+offset while a split target records the containing instruction's offset.
+The comparator normalizes these equivalent patch sites only; relocation type,
+symbol identity/binding, addends, order and other offsets remain checked.
+This follows [decomp-toolkit's ELF relocation convention](https://github.com/encounter/decomp-toolkit/blob/main/src/obj/relocations.rs).
+A real MWCC GC/1.2.5n `PADClamp` trial is instruction- and relocation-exact
+after that normalization, but not whole-object-byte-exact: split metadata,
+section flags and symbol/string-table ordering still differ. A 100 similarity
+score does not override the separate exactness fields.
+
+Standalone matching execution uses the Unix process runner; real-project
+verification additionally requires Linux bubblewrap. This isolates writable
+build state but is not a hermetic toolchain or hostile-code sandbox.
+See [core-api.md](core-api.md#matching-workspaces) for the shared contracts.
+
 ## Host Toolchains (Fedora 44 baseline)
 
 - **LLVM / Clang**: 22.1.8 (`clang`, `clang++`)

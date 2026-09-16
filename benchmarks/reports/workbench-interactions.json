@@ -1,0 +1,70 @@
+{
+  "platform": "Linux; native Qt/X11 and offscreen Qt",
+  "interaction": {
+    "enter_navigation": true,
+    "listing_context_reset": true,
+    "listing_home_end": true,
+    "listing_select_then_follow": true,
+    "matching_width": 1134,
+    "mode_restore": true,
+    "passed": true,
+    "rapid_filter": true,
+    "reference_generation": true,
+    "reference_row_activation": true
+  },
+  "interaction_wall_seconds": 1.83,
+  "job_regression": {
+    "before": "completed reference requests are still shown as running jobs",
+    "before_exit_code": 134,
+    "after_exit_code": 0
+  },
+  "matching": {
+    "after_image": "/home/raikaru/tmp/romwright-workbench-20260915/matching-smoke/after.png",
+    "before_image": "/home/raikaru/tmp/romwright-workbench-20260915/matching-smoke/before.png",
+    "calibration": true,
+    "editor_undo_restored": true,
+    "elapsed_ms": 2980,
+    "exact_object_recompiled": true,
+    "history_rows": 8,
+    "isolated_context_regression": true,
+    "mismatch_rows": 1,
+    "native_revision_unchanged": true,
+    "passed": true,
+    "portable_private_inputs_excluded": true,
+    "portable_replay_exact": true,
+    "project_applied": true,
+    "project_verified": true,
+    "protected_edit_rejected": true,
+    "search_compiler_invocations": 2,
+    "utf16_pin_correct": true
+  },
+  "analysis_gate": {
+    "fixture": "tiny_bin",
+    "exit_code": 0,
+    "wall_seconds": 1.39,
+    "analysed_functions": 12,
+    "synchronization_ms": 4.266496,
+    "legacy_unmeasured_install_flag": false
+  },
+  "broader_analysis_gate": {
+    "fixture": "ls",
+    "exit_code": 1,
+    "errors": [
+      "incomplete packed semantic document",
+      "invalid original control-flow cut"
+    ]
+  },
+  "native_visual_checks": [
+    "initial listing, decompiler and xrefs at 0x1039f0",
+    "Ctrl+Shift+M opens full-width Matching"
+  ],
+  "reference_comparison": {
+    "ghidra": "12.1.3, live ls function view",
+    "ida": "9.4, live ls layout; automatic updates and Lumina disabled with user approval"
+  },
+  "limits": [
+    "Linux only",
+    "IDA workflow parity not exercised",
+    "whole-binary decompilation not established"
+  ]
+}

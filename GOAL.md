@@ -25,14 +25,17 @@ Ghidra (C1), improvements over stock Ghidra measured against ground truth
 
 ## Remaining work
 
-- M1 is complete: all 20 ELF rows have precision/recall 1.0; the stripped DOL
-  has recall 0.984472. Hosted CI passes all 10 jobs; evidence is in `STATUS.md`.
+- M1 discovery is verified on the current tree: all 20 ELF rows have
+  precision/recall 1.0. The held DOL has recall 0.993789 and precision
+  0.956652; its acceptance gate constrains recall, not precision.
 - M2 program-model parity: constant propagation, data references and strings,
   inferred prototypes, switch recovery, library identification and C++ facts.
   The parity gate, not discovery alone, establishes C1.
-- M3 ground truth: DWARF scoring, a stock-Ghidra baseline and regression gates.
-- M4 measured improvements over that baseline, behind approved flags and
-  preserving oracle mode until the reserved decisions are made.
+- M3 ground-truth gates pass: fresh DWARF scoring, the reproduced stock
+  baseline and fresh regression scoring. The frozen comparison covers 20 ELF
+  rows; the broader DWARF gate retains its explicit exemptions.
+- M4's register-parameter improvement and aggregate gates pass with the
+  approved opt-in policy. Default-enabling passes remains reserved.
 - M5 end-to-end game sessions on the human-approved targets.
 - M6 user/analyzer documentation, release infrastructure and contributor
   sustainability. Releases and outside contribution merges remain reserved.
@@ -42,3 +45,8 @@ Ghidra (C1), improvements over stock Ghidra measured against ground truth
   precision is 1.0 by construction and gated as such.
 
 `STATUS.md` records the current milestone, exact next task and measured evidence.
+
+P1–P4 in `docs/game-decomp-plan.md` are separate from the migration stages.
+They are not closed by the architecture work or by passing M1/M3/M4 gates:
+the acceptance audit found implementation gaps and unproved superiority
+criteria. See the latest acceptance audit in `STATUS.md`.
