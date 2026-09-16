@@ -2,6 +2,7 @@
 /build/
 /dist/
 /target/
+/desktop/romwright-qt/build/
 
 # Java
 *.class
@@ -56,10 +57,13 @@ __pycache__/
 /oracle/xrefs-v1/
 /oracle/strings-v1/
 /oracle/nonreturn-v1/
+/oracle/switches-v1/
 
 # Compiled SLEIGH artifacts (regenerate via native/languages/*/install.sh)
 native/languages/**/*.sla
 project.sqlite
+*.sqlite-shm
+*.sqlite-wal
 # Xenon language: stock PowerPC sincs are symlinked in by install.sh at
 # build time (absolute paths into the Ghidra install); only the xenon-local
 # copies (ppc_common_vmx, altivec_xenon, vmx128) are committed.
