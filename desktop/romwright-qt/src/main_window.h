@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QCache>
 #include <QHash>
 #include <QMainWindow>
 #include <QPair>
@@ -16,6 +17,7 @@ class GateRunner;
 class GraphDock;
 class JobsDock;
 class ListingCanvas;
+class MatchingDock;
 class MemoryDock;
 class NavigationController;
 class TypesDock;
@@ -27,15 +29,16 @@ class QComboBox;
 class QTimer;
 class QLineEdit;
 class QMenu;
+class QTabBar;
 
-/// Root window: owns the CoreBridge, dock coordination, and workspace persistence.
+/// Root window: owns the CoreBridge, dock coordination, and workspace
+/// persistence.
 class MainWindow final : public QMainWindow {
     Q_OBJECT
 
-public:
-    explicit MainWindow(const QString &project, const QString &program,
-                        const QString &binary, const QString &address,
-                        QWidget *parent = nullptr);
+  public:
+    explicit MainWindow(const QString &project, const QString &program, const QString &binary,
+                        const QString &address, QWidget *parent = nullptr);
     ~MainWindow() override;
 
     /// Runs the deterministic offscreen UI gate and exits the application.
@@ -48,7 +51,9 @@ public:
     XrefsDock *xrefsDock() const { return xrefs_dock_; }
     ListingCanvas *listingCanvas() const { return listing_canvas_; }
     NavigationController *navigation() const { return navigation_; }
+    MatchingDock *matchingDock() const { return matching_dock_; }
     QString program() const;
+    void showMatchingWorkspace();
 
     /// A project holds several images -- a DS pair, an executable with
     /// overlays -- so the window lists them and switches between them.
@@ -56,21 +61,23 @@ public:
     int programCount() const;
     /// Selects a listed program by index and reloads every dock for it.
     void selectProgramAt(int index);
-    /// Points every dock at `program`. The name came from `programs`, so no
-    /// round trip is needed to learn the project holds it.
+    /// Loads the program's captured binary before switching every dock.
     void switchProgram(const QString &program);
 
-signals:
+  signals:
     /// The project's images have been listed; the argument is how many.
     void programsListed(int count);
 
-public:
+  public:
     QString binary() const;
     /// The first completeness the window showed after opening a program:
     /// what an analyst saw before any background analysis had run.
     QString firstAnalysisText() const;
 
-private slots:
+  protected:
+    void closeEvent(QCloseEvent *event) override;
+
+  private slots:
     void importNative();
     void openProgram();
     void decompile();
@@ -87,11 +94,11 @@ private slots:
     void applyComment();
     void undoCommand();
 
-private:
+  private:
     void showCommandPalette();
-    void checkOnboardingGate();
     void showSignatureSearch();
     void setStatus(const QString &message, bool error = false);
+    void decompileFunction(const QString &entry, const QString &address, quint64 generation);
     void restoreWorkspace();
     void saveWorkspace();
 
@@ -102,8 +109,23 @@ private:
     NavigationController *navigation_;
     GateRunner *gate_runner_ = nullptr;
 
-    QHash<QString, QPair<qint64, QVector<TokenView>>> decompile_cache_;
+    // At most eight small documents; large token streams consume more of the budget.
+    struct CachedDecompile {
+        qint64 revision;
+        QVector<TokenView> tokens;
+        QJsonObject graph;
+    };
+    QCache<QString, CachedDecompile> decompile_cache_{262144};
+    QString displayed_decompile_key_;
+    FunctionRowView current_function_;
+    bool source_selection_ = false;
+    QTimer *selection_timer_ = nullptr;
     quint64 decompile_generation_ = 0;
+    quint64 listing_generation_ = 0;
+    quint64 program_generation_ = 0;
+    quint64 switch_generation_ = 0;
+    QTabBar *workspace_modes_ = nullptr;
+    QByteArray analysis_layout_;
 
     // Controls
     QLineEdit *project_edit_ = nullptr;
@@ -137,6 +159,7 @@ private:
     MemoryDock *memory_dock_ = nullptr;
     GraphDock *graph_dock_ = nullptr;
     AnalystDock *analyst_dock_ = nullptr;
+    MatchingDock *matching_dock_ = nullptr;
     TypesDock *types_dock_ = nullptr;
     XrefsDock *xrefs_dock_ = nullptr;
     JobsDock *jobs_dock_ = nullptr;

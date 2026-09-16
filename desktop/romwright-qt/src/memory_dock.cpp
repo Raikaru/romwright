@@ -70,13 +70,23 @@ MemoryDock::MemoryDock(CoreBridge *bridge, QWidget *parent)
 
 void MemoryDock::loadMemory(const QString &program, const QString &binary, const QString &address) {
     last_binary_ = binary;
+    last_address_ = address;
+    const quint64 generation = ++map_generation_;
+    ++hex_generation_;
+    memory_regions_->setRowCount(0);
+    hex_canvas_->setRegions({});
+    hex_canvas_->setWindow(0, {});
     if (program.isEmpty()) {
         return;
     }
     emit jobStarted(QStringLiteral("memory map"));
     bridge_->request(QJsonObject{{"method", "memory_regions"},
                                  {"program", program}},
-                     [this, binary, address](const QJsonObject &response) {
+                     [this, generation, binary, address](const QJsonObject &response) {
+                         if (generation != map_generation_) {
+                             emit jobFinished(QStringLiteral("memory map"), true, QStringLiteral("Superseded memory map"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("memory map"), false, error);
@@ -88,6 +98,7 @@ void MemoryDock::loadMemory(const QString &program, const QString &binary, const
                          memory_regions_->setRowCount(0);
                          for (const QJsonValue &value : rows) {
                              const QJsonObject row = value.toObject();
+                             regions.append(MemoryRegionView::fromJson(row));
                              const int index = memory_regions_->rowCount();
                              memory_regions_->insertRow(index);
                              memory_regions_->setItem(index, 0,
@@ -107,7 +118,7 @@ void MemoryDock::loadMemory(const QString &program, const QString &binary, const
                          hex_canvas_->setRegions(regions);
                          emit jobFinished(QStringLiteral("memory map"), true,
                                           QStringLiteral("%1 memory regions").arg(rows.size()));
-                         loadHex(binary, address);
+                         loadHex(binary, address.isEmpty() && !regions.isEmpty() ? regions.first().start : address);
                      });
 }
 
@@ -117,6 +128,9 @@ void MemoryDock::loadHex(const QString &binary, const QString &address) {
 
 void MemoryDock::loadHexAt(const QString &binary, const QString &address) {
     last_binary_ = binary;
+    last_address_ = address;
+    const quint64 generation = ++hex_generation_;
+    hex_canvas_->setWindow(0, {});
     const bool live = live_memory_ && live_memory_->isChecked();
     if (address.isEmpty() || (!live && binary.isEmpty())) {
         return;
@@ -132,7 +146,11 @@ void MemoryDock::loadHexAt(const QString &binary, const QString &address) {
         request.insert(QStringLiteral("binary"), binary);
     }
     bridge_->request(request,
-                     [this, address, live](const QJsonObject &response) {
+                     [this, generation, address, live](const QJsonObject &response) {
+                         if (generation != hex_generation_) {
+                             emit jobFinished(QStringLiteral("hex %1").arg(address), true, QStringLiteral("Superseded memory window"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("hex %1").arg(address), false, error);

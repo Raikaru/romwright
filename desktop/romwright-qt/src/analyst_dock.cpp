@@ -45,13 +45,20 @@ AnalystDock::AnalystDock(CoreBridge *bridge, QWidget *parent)
 }
 
 void AnalystDock::loadAnalystData(const QString &program) {
+    const quint64 generation = ++generation_;
+    bookmarks_->setRowCount(0);
+    patches_->setRowCount(0);
     if (program.isEmpty()) {
         return;
     }
     emit jobStarted(QStringLiteral("bookmarks"));
     bridge_->request(QJsonObject{{"method", "bookmarks"},
                                  {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("bookmarks"), true, QStringLiteral("Superseded bookmarks"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("bookmarks"), false, error);
@@ -77,7 +84,11 @@ void AnalystDock::loadAnalystData(const QString &program) {
     emit jobStarted(QStringLiteral("patches"));
     bridge_->request(QJsonObject{{"method", "patches"},
                                  {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("patches"), true, QStringLiteral("Superseded patches"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("patches"), false, error);

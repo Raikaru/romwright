@@ -33,4 +33,6 @@ private:
     QLineEdit *live_endpoint_edit_ = nullptr;
     QString last_binary_;
     QString last_address_;
+    quint64 map_generation_ = 0;
+    quint64 hex_generation_ = 0;
 };

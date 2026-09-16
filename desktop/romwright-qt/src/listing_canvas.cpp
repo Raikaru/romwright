@@ -1,91 +1,111 @@
 #include "listing_canvas.h"
 
-#include <QContextMenuEvent>
+#include "json_util.h"
 #include "theme.h"
+#include <QContextMenuEvent>
 
 #include <QFontDatabase>
 #include <QKeyEvent>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QRegularExpression>
+ #include <QResizeEvent>
+ #include <QScrollBar>
 #include <QWheelEvent>
 
 namespace {
 
 constexpr int kMargin = 8;
-constexpr int kAddressWidth = 14;   // characters
-constexpr int kBytesWidth = 32;     // characters, 16 bytes
 
 /// Returns the hex token of `text` spanning character column `column`,
 /// or empty when the click is not on an address-like token.
 QString hexTokenAtColumn(const QString &text, int column) {
-    if (column < 0 || column >= text.size()) {
-        return {};
+    static const QRegularExpression address(QStringLiteral("\\b0[xX][0-9a-fA-F]+\\b"));
+    auto matches = address.globalMatch(text);
+    while (matches.hasNext()) {
+        const auto match = matches.next();
+        if (column >= match.capturedStart() && column < match.capturedEnd())
+            return match.captured();
     }
-    auto isHexChar = [](QChar c) {
-        return c.isDigit() || (c >= QLatin1Char('a') && c <= QLatin1Char('f')) ||
-               (c >= QLatin1Char('A') && c <= QLatin1Char('F'));
-    };
-    int begin = column;
-    while (begin > 0 && isHexChar(text[begin - 1])) {
-        --begin;
-    }
-    int end = column;
-    while (end < text.size() && isHexChar(text[end])) {
-        ++end;
-    }
-    const QString token = text.mid(begin, end - begin);
-    bool ok = false;
-    token.toULongLong(&ok, 16);
-    return ok ? token : QString();
+    return {};
 }
 
 bool isSelectableRow(const ListingRowView &row) {
-    return row.kind == QStringLiteral("instruction") ||
-           row.kind == QStringLiteral("data") ||
+    return row.kind == QStringLiteral("instruction") || row.kind == QStringLiteral("data") ||
            row.kind == QStringLiteral("label");
 }
 
-}  // namespace
+} // namespace
 
-ListingCanvas::ListingCanvas(QWidget *parent) : QWidget(parent) {
+ListingCanvas::ListingCanvas(QWidget *parent)
+    : QWidget(parent), horizontal_scroll_(new QScrollBar(Qt::Horizontal, this)) {
+    horizontal_scroll_->setRange(0, 0);
+    horizontal_scroll_->setAccessibleName(QStringLiteral("Listing horizontal scroll"));
+    horizontal_scroll_->setSingleStep(
+        QFontMetrics(Theme::codeFont()).horizontalAdvance(QLatin1Char('0')) * 3);
+    horizontal_scroll_->hide();
+    connect(horizontal_scroll_, &QScrollBar::valueChanged, this, [this]() { update(); });
     setMinimumHeight(180);
+    setAccessibleName(QStringLiteral("Disassembly"));
+    setAccessibleDescription(empty_message_);
     setFocusPolicy(Qt::StrongFocus);
     setFocus();
 }
 
-void ListingCanvas::setWindow(const QVector<ListingRowView> &rows) {
+void ListingCanvas::setWindow(const QVector<ListingRowView> &rows, const QString &emptyMessage) {
     rows_ = rows;
+    empty_message_ = rows_.isEmpty() ? emptyMessage : QString{};
+    setAccessibleDescription(empty_message_);
+    cursor_ = -1;
+    first_visible_ = 0;
+    address_columns_ = 10;
+    byte_columns_ = 0;
+    for (const auto &row : rows_) {
+        address_columns_ = qMax(address_columns_, int(row.address.size()));
+        byte_columns_ = qMax(byte_columns_, int(row.bytes.size()));
+    }
+    updateContentWidth();
     update();
 }
 
+void ListingCanvas::clear() {
+    requested_address_.clear();
+    setWindow({}, QStringLiteral("No listing loaded"));
+}
+
 void ListingCanvas::setAddress(const QString &address) {
-    if (address.isEmpty()) {
+    if (address.isEmpty())
         return;
-    }
-    // Structural rows share the address of their first instruction. Prefer
-    // the instruction so navigation never lands on a non-code marker.
+    // Structural rows share addresses with instructions; select code first.
     for (int pass = 0; pass < 2; ++pass) {
         for (int i = 0; i < rows_.size(); ++i) {
-            const ListingRowView &row = rows_.at(i);
-            if (row.address == address &&
+            const auto &row = rows_.at(i);
+            if (sameAddress(row.address, address) &&
                 (pass == 1 || row.kind == QStringLiteral("instruction"))) {
                 cursor_ = i;
+                requested_address_.clear();
+                revealCursor();
                 update();
                 return;
             }
         }
     }
-    // Not in this window: ask for a window anchored at the address. The
-    // owner refetches and calls setWindow + setAddress; when the address
-    // is genuinely unmapped the next setAddress stops here (cursor -1).
-    const QString window_start = rows_.isEmpty() ? QString() : rows_.first().address;
     cursor_ = -1;
-    if (address != window_start) {
+    update();
+    if (!sameAddress(requested_address_, address)) {
+        requested_address_ = address;
         emit windowNeeded(address);
-    } else {
-        update();
     }
+}
+
+void ListingCanvas::setFunctionName(const QString &address, const QString &name) {
+    for (auto &row : rows_) {
+        if (row.kind == QStringLiteral("function_header") && sameAddress(row.address, address))
+            row.text = name;
+    }
+    updateContentWidth();
+    update();
 }
 
 QString ListingCanvas::currentAddress() const {
@@ -94,6 +114,7 @@ QString ListingCanvas::currentAddress() const {
 
 void ListingCanvas::setBytesVisible(bool on) {
     bytes_visible_ = on;
+    updateContentWidth();
     update();
 }
 
@@ -102,12 +123,50 @@ bool ListingCanvas::bytesVisible() const { return bytes_visible_; }
 QSize ListingCanvas::sizeHint() const { return {640, 260}; }
 
 int ListingCanvas::rowHeight() const {
-    QFontMetrics metrics(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    QFontMetrics metrics(Theme::codeFont());
     return metrics.lineSpacing();
 }
 
 int ListingCanvas::visibleRows() const {
-    return qMax(0, (height() - 2 * kMargin) / rowHeight());
+    const int scroll_height = horizontal_scroll_->maximum() > 0 ? horizontal_scroll_->height() : 0;
+    return qMax(0, (height() - scroll_height - 2 * kMargin) / rowHeight());
+}
+
+void ListingCanvas::updateContentWidth() {
+    const QFontMetrics metrics(Theme::codeFont());
+    const int char_width = metrics.horizontalAdvance(QLatin1Char('0'));
+    const int text_start = kMargin + address_columns_ * char_width + 8 +
+                           (bytes_visible_ ? (byte_columns_ + 2) * char_width : 0);
+    content_width_ = 0;
+    for (const auto &row : rows_) {
+        int row_width;
+        if (row.kind == QStringLiteral("function_header")) {
+            row_width = kMargin + metrics.horizontalAdvance(QStringLiteral("Function  @ ")) +
+                        metrics.horizontalAdvance(row.text) + metrics.horizontalAdvance(row.address);
+        } else if (row.kind == QStringLiteral("bb_separator")) {
+            row_width = kMargin + metrics.horizontalAdvance(QStringLiteral("---- basic block  ----")) +
+                        metrics.horizontalAdvance(row.address);
+        } else {
+            row_width = text_start + metrics.horizontalAdvance(row.text) +
+                        (row.kind == QStringLiteral("label") ? char_width : 0);
+        }
+        content_width_ = qMax(content_width_, row_width + kMargin);
+    }
+    updateScrollRange();
+}
+
+void ListingCanvas::updateScrollRange() {
+    const int scroll_height = horizontal_scroll_->sizeHint().height();
+    horizontal_scroll_->setGeometry(0, qMax(0, height() - scroll_height), width(), scroll_height);
+    horizontal_scroll_->setPageStep(width());
+    horizontal_scroll_->setRange(0, qMax(0, content_width_ - width()));
+    horizontal_scroll_->setVisible(horizontal_scroll_->maximum() > 0);
+    revealCursor();
+}
+
+void ListingCanvas::resizeEvent(QResizeEvent *event) {
+    QWidget::resizeEvent(event);
+    updateScrollRange();
 }
 
 int ListingCanvas::cursorIndex() const { return cursor_; }
@@ -127,10 +186,13 @@ void ListingCanvas::moveCursor(int delta, bool record) {
         target = direction > 0 ? -1 : rows_.size();
     }
     while (remaining-- > 0) {
+        int next = target;
         do {
-            target += direction;
-        } while (target >= 0 && target < rows_.size() &&
-                 !isSelectableRow(rows_.at(target)));
+            next += direction;
+        } while (next >= 0 && next < rows_.size() && !isSelectableRow(rows_.at(next)));
+        if (next < 0 || next >= rows_.size())
+            break;
+        target = next;
     }
     if (target < 0 || target >= rows_.size()) {
         return;
@@ -139,55 +201,60 @@ void ListingCanvas::moveCursor(int delta, bool record) {
         return;
     }
     cursor_ = target;
-    ensureWindowAround(cursor_);
+    revealCursor();
     emit addressSelected(addressAt(cursor_), record);
+    ensureWindowAround(cursor_);
     update();
 }
 
 void ListingCanvas::ensureWindowAround(int index) {
-    const int visible = visibleRows();
-    // Refetch when the cursor enters one visible-page of either edge.
-    if (index < visible || index > rows_.size() - visible) {
-        if (!rows_.isEmpty()) {
-            emit windowNeeded(addressAt(index));
-        }
-    }
+    // Refill forward; moving Up must not discard the rows above the cursor.
+    if (rows_.size() > visibleRows() && index > rows_.size() - visibleRows())
+        emit windowNeeded(addressAt(index));
+}
+
+void ListingCanvas::revealCursor() {
+    if (cursor_ < first_visible_)
+        first_visible_ = qMax(0, cursor_);
+    else if (cursor_ >= first_visible_ + visibleRows())
+        first_visible_ = qMax(0, cursor_ - visibleRows() + 1);
 }
 
 void ListingCanvas::paintEvent(QPaintEvent *) {
     QPainter painter(this);
     painter.fillRect(rect(), Theme::current().background);
-    painter.setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+    painter.setFont(Theme::codeFont());
     const QFontMetrics metrics = painter.fontMetrics();
     const int line = rowHeight();
     const int char_w = metrics.horizontalAdvance(QLatin1Char('0'));
-    const int first = qMax(0, cursorIndex() - qMax(0, (visibleRows() - 1) / 2));
+    const int scroll = horizontal_scroll_->value();
+    painter.translate(-scroll, 0);
+    const int first = first_visible_;
     int y = kMargin + metrics.ascent();
     for (int i = first; i < rows_.size() && i < first + visibleRows(); ++i, y += line) {
         const ListingRowView &row = rows_.at(i);
         if (i == cursorIndex()) {
-            painter.fillRect(QRect(0, y - metrics.ascent(), width(), line), Theme::current().cursor_line);
+            painter.fillRect(QRect(scroll, y - metrics.ascent(), width(), line),
+                             Theme::current().cursor_line);
         }
         if (row.kind == QStringLiteral("function_header")) {
             painter.setPen(Theme::current().function_name);
-            painter.drawText(kMargin, y,
-                             QStringLiteral("Function %1 @ %2").arg(row.text, row.address));
+            painter.drawText(kMargin, y, QStringLiteral("Function %1 @ %2").arg(row.text, row.address));
             continue;
         }
         if (row.kind == QStringLiteral("bb_separator")) {
             painter.setPen(Theme::current().empty_text);
-            painter.drawText(kMargin, y,
-                             QStringLiteral("---- basic block %1 ----").arg(row.address));
+            painter.drawText(kMargin, y, QStringLiteral("---- basic block %1 ----").arg(row.address));
             continue;
         }
         int x = kMargin;
         painter.setPen(Theme::current().address_column);
-        painter.drawText(x, y, row.address.leftJustified(kAddressWidth, QLatin1Char(' ')));
-        x += kAddressWidth * char_w + 8;
+        painter.drawText(x, y, row.address);
+        x += address_columns_ * char_w + 8;
         if (bytes_visible_) {
             painter.setPen(Theme::current().bytes_column);
-            painter.drawText(x, y, row.bytes.leftJustified(kBytesWidth, QLatin1Char(' ')));
-            x += (kBytesWidth + 2) * char_w;
+            painter.drawText(x, y, row.bytes);
+            x += (byte_columns_ + 2) * char_w;
         }
         // Syntax coloring: mnemonic vs operands, jump targets highlighted.
         if (row.kind == QStringLiteral("label")) {
@@ -205,7 +272,7 @@ void ListingCanvas::paintEvent(QPaintEvent *) {
         painter.setPen(Theme::current().mnemonic);
         painter.drawText(x, y, mnemonic_end < 0 ? text : text.left(mnemonic_end));
         if (mnemonic_end >= 0) {
-            const QString operands = text.mid(mnemonic_end);
+            const QString operands = text.mid(mnemonic_end + 1);
             int ox = x + (mnemonic_end + 1) * char_w;
             int token_begin = 0;
             for (int c = 0; c <= operands.size(); ++c) {
@@ -216,9 +283,8 @@ void ListingCanvas::paintEvent(QPaintEvent *) {
                 const QString token = operands.mid(token_begin, c - token_begin);
                 bool is_hex = false;
                 token.toULongLong(&is_hex, 16);
-                painter.setPen(token.startsWith(QStringLiteral("0x")) && is_hex
-                                   ? Theme::current().jump_target
-                                   : Theme::current().operands);
+                painter.setPen(token.startsWith(QStringLiteral("0x")) && is_hex ? Theme::current().jump_target
+                                                                                : Theme::current().operands);
                 painter.drawText(ox, y, token);
                 ox += (token.size() + 1) * char_w;
                 token_begin = c + 1;
@@ -227,19 +293,36 @@ void ListingCanvas::paintEvent(QPaintEvent *) {
     }
     if (rows_.isEmpty()) {
         painter.setPen(Theme::current().empty_text);
-        painter.drawText(kMargin, y, QStringLiteral("No listing loaded"));
+        painter.drawText(rect().adjusted(kMargin, kMargin, -kMargin, -kMargin),
+                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, empty_message_);
     }
 }
 
 void ListingCanvas::wheelEvent(QWheelEvent *event) {
+    const bool horizontal = event->pixelDelta().x() != 0 || event->angleDelta().x() != 0;
+    if (horizontal || event->modifiers() & Qt::ShiftModifier) {
+        const int pixels = horizontal ? event->pixelDelta().x() : event->pixelDelta().y();
+        const int angle = horizontal ? event->angleDelta().x() : event->angleDelta().y();
+        const int delta = pixels != 0 ? pixels : angle * horizontal_scroll_->singleStep() / 120;
+        horizontal_scroll_->setValue(horizontal_scroll_->value() - delta);
+        event->accept();
+        return;
+    }
     const int delta = event->angleDelta().y();
-    moveCursor(delta > 0 ? -3 : 3, false);
+    if (delta != 0)
+        moveCursor(delta > 0 ? -3 : 3, false);
     event->accept();
 }
 
 void ListingCanvas::keyPressEvent(QKeyEvent *event) {
     const int page = qMax(1, visibleRows() - 1);
     switch (event->key()) {
+    case Qt::Key_Left:
+        horizontal_scroll_->setValue(horizontal_scroll_->value() - horizontal_scroll_->singleStep());
+        break;
+    case Qt::Key_Right:
+        horizontal_scroll_->setValue(horizontal_scroll_->value() + horizontal_scroll_->singleStep());
+        break;
     case Qt::Key_Up:
         moveCursor(-1, true);
         break;
@@ -279,46 +362,44 @@ void ListingCanvas::keyPressEvent(QKeyEvent *event) {
 }
 
 void ListingCanvas::mousePressEvent(QMouseEvent *event) {
-    const int line = rowHeight();
-    const int first = qMax(0, cursorIndex() - qMax(0, (visibleRows() - 1) / 2));
-    const int row = first + (event->position().y() - kMargin) / line;
-    if (row < 0 || row >= rows_.size()) {
+    if (event->button() != Qt::LeftButton || event->position().y() < kMargin)
         return;
-    }
+    const int row = first_visible_ + (event->position().y() - kMargin) / rowHeight();
+    if (row < 0 || row >= rows_.size() || !isSelectableRow(rows_.at(row)))
+        return;
     cursor_ = row;
-    const ListingRowView &view = rows_.at(row);
-    // Operand clicks jump; plain row clicks select.
-    const QFontMetrics metrics(QFontDatabase::systemFont(QFontDatabase::FixedFont));
-    const int char_w = metrics.horizontalAdvance(QLatin1Char('0'));
-    int text_x = kMargin + kAddressWidth * char_w + 8;
-    if (bytes_visible_) {
-        text_x += (kBytesWidth + 2) * char_w;
-    }
-    const QString token =
-        hexTokenAtColumn(view.text, (event->position().x() - text_x) / char_w);
-    if (!token.isEmpty()) {
-        emit addressSelected(token, true);
-    } else {
-        emit addressSelected(view.address, true);
-    }
+    emit addressSelected(addressAt(row), true);
     update();
     event->accept();
 }
 
 void ListingCanvas::mouseDoubleClickEvent(QMouseEvent *event) {
-    // Double-click follows the row address (single click already selects).
-    const int line = rowHeight();
-    const int first = qMax(0, cursorIndex() - qMax(0, (visibleRows() - 1) / 2));
-    const int row = first + (event->position().y() - kMargin) / line;
-    if (row >= 0 && row < rows_.size()) {
-        emit addressSelected(rows_.at(row).address, true);
-    }
+    if (event->button() != Qt::LeftButton || event->position().y() < kMargin)
+        return;
+    const int row = first_visible_ + (event->position().y() - kMargin) / rowHeight();
+    const QString target = operandTokenAt(row, event->position().toPoint());
+    if (!target.isEmpty())
+        emit addressSelected(target, true);
     event->accept();
+}
+
+QString ListingCanvas::operandTokenAt(int row, const QPoint &pos) const {
+    if (row < 0 || row >= rows_.size())
+        return {};
+    const QFontMetrics metrics(Theme::codeFont());
+    const int char_width = metrics.horizontalAdvance(QLatin1Char('0'));
+    int text_x = kMargin + address_columns_ * char_width + 8;
+    if (bytes_visible_)
+        text_x += (byte_columns_ + 2) * char_width;
+    const int content_x = pos.x() + horizontal_scroll_->value();
+    if (content_x < text_x)
+        return {};
+    return hexTokenAtColumn(rows_.at(row).text, (content_x - text_x) / char_width);
 }
 
 void ListingCanvas::contextMenuEvent(QContextMenuEvent *event) {
     const int line = rowHeight();
-    const int first = qMax(0, cursorIndex() - qMax(0, (visibleRows() - 1) / 2));
+    const int first = first_visible_;
     const int row = first + (event->pos().y() - kMargin) / line;
     if (row < 0 || row >= rows_.size()) {
         return;

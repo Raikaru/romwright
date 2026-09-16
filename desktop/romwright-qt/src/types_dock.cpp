@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
+#include <QScrollArea>
 #include <QTabWidget>
 #include <QTableWidget>
 #include <QVBoxLayout>
@@ -105,6 +106,9 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     stack_numbers_layout->addWidget(stack_offset_edit_);
     stack_numbers_layout->addWidget(stack_size_edit_);
     type_editor->addWidget(stack_numbers, 9, 3);
+    stack_ordinal_edit_ = new QLineEdit(QStringLiteral("0"), type_panel);
+    type_editor->addWidget(new QLabel(QStringLiteral("Stack ordinal"), type_panel), 10, 0);
+    type_editor->addWidget(stack_ordinal_edit_, 10, 1);
 
     auto *type_actions = new QHBoxLayout();
     auto *save_type = new QPushButton(QStringLiteral("Save type"), type_panel);
@@ -117,6 +121,13 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     type_actions->addWidget(save_prototype);
     type_actions->addWidget(save_stack);
     type_actions->addWidget(propagate);
+    connect(save_type, &QPushButton::clicked, this, [this]() { saveTypeDefinition(program_); });
+    connect(save_field, &QPushButton::clicked, this, [this]() { saveTypeField(program_); });
+    connect(save_prototype, &QPushButton::clicked, this,
+            [this]() { savePrototype(program_, current_address_); });
+    connect(save_stack, &QPushButton::clicked, this,
+            [this]() { saveStackVariable(program_, current_address_); });
+    connect(propagate, &QPushButton::clicked, this, [this]() { propagateTypes(program_); });
 
     type_layout->addLayout(type_editor);
     type_layout->addLayout(type_actions);
@@ -144,6 +155,10 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     type_links_->setHorizontalHeaderLabels(
         {QStringLiteral("Source"), QStringLiteral("Target"), QStringLiteral("Kind"),
          QStringLiteral("Provenance")});
+    for (auto *table : {types_, type_fields_, prototypes_, stack_variables_, type_links_}) {
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    }
 
     type_tabs->addTab(types_, QStringLiteral("Types"));
     type_tabs->addTab(type_fields_, QStringLiteral("Fields"));
@@ -152,7 +167,10 @@ TypesDock::TypesDock(CoreBridge *bridge, QWidget *parent)
     type_tabs->addTab(type_links_, QStringLiteral("Graph"));
     type_layout->addWidget(type_tabs, 1);
 
-    setWidget(type_panel);
+    auto *scroll = new QScrollArea(this);
+    scroll->setWidgetResizable(true);
+    scroll->setWidget(type_panel);
+    setWidget(scroll);
 }
 
 void TypesDock::setPrototypeAddress(const QString &address) {
@@ -160,12 +178,20 @@ void TypesDock::setPrototypeAddress(const QString &address) {
 }
 
 void TypesDock::loadTypes(const QString &program) {
+    program_ = program;
+    const quint64 generation = ++generation_;
+    for (auto *table : {types_, type_fields_, prototypes_, stack_variables_, type_links_})
+        table->setRowCount(0);
     if (program.isEmpty()) {
         return;
     }
     emit jobStarted(QStringLiteral("types"));
     bridge_->request(QJsonObject{{"method", "type_defs"}, {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("types"), true, QStringLiteral("Superseded types"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("types"), false, error);
@@ -215,7 +241,11 @@ void TypesDock::loadTypes(const QString &program) {
 
     emit jobStarted(QStringLiteral("type fields"));
     bridge_->request(QJsonObject{{"method", "type_fields"}, {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("type fields"), true, QStringLiteral("Superseded fields"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("type fields"), false, error);
@@ -257,7 +287,11 @@ void TypesDock::loadTypes(const QString &program) {
 
     emit jobStarted(QStringLiteral("prototypes"));
     bridge_->request(QJsonObject{{"method", "prototypes"}, {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("prototypes"), true, QStringLiteral("Superseded prototypes"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("prototypes"), false, error);
@@ -289,7 +323,11 @@ void TypesDock::loadTypes(const QString &program) {
 
     emit jobStarted(QStringLiteral("stack variables"));
     bridge_->request(QJsonObject{{"method", "stack_variables"}, {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("stack variables"), true, QStringLiteral("Superseded variables"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("stack variables"), false, error);
@@ -336,7 +374,11 @@ void TypesDock::loadTypes(const QString &program) {
 
     emit jobStarted(QStringLiteral("type graph"));
     bridge_->request(QJsonObject{{"method", "type_graph"}, {"program", program}},
-                     [this](const QJsonObject &response) {
+                     [this, generation](const QJsonObject &response) {
+                         if (generation != generation_) {
+                             emit jobFinished(QStringLiteral("type graph"), true, QStringLiteral("Superseded type graph"));
+                             return;
+                         }
                          QString error;
                          if (!successful(response, &error)) {
                              emit jobFinished(QStringLiteral("type graph"), false, error);
@@ -397,7 +439,8 @@ void TypesDock::saveTypeDefinition(const QString &program) {
                 emit jobFinished(QStringLiteral("save type"), false, error);
                 return;
             }
-            loadTypes(program);
+            if (program == program_)
+                loadTypes(program);
             emit jobFinished(QStringLiteral("save type"), true, QStringLiteral("type saved"));
         });
 }
@@ -428,7 +471,8 @@ void TypesDock::saveTypeField(const QString &program) {
                 emit jobFinished(QStringLiteral("save type field"), false, error);
                 return;
             }
-            loadTypes(program);
+            if (program == program_)
+                loadTypes(program);
             emit jobFinished(QStringLiteral("save type field"), true, QStringLiteral("type field saved"));
         });
 }
@@ -447,13 +491,16 @@ void TypesDock::savePrototype(const QString &program, const QString &address) {
                                 {"provenance", QJsonObject{{"kind", "asserted"}, {"source", "ui"},
                                                           {"confidence", QJsonValue(QJsonValue::Null)}}},
                                 {"return_type", QJsonValue(QJsonValue::Null)}}}},
-        [this, address](const QJsonObject &response) {
+        [this, program, address](const QJsonObject &response) {
             QString error;
             if (!successful(response, &error)) {
                 emit jobFinished(QStringLiteral("save prototype"), false, error);
                 return;
             }
-            emit prototypeSaved(address);
+            if (program == program_) {
+                loadTypes(program);
+                emit prototypeSaved(address);
+            }
             emit jobFinished(QStringLiteral("save prototype"), true, QStringLiteral("prototype saved; decompiling"));
         });
 }
@@ -466,7 +513,7 @@ void TypesDock::saveStackVariable(const QString &program, const QString &address
             {"program", program},
             {"row", QJsonObject{
                         {"function", address},
-                        {"ordinal", optionalInteger(field_ordinal_edit_->text())},
+                        {"ordinal", optionalInteger(stack_ordinal_edit_->text())},
                         {"name", stack_name_edit_->text()},
                         {"storage", stack_storage_edit_->text()},
                         {"type_name", stack_type_edit_->text().isEmpty()
@@ -480,7 +527,8 @@ void TypesDock::saveStackVariable(const QString &program, const QString &address
                 emit jobFinished(QStringLiteral("save stack variable"), false, error);
                 return;
             }
-            loadTypes(program);
+            if (program == program_)
+                loadTypes(program);
             emit jobFinished(QStringLiteral("save stack variable"), true, QStringLiteral("stack variable saved"));
         });
 }
@@ -495,7 +543,8 @@ void TypesDock::propagateTypes(const QString &program) {
                              emit jobFinished(QStringLiteral("propagate types"), false, error);
                              return;
                          }
-                         loadTypes(program);
+                         if (program == program_)
+                             loadTypes(program);
                          emit jobFinished(QStringLiteral("propagate types"), true,
                                           QStringLiteral("%1 type links")
                                               .arg(response.value("result").toArray().size()));

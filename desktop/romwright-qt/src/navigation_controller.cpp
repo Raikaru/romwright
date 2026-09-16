@@ -7,6 +7,10 @@ void NavigationController::setProgram(const QString &program) {
         return;
     }
     program_ = program;
+    address_.clear();
+    history_.clear();
+    history_index_ = -1;
+    emit historyChanged(false, false);
     emit programChanged(program_);
 }
 
@@ -16,16 +20,19 @@ void NavigationController::goTo(const QString &address, bool record) {
     if (address.isEmpty()) {
         return;
     }
+    bool valid = false;
+    const quint64 offset = address.toULongLong(&valid, 16);
+    const QString target = valid ? QStringLiteral("0x%1").arg(offset, 0, 16) : address;
     if (record) {
         while (history_.size() > history_index_ + 1) {
             history_.removeLast();
         }
-        if (history_.isEmpty() || history_.last() != address) {
-            history_.append(address);
+        if (history_.isEmpty() || history_.last() != target) {
+            history_.append(target);
         }
         history_index_ = history_.size() - 1;
     }
-    address_ = address;
+    address_ = target;
     emit addressChanged(address_);
     emit historyChanged(canGoBack(), canGoForward());
 }

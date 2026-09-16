@@ -34,7 +34,7 @@ set(CPACK_PACKAGE_FILE_NAME
 # The build dependency runs first, so the generated include tree exists before
 # automoc/compilation of the Qt target.
 add_custom_target(romwright-rust-bridge ALL
-    COMMAND "${CARGO_EXECUTABLE}" build --release -p romwright-qt-bridge
+    COMMAND "${CARGO_EXECUTABLE}" build --release -p romwright-qt-bridge -p romwright-worker
     WORKING_DIRECTORY "${ROMWRIGHT_ROOT}"
     BYPRODUCTS "${RUST_BRIDGE_LIB}"
     COMMENT "Building the Rust Core/CXX bridge"
@@ -42,6 +42,7 @@ add_custom_target(romwright-rust-bridge ALL
 
 add_executable(romwright-qt
     src/main.cpp
+    resources/workbench.qrc
     src/core_bridge.h
     src/core_bridge.cpp
     src/function_table_model.h
@@ -77,6 +78,11 @@ add_executable(romwright-qt
     src/graph_dock.cpp
     src/analyst_dock.h
     src/analyst_dock.cpp
+    src/matching_dock.h
+    src/matching_dock.cpp
+    src/matching_dock_dialogs.cpp
+    src/matching_gate.h
+    src/matching_gate.cpp
     src/types_dock.h
     src/types_dock.cpp
     src/xrefs_dock.h

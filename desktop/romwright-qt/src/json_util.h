@@ -35,6 +35,15 @@ inline QString addressText(const QJsonValue &value) {
     return QStringLiteral("?");
 }
 
+inline bool sameAddress(const QString &left, const QString &right) {
+    if (left == right)
+        return true;
+    bool left_ok = false, right_ok = false;
+    const auto left_offset = left.toULongLong(&left_ok, 16);
+    const auto right_offset = right.toULongLong(&right_ok, 16);
+    return left_ok && right_ok && left_offset == right_offset;
+}
+
 inline QJsonArray bytesFromText(QString text) {
     text.remove(' ');
     text.remove(':');

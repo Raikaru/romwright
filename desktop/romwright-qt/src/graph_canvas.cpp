@@ -3,9 +3,13 @@
 #include "theme.h"
 
 #include <QFontDatabase>
+#include <QContextMenuEvent>
 #include <QMouseEvent>
+#include <QKeyEvent>
+#include <QMenu>
 #include <QPainter>
 #include <QWheelEvent>
+#include <algorithm>
 
 namespace {
 
@@ -31,69 +35,173 @@ QColor edgeColor(const QString &kind) {
 GraphCanvas::GraphCanvas(QWidget *parent) : QWidget(parent) {
     setMinimumSize(420, 260);
     setMouseTracking(false);
+    setFocusPolicy(Qt::StrongFocus);
+    setToolTip(QStringLiteral("Wheel: zoom · Shift-drag or middle-drag: pan\n"
+                              "Home: current block · F: fit entire graph"));
 }
 
 void GraphCanvas::setGraph(const QVector<Node> &nodes, const QVector<Edge> &edges) {
     nodes_ = nodes;
-    edges_ = edges;
+    selected_node_ = -1;
+    highlight_address_.clear();
+    panning_ = false;
     node_lookup_.clear();
+    QRectF node_bounds;
     for (int i = 0; i < nodes_.size(); ++i) {
-        node_lookup_.insert(nodes_[i].address, i);
+        node_lookup_.insert(nodes_[i].id, i);
+        node_bounds = node_bounds.united(QRectF(nodes_[i].pos, QSizeF(kNodeWidth, kNodeHeight)));
     }
+    graph_bounds_ = node_bounds;
     resolved_edges_.clear();
-    resolved_edges_.reserve(edges_.size());
-    for (const Edge &edge : edges_) {
+    resolved_edges_.reserve(edges.size());
+    QVector<int> outer_edges;
+    for (const Edge &edge : edges) {
+        const int from = node_lookup_.value(edge.from, -1);
+        const int to = node_lookup_.value(edge.to, -1);
+        if (from < 0) {
+            continue;
+        }
         ResolvedEdge resolved;
-        resolved.from_index = node_lookup_.value(edge.from, -1);
-        resolved.to_index = node_lookup_.value(edge.to, -1);
+        resolved.from_index = from;
+        resolved.to_index = to;
         resolved.kind = edge.kind;
+        const QPointF start = nodes_[from].pos + QPointF(kNodeWidth / 2.0, kNodeHeight);
+        if (to < 0) {
+            resolved.path = {start, start + QPointF(0, 30)};
+        } else if (from == to) {
+            // A loop occupies the gap beside its own node, not a zero-length line.
+            const QPointF upper = nodes_[from].pos + QPointF(kNodeWidth, 20);
+            const QPointF lower = upper + QPointF(0, 20);
+            resolved.path = {lower, lower + QPointF(24, 0), upper + QPointF(24, 0), upper};
+        } else {
+            const QPointF end = nodes_[to].pos + QPointF(kNodeWidth / 2.0, 0);
+            if (end.y() > start.y() && end.y() - start.y() <= 90) {
+                const qreal middle = (start.y() + end.y()) / 2;
+                resolved.path = {start, QPointF(start.x(), middle), QPointF(end.x(), middle), end};
+            } else {
+                // Long and feedback edges travel outside node columns; their
+                // horizontal legs stay in row gaps, never through other blocks.
+                resolved.path = {start, start + QPointF(0, 24),
+                                 end - QPointF(0, 24), end};
+                outer_edges.append(resolved_edges_.size());
+            }
+        }
         resolved_edges_.append(resolved);
+    }
+    std::stable_sort(outer_edges.begin(), outer_edges.end(), [this](int a, int b) {
+        const auto &pa = resolved_edges_[a].path;
+        const auto &pb = resolved_edges_[b].path;
+        return qMin(pa[1].y(), pa[2].y()) < qMin(pb[1].y(), pb[2].y());
+    });
+    QVector<qreal> occupied_until[2];
+    for (int index : outer_edges) {
+        auto &path = resolved_edges_[index].path;
+        const qreal top = qMin(path[1].y(), path[2].y());
+        const qreal bottom = qMax(path[1].y(), path[2].y());
+        const bool right = (path.first().x() + path.last().x()) / 2 >= node_bounds.center().x();
+        auto &lanes = occupied_until[right ? 1 : 0];
+        int lane = 0;
+        while (lane < lanes.size() && lanes[lane] + 8 >= top) {
+            ++lane;
+        }
+        if (lane == lanes.size()) {
+            lanes.append(bottom);
+        } else {
+            lanes[lane] = bottom;
+        }
+        const qreal x = right ? node_bounds.right() + 24 + lane * 10
+                              : node_bounds.left() - 24 - lane * 10;
+        path = {path[0], path[1], QPointF(x, path[1].y()),
+                QPointF(x, path[2].y()), path[2], path[3]};
+    }
+    for (const auto &edge : resolved_edges_) {
+        graph_bounds_ = graph_bounds_.united(edge.path.boundingRect());
     }
     zoom_ = 1.0;
     pan_ = QPointF(0, 0);
-    fit_pending_ = true;  // fit once the widget knows its size
+    fit_pending_ = true;
     update();
 }
 
 void GraphCanvas::setAddress(const QString &address) {
+    if (address.isEmpty() || selected_node_ < 0 || nodes_[selected_node_].address != address) {
+        selected_node_ = -1;
+    }
     highlight_address_ = address;
     update();
 }
 
+QString GraphCanvas::selectedNodeId() const {
+    return selected_node_ < 0 ? QString{} : nodes_[selected_node_].id;
+}
+
 void GraphCanvas::fitToView() {
+    fit_pending_ = false;
     if (nodes_.isEmpty()) {
         return;
     }
-    QRectF bounds;
-    for (const Node &node : nodes_) {
-        bounds = bounds.united(QRectF(node.pos, QSizeF(kNodeWidth, kNodeHeight)));
-    }
+    const QRectF bounds = graph_bounds_;
     if (bounds.width() <= 0 || bounds.height() <= 0) {
         return;
     }
-    const double zx = width() / (bounds.width() + 40);
-    const double zy = height() / (bounds.height() + 40);
-    zoom_ = qBound(0.05, qMin(zx, zy), 2.0);
-    pan_ = QPointF(-bounds.x() * zoom_ + 20, -bounds.y() * zoom_ + 20);
+    const double zx = qMax(1, width() - 40) / bounds.width();
+    const double zy = qMax(1, height() - 40) / bounds.height();
+    zoom_ = qMin(qMin(zx, zy), 2.0);
+    pan_ = QPointF((width() - bounds.width() * zoom_) / 2.0 - bounds.x() * zoom_,
+                  (height() - bounds.height() * zoom_) / 2.0 - bounds.y() * zoom_);
     update();
+}
+
+void GraphCanvas::focusCurrentBlock() {
+    if (nodes_.isEmpty()) {
+        return;
+    }
+    int index = selected_node_;
+    if (index < 0 && !highlight_address_.isEmpty()) {
+        for (int i = 0; i < nodes_.size(); ++i) {
+            if (nodes_[i].address == highlight_address_) {
+                index = i;
+                break;
+            }
+        }
+    }
+    if (index < 0) {
+        index = 0;
+    }
+    fit_pending_ = false;
+    zoom_ = 1.0;
+    pan_ = QPointF((width() - kNodeWidth) / 2.0, 24) - nodes_[index].pos;
+    update();
+}
+
+void GraphCanvas::initialView() {
+    fitToView();
+    if (zoom_ < 0.65) {
+        focusCurrentBlock();
+    }
 }
 
 QSize GraphCanvas::sizeHint() const { return {640, 320}; }
 
-QPointF GraphCanvas::nodeCenter(const Node &node) const {
-    return QPointF(node.pos.x() + kNodeWidth / 2.0, node.pos.y() + kNodeHeight / 2.0) * zoom_ +
-           pan_;
-}
 
-QString GraphCanvas::nodeAt(const QPoint &pos) const {
-    for (const Node &node : nodes_) {
-        const QPointF top_left = node.pos * zoom_ + pan_;
-        if (pos.x() >= top_left.x() && pos.x() <= top_left.x() + kNodeWidth * zoom_ &&
-            pos.y() >= top_left.y() && pos.y() <= top_left.y() + kNodeHeight * zoom_) {
-            return node.address;
+int GraphCanvas::nodeAt(const QPoint &pos) const {
+    const QPointF scene_pos = (QPointF(pos) - pan_) / zoom_;
+    for (int index = 0; index < nodes_.size(); ++index) {
+        if (QRectF(nodes_[index].pos, QSizeF(kNodeWidth, kNodeHeight)).contains(scene_pos)) {
+            return index;
         }
     }
-    return {};
+    return -1;
+}
+
+void GraphCanvas::selectNode(int index) {
+    selected_node_ = index;
+    highlight_address_ = nodes_[index].address;
+    emit nodeSelected(nodes_[index].id);
+    if (!highlight_address_.isEmpty()) {
+        emit addressSelected(highlight_address_, true);
+    }
+    update();
 }
 
 void GraphCanvas::paintEvent(QPaintEvent *) {
@@ -109,66 +217,60 @@ void GraphCanvas::paintEvent(QPaintEvent *) {
         return;
     }
     if (fit_pending_) {
-        fit_pending_ = false;
-        fitToView();
+        initialView();
     }
 
-    // Edges: straight lines colored by kind; call edges dashed.
+    painter.translate(pan_);
+    painter.scale(zoom_, zoom_);
     for (const ResolvedEdge &edge : resolved_edges_) {
-        if (edge.from_index < 0 || edge.from_index >= nodes_.size()) {
-            continue;  // call edges may target other functions
-        }
-        const Node &from = nodes_[edge.from_index];
-        const Node *to = (edge.to_index >= 0 && edge.to_index < nodes_.size())
-                             ? &nodes_[edge.to_index]
-                             : nullptr;
-        const QPointF start = nodeCenter(from);
-        const QPointF end = to != nullptr
-                                ? nodeCenter(*to)
-                                : start + QPointF(0, kNodeHeight * zoom_);
         QPen pen(edgeColor(edge.kind), 1.5);
+        pen.setCosmetic(true);
         if (edge.kind == QStringLiteral("call")) {
             pen.setStyle(Qt::DashLine);
         }
         painter.setPen(pen);
-        painter.drawLine(start, end);
-        // Arrowhead for non-call edges.
-        if (to != nullptr) {
-            const QPointF dir = end - start;
+        painter.drawPolyline(edge.path);
+        if (edge.to_index >= 0) {
+            const QPointF tip = edge.path.last();
+            const QPointF dir = tip - edge.path[edge.path.size() - 2];
             const double len = qSqrt(dir.x() * dir.x() + dir.y() * dir.y());
-            if (len > 1) {
+            if (len > 0) {
                 const QPointF unit = dir / len;
-                const QPointF tip = end;
-                const QPointF left = tip - unit * 10 +
-                                     QPointF(-unit.y(), unit.x()) * 5;
-                const QPointF right = tip - unit * 10 +
-                                      QPointF(unit.y(), -unit.x()) * 5;
-                painter.setBrush(QBrush(pen.color()));
-                painter.drawPolygon({tip, left, right});
+                const qreal size = 10 / qMax(1.0, zoom_);
+                const QPointF normal(-unit.y(), unit.x());
+                const QPointF arrow[] = {tip, tip - unit * size + normal * (size / 2),
+                                         tip - unit * size - normal * (size / 2)};
+                painter.setBrush(pen.color());
+                painter.drawPolygon(arrow, 3);
                 painter.setBrush(Qt::NoBrush);
             }
         }
     }
 
-    // Nodes.
-    for (const Node &node : nodes_) {
-        const QPointF top_left = node.pos * zoom_ + pan_;
-        const QRectF box(top_left, QSizeF(kNodeWidth * zoom_, kNodeHeight * zoom_));
-        const bool highlighted = node.address == highlight_address_;
-        painter.setBrush(QBrush(Theme::current().node_fill));
-        painter.setPen(QPen(highlighted ? Theme::current().node_highlight : Theme::current().node_border, highlighted ? 2 : 1));
+    for (int index = 0; index < nodes_.size(); ++index) {
+        const Node &node = nodes_[index];
+        const QRectF box(node.pos, QSizeF(kNodeWidth, kNodeHeight));
+        const bool highlighted = selected_node_ >= 0 ? index == selected_node_
+            : !highlight_address_.isEmpty() && node.address == highlight_address_;
+        painter.setBrush(Theme::current().node_fill);
+        QPen border(highlighted ? Theme::current().node_highlight : Theme::current().node_border,
+                    highlighted ? 2 : 1);
+        border.setCosmetic(true);
+        painter.setPen(border);
         painter.drawRoundedRect(box, 5, 5);
-        painter.setPen(Theme::current().node_text);
-        const QString label = QStringLiteral("bb_%1\n%2 bytes")
-                                  .arg(node.address)
-                                  .arg(node.size);
-        painter.drawText(box.adjusted(6, 4, -6, -4), Qt::AlignCenter, label);
+        if (zoom_ >= 0.35) {
+            painter.setPen(Theme::current().node_text);
+            const QString label = QStringLiteral("bb_%1 · %2\n%3 operations")
+                .arg(node.id, node.address.isEmpty() ? QStringLiteral("no address") : node.address)
+                .arg(node.operations);
+            painter.drawText(box.adjusted(6, 4, -6, -4), Qt::AlignCenter, label);
+        }
     }
 }
 
 void GraphCanvas::wheelEvent(QWheelEvent *event) {
     const double factor = event->angleDelta().y() > 0 ? 1.15 : 1 / 1.15;
-    const double new_zoom = qBound(0.05, zoom_ * factor, 3.0);
+    const double new_zoom = qBound(0.0001, zoom_ * factor, 3.0);
     // Zoom around the cursor.
     const QPointF cursor = event->position();
     pan_ = cursor - (cursor - pan_) * (new_zoom / zoom_);
@@ -186,11 +288,9 @@ void GraphCanvas::mousePressEvent(QMouseEvent *event) {
         return;
     }
     if (event->button() == Qt::LeftButton) {
-        const QString address = nodeAt(event->pos());
-        if (!address.isEmpty()) {
-            highlight_address_ = address;
-            emit addressSelected(address, true);
-            update();
+        const int index = nodeAt(event->pos());
+        if (index >= 0) {
+            selectNode(index);
             event->accept();
             return;
         }
@@ -213,17 +313,35 @@ void GraphCanvas::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void GraphCanvas::mouseDoubleClickEvent(QMouseEvent *event) {
-    const QString address = nodeAt(event->pos());
-    if (!address.isEmpty()) {
-        emit addressSelected(address, true);
+    const int index = nodeAt(event->pos());
+    if (event->button() == Qt::LeftButton && index >= 0) {
+        selectNode(index);
     }
     event->accept();
 }
 
 void GraphCanvas::resizeEvent(QResizeEvent *event) {
     if (!nodes_.isEmpty() && fit_pending_) {
-        fit_pending_ = false;
-        fitToView();
+        initialView();
     }
     QWidget::resizeEvent(event);
+}
+
+void GraphCanvas::keyPressEvent(QKeyEvent *event) {
+    if (event->key() == Qt::Key_Home) {
+        focusCurrentBlock();
+    } else if (event->key() == Qt::Key_F && event->modifiers() == Qt::NoModifier) {
+        fitToView();
+    } else {
+        QWidget::keyPressEvent(event);
+        return;
+    }
+    event->accept();
+}
+
+void GraphCanvas::contextMenuEvent(QContextMenuEvent *event) {
+    QMenu menu(this);
+    menu.addAction(QStringLiteral("Current block (Home)"), this, &GraphCanvas::focusCurrentBlock);
+    menu.addAction(QStringLiteral("Fit entire graph (F)"), this, &GraphCanvas::fitToView);
+    menu.exec(event->globalPos());
 }

@@ -3,6 +3,8 @@
 #include <QDockWidget>
 
 class CoreBridge;
+class QLabel;
+class QLineEdit;
 class QTableWidget;
 class QTableView;
 class StringsTableModel;
@@ -22,6 +24,12 @@ signals:
     void statusRequested(const QString &message, bool error);
 
 private:
+    void searchFacts();
+    QString program_;
+    quint64 generation_ = 0;
+    quint64 search_generation_ = 0;
+    QLineEdit *search_edit_ = nullptr;
+    QLabel *search_status_ = nullptr;
     CoreBridge *bridge_;
     QTableWidget *symbols_ = nullptr;
     QTableView *strings_ = nullptr;

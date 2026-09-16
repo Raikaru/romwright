@@ -10,7 +10,7 @@ class QTabWidget;
 class XrefsDock final : public QDockWidget {
     Q_OBJECT
 
-public:
+  public:
     explicit XrefsDock(CoreBridge *bridge, QWidget *parent = nullptr);
 
     void loadXrefs(const QString &program, const QString &address);
@@ -27,17 +27,18 @@ public:
     int renderedRows() const { return rendered_rows_; }
     int unexplainedRows() const { return unexplained_rows_; }
 
-signals:
+  signals:
     void addressDoubleClicked(const QString &address);
     /// Both tables have answered: the counters below are final.
     void loadFinished();
     void jobStarted(const QString &name);
     void jobFinished(const QString &name, bool ok, const QString &detail);
 
-private:
+  private:
     CoreBridge *bridge_;
     QTableWidget *xrefs_to_ = nullptr;
     QTableWidget *xrefs_from_ = nullptr;
+    QTabWidget *tabs_ = nullptr;
     QComboBox *evidence_box_ = nullptr;
     QString evidence_;
     QString program_;
@@ -45,4 +46,5 @@ private:
     int pending_ = 0;
     int rendered_rows_ = 0;
     int unexplained_rows_ = 0;
+    quint64 generation_ = 0;
 };

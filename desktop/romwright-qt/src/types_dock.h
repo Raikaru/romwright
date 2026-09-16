@@ -30,6 +30,8 @@ signals:
 
 private:
     CoreBridge *bridge_;
+    QString program_;
+    quint64 generation_ = 0;
 
     QLineEdit *type_name_edit_ = nullptr;
     QLineEdit *type_kind_edit_ = nullptr;
@@ -50,6 +52,7 @@ private:
     QLineEdit *calling_convention_edit_ = nullptr;
 
     QLineEdit *stack_name_edit_ = nullptr;
+    QLineEdit *stack_ordinal_edit_ = nullptr;
     QLineEdit *stack_storage_edit_ = nullptr;
     QLineEdit *stack_type_edit_ = nullptr;
     QLineEdit *stack_offset_edit_ = nullptr;

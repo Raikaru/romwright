@@ -4,6 +4,7 @@
 
 class CoreBridge;
 class FunctionTableModel;
+struct FunctionRowView;
 class QLineEdit;
 class QTableView;
 class QTimer;
@@ -11,7 +12,7 @@ class QTimer;
 class FunctionsDock final : public QDockWidget {
     Q_OBJECT
 
-public:
+  public:
     explicit FunctionsDock(CoreBridge *bridge, QWidget *parent = nullptr);
 
     FunctionTableModel *model() const { return model_; }
@@ -21,13 +22,16 @@ public:
 
     void setProgram(const QString &program);
     void setFilter(const QString &filter);
+    void setFunction(const FunctionRowView &function, const QString &cursor);
 
-signals:
+  signals:
     void addressSelected(const QString &address, bool record);
+    void functionContextChanged(const QString &address, const QString &name);
 
-private:
+  private:
     QLineEdit *filter_edit_ = nullptr;
     QTimer *filter_timer_ = nullptr;
     QTableView *table_view_ = nullptr;
     FunctionTableModel *model_ = nullptr;
+    QString function_address_;
 };
