@@ -80,3 +80,26 @@ runs as `decompile_exe` inside every Ghidra session. The old project's
 `tools/` (in git history) built it unmodified; the old Rust bridge spoke
 its XML protocol. That is the feasibility-spike starting point for
 Stage 3/4, which is why the tree is kept pinned.
+
+### Romwright native compatibility extensions
+
+`native/build_ghidra_opt.sh` applies `native/ghidra-opt-sleigh.patch` to a
+temporary copy; the vendored tree remains unchanged.
+
+- Dynamic variable hashes support collision groups of up to **128** entries.
+  Groups of eight or fewer retain the exact upstream encoding. Larger groups
+  use previously unused bits 55–62 for the additional position/total bits.
+  **Stock Ghidra cannot decode those extended hashes correctly.** They are
+  Romwright-native identities, not an interchange format for an unmodified
+  Ghidra decompiler. Groups beyond 128 still fail rather than guess an identity.
+  The build runs `native/dynamic_hash_test.cc`, checking legacy packing,
+  extended round trips and invalid bounds before installing the executable.
+- Final native structuring may negate a condition and reorder its outgoing
+  edges. The structured-document envelope explicitly acknowledges each cut's
+  original and projected edge slot using its stable incoming reverse edge.
+  The worker validates the acknowledgement and projected control-flow cut;
+  it does not weaken the IR's slot/target validation.
+
+The September 2026 acceptance run recovered the two previously failing `ls`
+functions at `0x101540` and `0x1140b0`. This is targeted regression evidence,
+not a claim that every native decompilation succeeds.

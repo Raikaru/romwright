@@ -5,6 +5,31 @@ proven components (SLEIGH, p-code, the native decompiler) as compiler
 technology rather than reimplementing them. It is **not** a Ghidra fork and
 claims no drop-in compatibility.
 
+## Matching decompilation workflow
+
+The Qt **Matching** dock (`Ctrl+Shift+M`), CLI and API share the same Core
+workspace and execution contracts:
+
+- Evidence-backed mismatch diagnosis, without invented source/ROM links.
+- Bounded candidate search, immutable history and source pins; no LLM required.
+- Portable per-function inputs and reproducible tool profiles, with private
+  files and proprietary tools excluded from export.
+- Measured compiler/profile calibration that preserves ties.
+- Isolated shared-context trials reporting both improvements and regressions.
+- Reviewable source patches verified by the real project's build before
+  explicit application, with unexpected object/symbol/data changes refused.
+
+Similarity, instruction bytes, relocation metadata, object bytes and final
+project output equality are separate results. A 100% score is not a claim
+that the object or game matches.
+
+Start with [the desktop workflow](docs/desktop.md#matching-workstation),
+[API/CLI contracts](docs/core-api.md#matching-workspaces) and
+[user-owned toolchains](docs/toolchains.md#user-owned-matching-profiles).
+Local Clang, MWCC, Qt and actual AUF Ninja verification evidence is recorded in
+`benchmarks/reports/matching-workflow.json`; broader milestone gates are
+tracked separately in `STATUS.md`.
+
 ## Architecture: staged migration to JVM-free
 
 | Stage | Architecture | Status |
@@ -147,6 +172,11 @@ such recycles inside one bounded inference pass over a game module. Requests ins
 shards change wall time and nothing else — `tests/m2-016_import_budget.py`
 asserts that a one-console import and an N-console import write identical
 function, xref, string, symbol and thunk sets.
+
+Native import staging and mapped-image XML use `ROMWRIGHT_SCRATCH`, defaulting
+to `$HOME/.cache/romwright/scratch`, rather than the system temporary directory.
+Choose a filesystem with enough space for the imported image and switch-recovery
+store. Without either `ROMWRIGHT_SCRATCH` or `HOME`, scratch creation fails.
 
 <!-- not gated: illustrates the surfaces documented and executed by docs/core-api.md and docs/scripting.md -->
 ```sh
@@ -771,6 +801,22 @@ inline pointer/array/function types retain their nested targets. Missing type
 details remain unknown, and incomplete structural documents have no prototype.
 This read path does not persist inferred signatures or change store revisions.
 
+The optional `function_ir` is the semantic representation: stable value and
+operation IDs, SSA operations, control-flow edges, high variables and native
+type/symbol evidence. C tokens are a presentation, not the semantic authority.
+Token `varnode`, `operation`, `symbol_id` and `datatype_id` references remain
+independent. Native metadata IDs are unsigned 64-bit values; JSON clients must
+preserve integer precision rather than round them through JavaScript `Number`.
+
+Evidence, transformation, structuring and diagnostic passes have separate
+contracts; transformations propose typed edits and structuring proposes
+original CFG edge cuts. The native worker applies those proposals to the live
+function and returns new C tokens and a graph checked against the proposal.
+Unverified `DAT_*` literal replacement and text-only helper rewriting are not
+supported. Division/remainder helper rewrites require a locally applied,
+full-function byte signature bound to the current input and matching native
+operand/result widths and signedness.
+
 The same document exposes `jump_tables`: typed branch addresses and ordered
 target addresses, including duplicate case destinations. `[]` means a complete
 native function has no recovered tables; `null` means structural metadata is
@@ -792,19 +838,42 @@ stock exports and preserves immutable references in `oracle/switches-v1`.
 Zero-table cases are not positive recovery evidence. This comparison adds no
 II.3 metric and is not the full M2 program-model parity gate.
 
-Standalone and pooled workers share language resolution; pooled children receive
-their SLEIGH configuration explicitly without process-global environment edits.
-The pool's 60-second operation deadline includes native registration, not just
-decompilation. Failed and timed-out children are killed and reaped; late output
-is not published or returned to the warm pool. Protocol errors remain distinct
-from elapsed deadlines.
-Pool snapshots follow the store revision: edits invalidate idle workers, and a
-revision change during analysis discards the result. Both native entrypoints
-apply stored callee signatures before analyzing a caller, using call xrefs and
-stored function extents rather than neighboring function-entry distances.
-Recovery unlocks inferred target parameters, return type, and calling convention;
-stored callees and analyst assertions remain locked. Inferred declarations never
-rename functions. The native command resets its parameters between applications.
+Standalone and pooled workers consume Core's captured input and configuration,
+including the stored language. They share provider metadata and specification
+registration, including core types, decode contexts and tracked ABI registers.
+The default interactive job budget is 60 seconds. One absolute deadline covers
+queueing, registration, native commands, semantic passes and publication; retries
+and additional phases do not receive a fresh clock. Cancellation interrupts
+native I/O, and owned child process groups are killed and reaped. Late or
+stale-revision output is not published or returned to the warm pool.
+
+Imports capture binary, mapping and key inputs as content-addressed artifacts.
+Execution requests select an explicit imported image; a mutable source pathname is
+not a substitute for the captured input. Warm demand analysis keeps at most four
+program images, evicts obsolete inputs and atomically publishes function extents
+and references against the captured revision. Its completion stamp is the final
+committed revision, so an unchanged next request can reuse the analysis.
+
+Stored call xrefs seed callee prototypes, but are not assumed exhaustive:
+newly encountered native calls activate their stored prototypes before semantic
+transformation. Unrelated prototypes are not parsed. Recovery unlocks inferred
+target parameters, return type and calling convention; stored callees and
+analyst assertions remain locked. Inferred declarations never rename functions.
+The native command resets its parameters between applications.
+
+The internal standalone worker interface is
+`romwright-worker <ghidra_opt> <lang-dir> <program> <addr-hex>... --project DIR`;
+binary paths and rebasing are no longer worker arguments. The selected input
+comes from the captured request or the project's input record. `--structure`
+reads graph requests from stdin under the same stored-input contract.
+
+Matching runs retain the captured source/context, recipe, compiler identity,
+distinct target/candidate objects, diagnostics and objdiff result. Identical
+object bytes are valid, but the two comparison paths must remain distinct.
+Compile failures are durable results; cancellation and revision conflicts
+prevent publication. These controls do not sandbox compiler commands: use
+trusted recipes and the existing local-only deployment boundary.
+
 Core can persist a completed recovery batch through the existing prototype
 store. Nested pointer/array/callback declarations are rendered from structured
 types; absent types are rejected rather than replaced by `void`. The write

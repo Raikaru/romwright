@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-09-15T05:51:53.384Z",
+  "platform": "Linux x86_64",
+  "rendering": "Actual Qt application, offscreen platform, QWidget captures",
+  "qt_build_passed": true,
+  "visual": {
+    "annotations_opened": true,
+    "base_color": "#101419",
+    "bytes_toggle_exercised": true,
+    "filtered_function": "add",
+    "passed": true,
+    "window_color": "#202a35"
+  },
+  "analysis_navigation_gate": {
+    "passed": true,
+    "analysed_functions": 12,
+    "programs": 1,
+    "unexplained_xrefs": 0
+  },
+  "matching": {
+    "calibration": true,
+    "editor_undo_restored": true,
+    "elapsed_ms": 2656,
+    "exact_object_recompiled": true,
+    "history_rows": 8,
+    "isolated_context_regression": true,
+    "mismatch_rows": 1,
+    "native_revision_unchanged": true,
+    "passed": true,
+    "portable_private_inputs_excluded": true,
+    "portable_replay_exact": true,
+    "project_applied": true,
+    "project_verified": true,
+    "protected_edit_rejected": true,
+    "search_compiler_invocations": 2,
+    "utf16_pin_correct": true
+  },
+  "screenshot": "dark-workbench.png",
+  "native_desktop_capture": "Unavailable: computer capture requires wayland-pipewire; native Qt rendering used instead."
+}

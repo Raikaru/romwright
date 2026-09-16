@@ -1,0 +1,215 @@
+{
+  "date": "2026-09-15",
+  "platform": "Linux x86_64; Qt 6",
+  "verdict": "Native regressions repaired and bounded acceptance scenarios pass; IDA/Ghidra interaction parity is not established.",
+  "public_input": {
+    "name": "ls",
+    "sha256": "54e936d37decdad9ecaf189b1de347605a0a99037ec87bd17679b6cbde871a0c"
+  },
+  "native_repair": {
+    "elapsed_seconds": 16.919545561890118,
+    "functions": {
+      "00101540": {
+        "blocks": 361,
+        "operations": 47220,
+        "cuts": 117,
+        "tokens": 27361
+      },
+      "001140b0": {
+        "blocks": 547,
+        "operations": 3893,
+        "cuts": 198,
+        "tokens": 19391
+      }
+    }
+  },
+  "native_codec_regression": {
+    "passed": true,
+    "command": "native/build_ghidra_opt.sh --jobs 3 <temporary-build-directory>",
+    "totals_tested": [
+      1,
+      8,
+      9,
+      16,
+      128
+    ],
+    "all_ordinals_tested": true,
+    "legacy_encoding_preserved_through": 8,
+    "invalid_bounds_rejected": true,
+    "installed_sha256": "ea8850c6e3d4b38f03e5284948360a387607e67c1f263361efea6674d9229b16",
+    "compatibility": "Extended collision hashes above eight require the Romwright-patched native engine; stock Ghidra cannot decode them."
+  },
+  "worker_regressions": {
+    "command": "cargo test -p romwright-worker --lib",
+    "passed": 20,
+    "failed": 0
+  },
+  "qt_analysis_gate": {
+    "exit_code": 0,
+    "metrics": {
+      "ui.analysis": "provisional: 0 analysed, 195 to go",
+      "ui.analysis.analysed": 0,
+      "ui.analysis.first": "provisional: 0 analysed, 195 to go",
+      "ui.analysis.polls": 0,
+      "ui.analysis.seeded": 195,
+      "ui.analysis.stale": true,
+      "ui.graph.layout_ms": 2.705202,
+      "ui.graph.paint_ms": 0.582719,
+      "ui.install.ok": false,
+      "ui.list.filter_ms": 4.551796,
+      "ui.list.load_ms": 5.070573,
+      "ui.programs": 2,
+      "ui.programs_switch_functions": 195,
+      "ui.sync_ms": 2.963099,
+      "ui.xrefs.address": 1130672,
+      "ui.xrefs.declared_rows": 5,
+      "ui.xrefs.rows": 5,
+      "ui.xrefs.unexplained": 0
+    },
+    "notes": [
+      "Analysis metrics are taken after switching to a second loader-only image; provisional analysis is expected.",
+      "ui.install.ok is the legacy environment-fed harness flag, not an installation measurement."
+    ]
+  },
+  "sustained_analysis": {
+    "elapsed_ms": 84615,
+    "function_switches": 20,
+    "heartbeat_ticks": 5230,
+    "maximum_heartbeat_gap_ms": 531,
+    "native_decompile_jobs": 2,
+    "source_listing_settled": true,
+    "source_down_and_page_key_events": 2200,
+    "source_home_key_events": 20
+  },
+  "synthetic_matching": {
+    "after_image": "/home/raikaru/tmp/romwright-workbench-20260915/matching-smoke/after.png",
+    "before_image": "/home/raikaru/tmp/romwright-workbench-20260915/matching-smoke/before.png",
+    "calibration": true,
+    "editor_undo_restored": true,
+    "elapsed_ms": 2927,
+    "exact_object_recompiled": true,
+    "history_rows": 8,
+    "isolated_context_regression": true,
+    "mismatch_rows": 1,
+    "native_revision_unchanged": true,
+    "passed": true,
+    "portable_private_inputs_excluded": true,
+    "portable_replay_exact": true,
+    "project_applied": true,
+    "project_verified": true,
+    "protected_edit_rejected": true,
+    "search_compiler_invocations": 2,
+    "utf16_pin_correct": true
+  },
+  "real_mwcc_matching": {
+    "actual_target_mismatch": true,
+    "baseline_similarity": 100,
+    "bounded_search_dialog": true,
+    "close_cancel_preserves_edits": true,
+    "close_discard": true,
+    "close_save_persists_candidate": true,
+    "compiler": "MWCC GC/1.2.5n through wibo and sjiswrap",
+    "compiler_invocations": 3,
+    "intentional_regression_similarity": 99.98485,
+    "keyboard_compile": true,
+    "new_workspace_dialog": true,
+    "recovered_similarity": 100,
+    "symbol": "PADClamp",
+    "baseline_exact_instructions": true,
+    "baseline_exact_relocations": false,
+    "baseline_exact_object_bytes": false,
+    "user_project_applied": false
+  },
+  "secondary_workflows": {
+    "facts_search": true,
+    "invalid_empty_capped_search": true,
+    "latest_switch_wins": true,
+    "palette_byte_search": true,
+    "program_history_isolated": true,
+    "staging_context_isolated": true,
+    "types_persisted": true,
+    "independent_stack_ordinal_persisted": 3,
+    "different_field_ordinal_during_stack_save": 7
+  },
+  "remaining_panes": {
+    "bookmark_navigation": true,
+    "bounded_job_log": true,
+    "graph_follows_document": true,
+    "independent_project_window": true,
+    "job_details": true,
+    "live_error_and_recovery": true,
+    "memory_map_and_hex": true,
+    "vtable_recovery_rows": 2
+  },
+  "layout_matrix": [
+    {
+      "compact_bytes_hidden": true,
+      "device_pixel_ratio": 1,
+      "logical_height": 768,
+      "logical_width": 1024,
+      "physical_height": 768,
+      "physical_width": 1024,
+      "source_horizontal_scroll": true
+    },
+    {
+      "compact_bytes_hidden": false,
+      "device_pixel_ratio": 1.5,
+      "logical_height": 720,
+      "logical_width": 1280,
+      "physical_height": 1080,
+      "physical_width": 1920,
+      "source_horizontal_scroll": true
+    },
+    {
+      "compact_bytes_hidden": false,
+      "device_pixel_ratio": 2,
+      "logical_height": 900,
+      "logical_width": 1440,
+      "physical_height": 1800,
+      "physical_width": 2880,
+      "source_horizontal_scroll": true
+    },
+    {
+      "compact_bytes_hidden": false,
+      "device_pixel_ratio": 1,
+      "logical_height": 1080,
+      "logical_width": 1920,
+      "physical_height": 1080,
+      "physical_width": 1920,
+      "source_horizontal_scroll": true
+    }
+  ],
+  "layout_procedure": "Reset workbench layout; resize; wait for native source and listing; exercise horizontal source scrolling; switch Matching back to Analysis; show Types. At 1024 logical pixels, hide bytes through the existing Bytes toggle.",
+  "live_references": {
+    "network_isolated": true,
+    "same_public_binary": true,
+    "ida": [
+      "Main pseudocode navigated to the end; five Shift-Up selections exercised ordinary source range selection.",
+      "Line-number gutters, folding controls and inline argument hints observed.",
+      "IDA image base is zero: 0x1540 corresponds to Romwright/Ghidra 0x101540."
+    ],
+    "ghidra": [
+      "Stock main at 0x101540 reproduced Unable to find unique hash for varnode.",
+      "Go To 0x1140b0 and four PageDown keys exercised source/listing synchronization."
+    ]
+  },
+  "remaining_limits": [
+    "Maximum observed event-loop heartbeat gap was 531 ms; sustained low-latency interaction is not established.",
+    "Painted source lacks ordinary range selection/copy, folding, line-number gutters and inline argument hints.",
+    "Current graph endpoint is bounded to 4096 bytes, not the complete native function CFG.",
+    "Live memory error and file-mode recovery were exercised; no running Dolphin target was available.",
+    "Linux-only UI evidence; no cross-platform, whole-binary decompilation or whole-game matching certification.",
+    "MWCC 100 instruction similarity is not exact relocation or object-byte equality."
+  ],
+  "privacy": "Private game source, inputs and screenshots remain outside the repository; only scalar MWCC results are included.",
+  "images": {
+    "native_main": "benchmarks/reports/workbench-acceptance-native-main.png",
+    "compact_analysis": "benchmarks/reports/workbench-acceptance-compact-analysis.png",
+    "scaled_types": "benchmarks/reports/workbench-acceptance-scaled-types.png",
+    "synthetic_matching": "benchmarks/reports/workbench-acceptance-synthetic-matching.png",
+    "ida_selection": "benchmarks/reports/workbench-acceptance-ida-selection.png",
+    "ghidra_navigation": "benchmarks/reports/workbench-acceptance-ghidra-navigation.png",
+    "ghidra_hash_failure": "benchmarks/reports/workbench-acceptance-ghidra-hash-failure.png"
+  },
+  "local_evidence_root": "/home/raikaru/tmp/romwright-workbench-20260915"
+}

@@ -1,0 +1,228 @@
+{
+  "date": "2026-09-16",
+  "platform": "Linux x86_64; Qt 6.11.2",
+  "verdict": "Requested workstation repairs pass local Linux acceptance; native Windows/macOS execution remains blocked. No IDA/Ghidra parity or whole-game matching claim.",
+  "public_input": {
+    "name": "ls",
+    "sha256": "54e936d37decdad9ecaf189b1de347605a0a99037ec87bd17679b6cbde871a0c"
+  },
+  "prior_evidence": "workbench-acceptance.json",
+  "latency": {
+    "baseline_maximum_heartbeat_gap_ms": 531,
+    "profile_before": {
+      "bytes": 29648559,
+      "parse_ms": 436.388565,
+      "samples": [
+        {
+          "address": "00101540",
+          "load_ms": 5.852609,
+          "mapping_ms": 66.312183,
+          "paint_ms": 1.6541,
+          "tokens": 27361
+        },
+        {
+          "address": "001140b0",
+          "load_ms": 6.74413,
+          "mapping_ms": 40.01848,
+          "paint_ms": 1.149528,
+          "tokens": 19391
+        }
+      ]
+    },
+    "first_followup_maximum_heartbeat_gap_ms": 61,
+    "source_navigation_followup": {
+      "elapsed_ms": 89847,
+      "function_switches": 20,
+      "graphs": [
+        "Native CFG \u2014 368 blocks, 618 edges",
+        "Native CFG \u2014 555 blocks, 927 edges"
+      ],
+      "heartbeat_ticks": 8620,
+      "maximum_heartbeat_gap_ms": 56,
+      "native_decompile_jobs": 2,
+      "source_key_events": 2220,
+      "source_listing_settled": true
+    },
+    "measurement_mode": "Qt offscreen; real MainWindow, native worker and keyboard events",
+    "change": "Parse bridge responses and project token/address metadata off the GUI thread. Source and CFG share one cached native document."
+  },
+  "native_graphs": {
+    "x86_64": [
+      {
+        "address": "0x101540",
+        "argument_hints": 49,
+        "blocks": 368,
+        "complete": true,
+        "declaration_target": "0x101540",
+        "edges": 618,
+        "known_callees": 12
+      },
+      {
+        "address": "0x1140b0",
+        "argument_hints": 0,
+        "blocks": 555,
+        "complete": true,
+        "declaration_target": "0x1140b0",
+        "edges": 927,
+        "known_callees": 1
+      }
+    ],
+    "powerpc": {
+      "language": "PowerPC:BE:32:default",
+      "address": "0x80003100",
+      "argument_hints": 0,
+      "blocks": 7,
+      "complete": true,
+      "declaration_target": "0x80003100",
+      "edges": 8,
+      "known_callees": 0
+    },
+    "cli_powerpc": {
+      "blocks": 7,
+      "edges": 8,
+      "source": "native_function_ir",
+      "complete": true
+    },
+    "verified": "Every serialized node and successor counted against its native FunctionIr; block IDs preserve shared addresses, empty/disconnected blocks and loops. Addresses are retained-operation anchors, not machine extents.",
+    "old_limit_correction": "The removed bounded decoder stopped at 4096 instructions, not 4096 bytes."
+  },
+  "native_surface": {
+    "backend": "X11 on Wayland; Spectacle fallback after the computer backend timed out",
+    "source_paging_and_listing_sync_address": "0x101690",
+    "gutter_fold": {
+      "opening_line": 263,
+      "next_visible_line_after_fold": 631
+    },
+    "whole_graph_fit_observed": true,
+    "captures": [
+      "workbench-quality-source.png",
+      "workbench-quality-folded.png",
+      "workbench-quality-graph.png"
+    ]
+  },
+  "qt_analysis_gate": {
+    "metrics": {
+      "ui.analysis": "analysed: 306",
+      "ui.analysis.analysed": 306,
+      "ui.analysis.first": "analysed: 306",
+      "ui.analysis.polls": 0,
+      "ui.analysis.seeded": 0,
+      "ui.analysis.stale": false,
+      "ui.graph.layout_ms": 177.159877,
+      "ui.graph.paint_ms": 0.152518,
+      "ui.install.ok": false,
+      "ui.list.filter_ms": 5.326829,
+      "ui.list.load_ms": 8.28574,
+      "ui.programs": 1,
+      "ui.programs_switch_functions": 256,
+      "ui.source.fold_reverse_sync": true,
+      "ui.source.follow_rename": true,
+      "ui.source.hints_excluded_from_copy": true,
+      "ui.source.read_only": true,
+      "ui.source.selection_copy": true,
+      "ui.sync_ms": 7.914239,
+      "ui.xrefs.address": 1130672,
+      "ui.xrefs.declared_rows": 5,
+      "ui.xrefs.rows": 5,
+      "ui.xrefs.unexplained": 0
+    }
+  },
+  "linux_package_gate": {
+    "id": "m6-003",
+    "recorded_at": "2026-09-16T01:43:06.170830+00:00",
+    "thresholds": {
+      "ui.list.load_ms": 500.0,
+      "ui.list.filter_ms": 100.0
+    },
+    "status": "pass",
+    "platform": {
+      "system": "Linux",
+      "machine": "x86_64",
+      "qt": "6.11.2"
+    },
+    "passed": true,
+    "summary": "packaged romwright-0.5-Linux-x86_64.tar.gz on Linux/x86_64 with Qt 6.11.2: store-only run from a clean prefix with no ROMWRIGHT_* configuration, ui.list.load_ms 4.82",
+    "metrics": {
+      "ui.install.prefix_ok": true,
+      "ui.install.store_only_ok": true,
+      "ui.list.load_ms": 4.815913,
+      "ui.list.filter_ms": 2.227151,
+      "ui.source.fold_reverse_sync": true,
+      "ui.source.follow_rename": true,
+      "ui.source.hints_excluded_from_copy": true,
+      "ui.source.read_only": true,
+      "ui.source.selection_copy": true
+    },
+    "package": "romwright-0.5-Linux-x86_64.tar.gz"
+  },
+  "native_progress_gate": {
+    "passed": true,
+    "metrics": {
+      "first_shown": "provisional: 0 analysed, 405 to go",
+      "final_shown": "analysed: 405",
+      "analysed": 405,
+      "seeded": 0,
+      "stale": false,
+      "polls_while_filling": 22,
+      "seconds": 2.345
+    }
+  },
+  "mwcc": {
+    "profile": "MWCC GC/1.2.5n",
+    "exact_instructions": true,
+    "exact_object_bytes": false,
+    "exact_relocations": true,
+    "mismatches": [],
+    "similarity": 100,
+    "symbol": "PADClamp",
+    "cause": "Big-endian PPC32 R_PPC_EMB_SDA21 records equivalent word-start and low-halfword patch sites. Only that relocation convention is normalized; symbol identity/binding, relocation type, addends, order and other offsets remain checked.",
+    "whole_object_difference": "Split-object metadata, section flags, and symbol/string-table ordering remain distinct.",
+    "reference": "https://github.com/encounter/decomp-toolkit/blob/main/src/obj/relocations.rs"
+  },
+  "matching_regressions": {
+    "unrelated_data_application_refused": true,
+    "duplicate_project_history_rejected": true,
+    "private_tool_mutation_refused": true,
+    "relocation_binding_and_ambiguity_preserved": true,
+    "inconsistent_recipe_history_rejected": true,
+    "shutdown_ms": {
+      "eof": 33,
+      "invalid_utf8": 16
+    },
+    "passed": true
+  },
+  "focused_rust_regressions": {
+    "ppc_sda21_compiler_and_split_object_patch_sites_are_equivalent": {
+      "failed_before_fix": true,
+      "passed_after_fix": true
+    },
+    "native_graph_preserves_shared_addresses_empty_blocks_and_loops": {
+      "passed": true
+    }
+  },
+  "dolphin": {
+    "connection_reused": true,
+    "disc_id": "GW7E69",
+    "file_mode_recovered": true,
+    "real_dolphin": true,
+    "ui_live_bytes": 4096,
+    "disc_id_independently_checked": true,
+    "owned_debug_port_closed": true,
+    "private_memory_capture_published": false,
+    "note": "The live disc ID is GW7E69; no identity equivalence with the separate matching workspace is asserted."
+  },
+  "cross_platform": {
+    "linux": "passed",
+    "windows": "not executed",
+    "macos": "not executed",
+    "blocker": "No native Windows/macOS runtime was available; no remote publication or CI dispatch was authorized.",
+    "ci": "The packaged source gate remains in the three-platform Qt matrix. Native analysis progress now runs in the Linux corpus job with explicit Qt/native-engine prerequisites and retained evidence.",
+    "workflow_validation": "YAML and changed Bash commands parsed; relocated native progress command passed locally. Remote CI was not run."
+  },
+  "limits": [
+    "The largest measured heartbeat gap remains 56 ms in the final source scenario; this is not a no-stall guarantee.",
+    "Complete native CFGs can still be visually dense; layout parity with reference tools is not established.",
+    "Inline hints require known signatures and do not invent parameter names.",
+    "Instruction/relocation equality is not whole-object or whole-game equality."
+  ]
+}

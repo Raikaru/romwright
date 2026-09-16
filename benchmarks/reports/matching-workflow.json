@@ -1,0 +1,226 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-09-15T05:00:36.752Z",
+  "platform": "Linux x86_64",
+  "methodology": {
+    "runs": 1,
+    "setup": "Core/API workspace creation; excludes toolchain installation and human preparation",
+    "search": "Measured bounded baseline and candidate compiler executions",
+    "human_setup_ms": null,
+    "human_matching_ms": null,
+    "statistical_benchmark": false
+  },
+  "clang": {
+    "after": 100,
+    "before": 80,
+    "calibration": [
+      [
+        "O2",
+        100
+      ],
+      [
+        "O2-copy",
+        100
+      ],
+      [
+        "O0",
+        0
+      ]
+    ],
+    "compilations": 2,
+    "compiler_failure_retained": true,
+    "context_deltas": [
+      -20,
+      20
+    ],
+    "exact_object": true,
+    "imported_trials": 11,
+    "independent_replay_exact": true,
+    "native_fact_revision_unchanged": true,
+    "passed": true,
+    "pins_rejected_changes": true,
+    "private_bytes_excluded": true,
+    "search_ms": 133,
+    "setup_ms": 33,
+    "source_line_evidence": true,
+    "utf8_pin_relocated": true
+  },
+  "clang_project": {
+    "absolute_paths_isolated": true,
+    "baseline_score": 80,
+    "candidate_score": 100,
+    "checks_persisted": 11,
+    "elapsed_ms": 4052,
+    "external_write_blocked": true,
+    "native_fact_revision_unchanged": true,
+    "new_header_applied": true,
+    "no_op_build_rejected": true,
+    "passed": true,
+    "private_project_evidence_redacted": true,
+    "project_exactness": true,
+    "regression_rejected": true,
+    "relocation_anonymous_and_bss_scope_rejected": true,
+    "source_patch_applied": true,
+    "stale_outputs_rebuilt": true,
+    "stale_preview_rejected": true,
+    "unexpected_object_rejected_despite_generated_rule": true,
+    "unrelated_data_rejected": true,
+    "unrelated_function_removal_rejected": true
+  },
+  "mwcc": {
+    "passed": true,
+    "transport": "HTTP /v2",
+    "compiler_version": "\r\nMetrowerks C/C++ Compiler for Embedded PowerPC.\r\nCopyright (c) 2002, Metrowerks Corporation\r\nAll rights reserved.\r\nVersion 2.4.2 build 81\r\nRuntime Built: May  7 2002 23:39:33\r\n\r\n",
+    "setup_ms": 86.13513700664043,
+    "search_ms": 143,
+    "compilations": 2,
+    "before": 99.666664,
+    "after": 100,
+    "exact_object": true,
+    "pins_rejected": true,
+    "calibration": [
+      [
+        "O4",
+        100
+      ],
+      [
+        "O4-copy",
+        100
+      ],
+      [
+        "O0",
+        96.666664
+      ]
+    ],
+    "context_deltas": [
+      -20,
+      20
+    ],
+    "private_inputs_excluded": true,
+    "proprietary_tools_excluded": true,
+    "replayed_exact": true,
+    "native_revision": 8,
+    "project_build_ms": 163,
+    "project_kind": "two-function compiled source project",
+    "target_kind": "relocatable object",
+    "project_patch_applied": true,
+    "project_exactness": true
+  },
+  "qt": {
+    "calibration": true,
+    "editor_undo_restored": true,
+    "elapsed_ms": 2793,
+    "exact_object_recompiled": true,
+    "history_rows": 8,
+    "isolated_context_regression": true,
+    "mismatch_rows": 1,
+    "native_revision_unchanged": true,
+    "passed": true,
+    "portable_private_inputs_excluded": true,
+    "portable_replay_exact": true,
+    "project_applied": true,
+    "project_verified": true,
+    "protected_edit_rejected": true,
+    "search_compiler_invocations": 2,
+    "utf16_pin_correct": true
+  },
+  "auf": {
+    "project": "agent-under-fire/dtk-template",
+    "symbol": "Cvar_VariableValue",
+    "build": [
+      "ninja",
+      "build/GQFE78/src/cvar.o"
+    ],
+    "compiler_version": "MWCC Embedded PowerPC 2.3.3 build 163",
+    "elapsed_ms": 9712,
+    "baseline_build_succeeded": true,
+    "build_succeeded": true,
+    "diagnosis": {
+      "exact_instructions": true,
+      "exact_object_bytes": false,
+      "exact_relocations": false,
+      "mismatches": [
+        {
+          "candidate": "",
+          "candidate_address": null,
+          "category": "relocation",
+          "hypothesis": "Check symbol binding, relocation addends and addressing flags. Identical formatted instructions do not prove relocation equality.",
+          "source_line": null,
+          "target": "Different function relocation metadata",
+          "target_address": null
+        }
+      ],
+      "similarity": 100,
+      "symbol": "Cvar_VariableValue"
+    },
+    "original_inputs_unchanged": true,
+    "applied": false,
+    "unexpected_files": [],
+    "unexpected_objects": [],
+    "unexpected_symbols": [],
+    "project_exactness": null,
+    "note": "Already-matching function; equivalent-source build verification, not a new matching gain or whole-game link."
+  },
+  "regressions": {
+    "unrelated_data_application_refused": true,
+    "duplicate_project_history_rejected": true,
+    "private_tool_mutation_refused": true,
+    "relocation_binding_and_ambiguity_preserved": true,
+    "inconsistent_recipe_history_rejected": true,
+    "shutdown_ms": {
+      "eof": 16,
+      "invalid_utf8": 16
+    },
+    "passed": true
+  },
+  "http_cancel": {
+    "elapsed_ms": 7.209879003465176,
+    "child_exited": true
+  },
+  "native_console": {
+    "parent_death_ms": 25,
+    "passed": true,
+    "persistent_flow_regressions_passed": true
+  },
+  "limitations": [
+    "Single local runs, not population or human-productivity measurements.",
+    "Standalone compilation uses Unix; real-project verification requires Linux bubblewrap.",
+    "Build isolation does not deny network or readable host files and is not a hostile-code sandbox.",
+    "No proprietary compiler/header bytes are included in this report.",
+    "No broader M1-M4 or P1-P4 closure is claimed."
+  ],
+  "rust_workspace": {
+    "passed": 574,
+    "ignored": 3,
+    "suites": 35
+  },
+  "documented_api": {
+    "id": "m6-002",
+    "recorded_at": "2026-09-15T05:05:20.935598+00:00",
+    "status": "pass",
+    "passed": true,
+    "summary": "14 documented API exchanges driven through romwright-api, 0 block(s) skipped",
+    "metrics": {
+      "exchanges": 14,
+      "skipped_blocks": 0
+    },
+    "skipped": []
+  },
+  "ds_map": {
+    "id": "m20-001",
+    "recorded_at": "2026-09-14T23:54:00.373950+00:00",
+    "thresholds": {
+      "named_recall": 0.95
+    },
+    "status": "pass",
+    "passed": true,
+    "summary": "31719 functions, named recall 0.9946 over 11019 ELF symbols, MAP/ELF agreement 0.9946 over 11019 shared rows",
+    "metrics": {
+      "named_recall": 0.9945548597876396,
+      "elf_symbols": 11019,
+      "map_rows": 12062,
+      "agreement": 0.9945548597876396
+    },
+    "note": "Full corpus run before the final bulk-echo protocol correction; final persistent-flow tests pass. Default corpus path was absent on a later rerun."
+  }
+}
