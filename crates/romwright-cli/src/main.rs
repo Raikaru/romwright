@@ -66,6 +66,8 @@ const USAGE: &str = "usage:
   romwright-cli patches <program> [--project DIR]
   romwright-cli patch <program> <address> <original-hex> <patched-hex> [--disabled] [--project DIR]
   romwright-cli rename <program> <address> <new-name> [--project DIR]
+  romwright-cli assert-prototypes <program> <protos.json|-> [--source NAME] [--project DIR]
+  romwright-cli assert-names <program> <names.json|-> [--project DIR]
   romwright-cli signatures build --archive A --package P --license L --out DB [--report R] [--min-bytes N]
   romwright-cli signatures info --db DB
   romwright-cli mem <binary> <vaddr-hex> [size]
@@ -1752,6 +1754,78 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             }
             println!("-- {} symbols", rows.len());
         }
+        // A matching-decompilation project knows the exact signature and name
+        // of every function it has already matched byte-for-byte. Feeding
+        // those back is the cheapest accuracy win available: recovered types
+        // propagate through call sites, and `export-c` stops emitting
+        // "Supplied declaration required" for callees the project has
+        // already proven. Both commands take one JSON array on a path or
+        // stdin and mark what they write as ASSERTED, so no later inference
+        // round can overwrite a fact the project proved.
+        "assert-prototypes" => {
+            let program = args.get(2).ok_or("assert-prototypes needs a program name")?.clone();
+            let path = args
+                .get(3)
+                .ok_or("assert-prototypes needs a prototypes JSON file or -")?;
+            let text = read_json_argument(path)?;
+            #[derive(serde::Deserialize)]
+            struct Supplied {
+                function: String,
+                signature: String,
+                #[serde(default)]
+                calling_convention: Option<String>,
+                #[serde(default)]
+                return_type: Option<String>,
+            }
+            let supplied: Vec<Supplied> =
+                serde_json::from_str(&text).map_err(|error| error.to_string())?;
+            let source = flag(args, "--source").unwrap_or_else(|| "project".to_string());
+            let (mut applied, mut skipped) = (0usize, 0usize);
+            for row in &supplied {
+                let Some(address) = romwright_model::Address::parse_ram_hex(&row.function) else {
+                    return Err(format!("bad address: {}", row.function));
+                };
+                let prototype = romwright_model::PrototypeRow {
+                    function: address,
+                    signature: row.signature.clone(),
+                    calling_convention: row.calling_convention.clone(),
+                    return_type: row.return_type.clone(),
+                    provenance: romwright_model::FactProvenance {
+                        kind: romwright_model::FactKind::Asserted,
+                        source: source.clone(),
+                        confidence: Some(1.0),
+                    },
+                };
+                match core.set_prototype(&program, &prototype) {
+                    Ok(()) => applied += 1,
+                    Err(_) => skipped += 1,
+                }
+            }
+            println!("asserted {applied} prototypes, skipped {skipped}");
+        }
+        "assert-names" => {
+            let program = args.get(2).ok_or("assert-names needs a program name")?.clone();
+            let path = args.get(3).ok_or("assert-names needs a names JSON file or -")?;
+            let text = read_json_argument(path)?;
+            #[derive(serde::Deserialize)]
+            struct Supplied {
+                function: String,
+                name: String,
+            }
+            let supplied: Vec<Supplied> =
+                serde_json::from_str(&text).map_err(|error| error.to_string())?;
+            let (mut applied, mut skipped) = (0usize, 0usize);
+            for row in &supplied {
+                let Some(address) = romwright_model::Address::parse_ram_hex(&row.function) else {
+                    return Err(format!("bad address: {}", row.function));
+                };
+                match core.rename_command(&program, &address, &row.name) {
+                    Ok(()) => applied += 1,
+                    Err(_) => skipped += 1,
+                }
+            }
+            println!("renamed {applied} functions, skipped {skipped}");
+        }
         "strings" => {
             let program = args.get(2).ok_or("strings needs a program name")?.clone();
             let rows = core.strings(&program).map_err(|e| e.to_string())?;
@@ -2230,4 +2304,24 @@ fn matching_request_json<T: serde::de::DeserializeOwned>(path: &str) -> Result<T
     }.map_err(|error| error.to_string())?;
     if bytes.len() > 64 * 1024 * 1024 { return Err("matching request exceeds 64 MiB".into()); }
     serde_json::from_slice(&bytes).map_err(|error| format!("invalid matching request: {error}"))
+}
+
+/// Reads a JSON argument from a path or stdin, with the same 64 MiB ceiling
+/// the matching requests use.
+fn read_json_argument(path: &str) -> Result<String, String> {
+    use std::io::Read;
+    let mut bytes = Vec::new();
+    if path == "-" {
+        std::io::stdin().lock().take(64 * 1024 * 1024 + 1).read_to_end(&mut bytes)
+    } else {
+        std::fs::File::open(path)
+            .map_err(|error| format!("{path}: {error}"))?
+            .take(64 * 1024 * 1024 + 1)
+            .read_to_end(&mut bytes)
+    }
+    .map_err(|error| error.to_string())?;
+    if bytes.len() > 64 * 1024 * 1024 {
+        return Err("supplied JSON exceeds 64 MiB".into());
+    }
+    String::from_utf8(bytes).map_err(|error| error.to_string())
 }
