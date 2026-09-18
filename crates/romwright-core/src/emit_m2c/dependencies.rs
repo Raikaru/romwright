@@ -109,6 +109,7 @@ pub(super) fn from_doc(
     let mut result = Dependencies::default();
     let mut helpers: BTreeMap<Intrinsic, String> = BTreeMap::new();
     let mut callees: BTreeMap<&str, Result<String, String>> = BTreeMap::new();
+    let mut unsupported: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
     for operation in ir.blocks.iter().flat_map(|block| &block.operations) {
         let Some(&name) = requested.get(&operation.id) else { continue };
         match operation.opcode {
@@ -137,8 +138,31 @@ pub(super) fn from_doc(
             Opcode::CALL | Opcode::CALLIND => {}
             _ if operation.effect() == Effect::Control => {}
             _ => {
-                let intrinsic = Intrinsic::recover(ir, operation)
-                    .map_err(|error| format!("cannot emit intrinsic {name}: {error}"))?;
+                // An intrinsic this emitter cannot render in C -- a VU0 macro
+                // operation or an MMI instruction, say -- used to abort the
+                // whole export, which loses a 600-instruction body over one
+                // opcode. Name it and carry on instead: the reader gets the
+                // control flow, the types and every other statement, with the
+                // one operation flagged the same way an untyped callee is.
+                // m2c's own `M2C_ERROR` placeholder serves the same purpose.
+                let Ok(intrinsic) = Intrinsic::recover(ir, operation) else {
+                    let helper = format!("romwright_unsupported_{}", stem_for(operation));
+                    if unsupported.insert(helper.clone()) {
+                        let _ = writeln!(
+                            result.text,
+                            "/* Unsupported intrinsic, declaration required: {helper} \
+                             ({:?}). */",
+                            operation.opcode
+                        );
+                        result.warnings.push(format!(
+                            "operation {name} uses intrinsic {:?}, which this emitter cannot \
+                             render in C; the body is emitted with a placeholder",
+                            operation.opcode
+                        ));
+                    }
+                    result.names.insert(operation.id, helper);
+                    continue;
+                };
                 let helper = match helpers.entry(intrinsic) {
                     std::collections::btree_map::Entry::Occupied(entry) => entry.into_mut(),
                     std::collections::btree_map::Entry::Vacant(entry) => {
@@ -226,4 +250,19 @@ mod tests {
         assert!(ran.status.success(), "exit {:?}: {}", ran.status.code(), String::from_utf8_lossy(&ran.stderr));
         std::fs::remove_dir_all(root).unwrap();
     }
+}
+
+/// A C identifier stem for an operation this emitter cannot render, taken from
+/// the opcode's own debug name so two different unsupported opcodes never
+/// collapse into one placeholder.
+fn stem_for(operation: &IrOperation) -> String {
+    let debug = format!("{:?}", operation.opcode);
+    let mut stem: String = debug
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' })
+        .collect();
+    while stem.contains("__") {
+        stem = stem.replace("__", "_");
+    }
+    stem.trim_matches('_').to_string()
 }
