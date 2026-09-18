@@ -1605,6 +1605,18 @@ impl NativeWorker {
 /// also handles element-start/end headers with the extension byte (ids
 /// above 0x1f, per PackedEncode::writeHeader, marshal.hh:661).
 pub fn decode_addr_element(data: &[u8]) -> Option<(i64, u64, u64)> {
+    let result = decode_addr_element_inner(data);
+    if result.is_none() && std::env::var_os("ROMWRIGHT_TRACE_ADDR").is_some() {
+        eprintln!(
+            "trace: decode_addr_element failed on {} bytes: {}",
+            data.len(),
+            data.iter().map(|b| format!("{b:02x}")).collect::<Vec<_>>().join(" ")
+        );
+    }
+    result
+}
+
+fn decode_addr_element_inner(data: &[u8]) -> Option<(i64, u64, u64)> {
     let mut pos = 0usize;
     let mut space: Option<i64> = None;
     let mut offset: Option<u64> = None;
@@ -1632,7 +1644,7 @@ pub fn decode_addr_element(data: &[u8]) -> Option<(i64, u64, u64)> {
             }
             h if h == wire::ATTRIBUTE_EQ => {
                 let (aid, ty) = decode_attr_header(header, data, &mut pos)?;
-                let value = decode_int_value(data, pos, &mut pos, (ty & 0xf) as usize)?;
+                let value = decode_attr_value(data, ty, &mut pos)?;
                 if ty >> 4 == wire::attr_type::STRING {
                     pos = pos.checked_add(usize::try_from(value).ok()?)?;
                     if pos > data.len() {
@@ -1642,6 +1654,14 @@ pub fn decode_addr_element(data: &[u8]) -> Option<(i64, u64, u64)> {
                 }
                 match (aid, ty >> 4) {
                     (wire::attr::SPACE, wire::attr_type::SPACE) => space = Some(value as i64),
+                    // A special space (stack, join, fspec, iop, spacebase) is
+                    // named by the length nibble, not by an index into the
+                    // program's space table. Give it a negative identity so it
+                    // can never compare equal to `ram_space_index`, which is
+                    // what every caller tests.
+                    (wire::attr::SPACE, wire::attr_type::SPECIAL_SPACE) => {
+                        space = Some(-1 - value as i64)
+                    }
                     (wire::attr::OFFSET, wire::attr_type::UNSIGNED_INT) => {
                         if offset.is_none() {
                             offset = Some(value);
@@ -1683,6 +1703,26 @@ fn decode_int_value(data: &[u8], start: usize, pos: &mut usize, groups: usize) -
     }
     *pos = p;
     Some(value)
+}
+
+/// Decodes an attribute's value and advances past whatever payload it owns.
+///
+/// Two type codes carry their value in the type byte's low nibble and are
+/// followed by NO payload groups: `BOOLEAN` (marshal.cc
+/// `PackedEncode::writeBool` writes `(TYPECODE_BOOLEAN << 4) | val`) and
+/// `SPECIAL_SPACE` (`PackedEncode::writeSpace` writes
+/// `(TYPECODE_SPECIALSPACE << 4) | code` for the stack, join, fspec, iop and
+/// spacebase spaces). Reading `ty & 0xf` groups for those consumes the next
+/// attribute's header bytes instead, and because integer payload bytes all
+/// have bit 0x80 set, the walk then reads one as an element-end or attribute
+/// header and desynchronises for the rest of the element. That is what made
+/// every query carrying a stack or spacebase address fail as
+/// "bad packed <addr>".
+fn decode_attr_value(data: &[u8], ty: u8, pos: &mut usize) -> Option<u64> {
+    match ty >> 4 {
+        wire::attr_type::BOOLEAN | wire::attr_type::SPECIAL_SPACE => Some((ty & 0xf) as u64),
+        _ => decode_int_value(data, *pos, pos, (ty & 0xf) as usize),
+    }
 }
 
 /// Reads the root element id of a packed payload (with extension byte).
@@ -1732,10 +1772,8 @@ pub fn packed_element_span(data: &[u8]) -> Option<usize> {
             }
             h if h == wire::ATTRIBUTE_EQ => {
                 let (aid, ty) = decode_attr_header(header, data, &mut pos)?;
-                let tc = ty >> 4;
-                let len = (ty & 0xf) as usize;
-                let v = decode_int_value(data, pos, &mut pos, len)?;
-                if tc == wire::attr_type::STRING {
+                let v = decode_attr_value(data, ty, &mut pos)?;
+                if ty >> 4 == wire::attr_type::STRING {
                     pos = pos.checked_add(v as usize)?;
                 }
                 let _ = aid;
@@ -1777,11 +1815,17 @@ pub fn find_name_attribute(data: &[u8]) -> Option<String> {
                     return None;
                 }
                 let (aid, ty) = decode_attr_header(header, data, &mut pos)?;
-                if aid == wire::attr::NAME && ty >> 4 == wire::attr_type::STRING {
-                    let len = decode_int_value(data, pos, &mut pos, (ty & 0xf) as usize)? as usize;
-                    let end = pos.checked_add(len)?;
-                    let raw = data.get(pos..end)?.to_vec();
-                    name = Some(String::from_utf8_lossy(&raw).into_owned());
+                // Every attribute's payload has to be stepped over, not just
+                // the one being looked for: integer payload bytes all have bit
+                // 0x80 set, so a skipped payload is read back as an element or
+                // attribute header and the walk desynchronises.
+                let value = decode_attr_value(data, ty, &mut pos)?;
+                if ty >> 4 == wire::attr_type::STRING {
+                    let end = pos.checked_add(usize::try_from(value).ok()?)?;
+                    if aid == wire::attr::NAME {
+                        let raw = data.get(pos..end)?.to_vec();
+                        name = Some(String::from_utf8_lossy(&raw).into_owned());
+                    }
                     pos = end;
                 }
             }
@@ -1805,13 +1849,11 @@ pub fn find_numeric_attribute(data: &[u8], target: u32) -> Option<i64> {
             }
             h if h == wire::ATTRIBUTE_EQ => {
                 let (id, ty) = decode_attr_header(header, data, &mut pos)?;
-                let groups = (ty & 0xf) as usize;
+                let value = decode_attr_value(data, ty, &mut pos)?;
                 if ty >> 4 == wire::attr_type::STRING {
-                    let len = decode_int_value(data, pos, &mut pos, groups)? as usize;
-                    pos = pos.checked_add(len)?;
+                    pos = pos.checked_add(usize::try_from(value).ok()?)?;
                     continue;
                 }
-                let value = decode_int_value(data, pos, &mut pos, groups)?;
                 if id == target {
                     return match ty >> 4 {
                         wire::attr_type::NEGATIVE_INT => Some(-(value as i64)),
@@ -1986,6 +2028,66 @@ mod tests {
         wire::encode_addr_element(&mut payload, 3, 0x401178);
         wire::encode_header(&mut payload, wire::ELEMENT_END, wire::query::GETSTRINGDATA);
         assert_eq!(decode_addr_element(&payload), Some((3, 0x401178, 0)));
+    }
+
+    /// `PackedEncode::writeSpace` puts a special space's code in the type
+    /// byte's low nibble and writes no payload. Reading that nibble as a
+    /// group count swallows the following attribute's header, and because
+    /// every integer payload byte has bit 0x80 set the walk then reads one
+    /// as an element-end and gives up. This is the exact 15-byte query the
+    /// decompiler sends for a stack address; 158 of 197 Persona 4 functions
+    /// failed to decompile on it.
+    #[test]
+    fn special_space_address_decodes_without_a_payload() {
+        let payload: [u8; 15] = [
+            0x61, 0xf9, // <getmappedsymbols> (extended element id)
+            0x4b, // <addr>
+            0xd4, 0x64, // space attribute, SPECIAL_SPACE code 4 (spacebase)
+            0xd0, 0x45, 0x8f, 0xff, 0xfe, 0x8a, 0x84, // offset, 5 groups
+            0x8b, // </addr>
+            0xa1, 0xf9, // </getmappedsymbols>
+        ];
+        let (space, offset, size) = decode_addr_element(&payload).expect("special-space addr");
+        assert_eq!(offset, 0xffff8504);
+        assert_eq!(size, 0);
+        // Special spaces are not indices into the program's space table, so
+        // they must never collide with a real one.
+        assert!(space < 0, "special space {space} must not look like a real index");
+    }
+
+    /// `PackedEncode::writeBool` encodes the value in the length nibble and
+    /// writes no payload either, so a `true` used to consume the next byte.
+    #[test]
+    fn boolean_attribute_carries_no_payload() {
+        let mut payload = Vec::new();
+        wire::encode_header(&mut payload, wire::ELEMENT_START, wire::elem::ADDR);
+        wire::encode_header(&mut payload, wire::ATTRIBUTE, wire::attr::READONLY);
+        payload.push((wire::attr_type::BOOLEAN << 4) | 1);
+        wire::encode_attribute(&mut payload, wire::attr::SPACE, wire::attr_type::SPACE, 3);
+        wire::encode_attribute(
+            &mut payload,
+            wire::attr::OFFSET,
+            wire::attr_type::UNSIGNED_INT,
+            0x401178,
+        );
+        wire::encode_header(&mut payload, wire::ELEMENT_END, wire::elem::ADDR);
+        assert_eq!(decode_addr_element(&payload), Some((3, 0x401178, 0)));
+    }
+
+    /// `find_numeric_attribute` has to step over every attribute's payload,
+    /// not just the one it wants, or it desynchronises before reaching a
+    /// target that is not first.
+    #[test]
+    fn numeric_attribute_is_found_after_a_string_and_a_bool() {
+        let mut payload = Vec::new();
+        wire::encode_header(&mut payload, wire::ELEMENT_START, wire::elem::ADDR);
+        wire::encode_string_attribute(&mut payload, wire::attr::NAME, b"stackframe");
+        wire::encode_header(&mut payload, wire::ATTRIBUTE, wire::attr::READONLY);
+        payload.push((wire::attr_type::BOOLEAN << 4) | 1);
+        wire::encode_attribute(&mut payload, wire::attr::SIZE, wire::attr_type::POSITIVE_INT, 48);
+        wire::encode_header(&mut payload, wire::ELEMENT_END, wire::elem::ADDR);
+        assert_eq!(find_numeric_attribute(&payload, wire::attr::SIZE), Some(48));
+        assert_eq!(find_name_attribute(&payload).as_deref(), Some("stackframe"));
     }
 }
 
