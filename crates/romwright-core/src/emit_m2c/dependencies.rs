@@ -16,7 +16,52 @@ pub(super) struct Dependencies {
 enum Intrinsic {
     Piece(u32, u32),
     Carry(u32),
+    /// `INT_ZEXT` / `INT_SEXT`: a width change, which is a cast in C.
+    Extend { from: u32, to: u32, signed: bool },
+    /// `SUBPIECE(value, k)`: the `to`-byte field `k` bytes up from the bottom.
+    Subpiece { from: u32, to: u32, offset: u32 },
+    /// `FLOAT_ABS` / `FLOAT_NEG` / `FLOAT_SQRT` on a 4- or 8-byte float.
+    FloatUnary { op: FloatUnary, size: u32 },
 }
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum FloatUnary {
+    Abs,
+    Negate,
+}
+
+fn signed_type(size: u32) -> Result<&'static str, String> {
+    match size {
+        1 => Ok("signed char"),
+        2 => Ok("short"),
+        4 => Ok("int"),
+        8 => Ok("long long"),
+        16 => Ok(INT128),
+        _ => Err(format!("no supported C integer for {size}-byte intrinsic operand")),
+    }
+}
+
+fn float_type(size: u32) -> Result<&'static str, String> {
+    match size {
+        4 => Ok("float"),
+        8 => Ok("double"),
+        _ => Err(format!("no supported C float for {size}-byte intrinsic operand")),
+    }
+}
+
+/// A 128-bit integer is a real C type on every target that has one: GCC and
+/// Clang both spell it `__attribute__((mode(TI)))`, and PS2 decompilation
+/// projects already use exactly that under their own name (`u_long128`).
+/// Rejecting 16-byte operands left quadword extracts and extensions - the
+/// ordinary C behind `lq`/`sq` and the COP2 transfers - unrenderable for no
+/// reason, so they get the same treatment as every other width.
+const UINT128: &str = "romwright_uint128";
+const INT128: &str = "romwright_int128";
+const INT128_TYPEDEFS: &str = concat!(
+    "#ifndef ROMWRIGHT_INT128_DEFINED\n#define ROMWRIGHT_INT128_DEFINED\n",
+    "typedef unsigned int romwright_uint128 __attribute__((mode(TI)));\n",
+    "typedef int romwright_int128 __attribute__((mode(TI)));\n#endif\n",
+);
 
 fn unsigned(size: u32) -> Result<&'static str, String> {
     match size {
@@ -24,25 +69,87 @@ fn unsigned(size: u32) -> Result<&'static str, String> {
         2 => Ok("unsigned short"),
         4 => Ok("unsigned int"),
         8 => Ok("unsigned long long"),
+        16 => Ok(UINT128),
         _ => Err(format!("no supported C integer for {size}-byte intrinsic operand")),
     }
 }
 
 impl Intrinsic {
     fn recover(ir: &FunctionIr, operation: &IrOperation) -> Result<Self, String> {
-        let input = |index| {
+        let is_float = |index: usize| {
+            matches!(operation.inputs.get(index), Some(Operand::Value(id))
+                if matches!(ir.type_evidence.get(id),
+                            Some(romwright_model::type_evidence::Class::Float(_))))
+        };
+        let width = |index: usize| {
             let Some(Operand::Value(id)) = operation.inputs.get(index) else {
                 return Err("intrinsic has no scalar input".to_string());
             };
-            if matches!(ir.type_evidence.get(id), Some(romwright_model::type_evidence::Class::Float(_))) {
-                return Err("intrinsic requires a floating-point bit reinterpretation".into());
-            }
             ir.values.get(id).and_then(|value| value.size)
                 .ok_or_else(|| "intrinsic input has no native width".to_string())
+        };
+        let input = |index: usize| {
+            if is_float(index) {
+                return Err("intrinsic requires a floating-point bit reinterpretation".into());
+            }
+            width(index)
+        };
+        // A constant operand lives in native space zero, and its offset is
+        // the value: that is how SUBPIECE carries its byte offset.
+        let constant = |index: usize| {
+            let Some(Operand::Value(id)) = operation.inputs.get(index) else { return None };
+            let value = ir.values.get(id)?;
+            (value.space == romwright_model::function_ir::IrSpace::Index(0))
+                .then_some(value.offset)
+                .flatten()
         };
         let output = operation.output.and_then(|id| ir.values.get(&id))
             .and_then(|value| value.size)
             .ok_or("intrinsic output has no native width")?;
+
+        // Width changes and float sign operations take one operand, so they
+        // are recovered before the two-operand integer forms.
+        match operation.opcode {
+            Opcode::INT_ZEXT | Opcode::INT_SEXT => {
+                // Ghidra widens a constant through whatever odd source width
+                // the instruction implied (a 7-byte shift amount, say). A
+                // constant needs no truncation step, so the extension is just
+                // a cast to the output type.
+                let from = if constant(0).is_some() { output } else { input(0)? };
+                let signed = operation.opcode == Opcode::INT_SEXT;
+                if signed { signed_type(from)?; } else { unsigned(from)?; }
+                unsigned(output)?;
+                return Ok(Self::Extend { from, to: output, signed });
+            }
+            Opcode::SUBPIECE => {
+                let from = input(0)?;
+                let offset = constant(1)
+                    .ok_or("SUBPIECE needs a constant byte offset")?;
+                let offset = u32::try_from(offset)
+                    .map_err(|_| "SUBPIECE byte offset does not fit".to_string())?;
+                unsigned(from)?;
+                unsigned(output)?;
+                if offset + output > from {
+                    return Err("SUBPIECE field lies outside its operand".into());
+                }
+                return Ok(Self::Subpiece { from, to: output, offset });
+            }
+            Opcode::FLOAT_ABS | Opcode::FLOAT_NEG => {
+                let size = width(0)?;
+                float_type(size)?;
+                if size != output {
+                    return Err("float sign operation changes width".into());
+                }
+                let op = if operation.opcode == Opcode::FLOAT_ABS {
+                    FloatUnary::Abs
+                } else {
+                    FloatUnary::Negate
+                };
+                return Ok(Self::FloatUnary { op, size });
+            }
+            _ => {}
+        }
+
         if operation.inputs.len() != 2 {
             return Err("integer intrinsic needs two native operands".into());
         }
@@ -64,6 +171,20 @@ impl Intrinsic {
         match self {
             Self::Piece(upper, lower) => format!("romwright_piece_{upper}_{lower}"),
             Self::Carry(size) => format!("romwright_carry_{size}"),
+            Self::Extend { from, to, signed } => {
+                let kind = if signed { "sext" } else { "zext" };
+                format!("romwright_{kind}_{from}_{to}")
+            }
+            Self::Subpiece { from, to, offset } => {
+                format!("romwright_subpiece_{from}_{to}_{offset}")
+            }
+            Self::FloatUnary { op, size } => {
+                let kind = match op {
+                    FloatUnary::Abs => "fabs",
+                    FloatUnary::Negate => "fneg",
+                };
+                format!("romwright_{kind}_{size}")
+            }
         }
     }
 
@@ -90,8 +211,43 @@ impl Intrinsic {
                 // evaluate each operand once; addition is unsigned modulo 2^64.
                 format!("static unsigned char {name}(unsigned long long left, unsigned long long right)\n{{\n    return (unsigned char)((left + right) < left);\n}}\n")
             }
+            Self::Extend { from, to, signed } => {
+                // A width change is a cast. Truncate to the source width
+                // first so the macro is correct when handed a wider value,
+                // and go through the signed type for INT_SEXT so the
+                // conversion sign-extends.
+                let result = unsigned(to)?;
+                let source = if signed { signed_type(from)? } else { unsigned(from)? };
+                format!("#define {name}(value) (({result})({source})(value))\n")
+            }
+            Self::Subpiece { from, to, offset } => {
+                let result = unsigned(to)?;
+                let source = unsigned(from)?;
+                let shift = offset * 8;
+                if shift == 0 {
+                    format!("#define {name}(value) (({result})({source})(value))\n")
+                } else {
+                    format!("#define {name}(value) (({result})((({source})(value)) >> {shift}))\n")
+                }
+            }
+            Self::FloatUnary { op, size } => {
+                let ty = float_type(size)?;
+                match op {
+                    // The argument appears twice, so this has to be a
+                    // function: a macro would evaluate a call operand twice.
+                    FloatUnary::Abs => format!(
+                        "static {ty} {name}({ty} value)\n{{\n    return value < ({ty})0 ? -value : value;\n}}\n"
+                    ),
+                    FloatUnary::Negate => format!("#define {name}(value) (-({ty})(value))\n"),
+                }
+            }
         };
-        Ok(format!("#ifndef {guard}\n#define {guard}\n{body}#endif\n"))
+        let prelude = if body.contains(UINT128) || body.contains(INT128) {
+            INT128_TYPEDEFS
+        } else {
+            ""
+        };
+        Ok(format!("{prelude}#ifndef {guard}\n#define {guard}\n{body}#endif\n"))
     }
 }
 
@@ -138,20 +294,28 @@ pub(super) fn from_doc(
             Opcode::CALL | Opcode::CALLIND => {}
             _ if operation.effect() == Effect::Control => {}
             _ => {
-                // An intrinsic this emitter cannot render in C -- a VU0 macro
-                // operation or an MMI instruction, say -- used to abort the
-                // whole export, which loses a 600-instruction body over one
-                // opcode. Name it and carry on instead: the reader gets the
-                // control flow, the types and every other statement, with the
-                // one operation flagged the same way an untyped callee is.
-                // m2c's own `M2C_ERROR` placeholder serves the same purpose.
+                // An operation with no C spelling -- a VU0 macro-mode
+                // instruction or an MMI op arriving as CALLOTHER, say -- used
+                // to abort the whole export, which loses a 600-instruction
+                // body over one opcode. Flag it and carry on instead: the
+                // reader gets the control flow, the types and every other
+                // statement, with that one operation marked the same way an
+                // untyped callee is. m2c's `M2C_ERROR` serves the same purpose.
+                //
+                // The decompiler's own rendering of the operation is already
+                // the userop's name (`_lqc2`, `_pextlb`), so it is kept as
+                // written rather than replaced by a generic stem: which VU
+                // instruction it was is exactly what the reader needs.
                 let Ok(intrinsic) = Intrinsic::recover(ir, operation) else {
-                    let helper = format!("romwright_unsupported_{}", stem_for(operation));
-                    if unsupported.insert(helper.clone()) {
+                    let label = if is_c_ident(name) {
+                        name.to_string()
+                    } else {
+                        format!("romwright_unsupported_{}", stem_for(operation))
+                    };
+                    if unsupported.insert(label.clone()) {
                         let _ = writeln!(
                             result.text,
-                            "/* Unsupported intrinsic, declaration required: {helper} \
-                             ({:?}). */",
+                            "/* Unsupported intrinsic, declaration required: {label} ({:?}). */",
                             operation.opcode
                         );
                         result.warnings.push(format!(
@@ -160,7 +324,7 @@ pub(super) fn from_doc(
                             operation.opcode
                         ));
                     }
-                    result.names.insert(operation.id, helper);
+                    result.names.insert(operation.id, label);
                     continue;
                 };
                 let helper = match helpers.entry(intrinsic) {
