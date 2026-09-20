@@ -302,13 +302,19 @@ void GateRunner::startDecompile(const QString &addr) {
                 finish(false, err);
                 return;
             }
-            QVector<TokenView> tokens = TokenView::fromDocument(res.value("result").toObject());
+            const QJsonObject result = res.value("result").toObject();
+            // The graph ships with the document: laying it out must not
+            // pay a second worker round-trip through `function_bb_graph`
+            // (that re-decompiles the function, which is what the timer
+            // was measuring -- ~1.6 s on the 1865-block function).
+            const QJsonObject graph = result.value("graph").toObject();
+            QVector<TokenView> tokens = TokenView::fromDocument(result);
             bridge_->request(
                 QJsonObject{{"method", "listing"},
                             {"binary", window_->binary()},
                             {"start", address_},
                             {"count", 128}},
-                [this, tokens = std::move(tokens)](const QJsonObject &l_res) mutable {
+                [this, tokens = std::move(tokens), graph](const QJsonObject &l_res) mutable {
                     QVector<ListingRowView> views;
                     if (successful(l_res)) {
                         for (const QJsonValue &row : l_res.value("result").toObject().value("rows").toArray()) {
@@ -324,55 +330,44 @@ void GateRunner::startDecompile(const QString &addr) {
                     window_->listingCanvas()->repaint();
                     metrics_.insert(QStringLiteral("ui.sync_ms"),
                                     static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
-                    startGraph();
+                    startGraph(graph);
                 });
         });
 }
-
-void GateRunner::startGraph() {
+void GateRunner::startGraph(const QJsonObject &graph) {
     timer_.start();
-    bridge_->request(
-        QJsonObject{{"method", "function_bb_graph"},
-                    {"program", window_->program()},
-                    {"binary", window_->binary()},
-                    {"address", address_}},
-        [this](const QJsonObject &res) {
-            QString err;
-            if (!successful(res, &err)) {
-                finish(false, err);
-                return;
-            }
-            metrics_.insert(QStringLiteral("ui.graph.layout_ms"),
-                            static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
-            const QJsonObject result = res.value("result").toObject();
-            QVector<GraphCanvas::Node> nodes;
-            QVector<GraphCanvas::Edge> edges;
-            for (const QJsonValue &v : result.value("nodes").toArray()) {
-                const QJsonObject row = v.toObject();
-                GraphCanvas::Node n;
-                n.address = row.value("address").toString();
-                n.id = row.value("id").toString();
-                n.operations = row.value("operations").toVariant().toULongLong();
-                n.pos = QPointF(row.value("x").toVariant().toDouble(),
-                                row.value("y").toVariant().toDouble());
-                nodes.append(n);
-            }
-            for (const QJsonValue &v : result.value("edges").toArray()) {
-                const QJsonObject row = v.toObject();
-                GraphCanvas::Edge e;
-                e.from = row.value("from").toString();
-                e.to = row.value("to").toString();
-                e.kind = row.value("kind").toString();
-                edges.append(e);
-            }
-            timer_.start();
-            window_->graphDock()->canvas()->setGraph(nodes, edges);
-            window_->graphDock()->canvas()->setAddress(address_);
-            window_->graphDock()->canvas()->repaint();
-            metrics_.insert(QStringLiteral("ui.graph.paint_ms"),
-                            static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
-            startXrefs();
-        });
+    const QJsonObject result = graph;
+    {
+        QVector<GraphCanvas::Node> nodes;
+        QVector<GraphCanvas::Edge> edges;
+        for (const QJsonValue &v : result.value("nodes").toArray()) {
+            const QJsonObject row = v.toObject();
+            GraphCanvas::Node n;
+            n.address = row.value("address").toString();
+            n.id = row.value("id").toString();
+            n.operations = row.value("operations").toVariant().toULongLong();
+            n.pos = QPointF(row.value("x").toVariant().toDouble(),
+                            row.value("y").toVariant().toDouble());
+            nodes.append(n);
+        }
+        for (const QJsonValue &v : result.value("edges").toArray()) {
+            const QJsonObject row = v.toObject();
+            GraphCanvas::Edge e;
+            e.from = row.value("from").toString();
+            e.to = row.value("to").toString();
+            e.kind = row.value("kind").toString();
+            edges.append(e);
+        }
+        metrics_.insert(QStringLiteral("ui.graph.layout_ms"),
+                        static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
+        timer_.start();
+        window_->graphDock()->canvas()->setGraph(nodes, edges);
+        window_->graphDock()->canvas()->setAddress(address_);
+        window_->graphDock()->canvas()->repaint();
+        metrics_.insert(QStringLiteral("ui.graph.paint_ms"),
+                        static_cast<double>(timer_.nsecsElapsed()) / 1'000'000.0);
+        startXrefs();
+    }
 }
 
 void GateRunner::startXrefs() {

@@ -23,7 +23,7 @@ private:
     bool graphInteractions();
     void startLargestFunction();
     void startDecompile(const QString &address);
-    void startGraph();
+    void startGraph(const QJsonObject &graph);
     void startXrefs();
     void startFilteredXrefs();
     void startProgramSwitch();
