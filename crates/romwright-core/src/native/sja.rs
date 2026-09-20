@@ -1538,22 +1538,57 @@ impl DefIndex {
                 }
             }
         }
-        // The last write each block makes to each slot, as its DefPos: a
-        // later write kills the incoming definition.
-        let mut last: Vec<BTreeMap<Slot, DefPos>> = vec![BTreeMap::new(); n];
-        for (index, block) in blocks.iter().enumerate() {
-            for (insn, instruction) in block.instructions.iter().enumerate() {
-                for (op_idx, op) in instruction.ops.iter().enumerate() {
+        // Intern slots to dense ids for the fixpoint below. This is a pure
+        // representation change: the lattice, the seeds, the merge order
+        // effects (merge is commutative), and the stored facts are
+        // identical. What changes is cost: the hot function holds
+        // hundreds of blocks over a function-wide universe, and keying
+        // every map by `(String, u64)` pays string compare/clone on every
+        // edge every pass. Dense `Vec<Reach>` rows pay integer indexing.
+        let mut id_of: BTreeMap<Slot, usize> = BTreeMap::new();
+        let mut slots: Vec<Slot> = Vec::new();
+        let mut intern = |slot: Slot| {
+            if let Some(&id) = id_of.get(&slot) {
+                return id;
+            }
+            let id = slots.len();
+            slots.push(slot.clone());
+            id_of.insert(slot, id);
+            id
+        };
+        // Pre-intern in a fixed order so ids are deterministic.
+        for block in blocks.iter() {
+            for instruction in &block.instructions {
+                for op in &instruction.ops {
+                    for input in op.inputs.iter().filter(|v| !v.is_const()) {
+                        intern(slot(input));
+                    }
                     if let Some(out) = &op.output {
                         if !out.is_const() {
-                            last[index].insert(slot(out), (index, insn, op_idx));
+                            intern(slot(out));
                         }
                     }
                 }
             }
         }
-        let mut reach_in: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
-        let mut reach_out: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        let u = slots.len();
+        // The last write each block makes to each slot, as its DefPos: a
+        // later write kills the incoming definition.
+        let mut last: Vec<Vec<Option<DefPos>>> = vec![vec![None; u]; n];
+        for (index, block) in blocks.iter().enumerate() {
+            for (insn, instruction) in block.instructions.iter().enumerate() {
+                for (op_idx, op) in instruction.ops.iter().enumerate() {
+                    if let Some(out) = &op.output {
+                        if !out.is_const() {
+                            let id = id_of[&slot(out)];
+                            last[index][id] = Some((index, insn, op_idx));
+                        }
+                    }
+                }
+            }
+        }
+        let mut reach_in: Vec<Vec<Reach>> = vec![vec![Reach::Bottom; u]; n];
+        let mut reach_out: Vec<Vec<Reach>> = vec![vec![Reach::Bottom; u]; n];
         // Forward fixpoint over a per-slot lattice with bottom. Every edge
         // starts at `Bottom` (its transfer has not run: neither a
         // definition nor a live-in source) and merges normally once
@@ -1568,23 +1603,8 @@ impl DefIndex {
         // universe rather than per-block names keeps `entry -> left(def),
         // right(unnamed) -> join` at `Many`: the right arm contributes
         // the universe's live-in for the slot the left defines.
-        let mut universe: std::collections::BTreeSet<Slot> = std::collections::BTreeSet::new();
-        for block in blocks.iter() {
-            for instruction in &block.instructions {
-                for op in &instruction.ops {
-                    for input in op.inputs.iter().filter(|v| !v.is_const()) {
-                        universe.insert(slot(input));
-                    }
-                    if let Some(out) = &op.output {
-                        if !out.is_const() {
-                            universe.insert(slot(out));
-                        }
-                    }
-                }
-            }
-        }
         let mut computed = vec![false; n];
-        let mut prev_out: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        let mut prev_out: Vec<Vec<Reach>> = vec![vec![Reach::Bottom; u]; n];
         // External seeds as a set for the merge below: the caller names
         // the blocks it seeds from outside, and graph structure never
         // adds or removes one. A cycle with an incoming edge from another
@@ -1596,24 +1616,12 @@ impl DefIndex {
             let mut changed = false;
             for index in 0..n {
                 computed[index] = true;
-                let mut keys: std::collections::BTreeSet<Slot> =
-                    std::collections::BTreeSet::new();
-                for &pred in &preds[index] {
-                    if pred == index {
-                        keys.extend(prev_out[pred].keys().cloned());
-                    } else if computed[pred] {
-                        keys.extend(reach_out[pred].keys().cloned());
-                    }
-                }
-                // A seed reads the whole universe from outside: seed every
-                // universe slot as a merge key so the live-in below has
-                // something to attach to.
+                // Iterating the full universe is a superset of the old
+                // predecessor-key union: slots with no information
+                // everywhere stay `Bottom` and are dropped from the
+                // stored maps below, so the result is identical.
                 let entry = seeds.contains(&index);
-                if entry {
-                    keys.extend(universe.iter().cloned());
-                }
-                let mut merged: BTreeMap<Slot, Reach> = BTreeMap::new();
-                for key in keys {
+                for sid in 0..u {
                     let mut reach = Reach::Bottom;
                     for &pred in &preds[index] {
                         // Missing is bottom -- except through a block that
@@ -1623,14 +1631,15 @@ impl DefIndex {
                         // right arm of a diamond carries the entry's
                         // live-in to the join without defining anything.
                         let incoming = if pred == index {
-                            prev_out[pred].get(&key).copied().unwrap_or(Reach::Bottom)
+                            prev_out[pred][sid]
                         } else if computed[pred] {
-                            match reach_out[pred].get(&key).copied() {
-                                Some(found) => found,
-                                None if reach_in[pred].get(&key).copied() == Some(Reach::LiveIn) => {
-                                    Reach::LiveIn
-                                }
-                                None => Reach::Bottom,
+                            let out = reach_out[pred][sid];
+                            if out != Reach::Bottom {
+                                out
+                            } else if reach_in[pred][sid] == Reach::LiveIn {
+                                Reach::LiveIn
+                            } else {
+                                Reach::Bottom
                             }
                         } else {
                             Reach::Bottom
@@ -1640,21 +1649,20 @@ impl DefIndex {
                     if entry {
                         reach = reach.merge(Reach::LiveIn);
                     }
-                    if reach != Reach::Bottom {
-                        merged.insert(key, reach);
+                    if reach != reach_in[index][sid] {
+                        reach_in[index][sid] = reach;
+                        changed = true;
                     }
                 }
-                if merged != reach_in[index] {
-                    reach_in[index] = merged.clone();
-                    changed = true;
-                }
-                let mut out = merged;
-                for (key, def) in &last[index] {
-                    out.insert(key.clone(), Reach::One(*def));
-                }
-                if out != reach_out[index] {
-                    reach_out[index] = out;
-                    changed = true;
+                for sid in 0..u {
+                    let mut out = reach_in[index][sid];
+                    if let Some(def) = last[index][sid] {
+                        out = Reach::One(def);
+                    }
+                    if out != reach_out[index][sid] {
+                        reach_out[index][sid] = out;
+                        changed = true;
+                    }
                 }
             }
             prev_out.clone_from(&reach_out);
@@ -1662,7 +1670,15 @@ impl DefIndex {
                 break;
             }
         }
-        DefIndex { reach_in }
+        let mut stored: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        for (index, row) in reach_in.iter().enumerate() {
+            for (sid, &reach) in row.iter().enumerate() {
+                if reach != Reach::Bottom {
+                    stored[index].insert(slots[sid].clone(), reach);
+                }
+            }
+        }
+        DefIndex { reach_in: stored }
     }
 
     /// The reaching definition of `key` read at `upto` (instruction, op)
@@ -2288,11 +2304,22 @@ fn guard_bound(defs: &DefIndex, blocks: &[Block], expr: &Sliced) -> Option<(Slot
                 };
                 // The guard applies when the compared varnode is a
                 // quasi-copy of a switch-variable point: same base slot,
-                // or the compared varnode itself is a point.
+                // or the compared varnode itself is a point. The point
+                // must enter the index expression *unshifted*: a bound
+                // stated for `r8` says nothing about `r8 + 48`, whose
+                // loop-carried value the comparison never observed. A
+                // shifted occurrence would evaluate the guard's interval
+                // through arithmetic the guard did not state, reading a
+                // different table region (observed: entries 48.. of the
+                // neighbour table instead of 0..15 of the true one,
+                // materialising a foreign function's blocks).
                 let base = quasi_copy(defs, blocks, cmp_block, &compared, cmp_at);
                 if let Some(point) = points
                     .iter()
-                    .find(|point| **point == base || **point == slot(&compared))
+                    .find(|point| {
+                        (**point == base || **point == slot(&compared))
+                            && index_uses_point_unshifted(expr, point)
+                    })
                 {
                     let high = if inclusive {
                         limit
@@ -2325,6 +2352,36 @@ fn collect_points(expr: &Sliced, out: &mut Vec<Slot>) {
         }
         Sliced::SExt(inner, _) | Sliced::ZExt(inner, _) => collect_points(inner, out),
         _ => {}
+    }
+}
+/// Whether `point` occurs in the index expression under only transparent
+/// wrappers: bare, through copies/extensions/scale-by-1, or beside a zero
+/// constant. Any nonzero constant shift, non-unit multiply, shift, or
+/// mask means the guard's interval would be transformed before indexing,
+/// and the bound does not apply. (An earlier version allowed a shifted
+/// occurrence when the other side did not mention the point; that is
+/// backwards -- `Add(Point, Const(48))` shifts every value of the point
+/// regardless of what the other side mentions.)
+fn index_uses_point_unshifted(expr: &Sliced, point: &Slot) -> bool {
+    match expr {
+        Sliced::Point(key) => key == point,
+        Sliced::Load(addr, _) => index_uses_point_unshifted(addr, point),
+        Sliced::Add(a, b) | Sliced::Sub(a, b) => match (&**a, &**b) {
+            (Sliced::Const(0), other) | (other, Sliced::Const(0)) => {
+                index_uses_point_unshifted(other, point)
+            }
+            _ => false,
+        },
+        Sliced::Mult(a, b) => match (&**a, &**b) {
+            (Sliced::Const(1), other) | (other, Sliced::Const(1)) => {
+                index_uses_point_unshifted(other, point)
+            }
+            _ => false,
+        },
+        Sliced::SExt(inner, _) | Sliced::ZExt(inner, _) => {
+            index_uses_point_unshifted(inner, point)
+        }
+        _ => false,
     }
 }
 fn reverse_post_order(blocks: &[Block]) -> Vec<usize> {
@@ -2555,6 +2612,12 @@ mod tests {
         assert_eq!(found.tables[0].branch, 0x1010);
         assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
+    /// (No shifted-guard unit regression: the two synthetic attempts were
+    /// void -- the first never reached the filter, the second's image made
+    /// refusal semantically correct. The filter's evidence is the
+    /// import-level negative control on real libc p-code, recorded in
+    /// STATUS: filter disabled reproduces the exact 18 foreign targets.)
+
     /// Preheader defines the index; header and latch shuttle it back and
     /// forth without redefining it. The latch's missing slot is bottom
     /// until its transfer runs -- not live-in -- so the dominating
