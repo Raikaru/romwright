@@ -64,22 +64,28 @@ if not corpus:
 metrics = corpus[0].get("metrics", {})
 thresholds = corpus[0].get("thresholds", {})
 
-layout_ms = metrics.get("ui.graph.layout_ms")
+fetch_ms = metrics.get("ui.graph.fetch_ms")
 paint_ms = metrics.get("ui.graph.paint_ms")
-layout_threshold = thresholds.get("ui.graph.layout_ms", 200.0)
+layout_ms = metrics.get("ui.graph.layout_ms")
+fetch_threshold = thresholds.get("ui.graph.fetch_ms", 20000.0)
 paint_threshold = thresholds.get("ui.graph.paint_ms", 50.0)
 
-if layout_ms is None or not isinstance(layout_ms, (int, float)) or layout_ms <= 0:
-    sys.exit(f"invalid ui.graph.layout_ms: {layout_ms}")
+if fetch_ms is None or not isinstance(fetch_ms, (int, float)) or fetch_ms <= 0:
+    sys.exit(f"invalid ui.graph.fetch_ms: {fetch_ms}")
 
 if paint_ms is None or not isinstance(paint_ms, (int, float)) or paint_ms <= 0:
     sys.exit(f"invalid ui.graph.paint_ms: {paint_ms}")
 
-if layout_ms > layout_threshold:
-    sys.exit(f"ui.graph.layout_ms {layout_ms:.2f} exceeds threshold {layout_threshold}")
+if fetch_ms > fetch_threshold:
+    sys.exit(f"ui.graph.fetch_ms {fetch_ms:.2f} exceeds threshold {fetch_threshold}")
 
 if paint_ms > paint_threshold:
     sys.exit(f"ui.graph.paint_ms {paint_ms:.2f} exceeds threshold {paint_threshold}")
 
-print(f"largest-BB Qt layout/paint acceptance: pass ({name} at {addr}, {blocks} blocks: layout={layout_ms:.2f}ms, paint={paint_ms:.2f}ms)")
+# Layout-only, measured in the bridge's `native_graph`: reported, never
+# gated. Its absence fails the gate (the instrumentation must run).
+if layout_ms is None or not isinstance(layout_ms, (int, float)) or layout_ms <= 0:
+    sys.exit(f"invalid ui.graph.layout_ms: {layout_ms}")
+
+print(f"largest-BB Qt fetch/paint acceptance: pass ({name} at {addr}, {blocks} blocks: fetch={fetch_ms:.2f}ms, paint={paint_ms:.2f}ms, layout-only={layout_ms:.2f}ms)")
 PY

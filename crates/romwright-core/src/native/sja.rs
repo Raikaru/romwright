@@ -192,13 +192,19 @@ struct State {
     /// and keeping only the first loses the bound the dispatch needs. The
     /// trailing `u32` of each bound is the compared operand's width: a bound
     /// on `al` is a bound on one byte, whatever wider slot it was copied from.
-    predicates: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32)>>,
+    /// Each bound also snapshots the affine translation its operand
+    /// carried when the comparison ran: `p = (x < 64)` before `x -= 64`
+    /// translates through `(x, -64)`; `q = (x < 4)` after translates
+    /// through nothing. A slot-wide origin would mistranslate `q` to
+    /// `[-64, -61]`.
+    predicates: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32, Option<i64>)>>,
     /// Affine provenance: `slot = origin + off`, narrowed by the smallest
     /// width crossed, plus the origin's own width. A copy in one block and
     /// the compare in the next are ordinary code, so the links travel with
     /// the state the way predicates do.
     origins: BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
 }
+
 
 impl State {
     fn get(&self, varnode: &PcodeVarnode) -> Value {
@@ -618,12 +624,14 @@ fn run_block<I: Image>(
     // The comparison that produced each boolean, so a branch reading it can
     // refine the operand.
     // Boolean -> [(the compared slot, the constant, inclusive, which side
-    // the constant sat on, and the operand's width)]. The side decides which
+    // the constant sat on, the operand's width, and the affine link the
+    // operand carried when the comparison ran)]. The side decides which
     // *edge* learns the bound: `cmp idx, n; jbe body` bounds the taken
     // edge, and the far more common `cmp idx, n; ja default` bounds the
     // fallthrough. A boolean built from several comparisons -- a range
     // check `lo <= x && x < hi` -- carries every bound, not just the first.
-    let mut comparisons: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32)>> = state.predicates.clone();
+    let mut comparisons: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32, Option<i64>)>> =
+        state.predicates.clone();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
     // of the switch variable and then dispatches on the original, and the
@@ -675,22 +683,38 @@ fn run_block<I: Image>(
             //
             // An in-place `add`/`sub` by a constant is the exception to
             // the deletion below: the predicate names the slot's
-            // pre-write value, and the origin self-loop (`r8 -> (r8, -k)`,
-            // recorded by the affine arms) translates it at edge time to
-            // the post-write value (`CF = old_r8 < 64` before `r8 -= 64`
+            // pre-write value, and stamping it with the shift translates
+            // it at edge time (`CF = old_r8 < 64` before `r8 -= 64`
             // refines the edge to `new_r8 in [-64, -1]`). Deleting it
             // loses the only bound the dispatch chain has: the value arm
             // computes `add(Top, -k) = Top`, so nothing else carries it.
             // A non-constant add/sub (`add %rbx,%rax`), or any write to a
             // *different* slot than the predicate names, still deletes:
             // no translation exists for those, and the stale-operand test
-            // below pins that.
-            let is_in_place_affine_shift = matches!(opcode, crate::ir::Opcode::IntAdd | crate::ir::Opcode::IntSub)
-                && op.output.as_ref().is_some_and(|out| {
-                    !out.is_const()
-                        && op.inputs.first().is_some_and(|src| slot(src) == slot(out))
-                        && op.inputs.get(1).is_some_and(|k| k.is_const())
-                });
+            // below pins that. A second in-place rewrite composes onto
+            // an existing stamp; a predicate recorded after the rewrite
+            // stays unstamped and applies to the current value.
+            let in_place_shift = match opcode {
+                crate::ir::Opcode::IntAdd | crate::ir::Opcode::IntSub => {
+                    op.output.as_ref().and_then(|out| {
+                        if out.is_const() {
+                            return None;
+                        }
+                        let source = op.inputs.first()?;
+                        let konst = op.inputs.get(1)?;
+                        if slot(source) != slot(out) || !konst.is_const() {
+                            return None;
+                        }
+                        let delta = sign_extend(konst.offset, konst.size) as i64;
+                        Some(if matches!(opcode, crate::ir::Opcode::IntSub) {
+                            -delta
+                        } else {
+                            delta
+                        })
+                    })
+                }
+                _ => None,
+            };
             let prior = op.output.as_ref().and_then(|out| {
                 let key = slot(out);
                 comparisons.remove(&key);
@@ -698,16 +722,24 @@ fn run_block<I: Image>(
                 // `cmp $4,%eax; mov (%rsi),%eax; jbe` bounds the new eax.
                 // A value-preserving same-slot widening is the exception:
                 // `cmp $0x5a,%al; movzbl %al,%eax; ja` keeps the bound.
-                // An in-place add/sub by a constant is the second
-                // exception: the origin self-loop translates the bound.
+                // An in-place add/sub by a constant stamps instead of
+                // deleting (see above).
                 let preserves = (matches!(opcode, crate::ir::Opcode::Copy | crate::ir::Opcode::IntZExt | crate::ir::Opcode::IntSExt)
                     && op.inputs.first().is_some_and(|src| slot(src) == key))
-                    || is_in_place_affine_shift;
+                    || in_place_shift.is_some();
                 if !preserves {
                     comparisons.retain(|_, bounds| {
                         bounds.retain(|(operand, ..)| *operand != key);
                         !bounds.is_empty()
                     });
+                } else if let Some(shift) = in_place_shift {
+                    for bounds in comparisons.values_mut() {
+                        for bound in bounds.iter_mut() {
+                            if bound.0 == key {
+                                bound.5 = Some(bound.5.unwrap_or(0) + shift);
+                            }
+                        }
+                    }
                 }
                 origins.remove(&key)
             });
@@ -909,12 +941,17 @@ fn run_block<I: Image>(
                 | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
-                    let mut carried: Vec<(Slot, u64, bool, bool, u32)> = Vec::new();
+                    let mut carried: Vec<(Slot, u64, bool, bool, u32, Option<i64>)> = Vec::new();
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)) {
                             for bound in found {
                                 // Two bounds on one slot: the looser one is
-                                // what the combination admits.
+                                // what the combination admits. Stamps
+                                // merge only when both sides agree;
+                                // otherwise the combination's meaning for
+                                // that slot is unclear and the stamp is
+                                // dropped (the bound still applies
+                                // untranslated).
                                 match carried
                                     .iter_mut()
                                     .find(|existing| existing.0 == bound.0)
@@ -922,6 +959,9 @@ fn run_block<I: Image>(
                                     Some(existing) => {
                                         existing.1 = existing.1.max(bound.1);
                                         existing.2 = existing.2 || bound.2;
+                                        if existing.5 != bound.5 {
+                                            existing.5 = None;
+                                        }
                                     }
                                     None => carried.push(bound.clone()),
                                 }
@@ -937,30 +977,10 @@ fn run_block<I: Image>(
                 }
                 O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
                     // Remember what this boolean says, for the branch that
-                    // reads it: `index < n` bounds the index above.
-                    // A compare observes the slot's *current* value: drop
-                    // a self-loop (`r8 -> (r8, -k)` from an earlier
-                    // in-place rewrite) first, so the new predicate
-                    // applies untranslated -- but only when no predicate
-                    // already names the slot. A pending pre-write
-                    // predicate (`CF = old_r8 < 64`, consumed by a later
-                    // branch in the same block) still needs the loop as
-                    // its translation vehicle. Without any clearing,
-                    // `movzbl (%rdi),%eax; sub $0x20,%eax; cmp $3,%eax`
-                    // would translate the post-write bound back through
-                    // the sub and read 0x20 entries too deep; that shape
-                    // still clears (nothing names eax at its compare).
-                    for input in [op.inputs.first(), op.inputs.get(1)] {
-                        if let Some(source) = input
-                            && source.space != "const"
-                            && origins.get(&slot(source)).is_some_and(|(origin, ..)| *origin == slot(source))
-                            && !comparisons.values().any(|bounds| {
-                                bounds.iter().any(|(operand, ..)| *operand == slot(source))
-                            })
-                        {
-                            origins.remove(&slot(source));
-                        }
-                    }
+                    // reads it: `index < n` bounds the index above. The
+                    // stamp is empty: this comparison observes the
+                    // slot's current value, so no rewrite stands between
+                    // the bound and the value it names.
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                     {
@@ -969,12 +989,12 @@ fn run_block<I: Image>(
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size)]);
+                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size, None)]);
                             }
                             // `n < index`: the *fallthrough* is in range.
                             (Value::Const(limit), _) if left.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size)]);
+                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size, None)]);
                             }
                             _ => {}
                         }
@@ -1282,21 +1302,27 @@ fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
 
 /// Applies one comparison bound to both edges of a conditional branch.
 ///
-/// `bound` is `(operand, limit, inclusive, constant_left, operand_size)`:
-/// the compared slot, the constant it was compared against, whether the
-/// compare was `<=`, which side the constant sat on, and the operand's
-/// width. `values` is the abstract state at the branch, `origins` the
-/// affine provenance map, `edges` the per-successor refinements this block
-/// produces, and `branch` the branch's own address for tracing.
+/// `bound` is `(operand, limit, inclusive, constant_left, operand_size,
+/// stamp)`: the compared slot, the constant it was compared against,
+/// whether the compare was `<=`, which side the constant sat on, the
+/// operand's width, and the composed in-place shift between the
+/// comparison and the branch (`Some(k)` when the slot was rewritten
+/// `slot += k` after the comparison ran). `values` is the abstract
+/// state at the branch, `origins` the live affine provenance map,
+/// `edges` the per-successor refinements this block produces, and
+/// `branch` the branch's own address for tracing. The stamp -- not
+/// the live map -- translates pre-write predicates, so `p = (x <
+/// 64)` before `x -= 64` refines `new_x in [-64, -1]` while `q = (x
+/// < 4)` recorded after applies to the current value untranslated.
 #[allow(clippy::too_many_arguments)]
 fn apply_guard_bound(
     values: &BTreeMap<Slot, Value>,
     origins: &BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
     edges: &mut BTreeMap<usize, Vec<(Slot, Value)>>,
     branch: u64,
-    bound: (Slot, u64, bool, bool, u32),
+    bound: (Slot, u64, bool, bool, u32, Option<i64>),
 ) {
-    let (operand, limit, inclusive, constant_left, operand_size) = bound;
+    let (operand, limit, inclusive, constant_left, operand_size, stamp) = bound;
     // `index < n` taken means index <= n-1; `n < index`
     // *not* taken means index <= n.
     let high = if constant_left {
@@ -1316,15 +1342,21 @@ fn apply_guard_bound(
     // to [0, high] bounds the origin to
     // [-off, high - off].
     let mut targets = vec![(operand.clone(), 0i64)];
+    // A stamped bound names the slot's pre-write value: the entry is
+    // `-shift` (`old in [0, high]` with `new = old + shift` is `new +
+    // (-shift)`... i.e. `new in [shift, high + shift]`). For `r8 -=
+    // 64` under `old_r8 < 64` the entry is `(r8, +64)`, refining
+    // `new_r8 in [-64, -1]` -- not `[64, 127]`. The stamped entry is
+    // pushed alongside the untranslated one; it sorts after (pushed
+    // later), so the translated interval wins the insert order.
+    // Unstamped bounds walk the live map as before.
+    if let Some(shift) = stamp {
+        targets.push((operand.clone(), -shift));
+    }
     // Follow the origin chain transitively: `dl`
     // came from `edx`, which came from `r15`, so a
     // bound on the compared temp is a bound on each
-    // link, shifted by the accumulated offset. One
-    // hop (the first version) stopped at `edx`, and
-    // the `movzbl %r15b,%edx` that overwrote it
-    // carried the bound nowhere. A hop that fails
-    // `usable` is skipped, not terminal: the bound
-    // still reaches the wider origin past it.
+    // link, shifted by the accumulated offset.
     {
         let mut current = operand.clone();
         let mut accumulated = 0i64;
@@ -1345,6 +1377,13 @@ fn apply_guard_bound(
             // value, decides: `mov %ebx,%r11d` copies
             // all of ebx, so a bound on the copy is a
             // bound on ebx whatever ebx holds.
+            // a self-loop (`r8 -> (r8, -k)`) names the slot's pre-write
+            // value, but an unstamped predicate was recorded after the
+            // rewrite and constrains the current value. Stamped
+            // (pre-write) predicates translate through the stamp above.
+            if *origin == current {
+                break;
+            }
             let usable = if effective >= 8 || *origin_size <= effective {
                 true
             } else {
@@ -1366,22 +1405,6 @@ fn apply_guard_bound(
             let fits = effective >= 8
                 || (high - next_off) as u64
                     <= (1u64 << (effective * 8)) - 1;
-            // A self-loop (`r8 -> (r8, -k)` from an in-place
-            // `r8 -= k`) names the slot's pre-write value: the
-            // predicate constrains `old`, the edge refines `new =
-            // old + off`. `old in [0, high]` is `new - off in
-            // [0, high]`, i.e. the entry is `accumulated - off`,
-            // not `accumulated + off` (which would claim `new in
-            // [-off, high - off]` -- backwards: for `r8 -= 64`
-            // under `old_r8 < 64` that misfires to `[64, 127]`
-            // instead of `[-64, -1]`). Push the translated entry
-            // and stop: the pre-write name has no older link.
-            if *origin == current {
-                if usable && fits {
-                    targets.push((origin.clone(), accumulated - off));
-                }
-                break;
-            }
             if usable && fits {
                 targets.push((origin.clone(), next_off));
             }
@@ -2758,6 +2781,89 @@ mod tests {
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
     }
+    /// `p = (x < 64)` is recorded, `x -= 64` stamps it, then `q = (x
+    /// < 4)` is recorded on the rewritten value. Branching on `q`
+    /// must use `q` untranslated (`[0, 3]`): a slot-wide origin
+    /// would translate `q` through the loop too, mistargeting
+    /// `[-64, -61]`. Branching on `p` must still translate
+    /// (`[-64, -1]`). Per-predicate stamps keep the two apart.
+    #[test]
+    fn a_post_write_bound_ignores_an_earlier_rewrite() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        // Guard block records p, rewrites, records q, branches on q.
+        let guard_q = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x11, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[guard_q, dispatch, default], (0x1000, 0x2000));
+        // q's `[0, 3]` on the current value: entries 0..3. A shared
+        // self-loop would read `[-64, -61]` and refuse.
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1100, 0x1108, 0x1110, 0x1118]
+        );
+    }
+
 
     /// (No shifted-guard unit regression: the two synthetic attempts were
     /// void -- the first never reached the filter, the second's image made

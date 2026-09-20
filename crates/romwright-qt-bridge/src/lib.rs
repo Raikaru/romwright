@@ -571,7 +571,15 @@ fn dispatch(
             let doc = worker_pool
                 .decompile_doc(core, &req, &address)
                 .map_err(|error| error.to_string())?;
+            let graph_started = std::time::Instant::now();
             let graph = doc.function_ir.as_ref().map(romwright_core::graph::native_graph);
+            if let Some(graph) = graph.as_ref() {
+                eprintln!(
+                    "BRIDGE-GRAPH {:?} nodes={}",
+                    graph_started.elapsed(),
+                    graph.get("nodes").and_then(|nodes| nodes.as_array()).map(|nodes| nodes.len()).unwrap_or(0)
+                );
+            }
             let mut callees = std::collections::BTreeSet::new();
             if let Some(ir) = &doc.function_ir {
                 use romwright_model::function_ir::{Opcode, Operand};
