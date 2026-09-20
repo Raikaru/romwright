@@ -336,11 +336,17 @@ pub fn analyse<I: Image>(
     // starting at Top is the same assumption the function entry already
     // makes; the guard's bound still lands on the edge into the dispatch.
     let mut reached = vec![false; blocks.len()];
+    // External entry seeds for the reaching-definitions index below: the
+    // same roots this loop seeds from outside (block 0, plus every
+    // component the entry cannot reach). Kept alongside so the index and
+    // the forward pass agree on the outside boundary.
+    let mut seeds: Vec<usize> = Vec::new();
     for index in 0..blocks.len() {
         if reached[index] {
             continue;
         }
         entry_state[index] = Some(State::default());
+        seeds.push(index);
         reached[index] = true;
         let mut stack = vec![index];
         while let Some(node) = stack.pop() {
@@ -468,7 +474,7 @@ pub fn analyse<I: Image>(
             // The forward domain lost the bound entirely. Slice the
             // branch's address input back through the reaching
             // definitions to its table and bound the index there.
-            let defs = defs.get_or_insert_with(|| DefIndex::build(blocks));
+            let defs = defs.get_or_insert_with(|| DefIndex::build_with_entries(blocks, &seeds));
             let sliced = slice_dispatch(image, defs, blocks, branch, extent);
             if std::env::var_os("ROMWRIGHT_TRACE_SLICE").is_some() {
                 eprintln!("SJA-SLICE {branch:#x}: {sliced:?}");
@@ -1468,9 +1474,14 @@ fn apply_guard_bound(
 type DefPos = (usize, usize, usize);
 
 /// What reaches a slot at a program point: one defining op, several
-/// merged definitions, or a live-in value no in-function op defines.
+/// merged definitions, a live-in value no in-function op defines, or
+/// bottom -- an edge whose transfer has not run yet and contributes
+/// nothing.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Reach {
+    /// The producing transfer has not run yet: no information. Bottom
+    /// merges as identity and never materialises in the index.
+    Bottom,
     /// No in-function definition reaches: the value is live-in.
     LiveIn,
     /// Exactly one op's output reaches.
@@ -1480,10 +1491,16 @@ enum Reach {
 }
 
 impl Reach {
-    /// Merges two incoming reaching definitions: same source stays, any
-    /// difference -- including one path live-in and one defined -- is a
-    /// merge the slice cannot descend through.
+    /// Merges two incoming reaching definitions: bottom is identity, same
+    /// source stays, any difference -- including one path live-in and one
+    /// defined -- is a merge the slice cannot descend through.
     fn merge(self, other: Reach) -> Reach {
+        if self == Reach::Bottom {
+            return other;
+        }
+        if other == Reach::Bottom {
+            return self;
+        }
         if self == other {
             self
         } else {
@@ -1501,6 +1518,17 @@ struct DefIndex {
 
 impl DefIndex {
     fn build(blocks: &[Block]) -> DefIndex {
+        Self::build_with_entries(blocks, &[0])
+    }
+
+    /// Reaching definitions with explicit external entry seeds: the indices
+    /// `analyse` seeds from outside (always block 0, plus every component
+    /// the entry cannot reach). Graph structure alone cannot replace this
+    /// boundary: a cycle with an incoming edge from another component
+    /// still reads outside input on entry, and only the caller knows which
+    /// blocks those are. Every seed merges the function-wide slot universe
+    /// as `LiveIn` every pass alongside the other edges.
+    fn build_with_entries(blocks: &[Block], entries: &[usize]) -> DefIndex {
         let n = blocks.len();
         let mut preds = vec![Vec::new(); n];
         for (index, block) in blocks.iter().enumerate() {
@@ -1526,35 +1554,94 @@ impl DefIndex {
         }
         let mut reach_in: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
         let mut reach_out: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
-        // Forward fixpoint. A slot a predecessor does not define is live-in
-        // on that edge, which merges as a distinct source -- so a slot
-        // defined on one incoming path and live-in on another is `Many`,
-        // not `One`. Absent from the map means `LiveIn`.
+        // Forward fixpoint over a per-slot lattice with bottom. Every edge
+        // starts at `Bottom` (its transfer has not run: neither a
+        // definition nor a live-in source) and merges normally once
+        // computed -- self-edges included, whose previous-pass OUT carries
+        // loop-carried redefinitions. Missing is bottom on *every* edge
+        // uniformly, so no circular absence ever becomes an implicit
+        // `LiveIn`. `LiveIn` is seeded explicitly from entry roots: the
+        // function-wide slot universe (every non-constant slot any block
+        // names) is live at each root, where a root is a block with no
+        // non-self predecessors -- including an entry that spans a cycle
+        // whose members have no outside incoming edge. Seeding the
+        // universe rather than per-block names keeps `entry -> left(def),
+        // right(unnamed) -> join` at `Many`: the right arm contributes
+        // the universe's live-in for the slot the left defines.
+        let mut universe: std::collections::BTreeSet<Slot> = std::collections::BTreeSet::new();
+        for block in blocks.iter() {
+            for instruction in &block.instructions {
+                for op in &instruction.ops {
+                    for input in op.inputs.iter().filter(|v| !v.is_const()) {
+                        universe.insert(slot(input));
+                    }
+                    if let Some(out) = &op.output {
+                        if !out.is_const() {
+                            universe.insert(slot(out));
+                        }
+                    }
+                }
+            }
+        }
+        let mut computed = vec![false; n];
+        let mut prev_out: Vec<BTreeMap<Slot, Reach>> = vec![BTreeMap::new(); n];
+        // External seeds as a set for the merge below: the caller names
+        // the blocks it seeds from outside, and graph structure never
+        // adds or removes one. A cycle with an incoming edge from another
+        // component still reads outside input on entry, and only the
+        // caller knows that boundary.
+        let seeds: std::collections::BTreeSet<usize> =
+            entries.iter().copied().filter(|&e| e < n).collect();
         for _ in 0..=n {
             let mut changed = false;
             for index in 0..n {
+                computed[index] = true;
                 let mut keys: std::collections::BTreeSet<Slot> =
                     std::collections::BTreeSet::new();
                 for &pred in &preds[index] {
-                    keys.extend(reach_out[pred].keys().cloned());
+                    if pred == index {
+                        keys.extend(prev_out[pred].keys().cloned());
+                    } else if computed[pred] {
+                        keys.extend(reach_out[pred].keys().cloned());
+                    }
+                }
+                // A seed reads the whole universe from outside: seed every
+                // universe slot as a merge key so the live-in below has
+                // something to attach to.
+                let entry = seeds.contains(&index);
+                if entry {
+                    keys.extend(universe.iter().cloned());
                 }
                 let mut merged: BTreeMap<Slot, Reach> = BTreeMap::new();
                 for key in keys {
-                    let mut reach: Option<Reach> = None;
+                    let mut reach = Reach::Bottom;
                     for &pred in &preds[index] {
-                        let incoming = reach_out[pred]
-                            .get(&key)
-                            .copied()
-                            .unwrap_or(Reach::LiveIn);
-                        reach = Some(match reach {
-                            None => incoming,
-                            Some(prior) => prior.merge(incoming),
-                        });
+                        // Missing is bottom -- except through a block that
+                        // is itself live for the slot: a computed
+                        // predecessor whose entry already holds `LiveIn`
+                        // passes it through unchanged. That is how the
+                        // right arm of a diamond carries the entry's
+                        // live-in to the join without defining anything.
+                        let incoming = if pred == index {
+                            prev_out[pred].get(&key).copied().unwrap_or(Reach::Bottom)
+                        } else if computed[pred] {
+                            match reach_out[pred].get(&key).copied() {
+                                Some(found) => found,
+                                None if reach_in[pred].get(&key).copied() == Some(Reach::LiveIn) => {
+                                    Reach::LiveIn
+                                }
+                                None => Reach::Bottom,
+                            }
+                        } else {
+                            Reach::Bottom
+                        };
+                        reach = reach.merge(incoming);
                     }
-                    if let Some(reach) = reach {
-                        if reach != Reach::LiveIn {
-                            merged.insert(key, reach);
-                        }
+                    if entry {
+                        reach = reach.merge(Reach::LiveIn);
+                    }
+                    if reach != Reach::Bottom {
+                        merged.insert(key, reach);
                     }
                 }
                 if merged != reach_in[index] {
@@ -1570,6 +1657,7 @@ impl DefIndex {
                     changed = true;
                 }
             }
+            prev_out.clone_from(&reach_out);
             if !changed {
                 break;
             }
@@ -1671,9 +1759,10 @@ fn slice_expr(
             let op = &blocks[b].instructions[insn].ops[op_idx];
             slice_op(defs, blocks, b, op, (insn, op_idx), depth - 1)
         }
-        // A merge or a live-in: a pruned varnode. A persistent one is a
-        // switch-variable candidate; a unique temporary is not.
-        Reach::Many | Reach::LiveIn => {
+        // A merge, a live-in, or bottom (no computed definition reaches):
+        // a pruned varnode. A persistent one is a switch-variable
+        // candidate; a unique temporary is not.
+        Reach::Many | Reach::LiveIn | Reach::Bottom => {
             if varnode.is_persistent() {
                 Sliced::Point(key)
             } else {
@@ -2466,6 +2555,360 @@ mod tests {
         assert_eq!(found.tables[0].branch, 0x1010);
         assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
+    /// Preheader defines the index; header and latch shuttle it back and
+    /// forth without redefining it. The latch's missing slot is bottom
+    /// until its transfer runs -- not live-in -- so the dominating
+    /// definition stays `One` however the blocks are ordered.
+    #[test]
+    fn a_latch_without_a_definition_keeps_the_dominator() {
+        for order in [false, true] {
+            let index = varnode("register", 0x38, 8);
+            let preheader = Block {
+                instructions: vec![instruction(
+                    0x1000,
+                    vec![op(
+                        "COPY",
+                        Some(index.clone()),
+                        vec![varnode("register", 0x40, 8)],
+                    )],
+                )],
+                successors: vec![1],
+            };
+            let header = Block {
+                instructions: vec![instruction(
+                    0x1010,
+                    vec![op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![index.clone(), varnode("const", 4, 8)],
+                    )],
+                )],
+                successors: vec![2, 1],
+            };
+            let latch = Block {
+                instructions: vec![instruction(
+                    0x1020,
+                    vec![op(
+                        "COPY",
+                        Some(varnode("unique", 0x20, 1)),
+                        vec![varnode("const", 1, 1)],
+                    )],
+                )],
+                successors: vec![1],
+            };
+            // Swapped order puts the latch first: its missing slot must
+            // still read bottom, not live-in, or the dominator merges to
+            // `Many` before the preheader is ever processed.
+            // Swapped order puts the latch first, but the external entry
+            // is still the preheader (now index 2): it is passed
+            // explicitly, so position cannot move the outside boundary.
+            // The latch's missing slot reads bottom until its transfer
+            // runs, not live-in, or the dominator merges to `Many` before
+            // the preheader is ever processed.
+            let (blocks, header_at, pre_at, entries) = if order {
+                // Latch first, header second, preheader third: the latch
+                // still flows into the header (0->1), the header into the
+                // latch and itself (1->0, 1->1), and the preheader into
+                // the header (2->1). The latch bypasses nothing: the
+                // header's inputs are the latch, itself, and the
+                // preheader, so the dominator must survive.
+                let mut blocks = vec![latch, header, preheader];
+                blocks[0].successors = vec![1];
+                blocks[1].successors = vec![0, 1];
+                blocks[2].successors = vec![1];
+                (blocks, 1, 2, vec![2])
+            } else {
+                (vec![preheader, header, latch], 1, 0, vec![0])
+            };
+            let defs = DefIndex::build_with_entries(&blocks, &entries);
+            let reached = defs.reaching_def(&blocks, header_at, &slot(&index), (0, 0));
+            assert!(
+                matches!(reached, Reach::One(pos) if pos.0 == pre_at),
+                "order {order}: dominated def went {reached:?}"
+            );
+        }
+    }
+
+
+
+
+
+
+    /// One entry block reads the index, writes it, then loops to itself.
+    /// At its own entry the reaching def is `Many` -- the live-in read
+    /// plus the loop-carried write -- not `One` of the later write.
+    #[test]
+    fn an_entry_self_loop_reading_and_writing_goes_many() {
+        let index = varnode("register", 0x38, 8);
+        let block = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![index.clone(), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(index.clone()),
+                        vec![index.clone(), varnode("const", 1, 8)],
+                    ),
+                ],
+            )],
+            successors: vec![0],
+        };
+        let blocks = vec![block];
+        let defs = DefIndex::build(&blocks);
+        let reached = defs.reaching_def(&blocks, 0, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::Many),
+            "entry self-loop went {reached:?}"
+        );
+    }
+
+    /// B0 defines the index; B1 reads it, redefines it, and loops to
+    /// itself. At B1's entry the reaching def must be `Many` -- B0's
+    /// definition plus B1's own previous-iteration definition. A merge
+    /// that drops the computed self-edge would keep `One(B0)` and let the
+    /// slice substitute the wrong value.
+    #[test]
+    fn a_self_loop_redefinition_merges_to_many() {
+        let index = varnode("register", 0x38, 8);
+        let entry = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![op(
+                    "COPY",
+                    Some(index.clone()),
+                    vec![varnode("register", 0x40, 8)],
+                )],
+            )],
+            successors: vec![1],
+        };
+        let header = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![index.clone(), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(index.clone()),
+                        vec![index.clone(), varnode("const", 1, 8)],
+                    ),
+                ],
+            )],
+            successors: vec![1],
+        };
+        let blocks = vec![entry, header];
+        let defs = DefIndex::build(&blocks);
+        let reached = defs.reaching_def(&blocks, 1, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::Many),
+            "redefined loop went {reached:?}"
+        );
+    }
+    /// Entry splits to two arms that join before the dispatch: the left
+    /// arm defines the index, the right arm never names it. At the join
+    /// the reaching def must be `Many` -- the left definition plus the
+    /// right's live-in -- both before the fix (original code) and after:
+    /// seeding only entry-named slots would keep `One(left)` and lose the
+    /// live-in path.
+    #[test]
+    fn a_diamond_with_an_unnamed_arm_merges_to_many() {
+        let index = varnode("register", 0x38, 8);
+        let entry = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![op(
+                    "CBRANCH",
+                    None,
+                    vec![varnode("ram", 0x1010, 8), varnode("const", 1, 1)],
+                )],
+            )],
+            successors: vec![1, 2],
+        };
+        let left = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![op(
+                    "COPY",
+                    Some(index.clone()),
+                    vec![varnode("register", 0x40, 8)],
+                )],
+            )],
+            successors: vec![3],
+        };
+        let right = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![op(
+                    "COPY",
+                    Some(varnode("unique", 0x20, 1)),
+                    vec![varnode("const", 1, 1)],
+                )],
+            )],
+            successors: vec![3],
+        };
+        let join = Block {
+            instructions: vec![instruction(
+                0x1030,
+                vec![op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x10, 1)),
+                    vec![index.clone(), varnode("const", 4, 8)],
+                )],
+            )],
+            successors: vec![],
+        };
+        let blocks = vec![entry, left, right, join];
+        let defs = DefIndex::build(&blocks);
+        let reached = defs.reaching_def(&blocks, 3, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::Many),
+            "diamond went {reached:?}"
+        );
+    }
+
+    /// Entry spans a two-block cycle without defining the index: both
+    /// blocks loop to each other and neither writes it. The join reads
+    /// live-in on every path -- not bottom, and not a definition that
+    /// does not exist. `preds.all(pred == index)`-style entry checks
+    /// miss the external source on cyclic entries; the universe seed
+    /// covers it.
+    #[test]
+    fn a_cyclic_entry_without_a_definition_stays_live_in() {
+        let index = varnode("register", 0x38, 8);
+        let first = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x10, 1)),
+                    vec![index.clone(), varnode("const", 4, 8)],
+                )],
+            )],
+            successors: vec![1],
+        };
+        let second = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![op(
+                    "CBRANCH",
+                    None,
+                    vec![varnode("ram", 0x1020, 8), varnode("unique", 0x10, 1)],
+                )],
+            )],
+            successors: vec![0],
+        };
+        let blocks = vec![first, second];
+        let defs = DefIndex::build(&blocks);
+        let reached = defs.reaching_def(&blocks, 0, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::LiveIn),
+            "cyclic entry went {reached:?}"
+        );
+    }
+    /// B0 reads the index, B1 writes it and loops back: B0's entry must
+    /// be `Many` -- the external input plus B1's loop-carried definition.
+    /// Seeding by predecessor count finds no root in the cycle and would
+    /// merge `One(B1)` alone, letting the slice substitute the wrong
+    /// value for the external input's path.
+    #[test]
+    fn a_cyclic_entry_read_then_written_goes_many() {
+        let index = varnode("register", 0x38, 8);
+        let first = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x10, 1)),
+                    vec![index.clone(), varnode("const", 4, 8)],
+                )],
+            )],
+            successors: vec![1],
+        };
+        let second = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x10, 1)],
+                    ),
+                    op(
+                        "COPY",
+                        Some(index.clone()),
+                        vec![varnode("register", 0x40, 8)],
+                    ),
+                ],
+            )],
+            successors: vec![0],
+        };
+        let blocks = vec![first, second];
+        let defs = DefIndex::build_with_entries(&blocks, &[0]);
+        let reached = defs.reaching_def(&blocks, 0, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::Many),
+            "cyclic read-write went {reached:?}"
+        );
+    }
+    /// B0 reads the index and cannot reach B1; B1 writes it, then jumps
+    /// to B0. With explicit seeds `[0,1]` B0's entry must be `Many` --
+    /// the external input plus B1's definition. With seeds narrowed to
+    /// `[1]` it must be `One(B1)`, reproducing the rejected SCC boundary
+    /// that seeds graph components instead of the caller's outside
+    /// knowledge. The cyclic B0<->B1 test cannot distinguish the two:
+    /// this acyclic form can, because only the seed set places live-in
+    /// at B0.
+    #[test]
+    fn an_acyclic_backedge_needs_explicit_seeds() {
+        let index = varnode("register", 0x38, 8);
+        let first = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![op(
+                    "INT_LESS",
+                    Some(varnode("unique", 0x10, 1)),
+                    vec![index.clone(), varnode("const", 4, 8)],
+                )],
+            )],
+            successors: vec![],
+        };
+        let second = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![op(
+                    "COPY",
+                    Some(index.clone()),
+                    vec![varnode("register", 0x40, 8)],
+                )],
+            )],
+            successors: vec![0],
+        };
+        let blocks = vec![first, second];
+        let defs = DefIndex::build_with_entries(&blocks, &[0, 1]);
+        let reached = defs.reaching_def(&blocks, 0, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::Many),
+            "seeded acyclic entry went {reached:?}"
+        );
+        let defs = DefIndex::build_with_entries(&blocks, &[1]);
+        let reached = defs.reaching_def(&blocks, 0, &slot(&index), (0, 0));
+        assert!(
+            matches!(reached, Reach::One((1, _, _))),
+            "narrowed seeds went {reached:?}"
+        );
+    }
+
+
+
+
 
     /// `cmp $8,%r8; cmp $4,%rcx` combined into one flag by BOOL_AND, then
     /// `ja default` -- a bound on a different variable ANDed with the index

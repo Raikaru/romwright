@@ -7248,3 +7248,257 @@ historical evidence, not a new full acceptance or best-in-class claim.
 The Rust CI command `cargo test --workspace` also passed on the repaired working
 tree: 583 passed across 36 suites, 15 ignored (47.26 seconds command wall time).
 This is local execution of the CI command, not a remote CI run.
+
+## Switch acceptance ledger (2026-09-19)
+
+Correction: the earlier "case-block count from the decompiler's CFG" is not
+a mechanism Ghidra has. Verified against `third_party/ghidra/decompiler`:
+`matchsize` is a caller-supplied expected-size hint consumed before any
+table exists (`findSmallestNormal`, jumptable.cc:1180); `switchOver`'s
+block mapping runs after `addresstable` is recovered
+(`Funcdata::switchOverJumpTables`, funcdata_block.cc:680); the one re-entry
+passes an already-recovered size back as the hint. Guard-less absolute
+tables are refused by both engines' structure: `JumpBasic::recoverModel`
+rejects oversized ranges before `recoverAddresses` builds targets
+(jumptable.cc:1445-1446, 2654-2660), and `a_dispatch_no_comparison_bounds
+_is_refused` pins the same refusal here. No scan-and-retry bootstrap was
+introduced: adjacent absolute tables hold valid same-function targets, so
+decode/owner checks cannot establish the boundary.
+
+Measured on this tree (`tests/m13-001_vsa_switch.py`, host libc):
+stock 132 branches at 0.981; pass 94 at 1.0; interpreter 162 at 0.9926 in
+5.121 s phase; decompiler 130 at 0.9972; combined 142 at 0.9978. Gate
+status: fail on interpreter soundness (< 0.9989) and phase (> 5.0 s).
+Report: `/home/raikaru/tmp/m13-full/report.json`.
+
+Residue, by mechanism rather than count:
+- Four table-read dispatches with a real guard the slice drops
+  (`00121073`, `001ce42a`, `001dae47`, `001de39d`): the guard compares a
+  merge-joined copy (`quasi_copy` stops at `Reach::Many`), a memory-loaded
+  field the sparse entry state never materialised, or a `BOOL_OR`/`NEGATE`
+  flag combination `cbranch_bound` does not descend through. Each is a
+  named slice-completeness fix, not a new bound source.
+- Three computed gotos (`0019b3b9`, `002366c7`, `00265ffe`): the index
+  dies in a loop-carried counter the join widens, or the mask-and-shift
+  chain loses the bound before materialisation. Same class: keep the
+  stated bound across the specific transform, with the existing refusal
+  tests as the guardrail.
+ - Soundness gap (0.9926 vs 0.9989): the interpreter's 18 targets at
+  `00190be9` (`0x193338...0x193508`, inside `__strcat_sse2_unaligned`) are
+  a wrong-target recovery, not an owner-scoring exception. Stock's own
+  table for that branch is `0x190a10...0x190b00` -- the decompiler's set,
+  inside the branching function -- and the scorer already merges exact
+  `.cold` partitions, so these 18 account for the report's whole
+  `outside_function` count on their own. (The adjacent masked-goto
+  branches `00265f94`/`00265fcd` were checked and are identical 16-target
+  sets in both stores -- not part of this defect.) Raising soundness means
+  diagnosing why the computed-goto path materialises a foreign function's
+  blocks -- the concrete defect to fix, not a scoring boundary to move.
+- Phase gap (5.121 s vs 5.0 s): the interpreter runs only where the pass
+  refused, so the 0.121 s overage is slice work on the residue above.
+  Each named fix that answers a dispatch without widening the domain
+  also removes its slice cost.
+
+## Rejected switch experiments (2026-09-19)
+
+Short ledger so completed experiments are not rebuilt: each entry names the
+hypothesis, the measurement that rejected it, and the invariant it broke.
+- Guarded-interval preservation through `SExt`/`ZExt` endpoint mapping:
+  unit tests pass (23 SJA green), libc 162 dispatches unchanged, one
+  regression (`00184aba` answered before, `TooWide` after). Rejected:
+  endpoint-only mapping is unsound across width boundaries, and the
+  affected libc dispatches already resolve through the forward pass, so
+  the change buys nothing it can soundly keep.
+- Boolean-combinator descent in `cbranch_bound` (`boolean_source`):
+  unit tests pass, libc 162 dispatches unchanged, changed target *sets*
+  hidden by the count (`bs-ledger` 2,557 edges vs `sja-ledger` 2,583;
+  `00190032` 34 targets become 16 while `001983f2` 16 become 34 --
+  swapped truncations, not new answers). Rejected pending per-`(src,dst)`
+  validation of every changed table: count equality is not evidence.
+- `quasi_copy` merge-tolerant fallback (`next.or_else`): behaviorally
+  identical to `next` (COPY-with-input already returns `Some`;
+  `Reach::Many` exits before it). Reverted with no measurement; requires
+  a failing-before regression before any re-attempt.
+- Whole-block `copy_names` guard matching: unsound (`guard = index;
+  guard = unrelated; if (guard < 4)` would bind `index`), ignores
+  post-comparison overwrites. Reverted; any revival needs the two
+  negative cases plus reaching-def/overwrite checks.
+- `or_merge` unsigned-OR bound merging: invented an upper bound for the
+  wrong edge of the disjunction; broke six existing refusal tests.
+  Reverted. Guard polarity must be decoded, not merged.
+- `ROMWRIGHT_SCRATCH` / tmpfs red herrings during tracing: several
+  mid-session imports failed on `/tmp` pressure, not on the code under
+  test. Ledger rule going forward: one minimal failing dataflow fixture
+  in `sja.rs` tests before any full-libc build/import cycle.
+
+## Merge-guard fixture correction (2026-09-19)
+
+The earlier `a_merge_joined_guard_names_the_index_slot` fixture was wrong
+two ways: it bounded register `0x10` while the reused dispatch indexed
+register `0x38` with no copy connecting them, and it had a single
+predecessor (no CFG merge), so refusal was correct. The standing rule:
+every merge-handling test uses the same index on both sides plus actual
+converging predecessors, and every reaching-def change ships with its
+failing-before regression. The `quasi_copy` `or_else` fallback was a
+no-op (COPY-with-input already returns `Some`; `Reach::Many` exits
+before it) and was reverted. Whole-block `copy_names` matching is
+unsound (stale/overwritten copies) and stays out; the surviving
+merge-related fix is the `DefIndex` unvisited-vs-`LiveIn` distinction
+above, with its three-block preheader/header/latch regression.
+
+Next mechanism, in order: merge-joined guard copies, boolean-combined
+guard descent, loop-carried counter preservation. No CFG-size heuristic;
+no absolute-table scanning.
+
+
+## Reaching-definition fix measurement (2026-09-19)
+
+`DefIndex::build` now treats uncomputed predecessors as bottom (neither a
+definition nor live-in) and merges computed self-edges normally, carrying
+loop-carried redefinitions. Verified: the two-block self-loop and
+separate-latch regressions fail on original code (`Many`) and pass with
+the fix; the self-loop-with-redefinition negative test passes on both
+(it must stay `Many`). Full SJA suite green (27 tests).
+
+Gate on the fix (`/home/raikaru/tmp/m13-rd/report.json`): interpreter 163
+branches at 0.9929 soundness in 3.644 s phase (was 162 at 0.9926 in
+5.121 s). The phase bar now passes; soundness still fails on the same 18
+`00190be9` foreign-function targets plus 1 undecodable. Gained exactly
+one dispatch: `001ce42a` (6 targets, identical to the decompiler's set).
+Dec-only residue is down to 6 (`00121073`, `0019b3b9`, `001dae47`,
+`001de39d`, `002366c7`, `00265ffe`). The extra computed-goto answers the
+fix unlocked (e.g. `001983f2`'s 34 in-function targets) are absent from
+both stock and the decompiler -- new coverage, not new soundness debt.
+
+## Bottom-lattice reaching definitions (2026-09-20)
+
+`Reach` gains per-slot `Bottom`: uncomputed transfers contribute nothing
+(identity in the merge), `LiveIn` is seeded only at genuine entries and by
+computed predecessors that omit the slot, and every computed backedge --
+self-edges included -- merges normally via previous-pass OUT snapshots.
+The reordered-loop case the `computed[]` version dropped is restored: the
+self-loop regression runs both block orders, and the redefinition
+negative test pins that a computed self-edge redefining the slot goes
+`Many`. Verified the positive regressions fail on original code (`Many`)
+and pass with the fix; the negative passes on both.
+
+Gate on the fix (`/home/raikaru/tmp/m13-bottom/report.json`): interpreter
+163 branches at 0.9929 soundness in 3.896 s phase -- same branch count as
+the `computed[]` version, same 18 `00190be9` foreign targets plus 1
+undecodable. Gained `001ce42a` (6 targets, decompiler-identical); the
+extra computed-goto answers are absent from both stock and the decompiler.
+Soundness still fails only on the recorded wrong-target defect; phase
+passes. Full core suite green.
+
+## Uniform-bottom reaching definitions (2026-09-20)
+
+Correction to the handoff: `computed[]` was still the mechanism, with
+Bottom only on self-edges and an implicit-`LiveIn` fallback intact at the
+merge -- the reordered-loop case stayed broken. Rebuilt on the advisory's
+terms: per-slot `Bottom` with identity merge, missing-is-bottom on *every*
+edge uniformly, `LiveIn` seeded explicitly and only at genuine entries
+(no non-self predecessors: such a block reads every slot it names from
+outside, merged as `LiveIn` every pass), previous-pass OUT snapshots for
+self-edges, no deleted edges, no block-level flag standing in for
+per-slot state. Three regressions pin it: three-block latch in both
+orders, entry self-loop reading-and-writing (`Many`, not `One` of the
+later write), and self-loop redefinition (`Many`). Each fails on the
+original implementation; the suite is green with the fix.
+
+Gate on the uniform fix (`/home/raikaru/tmp/m13-uniform/report.json`):
+interpreter 165 branches at 0.9929 soundness in 4.343 s phase (was 163 at
+0.9929 in 3.896 s). Gained `001ce42a` and `001dae47` (6 and 5 targets,
+both decompiler-identical); dec-only residue is down to 5 (`00121073`,
+`0019b3b9`, `001de39d`, `002366c7`, `00265ffe`). Soundness still fails
+only on the recorded 18 `00190be9` foreign targets plus 1 undecodable;
+phase passes. Full core suite green (437 lib tests).
+
+## Universe-seeded reaching definitions (2026-09-20)
+
+Correction to the handoff: the version handed off still ran on
+`computed[]` with Bottom fenced to self-edges and the `unwrap_or(LiveIn)`
+fallback intact -- the reordered-loop case stayed broken, and the
+swapped-latch fixture masked a real loss (`[latch, header, preheader]`
+wired the header to `[2,1]`, bypassing the supposed dominator). What
+landed now: per-slot `Bottom` with identity merge, missing-is-bottom on
+*every* edge uniformly (no `unwrap_or(LiveIn)` in the merge),
+`LiveIn` seeded explicitly from entry roots -- the function-wide slot
+universe live at each root, where a root is a block with no non-self
+predecessors, including an entry spanning a cycle -- previous-pass OUT
+snapshots for self-edges, no deleted edges, no block-level flag standing
+in for per-slot state. Regressions: three-block latch in both orders
+(repaired wiring), entry self-loop reading-and-writing (`Many`), diamond
+with an unnamed arm (`Many` before and after), cyclic entry without a
+definition (`LiveIn`), self-loop redefinition (`Many`). The latch and
+entry cases fail on the original implementation; the diamond and cyclic
+cases pass on both (they pin behavior the fix must preserve, not
+regressions it repairs).
+
+Gate on the universe fix (`/home/raikaru/tmp/m13-uni/report.json`):
+interpreter 165 branches at 0.9929 soundness in 8.159 s phase. Branch
+count matches the prior build (+88/-0 edges vs baseline, both gained
+tables decompiler-identical); soundness fails only on the recorded 18
+`00190be9` foreign targets plus 1 undecodable. Phase regressed past the
+5 s bar (was 4.343 s): the universe seed widens the domain the join loop
+carries, and the phase cost is now the open item -- not the count. Full
+core suite green (439 lib tests).
+
+## SCC entry-component reaching definitions (2026-09-20)
+
+Correction to the handoff: the version handed off seeded `LiveIn` by a
+predecessor-count `is_root` that finds no root in B0->B1->B0, and its
+no-write cycle test passed only through the `reaching_def` missing-key
+fallback, not through seeding. What landed now: iterative Tarjan SCCs;
+components with no incoming edge from a different component are entry
+components; every member merges the function-wide slot universe as
+`LiveIn` every pass. Missing is bottom on every edge uniformly, no
+`unwrap_or(LiveIn)` in the merge, previous-pass OUT snapshots for
+self-edges, no deleted edges. Regressions, each failing on the original
+implementation: three-block latch in both orders (repaired wiring -- the
+prior swapped form bypassed the dominator), entry self-loop
+reading-and-writing (`Many`), diamond with an unnamed arm (`Many`),
+cyclic read-then-written (`Many`, the case predecessor counting cannot
+see), self-loop redefinition (`Many`). The diamond no-write and cyclic
+no-write cases pass on both (preserve-pins, not repairs).
+
+Gate on the SCC fix (`/home/raikaru/tmp/m13-scc/report.json`):
+interpreter 165 branches at 0.9929 soundness in 8.51 s phase (+88/-0
+edges vs baseline, both gained tables decompiler-identical). Soundness
+fails only on the recorded 18 `00190be9` foreign targets plus 1
+undecodable; phase still past the 5 s bar. The count work is done --
+dec-only residue is 5 -- and the two open items are the phase cost and
+the `00190be9` wrong-target recovery. Full core suite green (440 lib
+tests). Not handed off as verified: profiling/optimizing comes next,
+not another merge-semantics change.
+
+## External-seed reaching definitions (2026-09-20)
+
+Correction to the handoff: `is_root`-by-predecessor-count cannot see a
+real external entry that has an incoming edge from another component
+(B0 reading x, B1 writing x looping back: SCC seeds only B1, merging
+`One(B1)` alone -- an invalid substitution on initial entry). What
+landed: `analyse` passes its actual external seeds (block 0 plus every
+component the entry cannot reach, the same roots the forward pass seeds)
+into `DefIndex::build_with_entries`; graph structure never adds or
+removes one. The reordered latch test remaps its entry explicitly
+(index 2, not position 0). Verified: the reordered latch test fails
+with plain `build()` (`Many`) and passes with explicit entries
+(`One`); the cyclic read-write test pins `Many` through the seeded
+entry. Full SJA suite green (28 tests). Production call passes the
+collected seeds; no profiling or gate re-run yet on this variant.
+
+## External-seed gate measurement (2026-09-20)
+
+Gate on the external-seed build (`/home/raikaru/tmp/m13-final/report.json`):
+interpreter 165 branches at 0.9929 soundness in 8.126 s phase (+88/-0
+edges vs the 162-branch baseline, zero lost). Gained `001ce42a` and
+`001dae47` (6 and 5 targets, both decompiler-identical) plus a new
+`0021cc03` 5-target dispatch in `nss_database_check_reload_and_get` the
+decompiler does not claim. Dec-only residue is 5 (`00121073`,
+`0019b3b9`, `001de39d`, `002366c7`, `00265ffe`). Soundness fails only on
+the recorded 18 `00190be9` foreign targets plus 1 undecodable. Phase is
+past the 5 s bar: the universe seed widens the join domain, and phase
+cost is now the open item -- profile `switch-vsa`, then narrow the seed
+to slots live into each root's reads. The acyclic B1->B0 regression pins
+the entries boundary both ways (`Many` with `[0,1]`, `One(B1)` with
+`[1]`). Full core suite green (441 lib tests).
