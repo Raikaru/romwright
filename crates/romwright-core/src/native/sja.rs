@@ -672,6 +672,25 @@ fn run_block<I: Image>(
             // result would bound an unrelated test. The affine arms
             // re-insert what they mean; `prior` keeps the entry an
             // in-place op (`sub $0x20,%eax`) still reads.
+            //
+            // An in-place `add`/`sub` by a constant is the exception to
+            // the deletion below: the predicate names the slot's
+            // pre-write value, and the origin self-loop (`r8 -> (r8, -k)`,
+            // recorded by the affine arms) translates it at edge time to
+            // the post-write value (`CF = old_r8 < 64` before `r8 -= 64`
+            // refines the edge to `new_r8 in [-64, -1]`). Deleting it
+            // loses the only bound the dispatch chain has: the value arm
+            // computes `add(Top, -k) = Top`, so nothing else carries it.
+            // A non-constant add/sub (`add %rbx,%rax`), or any write to a
+            // *different* slot than the predicate names, still deletes:
+            // no translation exists for those, and the stale-operand test
+            // below pins that.
+            let is_in_place_affine_shift = matches!(opcode, crate::ir::Opcode::IntAdd | crate::ir::Opcode::IntSub)
+                && op.output.as_ref().is_some_and(|out| {
+                    !out.is_const()
+                        && op.inputs.first().is_some_and(|src| slot(src) == slot(out))
+                        && op.inputs.get(1).is_some_and(|k| k.is_const())
+                });
             let prior = op.output.as_ref().and_then(|out| {
                 let key = slot(out);
                 comparisons.remove(&key);
@@ -679,8 +698,11 @@ fn run_block<I: Image>(
                 // `cmp $4,%eax; mov (%rsi),%eax; jbe` bounds the new eax.
                 // A value-preserving same-slot widening is the exception:
                 // `cmp $0x5a,%al; movzbl %al,%eax; ja` keeps the bound.
-                let preserves = matches!(opcode, crate::ir::Opcode::Copy | crate::ir::Opcode::IntZExt | crate::ir::Opcode::IntSExt)
-                    && op.inputs.first().is_some_and(|src| slot(src) == key);
+                // An in-place add/sub by a constant is the second
+                // exception: the origin self-loop translates the bound.
+                let preserves = (matches!(opcode, crate::ir::Opcode::Copy | crate::ir::Opcode::IntZExt | crate::ir::Opcode::IntSExt)
+                    && op.inputs.first().is_some_and(|src| slot(src) == key))
+                    || is_in_place_affine_shift;
                 if !preserves {
                     comparisons.retain(|_, bounds| {
                         bounds.retain(|(operand, ..)| *operand != key);
@@ -733,10 +755,14 @@ fn run_block<I: Image>(
                             origins.get(&slot(source)).cloned()
                                 .unwrap_or((slot(source), 0, None, source.size))
                         };
-                        // A `unique` temporary is intra-instruction and dead
-                        // by the next block, so it is never an origin: the
-                        // output has no affine parent at all.
-                        if origin.0 != "unique" && origin != slot(output) {
+                        // An in-place op reads the entry the top-of-loop
+                        // clear just removed -- including a self-loop
+                        // (`r8 -> (r8, -k)`), which the edge translation
+                        // needs. Only `unique` temporaries (dead by the
+                        // next block) have no parent at all. A same-slot
+                        // copy keeps the prior link rather than dropping
+                        // it.
+                        if origin.0 != "unique" && (origin != slot(output) || prior.is_some()) {
                             // A bound on a piece says nothing about the
                             // whole: record the narrowest width crossed so
                             // the compare can check the origin already fits.
@@ -777,10 +803,14 @@ fn run_block<I: Image>(
                                 .unwrap_or((slot(source), 0, None, source.size))
                         };
                         // A `unique` temporary is dead by the next block:
-                        // the output has no affine parent, and recording
-                        // `out = out + k` would push a wrongly shifted bound
-                        // onto it at the next compare.
-                        if origin.0 != "unique" && origin != slot(output) {
+                        // the output has no affine parent.
+                        // A self-loop (`r8 -> (r8, +k)` from an in-place
+                        // `r8 += k`) is recorded, not skipped: the
+                        // predicate on the pre-write value translates
+                        // through it at edge time. The old skip (meant
+                        // for `unique` temporaries, already excluded
+                        // above) is what dropped every in-place re-bias.
+                        if origin.0 != "unique" {
                             origins.insert(slot(output),
                                 (origin, off + sign_extend(konst.offset, konst.size) as i64, narrow, source.size));
                         }
@@ -812,7 +842,9 @@ fn run_block<I: Image>(
                             origins.get(&slot(source)).cloned()
                                 .unwrap_or((slot(source), 0, None, source.size))
                         };
-                        if origin.0 != "unique" && origin != slot(output) {
+                        // Self-loops recorded, as in the add arm: the edge
+                        // translation needs `r8 -> (r8, -k)`.
+                        if origin.0 != "unique" {
                             origins.insert(slot(output),
                                 (origin, off - sign_extend(konst.offset, konst.size) as i64, narrow, source.size));
                         }
@@ -906,6 +938,29 @@ fn run_block<I: Image>(
                 O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
                     // Remember what this boolean says, for the branch that
                     // reads it: `index < n` bounds the index above.
+                    // A compare observes the slot's *current* value: drop
+                    // a self-loop (`r8 -> (r8, -k)` from an earlier
+                    // in-place rewrite) first, so the new predicate
+                    // applies untranslated -- but only when no predicate
+                    // already names the slot. A pending pre-write
+                    // predicate (`CF = old_r8 < 64`, consumed by a later
+                    // branch in the same block) still needs the loop as
+                    // its translation vehicle. Without any clearing,
+                    // `movzbl (%rdi),%eax; sub $0x20,%eax; cmp $3,%eax`
+                    // would translate the post-write bound back through
+                    // the sub and read 0x20 entries too deep; that shape
+                    // still clears (nothing names eax at its compare).
+                    for input in [op.inputs.first(), op.inputs.get(1)] {
+                        if let Some(source) = input
+                            && source.space != "const"
+                            && origins.get(&slot(source)).is_some_and(|(origin, ..)| *origin == slot(source))
+                            && !comparisons.values().any(|bounds| {
+                                bounds.iter().any(|(operand, ..)| *operand == slot(source))
+                            })
+                        {
+                            origins.remove(&slot(source));
+                        }
+                    }
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                     {
@@ -1311,6 +1366,22 @@ fn apply_guard_bound(
             let fits = effective >= 8
                 || (high - next_off) as u64
                     <= (1u64 << (effective * 8)) - 1;
+            // A self-loop (`r8 -> (r8, -k)` from an in-place
+            // `r8 -= k`) names the slot's pre-write value: the
+            // predicate constrains `old`, the edge refines `new =
+            // old + off`. `old in [0, high]` is `new - off in
+            // [0, high]`, i.e. the entry is `accumulated - off`,
+            // not `accumulated + off` (which would claim `new in
+            // [-off, high - off]` -- backwards: for `r8 -= 64`
+            // under `old_r8 < 64` that misfires to `[64, 127]`
+            // instead of `[-64, -1]`). Push the translated entry
+            // and stop: the pre-write name has no older link.
+            if *origin == current {
+                if usable && fits {
+                    targets.push((origin.clone(), accumulated - off));
+                }
+                break;
+            }
             if usable && fits {
                 targets.push((origin.clone(), next_off));
             }
@@ -2612,6 +2683,82 @@ mod tests {
         assert_eq!(found.tables[0].branch, 0x1010);
         assert_eq!(found.tables[0].targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
     }
+    /// `cmp $48,%r8` records `old_r8 < 48` on the carry flag; the next
+    /// op rewrites the slot in place (`add $16,%r8`). The predicate
+    /// names the pre-write value, and the origin self-loop carries it
+    /// to the edge as `new_r8 in [16, 63]`: deleting it (as a stale
+    /// operand) leaves `Top`, and the dispatch refuses. This is the
+    /// value-identity half of the `00190be9` defect: `CF = old_r8 <
+    /// 64` before `r8 -= 64` must survive as `new_r8 in [-64, -1]`.
+    /// Pre-fix this test refuses (`unknown_target`); post-fix it
+    /// recovers entries 16..63.
+    #[test]
+    fn a_bound_survives_an_in_place_shift() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 48, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 16, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[guard, dispatch, default], (0x1000, 0x2000));
+        let expected: Vec<u64> = (0..48u64).map(|i| 0x1100 + (16 + i) * 8).collect();
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, expected);
+    }
+
     /// (No shifted-guard unit regression: the two synthetic attempts were
     /// void -- the first never reached the filter, the second's image made
     /// refusal semantically correct. The filter's evidence is the
