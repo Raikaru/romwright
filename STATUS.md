@@ -7586,3 +7586,49 @@ stored gate databases -- not the claims they made:
   this false positive. Wrong-target recovery is NOT closed; the
   interpreted set must equal the 16 true targets before that claim.
   SJA suite 29 green; full core suite re-verified at commit time.
+
+## Guard value identity through in-place rewrites (2026-09-20)
+
+Fix (advisory-driven): a predicate on a slot rewritten in place by
+`add`/`sub` with a constant now survives, translated through the
+origin self-loop at edge time. Three parts:
+
+- Preamble keeps predicates naming the output of an in-place
+  `IntAdd`/`IntSub` with a constant second input (only that shape;
+  non-constant and cross-slot writes still delete, and the
+  overwritten-flag test pins the non-constant case).
+- The `IntAdd`/`IntSub`/widening origin arms record the self-loop
+  (`r8 -> (r8, -k)`); previously the `origin != slot(output)`
+  guard dropped every in-place re-bias, which is why the `CBRANCH
+  0x190b7a` trace showed `targets=[(r8, 0)]` with no translation.
+- The chain walker translates the self-loop with the correct sign
+  (`accumulated - off`: `CF = old_r8 < 64` before `r8 -= 64`
+  refines to `new_r8 in [-64, -1]`, not `[64, 127]`), and a fresh
+  `Less` compare clears a self-loop only when no predicate names
+  the slot (so `movzbl; sub; cmp $3` still applies post-write
+  while a pending pre-write predicate keeps its vehicle).
+
+Proof on real p-code: `CBRANCH 0x190b7a` now shows
+`targets=[(r8, 0), (r8, 64)]` (was `[(r8, 0)]`); the `(r8, 64)`
+entry is `new_r8 in [-64, -1]`, the advisory's `CF=true` interval.
+Regression `a_bound_survives_an_in_place_shift` fails pre-fix
+(`unknown_target`, 0 tables) and passes post-fix (entries 16..63).
+SJA suite 30 green; full core 442 passed, 4 ignored.
+
+Gate (`/home/raikaru/tmp/m13-ident/report.json`, status **pass**):
+vsa 94 @ 1.0 in 0.646 s; interpreted 169 @ 0.9997 in 2.557 s;
+decompiler 130 @ 0.9972; combined 142 @ 0.9978 in 0.278 s
+(missed 3, beyond 13). Deltas vs `m13-intern`: `00143b69` 16 -> 18
+targets (decompiler agrees on 16 of them; stock's own set for the
+branch is 84 raw entries), `001696cd` 5 -> 0 (stock: 23 raw; the 5
+were beyond-stock). Both deltas are in the beyond/missed accounting
+the gate already scores, not in soundness: no foreign-function
+targets introduced.
+
+`00190be9` stands at 17 (16 true + entry-16 `0x190b10`); stock's own
+table is the 16. The remaining entry is unreachable per the range
+proof (`[0,15]`) and needs the flag-combination domain (`JL` from
+`SCARRY != SLESS` carries no predicate today): explicitly out of
+scope, not claimed. The unshifted-expression filter stays as the
+proven anti-foreign backstop (negative control reproduces the exact
+18 foreign with it disabled).
