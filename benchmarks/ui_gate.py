@@ -20,12 +20,9 @@ NUMERIC_METRICS = (
     "ui.list.filter_ms",
     "ui.sync_ms",
     "ui.graph.fetch_ms",
+    "ui.graph.layout_ms",
     "ui.graph.paint_ms",
 )
-# Layout-only, measured where it runs (the bridge's `native_graph` over
-# the decoded IR, via the `BRIDGE-GRAPH` stderr line): reported
-# alongside the threshold metrics, never thresholded itself.
-LAYOUT_METRICS = ("ui.graph.layout_ms",)
 # Counts, not durations: a fact rendered without its evidence sentence is a
 # defect at any speed.
 COUNT_METRICS = ("ui.xrefs.rows", "ui.xrefs.unexplained", "ui.xrefs.declared_rows",
@@ -39,6 +36,7 @@ THRESHOLDS = {
     "ui.list.filter_ms": 100.0,
     "ui.sync_ms": 16.0,
     "ui.graph.fetch_ms": 20000.0,
+    "ui.graph.layout_ms": 200.0,
     "ui.graph.paint_ms": 50.0,
 }
 
@@ -194,8 +192,8 @@ def run_app(
         raise GateError(f"Qt gate exited {result.returncode}: {detail[-1000:]}")
     metrics = parse_metrics(result.stdout)
     # Layout-only time, measured where it runs (the bridge's
-    # `native_graph`): parsed from stderr, reported alongside the
-    # threshold metrics but never thresholded itself.
+    # `native_graph`): parsed from stderr into `ui.graph.layout_ms`,
+    # which carries the mandatory 200ms ceiling.
     layout_ms = parse_bridge_graph_ms(result.stderr)
     if layout_ms is not None:
         metrics["ui.graph.layout_ms"] = layout_ms
@@ -241,10 +239,6 @@ def aggregate(samples: list[dict[str, Any]]) -> dict[str, Any]:
         "ui.programs_switch_functions": min(
             int(sample["ui.programs_switch_functions"]) for sample in samples),
         **{metric: samples[0][metric] for metric in RECORDED_METRICS},
-        # Layout-only median, when every sample carried one; absent
-        # otherwise. The threshold gate never reads it.
-        **({"ui.graph.layout_ms": median([float(sample["ui.graph.layout_ms"]) for sample in samples])}
-           if all("ui.graph.layout_ms" in sample for sample in samples) else {}),
         "ui.install.ok": all(sample["ui.install.ok"] for sample in samples),
     }
 
