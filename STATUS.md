@@ -7697,3 +7697,19 @@ Three more advisory-driven corrections, all verified before commit:
   `a_copy_after_a_rewrite_uses_the_current_bound` fails pre-fix
   (refusal) and passes post-fix (`[0,3]` through `y`). SJA 33
   green (30 + post-write + copy + conflict), full core 445+7.
+
+## Correction: stamped bounds skip the live origin walk (2026-09-20)
+
+Advisory counterexample reproduced exactly: `y = x; p = (y < 4);
+`y -= 16`; branch `p`; dispatch `table[x]` recovered entries
+16..19 (`[0x1180, ...]`) instead of 0..3. Trace showed
+`targets=[(y, +16), (x, -16)]`: the stamp entry was right, but the
+unconditional live walk pushed `(x, -16)` through the post-write
+`(x, -16)` link the in-place arm composes from the copy's `(x,
+0)` -- a link that post-dates the comparison. Every rewrite
+removes the operand's link first, so a live link on a stamped
+operand is always stale; the walk now runs only for unstamped
+bounds. New regression
+`an_alias_before_a_rewrite_keeps_the_compared_bound` fails
+pre-fix (entries 16..19) and passes post-fix (entries 0..3).
+SJA 34 green, full core 446+7.

@@ -1379,8 +1379,18 @@ fn apply_guard_bound(
     } else {
         vec![(operand.clone(), 0i64)]
     };
-    // Follow the origin chain transitively: `dl`
-    // came from `edx`, which came from `r15`, so a
+    // Follow the origin chain transitively -- but only for unstamped
+    // bounds. A stamp means an in-place rewrite stands between the
+    // comparison and the branch, and every rewrite removes the
+    // operand's link before recording a new one: any live link on
+    // the operand now post-dates the comparison and describes the
+    // post-write value, so walking it re-targets the pre-write
+    // bound (`y = x; p = (y < 4); y -= 16` walks `y -> (x, -16)`
+    // and bounds `x` to `[16, 19]` instead of `[0, 3]`). The stamp
+    // entry above is the complete translation; aliases are already
+    // excluded with it.
+    if stamp.is_none() {
+    // `dl` came from `edx`, which came from `r15`, so a
     // bound on the compared temp is a bound on each
     // link, shifted by the accumulated offset.
     {
@@ -1440,6 +1450,7 @@ fn apply_guard_bound(
                 break;
             }
         }
+    }
     }
     // And the other direction: `mov %ebx,%r11d`
     // before the compare means r11's origin is the
@@ -3074,6 +3085,88 @@ mod tests {
         assert!(found.tables.is_empty(), "{found:?}");
         assert_eq!(found.refusals.unknown_target, 1);
     }
+    /// Alias before rewrite: `y = x` copies the current value, `p =
+    /// (y < 4)` is recorded, then `y -= 16` stamps `p`. Branching on
+    /// `p` with the dispatch reading `table[x]` must use `[0, 3]`:
+    /// `x` still holds the value `p` constrained, and the live link
+    /// `y -> (x, 0)` must not re-target `x` through the stamp
+    /// (`(x, -16)` would read entries 16..19).
+    #[test]
+    fn an_alias_before_a_rewrite_keeps_the_compared_bound() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x40, 8)),
+                        vec![varnode("register", 0x38, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x40, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x40, 8)),
+                        vec![varnode("register", 0x40, 8), varnode("const", 16, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 1],
+        };
+        // Dispatch reads through `x` (register 0x38), which the
+        // rewrite never touched.
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[guard, dispatch, default], (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1100, 0x1108, 0x1110, 0x1118]
+        );
+    }
+
 
 
     /// (No shifted-guard unit regression: the two synthetic attempts were
