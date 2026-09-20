@@ -7713,3 +7713,17 @@ bounds. New regression
 `an_alias_before_a_rewrite_keeps_the_compared_bound` fails
 pre-fix (entries 16..19) and passes post-fix (entries 0..3).
 SJA 34 green, full core 446+7.
+
+## Robustness dispatch fixtures (2026-09-20)
+
+New `tests/m18-001_robust_dispatch.py` gates hand-built x86-64
+fixtures against nm annotations (exact sets, not owner/decode
+soundness): `asm_table` (exact 5), `asm_flat` (loop-carried:
+exact or refuse), `asm_opaque` (opaque predicate: exact or
+refuse), `selfmod` (runtime-patched pointer: at-rest exact or
+refuse, patched target never claimed), packed XOR blob (no xrefs
+into blob/codebuf). Measured: 2 exact, 3 refusals, 0 wrong
+edges. The gate caught two fixture-authoring bugs first (guard
+compared 4/3 with 5/4 cases in the table -- analysis correctly
+recovered the reachable subset). Full `llvm-exegesis` (63 MB)
+import running separately for the huge-image measurement.
