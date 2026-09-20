@@ -613,6 +613,26 @@ fn materialise<I: Image>(
 
 /// Interprets one block, returning its exit state, the refinements each
 /// outgoing edge adds, and recording any indirect branch it ends on.
+/// The affine link a copy/shift of `source` inherits: the source's
+/// recorded link, except a self-loop (`x -> (x, k)` from an in-place
+/// rewrite) never propagates. The self-loop names the source's
+/// pre-write value; the copy holds its current one, so inheriting it
+/// would translate bounds the copy's own compares state through a
+/// rewrite the copy never underwent. A post-rewrite copy is a plain
+/// alias: `(source, 0)`.
+fn inherit_link(
+    origins: &BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
+    source: &PcodeVarnode,
+) -> (Slot, i64, Option<u32>, u32) {
+    match origins.get(&slot(source)) {
+        Some((origin, _, _, _)) if *origin == slot(source) => {
+            (slot(source), 0, None, source.size)
+        }
+        Some(link) => link.clone(),
+        None => (slot(source), 0, None, source.size),
+    }
+}
+
 fn run_block<I: Image>(
     image: &I,
     block: &Block,
@@ -784,8 +804,7 @@ fn run_block<I: Image>(
                         let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
                             prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
-                            origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None, source.size))
+                            inherit_link(&origins, source)
                         };
                         // An in-place op reads the entry the top-of-loop
                         // clear just removed -- including a self-loop
@@ -831,8 +850,7 @@ fn run_block<I: Image>(
                         let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
                             prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
-                            origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None, source.size))
+                            inherit_link(&origins, source)
                         };
                         // A `unique` temporary is dead by the next block:
                         // the output has no affine parent.
@@ -871,8 +889,7 @@ fn run_block<I: Image>(
                         let (origin, off, narrow, _origin_size) = if slot(source) == slot(output) {
                             prior.clone().unwrap_or((slot(source), 0, None, source.size))
                         } else {
-                            origins.get(&slot(source)).cloned()
-                                .unwrap_or((slot(source), 0, None, source.size))
+                            inherit_link(&origins, source)
                         };
                         // Self-loops recorded, as in the add arm: the edge
                         // translation needs `r8 -> (r8, -k)`.
@@ -946,21 +963,26 @@ fn run_block<I: Image>(
                         if let Some(found) = comparisons.get(&slot(input)) {
                             for bound in found {
                                 // Two bounds on one slot: the looser one is
-                                // what the combination admits. Stamps
-                                // merge only when both sides agree;
-                                // otherwise the combination's meaning for
-                                // that slot is unclear and the stamp is
-                                // dropped (the bound still applies
-                                // untranslated).
+                                // what the combination admits -- but only
+                                // when both sides agree on the stamp. A
+                                // stamp conflict (`p = (x < 4)` before
+                                // `x += 16`, `q = (x < 4)` after, combined
+                                // as `p || q`) admits a disjunction the
+                                // upper-bound tuple cannot name (`[0,3]`
+                                // or `[16,19]`). Keeping the looser bound
+                                // untranslated would present half the
+                                // truth as the bound, so the whole bound
+                                // is discarded and the dispatch refuses.
                                 match carried
-                                    .iter_mut()
-                                    .find(|existing| existing.0 == bound.0)
+                                    .iter()
+                                    .position(|existing: &(Slot, u64, bool, bool, u32, Option<i64>)| existing.0 == bound.0)
                                 {
-                                    Some(existing) => {
-                                        existing.1 = existing.1.max(bound.1);
-                                        existing.2 = existing.2 || bound.2;
-                                        if existing.5 != bound.5 {
-                                            existing.5 = None;
+                                    Some(index) => {
+                                        if carried[index].5 == bound.5 {
+                                            carried[index].1 = carried[index].1.max(bound.1);
+                                            carried[index].2 = carried[index].2 || bound.2;
+                                        } else {
+                                            carried.remove(index);
                                         }
                                     }
                                     None => carried.push(bound.clone()),
@@ -1341,18 +1363,22 @@ fn apply_guard_bound(
     // copied from. A temp `t = origin + off` bounded
     // to [0, high] bounds the origin to
     // [-off, high - off].
-    let mut targets = vec![(operand.clone(), 0i64)];
     // A stamped bound names the slot's pre-write value: the entry is
-    // `-shift` (`old in [0, high]` with `new = old + shift` is `new +
-    // (-shift)`... i.e. `new in [shift, high + shift]`). For `r8 -=
-    // 64` under `old_r8 < 64` the entry is `(r8, +64)`, refining
-    // `new_r8 in [-64, -1]` -- not `[64, 127]`. The stamped entry is
-    // pushed alongside the untranslated one; it sorts after (pushed
-    // later), so the translated interval wins the insert order.
-    // Unstamped bounds walk the live map as before.
-    if let Some(shift) = stamp {
-        targets.push((operand.clone(), -shift));
-    }
+    // `-shift` (`old in [0, high]` with `new = old + shift` is `new
+    // in [shift, high + shift]`). For `r8 -= 64` under `old_r8 < 64`
+    // the entry is `(r8, +64)`, refining `new_r8 in [-64, -1]` --
+    // not `[64, 127]`. The stamped entry stands alone: no
+    // untranslated `(operand, 0)` (it would apply the pre-write
+    // bound to the post-write slot), and no fixpoint propagation
+    // to aliases (a post-write copy `y = x` holds the post-write
+    // value, which the pre-write bound constrains only through the
+    // stamp on `x` itself -- flattening it onto `y` mistargets).
+    // Unstamped bounds keep the init entry and walk the live map.
+    let mut targets = if let Some(shift) = stamp {
+        vec![(operand.clone(), -shift)]
+    } else {
+        vec![(operand.clone(), 0i64)]
+    };
     // Follow the origin chain transitively: `dl`
     // came from `edx`, which came from `r15`, so a
     // bound on the compared temp is a bound on each
@@ -1423,12 +1449,25 @@ fn apply_guard_bound(
     // bound shifted by its own offset. Only exact
     // copies and shifts propagate -- a subpiece
     // (narrow set) truncates, and a bound on the
-    // whole says nothing about the piece.
+    // whole says nothing about the piece. Stamped
+    // (pre-write) bounds skip this: their entry names the
+    // pre-write value, and no post-write alias may inherit it.
     let mut reached: Vec<(Slot, i64)> = targets.clone();
+    if stamp.is_none() {
     loop {
         let mut grew = false;
         for (slot, (origin, off, narrow, _)) in origins {
             if reached.iter().any(|(s, _)| s == slot) {
+                continue;
+            }
+            // Never flatten a copy through a pre-write self-link:
+            // `y = x` after `x -= 64` links `y -> (x, 0)`, but `x`'s
+            // bound here is the *pre-write* value (stamped) while `y`
+            // holds the post-write one. Propagating the stamped entry
+            // to `y` would claim `y in [-64, -61]` when `x == y`
+            // post-write. The unstamped `(x, 0)` entry propagates
+            // normally; stamped entries stay on their own slot.
+            if *origin == *slot {
                 continue;
             }
             if let Some((_, bound)) = reached.iter().find(|(s, _)| s == origin) {
@@ -1439,7 +1478,6 @@ fn apply_guard_bound(
                 // `high - (o - off)`, so the slot's
                 // entry is `o - off`.
                 let shifted = bound - off;
-                // A slot that is a truncation of its
                 // origin still admits the bound when
                 // the bound on it fits the truncated
                 // width: `rax = zext(eax)` is a
@@ -1465,6 +1503,10 @@ fn apply_guard_bound(
         if !grew {
             break;
         }
+    }
+    }
+    if stamp.is_some() {
+        reached = targets.clone();
     }
     targets = reached;
     // The taken edge is the one the comparison holds
@@ -2862,6 +2904,175 @@ mod tests {
             found.tables[0].targets,
             vec![0x1100, 0x1108, 0x1110, 0x1118]
         );
+    }
+
+    /// `y = x` after `x -= 64` copies the post-write value, but the
+    /// origin link is `y -> (x, 0)` while `x`'s recorded bound is the
+    /// stamped pre-write one. Flattening the copy through the stamp
+    /// claims `y in [-64, -61]` when `x == y` post-write; the
+    /// dispatch through `y` must read `q`'s `[0, 3]`. Stamped
+    /// entries stay on their own slot and never propagate to
+    /// aliases.
+    #[test]
+    fn a_copy_after_a_rewrite_uses_the_current_bound() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x40, 8)),
+                        vec![varnode("register", 0x38, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x11, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 1],
+        };
+        // Dispatch reads through the copy `y` (register 0x40).
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x40, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[guard, dispatch, default], (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(
+            found.tables[0].targets,
+            vec![0x1100, 0x1108, 0x1110, 0x1118]
+        );
+    }
+    /// `p = (x < 4)` is recorded, `x += 16` stamps it, then `q = (x
+    /// < 4)` is recorded on the rewritten value. Branching on `p ||
+    /// q` admits a disjunction the upper-bound tuple cannot name
+    /// (`[0,3]` or `[16,19]`): merging to the looser unstamped bound
+    /// would present half the truth as the bound and recover only
+    /// entries 0..3. The whole bound is discarded instead, and the
+    /// dispatch refuses.
+    #[test]
+    fn a_stamp_conflict_in_a_combination_refuses() {
+        let mut memory = HashMap::new();
+        for index in [0u64, 1, 2, 3, 16, 17, 18, 19] {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 16, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("unique", 0x10, 1), varnode("unique", 0x11, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x12, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 1],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[guard, dispatch, default], (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.refusals.unknown_target, 1);
     }
 
 

@@ -7668,3 +7668,32 @@ Three advisory-driven corrections to the entries above:
   (147.88 ms standalone `native_graph` incl. JSON, 35.18 ms
   `layered_layout` proper). Gate passes; the 200 ms layout
   threshold is retired, not met.
+
+## Correction: mandatory layout gate, disjunctive stamps, copy aliasing (2026-09-20)
+
+Three more advisory-driven corrections, all verified before commit:
+
+- Layout is thresholded again. `6b459d81` had replaced the 200 ms
+  layout ceiling with a presence check plus a 20 s fetch ceiling.
+  Now `ui.graph.layout_ms` (bridge `native_graph`, via
+  `BRIDGE-GRAPH`) is back in `NUMERIC_METRICS` with the 200 ms
+  ceiling, `fetch_ms` stays separate, and `largest_graph_qt.sh`
+  fails unless layout is present *and* under threshold. Rerun:
+  **pass** -- fetch 1731.51 ms, layout 13.28 ms, paint 5.54 ms on
+  the 1865-block `__vfscanf_internal`.
+- Bool combinations discard stamp-conflicted bounds. `p = (x < 4)`
+  before `x += 16` combined with `q = (x < 4)` after as `p || q`
+  admits `[0,3]` or `[16,19]`; the old merge kept the looser bound
+  unstamped (`[0,3]` -- half the truth presented as the bound).
+  Conflicting stamps now remove the bound entirely and the
+  dispatch refuses. New regression
+  `a_stamp_conflict_in_a_combination_refuses` fails pre-fix
+  (recovers entries 0..3) and passes post-fix (refusal).
+- Copies never inherit self-links. `y = x` after `x -= 64` linked
+  `y -> (x, -64)` (the pre-write shift), so `q`'s bound
+  propagated to `y` as `[-64,-61]` although `x == y` post-write.
+  `inherit_link` flattens a source self-loop to a plain `(source,
+  0)` alias at the Copy/Add/Sub arms. New regression
+  `a_copy_after_a_rewrite_uses_the_current_bound` fails pre-fix
+  (refusal) and passes post-fix (`[0,3]` through `y`). SJA 33
+  green (30 + post-write + copy + conflict), full core 445+7.
