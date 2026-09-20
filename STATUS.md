@@ -7502,3 +7502,87 @@ cost is now the open item -- profile `switch-vsa`, then narrow the seed
 to slots live into each root's reads. The acyclic B1->B0 regression pins
 the entries boundary both ways (`Many` with `[0,1]`, `One(B1)` with
 `[1]`). Full core suite green (441 lib tests).
+
+## Unshifted-guard wrong-target fix (2026-09-20)
+
+Fix: `guard_bound` applies a comparison bound only when the guarded
+point enters the index expression unshifted (bare, zero-add, unit-mul,
+extension); a shifted occurrence (`Add(Point, Const(48))`) refuses.
+Regression `a_shifted_index_refuses_the_guard` fails pre-fix (recovers
+the neighbour table), passes post-fix (refusal, `unknown_target`).
+SJA suite 30 green; full core suite 442 passed, 4 ignored.
+
+Gate (`/home/raikaru/tmp/m13-strict/report.json`, status fail on phase
+only): vsa 94 branches at 1.0 soundness in 0.725 s phase (915/915
+targets, missed-of-stock 50, beyond-stock 12); interpreted 170
+branches at 0.9997 in 8.09 s phase (2905/2904); decompiler 130 at
+0.9972 (1812/1807, missed 3, beyond 1); combined 142 at 0.9978 in
+0.336 s (1830/1826, missed 3 -- meets the missed ceiling -- beyond
+13). Only failure: interpreter phase 8.09 s > 5.0 s.
+
+`00190be9`: vsa now recovers 0 targets (was 18 foreign); combined 16
+targets decompiler-identical (`0x190a10...0x190b00`); interpreted 17
+(the 16 plus one extra `0x190b10`). The wrong-target recovery is
+closed on the vsa/combined path; the interpreted extra target is the
+remaining residue there, not a reopen of the guard defect. Next open
+item is phase cost: profile `switch-vsa` under the universe seed
+(the 656-block function dominates), then narrow the seed while
+keeping all 30 SJA regressions green.
+
+## Interned-reaching-defs gate PASS (2026-09-20)
+
+Fix: `DefIndex::build_with_entries_inner` interns slots to dense ids
+and runs the fixpoint over `Vec<Reach>` rows -- pure representation
+change, same lattice/seeds/merges/stored facts. The 656-block function
+build drops 6.404 s -> 0.377 s; total build time 7.815 s -> 0.493 s.
+Timing trace was temporary and removed; no `ROMWRIGHT_TRACE_SJA_TIME`
+remains in the tree.
+
+Gate (`/home/raikaru/tmp/m13-intern/report.json`, status **pass**,
+failures []): vsa 94 branches at 1.0 soundness in 0.71 s phase;
+interpreted 170 at 0.9997 in 2.903 s (under the 5 s bar, was 8.09 s);
+decompiler 130 at 0.9972 (missed 3, beyond 1); combined 142 at
+0.9978 in 0.332 s (missed 3 -- meets the missed ceiling -- beyond
+13). `00190be9`: vsa 0 targets (no foreign recovery), combined 16
+decompiler-identical (`0x190a10...0x190b00`). The wrong-target defect
+and the phase-cost item are both closed. SJA suite 30 green; full
+core suite 442 passed, 4 ignored.
+
+## Guard-filter correction (2026-09-20, advisory-driven)
+
+Corrections to the two ledger entries above, verified against the
+stored gate databases -- not the claims they made:
+
+- The 18 foreign targets were never in the vsa tier. `m13-final`
+  stores: vsa 0 targets, interpreted 18 (`0x193338...0x193508` in
+  `__strcat_sse2_unaligned` for branch `00190be9` in
+  `__stpncpy_sse2_unaligned`). Combined (16, decompiler-identical)
+  cannot validate any SJA change: vsa contributes 0 there.
+- The unit regression as committed was void twice over: v1 never
+  reached the filter (`quasi_copy` stops at the guard's `INT_ADD`,
+  dispatch point `register:0x38` never matches), and v2's image made
+  refusal semantically correct (`rax < 4` with `table[rax + 48]`
+  genuinely addresses entries 48..; TooFew was the right answer).
+  Both removed; no synthetic shifted-guard unit test remains. The
+  filter's operative evidence is the import-level negative control:
+  filter disabled reproduces exactly the 18 foreign targets
+  (`/home/raikaru/tmp/nofilter-probe`, 2671 switch xrefs); filter
+  enabled yields 0 foreign (`/home/raikaru/tmp/guard-probe2`,
+  `SJA-GUARD 0x190be9: index=Add(Add(Point(r128), 32), 16),
+  unbound_value=Top guard=None`).
+- Real-function ground truth (disasm + ir-dump): the dispatch loads
+  `[R11 + R8*4]` PIC offsets with no index shift, but `R8` is
+  re-biased in place (`SUB R8,0x40`, `ADD R8,0x20/0x10`) along the
+  arms, so the reaching def is Many and the slice holds
+  `Add(Add(Point(R8), 32), 16)`. The filter refuses the guard, the
+  guard-less PIC scan recovers 17 targets: the 16 true ones plus
+  entry 16 (`0x190b10`). Stock's own table for the branch is exactly
+  the 16 (`0x190a10...0x190b00`).
+- Per the advisory's range proof the index is exactly 0..15 on the
+  taken path (carry exit, +32, `JL` restricts to `[-32,-1]`, +16 with
+  the non-`JL` edge leaves `[0,15]`), so entry 16 is unreachable: a
+  one-entry false positive the same-function owner check cannot
+  catch. Status: the filter removes the 18 foreign edges but leaves
+  this false positive. Wrong-target recovery is NOT closed; the
+  interpreted set must equal the 16 true targets before that claim.
+  SJA suite 29 green; full core suite re-verified at commit time.
