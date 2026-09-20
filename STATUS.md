@@ -7618,12 +7618,18 @@ SJA suite 30 green; full core 442 passed, 4 ignored.
 Gate (`/home/raikaru/tmp/m13-ident/report.json`, status **pass**):
 vsa 94 @ 1.0 in 0.646 s; interpreted 169 @ 0.9997 in 2.557 s;
 decompiler 130 @ 0.9972; combined 142 @ 0.9978 in 0.278 s
-(missed 3, beyond 13). Deltas vs `m13-intern`: `00143b69` 16 -> 18
-targets (decompiler agrees on 16 of them; stock's own set for the
-branch is 84 raw entries), `001696cd` 5 -> 0 (stock: 23 raw; the 5
-were beyond-stock). Both deltas are in the beyond/missed accounting
-the gate already scores, not in soundness: no foreign-function
-targets introduced.
+ (missed 3, beyond 13). Deltas vs `m13-intern`, scored as sets
+ against stock's distinct-target sets (`00143b69`: 16 targets,
+ `001696cd`: 6 targets -- not the 84/23 raw entry counts):
+ `00143b69` 16 -> 18 targets (4 extra beyond stock's 16, all
+ decoding inside `__vfscanf_internal`, 2 of stock's 16 missed;
+ owner/decode soundness cannot validate the 4 extras, and
+ `score()` counts branch presence only, so they sit outside the
+ beyond/missed accounting); `001696cd` 5 -> 0 (stock holds the
+ branch with 6; the 5 recovered were a subset, so missed_of_stock
+ rose 4 -> 5 -- a recall loss, not beyond-stock). No
+ foreign-function targets introduced, but the extras/miss are
+ real deltas the gate's branch-level accounting does not score.
 
 `00190be9` stands at 17 (16 true + entry-16 `0x190b10`); stock's own
 table is the 16. The remaining entry is unreachable per the range
@@ -7632,3 +7638,33 @@ proof (`[0,15]`) and needs the flag-combination domain (`JL` from
 scope, not claimed. The unshifted-expression filter stays as the
 proven anti-foreign backstop (negative control reproduces the exact
 18 foreign with it disabled).
+
+## Correction: per-predicate stamps, honest layout timing (2026-09-20)
+
+Three advisory-driven corrections to the entries above:
+
+- Gate deltas rescored as sets: `00143b69` ident-set is 18 vs
+  stock's 16 (4 extra, all decoding inside `__vfscanf_internal`,
+  2 of stock's missed) -- outside `score()`'s branch-presence
+  accounting and unvalidated by owner/decode soundness;
+  `001696cd` 5 -> 0 is a recall loss (stock holds 6; missed 4 ->
+  5), not beyond-stock. No foreign-function targets either way.
+- Value identity is per-predicate, not slot-wide: the committed
+  `7c33c3a3` shared one self-loop across predicates, so `p=(x <
+  64); x-=64; q=(x<4); branch q` mistranslated `q` to
+  `[-64,-61]`. Predicates now carry the composed in-place shift
+  stamped at rewrite time (`None` when recorded after); the live
+  walk skips self-loops. New regression
+  `a_post_write_bound_ignores_an_earlier_rewrite` fails on the
+  old design (refusal) and passes now (`[0,3]`); the pre-write
+  regression still passes (`[16,63]`). SJA 31 green, core 443+7.
+- Desktop: the `70962867` "6.63ms layout" measured JSON->Node
+  conversion, not layout (`layered_layout` runs in the bridge's
+  `native_graph`). Corrected: `ui.graph.fetch_ms` (round trip,
+  threshold 20 s) replaces `layout_ms` in the threshold gate;
+  layout-only rides a `BRIDGE-GRAPH` stderr line, reported but
+  never gated. Measured on the 1865-block function: fetch
+  1702.67 ms, paint 5.43 ms, layout-only 13.06 ms in-gate
+  (147.88 ms standalone `native_graph` incl. JSON, 35.18 ms
+  `layered_layout` proper). Gate passes; the 200 ms layout
+  threshold is retired, not met.
