@@ -7727,3 +7727,18 @@ edges. The gate caught two fixture-authoring bugs first (guard
 compared 4/3 with 5/4 cases in the table -- analysis correctly
 recovered the reachable subset). Full `llvm-exegesis` (63 MB)
 import running separately for the huge-image measurement.
+
+## Huge-image scaling (2026-09-20)
+
+`llvm-exegesis` (63 MB) structural import (switch round off):
+1001.8 s total, 48,688 functions, 6.27M instructions;
+references-only 733.1 s dominates, discovery 170.6 s, flow
+142.0 s, store 49.6 s; 221 MB store. No crash, exit 0.
+
+Full import with switch recovery did not finish in 60 min (job
+timeout killed it mid-store after ~50 min of switch batches at
+~460 completions each, with scattered 59 s decompiler timeouts
+and `DataUnavailError` failures): per-candidate decompiler
+round-trips do not scale to this image. Relaunched detached;
+bounding the switch round on huge images is open work, not
+claimed here.
