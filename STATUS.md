@@ -7892,3 +7892,26 @@ joins the polarity cannot reach). The exact-16 in combined is the
 pre-existing switch-decompiler stage's, not the SJA fix's. The open
 item stands as written: `00190be9` exact-16 via the SJA path needs
 path-sensitive joins, still unclaimed.
+
+## Correction: JL polarity gated on proven OF=0 (2026-09-21)
+
+Advisory (blocker): the ungated JL rule was unsound when OF=1
+(`SF != OF` then means `!SF`), and the "backstop refuses overflow
+paths" comment was false comfort -- a wrong-edge upper that decodes
+in-function is accepted, nothing downstream refuses it. Complied:
+`INT_SCARRY` outputs are evaluated where provable (`x + 0` folds to
+false; two constants fold by width-truncated checked add; else Top),
+carry slots are tracked separately (`scarry_src`), and the taken-edge
+polarity fires only when the silent side is the carry flag holding
+`Const(0)`. Proven-OF=1 and unknown-OF keep the both-edges defense.
+Control: `SCARRY(0x7fff...fff, 1)` fails pre-gate (fallthrough reads
+32..63) and passes post-gate (fallthrough re-guards to entries 0..31,
+exact); the taken leg pins entries 0..31 as the defense's heuristic,
+documented as the known OF=1 limitation rather than exactness (truth
+is 32..63). The gate-open control fails exactly the control test.
+Suite 451+7 core, m18 green, m13 identical sixth run
+(142 @ 0.9978): unknown-OF JL shapes do not move the measured
+dispatches. The fixture grew a symmetric fallthrough re-guard (both
+legs bias+bound-check, the production shape) after the first control
+draft showed the unblessed fallthrough refuses rather than reads --
+arithmetic never blesses, only comparisons do.

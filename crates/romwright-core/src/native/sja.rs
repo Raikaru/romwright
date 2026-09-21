@@ -682,6 +682,9 @@ fn run_block<I: Image>(
     // set in an earlier block arrive as plain booleans, which keep the
     // both-edges defense.
     let mut flag_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
+    // The subset holding signed-carry outputs: the `JL` polarity gate
+    // needs the carry side specifically (see the `Bool` arm).
+    let mut scarry_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
     // of the switch variable and then dispatches on the original, and the
@@ -990,9 +993,13 @@ fn run_block<I: Image>(
                 {
                     // The `JL` idiom is `INT_NOTEQUAL` of the signed-carry
                     // and sign flags of one comparison, and its taken edge
-                    // means less-than (absent signed overflow, which the
-                    // domain cannot name -- overflow paths stay wrong and
-                    // the backstop refuses them). Every other combination
+                    // means less-than only when the carry side proves `OF =
+                    // 0`: `SF != OF` with `OF = 1` means `!SF`, and
+                    // forwarding SF's bound to the taken edge then selects
+                    // exactly the wrong entries. A wrong-edge upper that
+                    // decodes in-function is accepted -- no backstop refuses
+                    // it -- so the gate below, not a check downstream, is
+                    // what keeps that case out. Every other combination
                     // keeps the both-edges defense: `ja` is an `AND` whose
                     // bound holds on the fallthrough, so polarity through
                     // arbitrary combinations would put bounds on exactly
@@ -1007,6 +1014,16 @@ fn run_block<I: Image>(
                         && op.inputs.len() == 2
                         && carrying == 1
                         && op.inputs.iter().all(|input| flag_src.contains(&slot(input)));
+                    // The overflow gate: the silent side must be the carry
+                    // flag specifically, and its value must be constant-false
+                    // (`x + 0` folds there; two constants fold; anything
+                    // else stays unknown). A constant-true carry or an
+                    // unknown one keeps the both-edges defense: the polarity
+                    // is unproven, and forwarding it would be the OF=1
+                    // misread.
+                    let proven_no_overflow = jl_idiom && op.inputs.iter()
+                        .find(|input| !comparisons.contains_key(&slot(input)))
+                        .is_some_and(|silent| scarry_src.contains(&slot(silent)) && state.get(silent) == Value::Const(0));
                     let mut carried: Vec<Predicate> = Vec::new();
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)) {
@@ -1040,10 +1057,11 @@ fn run_block<I: Image>(
                                     None => {
                                         let mut combined = bound.clone();
                                         // The `JL` idiom's bound holds on
-                                        // the taken edge; everything else
+                                        // the taken edge only with proven
+                                        // no-overflow; everything else
                                         // through a combination keeps the
                                         // both-edges defense.
-                                        combined.6 = jl_idiom;
+                                        combined.6 = proven_no_overflow;
                                         carried.push(combined);
                                     }
                                 }
@@ -1059,16 +1077,25 @@ fn run_block<I: Image>(
                 }
                 O::IntSCarry => {
                     // A signed-carry flag: with its `INT_SLESS` sibling it
-                    // forms the `JL` idiom (`INT_NOTEQUAL(sc, sf)`), the one
-                    // flag combination whose taken edge keeps a known
-                    // polarity (see the `Bool` arm). `INT_CARRY` is left
-                    // out: unsigned combinations (`ja`) hold on the
-                    // fallthrough, not the taken edge.
+                    // forms the `JL` idiom (`INT_NOTEQUAL(sc, sf)`), whose
+                    // taken edge keeps a known polarity only when the
+                    // carry side proves `OF = 0` (see the `Bool` arm).
+                    // `INT_CARRY` is left out: unsigned combinations (`ja`)
+                    // hold on the fallthrough, not the taken edge. The
+                    // value is evaluated where provable (`x + 0` never
+                    // overflows; two constants fold) so the gate below has
+                    // something to read; otherwise it stays unknown and the
+                    // idiom keeps the both-edges defense.
                     if let Some(output) = &op.output {
                         if output.size == 1 {
                             flag_src.insert(slot(output));
+                            scarry_src.insert(slot(output));
                         }
-                        state.set(output, Value::Top);
+                        let carried = match (inputs.first(), inputs.get(1)) {
+                            (Some(left), Some(right)) => scarry_value(left, right, op.inputs.first().map_or(8, |input| input.size)),
+                            _ => Value::Top,
+                        };
+                        state.set(output, carried);
                     }
                 }
                 O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
@@ -1195,6 +1222,23 @@ fn truncate(value: u64, width: u32) -> u64 {
         return value;
     }
     value & ((1u64 << (width * 8)) - 1)
+}
+
+/// What `INT_SCARRY(a, b)` -- the signed overflow of `a + b` -- is worth,
+/// where provable. `x + 0` never overflows, whatever `x` is; two
+/// constants fold by sign-extending to the operand width and adding
+/// checked. Anything else stays unknown, and the `JL` polarity gate
+/// keeps the both-edges defense there.
+fn scarry_value(left: &Value, right: &Value, size: u32) -> Value {
+    match (left, right) {
+        (_, Value::Const(0)) | (Value::Const(0), _) => Value::Const(0),
+        (Value::Const(a), Value::Const(b)) if size >= 1 && size <= 8 => {
+            let bits = size * 8;
+            let extend = |v: u64| ((v << (64 - bits)) as i64) >> (64 - bits);
+            Value::Const(u64::from(extend(*a).checked_add(extend(*b)).is_none()))
+        }
+        _ => Value::Top,
+    }
 }
 
 fn add(left: Value, right: Value) -> Value {
@@ -3077,15 +3121,24 @@ mod tests {
             None
         );
     }
-    /// `JL` keeps its polarity through the flag combination: `sub $32`
-    /// then `jl` on `R in [-32, 31]` refines the taken edge to `[-32, -1]`
-    /// and the fallthrough to `[0, 31]` (via the negation). The old
-    /// both-edges defense could not state a negative upper bound at
-    /// all, leaving the fallthrough dispatch at the full `[-32, 31]`
-    /// (64 targets instead of entries 32..63). The taken leg biases back
-    /// (`+32`) and re-guards unsigned before its dispatch, the production
-    /// shape: only a comparison-blessed bound drives a read.
-    fn jl_blocks() -> Vec<Block> {
+    /// `JL` keeps its polarity through the flag combination when the
+    /// carry side proves `OF = 0`: `sub $32` then `jl` on `R in [-32, 31]`
+    /// refines the taken edge to `[-32, -1]` and the fallthrough to
+    /// `[0, 31]` (via the negation). The old both-edges defense could not
+    /// state a negative upper bound at all, leaving the fallthrough
+    /// dispatch at the full `[-32, 31]` (64 targets instead of entries
+    /// 32..63). The taken leg biases back (`+32`) and re-guards unsigned
+    /// before its dispatch, the production shape: only a
+    /// comparison-blessed bound drives a read.
+    fn jl_blocks(proven_overflow: bool) -> Vec<Block> {
+        // Proven overflow (`0x7fff... + 1` signed-overflows) makes the `JL`
+        // taken edge mean `!SF`: the control case for the polarity gate.
+        // The plain case adds zero, which never overflows.
+        let (scarry_left, scarry_right) = if proven_overflow {
+            (varnode("const", 0x7fffffffffffffff, 8), varnode("const", 1, 8))
+        } else {
+            (varnode("register", 0x38, 8), varnode("const", 0, 8))
+        };
         let guard = Block {
             instructions: vec![instruction(
                 0x1000,
@@ -3102,7 +3155,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![1, 5],
+            successors: vec![1, 6],
         };
         let compare = Block {
             instructions: vec![instruction(
@@ -3116,7 +3169,7 @@ mod tests {
                     op(
                         "INT_SCARRY",
                         Some(varnode("unique", 0x5000, 1)),
-                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                        vec![scarry_left, scarry_right],
                     ),
                     op(
                         "INT_SLESS",
@@ -3137,14 +3190,15 @@ mod tests {
             )],
             successors: vec![2, 4],
         };
-        // The taken leg: `[-32, -1]` biased back to `[0, 31]`, re-guarded
-        // unsigned so the table read is blessed. Arithmetic never blesses
-        // (a width laundered through arithmetic must not drive a read),
-        // so the re-guard is the production shape, not test scaffolding:
-        // real switches bound-check after biasing.
-        let rebless = Block {
+        // Both legs bias back (`+32`) and re-guard unsigned before
+        // dispatching: only a comparison-blessed bound drives a read.
+        // Arithmetic never blesses (a width laundered through arithmetic
+        // must not drive a read), so the re-guard is the production
+        // shape, not test scaffolding: real switches bound-check after
+        // biasing.
+        let rebless_at = |address: u64, target: u64, then0: usize| Block {
             instructions: vec![instruction(
-                0x1020,
+                address,
                 vec![
                     op(
                         "INT_ADD",
@@ -3159,51 +3213,49 @@ mod tests {
                     op(
                         "CBRANCH",
                         None,
-                        vec![varnode("ram", 0x1030, 8), varnode("unique", 0x18, 1)],
+                        vec![varnode("ram", target, 8), varnode("unique", 0x18, 1)],
                     ),
                 ],
             )],
-            successors: vec![3, 5],
+            successors: vec![then0, 6],
         };
-        let dispatch = |address: u64, bias: bool| {
-            let mut ops = Vec::new();
-            // The fallthrough leg biases here (`[0, 31]` to `[32, 63]`);
-            // the taken leg already biased in `rebless`.
-            if bias {
-                ops.push(op(
-                    "INT_ADD",
-                    Some(varnode("register", 0x38, 8)),
-                    vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
-                ));
-            }
-            ops.extend([
-                op(
-                    "INT_MULT",
-                    Some(varnode("unique", 0x20, 8)),
-                    vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
-                ),
-                op(
-                    "INT_ADD",
-                    Some(varnode("unique", 0x28, 8)),
-                    vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
-                ),
-                op(
-                    "LOAD",
-                    Some(varnode("unique", 0x30, 8)),
-                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
-                ),
-                op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
-            ]);
-            Block {
-                instructions: vec![instruction(address, ops)],
-                successors: vec![],
-            }
-        };
-        let default = Block {
-            instructions: vec![instruction(0x1050, vec![op("BRANCH", None, vec![])])],
+        let dispatch = |address: u64| Block {
+            instructions: vec![instruction(
+                address,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
             successors: vec![],
         };
-        vec![guard, compare, rebless, dispatch(0x1030, false), dispatch(0x1040, true), default]
+        let default = Block {
+            instructions: vec![instruction(0x1060, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        vec![
+            guard,
+            compare,
+            rebless_at(0x1020, 0x1030, 3),
+            dispatch(0x1030),
+            rebless_at(0x1040, 0x1050, 5),
+            dispatch(0x1050),
+            default,
+        ]
     }
     #[test]
     fn a_jl_combination_keeps_its_taken_edge_polarity() {
@@ -3215,14 +3267,42 @@ mod tests {
             memory,
             code: (0x1000, 0x2000),
         };
-        let found = analyse(&image, &jl_blocks(), (0x1000, 0x2000));
+        let found = analyse(&image, &jl_blocks(false), (0x1000, 0x2000));
         assert_eq!(found.tables.len(), 2, "{found:?}");
         let taken = found.tables.iter().find(|t| t.branch == 0x1030).expect("taken dispatch");
-        let fall = found.tables.iter().find(|t| t.branch == 0x1040).expect("fallthrough dispatch");
+        let fall = found.tables.iter().find(|t| t.branch == 0x1050).expect("fallthrough dispatch");
         let expected_taken: Vec<u64> = (0..32u64).map(|i| 0x1100 + i * 8).collect();
         let expected_fall: Vec<u64> = (32..64u64).map(|i| 0x1100 + i * 8).collect();
         assert_eq!(taken.targets, expected_taken);
         assert_eq!(fall.targets, expected_fall);
+    }
+    /// `JL` with proven overflow keeps the both-edges defense:
+    /// `SCARRY(0x7fff...fff, 1)` is constant-true, so `SF != OF` means
+    /// `!SF` and forwarding SF's bound to the taken edge would put
+    /// entries 32..63 on the fallthrough. Gated, the fallthrough keeps
+    /// the upper shape (`[-32, -1]`), biases back, re-guards, and reads
+    /// entries 0..31 (exact -- truth there is `R < 0`). The taken leg
+    /// reads the same entries 0..31, which is the defense's heuristic,
+    /// NOT the truth (`R >= 0`, entries 32..63): a wrong-edge upper that
+    /// decodes in-function is accepted, and no backstop refuses it.
+    /// Pinned as the known OF=1 limitation, not as exactness.
+    #[test]
+    fn a_jl_with_proven_overflow_keeps_both_edges() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &jl_blocks(true), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 2, "{found:?}");
+        let taken = found.tables.iter().find(|t| t.branch == 0x1030).expect("taken dispatch");
+        let fall = found.tables.iter().find(|t| t.branch == 0x1050).expect("fallthrough dispatch");
+        let expected: Vec<u64> = (0..32u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(fall.targets, expected);
+        assert_eq!(taken.targets, expected);
     }
 
     /// A `JL`-shaped fallthrough: the first bound takes `r8` into
