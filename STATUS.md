@@ -7714,19 +7714,24 @@ bounds. New regression
 pre-fix (entries 16..19) and passes post-fix (entries 0..3).
 SJA 34 green, full core 446+7.
 
-## Robustness dispatch fixtures (2026-09-20)
+## Robustness dispatch fixtures (2026-09-20, corrected)
 
-New `tests/m18-001_robust_dispatch.py` gates hand-built x86-64
-fixtures against nm annotations (exact sets, not owner/decode
-soundness): `asm_table` (exact 5), `asm_flat` (loop-carried:
-exact or refuse), `asm_opaque` (opaque predicate: exact or
-refuse), `selfmod` (runtime-patched pointer: at-rest exact or
-refuse, patched target never claimed), packed XOR blob (no xrefs
-into blob/codebuf). Measured: 2 exact, 3 refusals, 0 wrong
-edges. The gate caught two fixture-authoring bugs first (guard
-compared 4/3 with 5/4 cases in the table -- analysis correctly
-recovered the reachable subset). Full `llvm-exegesis` (63 MB)
-import running separately for the huge-image measurement.
+`tests/m18-001_robust_dispatch.py` gates hand-built x86-64 fixtures
+against nm annotations (exact sets, never owner/decode soundness).
+Corrections to the first version: `br_sm` labeled the HLT past the
+jump (vacuous refusal) -- it now sits on the JMP, and the oracle is
+inverted (the unconditional store makes `sm_case1` the runtime
+target, exit 11; at-rest `sm_case0`-only is stale); the opaque
+predicate used `imul`+`js` (unsound: 46341^2 sets the sign bit and
+SF is undefined after IMUL) -- now `test $1` on `x*(x+1)` with 9
+boundary inputs; `check_exact` splits mandatory-exact (`asm_table`)
+from refusal-allowed, with a negative control proving empty
+recovery fails. Measured: control rejects-empty, 2 exact (table,
+opaque), 3 refusals (flat loop state, patched pointer, packed
+blob), 0 wrong edges. The gate caught two fixture-authoring bugs
+first (unreachable cases the analysis correctly excluded).
+Open, not claimed: `sm_case1` exact-live (needs store→load
+forwarding), flattened-dispatch exact (needs the flag domain).
 
 ## Huge-image scaling (2026-09-20)
 

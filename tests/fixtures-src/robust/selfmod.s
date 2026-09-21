@@ -1,15 +1,15 @@
-    # Runtime-patched dispatch: sm_target holds sm_case0 at rest and is
-    # overwritten with sm_case1 before the indirect jump. Ground truth
-    # via nm: br_sm statically reads sm_case0 only. sm_case1 must never
-    # be claimed (it is reachable only after the runtime patch).
+    # Runtime-patched dispatch: sm_target holds sm_case0 at rest but is
+    # unconditionally overwritten with sm_case1 before the indirect
+    # jump (exit code 11 proves the runtime target). Ground truth via
+    # nm: br_sm -> sm_case1. Recovering only the at-rest sm_case0 is a
+    # stale-pointer wrong edge; refusal is also accepted.
     .section .selfmod,"awx",@progbits
     .globl selfmod, br_sm, sm_case0, sm_case1, sm_target
-    .type selfmod, @function
 selfmod:
     leaq sm_case1(%rip), %rax
     movq %rax, sm_target(%rip)
-    jmp *sm_target(%rip)
 br_sm:
+    jmp *sm_target(%rip)
     hlt
 sm_case0:
     movl $10, %eax
