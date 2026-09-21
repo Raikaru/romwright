@@ -113,6 +113,10 @@ pub enum Evidence {
     Import,
     /// The same body bytes at the same address, unique on both sides.
     Body,
+    /// The same masked bytes -- relocations and image addresses zeroed --
+    /// unique on both sides: the same code, however loaded or relocated.
+    /// Tier-0: reference lookups run before the structural match.
+    Masked,
     /// The same decoded shape, unique on both sides: the same code, loaded
     /// or relocated differently.
     Shape,
@@ -218,6 +222,11 @@ struct Func {
     /// Digest of the decoded shape; equal digests are the same code wherever
     /// it was loaded.
     shape_digest: String,
+    /// Digest of the body bytes with relocations and image addresses
+    /// masked; equal digests are the same instructions with the same
+    /// constants, however loaded or relocated. The tier-0 anchor: looked
+    /// up before the structural match runs.
+    masked_digest: String,
     /// BSim-style data-flow signature, when the semantic index ran over
     /// this program. `None` is absence of evidence, never difference: the
     /// scorer drops the term rather than scoring it zero.
@@ -313,6 +322,7 @@ impl Program {
                 funcs[index].max_block = row.max_block;
                 funcs[index].body_digest = row.body_digest;
                 funcs[index].shape_digest = row.shape_digest;
+                funcs[index].masked_digest = row.masked_digest;
             }
         }
         // Semantic signatures come from the explicit indexing pass, not
@@ -612,12 +622,19 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
     };
     let mut matches: Vec<MatchRow> = Vec::new();
     let mut anchors = 0usize;
-
     // 1. Anchors, strongest first. Each is a key that occurs once on each
     // side, so accepting it cannot be a choice between candidates.
-    let anchor_keys: [(Evidence, fn(&Func) -> Option<String>); 6] = [
+    let anchor_keys: [(Evidence, fn(&Func) -> Option<String>); 7] = [
         (Evidence::Body, |func: &Func| {
             (!func.body_digest.is_empty()).then(|| format!("b:{}", func.body_digest))
+        }),
+        (Evidence::Masked, |func: &Func| {
+            // Tier-0: an exact masked-bytes match is the same instructions
+            // with the same constants, however loaded. A body shorter than
+            // four instructions is a stub: too many functions share one
+            // for it to identify anything, masked or not.
+            (func.instructions >= 4 && !func.masked_digest.is_empty())
+                .then(|| format!("m:{}", func.masked_digest))
         }),
         (Evidence::Shape, |func: &Func| {
             // A shape shorter than four instructions is a stub: too many

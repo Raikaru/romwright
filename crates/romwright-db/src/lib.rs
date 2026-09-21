@@ -29,7 +29,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 27;
+pub const SCHEMA_VERSION: i64 = 28;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -899,6 +899,23 @@ impl ProjectDb {
                     );
                     CREATE INDEX matching_project_checks_workspace ON matching_project_checks(workspace_id, id);",
                 )?;
+            }
+            if v < 28 {
+                // Tier-0 diff anchor: the masked body digest, indexed for
+                // reference-side lookup before the structural match runs.
+                let present: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('function_features')
+                                   WHERE name = 'masked_digest')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !present {
+                    tx.execute_batch(
+                        "ALTER TABLE function_features ADD COLUMN masked_digest TEXT NOT NULL DEFAULT '';
+                         CREATE INDEX IF NOT EXISTS idx_function_features_masked
+                             ON function_features(masked_digest);",
+                    )?;
+                }
             }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",
