@@ -201,17 +201,17 @@ fn mem_modlen(b: &[u8], m: usize, force_memory: bool) -> u8 {
 
 /// Offset and length of a branch displacement for the opcodes with a
 /// fixed layout (`p` counts the prefixes already consumed). RIP-relative
-/// data goes through the ModRM path instead. `None` is not "no address
-/// here", only "no fixed-layout relative field": indirect targets and
-/// plain immediates report none.
+/// data -- including `FF 25` GOT jumps -- reports through the ModRM path
+/// instead: only `rip_data` distinguishes a direct data reference from an
+/// indirect target, the span itself always covers the disp32. `None` is
+/// not "no address here", only "no covered relative field": plain
+/// immediates and register-indirect targets report none.
 fn rel_span(op: u8, op2: Option<u8>, p: usize) -> Option<(u8, u8)> {
     let at = |off: usize| u8::try_from(off).ok();
     match op {
         0xe8 | 0xe9 => Some((at(p + 1)?, 4)),
         0xeb | 0xe0..=0xe3 | 0x70..=0x7f => Some((at(p + 1)?, 1)),
-        0x0f if op2.map(|o| (0x80..=0x8f).contains(&o)).unwrap_or(false) => {
-            Some((at(p + 2)?, 4))
-        }
+        0x0f if op2.map(|o| (0x80..=0x8f).contains(&o)).unwrap_or(false) => Some((at(p + 2)?, 4)),
         _ => None,
     }
 }
@@ -248,14 +248,47 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
     // branch is longer than its bare form, and its target is relative to
     // its true end.
     let flow_len: Option<(Flow, u8)> = match op {
-        0xe8 => { let total = 5 + p; Some((Flow::Call(rel_target(b, p + 1, total, addr)), total.min(15) as u8)) }
-        0xe9 => { let total = 5 + p; Some((Flow::Jump(rel_target(b, p + 1, total, addr)), total.min(15) as u8)) }
-        0xeb => { let total = 2 + p; Some((Flow::Jump(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
-        0x70..=0x7f => { let total = 2 + p; Some((Flow::JumpCond(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
-        0xe0..=0xe3 => { let total = 2 + p; Some((Flow::JumpCond(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
+        0xe8 => {
+            let total = 5 + p;
+            Some((
+                Flow::Call(rel_target(b, p + 1, total, addr)),
+                total.min(15) as u8,
+            ))
+        }
+        0xe9 => {
+            let total = 5 + p;
+            Some((
+                Flow::Jump(rel_target(b, p + 1, total, addr)),
+                total.min(15) as u8,
+            ))
+        }
+        0xeb => {
+            let total = 2 + p;
+            Some((
+                Flow::Jump(rel8_target(b, p + 1, total, addr)),
+                total.min(15) as u8,
+            ))
+        }
+        0x70..=0x7f => {
+            let total = 2 + p;
+            Some((
+                Flow::JumpCond(rel8_target(b, p + 1, total, addr)),
+                total.min(15) as u8,
+            ))
+        }
+        0xe0..=0xe3 => {
+            let total = 2 + p;
+            Some((
+                Flow::JumpCond(rel8_target(b, p + 1, total, addr)),
+                total.min(15) as u8,
+            ))
+        }
         0x0f if op2.map(|o| (0x80..=0x8f).contains(&o)).unwrap_or(false) => {
             let total = 6 + p;
-            Some((Flow::JumpCond(rel_target(b, p + 2, total, addr)), total.min(15) as u8))
+            Some((
+                Flow::JumpCond(rel_target(b, p + 2, total, addr)),
+                total.min(15) as u8,
+            ))
         }
         // setcc/setb flows Next with its full length: handled below, not
         // here, so a prefixed form is not truncated to 3.
