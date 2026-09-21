@@ -2848,19 +2848,26 @@ fn slice_dispatch<I: Image>(
                         // `[-0x10, 0xf]`, and the negative low end refuses it.
                         eval_sliced(image, &table.index, Some((&point, high)))
                     }
-                    GuardSearch::NoMatchingGuard if table.offset_base.is_some() => {
+                    GuardSearch::NoMatchingGuard
+                        if table.offset_base.is_some()
+                            && matches!(table.index, Sliced::Point(_)) =>
+                    {
                         // No comparison, mask, or width bounds the index: scan a
                         // PIC table linearly until an invalid entry -- Ghidra's
                         // memory-scan bound (`JumpBasic::sanityCheck`). Sound only
-                        // for PIC: the next table's offsets resolve against *this*
-                        // base, so an over-read produces a wrong address and stops
-                        // the scan. An absolute table's neighbours are valid code,
-                        // so the scan would over-read into them -- refused.
+                        // for PIC with a dense point index: the next table's
+                        // offsets resolve against *this* base, so an over-read
+                        // produces a wrong address and stops the scan -- and a
+                        // point enumerates entries densely, which an opaque or
+                        // arithmetic index (a hash, a masked value) does not.
+                        // An absolute table's neighbours are valid code, so
+                        // the scan would over-read into them -- refused, as is
+                        // any non-dense index.
                         Value::Top
                     }
-                    // No guard at all on an absolute table, or a guard-like
-                    // comparison that decides nothing: scanning would read
-                    // whatever decodes next.
+                    // No guard at all on an absolute table, a guard-like
+                    // comparison that decides nothing, or a non-dense index:
+                    // scanning would read whatever decodes next.
                     _ => return None,
                 }
             };
@@ -6070,6 +6077,41 @@ mod tests {
         let found = analyse(&image, &pic_guardless_blocks(), (0x1000, 0x2000));
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
+    }
+    #[test]
+    fn an_opaque_pic_index_is_not_scanned() {
+        // Same table as the guardless scan, but the index is hashed
+        // through an XOR the slicer cannot descend: the index expression
+        // is opaque, not a dense point, so the linear scan -- which would
+        // read whatever decodes next -- is refused. Fails pre-fix with
+        // the four scanned entries.
+        let mut blocks = pic_guardless_blocks();
+        let mut ops = vec![blocks[0].instructions[0].ops[0].clone()];
+        ops.push(op(
+            "INT_XOR",
+            Some(varnode("unique", 0x22, 8)),
+            vec![varnode("register", 0x38, 8), varnode("const", 0x1234, 8)],
+        ));
+        ops.push(op(
+            "INT_MULT",
+            Some(varnode("unique", 0x20, 8)),
+            vec![varnode("unique", 0x22, 8), varnode("const", 4, 8)],
+        ));
+        ops.extend(blocks[0].instructions[0].ops[2..].to_vec());
+        blocks[0].instructions[0].ops = ops;
+        let mut memory = HashMap::new();
+        for index in 0..4u64 {
+            let target = 0x1400 + index * 8;
+            let offset = (target as i64 - 0x9000) as i32 as u32 as u64;
+            memory.insert(0x9000 + index * 4, offset);
+        }
+        memory.insert(0x9010, (0xdead0000u64 - 0x9000) as i32 as u32 as u64);
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
     }
 
     #[test]
