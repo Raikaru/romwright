@@ -330,6 +330,32 @@ pub struct Analysis {
 /// `extent` is the function's own range: a materialised target outside it
 /// is not this function's case, which is the check that keeps a wrong bound
 /// from inventing a table out of whatever follows in memory.
+/// Widening after eight non-converged updates: a value that is
+/// *still* moving goes to top, and one that has settled is kept.
+/// Bound metadata (predicates, origins) follows the same rule as the
+/// join: entries both sides agree on are still true, so an unchanged
+/// guard survives the loop that carries it instead of being dropped
+/// with the noise.
+fn widen_state(existing: &State, merged: &State) -> State {
+    let mut widened = State::default();
+    for (key, value) in &merged.values {
+        if existing.values.get(key) == Some(value) {
+            widened.values.insert(key.clone(), value.clone());
+        }
+    }
+    for (key, bound) in &merged.predicates {
+        if existing.predicates.get(key) == Some(bound) {
+            widened.predicates.insert(key.clone(), bound.clone());
+        }
+    }
+    for (key, link) in &merged.origins {
+        if existing.origins.get(key) == Some(link) {
+            widened.origins.insert(key.clone(), link.clone());
+        }
+    }
+    widened
+}
+
 pub fn analyse<I: Image>(
     image: &I,
     blocks: &[Block],
@@ -451,22 +477,9 @@ pub fn analyse<I: Image>(
                 None => next,
             };
             rounds[successor] += 1;
-            // Widening, after a few rounds: a value that is *still* moving
-            // goes to top, and one that has settled is kept. Discarding the
-            // whole state instead (the first version of this) threw away
-            // every bound a guard had established, so a dispatch inside a
-            // loop resolved to nothing.
             let merged = if rounds[successor] > 8 {
                 match &entry_state[successor] {
-                    Some(existing) => {
-                        let mut widened = State::default();
-                        for (key, value) in &merged.values {
-                            if existing.values.get(key) == Some(value) {
-                                widened.values.insert(key.clone(), value.clone());
-                            }
-                        }
-                        widened
-                    }
+                    Some(existing) => widen_state(existing, &merged),
                     None => merged,
                 }
             } else {
@@ -1035,9 +1048,9 @@ fn run_block<I: Image>(
                     }
                 }
                 O::CBranch => {
-                    // Slot 0 of a block's successors is the fallthrough in
-                    // our own construction, slot 1 the taken edge, so the
-                    // refinement is applied to whichever assumes the test.
+                    // Successor 0 is the taken edge, successor 1 the
+                    // fallthrough: block construction pushes the taken
+                    // target first, and pruning preserves the order.
                     // A boolean built from several comparisons carries every
                     // bound; each refines the edge it holds on.
                     if let Some(condition) = op.inputs.get(1)
@@ -1676,7 +1689,10 @@ fn apply_guard_bound(
     // both-edges defense with the stated shape only.
     let mut work: Vec<(i64, i64, bool, usize)> = Vec::new();
     if direct && successors >= 2 {
-        let holds = if constant_left { 0 } else { 1 };
+        // Taken edge is successor 0 (block construction pushes the
+        // taken target first; pruning preserves order): a direct
+        // `index < n` holds there, `n < index` on the fallthrough.
+        let holds = if constant_left { 1 } else { 0 };
         work.push((high, low, constant_left, holds));
         work.push((neg_high, neg_low, neg_left, 1 - holds));
     } else {
@@ -2895,7 +2911,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![2, 1],
+            successors: vec![1, 2],
         };
         let dispatch = Block {
             instructions: vec![instruction(
@@ -2930,6 +2946,39 @@ mod tests {
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
     }
+    /// Widening past eight updates drops a still-moving value but
+    /// keeps an unchanged guard predicate and origin link: the join
+    /// rule, not a blank slate. Without this, a dispatch after a
+    /// long loop loses the bound established before it.
+    #[test]
+    fn widening_keeps_stable_bound_metadata() {
+        let slot = |space: &str, offset: u64| (space.to_string(), offset);
+        let mut existing = State::default();
+        existing.values.insert(slot("register", 0x0), Value::Const(7));
+        existing.predicates.insert(
+            slot("unique", 0x10),
+            vec![(slot("register", 0x38), 4, false, false, 8, None, true)],
+        );
+        existing.origins.insert(
+            slot("register", 0x40),
+            (slot("register", 0x38), 0, None, 8),
+        );
+        let mut merged = existing.clone();
+        merged
+            .values
+            .insert(slot("register", 0x0), Value::Const(8));
+        let widened = widen_state(&existing, &merged);
+        assert_eq!(widened.values.get(&slot("register", 0x0)), None);
+        assert_eq!(
+            widened.predicates.get(&slot("unique", 0x10)),
+            existing.predicates.get(&slot("unique", 0x10))
+        );
+        assert_eq!(
+            widened.origins.get(&slot("register", 0x40)),
+            existing.origins.get(&slot("register", 0x40))
+        );
+    }
+
     /// A `JL`-shaped fallthrough: the first bound takes `r8` into
     /// `[0, 31]` on the taken edge; an in-place shift moves it to
     /// `[-16, 15]`; a signed `< 0` test's *fallthrough* (the value is
@@ -2963,7 +3012,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![3, 1],
+            successors: vec![1, 3],
         };
         let shift = Block {
             instructions: vec![instruction(
@@ -2982,11 +3031,11 @@ mod tests {
                     op(
                         "CBRANCH",
                         None,
-                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x11, 1)],
+                        vec![varnode("ram", 0x1030, 8), varnode("unique", 0x11, 1)],
                     ),
                 ],
             )],
-            successors: vec![2, 3],
+            successors: vec![3, 2],
         };
         let dispatch = Block {
             instructions: vec![instruction(
@@ -3065,7 +3114,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![2, 1],
+            successors: vec![1, 2],
         };
         let dispatch = Block {
             instructions: vec![instruction(
@@ -3153,7 +3202,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![2, 1],
+            successors: vec![1, 2],
         };
         // Dispatch reads through the copy `y` (register 0x40).
         let dispatch = Block {
@@ -3239,7 +3288,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![2, 1],
+            successors: vec![1, 2],
         };
         let dispatch = Block {
             instructions: vec![instruction(
@@ -3315,7 +3364,7 @@ mod tests {
                     ),
                 ],
             )],
-            successors: vec![2, 1],
+            successors: vec![1, 2],
         };
         // Dispatch reads through `x` (register 0x38), which the
         // rewrite never touched.

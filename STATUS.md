@@ -7842,3 +7842,21 @@ switch xrefs (vs 59,909). Refusals are machine-visible now:
 `discovery_note` (batch notes no longer clobber it). The tail is
 timeout sludge (59 s per pathological function), not owner
 count: further bounding needs timeout policy, recorded as open.
+
+## Correction: taken-is-successor-0 polarity (2026-09-21)
+
+Block construction pushes the taken target first and pruning
+preserves order, so successor 0 is taken -- but sja.rs claimed
+taken=1 and all handcrafted tests encoded it (their CBRANCH
+targets pointed at successor 1). History confirms taken=0
+(build order + `edge` derivation coherent since ab7138cd; the
+sja.rs comment was wrong from day one). Mapping flipped,
+fixtures rewritten to p-code-coherent shape (taken target at
+position 0), wrong comment corrected. Inverted-mapping control
+fails exactly the 4 coherent tests. Widening now preserves
+stable predicates/origins (join rule, with direct unit test).
+m18 green, m13 identical, suite 36+7.
+`00190be9` still 17: polarity was necessary but not sufficient;
+join-stale values (`[-96,-4]` at the load) defend against true
+bounds via infeasible-skip. Exact-16 needs path-sensitive
+joins -- open, not claimed.
