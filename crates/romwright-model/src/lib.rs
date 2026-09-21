@@ -633,6 +633,8 @@ pub struct ProgramSummary {
 pub struct SwitchStats {
     pub vsa_resolved: u64,
     pub vsa_refused: u64,
+    /// Decompiler-round owners skipped by the owner budget.
+    pub decompiler_skipped: u64,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

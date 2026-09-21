@@ -399,8 +399,13 @@ class Propagation {
     if ((code != CPUI_CALLIND && code != CPUI_BRANCHIND) || op.numInput() < 1)
       return;
     const Varnode *operand = op.getIn(0);
-    if (memorySpace(operand->getSpace()) || operand->isConstant())
-      return; // A slot read is a data reference; a literal target is direct flow.
+    if (operand->isConstant())
+      return; // A literal target is direct flow.
+    // A memory-direct branch reads its target from the image -- unless
+    // this function's own stores produced a value the propagation still
+    // knows (a self-patched dispatch). Then the stored value is the
+    // truth the static bytes predate; unknown memory still falls out
+    // below at complete().
     Value target = get(state, operand);
     if (target.base >= 0 || !target.complete(operand->getSize()))
       return;
