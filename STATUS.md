@@ -7743,7 +7743,8 @@ recovered edge. The gate now scores every computed jump at every
 annotated branch: other fixtures pin their branches absent from
 non-switch resolution; packed asserts `br_dec -> {codebuf}`
 (statically sound -- the stub unconditionally jumps there) with the
-blob untouched by all xref kinds. Measured: control
+blob untouched by control-flow xrefs (switch, COMPUTED_JUMP,
+COMPUTED_CALL; DATA/READ references are legitimate decoder reads).
 rejects-empty, 2 exact, 2 refusals, 1 stub-resolved, 0 wrong.
 Full packed validation (executable decoded payload, verified exit
 code) remains open, per the earlier concern.
@@ -7780,8 +7781,24 @@ claimed here.
 `pack_exec.py` emits a decoder that mmaps RWX, decodes a
 self-contained PIC payload (code+table in `.text`), calls it,
 and exits with its return code. `packed_exec` runs green (exit
-102 = dispatch(2), proving end-to-end execution of decoded
-bytes) and imports to `exec-refused` (the mmap-indirect call
-claims nothing; blob untouched by all xref kinds). Gate now:
+102 = dispatch(2), proving end-to-end execution of decoded bytes)
+and imports to `exec-refused` (the mmap-indirect call claims
+nothing; blob untouched by control-flow xrefs). Gate now:
 control rejects-empty, 2 exact, 2 refusals, stub-resolved,
 exec-refused, 0 wrong.
+
+## Correction: producer mask fix replaces ingest filter (2026-09-21)
+
+Advisory mechanism verified exactly: `computedFlow` cleared bit 0
+unconditionally, so the valid odd `state0=0x400123` became the
+observed `0x400122` -- not a loop over-read (my theory was wrong).
+The ingest filter is reverted (wrong layer: it risked legitimate
+internal jumps and rebuilt per-function sets quadratically).
+Producer fixes in `romwright_constants.hh`: mask bit 0 only with
+a mode register; classify the original flow via
+`indirectAccess()`, not the rewritten CALLIND. Negative control:
+pre-fix console emits `br_call -> 0x4000de`, post-fix exact odd
+`0x4000df` with CALL kind. New `asm_call` fixture pins it
+(mandatory exact + odd-parity + kind assertions). m18 fully
+green; m13 PASS identical (combined 142 @ 0.9978, interpreted
+170 @ 0.9997) -- no recall loss from either change.

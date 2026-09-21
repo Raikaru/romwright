@@ -404,11 +404,13 @@ class Propagation {
     Value target = get(state, operand);
     if (target.base >= 0 || !target.complete(operand->getSize()))
       return;
-    // The branch already cleared the mode bit from the address it wrote to
-    // the program counter; the mode itself sits in the switch register. It is
-    // handed back in the target's low bit, which is how the address was
-    // spelled before the branch took it apart.
-    Word raw = target.bits & ~Word(1);
+    // The mode bit lives in the target's low bit only on languages with
+    // a mode register (ARM Thumb): there the branch cleared it from the
+    // address and the switch register hands it back. Elsewhere (x86)
+    // bit 0 is address payload -- clearing it turned the valid odd
+    // target 0x400123 into 0x400122, mid-instruction. Mask only when a
+    // mode register exists.
+    Word raw = hasModeRegister ? target.bits & ~Word(1) : target.bits;
     if (hasModeRegister) {
       Value mode = state.registers.get(modeRegister.space->getIndex(), modeRegister.offset,
                                        (int)modeRegister.size);
@@ -417,8 +419,12 @@ class Propagation {
     }
     if (raw < 4 || region(raw & ~Word(1)) == nullptr)
       return;
+    // Classify the original instruction, not a recovery transform:
+    // FlowInfo can replace an unresolved BRANCHIND with CALLIND plus
+    // a halt, and op.code() would then misreport a jump as a call.
+    // indirectAccess re-translates the address for the original form.
     references.push_back(ReferenceFact{op.getAddr().getOffset(), raw,
-                                       code == CPUI_CALLIND ? 16u : 32u, 0});
+                                       indirectAccess(op) == 8 ? 32u : 16u, 0});
   }
 
   int pointerSizeOf(const PcodeOp &op) const {
