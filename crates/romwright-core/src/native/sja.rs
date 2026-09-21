@@ -208,14 +208,19 @@ struct State {
     /// through nothing. A slot-wide origin would mistranslate `q` to
     /// `[-64, -61]`.
     predicates: BTreeMap<Slot, Vec<Predicate>>,
+    /// Set on an OR-taken edge: the disjunction establishes no child
+    /// bound, so the forward values keep no guard provenance and the
+    /// Top-only backward slice must not resurrect a pre-OR guard there.
+    /// Monotone (join and widen OR it): uncertainty, once established,
+    /// is not talked away. A later direct guard still refines values
+    /// normally; the bit only gates the slice fallback.
+    slice_blocked: bool,
     /// Affine provenance: `slot = origin + off`, narrowed by the smallest
     /// width crossed, plus the origin's own width. A copy in one block and
     /// the compare in the next are ordinary code, so the links travel with
     /// the state the way predicates do.
     origins: BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
 }
-
-
 impl State {
     fn get(&self, varnode: &PcodeVarnode) -> Value {
         if varnode.space == "const" {
@@ -240,6 +245,7 @@ impl State {
 
     fn join(&self, other: &State) -> State {
         let mut merged = State::default();
+        merged.slice_blocked = self.slice_blocked || other.slice_blocked;
         for (key, left) in &self.predicates {
             if other.predicates.get(key) == Some(left) {
                 merged.predicates.insert(key.clone(), left.clone());
@@ -340,6 +346,7 @@ pub struct Analysis {
 /// with the noise.
 fn widen_state(existing: &State, merged: &State) -> State {
     let mut widened = State::default();
+    widened.slice_blocked = merged.slice_blocked;
     for (key, value) in &merged.values {
         if existing.values.get(key) == Some(value) {
             widened.values.insert(key.clone(), value.clone());
@@ -430,12 +437,13 @@ pub fn analyse<I: Image>(
     let mut rounds: Vec<u32> = vec![0; blocks.len()];
     let mut worklist: Vec<usize> = order.clone();
     let mut dispatches: BTreeMap<u64, (Value, Value)> = BTreeMap::new();
+    let mut blocked_dispatch: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
     while let Some(index) = worklist.pop() {
         let Some(state) = entry_state[index].clone() else {
             continue;
         };
         analysis.visits += 1;
-        let (exit, edges) = run_block(image, &blocks[index], state, &mut dispatches);
+        let (exit, edges, blocked) = run_block(image, &blocks[index], state, &mut dispatches, &mut blocked_dispatch);
         for (position, successor) in blocks[index].successors.iter().copied().enumerate() {
             if successor >= blocks.len() {
                 continue;
@@ -447,6 +455,9 @@ pub fn analyse<I: Image>(
                 for (key, value) in refinements {
                     next.values.insert(key.clone(), value.clone());
                 }
+            }
+            if blocked.contains(&position) {
+                next.slice_blocked = true;
             }
             if std::env::var("ROMWRIGHT_TRACE_SJA_EDGE")
                 .ok()
@@ -499,12 +510,12 @@ pub fn analyse<I: Image>(
     let mut defs: Option<DefIndex> = None;
     for (branch, (target, index)) in dispatches {
         let mut result = materialise(image, target.clone(), index, extent);
-        if matches!(result, Err(Reason::Unknown)) && matches!(target, Value::Top) {
+        if matches!(result, Err(Reason::Unknown)) && matches!(target, Value::Top) && !blocked_dispatch.contains(&branch) {
             // The forward domain lost the bound entirely. Slice the
             // branch's address input back through the reaching
             // definitions to its table and bound the index there.
             let defs = defs.get_or_insert_with(|| DefIndex::build_with_entries(blocks, &seeds));
-            let sliced = slice_dispatch(image, defs, blocks, branch, extent);
+            let sliced = slice_dispatch(image, defs, blocks, branch, extent, &seeds);
             if std::env::var_os("ROMWRIGHT_TRACE_SLICE").is_some() {
                 eprintln!("SJA-SLICE {branch:#x}: {sliced:?}");
             }
@@ -661,9 +672,14 @@ fn run_block<I: Image>(
     block: &Block,
     mut state: State,
     dispatches: &mut BTreeMap<u64, (Value, Value)>,
-) -> (State, BTreeMap<usize, Vec<(Slot, Value)>>) {
+    blocked_dispatch: &mut std::collections::BTreeSet<u64>,
+) -> (State, BTreeMap<usize, Vec<(Slot, Value)>>, std::collections::BTreeSet<usize>) {
     use crate::ir::Opcode as O;
     let mut edges: BTreeMap<usize, Vec<(Slot, Value)>> = BTreeMap::new();
+    // Successors whose entry is downstream of an uncertain OR edge
+    // (taken always, fallthrough when heuristics were dropped): the
+    // Top-only backward slice must not resurrect a pre-OR guard there.
+    let mut blocked: std::collections::BTreeSet<usize> = std::collections::BTreeSet::new();
     // The comparison that produced each boolean, so a branch reading it can
     // refine the operand.
     // Boolean -> [(the compared slot, the constant, inclusive, which side
@@ -682,9 +698,15 @@ fn run_block<I: Image>(
     // set in an earlier block arrive as plain booleans, which keep the
     // both-edges defense.
     let mut flag_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
-    // The subset holding signed-carry outputs: the `JL` polarity gate
-    // needs the carry side specifically (see the `Bool` arm).
-    let mut scarry_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
+    // The subset holding signed-carry/borrow outputs: the `JL` polarity
+    // gate needs the carry side specifically (see the `Bool` arm).
+    let mut carry_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
+    // `BOOL_OR` outputs and their input slots, block-local: an OR taken
+    // is a disjunction (both-edges, as carried), but an OR fallthrough
+    // means every input is false, so each input's negation holds there.
+    // Only same-block combinations are tracked (flag idioms set and test
+    // flags in one block); a cross-block combination keeps both-edges.
+    let mut or_combos: std::collections::HashMap<Slot, Vec<Slot>> = std::collections::HashMap::new();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
     // of the switch variable and then dispatches on the original, and the
@@ -991,6 +1013,14 @@ fn run_block<I: Image>(
                 | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
+                    // Record OR combinations for the branch that reads
+                    // them: taken is a disjunction, but fallthrough means
+                    // every input is false (see the `CBranch` arm).
+                    if opcode == O::BoolOr
+                        && let Some(output) = &op.output
+                    {
+                        or_combos.insert(slot(output), op.inputs.iter().map(slot).collect());
+                    }
                     // The `JL` idiom is `INT_NOTEQUAL` of the signed-carry
                     // and sign flags of one comparison, and its taken edge
                     // means less-than only when the carry side proves `OF =
@@ -1023,7 +1053,7 @@ fn run_block<I: Image>(
                     // misread.
                     let proven_no_overflow = jl_idiom && op.inputs.iter()
                         .find(|input| !comparisons.contains_key(&slot(input)))
-                        .is_some_and(|silent| scarry_src.contains(&slot(silent)) && state.get(silent) == Value::Const(0));
+                        .is_some_and(|silent| carry_src.contains(&slot(silent)) && state.get(silent) == Value::Const(0));
                     let mut carried: Vec<Predicate> = Vec::new();
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)) {
@@ -1056,12 +1086,25 @@ fn run_block<I: Image>(
                                     }
                                     None => {
                                         let mut combined = bound.clone();
-                                        // The `JL` idiom's bound holds on
-                                        // the taken edge only with proven
-                                        // no-overflow; everything else
-                                        // through a combination keeps the
-                                        // both-edges defense.
-                                        combined.6 = proven_no_overflow;
+                                        if opcode == O::BoolNegate && combined.6 {
+                                            // A single negation has exact
+                                            // polarity: taken means the
+                                            // input is false, so the negated
+                                            // bound (flipped inclusivity
+                                            // and side, same stamp and
+                                            // signedness) holds there.
+                                            // Deeper combinations keep the
+                                            // defense below.
+                                            combined.2 = !combined.2;
+                                            combined.3 = !combined.3;
+                                        } else {
+                                            // The `JL` idiom's bound holds on
+                                            // the taken edge only with proven
+                                            // no-overflow; everything else
+                                            // through a combination keeps the
+                                            // both-edges defense.
+                                            combined.6 = proven_no_overflow;
+                                        }
                                         carried.push(combined);
                                     }
                                 }
@@ -1089,7 +1132,7 @@ fn run_block<I: Image>(
                     if let Some(output) = &op.output {
                         if output.size == 1 {
                             flag_src.insert(slot(output));
-                            scarry_src.insert(slot(output));
+                            carry_src.insert(slot(output));
                         }
                         let carried = match (inputs.first(), inputs.get(1)) {
                             (Some(left), Some(right)) => scarry_value(left, right, op.inputs.first().map_or(8, |input| input.size)),
@@ -1098,6 +1141,21 @@ fn run_block<I: Image>(
                         state.set(output, carried);
                     }
                 }
+                O::IntSBorrow => {
+                    // The signed borrow of a subtraction: the `JL`-after-`SUB`
+                    // idiom's carry side, gated exactly like `INT_SCARRY`.
+                    if let Some(output) = &op.output {
+                        if output.size == 1 {
+                            flag_src.insert(slot(output));
+                            carry_src.insert(slot(output));
+                        }
+                        let carried = match (inputs.first(), inputs.get(1)) {
+                            (Some(left), Some(right)) => sborrow_value(left, right, op.inputs.first().map_or(8, |input| input.size)),
+                            _ => Value::Top,
+                        };
+                        state.set(output, carried);
+                    }
+                 }
                 O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
                     // Remember what this boolean says, for the branch that
                     // reads it: `index < n` bounds the index above. The
@@ -1140,15 +1198,85 @@ fn run_block<I: Image>(
                     if let Some(condition) = op.inputs.get(1)
                         && let Some(bounds) = comparisons.get(&slot(condition)).cloned()
                     {
-                        for bound in bounds {
-                            apply_guard_bound(
-                                &state.values,
-                                &origins,
-                                &mut edges,
-                                instruction.address,
-                                bound,
-                                block.successors.len(),
-                            );
+                        // An OR is one-sided and slot-local. Taken is a
+                        // disjunction: no child bound holds there, so
+                        // compared slots keep their exit intervals
+                        // de-blessed (sets collapse; constants stay exact)
+                        // and nothing else is pushed. Fallthrough means
+                        // every input is false: each exact (direct)
+                        // input's negation holds there, and each skipped
+                        // heuristic child's operand is de-blessed the same
+                        // way. Only slice-block marks travel (taken always,
+                        // fallthrough when heuristics were dropped) so the
+                        // Top-only backward slice cannot resurrect a
+                        // pre-OR guard there; later direct guards re-guard
+                        // normally, and forward reads proceed.
+                        let or_inputs = or_combos.get(&slot(condition)).cloned().unwrap_or_default();
+                        if or_inputs.is_empty() {
+                            for bound in bounds {
+                                apply_guard_bound(
+                                    &state.values,
+                                    &origins,
+                                    &mut edges,
+                                    instruction.address,
+                                    bound,
+                                    block.successors.len(),
+                                    None,
+                                );
+                            }
+                        } else {
+                            // Successor 0 (taken) is uncertain: block the
+                            // Top-only backward slice from resurrecting a
+                            // pre-OR guard downstream of it.
+                            blocked.insert(0);
+                            let mut skipped = false;
+                            for input in &or_inputs {
+                                if let Some(found) = comparisons.get(input).cloned() {
+                                    for bound in &found {
+                                        match state.values.get(&bound.0).cloned() {
+                                            Some(Value::Strided { base, stride, lo, hi, guarded: true }) => {
+                                                edges.entry(0).or_default().push((bound.0.clone(),
+                                                    Value::Strided { base, stride, lo, hi, guarded: false }));
+                                            }
+                                            Some(Value::Set(_)) => {
+                                                edges.entry(0).or_default().push((bound.0.clone(), Value::Top));
+                                            }
+                                            _ => {}
+                                        }
+                                    }
+                                    for (operand, limit, inclusive, constant_left, operand_size, stamp, direct, signed) in found {
+                                        if !direct {
+                                            skipped = true;
+                                            match state.values.get(&operand).cloned() {
+                                                Some(Value::Strided { base, stride, lo, hi, guarded: true }) => {
+                                                    edges.entry(1).or_default().push((operand.clone(),
+                                                        Value::Strided { base, stride, lo, hi, guarded: false }));
+                                                }
+                                                Some(Value::Set(_)) => {
+                                                    edges.entry(1).or_default().push((operand.clone(), Value::Top));
+                                                }
+                                                _ => {}
+                                            }
+                                            continue;
+                                        }
+                                        let negated = (operand, limit, !inclusive, !constant_left, operand_size, stamp, false, signed);
+                                        apply_guard_bound(
+                                            &state.values,
+                                            &origins,
+                                            &mut edges,
+                                            instruction.address,
+                                            negated,
+                                            block.successors.len(),
+                                            Some(0),
+                                        );
+                                    }
+                                }
+                            }
+                            // A fallthrough that dropped heuristic children
+                            // is under-refined: block the slice there too.
+                            if skipped {
+                                blocked.insert(1);
+                            }
                         }
                     }
                 }
@@ -1170,6 +1298,9 @@ fn run_block<I: Image>(
                                 eprintln!("    {}:{:x} = {known:?}", key.0, key.1);
                             }
                         }
+                        if state.slice_blocked {
+                            blocked_dispatch.insert(instruction.address);
+                        }
                         dispatches.insert(instruction.address, (value, Value::Top));
                     }
                 }
@@ -1183,7 +1314,7 @@ fn run_block<I: Image>(
     }
     state.predicates = comparisons;
     state.origins = origins;
-    (state, edges)
+    (state, edges, blocked)
 }
 
 /// Applies a function to every value a term stands for, where that is a
@@ -1233,14 +1364,77 @@ fn scarry_value(left: &Value, right: &Value, size: u32) -> Value {
     match (left, right) {
         (_, Value::Const(0)) | (Value::Const(0), _) => Value::Const(0),
         (Value::Const(a), Value::Const(b)) if size >= 1 && size <= 8 => {
-            let bits = size * 8;
-            let extend = |v: u64| ((v << (64 - bits)) as i64) >> (64 - bits);
-            Value::Const(u64::from(extend(*a).checked_add(extend(*b)).is_none()))
+            const_overflow(*a, *b, size, true)
+        }
+        (Value::Strided { base: 0, stride: 1, lo, hi, .. }, Value::Const(c))
+        | (Value::Const(c), Value::Strided { base: 0, stride: 1, lo, hi, .. })
+            if size == 8 && lo <= hi =>
+        {
+            scarry_interval(*lo, *hi, *c as i64, true)
         }
         _ => Value::Top,
     }
 }
-
+/// Overflow status of two constants at an operand width: sign-extend both
+/// to the width, add or subtract exactly, and compare against the width's
+/// signed bounds. Checking the extended sum for 64-bit overflow instead
+/// would clear real 8-bit overflow (`127 + 1` fits an i64) and make a
+/// wrong edge authoritative.
+fn const_overflow(a: u64, b: u64, size: u32, is_add: bool) -> Value {
+    let bits = size * 8;
+    let extend = |v: u64| (((v << (64 - bits)) as i64) >> (64 - bits)) as i128;
+    let sum = if is_add {
+        extend(a) + extend(b)
+    } else {
+        extend(a) - extend(b)
+    };
+    let min = -(1i128 << (bits - 1));
+    let max = (1i128 << (bits - 1)) - 1;
+    Value::Const(u64::from(sum < min || sum > max))
+}
+/// Overflow status of an interval plus a constant: `add` when `is_add`,
+/// `sub` otherwise. Opposite signs (add) or same signs (sub) never
+/// overflow; otherwise the endpoints decide, since overflow is monotone
+/// in each operand; a single wrapping value proves overflow.
+fn scarry_interval(lo: i64, hi: i64, constant: i64, is_add: bool) -> Value {
+    let combine = if is_add {
+        i64::checked_add
+    } else {
+        i64::checked_sub
+    };
+    if is_add {
+        if (hi <= 0 && constant >= 0) || (lo >= 0 && constant <= 0) {
+            return Value::Const(0);
+        }
+    } else if (lo >= 0 && constant >= 0) || (hi <= 0 && constant <= 0) {
+        return Value::Const(0);
+    }
+    if combine(lo, constant).is_some() && combine(hi, constant).is_some() {
+        return Value::Const(0);
+    }
+    if lo == hi {
+        return Value::Const(1);
+    }
+    Value::Top
+}
+/// What `INT_SBORROW(a, b)` -- the signed overflow of `a - b` -- is worth,
+/// where provable. `x - 0` never overflows; two constants fold against
+/// the width's signed bounds; a bounded interval minus a constant proves
+/// itself like the carry case with the signs flipped. Else unknown.
+fn sborrow_value(left: &Value, right: &Value, size: u32) -> Value {
+    match (left, right) {
+        (_, Value::Const(0)) => Value::Const(0),
+        (Value::Const(a), Value::Const(b)) if size >= 1 && size <= 8 => {
+            const_overflow(*a, *b, size, false)
+        }
+        (Value::Strided { base: 0, stride: 1, lo, hi, .. }, Value::Const(c))
+            if size == 8 && lo <= hi =>
+        {
+            scarry_interval(*lo, *hi, *c as i64, false)
+        }
+        _ => Value::Top,
+    }
+}
 fn add(left: Value, right: Value) -> Value {
     use Value::*;
     match (&left, &right) {
@@ -1504,6 +1698,20 @@ fn intersect_bound(
     };
     match values.get(target).cloned() {
         Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
+            // An unsigned lower bound names a complement the single
+            // interval cannot always hold: negative-signed members are
+            // unsigned-large and may satisfy `x >=_u n` too. Proceed
+            // exactly when the negative piece is empty: their olds span
+            // `[lo+off, off-1]`, so `lo+off >= 0` keeps them
+            // unsigned-small and `off-1 < low` keeps them below the
+            // limit; then the floor is exact. Otherwise refuse -- the
+            // negative piece is real but unnameable. Signed lowers are
+            // single intervals either way.
+            let neg_piece_empty = lo.checked_add(off).is_some_and(|shifted| shifted >= 0)
+                && off.checked_sub(1).is_some_and(|prev| prev < low);
+            if constant_left && !signed && !neg_piece_empty {
+                return None;
+            }
             let floor = lo.max(floor);
             let hi = if constant_left {
                 old_hi
@@ -1563,6 +1771,7 @@ fn apply_guard_bound(
     branch: u64,
     bound: Predicate,
     successors: usize,
+    skip_dest: Option<usize>,
 ) {
     let (operand, limit, inclusive, constant_left, operand_size, stamp, direct, signed) = bound;
     // `index < n` taken means index <= n-1; `n < index`
@@ -1793,34 +2002,37 @@ fn apply_guard_bound(
     } else {
         i64::MIN
     };
-    // Destinations: a direct bound holds on exactly one edge (the
-    // taken edge for `index < n`, the fallthrough for `n < index`)
-    // and its negation holds on the other. Combination-derived
-    // bounds carry no polarity, so they keep the both-edges defense
-    // with the stated shape only.
-    // Destinations: a direct bound on a real (two-target) branch holds
-    // on exactly one edge (taken for `index < n`, fallthrough for
-    // `n < index`) with its negation on the other. A degenerate
-    // single-target branch has no distinct false edge, so it keeps
-    // the legacy upper-only defense; combination bounds keep the
-    // both-edges defense with the stated shape only.
+    // Destinations: a direct bound is the branch condition's truth, and
+    // truth holds on the taken edge (successor 0) whatever side the
+    // constant sat on: `index < n` taken means the upper bound, `n <
+    // index` taken means the lower bound. The old const-left-maps-to-1
+    // rule put lower bounds on the fallthrough, exactly backwards: a
+    // direct `n < index` read holds taken, not fallthrough. The negation
+    // holds on the other edge. Combination-derived bounds carry no
+    // polarity, so they keep the both-edges defense with the stated
+    // shape only. A degenerate single-target branch has no distinct
+    // false edge, so it keeps the legacy upper-only defense.
     let mut work: Vec<(i64, i64, bool, usize, bool)> = Vec::new();
     if direct && successors >= 2 {
         // Taken edge is successor 0 (block construction pushes the
-        // taken target first; pruning preserves order): a direct
-        // `index < n` holds there, `n < index` on the fallthrough.
-        // The `JL`-idiom bound arrives direct the same way: its taken
-        // edge means less-than, so it refines successor 0 and its
-        // negation (greater-or-equal) refines successor 1.
-        let holds = if constant_left { 1 } else { 0 };
-        work.push((high, low, constant_left, holds, signed));
-        work.push((neg_high, neg_low, neg_left, 1 - holds, signed));
+        // taken target first; pruning preserves order). The `JL`-idiom
+        // and single-negation bounds arrive direct the same way: the
+        // pushed tuple already names the taken truth, so it refines
+        // successor 0 and its negation refines successor 1.
+        work.push((high, low, constant_left, 0, signed));
+        work.push((neg_high, neg_low, neg_left, 1, signed));
     } else {
         work.push((high, low, constant_left, edge, signed));
         work.push((high, low, constant_left, 1 - edge, signed));
     }
     for (target, off) in targets {
         for (high, low, constant_left, dest, signed) in work.iter().copied() {
+            // An OR fallthrough takes negations, not stated shapes (and
+            // vice versa for the taken edge): skip the edge this shape
+            // does not hold on.
+            if skip_dest == Some(dest) {
+                continue;
+            }
             let Some(bounded) = intersect_bound(values, &target, off, high, low, constant_left, signed)
             else {
                 continue;
@@ -2599,6 +2811,7 @@ fn slice_dispatch<I: Image>(
     blocks: &[Block],
     branch: u64,
     extent: (u64, u64),
+    seeds: &[usize],
 ) -> Option<Result<Vec<u64>, Reason>> {
     use crate::ir::Opcode as O;
     // Locate the BRANCHIND op and its block.
@@ -2616,10 +2829,6 @@ fn slice_dispatch<I: Image>(
     let op = &blocks[block].instructions[insn].ops[op_idx];
     let target = op.inputs.first()?;
     let expr = slice_expr(defs, blocks, block, target, (insn, op_idx), SLICE_DEPTH);
-
-    // A table read (`jmp *(table + index*stride)`) and a computed goto
-    // (`jmp *(base + index*stride)`, no load) share the guard search; they
-    // differ only in what the bound feeds. The table's index is the
     // expression's own; the goto's target is the whole expression.
     match match_table(&expr) {
         Some(table) => {
@@ -2629,24 +2838,31 @@ fn slice_dispatch<I: Image>(
             let index_value = eval_sliced(image, &table.index, None);
             let index_value = if index_value.bounded() {
                 index_value
-            } else if let Some((point, high)) = guard_bound(defs, blocks, &table.index) {
-                // The guard the forward pass could not connect bounds a
-                // point leaf of the index. Substituting it back into the
-                // expression applies the index's own arithmetic to the
-                // bounded value: `r8 - 0x10` under `r8 < 0x20` is
-                // `[-0x10, 0xf]`, and the negative low end refuses it.
-                eval_sliced(image, &table.index, Some((&point, high)))
-            } else if table.offset_base.is_some() {
-                // No comparison, mask, or width bounds the index: scan a
-                // PIC table linearly until an invalid entry -- Ghidra's
-                // memory-scan bound (`JumpBasic::sanityCheck`). Sound only
-                // for PIC: the next table's offsets resolve against *this*
-                // base, so an over-read produces a wrong address and stops
-                // the scan. An absolute table's neighbours are valid code,
-                // so the scan would over-read into them -- refused.
-                Value::Top
             } else {
-                return None;
+                match guard_bound(defs, blocks, &table.index, block, seeds) {
+                    GuardSearch::Bound(point, high) => {
+                        // The guard the forward pass could not connect bounds a
+                        // point leaf of the index. Substituting it back into the
+                        // expression applies the index's own arithmetic to the
+                        // bounded value: `r8 - 0x10` under `r8 < 0x20` is
+                        // `[-0x10, 0xf]`, and the negative low end refuses it.
+                        eval_sliced(image, &table.index, Some((&point, high)))
+                    }
+                    GuardSearch::NoMatchingGuard if table.offset_base.is_some() => {
+                        // No comparison, mask, or width bounds the index: scan a
+                        // PIC table linearly until an invalid entry -- Ghidra's
+                        // memory-scan bound (`JumpBasic::sanityCheck`). Sound only
+                        // for PIC: the next table's offsets resolve against *this*
+                        // base, so an over-read produces a wrong address and stops
+                        // the scan. An absolute table's neighbours are valid code,
+                        // so the scan would over-read into them -- refused.
+                        Value::Top
+                    }
+                    // No guard at all on an absolute table, or a guard-like
+                    // comparison that decides nothing: scanning would read
+                    // whatever decodes next.
+                    _ => return None,
+                }
             };
             Some(read_table(image, &table, &index_value, extent))
         }
@@ -2657,8 +2873,10 @@ fn slice_dispatch<I: Image>(
             let target_value = if target_value.bounded() {
                 target_value
             } else {
-                let (point, high) = guard_bound(defs, blocks, &expr)?;
-                eval_sliced(image, &expr, Some((&point, high)))
+                match guard_bound(defs, blocks, &expr, block, seeds) {
+                    GuardSearch::Bound(point, high) => eval_sliced(image, &expr, Some((&point, high))),
+                    GuardSearch::NoMatchingGuard | GuardSearch::RejectedMatchingGuard => return None,
+                }
             };
             Some(materialise(image, target_value, Value::Top, extent))
         }
@@ -2666,13 +2884,112 @@ fn slice_dispatch<I: Image>(
 }
 
 
+/// Whether `to` is reachable from `from` through block successors.
+fn reaches(blocks: &[Block], from: usize, to: usize) -> bool {
+    if from == to {
+        return true;
+    }
+    if from >= blocks.len() {
+        return false;
+    }
+    let mut seen = vec![false; blocks.len()];
+    let mut stack = vec![from];
+    seen[from] = true;
+    while let Some(node) = stack.pop() {
+        for &successor in &blocks[node].successors {
+            if successor == to {
+                return true;
+            }
+            if successor < blocks.len() && !seen[successor] {
+                seen[successor] = true;
+                stack.push(successor);
+            }
+        }
+    }
+    false
+}
+/// Whether every path from `entry` to `target` passes through `node`.
+/// Implemented by removal: `target` reachable with `node` skipped means
+/// some path avoids it.
+fn dominates(blocks: &[Block], entry: usize, node: usize, target: usize) -> bool {
+    // A zero-length path passes through nothing: when the dispatch is
+    // itself the component root, only itself dominates it.
+    if entry == target {
+        return node == target;
+    }
+    if !reaches(blocks, entry, target) {
+        return false;
+    }
+    if node == entry || node == target {
+        return true;
+    }
+    let mut seen = vec![false; blocks.len()];
+    let mut stack = vec![entry];
+    seen[entry] = true;
+    while let Some(current) = stack.pop() {
+        if current == node {
+            continue;
+        }
+        for &successor in &blocks[current].successors {
+            if successor == target {
+                return false;
+            }
+            if successor < blocks.len() && !seen[successor] {
+                seen[successor] = true;
+                stack.push(successor);
+            }
+        }
+    }
+    true
+}
+/// Whether the CBRANCH in `branch_block` decides the dispatch in `disp`:
+/// the branch block dominates the dispatch from every component root
+/// reaching it (so the bound is on every arrival path), and the branch's
+/// false edge cannot reach the dispatch (so no arrival refutes it).
+/// Successor 0 is the taken edge; fewer than two distinct successors is
+/// not a decision (degenerate control flow states nothing here).
+fn guard_decides(blocks: &[Block], seeds: &[usize], branch_block: usize, disp: usize) -> bool {
+    let mut rooted = false;
+    for &seed in seeds {
+        if !reaches(blocks, seed, disp) {
+            continue;
+        }
+        rooted = true;
+        if !dominates(blocks, seed, branch_block, disp) {
+            return false;
+        }
+    }
+    if !rooted {
+        return false;
+    }
+    let successors = &blocks[branch_block].successors;
+    if successors.len() < 2 || successors[0] == successors[1] {
+        return false;
+    }
+    !reaches(blocks, successors[1], disp)
+}
+/// What the guard search found: a deciding bound, no quasi-copy
+/// comparison at all, or a quasi-copy comparison reaching the dispatch
+/// that decides nothing. Only the first may bound the index; only the
+/// second may fall back to the guardless linear scan. A reaching but
+/// undeciding guard is evidence the index is wild where it matters --
+/// scanning past it over-reads into whatever decodes next.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum GuardSearch {
+    Bound(Slot, u64),
+    NoMatchingGuard,
+    RejectedMatchingGuard,
+}
 /// Finds a CBRANCH whose compared varnode is a quasi-copy of a point leaf
-/// of `expr` -- the guard the forward pass could not connect -- returning
-/// the point and the bound's high value. `index < limit` bounds the index
-/// to `0..=limit-1` (`<=` to `0..=limit`).
-fn guard_bound(defs: &DefIndex, blocks: &[Block], expr: &Sliced) -> Option<(Slot, u64)> {
+/// of `expr` -- the guard the forward pass could not connect. Returns the
+/// deciding bound, or whether the search found nothing (`NoMatchingGuard`)
+/// or only reaching-but-undeciding comparisons (`RejectedMatchingGuard`).
+/// `index < limit` bounds the index to `0..=limit-1` (`<=` to `0..=limit`).
+fn guard_bound(defs: &DefIndex, blocks: &[Block], expr: &Sliced, disp: usize, seeds: &[usize]) -> GuardSearch {
     let mut points: Vec<Slot> = Vec::new();
     collect_points(expr, &mut points);
+    let mut best: std::collections::BTreeMap<Slot, u64> = std::collections::BTreeMap::new();
+    let mut rejected = false;
     for (b, blk) in blocks.iter().enumerate() {
         for (i, instruction) in blk.instructions.iter().enumerate() {
             for (o, _) in instruction.ops.iter().enumerate() {
@@ -2693,24 +3010,41 @@ fn guard_bound(defs: &DefIndex, blocks: &[Block], expr: &Sliced) -> Option<(Slot
                 // neighbour table instead of 0..15 of the true one,
                 // materialising a foreign function's blocks).
                 let base = quasi_copy(defs, blocks, cmp_block, &compared, cmp_at);
-                if let Some(point) = points
+                let Some(point) = points
                     .iter()
                     .find(|point| {
                         (**point == base || **point == slot(&compared))
                             && index_uses_point_unshifted(expr, point)
                     })
-                {
-                    let high = if inclusive {
-                        limit
-                    } else {
-                        limit.saturating_sub(1)
-                    };
-                    return Some((point.clone(), high));
+                else {
+                    continue;
+                };
+                if !guard_decides(blocks, seeds, b, disp) {
+                    // A quasi-copy comparison reaching the dispatch that
+                    // decides nothing: the index is wild where it
+                    // matters. Remember, but keep searching -- a deciding
+                    // guard elsewhere still wins.
+                    if reaches(blocks, b, disp) {
+                        rejected = true;
+                    }
+                    continue;
                 }
+                let high = if inclusive {
+                    limit
+                } else {
+                    limit.saturating_sub(1)
+                };
+                best.entry(point.clone())
+                    .and_modify(|kept| *kept = (*kept).min(high))
+                    .or_insert(high);
             }
         }
     }
-    None
+    match best.into_iter().min_by_key(|(_, high)| *high) {
+        Some((point, high)) => GuardSearch::Bound(point, high),
+        None if rejected => GuardSearch::RejectedMatchingGuard,
+        None => GuardSearch::NoMatchingGuard,
+    }
 }
 fn collect_points(expr: &Sliced, out: &mut Vec<Slot>) {
     match expr {
@@ -3098,6 +3432,52 @@ mod tests {
             existing.origins.get(&slot("register", 0x40))
         );
     }
+    /// `INT_SCARRY` over a bounded 64-bit interval plus a constant proves
+    /// its own overflow status. Production shapes first: JL1's
+    /// `SCARRY(R8, 32)` with `R8 in [-144,-52]` and JL2's `SCARRY(R8, 16)`
+    /// with `R8 in [-112,-20]` cannot wrap (negative plus non-negative).
+    #[test]
+    fn scarry_interval_proofs() {
+        let strided = |lo: i64, hi: i64| Value::Strided { base: 0, stride: 1, lo, hi, guarded: false };
+        assert_eq!(scarry_value(&strided(-144, -52), &Value::Const(32), 8), Value::Const(0));
+        assert_eq!(scarry_value(&strided(-112, -20), &Value::Const(16), 8), Value::Const(0));
+        assert_eq!(scarry_value(&strided(-32, 31), &Value::Const(32), 8), Value::Const(0));
+        assert_eq!(scarry_value(&strided(i64::MAX - 10, i64::MAX), &Value::Const(32), 8), Value::Top);
+        assert_eq!(scarry_value(&strided(i64::MAX, i64::MAX), &Value::Const(1), 8), Value::Const(1));
+        assert_eq!(scarry_value(&strided(-4, 4), &Value::Const(1), 8), Value::Const(0));
+        // Narrow widths compare against the width's bounds, not i64
+        // overflow: 8-bit 127 + 1 wraps, 100 + 27 fits, and a wide 127 + 1
+        // fits.
+        assert_eq!(scarry_value(&Value::Const(127), &Value::Const(1), 1), Value::Const(1));
+        assert_eq!(scarry_value(&Value::Const(100), &Value::Const(27), 1), Value::Const(0));
+        assert_eq!(scarry_value(&Value::Const(127), &Value::Const(1), 8), Value::Const(0));
+        assert_eq!(scarry_value(&strided(-4, 4), &Value::Const(1), 1), Value::Top);
+        assert_eq!(
+            scarry_value(&Value::Strided { base: 8, stride: 8, lo: 0, hi: 4, guarded: true }, &Value::Const(1), 8),
+            Value::Top
+        );
+    }
+    /// `INT_SBORROW` mirrors with subtraction semantics: `x - 0` never
+    /// overflows, same-signed operands never overflow, else the endpoints
+    /// decide, and a single wrapping value proves overflow.
+    #[test]
+    fn sborrow_interval_proofs() {
+        let strided = |lo: i64, hi: i64| Value::Strided { base: 0, stride: 1, lo, hi, guarded: false };
+        assert_eq!(sborrow_value(&Value::Const(5), &Value::Const(0), 8), Value::Const(0));
+        assert_eq!(sborrow_value(&Value::Const(0), &Value::Const(1), 8), Value::Const(0));
+        assert_eq!(sborrow_value(&Value::Const(1u64 << 63), &Value::Const(1), 8), Value::Const(1));
+        assert_eq!(sborrow_value(&strided(10, 20), &Value::Const(5), 8), Value::Const(0));
+        assert_eq!(sborrow_value(&strided(-20, -10), &Value::Const((-5i64) as u64), 8), Value::Const(0));
+        assert_eq!(sborrow_value(&strided(-32, 31), &Value::Const((-40i64) as u64), 8), Value::Const(0));
+        assert_eq!(sborrow_value(&strided(i64::MIN, i64::MIN + 10), &Value::Const(20), 8), Value::Top);
+        assert_eq!(sborrow_value(&strided(i64::MIN, i64::MIN), &Value::Const(1), 8), Value::Const(1));
+        // Narrow widths compare against the width's bounds: 8-bit -128 - 1
+        // wraps, 0 - 1 fits, 127 - -1 wraps.
+        assert_eq!(sborrow_value(&Value::Const(0x80), &Value::Const(1), 1), Value::Const(1));
+        assert_eq!(sborrow_value(&Value::Const(0), &Value::Const(1), 1), Value::Const(0));
+        assert_eq!(sborrow_value(&Value::Const(127), &Value::Const(0xff), 1), Value::Const(1));
+        assert_eq!(sborrow_value(&strided(-4, 4), &Value::Const(1), 1), Value::Top);
+    }
     /// A signed upper bound on a strided value keeps the negative half:
     /// `R in [-32, 31]` with `R <_s 0` refines to `[-32, -1]`. The
     /// unsigned floor (`-off`) made every negative upper bound
@@ -3303,6 +3683,507 @@ mod tests {
         let expected: Vec<u64> = (0..32u64).map(|i| 0x1100 + i * 8).collect();
         assert_eq!(fall.targets, expected);
         assert_eq!(taken.targets, expected);
+    }
+    /// An unsigned loop-back through a single negation: `x -= 64` then
+    /// `jnc` (taken means no borrow, `x >= 64` pre-write) refines the
+    /// taken edge to `[0, 191]` from a `[0, 255]` entry, and the dispatch
+    /// reads 192 entries. The both-edges defense puts the upper shape on
+    /// the taken edge instead (`[-64, -1]`, unblessed), and the dispatch
+    /// refuses. Production mirror of the `0x190b93/0x190b97` loop-back.
+    /// Verifies in two stages: single-negate polarity (ii) without the
+    /// holds fix (iii) still fails (taken gets the upper); both pass.
+    fn negate_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 256, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 3],
+        };
+        let main = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "BOOL_NEGATE",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("unique", 0x11, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x12, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 3],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        vec![guard, main, dispatch, default]
+    }
+    #[test]
+    fn a_negated_borrow_bounds_the_loop_back_edge() {
+        let mut memory = HashMap::new();
+        for index in 0..192u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &negate_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].branch, 0x1020);
+        let expected: Vec<u64> = (0..192u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(found.tables[0].targets, expected);
+    }
+    /// An unsigned `jbe` shape through an OR combination: `x < 101`
+    /// guards entry to `[0, 100]`, then `(x < 50) || (x == 0)` branches
+    /// with the dispatch on the fallthrough. Fallthrough means both
+    /// disjuncts are false, so the negated bound `[50, 100]` holds and
+    /// the dispatch reads entries 50..100. The both-edges defense puts
+    /// the upper shape on the fallthrough instead (`[0, 49]`).
+    /// Production mirror of `0x190b57/0x190b5b`.
+    fn or_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 101, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 3],
+        };
+        let main = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 50, 8)],
+                    ),
+                    op(
+                        "INT_EQUAL",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x13, 1)),
+                        vec![varnode("unique", 0x11, 1), varnode("unique", 0x12, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1030, 8), varnode("unique", 0x13, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![3, 2],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        vec![guard, main, dispatch, default]
+    }
+    #[test]
+    fn an_or_fallthrough_bounds_both_disjuncts_false() {
+        let mut memory = HashMap::new();
+        for index in 0..101u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &or_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].branch, 0x1020);
+        let expected: Vec<u64> = (50..101u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(found.tables[0].targets, expected);
+    }
+    /// OR-taken applies no child bound: a disjunction implies none, so
+    /// the taken edge keeps the exit (here `Top`, which refuses) instead
+    /// of the wrong-side upper the both-edges defense fabricates (here a
+    /// 10-entry table of entries 0..9 that decodes and would be
+    /// accepted). Fails pre-fix with that table present.
+    #[test]
+    fn or_taken_applies_no_child_bound() {
+        let startup = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 10, 8)],
+                    ),
+                    op(
+                        "INT_EQUAL",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x13, 1)),
+                        vec![varnode("unique", 0x11, 1), varnode("unique", 0x12, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x13, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 2],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &[startup, dispatch, default], (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.reasons.get(&0x1010), Some(&RefusalKind::Unknown));
+    }
+    /// OR-fallthrough that drops a heuristic child refuses: an AND-merged
+    /// `(R < 20)` (non-direct) has unknown polarity, so the fallthrough
+    /// is under-refined by construction and a dispatch downstream of it
+    /// is refused outright rather than materialised wide. Fails pre-fix
+    /// with entries 20..100.
+    #[test]
+    fn or_fallthrough_ignores_nondirect_children() {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 101, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 3],
+        };
+        let main = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 10, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 20, 8)],
+                    ),
+                    op(
+                        "BOOL_AND",
+                        Some(varnode("unique", 0x14, 1)),
+                        vec![varnode("unique", 0x11, 1), varnode("unique", 0x12, 1)],
+                    ),
+                    op(
+                        "INT_EQUAL",
+                        Some(varnode("unique", 0x15, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x13, 1)),
+                        vec![varnode("unique", 0x14, 1), varnode("unique", 0x15, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1030, 8), varnode("unique", 0x13, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![3, 2],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let mut memory = HashMap::new();
+        for index in 0..101u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &[guard, main, dispatch, default], (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.reasons.get(&0x1020), Some(&RefusalKind::Unknown));
+    }
+    /// OR-taken with a pre-guarded value refuses: the taken edge keeps
+    /// the exit interval de-blessed (same interval, no guard provenance),
+    /// so the forward read yields `Top`, and the Top-only backward slice
+    /// is blocked on the uncertain edge rather than resurrecting the
+    /// pre-OR guard. Fails pre-fix with a 16-entry table of entries
+    /// 0..15 -- the wrong-side upper, blessed and accepted as exact.
+    #[test]
+    fn or_taken_with_preguarded_value_refuses() {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x39, 8)),
+                        vec![varnode("register", 0x38, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x39, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 3],
+        };
+        let main = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 16, 8)],
+                    ),
+                    op(
+                        "INT_EQUAL",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x13, 1)),
+                        vec![varnode("unique", 0x11, 1), varnode("unique", 0x12, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x13, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 3],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &[guard, main, dispatch, default], (0x1000, 0x2000));
+        assert!(found.tables.is_empty(), "{found:?}");
+        assert_eq!(found.reasons.get(&0x1020), Some(&RefusalKind::Unknown));
+    }
+    /// An unsigned lower bound states a complement the single interval
+    /// cannot name when values straddle zero: negative-signed members
+    /// are unsigned-large and satisfy `x >=_u n` too. Refuse there;
+    /// refine where values are already non-negative.
+    #[test]
+    fn unsigned_lower_refuses_when_values_straddle_zero() {
+        let target = ("register".to_string(), 0x80u64);
+        let values: std::collections::BTreeMap<Slot, Value> =
+            std::collections::BTreeMap::from([(
+                target.clone(),
+                Value::Strided { base: 0, stride: 1, lo: -10, hi: 100, guarded: false },
+            )]);
+        assert_eq!(intersect_bound(&values, &target, 0, i64::MIN, 50, true, false), None);
+        let values: std::collections::BTreeMap<Slot, Value> =
+            std::collections::BTreeMap::from([(
+                target.clone(),
+                Value::Strided { base: 0, stride: 1, lo: 10, hi: 100, guarded: true },
+            )]);
+        assert_eq!(
+            intersect_bound(&values, &target, 0, i64::MIN, 50, true, false),
+            Some(Value::Strided { base: 0, stride: 1, lo: 50, hi: 100, guarded: true })
+        );
     }
 
     /// A `JL`-shaped fallthrough: the first bound takes `r8` into
@@ -5214,7 +6095,7 @@ mod tests {
                         ),
                     ],
                 )],
-                successors: vec![1],
+                successors: vec![1, 2],
             },
             Block {
                 instructions: vec![instruction(
@@ -5240,12 +6121,131 @@ mod tests {
                 )],
                 successors: vec![],
             },
+            Block {
+                instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+                successors: vec![],
+            },
         ];
         let defs = DefIndex::build(&blocks);
-        let result = slice_dispatch(&image, &defs, &blocks, 0x1010, (0x1000, 0x2000));
+        let result = slice_dispatch(&image, &defs, &blocks, 0x1010, (0x1000, 0x2000), &[0]);
         let targets = result
             .expect("the slice found a table")
             .expect("the table read");
         assert_eq!(targets, vec![0x1100, 0x1108, 0x1110, 0x1118]);
+    }
+    /// The slice takes the guard that decides the dispatch, not the
+    /// first quasi-copy in function order: a side-branch `(R < 100)`
+    /// that rejoins, and an outer `(R < 200)` whose false edge reaches
+    /// too, are both skipped for the dominating `(R < 16)`.
+    #[test]
+    fn guard_search_requires_a_deciding_guard() {
+        let guard_at = |address: u64, limit: u64, taken: u64, yes: usize, no: usize| Block {
+            instructions: vec![instruction(
+                address,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", limit, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", taken, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![yes, no],
+        };
+        let jump = |address: u64, to: usize| Block {
+            instructions: vec![instruction(address, vec![op("BRANCH", None, vec![])])],
+            successors: vec![to],
+        };
+        let blocks = vec![
+            guard_at(0x1000, 200, 0x1010, 1, 2),
+            guard_at(0x1010, 100, 0x1030, 3, 3),
+            jump(0x1020, 3),
+            jump(0x1030, 4),
+            guard_at(0x1038, 312, 0x1040, 5, 7),
+            guard_at(0x1040, 16, 0x1050, 6, 7),
+            Block {
+                instructions: vec![instruction(0x1050, vec![op("BRANCH", None, vec![])])],
+                successors: vec![],
+            },
+            Block {
+                instructions: vec![instruction(0x1060, vec![op("BRANCH", None, vec![])])],
+                successors: vec![],
+            },
+        ];
+        let defs = DefIndex::build_with_entries(&blocks, &[0]);
+        let expr = Sliced::Point(("register".to_string(), 0x38));
+        // The side guard (100) never dominates, the outer guard (200)
+        // fails the false-edge rule, and the nested outer (312) loses to
+        // the inner (15) by minimum -- first-match would answer 311.
+        assert_eq!(
+            guard_bound(&defs, &blocks, &expr, 6, &[0]),
+            GuardSearch::Bound(("register".to_string(), 0x38), 15)
+        );
+    }
+    /// A side guard alone rejects: it reaches the dispatch and constrains
+    /// the point, but decides nothing there. The search must report the
+    /// rejection (blocking the guardless scan), not `NoMatchingGuard`.
+    #[test]
+    fn guard_search_rejects_side_only_guards() {
+        let branch = |address: u64, yes: usize, no: usize| Block {
+            instructions: vec![instruction(
+                address,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x39, 8), varnode("const", 7, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![yes, no],
+        };
+        let guard_at = |address: u64, limit: u64, taken: u64, yes: usize, no: usize| Block {
+            instructions: vec![instruction(
+                address,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", limit, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", taken, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![yes, no],
+        };
+        let jump = |address: u64, to: usize| Block {
+            instructions: vec![instruction(address, vec![op("BRANCH", None, vec![])])],
+            successors: vec![to],
+        };
+        let blocks = vec![
+            branch(0x1000, 1, 2),
+            guard_at(0x1010, 100, 0x1030, 3, 3),
+            jump(0x1020, 3),
+            Block {
+                instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+                successors: vec![],
+            },
+        ];
+        let defs = DefIndex::build_with_entries(&blocks, &[0]);
+        let expr = Sliced::Point(("register".to_string(), 0x38));
+        assert_eq!(
+            guard_bound(&defs, &blocks, &expr, 3, &[0]),
+            GuardSearch::RejectedMatchingGuard
+        );
     }
 }
