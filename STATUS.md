@@ -7960,3 +7960,32 @@ gone, handled by the full-length arm. (3) `ANCHOR_EVIDENCE` includes
 predicted enforced total. m19-003 byte-scan green (decoder changes
 hold console agreement). The prior entry's "x86-only" and "E0-E3
 untouched" lines are superseded by this one.
+
+## JoinPrecision closed: 00190be9 exact-16 via the SJA path (2026-09-21)
+
+Production traces, not the plan, found the mechanism -- and it was not
+path-sensitive joins (the todo's diagnosis, now superseded). What the
+traces showed: JL1/JL2 both-edges already exact-on-taken (values never
+straddle; negations infeasible), the JC at 0x190b7a fires stamped
+`(R8<64)` to taken `[-64,-52]` (floor heals, hi stuck), the JNC-backedge
+gets nothing (values `[-144,-116]`, both shapes miss), and the hi cap
+enters upstream: the JBE at 0x190b5b (`BOOL_OR(LESS,EQUAL)`) puts the
+wrong-side upper on its fallthrough, capping the loop entry at hi 12.
+Four changes, each pinned failing-first: (i) `scarry_value` /
+`sborrow_value` prove OF over bounded 64-bit intervals (sign rules,
+checked endpoints, single-wrap proves 1; consts fold against the
+width's bounds after a narrow-width unsoundness was caught: 8-bit
+127+1 is OF=1); (ii) single `BOOL_NEGATE` of a direct bound carries
+the negated tuple with polarity (two-stage verified: without the
+holds fix it still fails); (iii) direct holds is always successor 0
+(the const-left-maps-to-1 rule was backwards); (iv) OR fallthrough
+takes input negations via a block-local combo map with per-edge skip,
+and unsigned lowers refuse when values straddle zero or offsets go
+negative (the wrap-aware soundness condition; the full two-piece
+complement is unrepresentable, refusal is sound and sufficient).
+Declined with evidence: dead-edge suppression (the JC fallthrough
+feeds the live loop body; the corruption it reacted to is fixed at
+source) and path-sensitive joins (the 0x190b99 join heals hi via max
+once both exits refine). Verified: suite 460+7, m18 green, SJA-only
+`00190be9` exact-16 (`0x190a10..0x190b00`, no `0x190b10`), m13 PASS
+(142 @ 0.9978; interpreter 171, up one), every tier at 16.
