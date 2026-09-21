@@ -7989,3 +7989,36 @@ source) and path-sensitive joins (the 0x190b99 join heals hi via max
 once both exits refine). Verified: suite 460+7, m18 green, SJA-only
 `00190be9` exact-16 (`0x190a10..0x190b00`, no `0x190b10`), m13 PASS
 (142 @ 0.9978; interpreter 171, up one), every tier at 16.
+
+## JoinPrecision done, accurately: SJA exact-16 with a green m13 (2026-09-21)
+
+`00190be9` is exact-16 through the SJA path alone
+(`0x190a10..0x190b00`, verified in probes and in the m13 interpreted
+tier), and m13 passes (interpreter 134 at 1.0 with 0 undecodable,
+combined 142 at 0.9978). Corrections to earlier entries in this arc:
+the vsa tier carries no switch xref for this branch (never "every
+tier at 16" -- decompiler/combined/interpreted do); several entries
+described OR states before the code implemented them -- what shipped
+is below; `neg_piece_empty` permits production straddles by exact
+condition (negative olds below the limit), not by blanket refusal.
+Traced mechanism: the JC fires stamped `(R8<64)` but hi sticks (loop
+carried it low); JL both-edges was already exact-on-taken; the cap
+entered upstream through the JBE fallthrough's wrong-side upper.
+Shipped: scarry/sborrow interval OF proofs (consts fold against
+width bounds), single-negate polarity with holds fixed to taken,
+OR-taken de-bless plus fallthrough direct-only negations with
+skipped-operand de-bless, slice-block marks (fallback gate only),
+unsigned-lower refusal by exact condition, dominance-gated guard
+search with per-point minima and tri-state (rejected guards block
+the PIC scan, which additionally requires a dense `Point` index).
+Measured per variant on the project's own gate: exact16-stack
+(unsound OR-taken/non-direct) 0.9997; one-sided 0.996; slice-block
+0.9929 with a time blowout; authoritative 0.9977; slot/dominance
+0.9979; this stack passes. Residuals, all measured: OR-taken
+applies no child bound (refusal via de-bless+blocked slice);
+heuristic negations are refused, not narrowed; XOR-opaque indexes
+are unscanned (recall via decompiler in combined -- the game is
+recall-neutral there by construction). Suites 466+7, m18/m19
+green. The disjunct-subsumption synthesis stays future work with a
+concrete trigger: a measured wrong table tracing to a subsumable
+disjunction.
