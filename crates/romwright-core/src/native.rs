@@ -2859,14 +2859,11 @@ fn recover_switch_tables_native(
     }
     (added, unresolved)
 }
-
-/// Indirect jumps whose table is not known yet, with the extent of the
-/// function that owns each: the candidates both switch paths work from.
-///
 /// A jump whose transfer the image's structure already proved -- a linkage
-/// stub through an import slot, a thunk -- is not a switch;
-/// `DecompilerSwitchAnalyzer.findLocations` skips an instruction whose flow
-/// is overridden or already referenced (:398-431).
+/// stub through an import slot, a thunk -- is not a switch. Worker
+/// computed rows do NOT suppress: a single propagated target can be a
+/// first-iteration partial, and suppressing candidacy would hide the
+/// branch from every real recovery path.
 fn switch_candidates(imp: &mut NativeImport) -> Vec<(u64, u64, u64)> {
     let extents: Vec<(u64, u64)> = imp
         .functions
@@ -2874,16 +2871,17 @@ fn switch_candidates(imp: &mut NativeImport) -> Vec<(u64, u64, u64)> {
         .filter(|function| function.size > 1)
         .map(|function| (function.entry, function.entry.saturating_add(function.size)))
         .collect();
+    // Branches a worker row already resolved are NOT skipped: a
+    // single worker-computed target can be a first-iteration partial
+    // (observed: loop dispatch recovered as {state0} of {state0,
+    // state1}), and skipping candidacy suppresses every real
+    // recovery path (VSA, SJA, decompiler) for it. Only flow
+    // overrides suppress. Overlap resolves in the union: a switch
+    // table covering the branch subsumes the worker row.
     let resolved: std::collections::HashSet<u64> = imp
         .flow_overrides
         .iter()
         .map(|&(address, _)| address)
-        .chain(
-            imp.xrefs
-                .iter()
-                .filter(|xref| xref.kind == "COMPUTED_JUMP")
-                .map(|xref| xref.from),
-        )
         .collect();
     let thunk_entries: std::collections::HashSet<u64> =
         imp.thunks.iter().map(|thunk| thunk.entry).collect();

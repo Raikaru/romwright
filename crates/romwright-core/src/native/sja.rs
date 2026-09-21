@@ -176,6 +176,11 @@ impl Value {
 /// narrower width is the same storage.
 type Slot = (String, u64);
 
+/// A remembered comparison: compared slot, constant, `<=`, constant-left,
+/// operand width, in-place shift stamp, and whether it came straight from
+/// a comparison (see the `State` field docs).
+type Predicate = (Slot, u64, bool, bool, u32, Option<i64>, bool);
+
 fn slot(varnode: &PcodeVarnode) -> Slot {
     (varnode.space.clone(), varnode.offset)
 }
@@ -192,12 +197,15 @@ struct State {
     /// and keeping only the first loses the bound the dispatch needs. The
     /// trailing `u32` of each bound is the compared operand's width: a bound
     /// on `al` is a bound on one byte, whatever wider slot it was copied from.
+    /// The trailing `bool` records whether the bound came straight from a
+    /// comparison (polarity known: it holds on exactly one edge) or through
+    /// a flag combination (polarity unknown: both-edges defense).
     /// Each bound also snapshots the affine translation its operand
     /// carried when the comparison ran: `p = (x < 64)` before `x -= 64`
     /// translates through `(x, -64)`; `q = (x < 4)` after translates
     /// through nothing. A slot-wide origin would mistranslate `q` to
     /// `[-64, -61]`.
-    predicates: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32, Option<i64>)>>,
+    predicates: BTreeMap<Slot, Vec<Predicate>>,
     /// Affine provenance: `slot = origin + off`, narrowed by the smallest
     /// width crossed, plus the origin's own width. A copy in one block and
     /// the compare in the next are ordinary code, so the links travel with
@@ -650,7 +658,7 @@ fn run_block<I: Image>(
     // edge, and the far more common `cmp idx, n; ja default` bounds the
     // fallthrough. A boolean built from several comparisons -- a range
     // check `lo <= x && x < hi` -- carries every bound, not just the first.
-    let mut comparisons: BTreeMap<Slot, Vec<(Slot, u64, bool, bool, u32, Option<i64>)>> =
+    let mut comparisons: BTreeMap<Slot, Vec<Predicate>> =
         state.predicates.clone();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
@@ -958,7 +966,7 @@ fn run_block<I: Image>(
                 | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
-                    let mut carried: Vec<(Slot, u64, bool, bool, u32, Option<i64>)> = Vec::new();
+                    let mut carried: Vec<Predicate> = Vec::new();
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)) {
                             for bound in found {
@@ -975,7 +983,7 @@ fn run_block<I: Image>(
                                 // is discarded and the dispatch refuses.
                                 match carried
                                     .iter()
-                                    .position(|existing: &(Slot, u64, bool, bool, u32, Option<i64>)| existing.0 == bound.0)
+                                    .position(|existing: &Predicate| existing.0 == bound.0)
                                 {
                                     Some(index) => {
                                         if carried[index].5 == bound.5 {
@@ -985,7 +993,11 @@ fn run_block<I: Image>(
                                             carried.remove(index);
                                         }
                                     }
-                                    None => carried.push(bound.clone()),
+                                    None => {
+                                        let mut combined = bound.clone();
+                                        combined.6 = false;
+                                        carried.push(combined);
+                                    }
                                 }
                             }
                         }
@@ -1011,12 +1023,12 @@ fn run_block<I: Image>(
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size, None)]);
+                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size, None, true)]);
                             }
                             // `n < index`: the *fallthrough* is in range.
                             (Value::Const(limit), _) if left.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size, None)]);
+                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size, None, true)]);
                             }
                             _ => {}
                         }
@@ -1038,6 +1050,7 @@ fn run_block<I: Image>(
                                 &mut edges,
                                 instruction.address,
                                 bound,
+                                block.successors.len(),
                             );
                         }
                     }
@@ -1336,17 +1349,101 @@ fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
 /// the live map -- translates pre-write predicates, so `p = (x <
 /// 64)` before `x -= 64` refines `new_x in [-64, -1]` while `q = (x
 /// < 4)` recorded after applies to the current value untranslated.
+/// Intersect one bound shape with a slot's current value: the upper
+/// (`high`) and lower (`low`) bounds apply independently, shifted by
+/// the slot's origin offset. Returns `None` when the bound states
+/// nothing usable (unknown value with a lower-only shape, infeasible
+/// intersect, non-index value): the edge keeps its prior refinement.
+fn intersect_bound(
+    values: &BTreeMap<Slot, Value>,
+    target: &Slot,
+    off: i64,
+    high: i64,
+    low: i64,
+    constant_left: bool,
+) -> Option<Value> {
+    // Intersect, not overwrite: a bound on
+    // `t = origin + off` narrows the origin.
+    // Only a plain index-space value
+    // (base 0, stride 1) shifts this way.
+    // The refined floor can still go
+    // negative: `lea 0x10(%rax),%rdx;
+    // cmp $0x20,%rdx` bounds eax to
+    // [-0x10, 3-0x10]. No compiler indexes
+    // a table negatively, so the guard was
+    // never stated.
+    let floor = if constant_left {
+        low.saturating_sub(off)
+    } else {
+        -off
+    };
+    match values.get(target).cloned() {
+        Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
+            let floor = lo.max(floor);
+            let hi = if constant_left {
+                old_hi
+            } else {
+                old_hi.min(high - off)
+            };
+            if hi < floor {
+                return None;
+            }
+            Some(Value::Strided { base: 0, stride: 1, lo: floor, hi, guarded: floor >= 0 })
+        }
+        // A fresh bound on an unknown value. A lower-bound shape
+        // alone states no ceiling, so it refines nothing here
+        // rather than inventing one.
+        Some(Value::Top) | None => {
+            if constant_left {
+                return None;
+            }
+            let (lo, hi) = (-off, high - off);
+            if hi < lo {
+                return None;
+            }
+            Some(Value::Strided { base: 0, stride: 1, lo, hi, guarded: lo >= 0 })
+        }
+        // A set filters to the members the
+        // bound admits: sound, and keeps the
+        // precision the set already had.
+        Some(Value::Set(values)) => {
+            let kept: Vec<u64> = values.iter().copied()
+                .filter(|v| (*v as i64) >= floor && (constant_left || (*v as i64) <= high - off))
+                .collect();
+            if kept.is_empty() {
+                return None;
+            }
+            Some(Value::Set(std::rc::Rc::new(kept)))
+        }
+        // A constant outside the bound means
+        // this edge is infeasible; a Strided
+        // with a different base or stride is a
+        // different value set entirely. Both
+        // are left alone rather than refined
+        // into an index-space bound.
+        _ => None,
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn apply_guard_bound(
     values: &BTreeMap<Slot, Value>,
     origins: &BTreeMap<Slot, (Slot, i64, Option<u32>, u32)>,
     edges: &mut BTreeMap<usize, Vec<(Slot, Value)>>,
     branch: u64,
-    bound: (Slot, u64, bool, bool, u32, Option<i64>),
+    bound: Predicate,
+    successors: usize,
 ) {
-    let (operand, limit, inclusive, constant_left, operand_size, stamp) = bound;
+    let (operand, limit, inclusive, constant_left, operand_size, stamp, direct) = bound;
     // `index < n` taken means index <= n-1; `n < index`
-    // *not* taken means index <= n.
+    // *not* taken means index <= n. `high` may go negative: a signed
+    // bound (`JL` on `x <_s 0`) is a real upper bound, not an empty
+    // one, and the per-arm intersect below decides feasibility --
+    // the old blanket `high < 0` return dropped every negative
+    // bound before it could refine anything. `low` is the lower
+    // bound for the constant-left shape (`n < index` holds
+    // `index >= n+1`, `n <= index` holds `index >= n`); the taken
+    // edge of `cmp $10,%edx; ja` never states one.
     let high = if constant_left {
         if inclusive { limit as i64 - 1 } else { limit as i64 }
     } else if inclusive {
@@ -1354,10 +1451,12 @@ fn apply_guard_bound(
     } else {
         limit as i64 - 1
     };
+    let low = if constant_left {
+        if inclusive { limit as i64 } else { limit.saturating_add(1) as i64 }
+    } else {
+        i64::MIN
+    };
     let edge = usize::from(constant_left);
-    if high < 0 {
-        return;
-    }
     // The bound belongs to the value, wherever it
     // lives: the compared slot and whatever it was
     // copied from. A temp `t = origin + off` bounded
@@ -1542,67 +1641,64 @@ fn apply_guard_bound(
             branch, operand, high, targets
         );
     }
+    // The negation (flipped inclusivity and side) bounds the edge
+    // the comparison does not hold on: `!(x < n)` is `x >= n`. Both
+    // shapes refine both edges; overwrite order plus the
+    // infeasibility skip heals polarity. On an edge a shape
+    // contradicts, its intersect is infeasible and the other
+    // shape's refinement stands; where both are feasible the last
+    // one wins, and the materialise check refuses what decodes
+    // outside the function.
+    let neg_inclusive = !inclusive;
+    let neg_left = !constant_left;
+    let neg_high = if neg_left {
+        if neg_inclusive { limit as i64 - 1 } else { limit as i64 }
+    } else if neg_inclusive {
+        limit as i64
+    } else {
+        limit as i64 - 1
+    };
+    let neg_low = if neg_left {
+        if neg_inclusive { limit as i64 } else { limit.saturating_add(1) as i64 }
+    } else {
+        i64::MIN
+    };
+    // Destinations: a direct bound holds on exactly one edge (the
+    // taken edge for `index < n`, the fallthrough for `n < index`)
+    // and its negation holds on the other. Combination-derived
+    // bounds carry no polarity, so they keep the both-edges defense
+    // with the stated shape only.
+    // Destinations: a direct bound on a real (two-target) branch holds
+    // on exactly one edge (taken for `index < n`, fallthrough for
+    // `n < index`) with its negation on the other. A degenerate
+    // single-target branch has no distinct false edge, so it keeps
+    // the legacy upper-only defense; combination bounds keep the
+    // both-edges defense with the stated shape only.
+    let mut work: Vec<(i64, i64, bool, usize)> = Vec::new();
+    if direct && successors >= 2 {
+        let holds = if constant_left { 0 } else { 1 };
+        work.push((high, low, constant_left, holds));
+        work.push((neg_high, neg_low, neg_left, 1 - holds));
+    } else {
+        work.push((high, low, constant_left, edge));
+        work.push((high, low, constant_left, 1 - edge));
+    }
     for (target, off) in targets {
-        let bounded = match values.get(&target).cloned() {
-            // Intersect, not overwrite: a bound on
-            // `t = origin + off` narrows the origin
-            // to [lo.max(-off), hi.min(high-off)].
-            // Only a plain index-space value
-            // (base 0, stride 1) shifts this way.
-            // The refined floor can still go
-            // negative: `lea 0x10(%rax),%rdx;
-            // cmp $0x20,%rdx` bounds eax to
-            // [-0x10, 3-0x10]. No compiler indexes
-            // a table negatively, so the guard was
-            // never stated.
-            Some(Value::Strided { base: 0, stride: 1, lo, hi: old_hi, .. }) => {
-                let floor = lo.max(-off);
-                Value::Strided { base: 0, stride: 1, lo: floor, hi: old_hi.min(high - off), guarded: floor >= 0 }
+        for (high, low, constant_left, dest) in work.iter().copied() {
+            let Some(bounded) = intersect_bound(values, &target, off, high, low, constant_left)
+            else {
+                continue;
+            };
+            if trace_cbranch {
+                eprintln!(
+                    "  -> {:?} off={} bounded={:?}",
+                    target, off, bounded
+                );
             }
-            // A fresh bound on an unknown value.
-            // `lea 0x10(%r8),%rax; cmp $0x20,%rax`
-            // bounds r8 to [-0x10, 0xf]: the floor
-            // went negative, so no guard was ever
-            // stated and the read must refuse.
-            Some(Value::Top) | None =>
-                Value::Strided { base: 0, stride: 1, lo: -off, hi: high - off, guarded: -off >= 0 },
-            // A set filters to the members the
-            // bound admits: sound, and keeps the
-            // precision the set already had.
-            Some(Value::Set(values)) => {
-                let kept: Vec<u64> = values.iter().copied()
-                    .filter(|v| (*v as i64) >= -off && (*v as i64) <= high - off)
-                    .collect();
-                if kept.is_empty() {
-                    continue;
-                }
-                Value::Set(std::rc::Rc::new(kept))
-            }
-            // A constant outside the bound means
-            // this edge is infeasible; a Strided
-            // with a different base or stride is a
-            // different value set entirely. Both
-            // are left alone rather than refined
-            // into an index-space bound.
-            _ => continue,
-        };
-        if trace_cbranch {
-            eprintln!(
-                "  -> {:?} off={} bounded={:?}",
-                target, off, bounded
-            );
+            edges.entry(dest).or_default().push((target.clone(), bounded));
         }
-        edges
-            .entry(edge)
-            .or_default()
-            .push((target.clone(), bounded.clone()));
-        edges
-            .entry(1 - edge)
-            .or_default()
-            .push((target, bounded));
     }
 }
-
 // ---- Backward slice: findDeterminingVarnodes ----
 //
 // Ghidra's `JumpBasic::findDeterminingVarnodes` (jumptable.cc:554) walks a
@@ -2834,6 +2930,98 @@ mod tests {
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
     }
+    /// A `JL`-shaped fallthrough: the first bound takes `r8` into
+    /// `[0, 31]` on the taken edge; an in-place shift moves it to
+    /// `[-16, 15]`; a signed `< 0` test's *fallthrough* (the value is
+    /// `>= 0`) recovers `[0, 15]`. Without lower-bound application
+    /// the dispatch reads `[-16, 15]`, whose negative low end misses
+    /// the table base and refuses. The image holds 17 valid entries
+    /// so the scan cannot mask the difference.
+    #[test]
+    fn a_fallthrough_lower_bound_recovers_the_dispatch() {
+        let mut memory = HashMap::new();
+        for index in 0..17u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let bound = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![3, 1],
+        };
+        let shift = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 16, 8)],
+                    ),
+                    op(
+                        "INT_SLESS",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x11, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 3],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1030, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let found = analyse(&image, &[bound, shift, dispatch, default], (0x1000, 0x2000));
+        let expected: Vec<u64> = (0..16u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, expected);
+    }
+
     /// `p = (x < 64)` is recorded, `x -= 64` stamps it, then `q = (x
     /// < 4)` is recorded on the rewritten value. Branching on `q`
     /// must use `q` untranslated (`[0, 3]`): a slot-wide origin
