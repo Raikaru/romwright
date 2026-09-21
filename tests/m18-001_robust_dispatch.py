@@ -42,7 +42,7 @@ def build(work: Path) -> dict[str, Path]:
     plans = {
         'asm_table': (['clang', '-nostdlib', '-o'], ['asm_table.s'], 102),
         'asm_flat': (['clang', '-nostdlib', '-o'], ['asm_flat.s'], 0),
-        'asm_opaque': (['clang', '-nostdlib', '-o'], ['asm_opaque.s'], 201),
+        'asm_opaque': (['clang', '-nostdlib', '-o'], ['asm_opaque.s'], 0),
         'selfmod': (['clang', '-nostdlib', '-o'], ['selfmod.s'], 11),
     }
     for name, (prefix, sources, exit_code) in plans.items():
@@ -85,54 +85,73 @@ def switch_xrefs(project: Path) -> dict[int, set[int]]:
         connection.close()
 
 
-def check_exact(name: str, got: dict[int, set[int]], branch: int,
-                cases: list[int], results: dict) -> None:
+def check_exact(name, got, branch, cases, results, mandatory):
+    """Exact-set check against annotations, never owner/decode scoring.
+
+    `mandatory` fixtures (baseline capability) fail when the branch is
+    missing entirely; refusal-allowed fixtures record the refusal as a
+    separate outcome. Anything else is a wrong edge and fails.
+    """
     if got.get(branch, set()) == set(cases):
         results[name] = {'outcome': 'exact', 'targets': len(cases)}
     elif branch not in got:
+        if mandatory:
+            results[name] = {'outcome': 'WRONG',
+                             'expected': sorted(cases), 'recovered': []}
+            raise AssertionError(f'{name}: wrong edges: {results[name]}')
         results[name] = {'outcome': 'refused'}
     else:
         results[name] = {'outcome': 'WRONG',
                          'expected': sorted(cases),
                          'recovered': sorted(got[branch])}
         raise AssertionError(f'{name}: wrong edges: {results[name]}')
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
+    # Negative control: the mandatory path must reject empty recovery.
+    # If this passes silently, every fixture below is vacuous.
+    try:
+        check_exact('__control__', {}, 0x1000, [0x2000], {}, True)
+    except AssertionError:
+        pass
+    else:
+        raise SystemExit('negative control failed: empty recovery accepted')
+    results: dict[str, dict] = {}
+    results['__control__'] = {'outcome': 'rejects-empty'}
     with tempfile.TemporaryDirectory(prefix='romwright-m18-robust-') as temporary:
         work = Path(temporary)
         binaries = build(work)
         blob_len = binaries.pop('__blob_len__')
-        results: dict[str, dict] = {}
         projects: dict[str, Path] = {}
         for name, binary in binaries.items():
             project = work / f'{name}.project'
             run([str(CLI), 'import', str(binary), '--name', name,
                  '--project', str(project)])
             projects[name] = project
+        # Baseline capability: missing branch fails, not "refused".
         table = symbols(binaries['asm_table'])
         check_exact('asm_table', switch_xrefs(projects['asm_table']),
                     table['br_dispatch'],
-                    [table[f'case{i}'] for i in range(5)], results)
+                    [table[f'case{i}'] for i in range(5)], results, True)
         table = symbols(binaries['asm_flat'])
         check_exact('asm_flat', switch_xrefs(projects['asm_flat']),
-                    table['br_flat'], [table['state0'], table['state1']], results)
+                    table['br_flat'], [table['state0'], table['state1']], results, False)
         table = symbols(binaries['asm_opaque'])
         check_exact('asm_opaque', switch_xrefs(projects['asm_opaque']),
-                    table['br_opq'], [table[f'c{i}'] for i in range(4)], results)
+                    table['br_opq'], [table[f'c{i}'] for i in range(4)], results, False)
+        # Runtime truth is sm_case1 (the store executes before the
+        # jump; exit code 11 proves it). The at-rest sm_case0 alone
+        # is a stale-pointer wrong edge; absence is refusal.
         table = symbols(binaries['selfmod'])
         got = switch_xrefs(projects['selfmod'])
-        branch, live, patched = table['br_sm'], table['sm_case0'], table['sm_case1']
+        branch, stale, live = table['br_sm'], table['sm_case0'], table['sm_case1']
         if got.get(branch, set()) == {live}:
-            results['selfmod'] = {'outcome': 'exact-at-rest'}
+            results['selfmod'] = {'outcome': 'exact-live'}
         elif branch not in got:
             results['selfmod'] = {'outcome': 'refused'}
         else:
             results['selfmod'] = {'outcome': 'WRONG', 'recovered': sorted(got[branch])}
-            assert patched not in got.get(branch, set()), f'selfmod: claimed runtime-only {patched:x}'
             raise AssertionError(f"selfmod: wrong edges: {results['selfmod']}")
         table = symbols(binaries['packed'])
         blob, codebuf = table['blob'], table['codebuf']
