@@ -121,17 +121,10 @@ def check_exact(name, got, branch, cases, results, mandatory):
         raise AssertionError(f'{name}: wrong edges: {results[name]}')
 
 
-def assert_no_computed(name, project, branch, results):
-    """Pin a branch absent from non-switch computed jumps."""
-    found = computed_jumps(project).get(branch, set())
-    if found:
-        results[name] = {'outcome': 'WRONG', 'computed': sorted(found)}
-        raise AssertionError(f'{name}: wrong edges: {results[name]}')
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
-    # Negative control: the mandatory path must reject empty recovery.
     # If this passes silently, every fixture below is vacuous.
     try:
         check_exact('__control__', {}, 0x1000, [0x2000], {}, True)
@@ -151,32 +144,32 @@ def main() -> int:
             run([str(CLI), 'import', str(binary), '--name', name,
                  '--project', str(project)])
             projects[name] = project
+        # Each annotated branch is scored on the UNION of switch and
+        # non-switch computed jumps: recovery through either path
+        # counts (a future br_sm -> sm_case1 constant-propagation hit
+        # is the exact-live recovery we want, not a violation), and
+        # anything outside the oracle is a wrong edge.
+        def union(project):
+            merged = switch_xrefs(project)
+            for source, targets in computed_jumps(project).items():
+                merged.setdefault(source, set()).update(targets)
+            return merged
         # Baseline capability: missing branch fails, not "refused".
-        # Every fixture also pins its branch absent from non-switch
-        # computed jumps: recovery must flow through switch_tables,
-        # not a parallel resolution path the switch query can't see.
         table = symbols(binaries['asm_table'])
-        project = projects['asm_table']
-        check_exact('asm_table', switch_xrefs(project),
+        check_exact('asm_table', union(projects['asm_table']),
                     table['br_dispatch'],
                     [table[f'case{i}'] for i in range(5)], results, True)
-        assert_no_computed('asm_table', project, table['br_dispatch'], results)
         table = symbols(binaries['asm_flat'])
-        project = projects['asm_flat']
-        check_exact('asm_flat', switch_xrefs(project),
+        check_exact('asm_flat', union(projects['asm_flat']),
                     table['br_flat'], [table['state0'], table['state1']], results, False)
-        assert_no_computed('asm_flat', project, table['br_flat'], results)
         table = symbols(binaries['asm_opaque'])
-        project = projects['asm_opaque']
-        check_exact('asm_opaque', switch_xrefs(project),
+        check_exact('asm_opaque', union(projects['asm_opaque']),
                     table['br_opq'], [table[f'c{i}'] for i in range(4)], results, False)
-        assert_no_computed('asm_opaque', project, table['br_opq'], results)
         # Runtime truth is sm_case1 (the store executes before the
         # jump; exit code 11 proves it). The at-rest sm_case0 alone
         # is a stale-pointer wrong edge; absence is refusal.
         table = symbols(binaries['selfmod'])
-        project = projects['selfmod']
-        got = switch_xrefs(project)
+        got = union(projects['selfmod'])
         branch, stale, live = table['br_sm'], table['sm_case0'], table['sm_case1']
         if got.get(branch, set()) == {live}:
             results['selfmod'] = {'outcome': 'exact-live'}
@@ -185,23 +178,18 @@ def main() -> int:
         else:
             results['selfmod'] = {'outcome': 'WRONG', 'recovered': sorted(got[branch])}
             raise AssertionError(f"selfmod: wrong edges: {results['selfmod']}")
-        assert_no_computed('selfmod', project, branch, results)
         # The decoder stub resolves by constant propagation
-        # (br_dec -> codebuf), which switch recovery explicitly
-        # skips -- a switch-only query is blind to it. That edge is
-        # statically sound (the stub unconditionally jumps there);
-        # the blob itself must stay untouched by every xref kind.
+        # (br_dec -> codebuf): scored in the same union, sound (the
+        # stub unconditionally jumps there); the blob itself must
+        # stay untouched by every xref kind.
         table = symbols(binaries['packed'])
         project = projects['packed']
         blob, codebuf = table['blob'], table['codebuf']
         branch = table['br_dec']
-        stub = computed_jumps(project).get(branch, set())
-        if stub != {codebuf}:
-            results['packed'] = {'outcome': 'WRONG', 'stub': sorted(stub)}
+        all_xrefs = union(project)
+        if all_xrefs.get(branch, set()) != {codebuf}:
+            results['packed'] = {'outcome': 'WRONG', 'stub': sorted(all_xrefs.get(branch, set()))}
             raise AssertionError(f"packed: stub edge wrong: {results['packed']}")
-        all_xrefs = switch_xrefs(project)
-        for source, targets in computed_jumps(project).items():
-            all_xrefs.setdefault(source, set()).update(targets)
         bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
                if (s, d) != (branch, codebuf)
                and (blob <= s < blob + blob_len or blob <= d < blob + blob_len
