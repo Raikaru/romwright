@@ -74,16 +74,30 @@ def symbols(binary: Path) -> dict[str, int]:
 
 
 def switch_xrefs(project: Path) -> dict[int, set[int]]:
+    """Switch-table xrefs only (`native-import:switch` provenance)."""
+    return xref_map(project,
+                    "provenance = 'native-import:switch'")
+
+
+def computed_jumps(project: Path) -> dict[int, set[int]]:
+    """Computed jumps resolved outside switch recovery (e.g. constant
+    propagation). Switch recovery explicitly skips these branches
+    (`native.rs` computed-jump exclusion), so a switch-only query is
+    blind to them -- including genuinely recovered stub edges."""
+    return xref_map(project,
+                    "kind = 'COMPUTED_JUMP' AND provenance != 'native-import:switch'")
+
+
+def xref_map(project: Path, predicate: str) -> dict[int, set[int]]:
     connection = sqlite3.connect(project / 'project.sqlite')
     try:
         tables: dict[int, set[int]] = {}
         for source, destination in connection.execute(
-                "SELECT src, dst FROM xrefs WHERE provenance = 'native-import:switch'"):
+                f'SELECT src, dst FROM xrefs WHERE {predicate}'):
             tables.setdefault(int(source, 16), set()).add(int(destination, 16))
         return tables
     finally:
         connection.close()
-
 
 def check_exact(name, got, branch, cases, results, mandatory):
     """Exact-set check against annotations, never owner/decode scoring.
@@ -104,6 +118,14 @@ def check_exact(name, got, branch, cases, results, mandatory):
         results[name] = {'outcome': 'WRONG',
                          'expected': sorted(cases),
                          'recovered': sorted(got[branch])}
+        raise AssertionError(f'{name}: wrong edges: {results[name]}')
+
+
+def assert_no_computed(name, project, branch, results):
+    """Pin a branch absent from non-switch computed jumps."""
+    found = computed_jumps(project).get(branch, set())
+    if found:
+        results[name] = {'outcome': 'WRONG', 'computed': sorted(found)}
         raise AssertionError(f'{name}: wrong edges: {results[name]}')
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -130,21 +152,31 @@ def main() -> int:
                  '--project', str(project)])
             projects[name] = project
         # Baseline capability: missing branch fails, not "refused".
+        # Every fixture also pins its branch absent from non-switch
+        # computed jumps: recovery must flow through switch_tables,
+        # not a parallel resolution path the switch query can't see.
         table = symbols(binaries['asm_table'])
-        check_exact('asm_table', switch_xrefs(projects['asm_table']),
+        project = projects['asm_table']
+        check_exact('asm_table', switch_xrefs(project),
                     table['br_dispatch'],
                     [table[f'case{i}'] for i in range(5)], results, True)
+        assert_no_computed('asm_table', project, table['br_dispatch'], results)
         table = symbols(binaries['asm_flat'])
-        check_exact('asm_flat', switch_xrefs(projects['asm_flat']),
+        project = projects['asm_flat']
+        check_exact('asm_flat', switch_xrefs(project),
                     table['br_flat'], [table['state0'], table['state1']], results, False)
+        assert_no_computed('asm_flat', project, table['br_flat'], results)
         table = symbols(binaries['asm_opaque'])
-        check_exact('asm_opaque', switch_xrefs(projects['asm_opaque']),
+        project = projects['asm_opaque']
+        check_exact('asm_opaque', switch_xrefs(project),
                     table['br_opq'], [table[f'c{i}'] for i in range(4)], results, False)
+        assert_no_computed('asm_opaque', project, table['br_opq'], results)
         # Runtime truth is sm_case1 (the store executes before the
         # jump; exit code 11 proves it). The at-rest sm_case0 alone
         # is a stale-pointer wrong edge; absence is refusal.
         table = symbols(binaries['selfmod'])
-        got = switch_xrefs(projects['selfmod'])
+        project = projects['selfmod']
+        got = switch_xrefs(project)
         branch, stale, live = table['br_sm'], table['sm_case0'], table['sm_case1']
         if got.get(branch, set()) == {live}:
             results['selfmod'] = {'outcome': 'exact-live'}
@@ -153,16 +185,31 @@ def main() -> int:
         else:
             results['selfmod'] = {'outcome': 'WRONG', 'recovered': sorted(got[branch])}
             raise AssertionError(f"selfmod: wrong edges: {results['selfmod']}")
+        assert_no_computed('selfmod', project, branch, results)
+        # The decoder stub resolves by constant propagation
+        # (br_dec -> codebuf), which switch recovery explicitly
+        # skips -- a switch-only query is blind to it. That edge is
+        # statically sound (the stub unconditionally jumps there);
+        # the blob itself must stay untouched by every xref kind.
         table = symbols(binaries['packed'])
+        project = projects['packed']
         blob, codebuf = table['blob'], table['codebuf']
-        got = switch_xrefs(projects['packed'])
-        bad = [(f'{s:x}', f'{d:x}') for s, targets in got.items() for d in targets
-               if blob <= s < blob + blob_len or blob <= d < blob + blob_len
-               or codebuf <= d < codebuf + blob_len]
+        branch = table['br_dec']
+        stub = computed_jumps(project).get(branch, set())
+        if stub != {codebuf}:
+            results['packed'] = {'outcome': 'WRONG', 'stub': sorted(stub)}
+            raise AssertionError(f"packed: stub edge wrong: {results['packed']}")
+        all_xrefs = switch_xrefs(project)
+        for source, targets in computed_jumps(project).items():
+            all_xrefs.setdefault(source, set()).update(targets)
+        bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
+               if (s, d) != (branch, codebuf)
+               and (blob <= s < blob + blob_len or blob <= d < blob + blob_len
+                    or codebuf <= d < codebuf + blob_len)]
         if bad:
             results['packed'] = {'outcome': 'WRONG', 'touches': bad}
             raise AssertionError(f'packed: xrefs into blob/codebuf: {bad}')
-        results['packed'] = {'outcome': 'refused-blob', 'switch_xrefs': sum(len(t) for t in got.values())}
+        results['packed'] = {'outcome': 'stub-resolved'}
         summary = {name: result['outcome'] for name, result in results.items()}
         print(json.dumps(summary))
         if args.report:

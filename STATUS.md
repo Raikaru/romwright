@@ -7733,17 +7733,17 @@ first (unreachable cases the analysis correctly excluded).
 Open, not claimed: `sm_case1` exact-live (needs store→load
 forwarding), flattened-dispatch exact (needs the flag domain).
 
-## Huge-image scaling (2026-09-20)
+## Correction: packed stub was resolved, not refused (2026-09-20)
 
-`llvm-exegesis` (63 MB) structural import (switch round off):
-1001.8 s total, 48,688 functions, 6.27M instructions;
-references-only 733.1 s dominates, discovery 170.6 s, flow
-142.0 s, store 49.6 s; 221 MB store. No crash, exit 0.
-
-Full import with switch recovery did not finish in 60 min (job
-timeout killed it mid-store after ~50 min of switch batches at
-~460 completions each, with scattered 59 s decompiler timeouts
-and `DataUnavailError` failures): per-candidate decompiler
-round-trips do not scale to this image. Relaunched detached;
-bounding the switch round on huge images is open work, not
-claimed here.
+Advisory with evidence: the packed decoder `jmp *%rdi` recovers as
+`COMPUTED_JUMP 00400139 -> 00401060` (constant propagation), which
+the switch-only query never saw -- `native.rs` explicitly excludes
+resolved jumps from switch recovery. "Refused-blob" mislabeled a
+recovered edge. The gate now scores every computed jump at every
+annotated branch: other fixtures pin their branches absent from
+non-switch resolution; packed asserts `br_dec -> {codebuf}`
+(statically sound -- the stub unconditionally jumps there) with the
+blob untouched by all xref kinds. Measured: control
+rejects-empty, 2 exact, 2 refusals, 1 stub-resolved, 0 wrong.
+Full packed validation (executable decoded payload, verified exit
+code) remains open, per the earlier concern.
