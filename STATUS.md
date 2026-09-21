@@ -7860,3 +7860,35 @@ m18 green, m13 identical, suite 36+7.
 join-stale values (`[-96,-4]` at the load) defend against true
 bounds via infeasible-skip. Exact-16 needs path-sensitive
 joins -- open, not claimed.
+
+## Correction: signed bounds, JL polarity, and a misattributed exact-16 (2026-09-21)
+
+Advisory (blocker): `INT_SLESS`/`INT_LESS` built identical predicates and
+`intersect_bound` forced the unsigned floor (`-off`), so even
+straight-line `R8 in [-32,31]` with `R8 <_s 0` refined to nothing
+instead of `[-32,-1]`. Complied: predicates carry `signed`, the floor
+is the value's own floor for signed uppers, signed-on-Top refuses
+(no nameable floor), sets filter signed, and the `JL` idiom
+(`INT_NOTEQUAL` of `SCARRY`+`SLESS` flag slots, single-sided) keeps
+taken-edge polarity instead of the both-edges defense. `INT_CARRY` is
+deliberately not a flag slot (`ja` holds on the fallthrough); `jne`
+carries no flags. Two regressions: direct `intersect_bound`
+signed/unsigned pair, and a two-dispatch `JL` fixture (taken
+re-guarded unsigned after bias-back, the production shape -- arithmetic
+never blesses, only comparisons do). The inverted control
+(`direct=false`) fails exactly the fallthrough leg. Suite 38+7,
+m18 green, m13 identical (142 @ 0.9978, fifth time).
+
+MISATTRIBUTION CORRECTED, NOT CLAIMED: the m13-signed combined tier
+showed `00190be9` at 16 targets and I first read it as the fix working.
+Tier autopsy says otherwise: the decompiler tier reports 16 (ending
+`0x190b00`) identically BEFORE (m13-taken0) and after the fix, the
+combined tier inherits it, and the SJA-only path (manual
+`ROMWRIGHT_SJA=1` probes and the interpreted tier) reports 17 (ending
+`0x190b10`) identically before and after -- including with polarity
+forced off (bisection: polarity is inert on the production shape, as
+the fixtures predicted; the fallthrough pollution there flows through
+joins the polarity cannot reach). The exact-16 in combined is the
+pre-existing switch-decompiler stage's, not the SJA fix's. The open
+item stands as written: `00190be9` exact-16 via the SJA path needs
+path-sensitive joins, still unclaimed.

@@ -177,9 +177,11 @@ impl Value {
 type Slot = (String, u64);
 
 /// A remembered comparison: compared slot, constant, `<=`, constant-left,
-/// operand width, in-place shift stamp, and whether it came straight from
-/// a comparison (see the `State` field docs).
-type Predicate = (Slot, u64, bool, bool, u32, Option<i64>, bool);
+/// operand width, in-place shift stamp, whether it came straight from
+/// a comparison (see the `State` field docs), and whether the comparison
+/// was signed (`INT_SLESS`): a signed bound constrains below zero, so
+/// the unsigned origin-nonnegativity floor does not apply to it.
+type Predicate = (Slot, u64, bool, bool, u32, Option<i64>, bool, bool);
 
 fn slot(varnode: &PcodeVarnode) -> Slot {
     (varnode.space.clone(), varnode.offset)
@@ -673,6 +675,13 @@ fn run_block<I: Image>(
     // check `lo <= x && x < hi` -- carries every bound, not just the first.
     let mut comparisons: BTreeMap<Slot, Vec<Predicate>> =
         state.predicates.clone();
+    // Booleans holding sign/overflow-class flags (`INT_SCARRY` and
+    // `INT_SLESS` outputs): `JL` materialises as `INT_NOTEQUAL` of two
+    // such flags, and only that idiom keeps a known taken-edge polarity
+    // through a flag combination (see the `Bool` arm). Block-local: flags
+    // set in an earlier block arrive as plain booleans, which keep the
+    // both-edges defense.
+    let mut flag_src: std::collections::HashSet<Slot> = std::collections::HashSet::new();
     // Where each temporary came from, as (origin slot, affine offset,
     // narrowest width crossed, origin width): a machine compares a *copy*
     // of the switch variable and then dispatches on the original, and the
@@ -979,36 +988,62 @@ fn run_block<I: Image>(
                 | O::IntNotEqual | O::BoolNegate
                     if op.output.as_ref().is_some_and(|output| output.size == 1) =>
                 {
+                    // The `JL` idiom is `INT_NOTEQUAL` of the signed-carry
+                    // and sign flags of one comparison, and its taken edge
+                    // means less-than (absent signed overflow, which the
+                    // domain cannot name -- overflow paths stay wrong and
+                    // the backstop refuses them). Every other combination
+                    // keeps the both-edges defense: `ja` is an `AND` whose
+                    // bound holds on the fallthrough, so polarity through
+                    // arbitrary combinations would put bounds on exactly
+                    // the wrong edge. The idiom needs both inputs to be
+                    // sign/overflow-class flags (a `ZF`-derived `jne`
+                    // carries no flags at all) and exactly one side to
+                    // carry a bound (the carry side is silent).
+                    let carrying = op.inputs.iter()
+                        .filter(|input| comparisons.contains_key(&slot(input)))
+                        .count();
+                    let jl_idiom = opcode == O::IntNotEqual
+                        && op.inputs.len() == 2
+                        && carrying == 1
+                        && op.inputs.iter().all(|input| flag_src.contains(&slot(input)));
                     let mut carried: Vec<Predicate> = Vec::new();
                     for input in &op.inputs {
                         if let Some(found) = comparisons.get(&slot(input)) {
                             for bound in found {
                                 // Two bounds on one slot: the looser one is
                                 // what the combination admits -- but only
-                                // when both sides agree on the stamp. A
-                                // stamp conflict (`p = (x < 4)` before
-                                // `x += 16`, `q = (x < 4)` after, combined
-                                // as `p || q`) admits a disjunction the
-                                // upper-bound tuple cannot name (`[0,3]`
-                                // or `[16,19]`). Keeping the looser bound
-                                // untranslated would present half the
-                                // truth as the bound, so the whole bound
-                                // is discarded and the dispatch refuses.
+                                // when both sides agree on the stamp and the
+                                // signedness. A stamp conflict (`p = (x < 4)`
+                                // before `x += 16`, `q = (x < 4)` after,
+                                // combined as `p || q`) admits a disjunction
+                                // the upper-bound tuple cannot name (`[0,3]`
+                                // or `[16,19]`); a signedness conflict (`x
+                                // <_u 10 && x <_s 0`) mixes two readings of
+                                // the bits no one interval names. Keeping
+                                // the looser bound untranslated would present
+                                // half the truth as the bound, so the whole
+                                // bound is discarded and the dispatch refuses.
                                 match carried
                                     .iter()
                                     .position(|existing: &Predicate| existing.0 == bound.0)
                                 {
                                     Some(index) => {
-                                        if carried[index].5 == bound.5 {
+                                        if carried[index].5 == bound.5 && carried[index].7 == bound.7 {
                                             carried[index].1 = carried[index].1.max(bound.1);
                                             carried[index].2 = carried[index].2 || bound.2;
+                                            carried[index].6 = false;
                                         } else {
                                             carried.remove(index);
                                         }
                                     }
                                     None => {
                                         let mut combined = bound.clone();
-                                        combined.6 = false;
+                                        // The `JL` idiom's bound holds on
+                                        // the taken edge; everything else
+                                        // through a combination keeps the
+                                        // both-edges defense.
+                                        combined.6 = jl_idiom;
                                         carried.push(combined);
                                     }
                                 }
@@ -1022,12 +1057,34 @@ fn run_block<I: Image>(
                         state.set(output, Value::Top);
                     }
                 }
+                O::IntSCarry => {
+                    // A signed-carry flag: with its `INT_SLESS` sibling it
+                    // forms the `JL` idiom (`INT_NOTEQUAL(sc, sf)`), the one
+                    // flag combination whose taken edge keeps a known
+                    // polarity (see the `Bool` arm). `INT_CARRY` is left
+                    // out: unsigned combinations (`ja`) hold on the
+                    // fallthrough, not the taken edge.
+                    if let Some(output) = &op.output {
+                        if output.size == 1 {
+                            flag_src.insert(slot(output));
+                        }
+                        state.set(output, Value::Top);
+                    }
+                }
                 O::IntLess | O::IntSLess | O::IntLessEqual | O::IntSLessEqual => {
                     // Remember what this boolean says, for the branch that
                     // reads it: `index < n` bounds the index above. The
                     // stamp is empty: this comparison observes the
                     // slot's current value, so no rewrite stands between
                     // the bound and the value it names.
+                    let signed = matches!(opcode, O::IntSLess | O::IntSLessEqual);
+                    // The sign half of the `JL` idiom (see `IntSCarry`).
+                    if signed
+                        && let Some(output) = &op.output
+                        && output.size == 1
+                    {
+                        flag_src.insert(slot(output));
+                    }
                     if let (Some(output), Some(left), Some(right)) =
                         (&op.output, op.inputs.first(), op.inputs.get(1))
                     {
@@ -1036,12 +1093,12 @@ fn run_block<I: Image>(
                             // `index < n`: the taken edge is in range.
                             (_, Value::Const(limit)) if right.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size, None, true)]);
+                                    .insert(slot(output), vec![(slot(left), limit, inclusive, false, left.size, None, true, signed)]);
                             }
                             // `n < index`: the *fallthrough* is in range.
                             (Value::Const(limit), _) if left.space == "const" => {
                                 comparisons
-                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size, None, true)]);
+                                    .insert(slot(output), vec![(slot(right), limit, inclusive, true, right.size, None, true, signed)]);
                             }
                             _ => {}
                         }
@@ -1351,22 +1408,25 @@ fn load<I: Image>(image: &I, address: Value, size: u32) -> Value {
 /// Applies one comparison bound to both edges of a conditional branch.
 ///
 /// `bound` is `(operand, limit, inclusive, constant_left, operand_size,
-/// stamp)`: the compared slot, the constant it was compared against,
-/// whether the compare was `<=`, which side the constant sat on, the
-/// operand's width, and the composed in-place shift between the
-/// comparison and the branch (`Some(k)` when the slot was rewritten
-/// `slot += k` after the comparison ran). `values` is the abstract
-/// state at the branch, `origins` the live affine provenance map,
-/// `edges` the per-successor refinements this block produces, and
-/// `branch` the branch's own address for tracing. The stamp -- not
-/// the live map -- translates pre-write predicates, so `p = (x <
-/// 64)` before `x -= 64` refines `new_x in [-64, -1]` while `q = (x
-/// < 4)` recorded after applies to the current value untranslated.
+/// stamp, direct, signed)`: the compared slot, the constant it was
+/// compared against, whether the compare was `<=`, which side the
+/// constant sat on, the operand's width, the composed in-place shift
+/// between the comparison and the branch (`Some(k)` when the slot was
+/// rewritten `slot += k` after the comparison ran), whether the bound
+/// holds on exactly one edge, and whether the comparison was signed.
+/// `values` is the abstract state at the branch, `origins` the live
+/// affine provenance map, `edges` the per-successor refinements this
+/// block produces, and `branch` the branch's own address for tracing.
+/// The stamp -- not the live map -- translates pre-write predicates, so
+/// `p = (x < 64)` before `x -= 64` refines `new_x in [-64, -1]` while
+/// `q = (x < 4)` recorded after applies to the current value
+/// untranslated.
 /// Intersect one bound shape with a slot's current value: the upper
 /// (`high`) and lower (`low`) bounds apply independently, shifted by
 /// the slot's origin offset. Returns `None` when the bound states
-/// nothing usable (unknown value with a lower-only shape, infeasible
-/// intersect, non-index value): the edge keeps its prior refinement.
+/// nothing usable (unknown value with a lower-only shape, unknown
+/// value with a signed bound, infeasible intersect, non-index value):
+/// the edge keeps its prior refinement.
 fn intersect_bound(
     values: &BTreeMap<Slot, Value>,
     target: &Slot,
@@ -1374,6 +1434,7 @@ fn intersect_bound(
     high: i64,
     low: i64,
     constant_left: bool,
+    signed: bool,
 ) -> Option<Value> {
     // Intersect, not overwrite: a bound on
     // `t = origin + off` narrows the origin.
@@ -1385,7 +1446,14 @@ fn intersect_bound(
     // [-0x10, 3-0x10]. No compiler indexes
     // a table negatively, so the guard was
     // never stated.
-    let floor = if constant_left {
+    // A signed upper bound constrains below zero (`R8 <_s 0` admits
+    // `[-2^63, high]`), so the unsigned origin-nonnegativity floor
+    // (`-off`) does not apply: the value's own floor is the only
+    // floor. An unsigned bound keeps it, and a constant-left shape
+    // keeps its lower shape.
+    let floor = if signed && !constant_left {
+        i64::MIN
+    } else if constant_left {
         low.saturating_sub(off)
     } else {
         -off
@@ -1405,9 +1473,12 @@ fn intersect_bound(
         }
         // A fresh bound on an unknown value. A lower-bound shape
         // alone states no ceiling, so it refines nothing here
-        // rather than inventing one.
+        // rather than inventing one -- and a signed bound on an
+        // unknown value has no nameable floor (the unsigned `-off`
+        // floor would exclude the negative half the bound admits),
+        // so it refines nothing either.
         Some(Value::Top) | None => {
-            if constant_left {
+            if constant_left || signed {
                 return None;
             }
             let (lo, hi) = (-off, high - off);
@@ -1418,7 +1489,9 @@ fn intersect_bound(
         }
         // A set filters to the members the
         // bound admits: sound, and keeps the
-        // precision the set already had.
+        // precision the set already had. The members are compared
+        // signed: a signed upper bound keeps the negative-view
+        // members an unsigned floor would drop.
         Some(Value::Set(values)) => {
             let kept: Vec<u64> = values.iter().copied()
                 .filter(|v| (*v as i64) >= floor && (constant_left || (*v as i64) <= high - off))
@@ -1447,7 +1520,7 @@ fn apply_guard_bound(
     bound: Predicate,
     successors: usize,
 ) {
-    let (operand, limit, inclusive, constant_left, operand_size, stamp, direct) = bound;
+    let (operand, limit, inclusive, constant_left, operand_size, stamp, direct, signed) = bound;
     // `index < n` taken means index <= n-1; `n < index`
     // *not* taken means index <= n. `high` may go negative: a signed
     // bound (`JL` on `x <_s 0`) is a real upper bound, not an empty
@@ -1687,21 +1760,24 @@ fn apply_guard_bound(
     // single-target branch has no distinct false edge, so it keeps
     // the legacy upper-only defense; combination bounds keep the
     // both-edges defense with the stated shape only.
-    let mut work: Vec<(i64, i64, bool, usize)> = Vec::new();
+    let mut work: Vec<(i64, i64, bool, usize, bool)> = Vec::new();
     if direct && successors >= 2 {
         // Taken edge is successor 0 (block construction pushes the
         // taken target first; pruning preserves order): a direct
         // `index < n` holds there, `n < index` on the fallthrough.
+        // The `JL`-idiom bound arrives direct the same way: its taken
+        // edge means less-than, so it refines successor 0 and its
+        // negation (greater-or-equal) refines successor 1.
         let holds = if constant_left { 1 } else { 0 };
-        work.push((high, low, constant_left, holds));
-        work.push((neg_high, neg_low, neg_left, 1 - holds));
+        work.push((high, low, constant_left, holds, signed));
+        work.push((neg_high, neg_low, neg_left, 1 - holds, signed));
     } else {
-        work.push((high, low, constant_left, edge));
-        work.push((high, low, constant_left, 1 - edge));
+        work.push((high, low, constant_left, edge, signed));
+        work.push((high, low, constant_left, 1 - edge, signed));
     }
     for (target, off) in targets {
-        for (high, low, constant_left, dest) in work.iter().copied() {
-            let Some(bounded) = intersect_bound(values, &target, off, high, low, constant_left)
+        for (high, low, constant_left, dest, signed) in work.iter().copied() {
+            let Some(bounded) = intersect_bound(values, &target, off, high, low, constant_left, signed)
             else {
                 continue;
             };
@@ -2957,7 +3033,7 @@ mod tests {
         existing.values.insert(slot("register", 0x0), Value::Const(7));
         existing.predicates.insert(
             slot("unique", 0x10),
-            vec![(slot("register", 0x38), 4, false, false, 8, None, true)],
+            vec![(slot("register", 0x38), 4, false, false, 8, None, true, false)],
         );
         existing.origins.insert(
             slot("register", 0x40),
@@ -2977,6 +3053,176 @@ mod tests {
             widened.origins.get(&slot("register", 0x40)),
             existing.origins.get(&slot("register", 0x40))
         );
+    }
+    /// A signed upper bound on a strided value keeps the negative half:
+    /// `R in [-32, 31]` with `R <_s 0` refines to `[-32, -1]`. The
+    /// unsigned floor (`-off`) made every negative upper bound
+    /// infeasible-skipped, so the transfer returned `None` and a `JL`
+    /// refined nothing. The unsigned reading of the same shape still
+    /// refuses: `[0, -1]` is empty.
+    #[test]
+    fn a_signed_upper_bound_keeps_the_negative_half() {
+        let target = ("register".to_string(), 0x80u64);
+        let values: std::collections::BTreeMap<Slot, Value> =
+            std::collections::BTreeMap::from([(
+                target.clone(),
+                Value::Strided { base: 0, stride: 1, lo: -32, hi: 31, guarded: false },
+            )]);
+        assert_eq!(
+            intersect_bound(&values, &target, 0, -1, i64::MIN, false, true),
+            Some(Value::Strided { base: 0, stride: 1, lo: -32, hi: -1, guarded: false })
+        );
+        assert_eq!(
+            intersect_bound(&values, &target, 0, -1, i64::MIN, false, false),
+            None
+        );
+    }
+    /// `JL` keeps its polarity through the flag combination: `sub $32`
+    /// then `jl` on `R in [-32, 31]` refines the taken edge to `[-32, -1]`
+    /// and the fallthrough to `[0, 31]` (via the negation). The old
+    /// both-edges defense could not state a negative upper bound at
+    /// all, leaving the fallthrough dispatch at the full `[-32, 31]`
+    /// (64 targets instead of entries 32..63). The taken leg biases back
+    /// (`+32`) and re-guards unsigned before its dispatch, the production
+    /// shape: only a comparison-blessed bound drives a read.
+    fn jl_blocks() -> Vec<Block> {
+        let guard = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x10, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 64, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x10, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 5],
+        };
+        let compare = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
+                    ),
+                    op(
+                        "INT_SCARRY",
+                        Some(varnode("unique", 0x5000, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "INT_SLESS",
+                        Some(varnode("unique", 0x5008, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 0, 8)],
+                    ),
+                    op(
+                        "INT_NOTEQUAL",
+                        Some(varnode("unique", 0x5010, 1)),
+                        vec![varnode("unique", 0x5000, 1), varnode("unique", 0x5008, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1020, 8), varnode("unique", 0x5010, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![2, 4],
+        };
+        // The taken leg: `[-32, -1]` biased back to `[0, 31]`, re-guarded
+        // unsigned so the table read is blessed. Arithmetic never blesses
+        // (a width laundered through arithmetic must not drive a read),
+        // so the re-guard is the production shape, not test scaffolding:
+        // real switches bound-check after biasing.
+        let rebless = Block {
+            instructions: vec![instruction(
+                0x1020,
+                vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("register", 0x38, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x18, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1030, 8), varnode("unique", 0x18, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![3, 5],
+        };
+        let dispatch = |address: u64, bias: bool| {
+            let mut ops = Vec::new();
+            // The fallthrough leg biases here (`[0, 31]` to `[32, 63]`);
+            // the taken leg already biased in `rebless`.
+            if bias {
+                ops.push(op(
+                    "INT_ADD",
+                    Some(varnode("register", 0x38, 8)),
+                    vec![varnode("register", 0x38, 8), varnode("const", 32, 8)],
+                ));
+            }
+            ops.extend([
+                op(
+                    "INT_MULT",
+                    Some(varnode("unique", 0x20, 8)),
+                    vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                ),
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x28, 8)),
+                    vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x30, 8)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                ),
+                op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+            ]);
+            Block {
+                instructions: vec![instruction(address, ops)],
+                successors: vec![],
+            }
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1050, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        vec![guard, compare, rebless, dispatch(0x1030, false), dispatch(0x1040, true), default]
+    }
+    #[test]
+    fn a_jl_combination_keeps_its_taken_edge_polarity() {
+        let mut memory = HashMap::new();
+        for index in 0..64u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &jl_blocks(), (0x1000, 0x2000));
+        assert_eq!(found.tables.len(), 2, "{found:?}");
+        let taken = found.tables.iter().find(|t| t.branch == 0x1030).expect("taken dispatch");
+        let fall = found.tables.iter().find(|t| t.branch == 0x1040).expect("fallthrough dispatch");
+        let expected_taken: Vec<u64> = (0..32u64).map(|i| 0x1100 + i * 8).collect();
+        let expected_fall: Vec<u64> = (32..64u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(taken.targets, expected_taken);
+        assert_eq!(fall.targets, expected_fall);
     }
 
     /// A `JL`-shaped fallthrough: the first bound takes `r8` into
