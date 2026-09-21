@@ -7831,3 +7831,14 @@ are recorded refusals (`switch_decompiler_skipped` in
 SwitchStats, `discovery_note` in TIMINGS), never silent drops.
 m13 identical (budget inert on libc), m18 green, suite green;
 budget=1 on libc exits 0 with the refusal recorded.
+
+## Correction: bounded huge numbers (2026-09-21)
+
+Default budget (1024 owners) on the 63 MB image: 3427.8 s total
+(vs 4321.0 s unbounded, -21%), switch 1935.5 s (vs 2945.5 s),
+48,690 functions, 4,910 switch sources (vs 5,511), 54,210
+switch xrefs (vs 59,909). Refusals are machine-visible now:
+`switch_stats.decompiler_skipped` in TIMINGS plus an accumulated
+`discovery_note` (batch notes no longer clobber it). The tail is
+timeout sludge (59 s per pathological function), not owner
+count: further bounding needs timeout policy, recorded as open.

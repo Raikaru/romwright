@@ -484,13 +484,23 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     0 => String::new(),
                     count => format!(",\"references_refused\":{count}"),
                 };
+                let switch = summary
+                    .switch
+                    .as_ref()
+                    .map(|stats| {
+                        format!(
+                            ",\"switch_stats\":{}",
+                            serde_json::to_string(stats).unwrap_or_default()
+                        )
+                    })
+                    .unwrap_or_default();
                 let note = summary
                     .discovery_note
                     .as_deref()
                     .map(|note| format!(",\"discovery_note\":{}", serde_json::json!(note)))
                     .unwrap_or_default();
                 println!(
-                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{refused}{note}}}",
+                    "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{refused}{note}{switch}}}",
                     summary.functions,
                     core.runtime_config().console_shards
                 );

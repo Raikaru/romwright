@@ -3096,7 +3096,10 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
                 docs.failures.join("; "),
             );
             eprintln!("{message}");
-            imp.discovery_note = Some(message);
+            imp.discovery_note = Some(match imp.discovery_note.take() {
+                Some(previous) => format!("{previous}; {message}"),
+                None => message,
+            });
         }
         for table in &docs.tables {
             if table.branch.space != romwright_model::AddressSpace::Ram {
