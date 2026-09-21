@@ -916,6 +916,13 @@ pub struct FunctionFeatureRow {
     /// lengths and flow kinds, with no addresses in it. Equal digests are
     /// the same code, wherever it was loaded and however it was relocated.
     pub shape_digest: String,
+    /// Digest of the body bytes with relocations and image addresses
+    /// masked: loader-written bytes read zero, and a pc-relative field
+    /// naming an image address reads zero. Equal digests are the same
+    /// instructions with the same constants, however they were loaded or
+    /// relocated -- the tier-0 diff anchor between the body (same address
+    /// only) and the shape (lengths and flow kinds only).
+    pub masked_digest: String,
 }
 
 /// A BSim-style semantic signature of one function's p-code data-flow,

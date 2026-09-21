@@ -25,6 +25,11 @@ pub struct InstrInfo {
     pub len: u8,
     pub flow: Flow,
     pub rip_data: Option<u64>,
+    /// Offset and length of the pc-relative address field (a branch
+    /// displacement or a RIP-relative disp32), when the instruction has
+    /// one. A masked hash zeroes these bytes when they name an image
+    /// address, so the same code matches wherever it was loaded.
+    pub rel: Option<(u8, u8)>,
 }
 
 /// Stable numeric class per control-flow kind, for sweep histograms.
@@ -194,8 +199,25 @@ fn mem_modlen(b: &[u8], m: usize, force_memory: bool) -> u8 {
     }
 }
 
-/// Decodes one instruction at `b` (>= 15 bytes) and returns its length and
-/// flow. `addr` is the instruction address (for rel-target computation).
+/// Offset and length of a branch displacement for the opcodes with a
+/// fixed layout (`p` counts the prefixes already consumed). RIP-relative
+/// data goes through the ModRM path instead. `None` is not "no address
+/// here", only "no fixed-layout relative field": indirect targets and
+/// plain immediates report none.
+fn rel_span(op: u8, op2: Option<u8>, p: usize) -> Option<(u8, u8)> {
+    let at = |off: usize| u8::try_from(off).ok();
+    match op {
+        0xe8 | 0xe9 => Some((at(p + 1)?, 4)),
+        0xeb | 0xe0..=0xe3 | 0x70..=0x7f => Some((at(p + 1)?, 1)),
+        0x0f if op2.map(|o| (0x80..=0x8f).contains(&o)).unwrap_or(false) => {
+            Some((at(p + 2)?, 4))
+        }
+        _ => None,
+    }
+}
+/// Decodes one instruction at `b` (>= 15 bytes) and returns its length,
+/// flow, RIP-relative target and relative-field span. `addr` is the
+/// instruction address (for rel-target computation).
 pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
     let mut p = 0usize;
     let mut rex_w = false;
@@ -221,22 +243,22 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
     let has_op66 = b[..p].contains(&0x66);
     let _ = (rex_b, has_op66);
 
-    // Control-flow classification first (using raw op inspection).
+    // Control-flow classification first (using raw op inspection). Lengths
+    // and relative totals include the consumed prefixes `p`: a prefixed
+    // branch is longer than its bare form, and its target is relative to
+    // its true end.
     let flow_len: Option<(Flow, u8)> = match op {
-        0xe8 => Some((Flow::Call(rel_target(b, p + 1, 5, addr)), 5)),
-        0xe9 => Some((Flow::Jump(rel_target(b, p + 1, 5, addr)), 5)),
-        0xeb => Some((Flow::Jump(rel8_target(b, p + 1, 2, addr)), 2)),
-        0x70..=0x7f => Some((Flow::JumpCond(rel8_target(b, p + 1, 2, addr)), 2)),
+        0xe8 => { let total = 5 + p; Some((Flow::Call(rel_target(b, p + 1, total, addr)), total.min(15) as u8)) }
+        0xe9 => { let total = 5 + p; Some((Flow::Jump(rel_target(b, p + 1, total, addr)), total.min(15) as u8)) }
+        0xeb => { let total = 2 + p; Some((Flow::Jump(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
+        0x70..=0x7f => { let total = 2 + p; Some((Flow::JumpCond(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
+        0xe0..=0xe3 => { let total = 2 + p; Some((Flow::JumpCond(rel8_target(b, p + 1, total, addr)), total.min(15) as u8)) }
         0x0f if op2.map(|o| (0x80..=0x8f).contains(&o)).unwrap_or(false) => {
-            Some((Flow::JumpCond(rel_target(b, p + 2, 6, addr)), 6))
+            let total = 6 + p;
+            Some((Flow::JumpCond(rel_target(b, p + 2, total, addr)), total.min(15) as u8))
         }
-        0x0f
-            if op2
-                .map(|o| matches!(o, 0x90 | 0x91 | 0x92 | 0x93 | 0x94 | 0x95 | 0x96 | 0x97 | 0x98 | 0x99 | 0x9a | 0x9b | 0x9c | 0x9d | 0x9e | 0x9f))
-                .unwrap_or(false) =>
-        {
-            Some((Flow::Next, 3)) // setcc/setb; flow Next (handled below by full len)
-        }
+        // setcc/setb flows Next with its full length: handled below, not
+        // here, so a prefixed form is not truncated to 3.
         0xc3 | 0xc2 | 0xcb | 0xca | 0xcf => Some((Flow::Stop, if op == 0xc2 || op == 0xca { 3 } else { 1 })),
         0xcc => Some((Flow::Stop, 1)),
         0xf4 | 0xf5 | 0xfa | 0xfb | 0xfc | 0xfd | 0xfe => Some((Flow::Stop, 1)),
@@ -244,13 +266,13 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         _ => None,
     };
     if let Some((f, l)) = flow_len {
-        return InstrInfo { len: l, flow: f, rip_data: None };
+        return InstrInfo { len: l, flow: f, rip_data: None, rel: rel_span(op, op2, p) };
     }
     // 0F 90-9F setcc/setb: flow Next with full length.
     if op == 0x0f && op2.map(|o| (0x90..=0x9f).contains(&o)).unwrap_or(false) {
         let m = p + 2;
         let len = p + 3 + mem_modlen(b, m, false) as usize;
-        return InstrInfo { len: len.min(15) as u8, flow: Flow::Next, rip_data: None };
+        return InstrInfo { len: len.min(15) as u8, flow: Flow::Next, rip_data: None, rel: None };
     }
 
     let info = op_info(op, op2, op3, rex_w);
@@ -312,7 +334,7 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         } else {
             None
         };
-        return InstrInfo { len: final_len, flow, rip_data };
+        return InstrInfo { len: final_len, flow, rip_data, rel: is_rip_rel.then(|| u8::try_from(m + 1).ok()).flatten().map(|off| (off, 4)) };
     }
     match info.imm {
         ImmKind::I8 => len += 1,
@@ -323,7 +345,7 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         ImmKind::Imm32Rel => len += 4,
         ImmKind::None => {}
     }
-    InstrInfo { len: len.min(15) as u8, flow: Flow::Next, rip_data: None }
+    InstrInfo { len: len.min(15) as u8, flow: Flow::Next, rip_data: None, rel: rel_span(op, op2, p) }
 }
 
 fn rel_target(b: &[u8], o: usize, total: usize, addr: u64) -> u64 {
@@ -423,6 +445,36 @@ mod tests {
             6
         );
         assert_eq!(decode(&[0xf7, 0xd0], 0x4000).len, 2);
+    }
+
+    #[test]
+    fn relative_field_spans() {
+        // E8 rel32 with a REX prefix: length and target count the prefix
+        // (6 and addr+6+disp), and the displacement starts past it.
+        let d = decode(&[0x48, 0xe8, 0x01, 0x00, 0x00, 0x00], 0x1000);
+        assert_eq!(d.len, 6);
+        assert_eq!(d.flow, Flow::Call(0x1000 + 6 + 1));
+        assert_eq!(d.rel, Some((2, 4)));
+        let d = decode(&[0x0f, 0x84, 0x01, 0x02, 0x03, 0x04], 0x1000);
+        assert_eq!(d.rel, Some((2, 4)));
+        // Jcc rel8: one byte past the opcode.
+        let d = decode(&[0x74, 0xfe], 0x1000);
+        assert_eq!(d.rel, Some((1, 1)));
+        // A loop instruction is two bytes long with its rel8 inside: the
+        // old one-byte length put the span outside the instruction.
+        let d = decode(&[0xe2, 0xfe], 0x1000);
+        assert_eq!(d.len, 2);
+        assert_eq!(d.rel, Some((1, 1)));
+        // Plain immediates report none; a register-indirect target has
+        // no relative field either.
+        let d = decode(&[0x83, 0xc0, 0x28], 0x1000);
+        assert_eq!(d.rel, None);
+        let d = decode(&[0xff, 0xd0], 0x1000);
+        assert_eq!(d.rel, None);
+        // A GOT jump (`ff 25`, RIP-relative) reports its disp32: the GOT
+        // slot address moves with the load, so it must mask.
+        let d = decode(&[0xff, 0x25, 0x00, 0x00, 0x00, 0x00], 0x1000);
+        assert_eq!(d.rel, Some((2, 4)));
     }
 
     #[test]

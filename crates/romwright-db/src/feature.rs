@@ -1,5 +1,5 @@
-//! Structural function features (schema v16): the facts `romwright-diff` matches
-//! programs on.
+//! Structural function features (schema v28): the facts `romwright-diff` matches
+//! programs on, including the masked body digest tier-0 anchors on.
 
 use romwright_model::FunctionFeatureRow;
 use rusqlite::params;
@@ -22,11 +22,11 @@ impl ProjectDb {
             let mut insert = tx.prepare(
                 "INSERT OR REPLACE INTO function_features
                      (program_id, function, instructions, blocks, edges, body_digest,
-                      shape_digest, loops, max_block)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                      shape_digest, loops, max_block, masked_digest)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             )?;
             for row in rows {
-                if row.body_digest.is_empty() || row.shape_digest.is_empty() {
+                if row.body_digest.is_empty() || row.shape_digest.is_empty() || row.masked_digest.is_empty() {
                     return Err(DbError::InvalidFunctionFeatures(
                         "row has an empty digest".into(),
                     ));
@@ -41,6 +41,7 @@ impl ProjectDb {
                     row.shape_digest,
                     row.loops,
                     row.max_block,
+                    row.masked_digest,
                 ])?;
             }
         }
@@ -52,7 +53,7 @@ impl ProjectDb {
     pub fn function_features(&self, program: ProgramId) -> Result<Vec<FunctionFeatureRow>> {
         let mut stmt = self.conn.prepare(
             "SELECT function, instructions, blocks, edges, body_digest, shape_digest,
-                    loops, max_block
+                    loops, max_block, masked_digest
              FROM function_features WHERE program_id = ?1 ORDER BY function",
         )?;
         let rows = stmt
@@ -67,6 +68,7 @@ impl ProjectDb {
                     shape_digest: row.get(5)?,
                     loops: row.get(6)?,
                     max_block: row.get(7)?,
+                    masked_digest: row.get(8)?,
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;

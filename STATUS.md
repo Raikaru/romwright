@@ -7915,3 +7915,48 @@ dispatches. The fixture grew a symmetric fallthrough re-guard (both
 legs bias+bound-check, the production shape) after the first control
 draft showed the unblessed fallthrough refuses rather than reads --
 arithmetic never blesses, only comparisons do.
+
+## Tier-0 masked-hash anchors for M12 (2026-09-21, side mission)
+
+Structural match now looks refs up by exact masked hash before the
+fuzzy remainder runs. `disasm::decode` reports the pc-relative field
+span (`InstrInfo.rel`: branch displacements at fixed layouts,
+RIP-relative disp32 through ModRM); `features::masked_digest`
+zeroes relocation-covered bytes and relative fields naming an image
+address, keeping small constants. Store schema v28 carries
+`function_features.masked_digest` plus an index; `Evidence::Masked`
+fires at 1.0 on unique-both-sides + `instructions >= 4`, ordered
+after Body, before Shape. Decoder seam is x86-only: other arches
+hash deterministic garbage (same bytes still match; cross-address
+matching there stays with Shape). E0-E3 length under-read noted,
+untouched.
+Measured on corpus-full (`tests/m12-001_diff.py`, no `--index`):
+PASS -- twins 1.0/1.0/1.0 (33 rows), optimisation 1.0/0.9377/0.9423,
+anchors 1.0 over 4353; masked class 18/18 judged-correct (cross-opt
+crt boilerplate the shape/profile used to share). This corpus is
+Body-dominated (same-address twins), so 18 is the corpus-full
+actual, not a scale claim: tier-0's distinctive value is different
+addresses, shown on the o0/o2 rows. Unit pins: decoder span
+positions (prefix, Jcc, RIP-rel, GOT-jump reports, plain-imm and
+register-indirect report none), masked selectivity (in-image disp
+masked, outside-image disp kept). Full switch worker rebuilt for
+v28 (stale worker refused newer stores).
+
+## Tier-0 correction: x86-64-only spans, prefix lengths, enforced gate (2026-09-21)
+
+Two blockers on the tier-0 handoff, both complied. (1) Span masking is
+gated to x86-64 language ids, not x86 generally: the decoder assumes
+64-bit addressing and ModRM `mod=00, r/m=101` is absolute disp32 in
+32-bit mode, so x86-32 is relocation-only like every other non-64
+language. The enforced run's 10 non-x86 masked hits are therefore
+reloc-only or vacuous-span by construction, all judged correct; the
+garbage-span firing mode cannot have produced them. (2) The decoder
+under-reads are fixed, not noted: E0-E3 are 2-byte JumpCond (span
+inside the instruction), prefixed branches add `p` to lengths and
+relative totals (prefixed-E8 len/target pinned), and the redundant
+setcc fast path (which truncated prefixed and memory forms to 3) is
+gone, handled by the full-length arm. (3) `ANCHOR_EVIDENCE` includes
+`masked`: rerun PASS with anchors 1.0 over 4371 (4353 + 18), the
+predicted enforced total. m19-003 byte-scan green (decoder changes
+hold console agreement). The prior entry's "x86-only" and "E0-E3
+untouched" lines are superseded by this one.

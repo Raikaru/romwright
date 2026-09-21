@@ -82,7 +82,10 @@ INDEX_THRESHOLDS = {
 }
 
 # Evidence classes that identify a function outright rather than scoring it.
-ANCHOR_EVIDENCE = {"body", "shape", "import", "name", "string", "profile", "global"}
+# `masked` is tier-0: an exact masked-bytes match fires at 1.0, so the gate
+# judges it with the anchors -- a wrong masked anchor fails here, not in a
+# per-class report nobody thresholds.
+ANCHOR_EVIDENCE = {"body", "masked", "shape", "import", "name", "string", "profile", "global"}
 
 # Expected twins misses, address-keyed and tied to STATUS.md recorded
 # deficits -- visible in the row, never silent. A bare recall dip would

@@ -134,6 +134,7 @@ pub(crate) fn measure(imp: &NativeImport) -> Vec<FunctionFeatureRow> {
             max_block: max_block.max(1),
             body_digest: body_digest(imp, start, end),
             shape_digest: shape_digest(body),
+            masked_digest: masked_digest(imp, start, end, body),
         });
     }
     rows
@@ -173,6 +174,88 @@ fn shape_digest(body: &[FlowShape]) -> String {
             kind_code(shape.kind),
             u8::from(shape.conditional),
         ]);
+    }
+    hasher.finish()
+}
+/// Digest of the body bytes with relocations and image addresses masked:
+/// loader-written bytes read zero, and -- on x86-64 only -- a pc-relative
+/// field (a branch displacement, a RIP-relative disp32) reads zero when
+/// it names an image address. The operand masking is x86-64-only because
+/// the span decoder assumes 64-bit addressing: in 32-bit mode ModRM
+/// `mod=00, r/m=101` is an absolute disp32, not RIP-relative, and masking
+/// it would zero ordinary absolute operands into false anchors.
+/// Relocation masking is universal (loader facts, not decode). Small
+/// constants stay: `add eax, 5` and `add eax, 6` are different code. The
+/// walk's own lengths bound each instruction, so a decoder disagreement
+/// cannot run the masking into the next instruction.
+fn masked_digest(imp: &NativeImport, start: u64, end: u64, body: &[FlowShape]) -> String {
+    // Ghidra language ids name machine and width (`x86:LE:64:default`).
+    // Anything else -- including x86-32 and empty (unfilled) -- gets
+    // relocation masking only: without the 64-bit addressing the spans
+    // assume, they prove nothing, so only relocations mask.
+    let x86_64 = imp.language.split(':').nth(2).is_some_and(|bits| bits == "64")
+        && imp.language.starts_with("x86:");
+    let mut relocs: Vec<(u64, u64)> = imp.relocations.iter()
+        .map(|rel| (rel.address, rel.address.saturating_add(rel.width as u64)))
+        .collect();
+    relocs.sort_unstable();
+    let relocated = |address: u64| relocs.iter()
+        .any(|&(from, to)| address >= from && address < to);
+    let in_image = |address: u64| imp.mappings.iter().any(|mapping| {
+        address >= mapping.vaddr && address < mapping.vaddr.saturating_add(mapping.size)
+    });
+    let byte_at = |address: u64| {
+        for mapping in &imp.mappings {
+            if address >= mapping.vaddr && address < mapping.vaddr.saturating_add(mapping.size) {
+                if let Ok(index) = usize::try_from(address - mapping.vaddr) {
+                    return mapping.bytes.get(index).copied().unwrap_or(0);
+                }
+            }
+        }
+        0
+    };
+    let mut hasher = Digest::new();
+    for shape in body {
+        let length = usize::from(shape.length);
+        if shape.address < start || shape.address.saturating_add(length as u64) > end || length == 0 {
+            continue;
+        }
+        let mut bytes: Vec<u8> = (0..length)
+            .map(|offset| byte_at(shape.address.saturating_add(offset as u64)))
+            .collect();
+        let info = crate::disasm::decode(&bytes, shape.address);
+        // Mask the relative field only on x86-64 and only when it names
+        // an image address or the loader wrote it: a relative field that
+        // names nothing in the image is a (weird) constant, and constants
+        // stay. Elsewhere the spans are decoder garbage, so only the
+        // relocation sweep below masks.
+        if x86_64 && let Some((off, span)) = info.rel {
+            let (off, span) = (off as usize, span as usize);
+            if off + span <= bytes.len() && (span == 1 || span == 4) {
+                let value: i64 = if span == 1 {
+                    i8::from_le_bytes([bytes[off]]) as i64
+                } else {
+                    i32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]) as i64
+                };
+                let target = u64::from(info.len).saturating_add(shape.address).wrapping_add(value as u64);
+                let field = shape.address.saturating_add(off as u64);
+                let field_relocated = (0..span as u64).any(|delta| relocated(field.saturating_add(delta)));
+                if in_image(target) || field_relocated {
+                    for byte in &mut bytes[off..off + span] {
+                        *byte = 0;
+                    }
+                }
+            }
+        }
+        // Mask every loader-written byte wherever it sits: an absolute
+        // address immediate has no decoder span, but the relocation names
+        // it exactly.
+        for (offset, byte) in bytes.iter_mut().enumerate() {
+            if relocated(shape.address.saturating_add(offset as u64)) {
+                *byte = 0;
+            }
+        }
+        hasher.write(&bytes);
     }
     hasher.finish()
 }
@@ -355,6 +438,106 @@ mod tests {
         let moved = measure(&right);
         assert_eq!(moved[0].shape_digest, left_rows[0].shape_digest);
         assert_ne!(moved[0].body_digest, left_rows[0].body_digest);
+    }
+
+    #[test]
+    fn the_masked_digest_masks_in_image_displacements_only() {
+        // `call` + `ret`, 16 bytes mapped so 0x1008/0x100b are in-image
+        // and 0x1105 is not. x86-64: the span decoder's addressing holds.
+        let body = |language: &str, disp: [u8; 4]| {
+            let mut bytes = vec![0xe8];
+            bytes.extend(disp);
+            bytes.push(0xc3);
+            bytes.extend([0x90; 10]);
+            let mut imp = import(
+                vec![function(0x1000, 6)],
+                vec![
+                    shape(0x1000, 5, FlowKind::Call, None),
+                    shape(0x1005, 1, FlowKind::Return, None),
+                ],
+                bytes,
+            );
+            imp.language = language.into();
+            imp
+        };
+        let x86_64 = "x86:LE:64:default";
+        let left = measure(&body(x86_64, [3, 0, 0, 0]));
+        let right = measure(&body(x86_64, [6, 0, 0, 0]));
+        // Both displacements name the mapped image: masked equal, raw
+        // different.
+        assert_eq!(left[0].masked_digest, right[0].masked_digest);
+        assert_ne!(left[0].body_digest, right[0].body_digest);
+        // A displacement naming nothing in the image is a constant, and
+        // constants stay: masked differs.
+        let outside = measure(&body(x86_64, [0, 1, 0, 0]));
+        assert_ne!(left[0].masked_digest, outside[0].masked_digest);
+    }
+
+    #[test]
+    fn the_masked_digest_masks_no_spans_off_x86_64() {
+        // Same bodies under 32-bit and foreign languages: the span decoder
+        // assumes 64-bit addressing (in 32-bit mode `mod=00, r/m=101` is
+        // an absolute disp32), so spans must not mask there -- not even
+        // when the displacement names the mapped image.
+        let body = |language: &str, disp: [u8; 4]| {
+            let mut bytes = vec![0xe8];
+            bytes.extend(disp);
+            bytes.push(0xc3);
+            bytes.extend([0x90; 10]);
+            let mut imp = import(
+                vec![function(0x1000, 6)],
+                vec![
+                    shape(0x1000, 5, FlowKind::Call, None),
+                    shape(0x1005, 1, FlowKind::Return, None),
+                ],
+                bytes,
+            );
+            imp.language = language.into();
+            imp
+        };
+        for language in ["x86:LE:32:default", "ppc:BE:32:default", ""] {
+            let left = measure(&body(language, [3, 0, 0, 0]));
+            let right = measure(&body(language, [6, 0, 0, 0]));
+            assert_ne!(
+                left[0].masked_digest, right[0].masked_digest,
+                "spans masked under {language}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_masked_digest_masks_relocations_everywhere() {
+        // Relocation masking is loader fact, not decode: it holds on every
+        // language, including off-x86-64 where spans never mask.
+        let body = |language: &str, disp: [u8; 4]| {
+            let mut bytes = vec![0xe8];
+            bytes.extend(disp);
+            bytes.push(0xc3);
+            bytes.extend([0x90; 10]);
+            let mut imp = import(
+                vec![function(0x1000, 6)],
+                vec![
+                    shape(0x1000, 5, FlowKind::Call, None),
+                    shape(0x1005, 1, FlowKind::Return, None),
+                ],
+                bytes,
+            );
+            imp.language = language.into();
+            imp.relocations = vec![crate::native::MemoryRelocation {
+                address: 0x1001,
+                bytes: [0; 8],
+                width: 4,
+            }];
+            imp
+        };
+        for language in ["x86:LE:64:default", "x86:LE:32:default", "ppc:BE:32:default"] {
+            let left = measure(&body(language, [3, 0, 0, 0]));
+            let right = measure(&body(language, [6, 0, 0, 0]));
+            assert_eq!(
+                left[0].masked_digest, right[0].masked_digest,
+                "relocations not masked under {language}"
+            );
+        }
     }
 
     #[test]
