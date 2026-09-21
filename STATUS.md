@@ -7821,3 +7821,13 @@ exact via SJA forward sets subsuming the worker row. m18 fully
 green (4 exact, refused selfmod, stub, exec, both controls).
 `00190be9` still 17: edge refinements land (traced) but join
 stale (`[-80,-1]`-class unions); needs join/path precision, open.
+
+## Correction: decompiler owner budget (2026-09-21)
+
+The switch round costs one decompile per owner function (2945 s
+of 4321 s on the 63 MB image). `ROMWRIGHT_SWITCH_MAX_OWNERS`
+(default 1024, deterministic address order) caps it; the rest
+are recorded refusals (`switch_decompiler_skipped` in
+SwitchStats, `discovery_note` in TIMINGS), never silent drops.
+m13 identical (budget inert on libc), m18 green, suite green;
+budget=1 on libc exits 0 with the refusal recorded.

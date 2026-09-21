@@ -272,6 +272,10 @@ pub struct NativeImport {
     /// needed in the switch round at all.
     pub switch_vsa_resolved: usize,
     pub switch_vsa_refused: usize,
+    /// Decompiler-round owners skipped by the owner budget, recorded
+    /// rather than silently dropped: bounding wall time must not
+    /// masquerade as coverage.
+    pub switch_decompiler_skipped: usize,
     /// What the flow walk already did, kept so a later round resumes
     /// instead of re-walking the image. A round exists because a computed
     /// target found late creates a function whose body has to be walked;
@@ -2956,6 +2960,23 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
     }
     owners.sort_unstable();
     owners.dedup();
+    // Owner budget: one decompile per owner, so cost scales with this
+    // count. Past the budget the rest are recorded refusals, not
+    // silent drops. Deterministic (sorted) so reruns agree.
+    let budget: usize = std::env::var("ROMWRIGHT_SWITCH_MAX_OWNERS")
+        .ok()
+        .and_then(|raw| raw.parse().ok())
+        .unwrap_or(1024);
+    if owners.len() > budget {
+        imp.switch_decompiler_skipped += owners.len() - budget;
+        imp.discovery_note = Some(format!(
+            "switch recovery asked {} of {} owner functions (budget {})",
+            budget,
+            owners.len(),
+            budget
+        ));
+        owners.truncate(budget);
+    }
     if owners.is_empty() {
         phase(imp, "switch", started);
         return 0;
@@ -4766,6 +4787,7 @@ pub fn store_import(
         switch: Some(romwright_model::SwitchStats {
             vsa_resolved: imp.switch_vsa_resolved as u64,
             vsa_refused: imp.switch_vsa_refused as u64,
+            decompiler_skipped: imp.switch_decompiler_skipped as u64,
         }),
     })
 }
