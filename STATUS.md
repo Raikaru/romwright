@@ -7802,3 +7802,22 @@ pre-fix console emits `br_call -> 0x4000de`, post-fix exact odd
 (mandatory exact + odd-parity + kind assertions). m18 fully
 green; m13 PASS identical (combined 142 @ 0.9978, interpreted
 170 @ 0.9997) -- no recall loss from either change.
+
+## Correction: flag bounds with polarity; candidacy unblocked (2026-09-21)
+
+Signed bounds and lower bounds now apply: `high < 0` early-return
+is gone (infeasibility skips per arm instead), constant-left
+shapes raise the floor, and direct Less predicates refine the
+holding edge with the negation on the other (combination bounds
+keep both-edges; degenerate single-target branches keep legacy).
+Predicates carry a direct flag. New `a_fallthrough_*` regression
+fails without polarity, passes with it. SJA 35, core 447+7.
+
+Separate real bug on the same path: worker first-iteration rows
+marked loop branches resolved, suppressing VSA/SJA/decompiler for
+them (`candidates=0` with `indirect_jumps=1`). Computed rows no
+longer suppress candidacy; m18 runs with SJA on. `asm_flat` now
+exact via SJA forward sets subsuming the worker row. m18 fully
+green (4 exact, refused selfmod, stub, exec, both controls).
+`00190be9` still 17: edge refinements land (traced) but join
+stale (`[-80,-1]`-class unions); needs join/path precision, open.

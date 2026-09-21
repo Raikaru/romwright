@@ -21,8 +21,9 @@ from __future__ import annotations
 
 import argparse
 import json
-import sqlite3
+import os
 import shutil
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -163,6 +164,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--report', type=Path)
     args = parser.parse_args()
+    # The abstract interpretation runs here: it can only add tables
+    # (never remove worker rows), and the union scoring absorbs both.
+    # The cache stays off so every run measures real phase work.
+    os.environ['ROMWRIGHT_SJA'] = '1'
+    os.environ['ROMWRIGHT_NO_IMPORT_CACHE'] = '1'
     # If this passes silently, every fixture below is vacuous.
     try:
         check_exact('__control__', {}, 0x1000, [0x2000], {}, True)
