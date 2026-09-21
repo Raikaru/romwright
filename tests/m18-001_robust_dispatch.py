@@ -22,11 +22,11 @@ from __future__ import annotations
 import argparse
 import json
 import sqlite3
+import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / 'tests' / 'fixtures-src' / 'robust'
 CLI = ROOT / 'target' / 'release' / 'romwright-cli'
@@ -44,6 +44,7 @@ def build(work: Path) -> dict[str, Path]:
         'asm_flat': (['clang', '-nostdlib', '-o'], ['asm_flat.s'], 0),
         'asm_opaque': (['clang', '-nostdlib', '-o'], ['asm_opaque.s'], 0),
         'selfmod': (['clang', '-nostdlib', '-o'], ['selfmod.s'], 11),
+        'asm_call': (['clang', '-nostdlib', '-o'], ['asm_call.s'], 7),
     }
     for name, (prefix, sources, exit_code) in plans.items():
         out = work / f'{name}.bin'
@@ -94,12 +95,14 @@ def switch_xrefs(project: Path) -> dict[int, set[int]]:
 
 
 def computed_jumps(project: Path) -> dict[int, set[int]]:
-    """Computed jumps resolved outside switch recovery (e.g. constant
-    propagation). Switch recovery explicitly skips these branches
-    (`native.rs` computed-jump exclusion), so a switch-only query is
-    blind to them -- including genuinely recovered stub edges."""
+    """Computed jumps AND calls resolved outside switch recovery (e.g.
+    constant propagation; calls emit COMPUTED_CALL). Switch recovery
+    explicitly skips these branches, so a switch-only query is blind
+    to them -- including genuinely recovered stub edges and wrong
+    call targets alike (`br_exec` is CALLIND)."""
     return xref_map(project,
-                    "kind = 'COMPUTED_JUMP' AND provenance != 'native-import:switch'")
+                    "kind IN ('COMPUTED_JUMP', 'COMPUTED_CALL')"
+                    " AND provenance != 'native-import:switch'")
 
 
 def xref_map(project: Path, predicate: str) -> dict[int, set[int]]:
@@ -112,6 +115,27 @@ def xref_map(project: Path, predicate: str) -> dict[int, set[int]]:
         return tables
     finally:
         connection.close()
+
+def check_packed_exec(project, table, blob_len, results, key):
+    """Executable packed binary: `call *%r15` targets an mmap return,
+    so any claimed edge is wrong; the blob must stay untouched by
+    control-flow xrefs (switch, COMPUTED_JUMP, COMPUTED_CALL)."""
+    xblob = table['blob']
+    branch = table['br_exec']
+    all_xrefs = switch_xrefs(project)
+    for source, targets in computed_jumps(project).items():
+        all_xrefs.setdefault(source, set()).update(targets)
+    if branch in all_xrefs:
+        results[key] = {'outcome': 'WRONG',
+                        'recovered': sorted(all_xrefs[branch])}
+        raise AssertionError(f'{key}: wrong edges: {results[key]}')
+    bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
+           if xblob <= s < xblob + blob_len or xblob <= d < xblob + blob_len]
+    if bad:
+        results[key] = {'outcome': 'WRONG', 'touches': bad}
+        raise AssertionError(f'{key}: xrefs into blob: {bad}')
+    results[key] = {'outcome': 'exec-refused'}
+
 
 def check_exact(name, got, branch, cases, results, mandatory):
     """Exact-set check against annotations, never owner/decode scoring.
@@ -180,6 +204,17 @@ def main() -> int:
         table = symbols(binaries['asm_opaque'])
         check_exact('asm_opaque', union(projects['asm_opaque']),
                     table['br_opq'], [table[f'c{i}'] for i in range(4)], results, False)
+        # Odd-address indirect call: the target must keep bit 0 and
+        # the call kind. The fixture is only valid with an odd
+        # target; assert that first so the check can't pass vacuously.
+        table = symbols(binaries['asm_call'])
+        assert table['oddtarget'] & 1, table
+        check_exact('asm_call', union(projects['asm_call']),
+                    table['br_call'], [table['oddtarget']], results, True)
+        kinds = sqlite3.connect(projects['asm_call'] / 'project.sqlite').execute(
+            'SELECT DISTINCT kind FROM xrefs WHERE src = ?',
+            (f'{table["br_call"]:08x}',)).fetchall()
+        assert ('COMPUTED_CALL',) in kinds, kinds
         # Runtime truth is sm_case1 (the store executes before the
         # jump; exit code 11 proves it). The at-rest sm_case0 alone
         # is a stale-pointer wrong edge; absence is refusal.
@@ -216,22 +251,33 @@ def main() -> int:
         # Executable packed binary (exit 102 proved the decoded
         # payload ran): the `call *%r15` target is an mmap return no
         # static analysis can know, so any claimed edge is wrong;
-        # the blob must stay untouched by every xref kind.
+        # the blob must stay untouched by control-flow xrefs (switch,
+        # COMPUTED_JUMP, COMPUTED_CALL -- DATA/READ references to the
+        # blob are legitimate: the decoder reads it).
         table = symbols(binaries['packed_exec'])
-        project = projects['packed_exec']
-        xblob = table['blob']
-        branch = table['br_exec']
-        all_xrefs = union(project)
-        if branch in all_xrefs:
-            results['packed_exec'] = {'outcome': 'WRONG',
-                                      'recovered': sorted(all_xrefs[branch])}
-            raise AssertionError(f"packed_exec: wrong edges: {results['packed_exec']}")
-        bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
-               if xblob <= s < xblob + blob_x_len or xblob <= d < xblob + blob_x_len]
-        if bad:
-            results['packed_exec'] = {'outcome': 'WRONG', 'touches': bad}
-            raise AssertionError(f'packed_exec: xrefs into blob: {bad}')
-        results['packed_exec'] = {'outcome': 'exec-refused'}
+        check_packed_exec(projects['packed_exec'], table, blob_x_len,
+                          results, 'packed_exec')
+        # Negative control: an injected wrong COMPUTED_CALL at br_exec
+        # must fail the check -- proving it is not blind to call
+        # resolution the way the switch-only query was.
+        tampered = work / 'packed_exec.tamper'
+        shutil.copytree(projects['packed_exec'], tampered)
+        connection = sqlite3.connect(tampered / 'project.sqlite')
+        try:
+            program = connection.execute('SELECT id FROM programs LIMIT 1').fetchone()[0]
+            connection.execute(
+                'INSERT INTO xrefs (program_id, src, dst, kind, provenance)'
+                " VALUES (?, ?, ?, 'COMPUTED_CALL', 'native-analysis:constant-propagation')",
+                (program, f'{table["br_exec"]:08x}', f'{table["blob"] + 8:08x}'))
+            connection.commit()
+        finally:
+            connection.close()
+        try:
+            check_packed_exec(tampered, table, blob_x_len, {}, '__control_call__')
+        except AssertionError:
+            results['__control_call__'] = {'outcome': 'rejects-injected-call'}
+        else:
+            raise SystemExit('negative control failed: injected COMPUTED_CALL accepted')
         summary = {name: result['outcome'] for name, result in results.items()}
         print(json.dumps(summary))
         if args.report:
