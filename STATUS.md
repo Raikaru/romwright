@@ -7774,3 +7774,14 @@ claimed here.
   constant-propagation hit). Same outcomes on rerun.
 - Restored the Huge-image scaling section verbatim below; a prior
   edit replaced it instead of appending.
+
+## Correction: executable packed fixture (2026-09-21)
+
+`pack_exec.py` emits a decoder that mmaps RWX, decodes a
+self-contained PIC payload (code+table in `.text`), calls it,
+and exits with its return code. `packed_exec` runs green (exit
+102 = dispatch(2), proving end-to-end execution of decoded
+bytes) and imports to `exec-refused` (the mmap-indirect call
+claims nothing; blob untouched by all xref kinds). Gate now:
+control rejects-empty, 2 exact, 2 refusals, stub-resolved,
+exec-refused, 0 wrong.

@@ -60,6 +60,20 @@ def build(work: Path) -> dict[str, Path]:
     run(['clang', '-nostdlib', '-o', str(packed), str(packed_src)])
     binaries['packed'] = packed
     binaries['__blob_len__'] = blob_len
+    # Executable packed binary: self-contained PIC payload decoded
+    # into mmap'd RWX and CALLED. Exit 102 proves end-to-end
+    # execution of the decoded bytes (dispatch(2) == 102).
+    payload_x = work / 'payload_exec.o'
+    run(['clang', '-c', str(SRC / 'payload_exec.s'), '-o', str(payload_x)])
+    packed_x_src = work / 'packed_exec.s'
+    proc = run([sys.executable, str(SRC / 'pack_exec.py'), str(payload_x), str(packed_x_src)])
+    blob_x_len = int(proc.stdout.split()[1])
+    packed_x = work / 'packed_exec.bin'
+    run(['clang', '-nostdlib', '-o', str(packed_x), str(packed_x_src)])
+    completed = subprocess.run([str(packed_x)], capture_output=True, timeout=30)
+    assert completed.returncode == 102, ('packed_exec', completed.returncode)
+    binaries['packed_exec'] = packed_x
+    binaries['__blob_x_len__'] = blob_x_len
     return binaries
 
 
@@ -138,6 +152,7 @@ def main() -> int:
         work = Path(temporary)
         binaries = build(work)
         blob_len = binaries.pop('__blob_len__')
+        blob_x_len = binaries.pop('__blob_x_len__')
         projects: dict[str, Path] = {}
         for name, binary in binaries.items():
             project = work / f'{name}.project'
@@ -198,6 +213,25 @@ def main() -> int:
             results['packed'] = {'outcome': 'WRONG', 'touches': bad}
             raise AssertionError(f'packed: xrefs into blob/codebuf: {bad}')
         results['packed'] = {'outcome': 'stub-resolved'}
+        # Executable packed binary (exit 102 proved the decoded
+        # payload ran): the `call *%r15` target is an mmap return no
+        # static analysis can know, so any claimed edge is wrong;
+        # the blob must stay untouched by every xref kind.
+        table = symbols(binaries['packed_exec'])
+        project = projects['packed_exec']
+        xblob = table['blob']
+        branch = table['br_exec']
+        all_xrefs = union(project)
+        if branch in all_xrefs:
+            results['packed_exec'] = {'outcome': 'WRONG',
+                                      'recovered': sorted(all_xrefs[branch])}
+            raise AssertionError(f"packed_exec: wrong edges: {results['packed_exec']}")
+        bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
+               if xblob <= s < xblob + blob_x_len or xblob <= d < xblob + blob_x_len]
+        if bad:
+            results['packed_exec'] = {'outcome': 'WRONG', 'touches': bad}
+            raise AssertionError(f'packed_exec: xrefs into blob: {bad}')
+        results['packed_exec'] = {'outcome': 'exec-refused'}
         summary = {name: result['outcome'] for name, result in results.items()}
         print(json.dumps(summary))
         if args.report:
