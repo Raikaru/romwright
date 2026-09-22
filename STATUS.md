@@ -8140,3 +8140,32 @@ partitions -- both now match m13-001's recipe (rounded base,
 group-aware soundness). Asserts soundness only; agreement is
 recorded (111/140 first green run, unsound 0), so stock's own
 unsound targets can never become the bar by exact-equality.
+
+## Desktop proof partial: rebuilt + packaged + live window, paint stall open (2026-09-22)
+
+Scoped gap #4 partially closed. Proven with evidence: Qt rebuilt
+fresh on the current tree (build/romwright-qt, 65 s); m6-003 PASS
+(packaged 0.5 tarball, Qt 6.11.2, clean-prefix store-only run, no
+`ROMWRIGHT_*`); live native-Wayland window renders chrome, menus
+and the function list (spectacle captures); backend `listing`
+answers in 0.4 s through `romwright-api`. The offscreen ui_gate run
+against the fresh build fails only on `ui.install.ok`, which is a
+harness-supplied attestation (`ROMWRIGHT_UI_INSTALL_OK`), not a
+product signal -- m6-003 supersedes it by construction.
+
+Open defect, instrumented but unresolved: on live runs the
+disassembly listing never paints. Temporary file-tracing (since
+reverted; tree and binary verified clean) proved the full data
+path works -- one `listing` send, callback `ok:1` with 128 rows,
+`setWindow(views=10)` executed on the GUI thread on a visible
+canvas -- yet pixels never leave "Loading...". gdb shows
+`loadListingAt` fires 1-2x at startup, the bridge callback runs,
+Qt pool threads exit normally, main loop polls, and
+`ListingCanvas::paintEvent` never executes again post-startup.
+Same stall under XWayland (worse: fully black client area), so it
+is not Wayland-specific. prime suspect is frame/paint delivery
+stalling after startup paints; data delivery is exonerated.
+Session auto-lock during the long waits may have contributed and
+must be inhibited in future live proofs. All debug edits reverted
+and rebuilt clean (no DBG strings in the binary). Desktop proof
+stays open on this defect.
