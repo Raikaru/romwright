@@ -8174,10 +8174,16 @@ self-resize probe (temporary `QTimer::singleShot` +1px resize in
 the success branch, since reverted): window size unchanged in the
 capture, so the resize never applied -- deeper than a
 frame-callback wedge, and consistent with the success callback
-itself not having run in that run. Request completion is flaky
-across runs (grab-runs prove the success path end to end; other
-runs show no completion evidence either way), so a hanging
-`listing` console spawn remains a live suspect alongside
-paint/commit delivery. All probes reverted and rebuilt clean (no
-probe strings in the binary). Desktop proof stays open on this
-defect.
+itself not having run in that run. Completion is unmeasured in
+non-instrumented runs (grab-runs prove the success path end to end;
+other runs show no completion evidence either way), so a hanging
+`listing` console spawn stays suspect only where a file trace can
+probe strings in the binary). Follow-ups since: synchronous
+`repaint()` in the success branch changes nothing on screen;
+reserve/release pool accounting is clean; a combined
+marker+repaint run showed no success callback in 70 s with no pool
+threads and no console child, i.e. the bridge task vanished rather
+than errored. Two sub-defects stand: (a) bridge tasks sometimes
+vanish without callback, (b) even successful `setWindow` calls do
+not reach pixels. Both need interactive Qt debugging with a
+display. Desktop proof stays open on this defect.
