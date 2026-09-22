@@ -72,6 +72,7 @@ def timed_import(binary: Path, project: Path) -> tuple[float, int]:
     # cache module's own docs require this switch for cost gates.
     env = dict(os.environ)
     env['ROMWRIGHT_NO_IMPORT_CACHE'] = '1'
+    env.setdefault('ROMWRIGHT_CONSOLE', str(ROOT / 'native' / 'build' / 'decomp_native'))
     proc = subprocess.run(['/usr/bin/time', '-v', str(CLI), 'import',
                            str(binary), '--name', 'scale',
                            '--project', str(project)],
