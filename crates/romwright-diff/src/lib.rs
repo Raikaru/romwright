@@ -653,7 +653,14 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
                 format!("s:{value}")
             })
         }),
-        (Evidence::Profile, |func: &Func| Some(profile(func))),
+        (Evidence::Profile, |func: &Func| {
+            // A bare profile (straight-line code, no calls, no imports,
+            // no strings) lives in a tiny key space: unrelated small
+            // functions collide across programs and anchor wrong. The key
+            // only identifies when it names something only the function
+            // knows -- an import it calls or a string it references.
+            (!func.imports.is_empty() || !func.strings.is_empty()).then(|| profile(func))
+        }),
     ];
     for (evidence, key) in anchor_keys {
         let left_index = unique_index(reference, key);
