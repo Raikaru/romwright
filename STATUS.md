@@ -8342,3 +8342,21 @@ yields no agreement through the predicate producers) is owned by
 the still-open "Implement disjunct-subsumption synthesis"
 (equality-bound producers plus containment hull is its
 machinery), not by any closed item.
+
+## Modules P/R deficit diagnosed: small-function content saturation (2026-09-22)
+
+The 007 driving-rows miss (0.934/0.910 vs 0.95/0.93) is ~100
+wrong `Alignment` matches scoring up to 1.0, e.g. boot EXI/DB
+console stubs matched to driving AICharacter methods. Mechanism:
+`content_score` saturates at 1.0 for structurally identical tiny
+functions (all ratios 1.0, shape digests equal), and the
+degree-normalised context term contributes nothing for edgeless
+functions -- so the objective cannot separate them and the
+relevance-decode pass (strict-improvement only, anchors locked)
+keeps them. Ruled out with data: a size/instruction floor does
+not separate (34 wrong pairs >64B while 43 correct pairs are
+≤48B -- same overlap lesson as the profile anchors). Candidate
+directions, unbuilt: byte-level content features in the blend,
+or a near-tie ambiguity band (current guard needs exact score
+ties). Thresholds stay as measured; the contract pair (base<->boot)
+is unaffected. Item stays open.
