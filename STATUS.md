@@ -8108,3 +8108,19 @@ translating refused guards through shifts reopens the 18-foreign
 mechanism and has no failing case on this tree. Verified: SJA suite
 53, core lib 469+4, m18 green, m13 PASS (combined 142 @ 0.9978;
 interpreted 134 @ 1.0 in 3.2 s).
+
+## Guard filter: `0 - x` refuses (2026-09-22)
+
+Fifth thread from the scan-fallback review, fixed rather than
+parked. `index_uses_point_unshifted` treated `Sub(Const(0), other)`
+as a transparent wrapper like `other - Const(0)`, but `0 - x`
+negates every value -- a guard stating `x` in `[0, 15]` applied to
+`-x` reads the neighbouring region, the exact 18-foreign mechanism
+the backstop exists for. The Add/Sub arms are split: `x - 0` stays
+admitted, `0 - x` refuses. Failing-first
+`zero_minus_point_is_a_shift`, verified failing pre-fix. The
+analyse-level clamp test does not depend on this hole (its fixture
+has no comparison, so no guard search runs -- the path is
+structural-bounded straight into the clamp). Verified: core lib
+470+4, m18 green, m13 PASS identical (combined 142 @ 0.9978;
+interpreted 134 @ 1.0) -- the strictness moved nothing on libc.
