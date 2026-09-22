@@ -8057,17 +8057,16 @@ virtualization. CI registration: no m18 gate (001/002/003) is in
 
 ## Correction: 17-vs-16 already fixed; SJA credit restored (2026-09-22)
 
-Supersedes the "credit withdrawn" version below it, which reasoned
-from a hole: `SJA-SLICE` prints only on the slice-fallback path
+Supersedes `52007d09` ("credit withdrawn", rewritten in place),
+which reasoned from a hole: `SJA-SLICE` prints only on the slice-fallback path
 (sja.rs:511-525), so its absence is the expected signature of a
 forward-pass SJA answer, not of SJA idleness. The decisive two-run
 diff, both cold with `ROMWRIGHT_NO_SWITCH_DECOMPILER=1` +
 `ROMWRIGHT_NO_IMPORT_CACHE=1`: quick-only (no `ROMWRIGHT_SJA`)
 reports **0** switch xrefs at `00190be9` -- VSA-quick refuses the
-branch -- while +`ROMWRIGHT_SJA=1` reports the 16
-(`0x190a10..0x190b00`, no `0x190b10`). The 16 are SJA's; the
-JoinPrecision credit stands. Mechanism, now named instead of
-"unknown": `ded52997` ("SJA exact-16: OR one-sidedness,
+branch -- while `ROMWRIGHT_SJA=1` reports the 16
+(`0x190a10..0x190b00`, no `0x190b10`). Mechanism, now named instead
+of "unknown": `ded52997` ("SJA exact-16: OR one-sidedness,
 dominance-gated slice, dense scan gate") -- the value-identity fix
 (`CF = old_r8 < 64` surviving `r8 -= 64` as `new_r8 in [-64,-1]`,
 pinned by `a_bound_survives_an_in_place_shift`) lets materialise
@@ -8078,3 +8077,6 @@ re-opens with its correct scope: not this branch's count (16,
 done) but the general JL-combo domain and its measured residuals --
 OR-taken applies no child bound; heuristic negations refused, not
 narrowed (8017-8019).
+Totals anchor the 0: quick-only yields 915 switch xrefs over 94
+branches (m13's vsa scale), +SJA yields 1754 over 134 -- the 0 is
+branch-specific refusal, not a broken run.
