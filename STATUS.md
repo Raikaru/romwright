@@ -8295,3 +8295,20 @@ green with the anchor bar fixed at 1.0; docs/release slice green
 (m6-001/002/004/005/006). What stays open lives in its own todos:
 modules P/R on divergent code, import cost methodology, desktop
 paint delivery. Nothing in the bundle is ledger-only anymore.
+
+## OR-taken agreed hull recovers on the taken edge (2026-09-22)
+
+The flags recall-bar half that needed no disjunctive domain: when
+every `BOOL_OR` disjunct carries a direct bound on one slot in one
+direction, taken implies their hull, applied with taken polarity.
+Two subtleties the probes settled: edge refinements compose
+last-wins per key, so the de-blessed exit push overwrote the hull
+until covered slots were skipped; and the first green run's
+fixture wired `INT_ADD` to the raw index instead of the scaled
+one (product `add` exonerated by state dump). Failing-first
+`or_taken_applies_agreeing_hull` (20 of 32 entries, hi capped);
+the disagreeing-shape refusal and the heuristic-negation refusal
+stay green by construction (no agreement possible). Verified:
+lib 477, m18 green, m13 PASS identical (142 @ 0.9978,
+interpreted 134 @ 1.0) -- zero new wrong edges. The heuristic
+half stays refused as recorded.
