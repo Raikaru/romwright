@@ -8093,9 +8093,18 @@ guard's hi -- the exact soundness profile of the existing bounded
 read, converting refusal into recovery. Absolute tables keep
 refusal (their neighbours decode, so scanning from 0 would
 over-read into them); the clamp is PIC-only by `offset_base`.
-Failing-first regressions in sja.rs:
-`a_shifted_pic_index_scans_from_zero` (Err pre-fix, 16 entries
-post-fix) plus the `a_shifted_absolute_index_still_refuses`
-control pinning the unchanged refusal. Verified: SJA suite 52,
-core lib 468+4, m18 green, m13 PASS (combined 142 @ 0.9978;
+Failing-first regressions in sja.rs, each verified Err pre-fix
+(clamp reverted) and green post-fix: `a_shifted_pic_index_scans_from_zero`
+(direct `read_table`, 16 entries), the analyse-level
+`a_structural_negative_lo_pic_scans_from_zero_capped` (`15 - (r8 &
+0x1f)` structurally `[-16, 15]` through `analyse()`, 20 valid
+entries in the image, exactly the hi-capped 16 recovered -- proving
+the hi is kept, not scanned past), plus the
+`a_shifted_absolute_index_still_refuses` control pinning the
+unchanged absolute refusal. Deliberately unaddressed residual: the
+`Value::Top` scan arm (`0..MAX_TABLE`, no constraints) and the
+`guard_bound` unshifted-filter chain that feeds refusal into it --
+translating refused guards through shifts reopens the 18-foreign
+mechanism and has no failing case on this tree. Verified: SJA suite
+53, core lib 469+4, m18 green, m13 PASS (combined 142 @ 0.9978;
 interpreted 134 @ 1.0 in 3.2 s).
