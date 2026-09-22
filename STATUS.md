@@ -8141,7 +8141,7 @@ group-aware soundness). Asserts soundness only; agreement is
 recorded (111/140 first green run, unsound 0), so stock's own
 unsound targets can never become the bar by exact-equality.
 
-## Desktop proof partial: rebuilt + packaged + live window, paint stall open (2026-09-22)
+## Desktop proof partial: listing never appears on screen (2026-09-22)
 
 Scoped gap #4 partially closed. Proven with evidence: Qt rebuilt
 fresh on the current tree (build/romwright-qt, 65 s); m6-003 PASS
@@ -8153,22 +8153,31 @@ against the fresh build fails only on `ui.install.ok`, which is a
 harness-supplied attestation (`ROMWRIGHT_UI_INSTALL_OK`), not a
 product signal -- m6-003 supersedes it by construction.
 
-Open defect, measured but unresolved: on live runs the disassembly
-listing never paints. Temporary file-tracing (since reverted; tree
-and binary verified clean) proved the data path: one `listing`
-send, callback `ok:1` on a 128-capacity window with 10 rows parsed
+Open defect, measured but unresolved: on live runs the listing never
+appears on screen (state and `grab()`-level painting correct).
+Temporary file-tracing (since reverted; tree and binary verified
+clean) proved the data path: one `listing` send, callback `ok:1` on
+a 128-capacity window with 10 rows parsed
 (`count:128` is the echoed capacity, not a row count),
 `setWindow(views=10)` executed on the GUI thread on a visible
 canvas -- yet pixels never leave "Loading...". Decisive synchronous
 probe: `listing_canvas_->grab().save(...)` in the callback renders
 10 perfect syntax-colored rows, so widget state and the paint
 routine itself are exonerated. What fails is event-driven paint:
-a `printf`-in-commands gdb probe measured 0 `paintEvent` hits in
+`printf`-in-commands gdb probe measured 0 `paintEvent` hits in
 30 s (the earlier silent/continue probe was void and is
 disregarded), and 0 `setAddress` hits in 20 s, with the main loop
 polling. Same stall under XWayland (worse: fully black client
 area), so it is not Wayland-specific; a lock-inhibited rerun is
-identical, so session auto-lock is exonerated too. Remaining
-discriminator for a Qt engineer with a display: whether `update()`
-calls stop reaching the widget or frame commits stop leaving it.
-Desktop proof stays open on this defect.
+identical, so session auto-lock is exonerated too. Follow-up
+self-resize probe (temporary `QTimer::singleShot` +1px resize in
+the success branch, since reverted): window size unchanged in the
+capture, so the resize never applied -- deeper than a
+frame-callback wedge, and consistent with the success callback
+itself not having run in that run. Request completion is flaky
+across runs (grab-runs prove the success path end to end; other
+runs show no completion evidence either way), so a hanging
+`listing` console spawn remains a live suspect alongside
+paint/commit delivery. All probes reverted and rebuilt clean (no
+probe strings in the binary). Desktop proof stays open on this
+defect.
