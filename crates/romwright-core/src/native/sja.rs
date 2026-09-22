@@ -3094,10 +3094,16 @@ fn index_uses_point_unshifted(expr: &Sliced, point: &Slot) -> bool {
     match expr {
         Sliced::Point(key) => key == point,
         Sliced::Load(addr, _) => index_uses_point_unshifted(addr, point),
-        Sliced::Add(a, b) | Sliced::Sub(a, b) => match (&**a, &**b) {
+        Sliced::Add(a, b) => match (&**a, &**b) {
             (Sliced::Const(0), other) | (other, Sliced::Const(0)) => {
                 index_uses_point_unshifted(other, point)
             }
+            _ => false,
+        },
+        // `x - 0` is transparent, but `0 - x` negates every value:
+        // the guard's interval does not survive the flip.
+        Sliced::Sub(a, b) => match (&**a, &**b) {
+            (other, Sliced::Const(0)) => index_uses_point_unshifted(other, point),
             _ => false,
         },
         Sliced::Mult(a, b) => match (&**a, &**b) {
@@ -4438,6 +4444,28 @@ mod tests {
         let expected: Vec<u64> = (0..16u64).map(|i| 0x1400 + i * 4).collect();
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
+    }
+    /// `0 - x` negates the interval: a guard stating `x` in `[0, 15]`
+    /// says `-x` is in `[-15, 0]`, so the point does not enter
+    /// unshifted and the guard must not apply. `x - 0` is transparent
+    /// and stays admitted.
+    #[test]
+    fn zero_minus_point_is_a_shift() {
+        let point: Slot = ("register".to_string(), 0x38);
+        assert!(!index_uses_point_unshifted(
+            &Sliced::Sub(
+                Box::new(Sliced::Const(0)),
+                Box::new(Sliced::Point(point.clone())),
+            ),
+            &point,
+        ));
+        assert!(index_uses_point_unshifted(
+            &Sliced::Sub(
+                Box::new(Sliced::Point(point.clone())),
+                Box::new(Sliced::Const(0)),
+            ),
+            &point,
+        ));
     }
     /// `p = (x < 64)` is recorded, `x -= 64` stamps it, then `q = (x
     /// < 4)` is recorded on the rewritten value. Branching on `q`
