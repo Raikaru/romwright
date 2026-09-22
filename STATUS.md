@@ -8022,3 +8022,16 @@ recall-neutral there by construction). Suites 466+7, m18/m19
 green. The disjunct-subsumption synthesis stays future work with a
 concrete trigger: a measured wrong table tracing to a subsumable
 disjunction.
+
+## Robustness open: overlap dispatch + second packer family (2026-09-21)
+
+Opened the robustness gap with two fixtures in the exact-or-refuse
+style of m18-001 (no new threshold methodology): `asm_overlap`
+(table entry mid-instruction -- recovered exact, stronger than the
+allowed refusal) and `repack` (ADD blob, subb loop, jmp through
+%rdx -- stub-resolved, blob untouched). Gate green with both new
+scenarios on the current tree. Explicitly deferred: 100MB+ scale
+(needs perf-baseline methodology with machine-independent ceilings,
+not a unit gate), further packer families, virtualization. Next
+candidate gaps: scan-fallback index constraints, desktop proof,
+M5/M6 tail.
