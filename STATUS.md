@@ -8030,8 +8030,27 @@ style of m18-001 (no new threshold methodology): `asm_overlap`
 (table entry mid-instruction -- recovered exact, stronger than the
 allowed refusal) and `repack` (ADD blob, subb loop, jmp through
 %rdx -- stub-resolved, blob untouched). Gate green with both new
-scenarios on the current tree. Explicitly deferred: 100MB+ scale
-(needs perf-baseline methodology with machine-independent ceilings,
-not a unit gate), further packer families, virtualization. Next
-candidate gaps: scan-fallback index constraints, desktop proof,
-M5/M6 tail.
+scenarios on the current tree. Remaining deferrals (scale has since
+been gated -- see next entry): further packer families,
+virtualization. Next candidate gaps: scan-fallback index
+constraints, desktop proof, M5/M6 tail.
+
+## Robustness: 100MB scale gated, console XML load is measured debt (2026-09-21)
+
+The scale class is now covered, not deferred. `tests/m18-003_scale.py`
+imports same-shape 10MB and 100MB fixtures (`scale_gen.py`: 3
+nm-ground-truth marker dispatches + fill padding) with
+`ROMWRIGHT_NO_IMPORT_CACHE=1`, asserting markers exact at both sizes
+and wall-time ratio < 20. Measured green: 9.16 s -> 84.77 s
+(ratio 9.25), peak RSS 654 MB, zero extra facts at scale (store
+contents identical across sizes -- the cost buys nothing, which is
+the debt, not a cliff: scaling is linear at ~0.9 s/MB). perf
+attributes ~40%+ to `decomp_native` XML image load/parse
+(`LoadImageXml::open` + iostream locale facets): the whole image is
+shipped to the console as XML per import. Proper fix (ship
+executable sections only, or demand-page bytes) is a perf milestone,
+not a robustness gate; the gate pins the ratio so it cannot regress
+superlinear silently. Still deferred: further packer families,
+virtualization. CI registration: no m18 gate (001/002/003) is in
+`ci.yml` yet -- maintainer wires when the CI time budget allows
+(m18-003 costs ~96 s).
