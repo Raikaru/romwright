@@ -8248,11 +8248,11 @@ console-XML transfer. The tail item stays open on import perf.
 
 m11-002 PASS on all four 007 modules (boot/base/Movie/driving):
 732/732/1760/6064 functions imported in 3.1/2.9/8.1/27.2 s,
-recall 0.989-0.995, precision 0.78-0.91 over 644-5648 symbols,
+recall 0.980-0.995, precision 0.78-0.91 over 644-5648 symbols,
 5 decompiles each (median 71-301 ms), 960-1979 prototypes
 inferred. Module import costs scale with size and stay well under
 their bars -- the import-cost deficit is Bond.elf-specific
-(single 6k-function DOL vs split modules), which bounds the
+(single ~9k-function ELF vs split modules), which bounds the
 perf work to the big-single-image path. Docs/release slice:
 m6-001/002/004/005/006 green after fixing usage-verbs,
 dump-tools and decompile-format drift at the source.
