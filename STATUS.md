@@ -8360,3 +8360,22 @@ directions, unbuilt: byte-level content features in the blend,
 or a near-tie ambiguity band (current guard needs exact score
 ties). Thresholds stay as measured; the contract pair (base<->boot)
 is unaffected. Item stays open.
+
+## Import cost methodology for game modules (2026-09-22)
+
+Quiesced cold repeats of Bond.elf (8543 functions,
+`ROMWRIGHT_NO_IMPORT_CACHE=1`, real disk): wall 59.82 / 57.01 /
+54.73 s, peak RSS 276.8 / 276.6 / 265.9 MB -- stable within ±5%.
+The 93.68 s / 403 MB outlier ran under concurrent load; the
+earlier cached 0.9 s runs prove nothing (cache restores, correctly
+excluded from cost gates). Two findings: (1) the m11-001 bars
+(60.0 s, 300 MB) sit at the measured mean -- flaky by
+construction, not by regression; (2) phase split shows switch
+22.3 s dominant, references ~20 s combined, store 8.7 s, with
+`switch-vsa` at 0.22 s (0 resolved / 101 refused -- the decompiler
+tier does the work). Proposed replacement (NOT applied --
+metric-definition changes are reserved): per-function tripwires
+with 2x headroom over these numbers (wall < 14 s/kfn with 300 s
+sanity; peak < 70 KB/fn with 2 GB sanity), quiesced repeats,
+phase split recorded. This resolves the "absolute ceilings vs
+ratio" tension without quietly raising any ceiling.
