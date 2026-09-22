@@ -8190,12 +8190,13 @@ object file, so `strings`-based binary cleanliness checks are
 vacuous for them; cleanliness here rests on git source revert plus
 rebuild. Desktop proof stays open on this defect.
 
-## Flags domain residuals fold into disjunct-subsumption (2026-09-22)
+## Flags domain residuals tracked separately with recall bar (2026-09-22)
 
-Scoped gap #1's remaining scope (OR-taken child bounds, heuristic
-negations refused-not-narrowed) is not independently actionable:
-both are sound-conservative refusals whose only sound improvement
-is a disjunctive domain. OR-taken child bounds need per-disjunct
+Scoped gap #1's remaining scope is tracked separately with the
+recall bar (refused shapes recover with zero new wrong edges):
+OR-taken child bounds and heuristic negations refused-not-narrowed
+are sound-conservative refusals whose sound improvement needs a
+disjunctive domain. OR-taken child bounds need per-disjunct
 refinement (a taken `p || q` names no single interval); narrowing a
 heuristic negation needs provenance the predicate tuple does not
 carry (negating a possibly-wrong widened bound is unsound, not
