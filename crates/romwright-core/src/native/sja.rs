@@ -4244,6 +4244,7 @@ mod tests {
         };
         let found = analyse(&image, &[startup, dispatch, default], (0x1000, 0x2000));
         let expected: Vec<u64> = (0..20u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
     }
     /// OR-fallthrough that drops a heuristic child refuses: an AND-merged
