@@ -8285,3 +8285,13 @@ plus a renamed empty-header refusal and a truncated-fat refusal
 DOL misread). The `test_thirty_two_bit_refuses` name was stale
 (it passes on `ncmds 0`, not 32-bit-unsupported) and is now
 `test_empty_header_refuses`.
+
+## M5/M6/M12 tail decomposed, bundle closed (2026-09-22)
+
+The tail item's work is done or tracked under its own name:
+m11-001 ran on Bond.elf (import bars red, A/B-recorded, cause
+unknown) and m11-002 PASS on all four modules; M12 corpus rows
+green with the anchor bar fixed at 1.0; docs/release slice green
+(m6-001/002/004/005/006). What stays open lives in its own todos:
+modules P/R on divergent code, import cost methodology, desktop
+paint delivery. Nothing in the bundle is ledger-only anymore.
