@@ -4358,7 +4358,87 @@ mod tests {
         };
         assert!(read_table(&image, &table, &index, (0x1000, 0x2000)).is_err());
     }
-
+    /// Analyse-level shifted PIC: the index `15 - (r8 & 0x1f)` is
+    /// structurally `[-16, 15]` with no guard in play, so the slice
+    /// reads the table through the negative-lo clamp. The image holds
+    /// 20 valid entries but the index hi caps the read at 15: exactly
+    /// 16 targets proves the guard hi is kept, not scanned past.
+    #[test]
+    fn a_structural_negative_lo_pic_scans_from_zero_capped() {
+        let mut memory = HashMap::new();
+        for index in 0..20u64 {
+            let target = 0x1400 + index * 4;
+            let offset = (target as i64 - 0x9000) as i32 as u32 as u64;
+            memory.insert(0x9000 + index * 4, offset);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let blocks = vec![Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "INT_AND",
+                        Some(varnode("register", 0x8, 8)),
+                        vec![varnode("register", 0x8, 8), varnode("const", 0x1f, 8)],
+                    ),
+                    op(
+                        "INT_SUB",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("const", 15, 8), varnode("register", 0x8, 8)],
+                    ),
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x48, 8), varnode("const", 4, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("unique", 0x20, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op(
+                        "INT_SEXT",
+                        Some(varnode("register", 0x48, 8)),
+                        vec![varnode("unique", 0x30, 4)],
+                    ),
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x38, 8)),
+                        vec![varnode("register", 0x48, 8), varnode("const", 1, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x40, 8)),
+                        vec![varnode("register", 0x50, 8), varnode("unique", 0x38, 8)],
+                    ),
+                    op(
+                        "COPY",
+                        Some(varnode("register", 0x50, 8)),
+                        vec![varnode("unique", 0x40, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("register", 0x50, 8)]),
+                ],
+            )],
+            successors: vec![],
+        }];
+        let found = analyse(&image, &blocks, (0x1000, 0x2000));
+        let expected: Vec<u64> = (0..16u64).map(|i| 0x1400 + i * 4).collect();
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, expected);
+    }
     /// `p = (x < 64)` is recorded, `x -= 64` stamps it, then `q = (x
     /// < 4)` is recorded on the rewritten value. Branching on `q`
     /// must use `q` untranslated (`[0, 3]`): a slot-wide origin
