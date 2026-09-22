@@ -2726,8 +2726,11 @@ fn read_table<I: Image>(
     extent: (u64, u64),
 ) -> Result<Vec<u64>, Reason> {
     // The addresses to probe. A `Strided` whose lowest value is negative
-    // was shifted below zero by the index's own arithmetic -- that reads
-    // the preceding table, not a dispatch.
+    // was shifted below zero by the index's own arithmetic -- entries
+    // below zero are not the table. For a PIC table each entry resolves
+    // against its own base and validates on its own, so the scan starts
+    // at 0 and keeps the guard's hi; for an absolute table the
+    // neighbours decode, so refusal stands.
     let addresses: Vec<u64> = match index {
         Value::Const(k) => {
             vec![table.table_base.wrapping_add(k.wrapping_mul(table.stride))]
@@ -2746,11 +2749,16 @@ fn read_table<I: Image>(
             if hi < lo || hi - lo >= MAX_TABLE {
                 return Err(Reason::TooWide);
             }
-            let first = base.wrapping_add(stride.wrapping_mul(*lo as u64));
+            let lo = if table.offset_base.is_some() && *lo < 0 && *hi >= 0 {
+                0
+            } else {
+                *lo
+            };
+            let first = base.wrapping_add(stride.wrapping_mul(lo as u64));
             if (first as i64) < 0 {
                 return Err(Reason::Unknown);
             }
-            (*lo..=*hi)
+            (lo..=*hi)
                 .map(|i| {
                     let idx = base.wrapping_add(stride.wrapping_mul(i as u64));
                     table.table_base.wrapping_add(idx.wrapping_mul(table.stride))
@@ -4283,6 +4291,72 @@ mod tests {
         let expected: Vec<u64> = (0..16u64).map(|i| 0x1100 + i * 8).collect();
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
+    }
+    /// A shifted PIC index (`i - 4` under `i < 16`) substitutes to
+    /// `[-4, 15]`: entries below zero are not the table, but the
+    /// guard's hi still bounds it, so the scan starts at entry 0 and
+    /// keeps the constraint instead of refusing. Each entry resolves
+    /// against its own base and validates on its own, exactly like
+    /// the existing bounded read.
+    #[test]
+    fn a_shifted_pic_index_scans_from_zero() {
+        let mut memory = HashMap::new();
+        for index in 0..16u64 {
+            let target = 0x1100 + index * 8;
+            memory.insert(0x9000 + index * 4, target.wrapping_sub(0x9000));
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let table = TableSlice {
+            table_base: 0x9000,
+            entry_size: 4,
+            stride: 4,
+            index: Sliced::Opaque,
+            offset_base: Some(0x9000),
+        };
+        let index = Value::Strided {
+            base: 0,
+            stride: 1,
+            lo: -4,
+            hi: 15,
+            guarded: true,
+        };
+        let expected: Vec<u64> = (0..16u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(
+            read_table(&image, &table, &index, (0x1000, 0x2000)).unwrap(),
+            expected
+        );
+    }
+    /// Same shifted index over an absolute table keeps refusal: the
+    /// neighbours decode, so scanning from 0 would over-read into
+    /// them. The clamp is PIC-only.
+    #[test]
+    fn a_shifted_absolute_index_still_refuses() {
+        let mut memory = HashMap::new();
+        for index in 0..16u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let table = TableSlice {
+            table_base: 0x9000,
+            entry_size: 8,
+            stride: 8,
+            index: Sliced::Opaque,
+            offset_base: None,
+        };
+        let index = Value::Strided {
+            base: 0,
+            stride: 1,
+            lo: -4,
+            hi: 15,
+            guarded: true,
+        };
+        assert!(read_table(&image, &table, &index, (0x1000, 0x2000)).is_err());
     }
 
     /// `p = (x < 64)` is recorded, `x -= 64` stamps it, then `q = (x
