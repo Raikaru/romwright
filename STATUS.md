@@ -8324,9 +8324,21 @@ fixture's `INT_ADD` reading the scaled value. Second, the shipped
 `any()`-OR inclusivity was an off-by-one over-claim (`x<=5||x<20`
 took index 20, proven by a failing-first 21-entry test showing
 0..20): inclusivity now belongs to the extreme holders only, and
-coverage counts distinct contributing inputs. The `x<10||x==0`
 disagreeing shape yields no agreement through the predicate
 producers (equality records no upper), so its refusal stands as a
-recall loss -- recorded as the flags item's remaining scope, not
-impossibility in principle. Re-verified: lib 478, m18 green, m13
-PASS identical (142 @ 0.9978, interpreted 134 @ 1.0).
+recall loss -- owned by "Implement disjunct-subsumption synthesis"
+(see amendment below), not impossibility in principle. Re-verified:
+lib 478, m18 green, m13 PASS identical (142 @ 0.9978).
+
+## Correction amendment: insert restored, EQ residual owned (2026-09-22)
+
+Two amendments to the hull correction above. First, the
+`hulled.insert` is restored beside `apply_guard_bound` (it had
+dropped in an edit): the de-bless skip is live machinery again,
+not dead code, and the comment describes it accurately. m13
+re-verified identical with it live (142 @ 0.9978, interpreted
+134 @ 1.0). Second, the EQ-child recall loss (`x<10||x==0`
+yields no agreement through the predicate producers) is owned by
+the still-open "Implement disjunct-subsumption synthesis"
+(equality-bound producers plus containment hull is its
+machinery), not by any closed item.
