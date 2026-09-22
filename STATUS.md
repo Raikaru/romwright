@@ -8080,3 +8080,22 @@ narrowed (8017-8019).
 Totals anchor the 0: quick-only yields 915 switch xrefs over 94
 branches (m13's vsa scale), +SJA yields 1754 over 134 -- the 0 is
 branch-specific refusal, not a broken run.
+
+## Scan fallback keeps index constraints on shifted PIC (2026-09-22)
+
+Scoped gap #2 closed by implementation, not re-measurement. A
+substituted index range with a negative low end (shifted index with
+an upper-only guard, e.g. `[-4, 15]`) refused the whole table in
+`read_table`: the negative entries read the preceding table. For
+PIC tables each entry resolves against its own base and validates
+on its own, so the scan now starts at entry 0 and keeps the
+guard's hi -- the exact soundness profile of the existing bounded
+read, converting refusal into recovery. Absolute tables keep
+refusal (their neighbours decode, so scanning from 0 would
+over-read into them); the clamp is PIC-only by `offset_base`.
+Failing-first regressions in sja.rs:
+`a_shifted_pic_index_scans_from_zero` (Err pre-fix, 16 entries
+post-fix) plus the `a_shifted_absolute_index_still_refuses`
+control pinning the unchanged refusal. Verified: SJA suite 52,
+core lib 468+4, m18 green, m13 PASS (combined 142 @ 0.9978;
+interpreted 134 @ 1.0 in 3.2 s).
