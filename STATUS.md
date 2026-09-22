@@ -8174,16 +8174,17 @@ self-resize probe (temporary `QTimer::singleShot` +1px resize in
 the success branch, since reverted): window size unchanged in the
 capture, so the resize never applied -- deeper than a
 frame-callback wedge. The separation probe below settles it:
-non-instrumented runs stay unmeasured, but the instrumented run
-excludes error and superseded outcomes outright. The spawn-trace
-shows nothing reaches process creation. Callback-entry separation
-(temporary file log as the callback's first statement, so every
-branch -- ok, error, superseded, guard-null -- must log): canvas
-shows the sent-request placeholder yet the log stays empty after
-120 s, with the spawn-trace showing no children. Error and
-superseded outcomes are thereby excluded (both would log); the
-task never runs its Rust body and never calls back --
-dropped/not-dispatched at the Qt pool level. Caveat recorded for
+non-instrumented runs stay unmeasured. Verified-linked entry probe
+(hook confirmed in the binary via `strings -e l`, fresh launch):
+`entry gen 2 guardnull=0 ok=1` -- the request runs its Rust body
+and calls back successfully; the earlier empty logs ran pre-probe
+binaries and carry no weight. The strace zero-spawn reading is
+likewise retracted: attached ~1 s after launch, it missed the
+~0.4 s spawn window, and empty process snapshots minutes later
+fit a spawn that came and went. Corrected record: the request
+completes end to end in every instrumented run; the sole measured
+defect is presentation -- pixels never leave "Loading..." despite
+`ok:1` plus `setWindow` on the GUI thread. Caveat recorded for
 future probe work: `QStringLiteral` strings are UTF-16 in the
 object file, so `strings`-based binary cleanliness checks are
 vacuous for them; cleanliness here rests on git source revert plus
@@ -8200,8 +8201,10 @@ heuristic negation needs provenance the predicate tuple does not
 carry (negating a possibly-wrong widened bound is unsound, not
 imprecise). That work is already tracked as "Implement
 disjunct-subsumption synthesis" with its concrete trigger (a
-measured wrong table tracing to a subsumable disjunction). No
-separate implementation exists between here and there, so the flags
-item folds into it rather than standing as a duplicate. The
+measured wrong table tracing to a subsumable disjunction). The
 branch-count symptom that named the gap stays closed (SJA exact-16,
-measured).
+measured). Addendum: per scoping review the residuals item is tracked
+separately with the recall bar (refused shapes recover with zero
+new wrong edges) rather than folded -- shared disjunctive machinery
+may serve both, but the naive OR-taken variant measured unsound and
+must not ride in under subsumption.
