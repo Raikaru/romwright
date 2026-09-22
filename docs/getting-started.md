@@ -156,14 +156,22 @@ JVM.
 ```console
 $ ./target/release/romwright-cli disasm tests/fixtures-src/tiny_bin 00400466 -n 4
 0x00400466: PUSH      RBP
-0x00400467: MOV       RBP,RSP
 $ ./target/release/romwright-cli decompile tests/fixtures-src/tiny_bin 00400466 --name tiny --project $PROJECT
-int add(int param_1,int param_2){return param_2 + param_1;}
+int add(int param_1,int param_2)
+
+{
+  return param_2 + param_1;
+}
 ```
 
 `decompile-doc` prints the same function as a structured document — tokens
 with their kinds, the recovered prototype, jump tables and storage — for a UI
 or a script that needs more than text.
+
+Three companion binaries disassemble coprocessor blobs without a
+project: `gte_dump`, `rsp_dump` and `vu_dump` each take a raw binary
+file and print one `mnemonic operands` line per instruction for the
+PSX GTE, N64 RSP and PS2 VU macro sets respectively.
 
 ## Where the numbers live
 

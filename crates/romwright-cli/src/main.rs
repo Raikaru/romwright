@@ -76,6 +76,18 @@ const USAGE: &str = "usage:
   romwright-cli matching-run <binary> <program> <request.json|-> [--budget-ms N] [--base HEX] [--project DIR]
   romwright-cli export-c <binary> <program> <outdir> [--address HEX] [--splits FILE] [--transforms LIST] [--project DIR]
   romwright-cli export-scratch <program> <address> <binary> --compiler ID --c-flags FLAGS [--target-object FILE] [--context FILE] [--out DIR] [--project DIR]
+  romwright-cli export-dtk <program> <outdir> [--splits FILE] [--project DIR]
+  romwright-cli export-objdiff <program> <outdir> --splits <splits.txt> --target-root DIR [--project DIR]
+  romwright-cli export-splat <program> <outdir> [--project DIR]
+  romwright-cli export-symbols <program> [--project DIR]
+  romwright-cli byte-scan <binary> <vaddr-hex> [--project DIR]
+  romwright-cli import-score <program> <vaddr> <score.json> [--project DIR]
+  romwright-cli import-trace <program> <trace-file> [--project DIR]
+  romwright-cli match-source <program> <target-object> <source-C> --recipe <recipe.json> [--project DIR]
+  romwright-cli matching-runs <program> [--after ID] [--limit N] [--project DIR]
+  romwright-cli objdiff-report <report.json> [--project DIR]
+  romwright-cli oracle-signatures <program> [--project DIR]
+  romwright-cli prune-indirect-calls <binary> <program> [--project DIR]
 
 oracle generation only (launches the Stage-1 Java bridge):
   romwright-cli import <binary> --oracle [--name NAME] [--project DIR] [--ghidra DIR]
