@@ -44,6 +44,7 @@ def build(work: Path) -> dict[str, Path]:
         'asm_table': (['clang', '-nostdlib', '-o'], ['asm_table.s'], 102),
         'asm_flat': (['clang', '-nostdlib', '-o'], ['asm_flat.s'], 0),
         'asm_opaque': (['clang', '-nostdlib', '-o'], ['asm_opaque.s'], 0),
+        'asm_overlap': (['clang', '-nostdlib', '-o'], ['asm_overlap.s'], 121),
         'selfmod': (['clang', '-nostdlib', '-o'], ['selfmod.s'], 11),
         'asm_call': (['clang', '-nostdlib', '-o'], ['asm_call.s'], 7),
     }
@@ -62,6 +63,17 @@ def build(work: Path) -> dict[str, Path]:
     run(['clang', '-nostdlib', '-o', str(packed), str(packed_src)])
     binaries['packed'] = packed
     binaries['__blob_len__'] = blob_len
+    # Second packer family: ADD-encoded blob with a subb-loop stub
+    # jumping through %rdx instead of %rdi. Same contract as packed:
+    # stub edge resolves, blob and codebuf stay untouched.
+    repacked_src = work / 'repack.s'
+    proc = run([sys.executable, str(SRC / 'pack_gen.py'), str(payload),
+                str(repacked_src), '--encoding', 'add'])
+    repack_blob_len = int(proc.stdout.split()[1])
+    repacked = work / 'repack.bin'
+    run(['clang', '-nostdlib', '-o', str(repacked), str(repacked_src)])
+    binaries['repack'] = repacked
+    binaries['__repack_blob_len__'] = repack_blob_len
     # Executable packed binary: self-contained PIC payload decoded
     # into mmap'd RWX and CALLED. Exit 102 proves end-to-end
     # execution of the decoded bytes (dispatch(2) == 102).
@@ -183,6 +195,7 @@ def main() -> int:
         binaries = build(work)
         blob_len = binaries.pop('__blob_len__')
         blob_x_len = binaries.pop('__blob_x_len__')
+        repack_blob_len = binaries.pop('__repack_blob_len__')
         projects: dict[str, Path] = {}
         for name, binary in binaries.items():
             project = work / f'{name}.project'
@@ -210,6 +223,12 @@ def main() -> int:
         table = symbols(binaries['asm_opaque'])
         check_exact('asm_opaque', union(projects['asm_opaque']),
                     table['br_opq'], [table[f'c{i}'] for i in range(4)], results, False)
+        # Mid-instruction entry: only table-driven decoding reaches real1.
+        # Refusal is honest (adversarial entry); a ghost edge from linear
+        # misdecode is a wrong edge and fails.
+        table = symbols(binaries['asm_overlap'])
+        check_exact('asm_overlap', union(projects['asm_overlap']),
+                    table['br_over'], [table['case0'], table['real1']], results, False)
         # Odd-address indirect call: the target must keep bit 0 and
         # the call kind. The fixture is only valid with an odd
         # target; assert that first so the check can't pass vacuously.
@@ -254,7 +273,24 @@ def main() -> int:
             results['packed'] = {'outcome': 'WRONG', 'touches': bad}
             raise AssertionError(f'packed: xrefs into blob/codebuf: {bad}')
         results['packed'] = {'outcome': 'stub-resolved'}
-        # Executable packed binary (exit 102 proved the decoded
+        # Second packer family (ADD blob, subb loop, jmp through %rdx):
+        # same contract -- stub edge exact, blob and codebuf untouched.
+        table = symbols(binaries['repack'])
+        project = projects['repack']
+        blob, codebuf = table['blob'], table['codebuf']
+        branch = table['br_dec']
+        all_xrefs = union(project)
+        if all_xrefs.get(branch, set()) != {codebuf}:
+            results['repack'] = {'outcome': 'WRONG', 'stub': sorted(all_xrefs.get(branch, set()))}
+            raise AssertionError(f"repack: stub edge wrong: {results['repack']}")
+        bad = [(f'{s:x}', f'{d:x}') for s, targets in all_xrefs.items() for d in targets
+               if (s, d) != (branch, codebuf)
+               and (blob <= s < blob + repack_blob_len or blob <= d < blob + repack_blob_len
+                    or codebuf <= d < codebuf + repack_blob_len)]
+        if bad:
+            results['repack'] = {'outcome': 'WRONG', 'touches': bad}
+            raise AssertionError(f'repack: xrefs into blob/codebuf: {bad}')
+        results['repack'] = {'outcome': 'stub-resolved'}
         # payload ran): the `call *%r15` target is an mmap return no
         # static analysis can know, so any claimed edge is wrong;
         # the blob must stay untouched by control-flow xrefs (switch,
