@@ -156,6 +156,7 @@ JVM.
 ```console
 $ ./target/release/romwright-cli disasm tests/fixtures-src/tiny_bin 00400466 -n 4
 0x00400466: PUSH      RBP
+0x00400467: MOV       RBP,RSP
 $ ./target/release/romwright-cli decompile tests/fixtures-src/tiny_bin 00400466 --name tiny --project $PROJECT
 int add(int param_1,int param_2)
 
