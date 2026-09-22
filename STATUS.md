@@ -8230,15 +8230,16 @@ these numbers on the original pair.
 ## M5 session on Bond.elf: import thresholds red, no regression (2026-09-22)
 
 m11-001 on the approved 007 target fails two import bars:
-`import_wall_s` 61.59 vs 60.0 and `import_peak_kb` 373284 vs
-300000. Attribution by A/B (sja.rs at `ded52997`, rebuilt,
-re-run): without the session's SJA changes the same import costs
-93.68 s at 403 MB -- slower, not faster -- so the clamp/filter
-work did not regress it; run-to-run variance on this machine is
-wide (±50%). The drift itself predates the session: the recorded
-baseline is 45 s at 229 MB, and the unmodified tree already lands
-at 61-93 s / 373-403 MB, i.e. the JoinPrecision-era analyses
-(interval OF proofs, per-point minima, tri-state guard search)
-raised import cost on game modules before this session began.
-Fixing that is an import-perf project of its own; the tail item
-stays open on it. M12 modules anchor bar fixed separately above.
+`import_wall_s` 61.59 vs 60.0 and `import_peak_kb` 373284 vs 300000.
+Attribution correction (the committed version guessed): m11-001
+sets no `ROMWRIGHT_SJA`, and the SJA fallback runs only on that
+opt-in path -- so the A/B builds differed solely in dormant code,
+and 61.59 s vs 93.68 s is pure run-to-run noise under load. That
+exonerates the session's SJA commits definitively (stronger than
+the claimed "slower, not faster"). It also retracts the named
+drift cause: JoinPrecision-era sja.rs analyses never executed in
+these imports either, so the 45 s / 229 MB -> 61-93 s / 373-403 MB
+drift is unidentified, recorded as unknown per the project's own
+rule. Measured candidates only: switch-round parallel decompiles
+(per the 5328 note they count in the peak) and whole-image
+console-XML transfer. The tail item stays open on import perf.
