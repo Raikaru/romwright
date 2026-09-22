@@ -8272,3 +8272,16 @@ symtab names; discovery adds the rest with run-to-run variance
 (28795 vs 30850), a pre-existing detection nondeterminism, not
 loader behavior. ELF regression spot-checked after the dispatch
 move; core suite 474 green.
+
+## Mach-O i386 slices load (2026-09-22)
+
+Follow-up to the x86_64 loader: fat images fall back to the
+32-bit Intel slice when no x86_64 slice exists, and thin-32
+parses `LC_SEGMENT` (56-byte) plus 12-byte `nlist` into
+`x86:LE:32:default`. kotor2sub arch1 imports (33651 functions).
+Unit tests cover thin-32 load; m1-010 covers the extracted slice
+plus a renamed empty-header refusal and a truncated-fat refusal
+(family sanity fails -> falls past Mach-O -> still refuses, no
+DOL misread). The `test_thirty_two_bit_refuses` name was stale
+(it passes on `ncmds 0`, not 32-bit-unsupported) and is now
+`test_empty_header_refuses`.
