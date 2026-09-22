@@ -37,6 +37,7 @@ mod kirk;
 mod kirk_tables;
 pub mod linkmap;
 mod mdebug;
+pub(crate) mod macho;
 pub mod n64_overlays;
 pub(crate) mod nes;
 pub mod nid;
@@ -1740,6 +1741,8 @@ pub(crate) fn parse_native(data: &[u8]) -> Result<NativeImport> {
         snes::import(data)
     } else if genesis::is_rom(data) {
         genesis::import(data)
+    } else if macho::is_macho(data) {
+        macho::import(data)
     } else {
         dol::import(data)
     }
