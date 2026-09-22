@@ -8173,18 +8173,18 @@ identical, so session auto-lock is exonerated too. Follow-up
 self-resize probe (temporary `QTimer::singleShot` +1px resize in
 the success branch, since reverted): window size unchanged in the
 capture, so the resize never applied -- deeper than a
-frame-callback wedge, and consistent with the success callback
-itself not having run in that run. Completion is unmeasured in
-non-instrumented runs (grab-runs prove the success path end to end),
-retiring the hung-spawn theory below: the spawn-trace shows nothing
-reaches process creation. Follow-up probes since: synchronous
-`repaint()` in the success branch changes nothing on screen.
-`strace -f -e trace=%process` attached ~1 s after launch: zero
-`execve`/`clone` in 100 s while the canvas shows the sent-request
-placeholder -- nothing ever reaches process creation, so the task
-drops pre-spawn (queued-behind-phantom or cleared), not in a hung
-console child. The earlier `ghidra_opt` liveness sightings are the
-persistent decompile worker idling on its pipe, a different binary
-(`decompiler_path`, not the listing's `console_path`
-`decomp_native`), present-or-absent independently of the stuck
-request. Desktop proof stays open on this defect.
+frame-callback wedge. The separation probe below settles it:
+non-instrumented runs stay unmeasured, but the instrumented run
+excludes error and superseded outcomes outright. The spawn-trace
+shows nothing reaches process creation. Callback-entry separation
+(temporary file log as the callback's first statement, so every
+branch -- ok, error, superseded, guard-null -- must log): canvas
+shows the sent-request placeholder yet the log stays empty after
+120 s, with the spawn-trace showing no children. Error and
+superseded outcomes are thereby excluded (both would log); the
+task never runs its Rust body and never calls back --
+dropped/not-dispatched at the Qt pool level. Caveat recorded for
+future probe work: `QStringLiteral` strings are UTF-16 in the
+object file, so `strings`-based binary cleanliness checks are
+vacuous for them; cleanliness here rests on git source revert plus
+rebuild. Desktop proof stays open on this defect.
