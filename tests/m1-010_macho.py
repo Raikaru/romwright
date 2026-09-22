@@ -110,6 +110,40 @@ def test_kotor2sub(work: Path, results: dict) -> None:
     results['kotor2sub'] = {'outcome': 'imported', 'functions': count}
 
 
+def test_i386_slice(work: Path, results: dict) -> None:
+    # The fat fallback slice loads as 32-bit when extracted: same
+    # loader contract, `x86:LE:32` language.
+    if not KOTOR2SUB.is_file():
+        results['i386'] = {'outcome': 'skipped', 'reason': 'file absent'}
+        return
+    import struct as struct_
+    with open(KOTOR2SUB, 'rb') as handle:
+        head = handle.read(0x100)
+        narch = struct_.unpack('>I', head[4:8])[0]
+        arch = None
+        for index in range(narch):
+            cpu, _, off, size, _ = struct_.unpack(
+                '>5I', head[8 + index * 20:28 + index * 20])
+            if cpu & 0xFFFFFF == 7 and cpu != 0x01000007:
+                arch = (off, size)
+        assert arch is not None, 'no i386 slice'
+        handle.seek(arch[0])
+        image = work / 'kotor2sub-i386.bin'
+        image.write_bytes(handle.read(arch[1]))
+    project = work / 'i386.project'
+    proc = run([str(CLI), 'import', str(image), '--name', 'kotor2sub32',
+                '--project', str(project)])
+    assert 'imported kotor2sub32 natively' in (proc.stdout + proc.stderr), proc.stdout
+    connection = store(project)
+    try:
+        programs = connection.execute('SELECT name, language FROM programs').fetchall()
+        assert programs == [('kotor2sub32', 'x86:LE:32:default')], programs
+        count = connection.execute('SELECT COUNT(*) FROM functions').fetchone()[0]
+        assert count > 10000, count
+    finally:
+        connection.close()
+    results['i386'] = {'outcome': 'imported', 'functions': count}
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument('--report', type=Path, default=None)
@@ -122,6 +156,7 @@ def main() -> int:
         test_thirty_two_bit_refuses(args.work, results)
         test_truncated_refuses(args.work, results)
         test_kotor2sub(args.work, results)
+        test_i386_slice(args.work, results)
     else:
         with tempfile.TemporaryDirectory(prefix='romwright-m1-010-') as temporary:
             work = Path(temporary)
@@ -129,6 +164,7 @@ def main() -> int:
             test_thirty_two_bit_refuses(work, results)
             test_truncated_refuses(work, results)
             test_kotor2sub(work, results)
+            test_i386_slice(work, results)
     print(json.dumps(dict(results=results), indent=2))
     if args.report is not None:
         args.report.write_text(json.dumps(dict(results=results), indent=2) + '\n')
