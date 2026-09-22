@@ -1251,13 +1251,14 @@ fn run_block<I: Image>(
                                 std::collections::HashSet::new();
                             for constant_left in [false, true] {
                                 // Group key: slot, stamp, signedness.
-                                // Value: (limit, inclusive, size).
+                                // Value: contributing input index plus
+                                // (limit, inclusive, size).
                                 let mut groups: std::collections::BTreeMap<
                                     (Slot, Option<i64>, bool),
-                                    Vec<(u64, bool, u32)>,
+                                    Vec<(usize, u64, bool, u32)>,
                                 > = std::collections::BTreeMap::new();
                                 let mut eligible = true;
-                                for input in &or_inputs {
+                                for (input_index, input) in or_inputs.iter().enumerate() {
                                     match comparisons.get(input) {
                                         Some(found) => {
                                             let mut seen = false;
@@ -1271,7 +1272,7 @@ fn run_block<I: Image>(
                                                 groups
                                                     .entry((slot, stamp, signed))
                                                     .or_default()
-                                                    .push((limit, inclusive, size));
+                                                    .push((input_index, limit, inclusive, size));
                                             }
                                             if !seen {
                                                 eligible = false;
@@ -1288,25 +1289,36 @@ fn run_block<I: Image>(
                                     continue;
                                 }
                                 for ((slot, stamp, signed), bounds) in &groups {
-                                    if bounds.len() != or_inputs.len() {
+                                    // Every disjunct must agree: count
+                                    // distinct contributing inputs, not
+                                    // bounds (one input can carry several).
+                                    let mut seen_inputs = std::collections::HashSet::new();
+                                    for (input_index, _, _, _) in bounds {
+                                        seen_inputs.insert(*input_index);
+                                    }
+                                    if seen_inputs.len() != or_inputs.len() {
                                         continue;
                                     }
                                     let mut hull = bounds[0].clone();
                                     for candidate in &bounds[1..] {
                                         if constant_left {
-                                            if candidate.0 < hull.0 {
+                                            if candidate.1 < hull.1 {
                                                 hull = candidate.clone();
                                             }
-                                        } else if candidate.0 > hull.0 {
+                                        } else if candidate.1 > hull.1 {
                                             hull = candidate.clone();
                                         }
                                     }
-                                    // Inclusivity loosens across the hull:
-                                    // every disjunct implies each looser
-                                    // reading of the extreme.
-                                    hull.1 = bounds.iter().any(|bound| bound.1);
-                                    let (limit, inclusive, size) = hull;
-                                    hulled.insert(slot.clone());
+                                    // Inclusivity belongs to the extreme
+                                    // holders only: the taken edge reaches
+                                    // the extreme solely through a disjunct
+                                    // that includes it (`x<=5 || x<20`
+                                    // never takes x==20).
+                                    let extreme = hull.1;
+                                    hull.2 = bounds
+                                        .iter()
+                                        .any(|bound| bound.1 == extreme && bound.2);
+                                    let (_, limit, inclusive, size) = hull;
                                     apply_guard_bound(
                                         &state.values,
                                         &origins,
@@ -4158,8 +4170,83 @@ mod tests {
         assert_eq!(found.tables.len(), 1, "{found:?}");
         assert_eq!(found.tables[0].targets, expected);
     }
+    /// Inclusivity belongs to the extreme holders: `x <= 5 || x < 20`
+    /// taken never takes x==20 (neither disjunct includes it), so the
+    /// hull is exclusive even though one child is inclusive. The
+    /// image holds 21 valid entries to catch the over-claim.
+    /// Fails pre-fix with entries 0..20.
+    #[test]
+    fn or_taken_hull_takes_extreme_inclusivity() {
+        let startup = Block {
+            instructions: vec![instruction(
+                0x1000,
+                vec![
+                    op(
+                        "INT_LESSEQUAL",
+                        Some(varnode("unique", 0x11, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 5, 8)],
+                    ),
+                    op(
+                        "INT_LESS",
+                        Some(varnode("unique", 0x12, 1)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 20, 8)],
+                    ),
+                    op(
+                        "BOOL_OR",
+                        Some(varnode("unique", 0x13, 1)),
+                        vec![varnode("unique", 0x11, 1), varnode("unique", 0x12, 1)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x13, 1)],
+                    ),
+                ],
+            )],
+            successors: vec![1, 2],
+        };
+        let dispatch = Block {
+            instructions: vec![instruction(
+                0x1010,
+                vec![
+                    op(
+                        "INT_MULT",
+                        Some(varnode("unique", 0x20, 8)),
+                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
+                    ),
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x28, 8)),
+                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x30, 8)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
+                    ),
+                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
+                ],
+            )],
+            successors: vec![],
+        };
+        let default = Block {
+            instructions: vec![instruction(0x1020, vec![op("BRANCH", None, vec![])])],
+            successors: vec![],
+        };
+        let mut memory = HashMap::new();
+        for index in 0..21u64 {
+            memory.insert(0x9000 + index * 8, 0x1100 + index * 8);
+        }
+        let image = Fixture {
+            memory,
+            code: (0x1000, 0x2000),
+        };
+        let found = analyse(&image, &[startup, dispatch, default], (0x1000, 0x2000));
+        let expected: Vec<u64> = (0..20u64).map(|i| 0x1100 + i * 8).collect();
+        assert_eq!(found.tables.len(), 1, "{found:?}");
+        assert_eq!(found.tables[0].targets, expected);
+    }
     /// `(R < 20)` (non-direct) has unknown polarity, so the fallthrough
-    /// is under-refined by construction and a dispatch downstream of it
     /// is refused outright rather than materialised wide. Fails pre-fix
     /// with entries 20..100.
     #[test]
