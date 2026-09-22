@@ -8175,15 +8175,16 @@ the success branch, since reverted): window size unchanged in the
 capture, so the resize never applied -- deeper than a
 frame-callback wedge, and consistent with the success callback
 itself not having run in that run. Completion is unmeasured in
-non-instrumented runs (grab-runs prove the success path end to end;
-other runs show no completion evidence either way), so a hanging
-`listing` console spawn stays suspect only where a file trace can
-probe strings in the binary). Follow-ups since: synchronous
-`repaint()` in the success branch changes nothing on screen;
-reserve/release pool accounting is clean; a combined
-marker+repaint run showed no success callback in 70 s with no pool
-threads and no console child, i.e. the bridge task vanished rather
-than errored. Two sub-defects stand: (a) bridge tasks sometimes
-vanish without callback, (b) even successful `setWindow` calls do
-not reach pixels. Both need interactive Qt debugging with a
-display. Desktop proof stays open on this defect.
+non-instrumented runs (grab-runs prove the success path end to end),
+retiring the hung-spawn theory below: the spawn-trace shows nothing
+reaches process creation. Follow-up probes since: synchronous
+`repaint()` in the success branch changes nothing on screen.
+`strace -f -e trace=%process` attached ~1 s after launch: zero
+`execve`/`clone` in 100 s while the canvas shows the sent-request
+placeholder -- nothing ever reaches process creation, so the task
+drops pre-spawn (queued-behind-phantom or cleared), not in a hung
+console child. The earlier `ghidra_opt` liveness sightings are the
+persistent decompile worker idling on its pipe, a different binary
+(`decompiler_path`, not the listing's `console_path`
+`decomp_native`), present-or-absent independently of the stuck
+request. Desktop proof stays open on this defect.
