@@ -8124,3 +8124,19 @@ has no comparison, so no guard search runs -- the path is
 structural-bounded straight into the clamp). Verified: core lib
 470+4, m18 green, m13 PASS identical (combined 142 @ 0.9978;
 interpreted 134 @ 1.0) -- the strictness moved nothing on libc.
+
+## Comparative re-run built: m13-002 recorded manifest (2026-09-22)
+
+Scoped gap #3 closed by building the harness it named. The
+"8-function manifest, recorded harness" did not exist anywhere in
+the repo, so `tests/m13-002_manifest_switch.py` constructs it each
+run: fresh stock export (old exports cannot pass -- there is
+nothing to replay), mechanical top-8 manifest by branch count with
+tie-break by address, per-function recorded comparison of the
+combined and interpreted tiers. Two harness bugs died in
+construction: a missing base-rounding line (m13-001:334) biased
+every span by `0x1019db`, and exact-extent soundness ignored cold
+partitions -- both now match m13-001's recipe (rounded base,
+group-aware soundness). Asserts soundness only; agreement is
+recorded (111/140 first green run, unsound 0), so stock's own
+unsound targets can never become the bar by exact-equality.
