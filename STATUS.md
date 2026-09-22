@@ -8209,3 +8209,20 @@ separately with the recall bar (refused shapes recover with zero
 new wrong edges) rather than folded -- shared disjunctive machinery
 may serve both, but the naive OR-taken variant measured unsound and
 must not ride in under subsumption.
+
+## M12 anchor precision: profile keys need content (2026-09-22)
+
+M5-approved 007 modules rows failed the anchor 1.0 bar (0.9987):
+6 wrong anchors, all `profile` evidence on driving pairs --
+`DVDSetAutoInvalidation`->`BZIP2_init` (16/16 bytes),
+`GXSetAlphaCompare`->EAGLAnim ctor (80/80), `GXPokeZMode`->`DBInit`
+(40/40). No count separates wrong from correct (wrong 4-20
+insns, correct 1-21, including a correct 1-instruction anchor), so
+the bar is key content: a profile anchors only with a non-empty
+imports or strings set, mirroring the String anchor's `len()==1`
+guard. 6 wrong -> 0; twins hold 1.0/1.0/1.0; optimisation floors
+hold. Remaining tail: modules precision/recall (0.9344/0.9101 vs
+0.95/0.93) is alignment-evidence quality on divergent game code
+(~18 wrong alignment matches/row, 0.88-class) -- a recalibration
+project, not a bar adjustment: the thresholds were measured above
+these numbers on the original pair.
