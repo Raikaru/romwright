@@ -8226,3 +8226,19 @@ hold. Remaining tail: modules precision/recall (0.9344/0.9101 vs
 (~18 wrong alignment matches/row, 0.88-class) -- a recalibration
 project, not a bar adjustment: the thresholds were measured above
 these numbers on the original pair.
+
+## M5 session on Bond.elf: import thresholds red, no regression (2026-09-22)
+
+m11-001 on the approved 007 target fails two import bars:
+`import_wall_s` 61.59 vs 60.0 and `import_peak_kb` 373284 vs
+300000. Attribution by A/B (sja.rs at `ded52997`, rebuilt,
+re-run): without the session's SJA changes the same import costs
+93.68 s at 403 MB -- slower, not faster -- so the clamp/filter
+work did not regress it; run-to-run variance on this machine is
+wide (±50%). The drift itself predates the session: the recorded
+baseline is 45 s at 229 MB, and the unmodified tree already lands
+at 61-93 s / 373-403 MB, i.e. the JoinPrecision-era analyses
+(interval OF proofs, per-point minima, tri-state guard search)
+raised import cost on game modules before this session began.
+Fixing that is an import-perf project of its own; the tail item
+stays open on it. M12 modules anchor bar fixed separately above.
