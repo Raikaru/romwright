@@ -8256,3 +8256,19 @@ their bars -- the import-cost deficit is Bond.elf-specific
 perf work to the big-single-image path. Docs/release slice:
 m6-001/002/004/005/006 green after fixing usage-verbs,
 dump-tools and decompile-format drift at the source.
+
+## Mach-O support lands on kotor2sub (2026-09-22)
+
+User-reported gap: macOS executables unsupported. New
+`native/macho.rs` wired before the DOL fallback: fat parse, x86_64
+slice selection, `LC_SEGMENT_64` mappings with `VM_PROT_EXECUTE`
+(`0x04`, not the mapping-flag order -- data was briefly mis-marked
+executable), `LC_SYMTAB` names with underscore stripping. Slipped
+field offsets (missing `vmsize`) caught by the first kotor2sub
+probe. m1-010 gate: synthetic exact fixture plus the 18 MB
+KOTOR2sub fat binary (x86_64 slice, 28795 functions, `main` at
+`0x1000043e7`, 3 regions with `r-x` text). Loader provides 20407
+symtab names; discovery adds the rest with run-to-run variance
+(28795 vs 30850), a pre-existing detection nondeterminism, not
+loader behavior. ELF regression spot-checked after the dispatch
+move; core suite 474 green.
