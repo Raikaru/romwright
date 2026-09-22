@@ -8312,3 +8312,21 @@ stay green by construction (no agreement possible). Verified:
 lib 477, m18 green, m13 PASS identical (142 @ 0.9978,
 interpreted 134 @ 1.0) -- zero new wrong edges. The heuristic
 half stays refused as recorded.
+
+## Correction: hull de-bless story and inclusivity fix (2026-09-22)
+
+Supersedes two claims in the OR-hull entry above. First, the
+de-blessed-exit overwrite never happened in the failing fixture:
+the de-bless arms require a guarded Strided or Set in state and
+the slot was absent, so the `hulled` skip is retained
+defense-in-depth, not the fix -- the green came solely from the
+fixture's `INT_ADD` reading the scaled value. Second, the shipped
+`any()`-OR inclusivity was an off-by-one over-claim (`x<=5||x<20`
+took index 20, proven by a failing-first 21-entry test showing
+0..20): inclusivity now belongs to the extreme holders only, and
+coverage counts distinct contributing inputs. The `x<10||x==0`
+disagreeing shape yields no agreement through the predicate
+producers (equality records no upper), so its refusal stands as a
+recall loss -- recorded as the flags item's remaining scope, not
+impossibility in principle. Re-verified: lib 478, m18 green, m13
+PASS identical (142 @ 0.9978, interpreted 134 @ 1.0).
