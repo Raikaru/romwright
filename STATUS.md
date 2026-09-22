@@ -8188,3 +8188,20 @@ future probe work: `QStringLiteral` strings are UTF-16 in the
 object file, so `strings`-based binary cleanliness checks are
 vacuous for them; cleanliness here rests on git source revert plus
 rebuild. Desktop proof stays open on this defect.
+
+## Flags domain residuals fold into disjunct-subsumption (2026-09-22)
+
+Scoped gap #1's remaining scope (OR-taken child bounds, heuristic
+negations refused-not-narrowed) is not independently actionable:
+both are sound-conservative refusals whose only sound improvement
+is a disjunctive domain. OR-taken child bounds need per-disjunct
+refinement (a taken `p || q` names no single interval); narrowing a
+heuristic negation needs provenance the predicate tuple does not
+carry (negating a possibly-wrong widened bound is unsound, not
+imprecise). That work is already tracked as "Implement
+disjunct-subsumption synthesis" with its concrete trigger (a
+measured wrong table tracing to a subsumable disjunction). No
+separate implementation exists between here and there, so the flags
+item folds into it rather than standing as a duplicate. The
+branch-count symptom that named the gap stays closed (SJA exact-16,
+measured).
