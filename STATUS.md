@@ -8054,3 +8054,23 @@ superlinear silently. Still deferred: further packer families,
 virtualization. CI registration: no m18 gate (001/002/003) is in
 `ci.yml` yet -- maintainer wires when the CI time budget allows
 (m18-003 costs ~96 s).
+
+## Correction: 17-vs-16 already fixed; SJA-path credit withdrawn (2026-09-22)
+
+The user reported the `00190be9` 17-vs-16 gap already fixed; confirmed
+by fresh cold probes on the current tree, all with
+`ROMWRIGHT_NO_SWITCH_DECOMPILER=1`, `ROMWRIGHT_NO_IMPORT_CACHE=1`:
+VSA+SJA import reports 16 switch xrefs (`0x190a10..0x190b00`, no
+`0x190b10`), twice. Attribution probe with `ROMWRIGHT_TRACE_SLICE=1`
+shows 318 `SJA-SLICE` branches and none for `0x190be9`: the SJA
+fallback never attempts the branch (it runs only where VSA-quick
+refused), so the 16-target table is VSA-quick's answer, not SJA's.
+The JoinPrecision entries above (7964/7993/7995) crediting "exact-16
+via/through the SJA path" are therefore withdrawn as production
+claims -- the same misattribution class corrected at 7882, one tier
+over. No vsa.rs/switch.rs commit since 09-20 explains a VSA-side
+move, and the fixing commit is unidentified: recorded as unknown,
+not guessed. The flags-domain todo closes on the measured present
+(16, VSA-answered), not on a mechanism. SJA's unknown-OF JL shapes
+still keep the both-edges defense by design (7896); that is a
+standing soundness behavior, not this symptom.
