@@ -58,8 +58,9 @@ def test_synthetic(work: Path, results: dict) -> None:
     results['synthetic'] = {'outcome': 'exact'}
 
 
-def test_thirty_two_bit_refuses(work: Path, results: dict) -> None:
-    # Thin 32-bit header: recognised as Mach-O, refused as unsupported.
+def test_empty_header_refuses(work: Path, results: dict) -> None:
+    # Bare 32-bit header with no load commands: recognised as Mach-O,
+    # refused as carrying no segments.
     image = work / 'mini32.macho'
     image.write_bytes(struct.pack('<8I', 0xFEEDFACE, 7, 3, 2, 0, 0, 0, 0))
     project = work / 'mini32.project'
@@ -68,7 +69,21 @@ def test_thirty_two_bit_refuses(work: Path, results: dict) -> None:
                           cwd=ROOT, text=True, capture_output=True, timeout=600)
     assert proc.returncode != 0, proc.stdout
     assert 'Mach-O' in (proc.stdout + proc.stderr), proc.stdout
-    results['thin32'] = {'outcome': 'refused'}
+    results['empty32'] = {'outcome': 'refused'}
+
+
+def test_truncated_fat_refuses(work: Path, results: dict) -> None:
+    # Fat magic with entries past EOF: fails family sanity, falls
+    # past Mach-O, and must still refuse (no DOL misread import).
+    image = work / 'truncated-fat.macho'
+    image.write_bytes(struct.pack('>6I', 0xCAFEBABE, 1, 0x01000007, 0, 0x1000, 0x1000))
+    project = work / 'truncated-fat.project'
+    proc = subprocess.run([str(CLI), 'import', str(image), '--name', 'truncfat',
+                           '--project', str(project)],
+                          cwd=ROOT, text=True, capture_output=True, timeout=600)
+    assert proc.returncode != 0, proc.stdout
+    assert 'imported truncfat' not in (proc.stdout + proc.stderr), proc.stdout
+    results['truncated_fat'] = {'outcome': 'refused'}
 
 
 def test_truncated_refuses(work: Path, results: dict) -> None:
@@ -153,17 +168,19 @@ def main() -> int:
     if args.work is not None:
         args.work.mkdir(parents=True, exist_ok=True)
         test_synthetic(args.work, results)
-        test_thirty_two_bit_refuses(args.work, results)
+        test_empty_header_refuses(args.work, results)
         test_truncated_refuses(args.work, results)
         test_kotor2sub(args.work, results)
+        test_truncated_fat_refuses(args.work, results)
         test_i386_slice(args.work, results)
     else:
         with tempfile.TemporaryDirectory(prefix='romwright-m1-010-') as temporary:
             work = Path(temporary)
             test_synthetic(work, results)
-            test_thirty_two_bit_refuses(work, results)
+            test_empty_header_refuses(work, results)
             test_truncated_refuses(work, results)
             test_kotor2sub(work, results)
+            test_truncated_fat_refuses(work, results)
             test_i386_slice(work, results)
     print(json.dumps(dict(results=results), indent=2))
     if args.report is not None:
