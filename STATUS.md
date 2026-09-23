@@ -14,6 +14,10 @@ Read this first; everything below it is the dated log.
   run with `--oracle-dir` on freshly generated oracles. The 13 tracked
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
+- Real-image function recovery (m21-001, private images), recall /
+  precision: GBA 0.869 / 0.840, PS2 Capcom 0.750 / 0.871, PS2 dungeon
+  0.791 / 0.824, PSX 0.284 / 0.678, X360 0.547 / 0.999 (console crash);
+  NDS does not finish.
 - Known weak spots: CallGraph rows under content 0.9 (about two-thirds
   right on the modules). PE function-start ownership is settled by three
   special-case retraction rules rather than one pass after all
@@ -8960,3 +8964,51 @@ and was dropped. m12-002: named 246/0, Mac-only Alignment 0.12% to 0.06%,
 Context 0.66% to 0.0%. m1-010 16,404 / 16,443. m3-001, m17-002, m8-002,
 m8-003 and m12-001 unchanged. Those corpus gates hold one const seed in
 total, so the evidence is the two real images.
+
+## m21-001: real game images scored against their own truth (2026-09-23)
+
+`tests/m21-001_real_images.py` imports real retail or stripped images from
+`~/ventris-corpus/extracted` and scores the found functions against truth
+the image ships with: the unstripped ELF's `FUNC` symbols (GBA, NDS, PS2),
+a Psy-Q map's `.text` names (PSX), or an MSVC map's `f` publics (X360).
+Per image it reports recall, precision (a lower bound where the map lists
+only globals), size agreement, wall time and every diagnostic. A degraded
+analysis fails unless recorded in `EXPECTED_DEGRADED`; each image has a
+time limit, and known overruns go in `EXPECTED_TIMEOUT`. Both records fail
+as stale once the defect stops, and floors sit 0.01 under the measured
+values. Registered in CI, where every image is skipped.
+
+Measured on this tree (recall / precision, time):
+- GBA pokeemerald, 15,856 truth functions: 0.869 / 0.840; 1,105 s here,
+  755 s on an idle host, 2.3 GB.
+- PS2 Capcom Fighting Evolution, 8,794: 0.750 / 0.871; 35 s.
+- PS2 dungeon_game, 783: 0.791 / 0.824; 14 s.
+- PSX Darkstalkers 3, 818 map names: 0.284 / 0.678; 3 s.
+- X360 Black Ops II, MSVC map: 0.547 / 0.999; 20 s, discovery crashed.
+- NDS HeartGold arm9: does not finish in an hour.
+GBA sizes: 8,944 short against 4,831 exact, mostly agbcc literal pools
+after the code, which symbol sizes include.
+
+Fixed, found by the gate:
+- XEX: the AES file key was read at security-info +0x11C (an old layout);
+  standard XEX2 has it at +0x150. Only the retail key was tried, not the
+  devkit (zero) key. Black Ops II failed as "PE image has no sections".
+  Both offsets and both keys are now tried, and the combination that
+  decodes to `MZ` wins.
+- Thumb `pop {..rX..}; bx rX` returns were switch candidates: 14,635 of
+  the GBA ROM's 15,991 `bx rX`. Switch recovery found 12,607 owners and hit
+  its 1,024 budget, which also cut real recovery short. They are now
+  dropped from `indirect_jumps`. GBA: 1,417 s to 755 s idle, recall 0.849
+  to 0.869. Test `thumb_pop_then_bx_is_a_return_not_a_computed_jump`.
+
+Open, found by the gate:
+- NDS: 134 overlays are mapped over one range in the arm9 program; the
+  import runs over an hour.
+- X360: the SLEIGH console segfaults during flow discovery on
+  PowerPC:BE:64:Xenon-32addr.
+- PSX: recall 0.28. [INFERENCE: most `.text` functions are reached only
+  through data tables; no stock baseline was run.]
+- PS2: recall 0.75-0.79; many misses are SDK functions (`sceDma*`,
+  `sceVu0*`).
+- GBA import cost: discovery 426 s over 3.09 M decoded instructions in 4
+  rounds, references 337 s.
