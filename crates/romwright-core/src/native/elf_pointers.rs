@@ -40,6 +40,7 @@ pub(super) fn collect(
             super::ExtentIndex::build(&[]),
         )
     };
+    let mut scanned = false;
     for section in sections {
         // IDO emits switch jump tables into .late_rodata (P2.4): a
         // read-only section that is not .rodata by name, so it must be
@@ -54,6 +55,7 @@ pub(super) fn collect(
         if !selected || section.flags & 2 == 0 || section.flags & 4 != 0 || section.typ == 8 {
             continue;
         }
+        scanned = true;
         let Some(end) = section.off.checked_add(section.size) else {
             return err("ELF pointer section file range overflow");
         };
@@ -145,6 +147,9 @@ pub(super) fn collect(
             }
         }
     }
+    // No data section at all: code and data share executable segments, and
+    // their tables can only be found in the bytes discovery leaves undecoded.
+    import.code_holds_data = !scanned;
     import.pointer_candidates.sort_unstable();
     import.pointer_candidates.dedup();
     import.initializer_candidates.sort_unstable();

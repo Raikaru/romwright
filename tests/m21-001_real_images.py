@@ -128,9 +128,12 @@ EXPECTED_DEGRADED: dict[str, str] = {
 # recovery improves; a drop below is a regression.
 FLOORS: dict[str, tuple[float, float]] = {
     "gba-pokeemerald": (0.859, 0.830),          # 0.869 / 0.840, 755 s, 2.3 GB
-    "ps2-capcom-fighting-evolution": (0.740, 0.861),  # 0.750 / 0.871
+    "ps2-capcom-fighting-evolution": (0.887, 0.874),  # 0.897 / 0.884
     "ps2-dungeon-game": (0.780, 0.814),         # 0.791 / 0.824
-    "psx-darkstalkers-3": (0.273, 0.668),       # 0.284 / 0.678 (map lists globals only)
+    # 0.919 / 0.376. The map lists globals only: of the 1,246 "invented"
+    # entries, 534 are jal targets and 678 open a stack frame; 34 have
+    # neither. Precision here is a floor on accuracy, not a measure of it.
+    "psx-darkstalkers-3": (0.909, 0.366),
     "x360-black-ops-2": (0.536, 0.989),         # 0.547 / 0.999, discovery crashed
 }
 
