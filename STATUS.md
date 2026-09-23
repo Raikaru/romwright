@@ -8796,3 +8796,25 @@ test asserts that a refused match leaves `pattern_starts`.
 Ownership-pass finding: the shadow still needs an "internal branch or
 tail jump" rule. 0x778b77, a tail-jumped x87 fallback, and a guard-clause
 body are the same shape to reachability. The single pass stays open.
+
+## Reference inference reuses unchanged ranges across rounds (2026-09-23)
+
+First-import time on swkotor2 (11.5k functions, 6 shards) was 115 s; reference
+inference took 57 s of it, because each of up to four discovery rounds re-infers
+every function. Neither existing switch helps: 12 shards 117 s,
+`ROMWRIGHT_INCREMENTAL_ROUNDS` 129 s with different facts (99 fewer functions).
+A probe hashed each range's facts per round: every range repeated from the
+previous round was identical. That was 29,604 on swkotor2, 5,572 on driving.elf,
+473 on pe64_many_o2 and 7 on mipsel_many_o2, with no difference anywhere.
+`infer_data_references` now reuses a function range's facts from the last round
+when (a) a digest of the round-level inputs matches (register contexts, call
+register, external slots, decode contexts, installed call fixups), and (b) the
+last round adopted no discovered call context, since a reused range is not
+re-queried and could not re-discover one.
+swkotor2: 115 s to 85 s, references 57 s to 27.5 s. The stored functions,
+140,787 xrefs, strings, stack variables and thunks are byte-identical to the
+unmemoized import (sha256 per table). Gates unchanged: m3-001, m17-002,
+m8-002, m8-003, m12-001, core lib 482. No unit test: the property is fact
+identity, which the table digests and gates check directly.
+Remaining first-import cost: switch recovery 24 s, discovery 22 s, flow 19 s,
+store 9.5 s.
