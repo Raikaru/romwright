@@ -16,8 +16,8 @@ Read this first; everything below it is the dated log.
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
   precision: GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
-  0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.547 /
-  0.999 (console crash);
+  0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.940 /
+  0.995;
   NDS does not finish.
 - Known weak spots: CallGraph rows under content 0.9 (about two-thirds
   right on the modules). PE function-start ownership is settled by three
@@ -9043,3 +9043,27 @@ is unchanged at 0.791: its 154 unreferenced misses are dead library code
 (`stbi_*`) that nothing points to.
 Regression: m3-001, m17-002, m8-002, m8-003, m12-001 unchanged; core lib
 484. Tests: `mips_table_targets_need_code_evidence`.
+
+## X360: console crash, entry point, exception directory (2026-09-23)
+
+Black Ops 2 (XEX, PowerPC:BE:64:Xenon-32addr), recall 0.547 to 0.940,
+precision 0.999 to 0.995, no diagnostics (was degraded).
+1. The SLEIGH console segfaulted in `SleighBuilder::generateLocation`: a
+   Xenon constructor's operand exported nothing, so its handle had no
+   space and the builder dereferenced null (fault address 0x28, from a
+   core dump). The patch now throws `BadDataError` for a template whose
+   space resolves to null, in `generateLocation` and `generatePointer`;
+   the flow command already reports that word as `kind=BAD`. Stock Ghidra
+   has the same null path in C++.
+2. With discovery running, every switch worker failed `registerProgram`
+   ("Symbol entry extends beyond the end of the address space"): the XEX
+   loader added the image base to the entry-point header, which already
+   holds a virtual address, seeding `entry` at 0x1047170e8.
+3. 6,132 of the remaining 6,281 misses had no code reference: vtable and
+   script-table methods (`?GScr_*`, `?ScrCmd_*`). The exception directory
+   (`.pdata`, 8-byte big-endian records of begin address and packed
+   length) lists 21,393 function starts, 21,324 of them in the map; the
+   XEX loader now seeds them with `native-import:pe-unwind` DATA xrefs,
+   as the PE32+ loader already did for x64 records.
+Regression: m3-001, m17-002, m8-002, m8-003, m12-001, ppc_sda unchanged;
+core lib 486. Tests: `pdata_records_seed_functions_in_code`.

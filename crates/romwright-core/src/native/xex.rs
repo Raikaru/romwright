@@ -350,7 +350,10 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
     if mappings.is_empty() {
         return super::err("xex: PE image has no sections");
     }
-    let entry_addr = u64::from(image_base) + u64::from(entry);
+    // The entry-point header holds a virtual address, not an image offset
+    // (Black Ops 2: 0x827170e8 over base 0x82000000); adding the base put
+    // the seed past the 32-bit space and failed every switch worker.
+    let entry_addr = u64::from(entry);
     let mut import = NativeImport {
         mappings,
         mapping_names: names,
@@ -365,5 +368,75 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         size: 1,
     });
     import.declared_regions = Vec::<DeclaredRegion>::new();
+    let exception_directory = pe_image
+        .get(pe_off + 24 + 96 + 3 * 8..pe_off + 24 + 96 + 4 * 8)
+        .map(|s| {
+            let word = |at: usize| u32::from_le_bytes([s[at], s[at + 1], s[at + 2], s[at + 3]]);
+            (word(0), word(4))
+        });
+    if let Some((rva, size)) = exception_directory {
+        let table = pe_image.get(rva as usize..(rva as usize).saturating_add(size as usize));
+        pdata_functions(table.unwrap_or(&[]), u64::from(image_base) + u64::from(rva), &mut import);
+    }
     Ok(import)
+}
+
+/// Function starts from a PowerPC exception directory (`.pdata`): 8-byte
+/// records of `BeginAddress` (a virtual address) and a packed word whose
+/// bits 8-29 are the function length in instructions (Microsoft PE format,
+/// "The .pdata Section", the 32-bit ARM/PowerPC/SH layout; big-endian on
+/// Xenon). The compiler writes one per function body, including the ones
+/// only a vtable or script table reaches: Black Ops 2 has 21,393 records,
+/// 21,324 of them functions its map names; recall went 0.773 to 0.940.
+fn pdata_functions(table: &[u8], table_vaddr: u64, import: &mut NativeImport) {
+    let known: std::collections::HashSet<u64> = import.functions.iter().map(|f| f.entry).collect();
+    for (index, record) in table.chunks_exact(8).enumerate() {
+        let begin = u64::from(u32::from_be_bytes([record[0], record[1], record[2], record[3]]));
+        let packed = u32::from_be_bytes([record[4], record[5], record[6], record[7]]);
+        let instructions = (packed >> 8) & 0x3f_ffff;
+        let executable = import
+            .mappings
+            .iter()
+            .any(|m| m.flags & 4 != 0 && begin >= m.vaddr && begin - m.vaddr < m.size);
+        if instructions == 0 || !executable {
+            continue;
+        }
+        if !known.contains(&begin) {
+            import.functions.push(NativeFunction {
+                entry: begin,
+                name: format!("FUN_{begin:08x}"),
+                size: 1,
+            });
+        }
+        import.xrefs.push(super::NativeXref::with_provenance(
+            table_vaddr + 8 * index as u64,
+            begin,
+            "DATA",
+            "native-import:pe-unwind",
+        ));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Records are big-endian, name virtual addresses, and only a nonzero
+    /// length landing in executable bytes seeds a function.
+    #[test]
+    fn pdata_records_seed_functions_in_code() {
+        let code = Mapping { vaddr: 0x8214_0000, size: 0x100, file_off: 0, flags: 5, bytes: vec![0; 0x100] };
+        let data = Mapping { vaddr: 0x828a_0000, size: 0x100, file_off: 0, flags: 3, bytes: vec![0; 0x100] };
+        let mut import = NativeImport { mappings: vec![code, data], ..Default::default() };
+        let record = |begin: u32, instructions: u32| {
+            let mut bytes = begin.to_be_bytes().to_vec();
+            bytes.extend((instructions << 8 | 0x4000_0003).to_be_bytes());
+            bytes
+        };
+        let table = [record(0x8214_0010, 12), record(0x8214_0040, 0), record(0x828a_0000, 4)].concat();
+        pdata_functions(&table, 0x8211_3400, &mut import);
+        let entries: Vec<u64> = import.functions.iter().map(|f| f.entry).collect();
+        assert_eq!(entries, [0x8214_0010]);
+        assert_eq!((import.xrefs.len(), import.xrefs[0].from), (1, 0x8211_3400));
+    }
 }

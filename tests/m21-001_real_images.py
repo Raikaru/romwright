@@ -118,11 +118,7 @@ EXPECTED_TIMEOUT = {
 }
 DEFAULT_LIMIT_S = 1800
 
-EXPECTED_DEGRADED: dict[str, str] = {
-    # The SLEIGH console segfaults during flow discovery on this Xenon
-    # (PowerPC:BE:64:Xenon-32addr) image.
-    "x360-black-ops-2": "console exited: signal: 11",
-}
+EXPECTED_DEGRADED: dict[str, str] = {}
 
 # Measured 2026-09-23 (recall, precision), with a 0.01 margin. Raise them as
 # recovery improves; a drop below is a regression.
@@ -134,7 +130,7 @@ FLOORS: dict[str, tuple[float, float]] = {
     # entries, 534 are jal targets and 678 open a stack frame; 34 have
     # neither. Precision here is a floor on accuracy, not a measure of it.
     "psx-darkstalkers-3": (0.909, 0.366),
-    "x360-black-ops-2": (0.536, 0.989),         # 0.547 / 0.999, discovery crashed
+    "x360-black-ops-2": (0.929, 0.985),         # 0.940 / 0.995, 153 s
 }
 
 
