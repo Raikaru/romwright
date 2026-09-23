@@ -8885,3 +8885,15 @@ distinct rows. m20-008 passes; core lib 482.
 Also seen, not fixed: store_import never clears modules or module_xrefs,
 so storing a program twice into one store would duplicate them, and every
 cross-module row is labelled `call`, data references included.
+
+## Disjunct-subsumption trigger checked: not fired (2026-09-23)
+
+m13-001 on this tree: the combined analysis has 4 targets outside a
+function (0.9978). All come from the decompiler fallback (5 outside of
+1,812). The VSA pass (915 targets) and the interpreter (1,754) are both
+at soundness 1.0 with none outside. No wrong table traces to our own
+predicate domain, so the recorded trigger for disjunct-subsumption
+synthesis ("a measured wrong table tracing to a subsumable
+disjunction") has not fired. What the item would buy is recall on
+refused shapes: the interpreter misses 30 of stock's branches. That is
+real, but it is the separate recall-bar item, not a soundness defect.
