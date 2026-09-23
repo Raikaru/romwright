@@ -81,13 +81,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpus-dir", type=Path, required=True)
     parser.add_argument("--report", type=Path)
+    # The stock-Ghidra references for this corpus. CI generates them fresh
+    # beside the corpus; the tracked `oracle/` is the default and goes stale
+    # whenever the bridge sources change.
+    parser.add_argument("--oracle-dir", type=Path, default=ROOT / "oracle")
     arguments = parser.parse_args()
 
     report_path = arguments.report or Path(
         subprocess.check_output(["mktemp", "-t", "m3-001-XXXXXX.json"], text=True).strip())
     result = subprocess.run(
         [sys.executable, str(ROOT / "benchmarks/dwarf_gate.py"),
-         "--corpus-dir", str(arguments.corpus_dir), "--report", str(report_path)],
+         "--corpus-dir", str(arguments.corpus_dir), "--oracle-dir", str(arguments.oracle_dir),
+         "--report", str(report_path)],
         cwd=ROOT, capture_output=True, text=True)
     print(result.stdout.strip())
     # The scorer's exit code is its own un-exempted verdict; the tied

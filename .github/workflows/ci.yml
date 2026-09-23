@@ -587,6 +587,7 @@ jobs:
         run: |
           python3 tests/m3-001_dwarf_truth.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
+            --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --report "$RUNNER_TEMP/discovery/dwarf-truth.json"
       - name: Enforce the Game Boy Advance platform gate
         env:

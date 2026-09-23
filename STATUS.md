@@ -6,11 +6,14 @@ Read this first; everything below it is the dated log.
 
 - Gates green on this workstation: m12-001 (all rows, modules
   0.9784/0.9332), m12-002 (cross-compiler pair, private inputs), m17-002,
-  m1-010; romwright-core 481/481, romwright-diff 21/21.
+  m1-010, m3-001; romwright-core 481/481, romwright-diff 21/21.
 - Failing, not attributed to a cause yet: m15-001 structuring (0.9232 vs
   0.9) and m14-002 (`__memmove_sse2_unaligned_erms`), both identical at
-  HEAD per a stash A/B. m3-001 unscorable here (oracle
-  `bridge_sources_sha256` mismatch).
+  HEAD per a stash A/B.
+- m3-001 passes (1,640 DWARF functions, recall 1.0, 0 unattributed) when
+  run with `--oracle-dir` on freshly generated oracles. The 13 tracked
+  mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
+  scores those rows.
 - Known weak spots: CallGraph rows under content 0.9 (about two-thirds
   right on the modules). PE function-start ownership is settled by three
   special-case retraction rules rather than one pass after all
@@ -8739,3 +8742,21 @@ Follow-ups:
   Dropping that case instead measured worse: m12 `--index` modules 3,499 /
   0.9929 / 0.9506 against 3,565 / 0.9969 / 0.9685; kotor 5,733 rows, with
   Mac-only Context 1.75% against 6,010 rows and 0.69%.
+
+## m3-001 scores again: stale tracked oracles, unforwarded oracle dir (2026-09-23)
+
+The "Oracle `bridge_sources_sha256` mismatch" that left m3-001 unscorable
+predates this session. The tracked oracles carry the bridge digest from
+before 13cc4a6f (2026-09-16), which changed 6 lines of decompiler options in
+`Dispatcher.java` and nothing in the analysis the oracles record.
+Regenerating the 20 ELF oracles (`gen_oracle.py`, 71 s) gave entries
+identical to the tracked files in all 20; only the digest moved.
+The wiring gap: CI generates fresh oracles into `$RUNNER_TEMP`, but the
+m3-001 wrapper neither accepted nor forwarded `--oracle-dir`, so it always
+read the tracked copy. It now forwards `--oracle-dir` and CI passes the
+fresh directory. The CI corpus is the four-architecture matrix, so the 20
+fresh oracles cover every row it scores.
+On a four-architecture corpus with the current tree, including this
+session's discovery changes: 20/20 rows pass, 1,640 DWARF functions,
+recall 1.0, 0 unattributed. The 13 tracked mipsel/PE oracle files are
+outside `gen_oracle.py`'s matrix and keep the old digest.
