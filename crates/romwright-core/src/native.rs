@@ -363,6 +363,11 @@ pub struct NativeImport {
     /// above them. Durable across discovery rounds, which refresh
     /// `pattern_labels`: an absorbed start is no evidence of a function.
     pub absorbed_starts: std::collections::HashSet<u64>,
+    /// Reference facts of the last discovery round, per function range,
+    /// with the digest of the round-level inputs they were inferred under.
+    /// See `infer_data_references`.
+    pub reference_memo: std::collections::HashMap<(u64, u64), Vec<crate::native_runtime::ReferenceFact>>,
+    pub reference_memo_inputs: Option<u64>,
     /// Starts this rule seeded from constant-propagated DATA facts: the
     /// only evidence that names the seeding pass, so the producer column
     /// credits discovery's source instead of the walk that followed it.
@@ -3701,6 +3706,37 @@ fn stack_frame(function: u64, accesses: &[(i64, u32)]) -> Vec<romwright_model::S
         .collect()
 }
 
+/// Digest of everything a reference round reads besides a function's own
+/// bytes: the loader's register contexts, the call register, imported
+/// slots, decode contexts, and the call fixups installed for
+/// pattern-labelled functions that exist this round.
+fn reference_inputs_digest(import: &NativeImport, labels: &[(u64, String)]) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    for context in &import.register_contexts {
+        (context.start, context.end, &context.register, context.value).hash(&mut hasher);
+    }
+    import.reference_call_register.hash(&mut hasher);
+    for (slot, name) in &import.externals {
+        (slot, name).hash(&mut hasher);
+    }
+    for context in &import.contexts {
+        (&context.name, context.address, context.value).hash(&mut hasher);
+    }
+    let sized: std::collections::HashSet<u64> = import
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| function.entry)
+        .collect();
+    for (address, label) in labels {
+        if sized.contains(address) {
+            (address, label).hash(&mut hasher);
+        }
+    }
+    hasher.finish()
+}
+
 fn infer_data_references(
     import: &mut NativeImport,
     session: &mut crate::native_runtime::ConsoleSession,
@@ -3740,7 +3776,28 @@ fn infer_data_references(
     for (start, end) in roots {
         work.push((start, end, Vec::new(), true));
     }
-    let mut pending: Vec<usize> = (0..work.len()).collect();
+    // Rounds re-infer every function, but a function whose range and
+    // round-level inputs are unchanged gets the same facts (measured on
+    // swkotor2: 29,604 repeated ranges over three rounds, every one
+    // identical; the same on a PowerPC game module, mipsel and PE64
+    // corpus images). So those ranges reuse the last round's facts, and
+    // only when the inputs the console reads for a range are the same:
+    // register contexts, the call register, external slots, decode
+    // contexts and the call fixups this round installs.
+    let inputs = reference_inputs_digest(import, session.pattern_labels());
+    let reusable = import.reference_memo_inputs == Some(inputs);
+    let mut pending: Vec<usize> = Vec::with_capacity(work.len());
+    for index in 0..work.len() {
+        let key = (work[index].0, work[index].1);
+        match import.reference_memo.get(&key).filter(|_| reusable && index < function_count) {
+            Some(facts) => {
+                work[index].2 = facts.clone();
+                work[index].3 = false;
+            }
+            None => pending.push(index),
+        }
+    }
+    let mut adopted_any = false;
     // One console per hardware thread: the per-function cost is the console
     // lifting that function, so the pass scales with processes, not with
     // fewer requests. Shards start from the round's context and never read
@@ -3852,6 +3909,7 @@ fn infer_data_references(
                 && left.register == right.register
                 && left.value == right.value
         });
+        adopted_any |= !discovered.is_empty();
         let mut targets = session.adopt_reference_contexts(discovered);
         targets.sort_unstable();
         targets.dedup();
@@ -3866,6 +3924,21 @@ fn infer_data_references(
         if pending.is_empty() {
             break;
         }
+    }
+    // Keep this round's facts for the next one only when nothing was
+    // adopted mid-pass: a reused range is not re-queried, so it cannot
+    // re-discover a caller context the next round's fresh console would
+    // otherwise adopt from it.
+    if adopted_any {
+        import.reference_memo.clear();
+        import.reference_memo_inputs = None;
+    } else {
+        import.reference_memo = work
+            .iter()
+            .take(function_count)
+            .map(|(start, end, facts, _)| ((*start, *end), facts.clone()))
+            .collect();
+        import.reference_memo_inputs = Some(inputs);
     }
     // Propagated caller context can resolve a linkage whose base register was
     // unknown during discovery. Require the existing pure-linkage proof and
