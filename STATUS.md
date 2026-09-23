@@ -8639,10 +8639,9 @@ merges all 8 and keeps both CRT fallbacks. The PE evidence is swkotor2
 alone.
 Kotor 286: 221 right / 1 wrong (was 220/2). m17-002 identical with and
 without the change, but it sees only 3 pattern entries on the ELF corpus.
-m3-001 cannot score in either arm (oracle `bridge_sources_sha256`
-mismatch). Both arms carry this session's uncommitted edits, so that
-failure is not shown to predate them. Superseded: the mismatch was stale tracked oracles
-(see "m3-001 scores again" below); m3-001 passes on the current tree.
+m3-001 did not score at the time; the cause was stale tracked oracles,
+fixed later the same day ("m3-001 scores again" below), and it passes on
+this tree.
 
 Mac i386 decompile: closed. Nine stored stack locals (4 bytes at -1 or -3)
 straddled the parameter boundary. The preloaded function shell carries
