@@ -933,11 +933,16 @@ pub struct FunctionFeatureRow {
 /// what they compute rather than how they encode it. `ops` is how many
 /// p-code operations were hashed; a function nobody decoded gets no row,
 /// for the same reason an unmeasured body gets no feature row.
+/// `constants` are the distinct literal operands of that p-code worth
+/// comparing across builds (`romwright_diff::semantic::constants`): magic
+/// values and masks survive a change of compiler where counts do not.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct SemanticSignatureRow {
     pub function: Address,
     pub signature: String,
     pub ops: u32,
+    #[serde(default)]
+    pub constants: Vec<u64>,
 }
 
 /// A name a signature database claimed for a function, with the evidence.

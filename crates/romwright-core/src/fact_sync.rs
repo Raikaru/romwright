@@ -520,6 +520,7 @@ mod tests {
                     function: Address::ram(0x1000),
                     signature: hex.clone(),
                     ops: 2,
+                    constants: Vec::new(),
                 }],
             )
             .expect("sigs");
@@ -567,11 +568,13 @@ mod tests {
                         function: Address::ram(0x2000),
                         signature: hex.clone(),
                         ops: 2,
+                        constants: Vec::new(),
                     },
                     SemanticSignatureRow {
                         function: Address::ram(0x3000),
                         signature: signature(&other).to_hex(),
                         ops: 1,
+                        constants: Vec::new(),
                     },
                 ],
             )

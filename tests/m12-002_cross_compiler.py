@@ -19,8 +19,11 @@ Two truths, neither of them the matcher's own:
   of the errors, but a slice that does not depend on what else is
   labelled, and per evidence class.
 
-The inputs are private, so a runner skips with a reason, as the modules
-rows of m12-001 do.
+Both programs are indexed after import (`index-semantics`): the literal
+operands the index keeps are the one content term measured to carry
+identity across the compiler change, so the gate scores the diff as it
+should be run. The inputs are private, so a runner skips with a reason,
+as the modules rows of m12-001 do.
 """
 from __future__ import annotations
 
@@ -41,11 +44,11 @@ FAT = NIHILUS / "KOTOR2sub"
 TARGET = Path.home() / "nihilus-lab" / "unpack" / "swkotor2.exe.unpacked.exe"
 TRUTH = NIHILUS / ".private" / "research" / "SYM-0001" / "symbol-map-extended.json"
 
-# Measured 2026-09-23: named 245 right / 3 wrong (0.9879; all three wrong
-# rows are call-graph pairs of content 0.32-0.45); Mac-only Alignment
-# 0.27%, CallGraph 0.15%, Context 1.01%; 480+ anchors. Before that day's
-# fixes this pair read 8 anchors and Mac-only 4.5% / 5.4%, failing every
-# ceiling below by a wide margin.
+# Measured 2026-09-23 with both programs indexed: named 245 right / 3
+# wrong (0.9879; all three are call-graph pairs of content 0.11-0.24);
+# Mac-only Alignment 0.12%, CallGraph 0.0%, Context 0.69%; 487 anchors,
+# 6,010 rows. Before that day's fixes this pair read 8 anchors and
+# Mac-only 4.5% / 5.4%, failing every ceiling below by a wide margin.
 THRESHOLDS = {
     "named.precision": 0.98,
     "named.right": 235,
@@ -61,7 +64,7 @@ THRESHOLDS = {
 # real caller on one vote. The C2 bodies themselves land right on string
 # anchors.
 EXPECTED_WRONG = {
-    ("CSWTrackFollower::Load(CResGFF*, CResStruct*)", "0x5ad4e0"),
+    ("CSWTrackFollower::Load(CResGFF*, CResStruct*)", "0x4f8a70"),
     ("CExoInputInternal::CExoInputInternal(HINSTANCE__*, HWND__*)", "0x62b6f0"),
     ("CSWGuiInGameOptKeyMappings::CSWGuiInGameOptKeyMappings(CSWGuiManager*)", "0x759480"),
 }
@@ -93,6 +96,11 @@ def import_program(binary: Path, project: Path, name: str) -> None:
         capture_output=True, text=True)
     if result.returncode:
         raise ValueError(f"import {binary.name} failed: {result.stderr[-800:]}")
+    result = subprocess.run(
+        [str(CLI), "index-semantics", str(binary), name, "--project", str(project)],
+        capture_output=True, text=True)
+    if result.returncode:
+        raise ValueError(f"index {binary.name} failed: {result.stderr[-800:]}")
 
 
 def demangle(names: list[str]) -> list[str]:

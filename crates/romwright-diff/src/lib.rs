@@ -231,6 +231,9 @@ struct Func {
     /// this program. `None` is absence of evidence, never difference: the
     /// scorer drops the term rather than scoring it zero.
     semantic: Option<semantic::Signature>,
+    /// Literal operands the indexing pass kept (`semantic::constants`);
+    /// empty for an unindexed program, which drops the term.
+    constants: BTreeSet<u64>,
 }
 
 /// One side of the diff.
@@ -334,6 +337,7 @@ impl Program {
                 if row.ops > 0 {
                     funcs[index].semantic = semantic::Signature::parse_hex(&row.signature);
                 }
+                funcs[index].constants = row.constants.iter().copied().collect();
             }
         }
 
@@ -422,7 +426,7 @@ fn ratio(a: u64, b: u64) -> f64 {
     a.min(b) / high
 }
 
-fn jaccard(a: &BTreeSet<String>, b: &BTreeSet<String>) -> Option<f64> {
+fn jaccard<T: Ord>(a: &BTreeSet<T>, b: &BTreeSet<T>) -> Option<f64> {
     if a.is_empty() && b.is_empty() {
         return None;
     }
@@ -497,6 +501,13 @@ fn content_score(a: &Func, b: &Func, options: &Options) -> f64 {
     }
     if let Some(value) = jaccard(&a.imports, &b.imports) {
         add(value, 0.2);
+    }
+    // Literal operands: magic values and masks are in the source, so they
+    // survive a change of compiler that rewrites every count above.
+    // Present whenever the program was indexed, independent of the
+    // data-flow switch below; dropped when neither side kept one.
+    if let Some(value) = jaccard(&a.constants, &b.constants) {
+        add(value, semantic::CONSTANT_WEIGHT);
     }
     // Data-flow over p-code: what the body computes, not how it encodes
     // it. Dropped outright when the switch is off or either side has no

@@ -29,7 +29,7 @@ mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 28;
+pub const SCHEMA_VERSION: i64 = 29;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -914,6 +914,22 @@ impl ProjectDb {
                         "ALTER TABLE function_features ADD COLUMN masked_digest TEXT NOT NULL DEFAULT '';
                          CREATE INDEX IF NOT EXISTS idx_function_features_masked
                              ON function_features(masked_digest);",
+                    )?;
+                }
+            }
+            if v < 29 {
+                // Literal operands of each indexed body, beside its
+                // data-flow signature: the cross-compiler content evidence
+                // (space-separated hex, empty when none were kept).
+                let present: bool = tx.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM pragma_table_info('semantic_signatures')
+                                   WHERE name = 'constants')",
+                    [],
+                    |row| row.get(0),
+                )?;
+                if !present {
+                    tx.execute_batch(
+                        "ALTER TABLE semantic_signatures ADD COLUMN constants TEXT NOT NULL DEFAULT '';",
                     )?;
                 }
             }

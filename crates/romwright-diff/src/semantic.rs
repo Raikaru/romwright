@@ -75,6 +75,48 @@ pub const MATCH_FLOOR: f64 = 0.90;
 /// identical data-flow and can never sink anything.
 pub const SCORE_WEIGHT: f64 = 0.5;
 
+/// A literal is compared across builds only when its magnitude, read
+/// signed at its own width, reaches this: below it sit loop counters,
+/// small offsets and flag arithmetic every function shares.
+pub const CONSTANT_MIN: u64 = 0x100;
+
+/// Weight of the constant-overlap term inside `content_score`. Measured on
+/// a GCC-Mac / MSVC-Windows build of one game (282 anchor pairs that use a
+/// constant): constants alone rank the true partner first 0.53 of the time
+/// against 0.26 for every structural term together, and 0.6 beside the
+/// structural terms (whose weights sum to 1) keeps that rank.
+pub const CONSTANT_WEIGHT: f64 = 0.6;
+
+/// The distinct literal operands of a body worth comparing across builds:
+/// `const`-space inputs whose signed magnitude reaches `CONSTANT_MIN` and
+/// that are not an address inside `mapped` (a pointer names where the
+/// linker put something, which no other build shares). A LOAD or STORE
+/// names its address space in input 0 as a `const`; that is the
+/// translator's handle, not a literal (one value sat in 11,313 of
+/// swkotor2's 11,353 bodies), so it is skipped. Sorted.
+pub fn constants(ops: &[SemOp], mapped: &[(u64, u64)]) -> Vec<u64> {
+    let mut found: Vec<u64> = ops
+        .iter()
+        .flat_map(|op| {
+            let skip = usize::from(matches!(op.opcode.as_str(), "LOAD" | "STORE"));
+            op.inputs.iter().skip(skip)
+        })
+        .filter(|var| var.space == "const")
+        .filter_map(|var| {
+            let bits = (var.size.clamp(1, 8) * 8) as u32;
+            let value = if bits >= 64 { var.offset } else { var.offset & ((1u64 << bits) - 1) };
+            let negative = bits < 64 && value >> (bits - 1) == 1;
+            let magnitude = if negative { (1u64 << bits) - value } else { value };
+            (magnitude >= CONSTANT_MIN
+                && !mapped.iter().any(|&(start, end)| start <= value && value < end))
+            .then_some(value)
+        })
+        .collect();
+    found.sort_unstable();
+    found.dedup();
+    found
+}
+
 /// One p-code operand as the console prints it: `<space>:<offset>:<size>`.
 /// `romwright-core` builds these from `PcodeVarnode` (this crate must not
 /// depend on `romwright-core`: the dependency runs the other way); tests build
@@ -314,6 +356,35 @@ mod tests {
             op("INT_MULT", Some(u(0x1040)), vec![u(0x1020), r(1)]),
             op("STORE", None, vec![var("ram", 0x401000, 8), u(0x1040)]),
         ]
+    }
+
+    /// Only literals a rebuild keeps: a small value is everyone's, a
+    /// negative one counts by magnitude at its own width (a 32-bit -4 is
+    /// small, a 32-bit frame of -0x3c08 is not), and a mapped address is
+    /// where this link put something.
+    #[test]
+    fn constants_keep_large_signed_literals_and_drop_pointers() {
+        let ops = vec![
+            // A LOAD's input 0 is the space handle, never a literal.
+            op("LOAD", None, vec![var("const", 0x133d_c1c0, 8), var("unique", 0x80, 4)]),
+            op(
+            "INT_ADD",
+            None,
+            vec![
+                var("const", 0x10, 4),
+                var("const", 0xffff_fffc, 4),
+                var("const", 0xffff_c3f8, 4),
+                var("const", 0x3f80_0000, 4),
+                var("const", 0x0040_2000, 4),
+                var("register", 0x1234, 4),
+                var("const", 0x3f80_0000, 4),
+            ],
+        ),
+        ];
+        assert_eq!(
+            constants(&ops, &[(0x0040_0000, 0x0050_0000)]),
+            vec![0x3f80_0000, 0xffff_c3f8]
+        );
     }
 
     #[test]
