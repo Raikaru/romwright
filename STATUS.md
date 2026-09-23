@@ -8860,3 +8860,8 @@ that host match local ones table for table.
 Open: scratch-store setup still grows per round (rounds 2-3 ask 21
 functions and find no tables); in-memory xrefs repeat the same way (228 k
 vs 140 k stored).
+Tried and dropped: dropping exact xref repeats at write time. Facts were
+identical, but in an interleaved A/B on smt-cloud the two baseline runs
+differed by 21 s (136.7 vs 115.4 s), the change sat inside that noise
+(127.6 / 108.1 s), and switch setup did not move. Setup is a full
+`store_import` of the growing image each round, not the duplicate rows.
