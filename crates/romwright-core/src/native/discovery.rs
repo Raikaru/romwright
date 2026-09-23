@@ -1751,6 +1751,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     }
     indirect_jumps.sort_unstable();
     indirect_jumps.dedup();
+    // A Thumb `pop {..rX..}; bx rX` is a return, not a computed jump: agbcc
+    // and older GCC return this way from nearly every function. As switch
+    // candidates they made recovery decompile 12,607 owners of
+    // pokeemerald (budget-capped at 1,024, 1,400 s) to find no table; 14,635
+    // of the ROM's 15,991 `bx rX` are this pair.
+    if imp.language.starts_with("ARM") {
+        indirect_jumps.retain(|&address| !thumb_pop_return(imp, address));
+    }
     imp.indirect_jumps = indirect_jumps;
     // The bytes this walk decoded, merged into ranges: what a later pass
     // reads to tell a target it has seen from one it has not.
@@ -2324,4 +2332,28 @@ fn record_stub_transfers(imp: &mut NativeImport, endings: &[(u64, bool)]) {
                 .push((address, crate::native::THUNK_SOURCE));
         }
     }
+}
+
+/// Whether the halfwords at `address` are a Thumb `bx rX` directly after a
+/// `pop` whose register list holds `rX`: the return idiom of Thumb code
+/// that predates `pop {pc}` interworking.
+fn thumb_pop_return(imp: &NativeImport, address: u64) -> bool {
+    let halfword = |at: u64| -> Option<u16> {
+        imp.mappings.iter().find_map(|mapping| {
+            let offset = at.checked_sub(mapping.vaddr)?;
+            let offset = usize::try_from(offset).ok()?;
+            let bytes = mapping.bytes.get(offset..offset + 2)?;
+            Some(u16::from_le_bytes([bytes[0], bytes[1]]))
+        })
+    };
+    let (Some(branch), Some(previous)) = (halfword(address), address.checked_sub(2).and_then(halfword))
+    else {
+        return false;
+    };
+    // BX Rm: 0100 0111 0 Rm(4) 000; POP {list}: 1011 110 0 list(8).
+    if branch & 0xff87 != 0x4700 {
+        return false;
+    }
+    let register = (branch >> 3) & 0xf;
+    register < 8 && previous & 0xff00 == 0xbc00 && (previous >> register) & 1 == 1
 }
