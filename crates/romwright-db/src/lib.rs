@@ -1184,20 +1184,29 @@ impl ProjectDb {
     }
 
     /// Inserts one cross-module reference.
-    pub fn insert_module_xref(&self, xref: &romwright_model::ModuleXrefRow) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO module_xrefs(
-                 module_id, from_addr, to_module_id, to_addr, to_external, kind
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![
-                xref.module_id,
-                addr_cell(&xref.from_addr),
-                xref.to_module_id,
-                addr_cell(&xref.to_addr),
-                xref.to_external,
-                xref.kind,
-            ],
-        )?;
+    /// Inserts many cross-module references in one transaction. One
+    /// autocommit statement per row cost 5 s for swkotor2's 140 k rows,
+    /// and the import writes them once per switch-recovery round.
+    pub fn insert_module_xrefs(&self, xrefs: &[romwright_model::ModuleXrefRow]) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        {
+            let mut stmt = tx.prepare(
+                "INSERT INTO module_xrefs(
+                     module_id, from_addr, to_module_id, to_addr, to_external, kind
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            )?;
+            for xref in xrefs {
+                stmt.execute(params![
+                    xref.module_id,
+                    addr_cell(&xref.from_addr),
+                    xref.to_module_id,
+                    addr_cell(&xref.to_addr),
+                    xref.to_external,
+                    xref.kind,
+                ])?;
+            }
+        }
+        tx.commit()?;
         Ok(())
     }
 
