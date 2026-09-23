@@ -8818,3 +8818,22 @@ m8-002, m8-003, m12-001, core lib 482. No unit test: the property is fact
 identity, which the table digests and gates check directly.
 Remaining first-import cost: switch recovery 24 s, discovery 22 s, flow 19 s,
 store 9.5 s.
+
+## Re-imports were never cached: switch owners the store retracts (2026-09-23)
+
+m14-001 was failing on this machine, and the failure predates this session:
+the session's starting commit showed it too. The second import of libc took
+71-75 s instead of a cache restore. Cause: switch recovery takes its owner
+functions from `imp.functions`, but its worker reads a scratch store written
+by `store_import`, which retracts const seeds swallowing better evidence.
+Asking for a retracted owner (libc 0x13ff9e, mid-instruction; swkotor2
+0x40357c) failed with "Bad decompile address". That set `discovery_note`,
+and an import with a note is never published to the import cache, so every
+such image re-analysed on every import. Owners are now filtered to the
+functions the scratch store kept.
+libc: no note; stored facts identical, table by table, to the
+session-start build's. A second import is a cache restore in 0.39 s
+(was 73 s). swkotor2: 89 s, then 0.86 s. m14-001 PASS (analysed 72.4 s,
+reused 0.39 s over 41 identical tables); m3-001, m17-002, m8-003
+unchanged. The switch phase itself still costs 53 s on libc and 24 s on
+swkotor2: open.
