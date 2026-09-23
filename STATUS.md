@@ -8690,3 +8690,6 @@ positives are string-rich, not a random sample [INFERENCE: string-free
 functions may rank differently]. The next lever is features that survive a
 compiler change: constants, callee sets, and the data-flow signature
 (`--semantic`, which user runs switch off). Not weights.
+Mirror fidelity: the Python score against the shipped Rust `content_score`
+on 256 Alignment rows (which print that score) differs by at most 0.0005,
+the rounding of the 3-decimal output.
