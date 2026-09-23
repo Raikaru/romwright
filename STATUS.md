@@ -8641,7 +8641,8 @@ Kotor 286: 221 right / 1 wrong (was 220/2). m17-002 identical with and
 without the change, but it sees only 3 pattern entries on the ELF corpus.
 m3-001 cannot score in either arm (oracle `bridge_sources_sha256`
 mismatch). Both arms carry this session's uncommitted edits, so that
-failure is not shown to predate them.
+failure is not shown to predate them. Superseded: the mismatch was stale tracked oracles
+(see "m3-001 scores again" below); m3-001 passes on the current tree.
 
 Mac i386 decompile: closed. Nine stored stack locals (4 bytes at -1 or -3)
 straddled the parameter boundary. The preloaded function shell carries
@@ -8760,3 +8761,39 @@ On a four-architecture corpus with the current tree, including this
 session's discovery changes: 20/20 rows pass, 1,640 DWARF functions,
 recall 1.0, 0 unattributed. The 13 tracked mipsel/PE oracle files are
 outside `gen_oracle.py`'s matrix and keep the old digest.
+
+## Ownership shadow: two evidence bugs found and fixed (2026-09-23)
+
+A throwaway shadow pass computed what flow-based ownership would decide
+over the final entries and compared it with the importer's result
+(swkotor2, driving.elf, two corpus binaries). The corpus binaries show 0
+and 1 disagreements. On swkotor2 it led to two bugs; the shadow code is
+removed.
+1. Guard-clause merge across rounds: `pattern_only` excluded any start
+   already in `imp.functions`, so a start accepted in an earlier round
+   whose owner was walked later could never merge. It now excludes only
+   loader-declared symbols, and drops the absorbed start's row,
+   `pattern_starts` record and label evidence (`absorbed_starts`).
+   swkotor2: 3 more splits merged (0x6a339a, 0x6a9763, 0x7270ff), 11 in
+   total.
+2. The store's const rule counted every console-labelled pattern match
+   as a stronger entry, including matches the importer refused (offcuts
+   inside a body decoded later). That retracted real const-seeded
+   functions, such as the callback 0x727010 over four refused offcuts.
+   Pattern evidence for that rule is now the accepted, unabsorbed starts
+   only; the producer labels are unchanged. Found by elimination: taking
+   refused matches out of the fixpoint, and recording starts at acceptance
+   instead of match, changed nothing. Filtering `pattern_labels` reproduced
+   the effect exactly.
+swkotor2: 175 functions restored (11,535, was 11,360). One is the named
+0x6c8f50; 0x435a30 claims 69,548 bytes, a region no function owned before.
+m12-002, same Mac reference: 6,139 rows (was 6,010), named 246 right / 2
+wrong (was 245 / 3; `CSWTrackFollower::Load` now right), Mac-only rates
+flat. Gates on this tree: m3-001 (1,640, recall 1.0), m17-002 (6
+architectures), m8-002 (0 unattributed), m8-003 (0 crossing, 0
+unexplained), m12-001 unchanged, core lib 482. Tests:
+`only_accepted_pattern_starts_retract_a_const_entry`, and the rejection
+test asserts that a refused match leaves `pattern_starts`.
+Ownership-pass finding: the shadow still needs an "internal branch or
+tail jump" rule. 0x778b77, a tail-jumped x87 fallback, and a guard-clause
+body are the same shape to reachability. The single pass stays open.

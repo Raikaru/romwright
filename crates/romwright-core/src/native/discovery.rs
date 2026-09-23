@@ -979,8 +979,6 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         }
                     }
                     pattern_accepted += collected.len() as u64;
-                    imp.pattern_starts
-                        .extend(collected.iter().map(|candidate| candidate.address));
                     imp.patterns_seen = Some(romwright_model::PatternStats {
                         hits: patterns.matches.len() as u64,
                         accepted: pattern_accepted,
@@ -1076,6 +1074,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         // starts on a PlayStation 2 executable.
                         if !pattern_round {
                             data_derived.insert(r);
+                        } else {
+                            // Recorded on acceptance, not on match: a match
+                            // the decode then refuses (an offcut once its
+                            // owner is decoded) is no start, and as a
+                            // recorded one the store's const rule counted it
+                            // as a stronger entry and retracted the real
+                            // function around it (swkotor2 0x727010).
+                            imp.pattern_starts.push(r);
                         }
                     }
                 }
@@ -1344,6 +1350,8 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             }
             entries.retain(|entry| !rejected.contains(entry));
             entries_set.retain(|entry| !rejected.contains(entry));
+            // A rejected start is its owner's code, not a start.
+            imp.pattern_starts.retain(|start| !rejected.contains(start));
         }
         round += 1;
         // The first pattern round always runs; a later one runs only while the
@@ -1491,6 +1499,11 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     // called, declared or thunk entry is a function whoever branches to it.
     {
         let called: HashSet<u64> = calls.iter().map(|&(_, target)| target).collect();
+        let declared: HashSet<u64> = imp.symbol_named.iter().copied().collect();
+        // A start accepted in an earlier discovery round is already a row
+        // in `imp.functions`; its owner may only be walked in a later round,
+        // so it stays eligible (swkotor2 0x6a339a and 0x6a9763). Only the
+        // loader's own declarations are exempt.
         let pattern_only: HashSet<u64> = imp
             .pattern_starts
             .iter()
@@ -1498,9 +1511,10 @@ fn flow_discover_with_candidates<P: FlowProvider>(
             .filter(|entry| {
                 !called.contains(entry)
                     && !thunk_candidates.contains(entry)
-                    && !imp.functions.iter().any(|f| f.entry == *entry)
+                    && !declared.contains(entry)
             })
             .collect();
+        let mut absorbed: HashSet<u64> = HashSet::new();
         if !pattern_only.is_empty() {
             let mut sorted: Vec<u64> = entries.clone();
             sorted.sort_unstable();
@@ -1541,8 +1555,20 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                         &mut addr_origin,
                         &mut proven_bodies,
                     );
+                    absorbed.insert(target);
                 }
             }
+        }
+        // An absorbed start is its owner's code, not a start: its earlier
+        // round's row must go (kept, it returns as an entry and the next-
+        // entry boundary cuts its owner at it again), and so must its
+        // pattern-start record, which the store's const rule counts as a
+        // stronger entry swallowed (swkotor2 0x7270ff inside the callback
+        // 0x727010 retracted the callback).
+        if !absorbed.is_empty() {
+            imp.functions.retain(|function| !absorbed.contains(&function.entry));
+            imp.pattern_starts.retain(|start| !absorbed.contains(start));
+            imp.absorbed_starts.extend(absorbed.iter().copied());
         }
     }
     // Canonicalize proven_bodies so descendant spans are merged into their root origins:

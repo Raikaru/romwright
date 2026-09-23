@@ -883,6 +883,9 @@ fn possible_pattern_entry_rejects_later_conditional_reference() {
             .collect::<Vec<_>>(),
         [0x1000, 0x1010]
     );
+    // The refused match is no pattern start: the store's const rule reads
+    // that record as evidence of a function.
+    assert!(!import.pattern_starts.contains(&0x1004), "{:?}", import.pattern_starts);
 }
 
 #[test]

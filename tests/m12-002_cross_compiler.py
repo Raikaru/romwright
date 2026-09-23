@@ -44,10 +44,10 @@ FAT = NIHILUS / "KOTOR2sub"
 TARGET = Path.home() / "nihilus-lab" / "unpack" / "swkotor2.exe.unpacked.exe"
 TRUTH = NIHILUS / ".private" / "research" / "SYM-0001" / "symbol-map-extended.json"
 
-# Measured 2026-09-23 with both programs indexed: named 245 right / 3
-# wrong (0.9879; all three are call-graph pairs of content 0.11-0.24);
-# Mac-only Alignment 0.12%, CallGraph 0.0%, Context 0.69%; 487 anchors,
-# 6,010 rows. Before that day's fixes this pair read 8 anchors and
+# Measured 2026-09-23 with both programs indexed: named 246 right / 2
+# wrong (0.9919; both are GCC C1 stubs, call-graph pairs of content
+# 0.20-0.24); Mac-only Alignment 0.12%, CallGraph 0.05%, Context 0.66%;
+# 489 anchors, 6,139 rows. Before that day's fixes this pair read 8 anchors and
 # Mac-only 4.5% / 5.4%, failing every ceiling below by a wide margin.
 THRESHOLDS = {
     "named.precision": 0.98,
@@ -57,14 +57,13 @@ THRESHOLDS = {
     "maconly.context": 0.02,
     "anchors": 400,
 }
-# The wrong named rows as measured, each with its cause. The two C1
+# The wrong named rows as measured, each with its cause. The C1
 # constructors are GCC's complete-object stubs (`push ebp; mov ebp,esp;
 # pop ebp; jmp C2`): MSVC emits one constructor, so a stub has no Windows
 # counterpart, and the call-graph extension placed each on its C2 body's
 # real caller on one vote. The C2 bodies themselves land right on string
 # anchors.
 EXPECTED_WRONG = {
-    ("CSWTrackFollower::Load(CResGFF*, CResStruct*)", "0x4f8a70"),
     ("CExoInputInternal::CExoInputInternal(HINSTANCE__*, HWND__*)", "0x62b6f0"),
     ("CSWGuiInGameOptKeyMappings::CSWGuiInGameOptKeyMappings(CSWGuiManager*)", "0x759480"),
 }
