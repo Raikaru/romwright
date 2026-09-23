@@ -8693,3 +8693,11 @@ compiler change: constants, callee sets, and the data-flow signature
 Mirror fidelity: the Python score against the shipped Rust `content_score`
 on 256 Alignment rows (which print that score) differs by at most 0.0005,
 the rounding of the 3-decimal output.
+Control on same-compiler truth, same pipeline and features: boot -> driving,
+604 name-truth pairs, 2-fold (about 300 training groups per fold, close to
+the cross-compiler folds' 243). Learned structural score: rank-1 0.854 /
+0.828, top-12 0.954 / 0.970. Hand weights: 0.818 / 0.791 and 0.927 / 0.950.
+Learning wins on both folds here, so the fit is sound and label count does
+not explain the cross-compiler loss. What these structural terms carry does
+not survive the compiler change. Not shipped: the gain is 3-4 points rank-1
+on the one module pair it was measured on, and m12 already passes.
