@@ -78,6 +78,18 @@ impl CancelToken {
         }
     }
 
+    /// Fail fast on explicit cancellation only: an expired deadline is not
+    /// an error at job entry — the manager returns the graceful empty
+    /// report (rounds 0, stop budget), which m2-006 pins for budget_ms=0.
+    /// `publish` keeps the full checkpoint, so fact publication under an
+    /// expired deadline still fails.
+    pub fn check_cancelled(&self) -> Result<()> {
+        if self.is_cancelled() {
+            return Err(crate::native_runtime::NativeRuntimeError("execution cancelled".into()).into());
+        }
+        Ok(())
+    }
+
     /// Cancellation and fact publication have a single linearization point:
     /// once cancellation has been accepted, no later transaction can publish.
     pub fn publish<T>(&self, deadline: Instant, work: impl FnOnce() -> Result<T>) -> Result<T> {
@@ -147,7 +159,7 @@ impl Core {
         let input = self.resolve_program_input(binary, program)?;
         let language = store.program_language(program_id)?;
         let cancel = CancelToken::default();
-        cancel.checkpoint(deadline)?;
+        cancel.check_cancelled()?;
         let request = ExecutionRequest {
             binary: self.db_path().join("artifacts").join(&input.binary_digest),
             artifact_digest: input.binary_digest.clone(),
@@ -166,7 +178,7 @@ impl Core {
         // Capturing a request does not publish facts. Fact-dependent consumers
         // validate their snapshot when executing/publishing; immutable artifact
         // jobs may legitimately finish after unrelated analysis advances it.
-        request.cancel.checkpoint(request.deadline)?;
+        request.cancel.check_cancelled()?;
         Ok(request)
     }
 

@@ -445,14 +445,12 @@ jobs:
       - name: Structure our control-flow graphs with stock's structuring
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
-          ROMWRIGHT_SERVICE_JAR: ${{ github.workspace }}/service/build/romwright-service.jar
         run: |
           python3 tests/m15-001_structuring.py \
             --report "$RUNNER_TEMP/reports/m15-001.json"
       - name: Analyse one function on demand
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
-          ROMWRIGHT_SERVICE_JAR: ${{ github.workspace }}/service/build/romwright-service.jar
         run: |
           python3 tests/m14-002_demand.py \
             --report "$RUNNER_TEMP/reports/m14-002.json"

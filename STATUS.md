@@ -8379,3 +8379,42 @@ with 2x headroom over these numbers (wall < 14 s/kfn with 300 s
 sanity; peak < 70 KB/fn with 2 GB sanity), quiesced repeats,
 phase split recorded. This resolves the "absolute ceilings vs
 ratio" tension without quietly raising any ceiling.
+## M2 parity closure (2026-09-22)
+
+Ran the full executable M2 battery locally against a fresh on-disk corpus
+(`scripts/gen_corpus.py`, sysroots fetched via `tools/fetch_cross_sysroots.py`;
+third_party/sysroots is gitignored). All green; two defects found and fixed:
+
+- m2-007 was red: same-bytes-different-path imports failed with "binary does
+  not identify this program's imported source". Root cause is the import
+  cache, not the check: the cache key omits path by design, and a hit
+  restores the first import's `source_path` verbatim into the new project.
+  Fix (`inputs.rs`): `resolve_program_input` accepts a path mismatch when the
+  file's digest equals the stored `binary_digest` — identity is content,
+  checked lazily only after both path comparisons fail, so the hot path is
+  unchanged and genuine substitution still errors.
+- m2-015 was red: two CI steps (`m15-001`, `m14-002`) set
+  `ROMWRIGHT_SERVICE_JAR` without "oracle" in the step name. Neither test
+  references the bridge (verified by grep); the env was dead copy-paste.
+  Fix (`.github/workflows/ci.yml`): removed the two unused env lines; both
+  step tests re-run jar-less and their outcomes are unchanged.
+
+Battery (all `passed: true`, exit 0): m2-002_context, xref_gate
+(data_xref recall 0.96–1.0), string_gate (recall 1.0), m2-005, m2-006 family
+(inference/revision/specs/rebuild/thunks), m2-007 (7 targets),
+m2-008_nonreturn, m2-008_ppc_linkage, m2-009, m2-011 (3858 records),
+m2-012 (871/871, 0 FP), m2-013 (20/20 classes, msvc skipped per local-MSVC
+policy), m2-015, m2-016 (flow 1.9 s < 5 s budget). m2-001/003/004 have no
+ executable gates (ledger-complete slices).
+ Correction (stash A/B, same session): m15-001 (structuring 0.9232 vs 0.9)
+ and m14-002 (one demand-vs-batch extent mismatch,
+ `__memmove_sse2_unaligned_erms 1362 > 7`) fail IDENTICALLY with all local
+ diffs stashed (baseline rebuilt, same jar-less env) — pre-existing, not
+ caused by this work. Both tests set `ROMWRIGHT_NO_IMPORT_CACHE=1`, so cache
+ staleness is ruled out; glibc (Aug 27) predates the session. Separate
+ attribution: romwright-cli has no worker-client dependency, so that diff
+ cannot reach m15 at link level; m14-002 builds `-p romwright-api` and was
+ covered by the joint stash. A with-diff m14 rerun reproduces the identical
+ tokens (`__memmove_sse2_unaligned_erms 1362 > 7`, 1 extent) a third time,
+ ruling out per-process order flakiness. Parked for owners.
+
