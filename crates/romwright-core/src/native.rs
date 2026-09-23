@@ -370,6 +370,10 @@ pub struct NativeImport {
     pub reloc_candidates: Vec<u64>,
     /// Untrusted data pointers; never functions until flow confirms them.
     pub pointer_candidates: Vec<u64>,
+    /// Set when no data section held pointers to scan: code and data share
+    /// executable segments (Sony's `main`/`heap` layout), so tables live in
+    /// the bytes of code mappings discovery did not decode.
+    pub code_holds_data: bool,
     /// Loader-declared initializer entry points, also requiring valid flow.
     pub initializer_candidates: Vec<u64>,
     /// Names an initializer array gives its targets: the array names the
@@ -2058,6 +2062,115 @@ pub(crate) fn low_bit_code_mode(language: &str) -> bool {
     language.starts_with("ARM:") || language.starts_with("MIPS:")
 }
 
+/// Code pointers stored as tables in executable bytes discovery has not
+/// decoded, for images whose code segments also carry their data. Only runs
+/// of two or more aligned words that each name an address in code count: a
+/// single word that happens to equal a code address is no table. A target
+/// inside code already decoded is a case label or interior address, not an
+/// entry, and is skipped. Candidates still face flow validation. Measured on
+/// PS2 Capcom Fighting Evolution: 1,679 of 2,199 missed functions had their
+/// address stored in `main`, the one segment code and data share.
+fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
+    if !imp.code_holds_data {
+        return Vec::new();
+    }
+    let be = imp.language.contains(":BE:");
+    let arm = imp.language.starts_with("ARM");
+    // Owned code is the bodies of functions that exist now, not every byte
+    // ever decoded: walks from retracted junk entries decode data too, and
+    // on Capcom that hid nearly every table.
+    let mut bodies: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| (function.entry, function.entry + function.size))
+        .collect();
+    bodies.sort_unstable();
+    let decoded = |address: u64| {
+        let index = bodies.partition_point(|&(start, _)| start <= address);
+        bodies[..index].iter().rev().take(8).any(|&(_, end)| address < end)
+    };
+    let code: Vec<(u64, u64)> = imp
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.flags & 4 != 0)
+        .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
+        .collect();
+    let in_code = |address: u64| code.iter().any(|&(lo, hi)| lo <= address && address < hi);
+    let known: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+    let mut found = Vec::new();
+    for mapping in imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0) {
+        let mut run: Vec<u64> = Vec::new();
+        let mut flush = |run: &mut Vec<u64>, found: &mut Vec<u64>| {
+            if run.len() >= 2 {
+                found.extend(run.iter().copied());
+            }
+            run.clear();
+        };
+        let start = (mapping.vaddr + 3) & !3;
+        let mut address = start;
+        while address + 4 <= mapping.vaddr + mapping.bytes.len() as u64 {
+            if decoded(address) {
+                flush(&mut run, &mut found);
+                address += 4;
+                continue;
+            }
+            let at = (address - mapping.vaddr) as usize;
+            let raw: [u8; 4] = mapping.bytes[at..at + 4].try_into().expect("four bytes");
+            let word = u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) });
+            let target = if arm { word & !1 } else { word };
+            let aligned = if arm { target % 2 == 0 } else { target % 4 == 0 };
+            if word != 0 && aligned && in_code(target) {
+                run.push(target);
+            } else {
+                flush(&mut run, &mut found);
+            }
+            address += 4;
+        }
+        flush(&mut run, &mut found);
+    }
+    found.retain(|target| {
+        !known.contains(target) && !decoded(*target) && mips_function_evidence(imp, *target, be)
+    });
+    found.sort_unstable();
+    found.dedup();
+    found
+}
+
+/// Code evidence for a table target on MIPS: a stack-frame prologue
+/// (`addiu sp, sp, -N`), or a start that is not text or zero with a
+/// `jr ra` within 64 instructions. A segment that holds code and data also
+/// holds tables of string and data pointers; on PS2 Capcom Fighting
+/// Evolution this rule kept 1,306 real functions against 105 others,
+/// where "points into code" alone took 1,624 against 1,924. Other
+/// architectures have no measured rule, and take nothing.
+fn mips_function_evidence(imp: &NativeImport, target: u64, be: bool) -> bool {
+    let mips = ["MIPS", "r5900", "PSX", "Allegrex"]
+        .iter()
+        .any(|family| imp.language.starts_with(family));
+    if !mips {
+        return false;
+    }
+    let word = |address: u64| -> Option<u32> {
+        imp.mappings.iter().find_map(|mapping| {
+            let at = usize::try_from(address.checked_sub(mapping.vaddr)?).ok()?;
+            let raw: [u8; 4] = mapping.bytes.get(at..at + 4)?.try_into().ok()?;
+            Some(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
+        })
+    };
+    let Some(first) = word(target) else {
+        return false;
+    };
+    if first >> 16 == 0x27bd && first & 0x8000 != 0 {
+        return true;
+    }
+    let bytes = if be { first.to_be_bytes() } else { first.to_le_bytes() };
+    if first == 0 || bytes.iter().all(|&byte| (32..127).contains(&byte)) {
+        return false;
+    }
+    (0..64).any(|index| word(target + 4 * index) == Some(0x03e0_0008))
+}
+
 // Code addresses the propagation proved hold constants.
 //
 // A constant-propagated DATA value into executable code is usually a
@@ -3337,6 +3450,7 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         let targets = computed_flow_targets(imp);
         let callbacks = const_data_targets(imp, &mut session);
         let stubs = stub_jump_seeds(imp);
+        let tables_in_code = code_pointer_tables(imp);
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -3380,7 +3494,12 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         } else if tables > 0 {
             demote_case_blocks(imp);
         }
-        if targets.is_empty() && tables == 0 && callbacks.is_empty() && stubs.is_empty() {
+        if targets.is_empty()
+            && tables == 0
+            && callbacks.is_empty()
+            && stubs.is_empty()
+            && tables_in_code.is_empty()
+        {
             break;
         }
         let mode = low_bit_code_mode(&imp.language);
@@ -3413,6 +3532,17 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
             imp.functions.push(NativeFunction {
                 entry: destination,
                 name: format!("FUN_{destination:08x}"),
+                size: 1,
+            });
+        }
+        // Table targets are seeded like computed-call targets: two or more
+        // adjacent code pointers are stronger evidence than one relocation,
+        // and the candidate veto would drop them for bytes a walk from a
+        // since-retracted entry once decoded.
+        for &target in &tables_in_code {
+            imp.functions.push(NativeFunction {
+                entry: target,
+                name: format!("FUN_{target:08x}"),
                 size: 1,
             });
         }
@@ -5694,6 +5824,31 @@ mod tests {
             "{:?}",
             imp.diagnostics
         );
+    }
+
+    /// A table in a segment that mixes code and data names strings as well
+    /// as functions. Only a target with code evidence is taken: a frame
+    /// prologue, or a non-text start with a return close behind.
+    #[test]
+    fn mips_table_targets_need_code_evidence() {
+        let mut bytes = vec![0u8; 0x400];
+        let put = |bytes: &mut Vec<u8>, at: usize, word: u32| bytes[at..at + 4].copy_from_slice(&word.to_le_bytes());
+        put(&mut bytes, 0x000, 0x27bd_ffe0); // addiu sp, sp, -32
+        bytes[0x100..0x108].copy_from_slice(b"FIGHTER\0"); // a string
+        put(&mut bytes, 0x200, 0x0080_1021); // move v0, a0 (leaf)
+        put(&mut bytes, 0x204, 0x03e0_0008); // jr ra
+        put(&mut bytes, 0x300, 0x0080_1021); // no return within 64 words
+        let imp = NativeImport {
+            language: "r5900:LE:32:default".into(),
+            mappings: vec![Mapping { vaddr: 0x100000, size: 0x400, file_off: 0, flags: 6, bytes }],
+            ..Default::default()
+        };
+        assert!(mips_function_evidence(&imp, 0x100000, false));
+        assert!(!mips_function_evidence(&imp, 0x100100, false));
+        assert!(mips_function_evidence(&imp, 0x100200, false));
+        assert!(!mips_function_evidence(&imp, 0x100300, false));
+        let arm = NativeImport { language: "ARM:LE:32:v4t".into(), ..imp };
+        assert!(!mips_function_evidence(&arm, 0x100000, false), "no measured rule off MIPS");
     }
 
     #[test]

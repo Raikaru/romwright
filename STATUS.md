@@ -15,8 +15,9 @@ Read this first; everything below it is the dated log.
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision: GBA 0.869 / 0.840, PS2 Capcom 0.750 / 0.871, PS2 dungeon
-  0.791 / 0.824, PSX 0.284 / 0.678, X360 0.547 / 0.999 (console crash);
+  precision: GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
+  0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.547 /
+  0.999 (console crash);
   NDS does not finish.
 - Known weak spots: CallGraph rows under content 0.9 (about two-thirds
   right on the modules). PE function-start ownership is settled by three
@@ -9012,3 +9013,33 @@ Open, found by the gate:
   `sceVu0*`).
 - GBA import cost: discovery 426 s over 3.09 M decoded instructions in 4
   rounds, references 337 s.
+
+## PSX and PS2 recall: patterns under the wrong id, tables inside code (2026-09-23)
+
+PSX (Darkstalkers 3), recall 0.284 to 0.919. The PsxLoader extension ships
+577 R3000 function-start patterns, but its `patternconstraints.xml` keys
+them to MIPS:LE:32:default while its language is PSX:LE:32:default, so
+nothing ever matched (0 pattern hits; 15 k of 87 k `.text` instructions
+decoded). The console's pattern selection now falls back to an explicit
+alias when a language's own id selects nothing
+(`native/romwright_patterns.hh`). Precision against the map reads 0.376,
+but a Psy-Q map lists globals only: of the 1,246 entries it does not
+name, 534 are `jal` targets and 678 open a stack frame; 34 have neither.
+PS2 (Capcom Fighting Evolution), recall 0.750 to 0.897, precision 0.871
+to 0.884. Sony's linker emits two segments (`main`, `heap`) with code and
+data together. The ELF pointer scan reads data sections by name, and
+there are none, so 1,679 of the 2,199 missed functions sat in handler
+tables it never read. For images whose pointer scan found no data section
+(`code_holds_data`), each discovery round now reads the bytes outside
+current function bodies for runs of two or more aligned code pointers.
+Targets need MIPS code evidence (`mips_function_evidence`): a frame
+prologue, or a non-text, non-zero start with `jr ra` within 64 words.
+Measured on Capcom: "points into code" alone took 1,624 real functions
+against 1,924 others (strings and data tables); prologue alone 532 / 0;
+the rule shipped 1,306 / 105. Targets are seeded as functions, because the
+candidate veto rejected them for bytes that walks from since-retracted
+junk entries had decoded. Other architectures take nothing. dungeon_game
+is unchanged at 0.791: its 154 unreferenced misses are dead library code
+(`stbi_*`) that nothing points to.
+Regression: m3-001, m17-002, m8-002, m8-003, m12-001 unchanged; core lib
+484. Tests: `mips_table_targets_need_code_evidence`.

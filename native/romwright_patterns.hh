@@ -430,6 +430,19 @@ public:
       throw IfaceExecutionError("No installed pattern constraints");
     vector<string> files;
     selectFiles(decisions, language->getId(), compiler, files);
+    // A language whose own id selects nothing borrows the patterns its
+    // extension ships for it under another id. PsxLoader keys its R3000
+    // patterns (577 rules) to MIPS:LE:32:default while its language is
+    // PSX:LE:32:default, so no PSX image ever matched a function start:
+    // Darkstalkers 3 decoded 15 k of its 87 k instructions.
+    if (files.empty()) {
+      static const std::pair<const char *, const char *> aliases[] = {
+          {"PSX:LE:32:default", "MIPS:LE:32:default"},
+      };
+      for (const auto &alias : aliases)
+        if (language->getId() == alias.first)
+          selectFiles(decisions, alias.second, compiler, files);
+    }
     std::sort(files.begin(), files.end());
     files.erase(std::unique(files.begin(), files.end()), files.end());
     sequences.emplace_back(); // Empty pre-sequence for direct patterns.
