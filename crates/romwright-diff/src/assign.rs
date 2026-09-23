@@ -7,18 +7,24 @@
 //! gradient onto the assignment polytope, whose vertices are exactly the
 //! one-to-one matchings).
 //!
-//! It is solved as a minimum-cost flow with unit capacities: source to each
-//! left node, candidate edges carrying cost `-weight`, each right node to the
-//! sink. Successive shortest augmenting paths give the optimum for every
-//! cardinality in turn, so stopping as soon as the next path would not lower
-//! the cost yields the maximum-weight matching rather than a forced perfect
-//! one -- a pair nobody wants stays unmatched instead of being assigned at a
-//! loss.
+//! It is solved as a minimum-cost flow with unit capacities, one left node at
+//! a time: every left ships one unit to the sink, either through a right
+//! (cost `-weight`) or through a private zero-cost exit that means "stay
+//! unmatched". Adding the lefts one by one and routing each along a shortest
+//! augmenting path keeps the flow optimal for the lefts processed so far
+//! (successive shortest paths with the source arcs introduced in turn), so
+//! the final flow is the maximum-weight matching -- a pair nobody wants stays
+//! unmatched instead of being assigned at a loss.
 //!
-//! Costs are negative, which Dijkstra cannot take, so the first potentials
-//! come from one pass over the graph in topological order: source, lefts,
-//! rights, sink is a DAG before any flow is pushed. Every later round uses
-//! Johnson's reweighting, under which reduced costs are non-negative.
+//! The search is local. A search from the global source (the textbook form)
+//! reaches every free left at distance ~0 and so explores the whole graph
+//! for every pair it adds; from one left it stops at the first free right or
+//! exit, which on a 45k-node cross-binary candidate graph is the difference
+//! between hours and seconds. Potentials follow Johnson's reweighting with
+//! the early-stop correction: a node settled at distance `d` before the sink
+//! (at `D`) moves by `d - D`, every other node by nothing, which keeps every
+//! reduced cost non-negative without touching the untouched part of the
+//! graph. The sink's potential stays 0 under that convention.
 
 /// One candidate pair and the weight of matching it.
 #[derive(Clone, Copy, Debug)]
@@ -28,167 +34,235 @@ pub struct Edge {
     pub weight: f64,
 }
 
-/// Residual arc.
-#[derive(Clone, Copy)]
-struct Arc {
-    to: u32,
-    capacity: u32,
-    cost: f64,
-    /// Index of the paired arc in the same list.
-    mirror: u32,
-}
-
 /// Matches `left_count` left nodes against `right_count` right nodes over
 /// `edges`, maximising total weight.
 ///
-/// Returns the partner of each left node. Determinism: arcs are built in
-/// input order and shortest-path ties break by node index, so equal inputs
-/// give equal matchings, which the gates depend on.
+/// Returns the partner of each left node. Determinism: lefts are routed in
+/// index order, adjacency keeps input order and shortest-path ties break by
+/// node index, so equal inputs give equal matchings, which the gates depend
+/// on.
 pub fn max_weight_matching(
     left_count: usize,
     right_count: usize,
     edges: &[Edge],
 ) -> Vec<Option<u32>> {
-    let source = left_count + right_count;
-    let sink = source + 1;
+    // A pair worth nothing is never better than staying unmatched, which
+    // frees its right for someone else at no loss, so it is not a candidate.
+    let mut start = vec![0usize; left_count + 1];
+    for edge in edges {
+        if edge.weight > 0.0 {
+            start[edge.left as usize + 1] += 1;
+        }
+    }
+    for left in 0..left_count {
+        start[left + 1] += start[left];
+    }
+    let mut fill = start.clone();
+    let mut adjacency: Vec<(u32, f64)> = vec![(0, 0.0); start[left_count]];
+    for edge in edges {
+        if edge.weight > 0.0 {
+            let slot = &mut fill[edge.left as usize];
+            adjacency[*slot] = (edge.right, edge.weight);
+            *slot += 1;
+        }
+    }
+
+    // Nodes: lefts 0..L, rights L..L+R, then the sink.
+    let sink = left_count + right_count;
     let nodes = sink + 1;
-    let mut graph: Vec<Vec<u32>> = vec![Vec::new(); nodes];
-    let mut arcs: Vec<Arc> = Vec::with_capacity(2 * (edges.len() + left_count + right_count));
-    let mut connect = |arcs: &mut Vec<Arc>,
-                       graph: &mut Vec<Vec<u32>>,
-                       from: usize,
-                       to: usize,
-                       cost: f64| {
-        let forward = arcs.len() as u32;
-        arcs.push(Arc {
-            to: to as u32,
-            capacity: 1,
-            cost,
-            mirror: forward + 1,
-        });
-        arcs.push(Arc {
-            to: from as u32,
-            capacity: 0,
-            cost: -cost,
-            mirror: forward,
-        });
-        graph[from].push(forward);
-        graph[to].push(forward + 1);
-    };
-    for left in 0..left_count {
-        connect(&mut arcs, &mut graph, source, left, 0.0);
-    }
-    for right in 0..right_count {
-        connect(&mut arcs, &mut graph, left_count + right, sink, 0.0);
-    }
-    // Candidate arcs: the pair's weight, as a cost to be minimised.
-    let mut pair_arc: Vec<u32> = Vec::with_capacity(edges.len());
-    for edge in edges {
-        pair_arc.push(arcs.len() as u32);
-        connect(
-            &mut arcs,
-            &mut graph,
-            edge.left as usize,
-            left_count + edge.right as usize,
-            -edge.weight,
-        );
-    }
+    let mut matched_left: Vec<Option<u32>> = vec![None; left_count];
+    let mut matched_right: Vec<Option<u32>> = vec![None; right_count];
+    // Weight of the pair each right is currently matched through.
+    let mut matched_weight = vec![0.0f64; right_count];
+    let mut potential = vec![0.0f64; nodes];
+    let mut distance = vec![f64::INFINITY; nodes];
+    let mut settled = vec![false; nodes];
+    // Predecessor on the shortest path: for a right, the left whose forward
+    // arc reached it (and that arc's weight); for a left, the right whose
+    // reverse arc reached it; for the sink, the node that exited.
+    let mut previous = vec![u32::MAX; nodes];
+    let mut previous_weight = vec![0.0f64; right_count];
+    let mut touched: Vec<u32> = Vec::new();
+    let mut queue = std::collections::BinaryHeap::new();
 
-    // Initial potentials: one relaxation pass in topological order.
-    let mut potential = vec![f64::INFINITY; nodes];
-    potential[source] = 0.0;
-    for left in 0..left_count {
-        potential[left] = 0.0;
-    }
-    for edge in edges {
-        let right = left_count + edge.right as usize;
-        let candidate = -edge.weight;
-        if candidate < potential[right] {
-            potential[right] = candidate;
+    for source in 0..left_count {
+        let arcs = &adjacency[start[source]..start[source + 1]];
+        if arcs.is_empty() {
+            continue;
         }
-    }
-    let mut best_right = f64::INFINITY;
-    for right in 0..right_count {
-        if potential[left_count + right].is_infinite() {
-            potential[left_count + right] = 0.0;
-        }
-        best_right = best_right.min(potential[left_count + right]);
-    }
-    potential[sink] = best_right.min(0.0);
+        // A new left has no incoming residual arcs; this potential makes its
+        // outgoing ones (every pair, and its exit) non-negative.
+        potential[source] = arcs
+            .iter()
+            .map(|&(right, weight)| weight + potential[left_count + right as usize])
+            .fold(0.0, f64::max);
 
-    let rounds = left_count.min(right_count);
-    for _ in 0..rounds {
-        // Dijkstra in reduced costs.
-        let mut distance = vec![f64::INFINITY; nodes];
-        let mut arrived: Vec<u32> = vec![u32::MAX; nodes];
-        let mut settled = vec![false; nodes];
         distance[source] = 0.0;
-        let mut queue = std::collections::BinaryHeap::new();
+        touched.push(source as u32);
         queue.push(Entry {
             key: 0.0,
             node: source as u32,
         });
+        let relax = |to: usize,
+                     step: f64,
+                     from: u32,
+                     distance: &mut [f64],
+                     previous: &mut [u32],
+                     touched: &mut Vec<u32>,
+                     queue: &mut std::collections::BinaryHeap<Entry>|
+         -> bool {
+            if step + 1e-12 < distance[to] {
+                if distance[to].is_infinite() {
+                    touched.push(to as u32);
+                }
+                distance[to] = step;
+                previous[to] = from;
+                queue.push(Entry {
+                    key: step,
+                    node: to as u32,
+                });
+                true
+            } else {
+                false
+            }
+        };
         while let Some(Entry { key, node }) = queue.pop() {
             let node = node as usize;
             if settled[node] || key > distance[node] + f64::EPSILON {
                 continue;
             }
             settled[node] = true;
-            for &index in &graph[node] {
-                let arc = arcs[index as usize];
-                if arc.capacity == 0 {
-                    continue;
+            if node == sink {
+                break;
+            }
+            let here = distance[node];
+            if node < left_count {
+                // Forward arcs to every candidate right but its own partner.
+                for &(right, weight) in &adjacency[start[node]..start[node + 1]] {
+                    if matched_left[node] == Some(right) {
+                        continue;
+                    }
+                    let to = left_count + right as usize;
+                    // Reduced costs are non-negative under a feasible
+                    // potential; floating point can still produce a tiny
+                    // negative, which would only misorder the queue.
+                    let reduced = -weight + potential[node] - potential[to];
+                    if relax(
+                        to,
+                        here + feasible(reduced),
+                        node as u32,
+                        &mut distance,
+                        &mut previous,
+                        &mut touched,
+                        &mut queue,
+                    ) {
+                        previous_weight[right as usize] = weight;
+                    }
                 }
-                let to = arc.to as usize;
-                let reduced = arc.cost + potential[node] - potential[to];
-                // Reduced costs are non-negative under a feasible potential;
-                // floating point can still produce a tiny negative, which
-                // would only misorder the queue, so it is clamped.
-                let step = distance[node] + reduced.max(0.0);
-                if step + 1e-12 < distance[to] {
-                    distance[to] = step;
-                    arrived[to] = index;
-                    queue.push(Entry {
-                        key: step,
-                        node: arc.to,
-                    });
+                // The exit: this left gives up its pair (or, for the source,
+                // never takes one). Every left the search reaches is either
+                // the source or matched, so its exit is free.
+                let reduced = potential[node] - potential[sink];
+                relax(
+                    sink,
+                    here + feasible(reduced),
+                    node as u32,
+                    &mut distance,
+                    &mut previous,
+                    &mut touched,
+                    &mut queue,
+                );
+            } else {
+                let right = node - left_count;
+                match matched_right[right] {
+                    // The reverse arc back to the right's partner.
+                    Some(partner) => {
+                        let to = partner as usize;
+                        let reduced = matched_weight[right] + potential[node] - potential[to];
+                        relax(
+                            to,
+                            here + feasible(reduced),
+                            node as u32,
+                            &mut distance,
+                            &mut previous,
+                            &mut touched,
+                            &mut queue,
+                        );
+                    }
+                    None => {
+                        let reduced = potential[node] - potential[sink];
+                        relax(
+                            sink,
+                            here + feasible(reduced),
+                            node as u32,
+                            &mut distance,
+                            &mut previous,
+                            &mut touched,
+                            &mut queue,
+                        );
+                    }
                 }
             }
         }
-        if !distance[sink].is_finite() {
-            break;
-        }
-        // True cost of this augmenting path, under Johnson's reweighting.
-        let path_cost = distance[sink] - potential[source] + potential[sink];
-        if path_cost >= -1e-12 {
-            // The next pair would not increase the total weight.
-            break;
-        }
-        for node in 0..nodes {
-            if distance[node].is_finite() {
-                potential[node] += distance[node];
-            }
-        }
-        let mut node = sink;
-        while node != source {
-            let index = arrived[node];
-            let arc = &mut arcs[index as usize];
-            arc.capacity -= 1;
-            let previous = arc.to;
-            let mirror = arc.mirror;
-            arcs[mirror as usize].capacity += 1;
-            node = arcs[mirror as usize].to as usize;
-            debug_assert_ne!(previous as usize, node);
-        }
-    }
+        queue.clear();
 
-    let mut matching = vec![None; left_count];
-    for (edge, &index) in edges.iter().zip(&pair_arc) {
-        if arcs[index as usize].capacity == 0 {
-            matching[edge.left as usize] = Some(edge.right);
+        // The sink is always reached: the source's own exit leads there.
+        let total = distance[sink];
+        for &node in &touched {
+            let node = node as usize;
+            if settled[node] && node != sink {
+                potential[node] += distance[node] - total;
+            }
         }
+
+        // Augment back from the sink. An exit through a left unmatches it
+        // and hands its right down the path; an exit through a free right
+        // starts the hand-down there.
+        let exit = previous[sink] as usize;
+        let mut open: Option<usize> = if exit < left_count {
+            let left = exit;
+            let freed = matched_left[left].take();
+            if let Some(right) = freed {
+                matched_right[right as usize] = None;
+            }
+            if left == source {
+                None
+            } else {
+                freed.map(|right| right as usize)
+            }
+        } else {
+            Some(exit - left_count)
+        };
+        while let Some(right) = open {
+            let left = previous[left_count + right] as usize;
+            let handed = matched_left[left].replace(right as u32);
+            matched_right[right] = Some(left as u32);
+            matched_weight[right] = previous_weight[right];
+            open = if left == source {
+                None
+            } else {
+                handed.map(|right| right as usize)
+            };
+        }
+
+        for &node in &touched {
+            let node = node as usize;
+            distance[node] = f64::INFINITY;
+            settled[node] = false;
+            previous[node] = u32::MAX;
+        }
+        touched.clear();
     }
-    matching
+    matched_left
+}
+
+/// A reduced cost, clamped at zero. Under a feasible potential it is
+/// non-negative up to rounding; anything more negative means the
+/// potential update broke feasibility, which the clamp would otherwise
+/// hide by fabricating a distance.
+fn feasible(reduced: f64) -> f64 {
+    debug_assert!(reduced >= -1e-9, "infeasible potential: reduced cost {reduced}");
+    reduced.max(0.0)
 }
 
 /// Heap entry ordered by ascending key, ties by node index: `BinaryHeap` is
@@ -290,5 +364,63 @@ mod tests {
             ],
         );
         assert_eq!(matching, vec![Some(0), Some(1), None]);
+    }
+
+    /// Best total by exhaustion: each left takes a free right or nothing.
+    fn brute_force(left: usize, taken: u32, weights: &[Vec<Option<f64>>]) -> f64 {
+        if left == weights.len() {
+            return 0.0;
+        }
+        let mut best = brute_force(left + 1, taken, weights);
+        for (right, weight) in weights[left].iter().enumerate() {
+            if let Some(weight) = weight {
+                if taken & (1 << right) == 0 {
+                    best = best.max(weight + brute_force(left + 1, taken | (1 << right), weights));
+                }
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn it_is_optimal_on_random_sparse_instances() {
+        // Local searches from one left at a time must still find the global
+        // optimum, including chains that unmatch an earlier left through its
+        // exit. Sparse, mixed-sign weights force both.
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = || {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            (state >> 11) as f64 / (1u64 << 53) as f64
+        };
+        for _ in 0..3000 {
+            let lefts = 1 + (next() * 9.0) as usize;
+            let rights = 1 + (next() * 8.0) as usize;
+            let mut weights = vec![vec![None; rights]; lefts];
+            let mut edges = Vec::new();
+            for (left, row) in weights.iter_mut().enumerate() {
+                for (right, slot) in row.iter_mut().enumerate() {
+                    if next() < 0.5 {
+                        let weight = next() * 2.0 - 0.5;
+                        *slot = Some(weight);
+                        edges.push(edge(left as u32, right as u32, weight));
+                    }
+                }
+            }
+            let matching = max_weight_matching(lefts, rights, &edges);
+            let mut used = vec![false; rights];
+            let mut total = 0.0;
+            for (left, partner) in matching.iter().enumerate() {
+                if let Some(right) = partner {
+                    let right = *right as usize;
+                    assert!(!used[right], "right {right} matched twice");
+                    used[right] = true;
+                    total += weights[left][right].expect("matched a non-candidate");
+                }
+            }
+            let best = brute_force(0, 0, &weights);
+            assert!((total - best).abs() < 1e-9, "{total} vs optimum {best}: {edges:?}");
+        }
     }
 }
