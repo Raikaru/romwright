@@ -3020,7 +3020,18 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
             imp,
             declared_entry_model(&imp.cfg, &imp.language),
         )?;
-        db.set_program_input(db.program_id(program)?, input)?;
+        let id = db.program_id(program)?;
+        db.set_program_input(id, input)?;
+        // The worker decompiles what this store holds, and storing retracts
+        // entries the store's rules reject (a const seed swallowing better
+        // evidence). Asking for one failed the whole lane's decompile with
+        // "Bad decompile address" and marked the import degraded, which also
+        // kept it out of the import cache (libc 0x13ff9e, swkotor2
+        // 0x40357c). A retracted entry is no function; its switch is not
+        // asked.
+        let kept: std::collections::HashSet<u64> =
+            db.functions(id)?.into_iter().map(|row| row.entry.offset).collect();
+        owners.retain(|entry| kept.contains(entry));
         Ok(())
     })();
     if let Err(error) = stored {
