@@ -254,7 +254,7 @@ impl Core {
             flow: None,
             patterns: None,
             references_refused: 0,
-            discovery_note: None,
+            diagnostics: self.db.import_diagnostics(id)?,
             switch: None,
         })
     }
@@ -2281,7 +2281,10 @@ impl Core {
             imp.input_context = Some(std::sync::Arc::new((self.db_path.clone(), selected)));
             if analyse {
                 imp.analysed = true;
-                imp.discovery_note = None;
+                // The loader's "not analysed" note no longer holds.
+                imp.diagnostics.retain(|diagnostic| {
+                    !diagnostic.message.starts_with("loaded without analysis")
+                });
                 native::discover(imp)?;
             }
         }
@@ -2301,7 +2304,7 @@ impl Core {
             });
             stored.push(summary);
         }
-        if let Some(key) = cache_key.as_deref().filter(|_| !images.iter().any(|(_, imp)| imp.discovery_note.is_some())) {
+        if let Some(key) = cache_key.as_deref().filter(|_| !images.iter().any(|(_, imp)| imp.degraded())) {
             // Snapshot through the connection, then publish it under the key.
             let staging = self.db_path.join("project.cache-staging.sqlite");
             if self.db.export_to(&staging).is_ok() {
@@ -2722,7 +2725,7 @@ impl Core {
             flow: None,
             patterns: None,
             references_refused: 0,
-            discovery_note: None,
+            diagnostics: self.db.import_diagnostics(id)?,
             switch: None,
         })
     }

@@ -593,6 +593,32 @@ pub struct PatternStats {
     pub refused: std::collections::BTreeMap<String, u64>,
 }
 
+/// How much a diagnostic changes what the import stored.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum DiagnosticSeverity {
+    /// Nothing is missing that could have been there: an image with no
+    /// symbol table, an import asked not to analyse.
+    Info,
+    /// A stage ran and some items failed, the same way every time on the
+    /// same inputs (a function the decompiler rejects). The rest stands,
+    /// and the result is safe to reuse.
+    Partial,
+    /// A stage did not run, or stopped for reasons outside the inputs (a
+    /// console that did not start, a worker that crashed). The facts are
+    /// incomplete, and the import is never cached.
+    Degraded,
+}
+
+/// One thing an import could not do.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct ImportDiagnostic {
+    pub severity: DiagnosticSeverity,
+    /// The stage that reported it (`discovery`, `references`, `switch`, ...).
+    pub stage: String,
+    pub message: String,
+}
+
 /// Program summary returned by import/open.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct ProgramSummary {
@@ -618,10 +644,11 @@ pub struct ProgramSummary {
     /// Ranges whose reference query the console refused, when any did.
     #[serde(default, skip_serializing_if = "is_zero")]
     pub references_refused: u64,
-    /// Why console-driven discovery did not run, when it did not: a silent
-    /// fallback to pointer-only seeds hides a whole architecture's flow.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub discovery_note: Option<String>,
+    /// What the import could not do, and how much that matters. Empty when
+    /// every stage ran in full. Stored with the program, so a cached import
+    /// reports the same diagnostics as the analysis that produced it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnostics: Vec<ImportDiagnostic>,
     /// Switch-recovery accounting: dispatches value-set analysis resolved,
     /// and dispatches it refused and handed to the decompiler.
     #[serde(default, skip_serializing_if = "Option::is_none")]

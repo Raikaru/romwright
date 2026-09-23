@@ -201,7 +201,7 @@ pub(super) struct ConsoleLanes {
 /// All supported languages use the same mapped addresses and flow worklist.
 pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes> {
     if import.mappings.is_empty() {
-        import.discovery_note = Some("the image has no mapped bytes".into());
+        import.diagnose(romwright_model::DiagnosticSeverity::Info, "discovery", "the image has no mapped bytes");
         return None;
     }
     if import
@@ -210,18 +210,18 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
         .as_ref()
         .map_or(true, |path| !path.is_file())
     {
-        import.discovery_note = Some("no SLEIGH console is configured".into());
+        import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", "no SLEIGH console is configured");
         return None;
     }
     let mut session = match ConsoleSession::new(&import.cfg) {
         Ok(session) => session,
         Err(error) => {
-            import.discovery_note = Some(format!("console did not start: {error}"));
+            import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console did not start: {error}"));
             return None;
         }
     };
     if let Err(error) = session.load_mapped(import) {
-        import.discovery_note = Some(format!("console did not load the image: {error}"));
+        import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console did not load the image: {error}"));
         return None;
     }
     let patterns_started = std::time::Instant::now();
@@ -232,7 +232,7 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     let patterns = match session.function_patterns(&ranges) {
         Ok(patterns) => patterns,
         Err(error) => {
-            import.discovery_note = Some(format!("console refused the pattern search: {error}"));
+            import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console refused the pattern search: {error}"));
             return None;
         }
     };
@@ -248,11 +248,11 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     };
     let walked = flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider);
     if let Err(error) = walked {
-        import.discovery_note = Some(format!("console-driven flow failed: {error}"));
+        import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console-driven flow failed: {error}"));
         return None;
     }
     if let Some(failure) = provider.failure.as_ref().map(ToString::to_string) {
-        import.discovery_note = Some(format!("console-driven flow failed: {failure}"));
+        import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console-driven flow failed: {failure}"));
         return None;
     }
     super::phase(import, "flow", flow_started);
