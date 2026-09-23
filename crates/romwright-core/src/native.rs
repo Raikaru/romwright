@@ -359,6 +359,10 @@ pub struct NativeImport {
     /// prerequisites). Labels alone cannot say this -- only a subset of
     /// rules carry a `<funcstart label=>`.
     pub pattern_starts: Vec<u64>,
+    /// Pattern starts the guard-clause merge folded into the function
+    /// above them. Durable across discovery rounds, which refresh
+    /// `pattern_labels`: an absorbed start is no evidence of a function.
+    pub absorbed_starts: std::collections::HashSet<u64>,
     /// Starts this rule seeded from constant-propagated DATA facts: the
     /// only evidence that names the seeding pass, so the producer column
     /// credits discovery's source instead of the walk that followed it.
@@ -4246,10 +4250,22 @@ pub fn store_import(
     // for a 3-entry cosmetic gain on one ROM. A taken address with no
     // edges is indistinguishable from a quiet leaf at store time.
     {
+        // Pattern evidence is an accepted start, not a match: the console
+        // labels every match of a labelled pattern, and those it refused
+        // (offcuts inside a body decoded later) retracted the real
+        // function around them (swkotor2 0x727010, over four refused
+        // matches). A start the guard-clause merge absorbed is its
+        // owner's code, not evidence either.
+        let accepted_patterns: Vec<u64> = imp
+            .pattern_starts
+            .iter()
+            .copied()
+            .filter(|address| !imp.absorbed_starts.contains(address))
+            .collect();
         let stronger: Vec<u64> = thunked
             .iter()
             .chain(declared.iter())
-            .chain(patterned.iter())
+            .chain(accepted_patterns.iter())
             .chain(pointed.iter())
             .chain(called.iter())
             .copied()
@@ -6840,6 +6856,36 @@ mod tests {
         assert!(!const_entry_swallowed(0x1000, 0, &[0x1001]));
         // Empty evidence: nothing to swallow.
         assert!(!const_entry_swallowed(0x1000, 100, &[]));
+    }
+
+    /// A labelled pattern match the importer refused, or a start the
+    /// guard-clause merge absorbed, is no evidence of a function: counted,
+    /// it retracted the const-seeded callback around it (swkotor2
+    /// 0x727010). An accepted pattern start inside one still does.
+    #[test]
+    fn only_accepted_pattern_starts_retract_a_const_entry() {
+        let stored = |pattern_starts: Vec<u64>, absorbed: Vec<u64>| {
+            let imp = NativeImport {
+                language: "x86:LE:32:default".into(),
+                functions: vec![NativeFunction {
+                    entry: 0x1000,
+                    size: 0x100,
+                    name: "FUN_00001000".into(),
+                }],
+                const_data_starts: vec![0x1000],
+                pattern_labels: vec![(0x1040, "refused".into())],
+                pattern_starts,
+                absorbed_starts: absorbed.into_iter().collect(),
+                ..Default::default()
+            };
+            let db = ProjectDb::open_in_memory().unwrap();
+            let pid = db.upsert_program("p", &imp.language, &native_provenance()).unwrap();
+            store_import(&db, "p", &imp, None).unwrap();
+            db.functions(pid).unwrap().len()
+        };
+        assert_eq!(stored(Vec::new(), Vec::new()), 1, "a refused match retracted the callback");
+        assert_eq!(stored(vec![0x1080], vec![0x1080]), 1, "an absorbed start retracted its owner");
+        assert_eq!(stored(vec![0x1080], Vec::new()), 0, "an accepted start inside must still retract");
     }
 
     #[test]
