@@ -8730,3 +8730,12 @@ becomes 3,565 / 0.9969 / 0.9685; optimisation name precision 0.9792 becomes
 be run: import, `index-semantics`, then diff. Tests:
 `constants_keep_large_signed_literals_and_drop_pointers`, and the db
 round-trip carries constants.
+Follow-ups:
+- Constants are stored sign-extended to 64 bits, so one literal read at
+  two widths is one constant. No measured change on these sets.
+- A body the index never decoded has no set (`None`); the term is dropped,
+  not scored zero.
+- A decoded body with no literal against one with some still scores zero.
+  Dropping that case instead measured worse: m12 `--index` modules 3,499 /
+  0.9929 / 0.9506 against 3,565 / 0.9969 / 0.9685; kotor 5,733 rows, with
+  Mac-only Context 1.75% against 6,010 rows and 0.69%.

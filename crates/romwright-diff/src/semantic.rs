@@ -105,11 +105,17 @@ pub fn constants(ops: &[SemOp], mapped: &[(u64, u64)]) -> Vec<u64> {
         .filter_map(|var| {
             let bits = (var.size.clamp(1, 8) * 8) as u32;
             let value = if bits >= 64 { var.offset } else { var.offset & ((1u64 << bits) - 1) };
-            let negative = bits < 64 && value >> (bits - 1) == 1;
-            let magnitude = if negative { (1u64 << bits) - value } else { value };
-            (magnitude >= CONSTANT_MIN
+            // One canonical form whatever width carried it: sign-extended
+            // to 64 bits, so -300 read at four bytes and at eight is the
+            // same literal. Pointers are recognised on the unsigned view.
+            let signed = if bits >= 64 {
+                value as i64
+            } else {
+                ((value << (64 - bits)) as i64) >> (64 - bits)
+            };
+            (signed.unsigned_abs() >= CONSTANT_MIN
                 && !mapped.iter().any(|&(start, end)| start <= value && value < end))
-            .then_some(value)
+            .then_some(signed as u64)
         })
         .collect();
     found.sort_unstable();
@@ -383,8 +389,15 @@ mod tests {
         ];
         assert_eq!(
             constants(&ops, &[(0x0040_0000, 0x0050_0000)]),
-            vec![0x3f80_0000, 0xffff_c3f8]
+            vec![0x3f80_0000, 0xffff_ffff_ffff_c3f8]
         );
+        // The same negative literal at two widths is one constant.
+        let wide = vec![op(
+            "INT_ADD",
+            None,
+            vec![var("const", 0xffff_fed4, 4), var("const", 0xffff_ffff_ffff_fed4, 8)],
+        )];
+        assert_eq!(constants(&wide, &[]), vec![(-300i64) as u64]);
     }
 
     #[test]

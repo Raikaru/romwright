@@ -231,9 +231,9 @@ struct Func {
     /// this program. `None` is absence of evidence, never difference: the
     /// scorer drops the term rather than scoring it zero.
     semantic: Option<semantic::Signature>,
-    /// Literal operands the indexing pass kept (`semantic::constants`);
-    /// empty for an unindexed program, which drops the term.
-    constants: BTreeSet<u64>,
+    /// Literal operands the indexing pass kept (`semantic::constants`).
+    /// `None` when the index never decoded the body, which drops the term.
+    constants: Option<BTreeSet<u64>>,
 }
 
 /// One side of the diff.
@@ -337,7 +337,7 @@ impl Program {
                 if row.ops > 0 {
                     funcs[index].semantic = semantic::Signature::parse_hex(&row.signature);
                 }
-                funcs[index].constants = row.constants.iter().copied().collect();
+                funcs[index].constants = Some(row.constants.iter().copied().collect());
             }
         }
 
@@ -505,9 +505,15 @@ fn content_score(a: &Func, b: &Func, options: &Options) -> f64 {
     // Literal operands: magic values and masks are in the source, so they
     // survive a change of compiler that rewrites every count above.
     // Present whenever the program was indexed, independent of the
-    // data-flow switch below; dropped when neither side kept one.
-    if let Some(value) = jaccard(&a.constants, &b.constants) {
-        add(value, semantic::CONSTANT_WEIGHT);
+    // data-flow switch below. A body the index never decoded has no set:
+    // absence is not difference, so the term is dropped. A decoded body
+    // that kept no literal against one that kept some does score zero:
+    // dropping that case instead lost 66 correct module pairs (recall
+    // 0.9685 to 0.9506) and 277 rows on the Mac/Windows pair.
+    if let (Some(left), Some(right)) = (&a.constants, &b.constants) {
+        if let Some(value) = jaccard(left, right) {
+            add(value, semantic::CONSTANT_WEIGHT);
+        }
     }
     // Data-flow over p-code: what the body computes, not how it encodes
     // it. Dropped outright when the switch is off or either side has no
