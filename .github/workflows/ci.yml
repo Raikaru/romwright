@@ -482,6 +482,14 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --work "$RUNNER_TEMP/discovery/diff" \
             --report "$RUNNER_TEMP/discovery/diff.json"
+      - name: Score function recovery on real game images
+        env:
+          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          # The game images are private; a runner records each skip.
+          python3 tests/m21-001_real_images.py \
+            --work "$RUNNER_TEMP/discovery/real-images" \
+            --report "$RUNNER_TEMP/discovery/real-images.json"
       - name: Transfer names across compilers on a real pair
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

@@ -236,28 +236,55 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         }
     }
 
-    // Security info: imageSize @+4, fileKey @+0x11C.
+    // Security info: imageSize @+4. The AES file key sits at +0x150 in the
+    // XEX2 security info retail and late development images carry, and at
+    // +0x11C in the earlier layout; which applies is proven by decryption.
     let image_size = be32(data, offset_sec + 4)? as usize;
-    let file_key: [u8; 16] = data
-        .get(offset_sec + 0x11C..offset_sec + 0x12C)
-        .ok_or_else(|| super::ImportError::Bad("xex: fileKey truncated".into()))?
-        .try_into()
-        .map_err(|_| super::ImportError::Bad("xex: fileKey".into()))?;
-    let session_key: [u8; 16] = aes_cbc_decrypt(&RETAIL_KEY, &file_key)
-        .try_into()
-        .map_err(|_| super::ImportError::Bad("xex: session key".into()))?;
-
+    let file_keys: Vec<[u8; 16]> = [0x150usize, 0x11C]
+        .iter()
+        .filter_map(|&at| data.get(offset_sec + at..offset_sec + at + 16)?.try_into().ok())
+        .collect();
+    if file_keys.is_empty() {
+        return super::err("xex: fileKey truncated");
+    }
     // The PE payload runs from offsetPE to EOF.
-    let mut payload = data
+    let payload = data
         .get(offset_pe..)
-        .ok_or_else(|| super::ImportError::Bad("xex: no PE payload".into()))?
-        .to_vec();
-    if encryption == 1 {
-        payload = aes_cbc_decrypt(&session_key, &payload);
-    } else if encryption != 0 {
+        .ok_or_else(|| super::ImportError::Bad("xex: no PE payload".into()))?;
+    if encryption != 0 && encryption != 1 {
         return super::err(&format!("xex: encryption {encryption} not supported"));
     }
-    let pe_image = decompress(compression, &basic, block_size, image_size, &payload)?;
+    // Retail images are keyed by the retail key; development and
+    // pre-release builds by the devkit key, which is all zeros. Which one
+    // applies is only known by decrypting: the right key yields an `MZ`
+    // image (XEXLoaderWV tries them in this order).
+    let mut pe_image = Vec::new();
+    'keys: for (key, file_key) in [RETAIL_KEY, [0u8; 16]]
+        .into_iter()
+        .flat_map(|key| file_keys.iter().map(move |file_key| (key, *file_key)))
+    {
+        let session_key: [u8; 16] = aes_cbc_decrypt(&key, &file_key)
+            .try_into()
+            .map_err(|_| super::ImportError::Bad("xex: session key".into()))?;
+        let plain = if encryption == 1 {
+            aes_cbc_decrypt(&session_key, payload)
+        } else {
+            payload.to_vec()
+        };
+        match decompress(compression, &basic, block_size, image_size, &plain) {
+            Ok(image) if image.starts_with(b"MZ") => {
+                pe_image = image;
+                break 'keys;
+            }
+            Ok(image) if pe_image.is_empty() => pe_image = image,
+            Ok(_) => {}
+            Err(error) if encryption == 0 => return Err(error),
+            Err(_) => {}
+        }
+        if encryption == 0 {
+            break;
+        }
+    }
 
     // The decompressed image is a memory image: each PE section's bytes sit at
     // its VirtualAddress (RVA), not PointerToRawData (XEXHeader.ProcessPEImage

@@ -1160,3 +1160,24 @@ fn the_plt_header_override_needs_a_branch_that_transfers() {
         "the override belongs on the branch the flow walk proved"
     );
 }
+
+/// `pop {..rX..}; bx rX` is Thumb's old return idiom: not a switch
+/// candidate. A `bx` through a register the pop did not load, or with no
+/// pop before it, still is.
+#[test]
+fn thumb_pop_then_bx_is_a_return_not_a_computed_jump() {
+    let mut imp = image();
+    let bytes = &mut imp.mappings[0].bytes;
+    // 0x1000: pop {r0, r4}; bx r0
+    bytes[0..2].copy_from_slice(&0xbc11u16.to_le_bytes());
+    bytes[2..4].copy_from_slice(&0x4700u16.to_le_bytes());
+    // 0x1010: pop {r0}; bx r3
+    bytes[0x10..0x12].copy_from_slice(&0xbc01u16.to_le_bytes());
+    bytes[0x12..0x14].copy_from_slice(&0x4718u16.to_le_bytes());
+    // 0x1020: mov r0, r1; bx r0
+    bytes[0x20..0x22].copy_from_slice(&0x1c08u16.to_le_bytes());
+    bytes[0x22..0x24].copy_from_slice(&0x4700u16.to_le_bytes());
+    assert!(thumb_pop_return(&imp, 0x1002));
+    assert!(!thumb_pop_return(&imp, 0x1012));
+    assert!(!thumb_pop_return(&imp, 0x1022));
+}
