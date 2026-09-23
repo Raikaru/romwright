@@ -4595,21 +4595,26 @@ pub fn store_import(
                 .iter()
                 .find(|m| m.load_vaddr.offset <= address && address - m.load_vaddr.offset < m.size)
         };
+        // One row per distinct reference: discovery rounds re-append the
+        // same xref, and each copy used to become its own row.
+        let mut seen: std::collections::HashSet<(u64, u64)> = std::collections::HashSet::new();
+        let mut rows: Vec<romwright_model::ModuleXrefRow> = Vec::new();
         for x in &imp.xrefs {
             let (Some(from), Some(to)) = (module_of(x.from), module_of(x.to)) else {
                 continue;
             };
-            if from.module_id != to.module_id {
-                db.insert_module_xref(&romwright_model::ModuleXrefRow {
+            if from.module_id != to.module_id && seen.insert((x.from, x.to)) {
+                rows.push(romwright_model::ModuleXrefRow {
                     module_id: from.module_id,
                     from_addr: romwright_model::Address::ram(x.from),
                     to_module_id: Some(to.module_id),
                     to_addr: romwright_model::Address::ram(x.to),
                     to_external: String::new(),
                     kind: "call".into(),
-                })?;
+                });
             }
         }
+        db.insert_module_xrefs(&rows)?;
     }
     // Each rule owns its rows: the ABI-reserved slot and a stub's own branch
     // are different evidence for the same kind of correction.

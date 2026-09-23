@@ -8865,3 +8865,23 @@ identical, but in an interleaved A/B on smt-cloud the two baseline runs
 differed by 21 s (136.7 vs 115.4 s), the change sat inside that noise
 (127.6 / 108.1 s), and switch setup did not move. Setup is a full
 `store_import` of the growing image each round, not the duplicate rows.
+
+## Switch setup: module xrefs written one autocommit row at a time (2026-09-23)
+
+A per-step trace of the scratch store put nearly all of the switch setup
+time in one loop. Every xref crossing a module boundary (a PE section
+counts as a module) was inserted as its own autocommit statement. Each
+in-memory repeat of an xref was written again: swkotor2 stored 165,912
+module_xrefs rows, of which 44,351 are distinct. This ran in every
+switch round's scratch store and again in the final store. It is now one
+prepared statement in one transaction, one row per distinct (from, to).
+Idle-host A/B (smt-cloud), alternated:
+- Setup per round: 2.0-6.8 s before, 0.8-1.4 s after.
+- Store phase: 9-10 s before, 1.2 s after.
+- Switch phase: 23-27 s before, 15-16 s after.
+- swkotor2 import: 123.6 / 133.6 s before, 112.5 / 107.8 s after.
+The facts tables are identical; module_xrefs holds exactly the previous
+distinct rows. m20-008 passes; core lib 482.
+Also seen, not fixed: store_import never clears modules or module_xrefs,
+so storing a program twice into one store would duplicate them, and every
+cross-module row is labelled `call`, data references included.
