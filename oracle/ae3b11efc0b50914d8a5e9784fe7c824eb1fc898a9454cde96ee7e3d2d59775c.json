@@ -5,7 +5,7 @@
   "producer": "ghidra-bridge",
   "upstream_version": "12.1.3",
   "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
-  "bridge_sources_sha256": "e995f6d5e71cbe6e78e6aa32006ac5231683186993a3c4a6d2788f749c30d1bd",
+  "bridge_sources_sha256": "180235b9ab1a62a76933524cc1364f21faabcdefe5fd4857ffbbae0ebe3a9729",
   "analysis": "GhidraProject.analyze:defaults",
   "language_selection": "automatic",
   "address_basis": "ghidra",
