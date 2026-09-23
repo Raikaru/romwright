@@ -28,15 +28,18 @@ impl ProjectDb {
         {
             let mut insert = tx.prepare(
                 "INSERT OR REPLACE INTO semantic_signatures
-                     (program_id, function, signature, ops)
-                 VALUES (?1, ?2, ?3, ?4)",
+                     (program_id, function, signature, ops, constants)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
             )?;
             for row in rows {
+                let constants: Vec<String> =
+                    row.constants.iter().map(|value| format!("{value:x}")).collect();
                 insert.execute(params![
                     program.0,
                     addr_cell(&row.function),
                     row.signature,
                     row.ops,
+                    constants.join(" "),
                 ])?;
             }
         }
@@ -50,16 +53,21 @@ impl ProjectDb {
         program: ProgramId,
     ) -> Result<Vec<SemanticSignatureRow>> {
         let mut stmt = self.conn.prepare(
-            "SELECT function, signature, ops
+            "SELECT function, signature, ops, constants
              FROM semantic_signatures WHERE program_id = ?1 ORDER BY function",
         )?;
         let rows = stmt
             .query_map(params![program.0], |row| {
                 let function: String = row.get(0)?;
+                let constants: String = row.get(3)?;
                 Ok(SemanticSignatureRow {
                     function: romwright_model::Address::parse_ram_hex(&function).unwrap_or_default(),
                     signature: row.get(1)?,
                     ops: row.get(2)?,
+                    constants: constants
+                        .split_whitespace()
+                        .filter_map(|value| u64::from_str_radix(value, 16).ok())
+                        .collect(),
                 })
             })?
             .collect::<rusqlite::Result<Vec<_>>>()?;
@@ -90,11 +98,13 @@ mod tests {
                 function: romwright_model::Address::ram(0x400100),
                 signature: "ab".repeat(1024),
                 ops: 12,
+                constants: vec![0x3f800000, 0xdeadbeef],
             },
             SemanticSignatureRow {
                 function: romwright_model::Address::ram(0x400200),
                 signature: "cd".repeat(1024),
                 ops: 30,
+                constants: Vec::new(),
             },
         ];
         db.replace_semantic_signatures(id, &rows).unwrap();

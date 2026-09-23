@@ -8701,3 +8701,32 @@ Learning wins on both folds here, so the fit is sound and label count does
 not explain the cross-compiler loss. What these structural terms carry does
 not survive the compiler change. Not shipped: the gain is 3-4 points rank-1
 on the one module pair it was measured on, and m12 already passes.
+
+## Literal-constant content term (2026-09-23, schema v29)
+
+Candidate features measured on the 486 cross-compiler anchor pairs
+(rank-1 / top-12 among 11,363 Windows functions):
+- Data-flow signature: 0.029 / 0.070 alone. True pairs sit at a median
+  cosine of 0.926, but so does nearly everything else. Blended with the
+  structural terms at weight 1: 0.261 / 0.496, against 0.218 / 0.479
+  without it. Not pursued.
+- Literal constants (objdump immediates of at least 0x100, pointers
+  excluded; present in 26% of Mac and 35% of Windows bodies): on the 282
+  pairs that have some, 0.528 / 0.730 alone, against 0.262 / 0.567 for all
+  structural terms together.
+Shipped: `index-semantics` stores each body's p-code `const` inputs of
+signed magnitude at least 0x100 that are not mapped addresses
+(`semantic::constants`, new `semantic_signatures.constants` column,
+schema 29). A LOAD/STORE space handle is skipped: one value sat in
+11,313 of 11,353 bodies until it was. The diff adds their Jaccard at
+`CONSTANT_WEIGHT` 0.6, independent of `--semantic`. Unindexed programs
+score as before.
+Kotor pair, both programs indexed, `--no-semantic`: 6,010 rows (was 5,491),
+Mac-only Alignment 0.12% (was 0.27%), CallGraph 0.0%, Context 0.69%, named
+245/3. The `CSWTrackFollower::Load` miss moved to 0x4f8a70.
+m12-001 `--index`, constants off / on: modules 3,518 / 0.9882 / 0.9557
+becomes 3,565 / 0.9969 / 0.9685; optimisation name precision 0.9792 becomes
+1.0. m12-002 now indexes both programs, so it scores the diff as it should
+be run: import, `index-semantics`, then diff. Tests:
+`constants_keep_large_signed_literals_and_drop_pointers`, and the db
+round-trip carries constants.

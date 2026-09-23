@@ -884,6 +884,12 @@ impl Core {
         let id = self.db.program_id(program)?;
         let entries: Vec<romwright_model::Address> =
             self.db.functions(id)?.into_iter().map(|row| row.entry).collect();
+        let mapped: Vec<(u64, u64)> = self
+            .db
+            .memory_regions(id)?
+            .into_iter()
+            .map(|region| (region.start.offset, region.start.offset.saturating_add(region.size)))
+            .collect();
         let mut rows: Vec<romwright_model::SemanticSignatureRow> = Vec::new();
         self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
             for entry in &entries {
@@ -930,6 +936,7 @@ impl Core {
                     function: entry.clone(),
                     signature: signature.to_hex(),
                     ops: ops.len() as u32,
+                    constants: romwright_diff::semantic::constants(&ops, &mapped),
                 });
             }
             Ok(())
