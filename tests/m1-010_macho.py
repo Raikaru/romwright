@@ -110,19 +110,62 @@ def test_kotor2sub(work: Path, results: dict) -> None:
     try:
         programs = connection.execute('SELECT name, language FROM programs').fetchall()
         assert programs == [('kotor2sub', 'x86:LE:64:default')], programs
+        # Functions are code: every entry lies in an executable region. A
+        # loader that took every section symbol as a function also counted
+        # string literals, exception tables and data labels (33k "functions"
+        # on the i386 slice, 18k of them code), which is why there is no
+        # upper count bound worth pinning and only a floor.
         count = connection.execute('SELECT COUNT(*) FROM functions').fetchone()[0]
-        assert count > 20000, count
+        assert count > 15000, count
         main = connection.execute(
             'SELECT entry FROM functions WHERE name = ?', ('main',)).fetchall()
         assert main == [('1000043e7',)], main
-        regions = connection.execute(
-            'SELECT start, permissions FROM memory_regions ORDER BY start').fetchall()
-        assert len(regions) == 3, regions
-        assert regions[0][1] == 'r-x', regions
-        assert regions[0][0] == '100000000', regions
+        regions = [(int(start, 16), size, permissions) for start, size, permissions in
+                   connection.execute('SELECT start, size, permissions FROM memory_regions')]
+        code = [(start, start + size) for start, size, permissions in regions if 'x' in permissions]
+        assert code, regions
+        # `__TEXT,__cstring` / `__TEXT,__const` read as data, not code.
+        assert any(permissions == 'r--' for _, _, permissions in regions), regions
+        outside = [entry for (entry,) in connection.execute('SELECT entry FROM functions')
+                   if not any(lo <= int(entry, 16) < hi for lo, hi in code)]
+        assert not outside, outside[:10]
+        edge = linkedit_vmaddr(fat_slice(0x01000007))
+        leaked = sum(int(address, 16) >= edge for (address,) in
+                     connection.execute('SELECT address FROM strings'))
+        assert leaked == 0, leaked
     finally:
         connection.close()
     results['kotor2sub'] = {'outcome': 'imported', 'functions': count}
+
+
+def fat_slice(cpu: int) -> bytes:
+    """The thin image for `cpu` out of the fat kotor2sub binary."""
+    import struct as struct_
+    with open(KOTOR2SUB, 'rb') as handle:
+        head = handle.read(0x100)
+        narch = struct_.unpack('>I', head[4:8])[0]
+        for index in range(narch):
+            arch, _, off, size, _ = struct_.unpack(
+                '>5I', head[8 + index * 20:28 + index * 20])
+            if arch == cpu:
+                handle.seek(off)
+                return handle.read(size)
+    raise AssertionError(f'no slice for cpu {cpu:#x}')
+
+
+def linkedit_vmaddr(image: bytes) -> int:
+    """`__LINKEDIT`'s load address, from a thin image's segment commands."""
+    import struct as struct_
+    magic = struct_.unpack_from('<I', image, 0)[0]
+    is64 = magic == 0xFEEDFACF
+    ncmds = struct_.unpack_from('<I', image, 16)[0]
+    cursor = 32 if is64 else 28
+    for _ in range(ncmds):
+        cmd, size = struct_.unpack_from('<II', image, cursor)
+        if cmd in (0x1, 0x19) and image[cursor + 8:cursor + 24].rstrip(b'\0') == b'__LINKEDIT':
+            return struct_.unpack_from('<Q' if is64 else '<I', image, cursor + 24)[0]
+        cursor += size
+    raise AssertionError('no __LINKEDIT segment')
 
 
 def test_i386_slice(work: Path, results: dict) -> None:
@@ -131,20 +174,8 @@ def test_i386_slice(work: Path, results: dict) -> None:
     if not KOTOR2SUB.is_file():
         results['i386'] = {'outcome': 'skipped', 'reason': 'file absent'}
         return
-    import struct as struct_
-    with open(KOTOR2SUB, 'rb') as handle:
-        head = handle.read(0x100)
-        narch = struct_.unpack('>I', head[4:8])[0]
-        arch = None
-        for index in range(narch):
-            cpu, _, off, size, _ = struct_.unpack(
-                '>5I', head[8 + index * 20:28 + index * 20])
-            if cpu & 0xFFFFFF == 7 and cpu != 0x01000007:
-                arch = (off, size)
-        assert arch is not None, 'no i386 slice'
-        handle.seek(arch[0])
-        image = work / 'kotor2sub-i386.bin'
-        image.write_bytes(handle.read(arch[1]))
+    image = work / 'kotor2sub-i386.bin'
+    image.write_bytes(fat_slice(7))
     project = work / 'i386.project'
     proc = run([str(CLI), 'import', str(image), '--name', 'kotor2sub32',
                 '--project', str(project)])
@@ -155,6 +186,30 @@ def test_i386_slice(work: Path, results: dict) -> None:
         assert programs == [('kotor2sub32', 'x86:LE:32:default')], programs
         count = connection.execute('SELECT COUNT(*) FROM functions').fetchone()[0]
         assert count > 10000, count
+        # What the per-section loader recovers, as floors well below the
+        # measured values (2026-09-22: 18,068 functions, 10,372 strings,
+        # 3,289 import symbols). The segment loader read 38 string-bearing
+        # functions and 0 symbols here: `__TEXT,__cstring` was mapped
+        # executable and skipped by the string sweep, and stubs went unnamed.
+        referenced = connection.execute(
+            'SELECT COUNT(DISTINCT s.address) FROM strings s JOIN xrefs x '
+            'ON x.program_id = s.program_id AND x.dst = s.address').fetchone()[0]
+        assert referenced > 1000, referenced
+        symbols = connection.execute('SELECT COUNT(*) FROM symbols').fetchone()[0]
+        assert symbols > 1000, symbols
+        regions = [(int(start, 16), int(start, 16) + size) for start, size, permissions in
+                   connection.execute('SELECT start, size, permissions FROM memory_regions')
+                   if 'x' in permissions]
+        outside = [entry for (entry,) in connection.execute('SELECT entry FROM functions')
+                   if not any(lo <= int(entry, 16) < hi for lo, hi in regions)]
+        assert not outside, outside[:10]
+        # `__LINKEDIT` holds the symbol and string tables, not program
+        # memory: mapping it read symbol-name fragments as program strings
+        # (125,010 such rows on the segment loader, 0 now).
+        edge = linkedit_vmaddr(image.read_bytes())
+        leaked = sum(int(address, 16) >= edge for (address,) in
+                     connection.execute('SELECT address FROM strings'))
+        assert leaked == 0, leaked
     finally:
         connection.close()
     results['i386'] = {'outcome': 'imported', 'functions': count}

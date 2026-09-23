@@ -8418,3 +8418,179 @@ policy), m2-015, m2-016 (flow 1.9 s < 5 s budget). m2-001/003/004 have no
  tokens (`__memmove_sse2_unaligned_erms 1362 > 7`, 1 extent) a third time,
  ruling out per-process order flakiness. Parked for owners.
 
+## M12 diff scaling: local assignment search and local decode deltas (2026-09-22)
+
+A 33,651 x 11,371-function cross-binary `diff --matcher nap` (swkotor2)
+ran 1h24m with no end in sight. Two defects, each superlinear:
+
+- `assign::max_weight_matching` ran every augmenting-path Dijkstra from
+  the global source, which reaches every free left at distance ~0 and so
+  explored the whole ~45k-node graph for each of up to 11k pairs, and
+  the alignment re-solves it up to 64 rounds x 2 passes. Rewritten as
+  successive shortest paths one left at a time (each left has a private
+  zero-cost exit, i.e. "stay unmatched"), searched from that left only,
+  stopping at the sink, with the early-stop potential correction
+  (settled nodes move by d - D). Same optimum: synthetic 20k x 8k,
+  12 edges/left, total weight identical to the old solver to 1e-9;
+  109.8 s -> 0.094 s. New unit test checks optimality against brute force
+  over 3,000 random sparse mixed-sign instances. It catches a potential
+  update without the early-stop correction (verified by mutation).
+- `decode` re-summed the whole pairing's objective for every candidate
+  move and scanned every movable reference as a swap partner:
+  O(rounds x M^2 x N) content scores. Now the gain is computed exactly
+  over the move's call-graph neighbourhood (a pair's weight reads only
+  its own and its neighbours' partners), and swap partners are
+  restricted to holders of floor-clearing targets, the same condition
+  the old code checked last.
+
+Evidence: m12 corpus rows (54) are identical before and after the decode
+change. The diff step alone, same imported projects: driving->boot
+27.05 s (HEAD) -> 0.65 s. Bond<->driving 14-18 s; with the new solver
+but the old decode it ran >10 min without finishing (sampled in
+`objective`). Real pair: swkotor2_unpacked vs kotor2sub_i386 (33,651 x
+11,371, nap, --no-semantic) completes in 169.9 s wall / 166.5 s CPU,
+154 MB peak, measured with a second full-core diff running, 7,318
+matched, 6,284 names portable. A run of the same pair on a binary with
+the old decode was confirmed (3/3 stack samples) stuck in `objective`.
+Module rows A/B, boot/base/driving only (HEAD cannot finish the Bond
+pairs), HEAD diff crate vs new, same corpus: all 6 rows gain precision
+and recall, pooled 0.9291/0.9074 -> 0.9400/0.9155, alignment class e.g.
+boot->base 86/99 -> 89/94. This is one 6-pair set where tie choices can
+move rows, and it is not comparable to the ledger's 0.9344/0.9101
+(different module set). Cause unattributed. [INFERENCE] Either a
+different choice among equal-weight optima, or the removal of
+rounding-noise "gains" from full-sum differences. The modules bar
+(0.95/0.93) is still unmet; that item stays open. Reduced costs now go
+through an asserting clamp (`feasible`): a potential update without the
+early-stop correction fails the optimality test through the assertion
+(verified by mutation).
+
+## Cross-compiler name transfer: Mach-O import was the defect (2026-09-22)
+
+swkotor2_unpacked (MSVC, Windows) vs kotor2sub_i386 (Mac, symbols), nap
+--no-semantic, scored against 286 string-anchored names (every shared
+unique literal agreeing on one Mac symbol; correspondence INFERRED by the
+baseline's own label). Before: counting known Mac names that are unique
+in the reference and placed by the diff, 42 correct and 61 wrong (41%).
+Every placement scoring >=0.75 was wrong (0/56); below 0.75, 42 of 50
+were right. That was a statement about this pair and name set, not a
+law of content_score (the module rows hold 0.94 on same-compiler pairs).
+
+Cause: the Mach-O loader, not the matcher's weights. It mapped whole
+segments, so `__TEXT,__cstring`/`__const` inherited execute and the
+string sweep (readable, not executable) skipped them: 38 of 33,651 Mac
+functions referenced a string. It mapped `__LINKEDIT`, so symbol names
+read as program strings. It took every `N_SECT` symbol as a function,
+so 6,111 string literals, 3,320 exception tables and ~6k other data
+labels were "functions" (16,501 in `__text`). And it read no import
+names (0 symbol rows). With no strings and no imports on one side,
+content reduced to counts and shape, which do not transfer across
+compilers.
+
+Fix (`native/macho.rs`): per-section mappings (code sections r-x; other
+sections r--/rw- by segment protection; sectionless segments whole,
+except `__LINKEDIT`); functions only from code-section symbols; import
+names for stubs and lazy/non-lazy pointer slots from `LC_DYSYMTAB`'s
+indirect table as `externals`. i386 slice: 18,068 functions, 1,777 with
+strings, 3,289 symbols, 1,647 thunks. Matcher (`romwright-diff`):
+per-literal votes -- a literal of >=12 chars referenced by exactly one
+function per side votes for that pair; unanimous pairs anchor as
+`String` (the one-string key could not use multi-literal functions).
+
+After: 487 anchors (was 8), 91 s. The 286 check reads 220 right / 1
+wrong, but it is not independent: it replicates the baseline's method.
+All 221 judged rows are literal votes. Split by vote count: single-vote
+147/147, multi-vote 73/74. The one miss (12 unanimous votes) matched
+0x4cfd97, the 1,194-byte body of a function the PE import split from its
+23-byte head at 0x4cfd80, which the baseline names. That is a PE
+function-boundary defect, not a matcher error; it is open.
+Independent check: hold out every other literal-vote pair (174) and
+anchor on the rest only. Placement is 151 right / 0 wrong / 23 unplaced.
+By mechanism: Alignment recovered 116 (67% recall, 0 wrong); the other
+35 came from the pre-existing one-string key (`s:`), which the hook did
+not suppress, so they are not propagation evidence. The hidden literals
+still count toward content's string jaccard, so the defensible claim is
+"0 wrong placements", not a recall figure for literal-free functions.
+The held-out pairs are string-rich functions, not a random sample.
+
+Regression: m12 corpus rows unchanged. Module rows (boot/base/driving)
+identical to before (pooled 0.9400/0.9155, literal anchors all correct,
+anchor precision 1.0). The votes do not perturb same-compiler matching,
+but they do not move the open 0.95/0.93 modules gap either: don't retry
+this lever for that item. m1-010 passes after replacing assertions that
+pinned the defect: `count > 20000` (it counted data labels) and exactly
+3 segment regions. They now assert a floor of 15,000, `main` at its
+address, an r-- data region, and that every function entry lies in an
+executable region, and the i386 half now floors referenced strings
+(>1,000), import symbols (>1,000) and code-only function entries. The
+loader refuses a section whose bytes leave the file, and drops symbols
+whose section ordinal names no declared section (no count change on
+either real slice). romwright-core 480/480 lib tests, romwright-diff 19/19.
+Projects imported before this fix keep the old Mac function set and
+must be re-imported.
+
+Open, pre-existing (A/B against HEAD's loader, same command): decompiling
+any kotor2sub_i386 function fails with "decompiler exception: No
+architecture registered with decompiler" (e.g. 0x2f8bca). The i386 Mach-O
+import's switch-recovery round fails for the same reason. Matching and
+name transfer do not decompile the reference and are unaffected.
+
+## Matcher rows need a preserved call edge (2026-09-23)
+
+The fixed kotor pair still placed Mac-only names (SDL, `*_Mac`, ASL; a
+negative-only truth: they cannot be right on Windows code) on 4.5% of
+Alignment and 5.4% of Context rows. Split by call edges the final
+pairing preserves: 0 edges, 2,844 rows, 9.5% Mac-only against a pool rate
+of 8.7% (chance-level placement [INFERENCE: assumes wrong rows draw names
+like the pool]); 1 edge, 1.4%; 2+ edges, 1 in 2,231. The median content
+score of the Mac-only rows is 0.92, so no content floor separates them.
+
+Change: `withdraw_unsupported` runs after `decode` and removes every
+Alignment/Context/CallGraph row preserving zero edges, to a fixed point.
+Anchors, Global and Semantic rows are untouched.
+
+Kotor: 7,037 rows become 3,533. Mac-only Alignment 0.3% (7/2,545), Context
+1.0% (5/496) [INFERENCE: scaled by pool rate, ~3.5% and ~11% wrong]. The
+286 check is unchanged at 220/1. 87 s.
+m12: twins unchanged (1.0/1.0). Optimisation recall 0.9351 to 0.9169
+(floor 0.75), name precision 0.9423 to 0.9778. Modules precision 0.9400 to
+0.9818, clearing 0.95; recall 0.9155 to 0.9079, still short of 0.93, now
+the only failing modules row. Alignment-class precision 0.7575 to 0.9150.
+
+Tried and dropped: exempting zero-edge rows whose content beats every
+rival by a margin (0.03 recovers 10 correct pairs: modules +6, recall
+0.9079 to 0.9095; optimisation +4, 0.9169 to 0.9273; costs
+optimisation name precision 0.9778 to 0.9592, adds an O(n) scan per row);
+a second align/decode/withdraw round (+8 module pairs, recall 0.9101, costs
+a whole alignment pass). Test
+`a_content_only_pair_with_no_preserved_call_is_withdrawn` fails with the
+pass removed. romwright-diff 20/20.
+
+## Modules P/R closed: supported extension after withdrawal (2026-09-23)
+
+After the withdrawal, 262 of the 339 missed module truth pairs were left
+with both sides open, and most sat next to a correctly matched neighbour
+whose partner neighbours the true target. `extend_supported` runs after
+the withdrawal: each open pair gets one vote per matched neighbour pair it
+would preserve. It is taken when it is the most-voted partner of both of
+its functions. A tie at the top is broken on content only when the winner
+leads by `EXTEND_MARGIN` (0.2). No content floor. It repeats to a fixed
+point.
+
+m12 now passes outright: modules 0.9784/0.9332 (targets 0.95/0.93), name
+precision 0.9678; optimisation 1.0/0.9195; twins 1.0/1.0; anchors 1.0.
+Margin sweep on the modules, precision/recall: no tie-break 0.9800/0.9299;
+0.2 0.9784/0.9332; 0.1 0.9778/0.9343; every tie broken 0.9741/0.9386, with
+its added rows 79% right against 87% at 0.2.
+Kotor: the added CallGraph rows carry 0.2% Mac-only names (3/1,954), against
+0.7% with every tie broken.
+Purity by content, measured on the m12 modules at 0.2: under 0.9, 25 right
+/ 12 wrong; at or above 0.9, 68 right / 2 wrong. A 0.9 floor fails on
+recall (3,435 - 25 gives 0.9264, below 0.93), so no floor ships. The ported
+list should still hold back CallGraph rows under 0.9. All three wrong named
+rows on the kotor pair sit there (content 0.32-0.45): `CSWTrackFollower::Load`,
+`CExoInputInternal`'s constructor, and `CSWGuiInGameOptKeyMappings`'
+constructor. None is a second truth entry for its name. Test
+`an_open_callee_is_paired_through_its_matched_caller` fails with the pass
+removed. romwright-diff 21/21.
+

@@ -613,6 +613,73 @@ fn slot_value(index: usize) -> usize {
     index
 }
 
+/// Shortest literal that may vote. Short text ("%s", "OK", "true") recurs
+/// across unrelated functions in one build and is owned by exactly one
+/// function in the other by accident. Twelve characters matches the SYM-0001
+/// cross-compiler baseline's floor, which also required the literal to occur
+/// once in the image; votes here require one owning function per side, a
+/// weaker filter. Measured on that pair against its 286 names, with this
+/// weaker filter: single-vote pairs 147/147 right, multi-vote 73/74 (the miss
+/// matched the body of a function the target's import split in two).
+const LITERAL_MIN_CHARS: usize = 12;
+
+/// Pairs every literal-unique string votes for, keeping only pairs whose
+/// votes are unanimous on both sides. Sorted, so acceptance order is
+/// deterministic.
+fn literal_votes(reference: &Program, target: &Program) -> Vec<(usize, usize)> {
+    // The one function referencing each literal, or `None` once a second
+    // function does.
+    fn owners(program: &Program) -> HashMap<&str, Option<usize>> {
+        let mut owner: HashMap<&str, Option<usize>> = HashMap::new();
+        for (index, func) in program.funcs.iter().enumerate() {
+            for value in &func.strings {
+                if value.chars().count() < LITERAL_MIN_CHARS {
+                    continue;
+                }
+                owner
+                    .entry(value.as_str())
+                    .and_modify(|slot| {
+                        if *slot != Some(index) {
+                            *slot = None;
+                        }
+                    })
+                    .or_insert(Some(index));
+            }
+        }
+        owner
+    }
+    let left_owner = owners(reference);
+    let right_owner = owners(target);
+    // Every function's votes, then unanimity from both ends.
+    let mut left_votes: HashMap<usize, Option<usize>> = HashMap::new();
+    let mut right_votes: HashMap<usize, Option<usize>> = HashMap::new();
+    for (value, left) in &left_owner {
+        let (Some(left), Some(Some(right))) = (*left, right_owner.get(value)) else {
+            continue;
+        };
+        let right = *right;
+        for (voter, choice, votes) in [(left, right, &mut left_votes), (right, left, &mut right_votes)] {
+            votes
+                .entry(voter)
+                .and_modify(|slot| {
+                    if *slot != Some(choice) {
+                        *slot = None;
+                    }
+                })
+                .or_insert(Some(choice));
+        }
+    }
+    let mut pairs: Vec<(usize, usize)> = left_votes
+        .iter()
+        .filter_map(|(&left, &right)| {
+            let right = right?;
+            (right_votes.get(&right) == Some(&Some(left))).then_some((left, right))
+        })
+        .collect();
+    pairs.sort_unstable();
+    pairs
+}
+
 /// Matches `target` against `reference` and reports the names that would be
 /// ported onto the target.
 pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffReport {
@@ -675,6 +742,19 @@ pub fn diff(reference: &Program, target: &Program, options: &Options) -> DiffRep
                 anchors += 1;
                 matches.push(row(reference, target, left, right, 1.0, evidence));
             }
+        }
+    }
+    // 1a'. Literal votes. A string literal referenced by exactly one
+    // function on each side votes for that pair; the pair anchors only
+    // when every such vote from either function agrees, so a conflict
+    // withholds the pair instead of choosing. This is the string evidence
+    // one-string keys cannot use: most functions that print or look up
+    // text reference several literals, and those survive a change of
+    // compiler where sizes and shapes do not.
+    for (left, right) in literal_votes(reference, target) {
+        if pairs.accept(left, right) {
+            anchors += 1;
+            matches.push(row(reference, target, left, right, 1.0, Evidence::String));
         }
     }
     // 1b. Structural round one, from the anchors alone. Raw data-flow
@@ -820,7 +900,10 @@ fn propagate(
     // only, so this pass can only raise the alignment objective, never
     // scatter what the matchers found.
     decode(reference, target, &mut pairs, options, &mut matches);
-
+    withdraw_unsupported(reference, target, &mut pairs, &mut matches);
+    // 5. What the withdrawal left open next to what it kept: pairs the
+    // call graph now vouches for.
+    extend_supported(reference, target, &mut pairs, options, &mut matches);
     matches.sort_by_key(|row| (row.target.offset, row.reference.offset));
     let names = matches
         .iter()
@@ -842,6 +925,103 @@ fn propagate(
         anchors,
         matches,
         names,
+    }
+}
+
+/// A choice between candidates tied on preserved edges is only made on
+/// content when the winner leads the runner-up by this much. Measured on
+/// the game modules (boot/base/driving): no tie-break at all leaves recall
+/// at 0.9299, breaking every tie takes 0.9386 but its added rows are 79%
+/// right, and 0.2 lands 0.9784/0.9332 with the rows 87% right; on the
+/// GCC-Mac/MSVC-Windows pair the added rows carry 0.2% Mac-only names at
+/// 0.2 against 0.7% with every tie broken.
+const EXTEND_MARGIN: f64 = 0.2;
+
+/// Pairs open functions through the call edges they would preserve with
+/// what is already matched: a pair gets one vote per matched neighbour
+/// pair it sits under or over. A pair is taken when it is the most-voted
+/// partner of both its functions -- ties at the top broken on content only
+/// past `EXTEND_MARGIN` -- which is what makes each accepted pair
+/// supported by construction. No content floor: the vote is the evidence
+/// (on the modules, a floor of 0.425 lost more right pairs than wrong).
+/// Repeats until nothing is accepted, since each round's pairs vote in
+/// the next.
+fn extend_supported(
+    reference: &Program,
+    target: &Program,
+    pairs: &mut Pairing,
+    options: &Options,
+    matches: &mut Vec<MatchRow>,
+) {
+    // (votes, partner, content, runner-up content at the same votes)
+    type Best = (u32, usize, f64, Option<f64>);
+    loop {
+        let mut votes: HashMap<(usize, usize), u32> = HashMap::new();
+        for left in 0..reference.funcs.len() {
+            let Some(right) = pairs.reference[left] else {
+                continue;
+            };
+            let a = &reference.funcs[left];
+            let b = &target.funcs[right];
+            for (lefts, rights) in [(&a.callees, &b.callees), (&a.callers, &b.callers)] {
+                for &l in lefts {
+                    if pairs.reference[l].is_some() {
+                        continue;
+                    }
+                    for &r in rights {
+                        if pairs.target[r].is_none() {
+                            *votes.entry((l, r)).or_insert(0) += 1;
+                        }
+                    }
+                }
+            }
+        }
+        let mut scored: Vec<((usize, usize), u32, f64)> = votes
+            .into_iter()
+            .map(|((l, r), n)| {
+                let content = content_score(&reference.funcs[l], &target.funcs[r], options);
+                ((l, r), n, content)
+            })
+            .collect();
+        // Index order, so equal contents resolve the same way every run.
+        scored.sort_unstable_by_key(|&(pair, _, _)| pair);
+        let mut best_left: HashMap<usize, Best> = HashMap::new();
+        let mut best_right: HashMap<usize, Best> = HashMap::new();
+        for &((l, r), n, content) in &scored {
+            for (best, key, partner) in [(&mut best_left, l, r), (&mut best_right, r, l)] {
+                match best.get_mut(&key) {
+                    Some(top) if n > top.0 => *top = (n, partner, content, None),
+                    Some(top) if n == top.0 => {
+                        if content > top.2 {
+                            *top = (n, partner, content, Some(top.2));
+                        } else {
+                            top.3 = Some(top.3.map_or(content, |second| second.max(content)));
+                        }
+                    }
+                    Some(_) => {}
+                    None => {
+                        best.insert(key, (n, partner, content, None));
+                    }
+                }
+            }
+        }
+        let clear = |top: &Best| top.3.is_none_or(|second| top.2 - second >= EXTEND_MARGIN);
+        let mut lefts: Vec<(usize, Best)> = best_left.into_iter().collect();
+        lefts.sort_unstable_by_key(|&(l, _)| l);
+        let mut accepted = 0usize;
+        for (l, top) in lefts {
+            let r = top.1;
+            if clear(&top)
+                && best_right.get(&r).is_some_and(|back| back.1 == l && clear(back))
+                && pairs.accept(l, r)
+            {
+                matches.push(row(reference, target, l, r, top.2, Evidence::CallGraph));
+                accepted += 1;
+            }
+        }
+        if accepted == 0 {
+            return;
+        }
     }
 }
 
@@ -1165,18 +1345,35 @@ fn pair_weight(
             / degree
 }
 
-/// The whole pairing's objective: every committed pair weighed as above.
-fn objective(
+/// The change a move makes to the whole pairing's objective (the sum of
+/// every committed pair's weight), computed exactly from the terms it can
+/// touch. A pair's weight reads only its own partner and its call-graph
+/// neighbours' partners, so moving the references in `moved` changes the
+/// terms of those references and their neighbours and no others. Summing
+/// only that neighbourhood before and after is the global difference
+/// without the global sum, which at 10k+ committed pairs was the whole
+/// cost of decoding.
+fn affected(reference: &Program, moved: &[usize]) -> Vec<usize> {
+    let mut set: Vec<usize> = moved.to_vec();
+    for &left in moved {
+        let func = &reference.funcs[left];
+        set.extend(func.callees.iter().chain(&func.callers).copied());
+    }
+    set.sort_unstable();
+    set.dedup();
+    set
+}
+
+fn local_weight(
     reference: &Program,
     target: &Program,
+    around: &[usize],
     pairs: &Pairing,
     options: &Options,
 ) -> f64 {
-    pairs
-        .reference
+    around
         .iter()
-        .enumerate()
-        .filter_map(|(left, &right)| right.map(|right| (left, right)))
+        .filter_map(|&left| pairs.reference[left].map(|right| (left, right)))
         .map(|(left, right)| pair_weight(reference, target, left, right, pairs, options))
         .sum()
 }
@@ -1207,16 +1404,16 @@ fn decode(
             Evidence::Alignment | Evidence::CallGraph | Evidence::Semantic
         )
     };
+    let mut index_of: HashMap<u64, usize> = HashMap::with_capacity(reference.funcs.len());
+    for (index, func) in reference.funcs.iter().enumerate() {
+        index_of.entry(func.entry).or_insert(index);
+    }
     let mut row_of: Vec<Option<usize>> = vec![None; reference.funcs.len()];
     for (index, row) in matches.iter().enumerate() {
         if !movable(row.evidence) {
             continue;
         }
-        if let Some(left) = reference
-            .funcs
-            .iter()
-            .position(|func| func.entry == row.reference.offset)
-        {
+        if let Some(&left) = index_of.get(&row.reference.offset) {
             row_of[left] = Some(index);
         }
     }
@@ -1229,6 +1426,10 @@ fn decode(
     // its content is low, since leaving is always an option the search
     // must price, not a destination it can choose.
     let mut shortlist: Vec<Vec<usize>> = vec![Vec::new(); reference.funcs.len()];
+    // Every target a movable reference may be installed on (content at or
+    // above the floor), sorted: a swap needs both installed pairs to clear
+    // the floor, so only the holders of these targets can be swap partners.
+    let mut eligible: Vec<Vec<u32>> = vec![Vec::new(); reference.funcs.len()];
     for left in 0..reference.funcs.len() {
         if row_of[left].is_none() {
             continue;
@@ -1242,6 +1443,8 @@ fn decode(
             })
             .filter(|(value, _)| *value >= options.min_score)
             .collect();
+        eligible[left] = scored.iter().map(|&(_, right)| right as u32).collect();
+        eligible[left].sort_unstable();
         scored.sort_by(|a, b| {
             b.0.partial_cmp(&a.0)
                 .unwrap_or(std::cmp::Ordering::Equal)
@@ -1275,12 +1478,12 @@ fn decode(
             if row_of[left].is_none() {
                 continue;
             }
-            let base = objective(reference, target, pairs, options);
             let mut best: Option<(usize, Option<usize>, f64)> = None;
             // Moves to an open target first (target index order), then
             // swaps with committed pairs (reference index order): a
             // free target never pays for a displacement it never caused.
-            for &right in &shortlist[left].clone() {
+            let around = affected(reference, &[left]);
+            for &right in &shortlist[left] {
                 if pairs.reference[left] == Some(right) {
                     continue;
                 }
@@ -1288,10 +1491,11 @@ fn decode(
                     continue;
                 }
                 let held = pairs.reference[left].expect("movable is committed");
+                let before = local_weight(reference, target, &around, pairs, options);
                 pairs.reference[left] = Some(right);
                 pairs.target[held] = None;
                 pairs.target[right] = Some(left);
-                let gain = objective(reference, target, pairs, options) - base;
+                let gain = local_weight(reference, target, &around, pairs, options) - before;
                 pairs.reference[left] = Some(held);
                 pairs.target[held] = Some(left);
                 pairs.target[right] = None;
@@ -1299,29 +1503,31 @@ fn decode(
                     best = Some((right, None, gain));
                 }
             }
-            for other in 0..reference.funcs.len() {
-                if other == left || row_of[other].is_none() {
-                    continue;
-                }
-                let held = pairs.reference[left].expect("movable is committed");
+            let held = pairs.reference[left].expect("movable is committed");
+            // Swap partners: movable holders of a target `left` may take
+            // whose own content clears the floor on `held`.
+            let mut others: Vec<usize> = eligible[left]
+                .iter()
+                .filter_map(|&right| pairs.target[right as usize])
+                .filter(|&other| {
+                    other != left
+                        && row_of[other].is_some()
+                        && eligible[other].binary_search(&(held as u32)).is_ok()
+                })
+                .collect();
+            others.sort_unstable();
+            for other in others {
                 let other_held = pairs.reference[other].expect("movable is committed");
                 if held == other_held {
                     continue;
                 }
-                // Both installed pairs must clear the floor, like any
-                // other destination the search can choose.
-                if content_score(&reference.funcs[left], &target.funcs[other_held], options)
-                    < options.min_score
-                    || content_score(&reference.funcs[other], &target.funcs[held], options)
-                        < options.min_score
-                {
-                    continue;
-                }
+                let around = affected(reference, &[left, other]);
+                let before = local_weight(reference, target, &around, pairs, options);
                 pairs.reference[left] = Some(other_held);
                 pairs.reference[other] = Some(held);
                 pairs.target[held] = Some(other);
                 pairs.target[other_held] = Some(left);
-                let gain = objective(reference, target, pairs, options) - base;
+                let gain = local_weight(reference, target, &around, pairs, options) - before;
                 pairs.reference[left] = Some(held);
                 pairs.reference[other] = Some(other_held);
                 pairs.target[held] = Some(left);
@@ -1349,6 +1555,54 @@ fn decode(
         if !moved {
             break;
         }
+    }
+}
+
+/// Withdraws every matcher-committed pair (alignment, context, call-graph)
+/// that preserves no call edge of the final pairing. Content similarity
+/// alone does not identify a function: measured on a GCC Mac / MSVC
+/// Windows build of one game, unsupported pairs placed Mac-only names on
+/// Windows code at the pool's own rate (9.5% vs 8.7%, so placement no
+/// better than chance), with a median content score of 0.92, while pairs
+/// preserving two or more edges placed 1 in 2,231. Anchors, global leaves
+/// and semantic pairs are not choices between candidates and stay.
+/// Withdrawing a pair can strip its neighbours of their only preserved
+/// edge, so this runs to a fixed point.
+fn withdraw_unsupported(
+    reference: &Program,
+    target: &Program,
+    pairs: &mut Pairing,
+    matches: &mut Vec<MatchRow>,
+) -> usize {
+    let mut index_of: HashMap<u64, usize> = HashMap::with_capacity(reference.funcs.len());
+    for (index, func) in reference.funcs.iter().enumerate() {
+        index_of.entry(func.entry).or_insert(index);
+    }
+    let mut withdrawn = 0usize;
+    loop {
+        let unsupported: Vec<(usize, usize)> = matches
+            .iter()
+            .filter(|row| {
+                matches!(
+                    row.evidence,
+                    Evidence::Alignment | Evidence::Context | Evidence::CallGraph
+                )
+            })
+            .filter_map(|row| {
+                let left = index_of[&row.reference.offset];
+                let right = pairs.reference[left].expect("a row is a committed pair");
+                (preserved(reference, target, left, right, pairs) == 0).then_some((left, right))
+            })
+            .collect();
+        if unsupported.is_empty() {
+            return withdrawn;
+        }
+        for &(left, right) in &unsupported {
+            pairs.reference[left] = None;
+            pairs.target[right] = None;
+        }
+        matches.retain(|row| pairs.reference[index_of[&row.reference.offset]].is_some());
+        withdrawn += unsupported.len();
     }
 }
 
@@ -1577,6 +1831,99 @@ mod tests {
         let target = Program::load(&right, "tgt").unwrap();
         let report = diff(&reference, &target, &Options::default());
         assert!(report.names.is_empty(), "ported: {:?}", report.names);
+    }
+
+    /// A callee the other build rewrote past content recognition is still
+    /// identified by where it sits: its caller is matched, and it is the
+    /// caller's only open callee on each side.
+    #[test]
+    fn an_open_callee_is_paired_through_its_matched_caller() {
+        let func = |entry: u64, name: &str, size: u64, instructions: u32, blocks: u32| Func {
+            entry,
+            size,
+            name: name.into(),
+            instructions,
+            blocks,
+            edges: blocks.saturating_sub(1),
+            max_block: instructions / blocks.max(1),
+            ..Func::default()
+        };
+        let program = |base: u64, callee: Func| {
+            let mut funcs = vec![func(base, "main", 0x40, 12, 2), callee];
+            funcs[0].calls = 1;
+            funcs[0].callees = vec![1];
+            funcs[1].callers = vec![0];
+            Program {
+                name: "p".into(),
+                funcs,
+            }
+        };
+        let reference = program(0x400000, func(0x400100, "FUN_00400100", 0x20, 6, 1));
+        let target = program(0x800000, func(0x800100, "FUN_00800100", 0x400, 180, 14));
+        let options = Options {
+            semantic: false,
+            ..Options::default()
+        };
+        let report = diff(&reference, &target, &options);
+        let callee = report
+            .matches
+            .iter()
+            .find(|row| row.reference.offset == 0x400100)
+            .map(|row| row.target.offset);
+        assert_eq!(callee, Some(0x800100), "{:?}", report.matches);
+    }
+
+    /// The cross-compiler failure: a function one build has and the other
+    /// lacks resembles some unrelated function closely by counts alone.
+    /// With no call edge between them, content is all that pairs them,
+    /// and content is not identity: the pair must not be reported, while
+    /// the pair the call graph vouches for stays.
+    #[test]
+    fn a_content_only_pair_with_no_preserved_call_is_withdrawn() {
+        let func = |entry: u64, size: u64, instructions: u32| Func {
+            entry,
+            size,
+            name: format!("FUN_{entry:08x}"),
+            instructions,
+            blocks: 1,
+            edges: 0,
+            max_block: instructions,
+            ..Func::default()
+        };
+        // caller -> callee, plus one leaf nothing calls.
+        let program = |base: u64, leaf_name: &str| {
+            let mut funcs = vec![
+                func(base, 0x40, 3),
+                func(base + 0x100, 0x18, 2),
+                func(base + 0x200, 0x90, 3),
+            ];
+            funcs[0].calls = 1;
+            funcs[0].callees = vec![1];
+            funcs[1].callers = vec![0];
+            funcs[2].name = leaf_name.into();
+            Program {
+                name: "p".into(),
+                funcs,
+            }
+        };
+        let reference = program(0x400000, "mac_only");
+        let mut target = program(0x800000, "FUN_00800200");
+        // The target's leaf is some other function of the same shape.
+        target.funcs[2].name = "FUN_00800200".into();
+        let options = Options {
+            semantic: false,
+            ..Options::default()
+        };
+        let report = diff(&reference, &target, &options);
+        let paired = |offset: u64| {
+            report
+                .matches
+                .iter()
+                .find(|row| row.reference.offset == offset)
+                .map(|row| row.target.offset)
+        };
+        assert_eq!(paired(0x400100), Some(0x800100), "{:?}", report.matches);
+        assert_eq!(paired(0x400200), None, "{:?}", report.matches);
     }
 
     /// Two programs, each with the same computation under different
