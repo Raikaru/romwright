@@ -8917,3 +8917,46 @@ m12-002's expected-miss list is now empty. m12-001 unchanged (modules
 rule. Also checked: swkotor2's 69,548-byte 0x435a30 is one function, a
 109-way dispatcher (15,556 instructions, no padding, 99 switch-case
 xrefs), not a merge.
+
+## Import diagnostics: nothing fails quietly (2026-09-23, schema v30)
+
+`discovery_note: Option<String>` mixed three kinds of message in one slot,
+let later stages overwrite earlier ones, and blocked caching on any of
+them. It is now a list of `ImportDiagnostic { severity, stage, message }`:
+- info: nothing that could exist is missing (for example, loaded without
+  analysis).
+- partial: deterministic per-item failures (a function the decompiler
+  rejects, the switch budget, ranges the console refuses for references,
+  a section running past the end of the file). The import is still cached.
+- degraded: a stage did not run or stopped for reasons outside the inputs
+  (a console or worker that did not start or crashed). Never cached.
+The list is stored with the program (`import_diagnostics`), so a cache hit
+reports the same warnings. The CLI prints a per-severity summary after
+every import, and says when a degraded import will not be cached.
+`--timings` carries `diagnostics` in place of `discovery_note`
+(ppc_sda.sh now asserts nothing is degraded). New loader rule: a PE or ELF
+section, or a symbol string table, running past the end of the file keeps
+the bytes present and records a partial diagnostic; a missing section
+used to read as zeros. Tests: `a_truncated_pe_section_keeps_its_bytes_and_reports_the_cut`
+(fails with the old empty-slice behaviour) and a db round-trip. Checked by
+hand: a degraded import says so and does not publish; an info note
+survives a cache restore; a clean import prints nothing extra.
+
+## Const seeds starting mid-instruction are operands (2026-09-23)
+
+Correction to "Ownership shadow" above. The 175 swkotor2 functions that
+filtering refused pattern matches "restored" were not all real: 54
+started mid-instruction. The refused matches had been retracting junk
+const seeds by accident. The Mac slice (full symbol table) shows the size
+of it: 2,440 unnamed functions beside 15,628 named ones.
+New store clause: a const seed that starts strictly inside an instruction
+the walk decoded is retracted.
+- Mac i386: removes 1,578 unnamed const seeds and no named function; an
+  independent linear disassembly puts 1,442 of them mid-instruction.
+- swkotor2: removes 117, 115 of them mid-instruction; 0x727010 and the
+  truth-set 0x6c8f50 are kept.
+A second clause (inside a stronger function's proven span) added only 63
+and was dropped. m12-002: named 246/0, Mac-only Alignment 0.12% to 0.06%,
+Context 0.66% to 0.0%. m1-010 16,404 / 16,443. m3-001, m17-002, m8-002,
+m8-003 and m12-001 unchanged. Those corpus gates hold one const seed in
+total, so the evidence is the two real images.

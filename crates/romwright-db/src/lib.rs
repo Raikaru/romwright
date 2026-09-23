@@ -23,13 +23,14 @@ mod input;
 mod matching;
 mod matching_workspace;
 mod return_behavior;
+mod diagnostic;
 mod semantic;
 mod signature;
 mod thunk;
 pub use return_behavior::{ReturnFlowUpdate, ReturnPublication};
 
 /// Schema version; bump on any incompatible change and add a migration.
-pub const SCHEMA_VERSION: i64 = 29;
+pub const SCHEMA_VERSION: i64 = 30;
 
 /// Database open or query failure.
 #[derive(Debug, thiserror::Error)]
@@ -932,6 +933,20 @@ impl ProjectDb {
                         "ALTER TABLE semantic_signatures ADD COLUMN constants TEXT NOT NULL DEFAULT '';",
                     )?;
                 }
+            }
+            if v < 30 {
+                // What an import could not do, kept with the program so a
+                // restored cache entry reports it too.
+                tx.execute_batch(
+                    "CREATE TABLE IF NOT EXISTS import_diagnostics (
+                         program_id INTEGER NOT NULL REFERENCES programs(id),
+                         ordinal INTEGER NOT NULL,
+                         severity TEXT NOT NULL CHECK(severity IN ('info', 'partial', 'degraded')),
+                         stage TEXT NOT NULL,
+                         message TEXT NOT NULL,
+                         PRIMARY KEY(program_id, ordinal)
+                     );",
+                )?;
             }
             tx.execute(
                 "UPDATE meta SET value = ?1 WHERE key = 'schema_version'",

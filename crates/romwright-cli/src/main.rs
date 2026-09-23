@@ -441,6 +441,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     "imported {} natively ({} functions, {})",
                     summary.program, summary.functions, summary.language
                 );
+                report_diagnostics(summary);
             }
             let summary = stored
                 .first()
@@ -506,11 +507,14 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                         )
                     })
                     .unwrap_or_default();
-                let note = summary
-                    .discovery_note
-                    .as_deref()
-                    .map(|note| format!(",\"discovery_note\":{}", serde_json::json!(note)))
-                    .unwrap_or_default();
+                let note = if summary.diagnostics.is_empty() {
+                    String::new()
+                } else {
+                    format!(
+                        ",\"diagnostics\":{}",
+                        serde_json::to_string(&summary.diagnostics).unwrap_or_default()
+                    )
+                };
                 println!(
                     "TIMINGS {{\"total\":{total:.6},\"functions\":{},\"shards\":{},\"flow\":{flow},\"phases\":{{{phases}}}{patterns}{refused}{note}{switch}}}",
                     summary.functions,
@@ -2346,4 +2350,45 @@ fn read_json_argument(path: &str) -> Result<String, String> {
         return Err("supplied JSON exceeds 64 MiB".into());
     }
     String::from_utf8(bytes).map_err(|error| error.to_string())
+}
+
+/// Says on stderr what an import could not do: one line per severity with a
+/// few examples, and whether the result is reusable. A degraded stage used
+/// to leave only a JSON field under `--timings`, and a failure that kept an
+/// image out of the import cache left nothing at all.
+fn report_diagnostics(summary: &romwright_model::ProgramSummary) {
+    use romwright_model::DiagnosticSeverity;
+    const SHOWN: usize = 5;
+    for (severity, label) in [
+        (DiagnosticSeverity::Degraded, "degraded"),
+        (DiagnosticSeverity::Partial, "partial"),
+        (DiagnosticSeverity::Info, "note"),
+    ] {
+        let rows: Vec<_> = summary
+            .diagnostics
+            .iter()
+            .filter(|diagnostic| diagnostic.severity == severity)
+            .collect();
+        if rows.is_empty() {
+            continue;
+        }
+        eprintln!("{label}: {} ({})", rows.len(), summary.program);
+        for row in rows.iter().take(SHOWN) {
+            let first = row.message.lines().next().unwrap_or_default();
+            eprintln!("  [{}] {first}", row.stage);
+        }
+        if rows.len() > SHOWN {
+            eprintln!("  ... {} more", rows.len() - SHOWN);
+        }
+    }
+    if summary
+        .diagnostics
+        .iter()
+        .any(|diagnostic| diagnostic.severity == DiagnosticSeverity::Degraded)
+    {
+        eprintln!(
+            "{}: analysis incomplete; this import is not cached and will run again",
+            summary.program
+        );
+    }
 }

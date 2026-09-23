@@ -218,6 +218,29 @@ pub struct FlowShape {
     pub target: Option<u64>,
 }
 
+impl NativeImport {
+    /// Records one thing the import could not do.
+    pub(crate) fn diagnose(
+        &mut self,
+        severity: romwright_model::DiagnosticSeverity,
+        stage: &str,
+        message: impl Into<String>,
+    ) {
+        self.diagnostics.push(romwright_model::ImportDiagnostic {
+            severity,
+            stage: stage.to_string(),
+            message: message.into(),
+        });
+    }
+
+    /// Whether any stage fell short for reasons outside the inputs.
+    pub(crate) fn degraded(&self) -> bool {
+        self.diagnostics
+            .iter()
+            .any(|diagnostic| diagnostic.severity == romwright_model::DiagnosticSeverity::Degraded)
+    }
+}
+
 /// Parsed image and transient loader/discovery evidence.
 #[derive(Debug, Default)]
 pub struct NativeImport {
@@ -425,10 +448,11 @@ pub struct NativeImport {
     /// (`ARM_ElfExtension.creatingFunction`, 116-140, and
     /// `evaluateElfSymbol`, 142-209).
     pub contexts: Vec<NativeContext>,
-    /// Why console-driven discovery was not used, when it was not. A silent
-    /// fallback to pointer-only seeds is how a MIPS image came back with a
-    /// third of its functions and no complaint (m11-002).
-    pub discovery_note: Option<String>,
+    /// What this import could not do, graded by how much it matters. A
+    /// silent fallback to pointer-only seeds is how a MIPS image came back
+    /// with a third of its functions and no complaint (m11-002); a single
+    /// note slot also let one stage overwrite another's.
+    pub diagnostics: Vec<romwright_model::ImportDiagnostic>,
     /// True when discovery walked this image, as opposed to the loader
     /// simply declaring what the file says about itself.
     pub analysed: bool,
@@ -441,6 +465,30 @@ pub struct DeclaredRegion {
     pub size: u64,
     /// ELF SHF-style bits, as `Mapping::flags`.
     pub flags: u64,
+}
+
+/// The bytes of `[off, off+len)` the file holds. A range that runs past
+/// the end of the file keeps the part that is there and says what was cut:
+/// taking nothing -- a missing section read as zeros -- is how a
+/// truncated image used to import without a word.
+fn file_bytes<'a>(
+    data: &'a [u8],
+    off: u64,
+    len: u64,
+    what: impl FnOnce() -> String,
+    notes: &mut Vec<romwright_model::ImportDiagnostic>,
+) -> &'a [u8] {
+    let start = usize::try_from(off).unwrap_or(usize::MAX).min(data.len());
+    let end = usize::try_from(off.saturating_add(len)).unwrap_or(usize::MAX).min(data.len());
+    let present = &data[start..end];
+    if (present.len() as u64) < len {
+        notes.push(romwright_model::ImportDiagnostic {
+            severity: romwright_model::DiagnosticSeverity::Partial,
+            stage: "load".into(),
+            message: format!("{} runs past the end of the file: {} of {len} bytes present", what(), present.len()),
+        });
+    }
+    present
 }
 
 fn err<T>(msg: impl Into<String>) -> Result<T> {
@@ -552,6 +600,7 @@ fn parse_elf32_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u
 /// Symbols use 16-byte Elf32_Sym entries. Relative relocations, pointers,
 /// unwind indexes and linkage metadata share the ELF64 implementation.
 fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
+    let mut notes: Vec<romwright_model::ImportDiagnostic> = Vec::new();
     let rd32 = |o: usize| -> Result<u32> {
         if be {
             u32_be_at(data, o)
@@ -592,8 +641,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         let b = if s.typ == 8 {
             &[]
         } else {
-            data.get(s.off as usize..s.off as usize + s.size as usize)
-                .unwrap_or(&[])
+            file_bytes(data, s.off, s.size, || format!("section {}", s.name), &mut notes)
         };
         mappings.push(Mapping {
             vaddr: s.addr,
@@ -620,8 +668,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         let strtab = sections
             .get(s.link as usize)
             .map(|t| {
-                data.get(t.off as usize..t.off as usize + t.size as usize)
-                    .unwrap_or(&[])
+                file_bytes(data, t.off, t.size, || format!("string table {}", t.name), &mut notes)
                     .to_vec()
             })
             .unwrap_or_default();
@@ -731,6 +778,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         &mut register_contexts,
     );
     let mut import = NativeImport {
+        diagnostics: notes,
         process_entry,
         symbol_named,
         format: "elf32".into(),
@@ -911,6 +959,7 @@ fn symbol_rank(info: u8, name: &str) -> u8 {
 }
 
 pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
+    let mut notes: Vec<romwright_model::ImportDiagnostic> = Vec::new();
     if data.get(0..4) != Some(b"\x7fELF") {
         return err("not an ELF");
     }
@@ -967,8 +1016,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         let b = if s.typ == 8 {
             &[]
         } else {
-            data.get(s.off as usize..s.off as usize + s.size as usize)
-                .unwrap_or(&[])
+            file_bytes(data, s.off, s.size, || format!("section {}", s.name), &mut notes)
         };
         mappings.push(Mapping {
             vaddr: s.addr,
@@ -1038,8 +1086,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         let strtab = sections
             .get(s.link as usize)
             .map(|t| {
-                data.get(t.off as usize..t.off as usize + t.size as usize)
-                    .unwrap_or(&[])
+                file_bytes(data, t.off, t.size, || format!("string table {}", t.name), &mut notes)
                     .to_vec()
             })
             .unwrap_or_default();
@@ -1103,8 +1150,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         let strtab = sections
             .get(s.link as usize)
             .map(|t| {
-                data.get(t.off as usize..t.off as usize + t.size as usize)
-                    .unwrap_or(&[])
+                file_bytes(data, t.off, t.size, || format!("string table {}", t.name), &mut notes)
                     .to_vec()
             })
             .unwrap_or_default();
@@ -1203,6 +1249,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         });
     }
     let mut import = NativeImport {
+        diagnostics: notes,
         mappings,
         functions,
         externals,
@@ -1230,6 +1277,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
 }
 
 pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
+    let mut notes: Vec<romwright_model::ImportDiagnostic> = Vec::new();
     if data.get(0..2) != Some(b"MZ") {
         return err("not a PE");
     }
@@ -1363,7 +1411,14 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
             vsize: size,
             raw_off: raw,
         });
-        let mut bytes = data.get(raw..raw + raw_size).unwrap_or(&[]).to_vec();
+        let mut bytes = file_bytes(
+            data,
+            raw as u64,
+            raw_size as u64,
+            || format!("PE section at {vaddr:#x}"),
+            &mut notes,
+        )
+        .to_vec();
         bytes.resize(size, 0);
         let sflags = u32_at(data, o + 36)? as u64; // section characteristics
         let flags = (u64::from(sflags & 0x20000000 != 0) << 2)
@@ -1505,6 +1560,7 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
     let mut import = NativeImport {
+        diagnostics: notes,
         mappings,
         functions,
         xrefs,
@@ -1984,8 +2040,7 @@ pub fn load_container_with(
             discover(&mut imp)?;
             imp.input_context = None;
         } else {
-            imp.discovery_note =
-                Some("loaded without analysis: functions are the image's own symbols".into());
+            imp.diagnose(romwright_model::DiagnosticSeverity::Info, "load", "loaded without analysis: functions are the image's own symbols");
         }
         loaded.push((suffix, imp));
     }
@@ -2981,7 +3036,7 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         .unwrap_or(1024);
     if owners.len() > budget {
         imp.switch_decompiler_skipped += owners.len() - budget;
-        imp.discovery_note = Some(format!(
+        imp.diagnose(romwright_model::DiagnosticSeverity::Partial, "switch", format!(
             "switch recovery asked {} of {} owner functions (budget {})",
             budget,
             owners.len(),
@@ -2994,13 +3049,13 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         return 0;
     }
     let Some(context) = &imp.input_context else {
-        imp.discovery_note = Some("switch recovery requires captured loader inputs".into());
+        imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "switch", "switch recovery requires captured loader inputs");
         return 0;
     };
     let (input_project, input) = context.as_ref();
     let scratch = ScratchDir::new("romwright-switch");
     let Some(scratch) = scratch else {
-        imp.discovery_note = Some("switch recovery has no scratch dir".into());
+        imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "switch", "switch recovery has no scratch dir");
         return 0;
     };
     let program = "switch-recovery";
@@ -3035,9 +3090,7 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         Ok(())
     })();
     if let Err(error) = stored {
-        imp.discovery_note = Some(format!(
-            "switch recovery could not store the image: {error}"
-        ));
+        imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "switch", format!("switch recovery could not store the image: {error}"));
         return 0;
     }
     // One worker per lane, as many at once as the host has cores: the
@@ -3121,27 +3174,17 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
             Err(error) => {
                 // A worker that cannot run degrades this round to no
                 // answers at all, which reads exactly like a body nothing
-                // could follow. Recording it only in `discovery_note` made
-                // a stale worker binary (one refusing a newer store schema)
-                // look like a regression in the analysis twice over, so it
-                // is said out loud as well.
-                eprintln!("switch recovery decompile failed: {error}");
-                imp.discovery_note = Some(format!("switch recovery decompile failed: {error}"));
+                // could follow: the import is incomplete, and is not cached.
+                imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "switch", format!("switch recovery decompile failed: {error}"));
                 continue;
             }
         };
-        if !docs.failures.is_empty() {
-            let message = format!(
-                "switch recovery: {} completed, {} failures; {}",
-                docs.completed,
-                docs.failures.len(),
-                docs.failures.join("; "),
-            );
-            eprintln!("{message}");
-            imp.discovery_note = Some(match imp.discovery_note.take() {
-                Some(previous) => format!("{previous}; {message}"),
-                None => message,
-            });
+        // A function the decompiler rejects is rejected the same way every
+        // time: the rest of the round stands, and the import stays
+        // reusable. Only the whole-import note used to exist, and one such
+        // function kept libc and swkotor2 out of the import cache.
+        for failure in &docs.failures {
+            imp.diagnose(romwright_model::DiagnosticSeverity::Partial, "switch", failure.clone());
         }
         for table in &docs.tables {
             if table.branch.space != romwright_model::AddressSpace::Ram {
@@ -3270,12 +3313,12 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         let mut session = match crate::native_runtime::ConsoleSession::new(&imp.cfg) {
             Ok(session) => session,
             Err(error) => {
-                imp.discovery_note = Some(format!("reference console did not start: {error}"));
+                imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "references", format!("reference console did not start: {error}"));
                 break;
             }
         };
         if let Err(error) = session.load_mapped(imp) {
-            imp.discovery_note = Some(format!("reference console did not load the image: {error}"));
+            imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "references", format!("reference console did not load the image: {error}"));
             break;
         }
         let shards = crate::native_runtime::ConsoleSession::open_image_shards(
@@ -3399,6 +3442,15 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     // references have to exist first, which is why this is not a loader pass
     // (m4-027).
     elf_pointers::confirm_referenced_pointers(imp);
+    // Counted by the last reference round, which re-asks every range.
+    if imp.references_refused > 0 {
+        let refused = imp.references_refused;
+        imp.diagnose(
+            romwright_model::DiagnosticSeverity::Partial,
+            "references",
+            format!("{refused} function ranges the console could not decode for references"),
+        );
+    }
     phase(imp, "settle", tail_started);
     Ok(())
 }
@@ -4378,10 +4430,29 @@ pub fn store_import(
             .iter()
             .map(|(address, _)| *address)
             .collect();
+        // A const seed that starts inside an instruction the walk decoded
+        // is an operand, not code. On the Mac KOTOR II slice (full symbol
+        // table) this retracts 1,578 unnamed const seeds and no named
+        // function; a linear sweep puts 1,442 of them mid-instruction. Each
+        // cut the function it sat in short at the next-entry boundary.
+        let mut decoded: Vec<(u64, u64)> = imp
+            .flow_shapes
+            .iter()
+            .map(|shape| (shape.address, shape.address + u64::from(shape.length)))
+            .collect();
+        decoded.sort_unstable();
+        decoded.dedup();
+        let mid_instruction = |entry: u64| {
+            let index = decoded.partition_point(|&(start, _)| start < entry);
+            index
+                .checked_sub(1)
+                .is_some_and(|i| decoded[i].0 < entry && entry < decoded[i].1)
+        };
         functions.retain(|f| {
             !(consted.contains(&f.entry)
                 && (const_entry_swallowed(f.entry, f.size, &stronger)
-                    || accessed.contains(&f.entry)))
+                    || accessed.contains(&f.entry)
+                    || mid_instruction(f.entry)))
         });
     }
     let rows: Vec<FunctionRow> = functions
@@ -4586,6 +4657,7 @@ pub fn store_import(
         })
         .collect();
     db.replace_xrefs(pid, &xrows)?;
+    db.replace_import_diagnostics(pid, &imp.diagnostics)?;
     // Cross-module references: an xref whose src and dst live in
     // different modules is a module_xrefs row.
     let module_rows = db.modules(pid)?;
@@ -4921,7 +4993,7 @@ pub fn store_import(
         flow: imp.flow,
         patterns: imp.patterns_seen.clone(),
         references_refused: imp.references_refused,
-        discovery_note: imp.discovery_note.clone(),
+        diagnostics: imp.diagnostics.clone(),
         switch: Some(romwright_model::SwitchStats {
             vsa_resolved: imp.switch_vsa_resolved as u64,
             vsa_refused: imp.switch_vsa_refused as u64,
@@ -5591,6 +5663,37 @@ mod tests {
         let imp = import_pe(&b).unwrap();
         store_import(&db, "pe", &imp, None).unwrap();
         assert_eq!(db.memory_regions(pid).unwrap()[0].permissions, "rwx");
+    }
+
+    /// A section whose raw bytes run past the end of the file keeps the
+    /// bytes that are there and says so; it used to become all zeros
+    /// without a word.
+    #[test]
+    fn a_truncated_pe_section_keeps_its_bytes_and_reports_the_cut() {
+        let mut b = vec![0u8; 0x200];
+        b[0..2].copy_from_slice(b"MZ");
+        b[0x3c..0x40].copy_from_slice(&0x80u32.to_le_bytes());
+        b[0x80..0x84].copy_from_slice(b"PE\0\0");
+        b[0x84..0x86].copy_from_slice(&0x8664u16.to_le_bytes());
+        b[0x86..0x88].copy_from_slice(&1u16.to_le_bytes());
+        b[0x94..0x96].copy_from_slice(&0xf0u16.to_le_bytes());
+        b[0x98..0x9a].copy_from_slice(&0x20bu16.to_le_bytes());
+        b[0xb0..0xb8].copy_from_slice(&0x140000000u64.to_le_bytes());
+        let sec = 0x80 + 24 + 0xf0;
+        b[sec + 8..sec + 12].copy_from_slice(&0x1000u32.to_le_bytes());
+        b[sec + 16..sec + 20].copy_from_slice(&0x200u32.to_le_bytes()); // raw size
+        b[sec + 20..sec + 24].copy_from_slice(&0x1c0u32.to_le_bytes()); // raw ptr: 0x40 bytes left
+        b[sec + 36..sec + 40].copy_from_slice(&0x60000020u32.to_le_bytes());
+        b[0x1c0] = 0xc3;
+        let imp = import_pe(&b).unwrap();
+        let mapping = imp.mappings.iter().find(|m| m.size == 0x1000).expect("section mapped");
+        assert_eq!(mapping.bytes[0], 0xc3, "the bytes the file holds are kept");
+        assert!(
+            imp.diagnostics.iter().any(|d| d.severity == romwright_model::DiagnosticSeverity::Partial
+                && d.message.contains("64 of 512 bytes present")),
+            "{:?}",
+            imp.diagnostics
+        );
     }
 
     #[test]

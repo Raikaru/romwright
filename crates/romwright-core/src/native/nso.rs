@@ -301,7 +301,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
             &mut externals,
         );
     } else {
-        import.discovery_note = Some("NSO0 module carries no MOD0 dynamic table".into());
+        import.diagnose(romwright_model::DiagnosticSeverity::Info, "load", "NSO0 module carries no MOD0 dynamic table");
     }
 
     // One mapping per segment, with the permissions the platform gives it.

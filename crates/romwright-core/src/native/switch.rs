@@ -462,7 +462,7 @@ fn import_main(bytes: &[u8]) -> Result<NativeImport> {
         flags: 6,
         bytes: bytes.to_vec(),
     });
-    imp.discovery_note = Some("raw main image carries no symbol table; entry unknown".into());
+    imp.diagnose(romwright_model::DiagnosticSeverity::Info, "load", "raw main image carries no symbol table; entry unknown");
     Ok(imp)
 }
 

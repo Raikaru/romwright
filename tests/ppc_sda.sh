@@ -3,7 +3,7 @@
 # loads a word through r13 must decompile to the OBJECT name, not a raw
 # r13-relative dereference. Covers the #325 slice: OBJECT symbols through
 # the store, `_SDA_BASE_` into tracked r13, one tracked_set per range --
-# and the console path: the import must carry no discovery_note, proving
+# and the console path: the import must report no degraded stage, proving
 # the reference console loaded the image (r13 rows are not console
 # context variables).
 set -euo pipefail
@@ -43,7 +43,7 @@ import pathlib
 import sys
 
 import_out = pathlib.Path(sys.argv[1]).read_text()
-assert "discovery_note" not in import_out, import_out
+assert "\"degraded\"" not in import_out, import_out
 out = pathlib.Path(sys.argv[2]).read_text()
 assert "HadError" in out, out
 assert "unaff_r13" not in out, out
