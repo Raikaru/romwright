@@ -8665,3 +8665,28 @@ Measured: named 245/248 (0.9879), Mac-only Alignment 0.27%, CallGraph
 2% / 400 anchors. Every state before this session's fixes fails them (8
 anchors; Mac-only 4.5% / 5.4%). The inputs are private, so CI registers the
 step and records the skip.
+
+## Learned content score: reweighting does not help cross-compiler (2026-09-23)
+
+Positives: the 486 String/Name/Import anchors of the Mac/Windows KOTOR II
+pair. Negatives: every other Windows function (11,363). This measures how
+well `content_score` ranks the true partner (Python mirror of
+`Program::load` and `content_score`).
+- Full score: rank-1 0.912, top-12 0.963. The string and import terms do
+  the work.
+- Structural terms only: rank-1 0.218, top-12 0.479. For a function
+  without strings, the alignment's 12-candidate list misses the true
+  partner about half the time, so no later pass can find it.
+Fits over the structural terms (the 10 count ratios, their log
+differences, shape equality, and a size interaction), 2-fold CV over the
+positives, compared with the hand weights on the same held-out half:
+- Pointwise logistic: rank-1 0.066 / 0.115 against 0.255 / 0.181.
+- RankNet against hard negatives only: collapses to 0.0 / 0.016 on the full
+  candidate set.
+- RankNet against hard plus random negatives: rank-1 0.189 / 0.14, top-12
+  0.43 / 0.40, against 0.255 / 0.181 and 0.50 / 0.46.
+No reweighting of these terms beats the hand weights, so nothing ships. The
+positives are string-rich, not a random sample [INFERENCE: string-free
+functions may rank differently]. The next lever is features that survive a
+compiler change: constants, callee sets, and the data-flow signature
+(`--semantic`, which user runs switch off). Not weights.
