@@ -8837,3 +8837,26 @@ session-start build's. A second import is a cache restore in 0.39 s
 reused 0.39 s over 41 identical tables); m3-001, m17-002, m8-003
 unchanged. The switch phase itself still costs 53 s on libc and 24 s on
 swkotor2: open.
+
+## Switch recovery: balanced lanes, deduplicated flow shapes (2026-09-23)
+
+Per-owner timing on libc: three functions take 12-13 s each to decompile,
+two take 4-6 s, and the other 120 take well under a second. Contiguous
+address chunks put all five in one lane, which ran 49 s while seven lanes
+idled. Lanes are now filled largest-body-first onto the lightest lane.
+libc: switch 55 s to 27 s, import 73 s to 47 s, facts identical.
+Simulated on the measured costs: 54 s contiguous, 17 s by size, 13 s with
+perfect foreknowledge (one slow function, 0x14c210, is small).
+swkotor2's switch cost is setup instead: each round writes the whole image
+to a scratch store for the worker (2.4, 4.9 and 7.3 s over three rounds).
+`imp.flow_shapes` recorded every instruction once per round: 2.56 M
+records for 930 k instructions by the third round. Exact repeats are now
+dropped after each discovery pass.
+A/B on an idle 4-core host (smt-cloud), alternated, two runs each:
+swkotor2 import 137.0 / 138.5 s without, 123.5 / 120.8 s with; facts
+identical, function features included. The local host was at load 16 from
+other sessions, so local wall times of this change are void. Imports on
+that host match local ones table for table.
+Open: scratch-store setup still grows per round (rounds 2-3 ask 21
+functions and find no tables); in-memory xrefs repeat the same way (228 k
+vs 140 k stored).
