@@ -8897,3 +8897,23 @@ synthesis ("a measured wrong table tracing to a subsumable
 disjunction") has not fired. What the item would buy is recall on
 refused shapes: the interpreter misses 30 of stock's branches. That is
 real, but it is the separate recall-bar item, not a soundness defect.
+
+## Forwarding stubs pair only with forwarders (2026-09-23)
+
+The last two wrong named rows on the Mac/Windows pair were GCC's C1
+constructor stubs (`push ebp; mov ebp,esp; pop ebp; jmp C2`), which MSVC
+does not emit. The call-graph extension placed each on the constructor's
+real caller through a caller vote; that caller also reaches the
+constructor, so "reaches the partner" did not separate them. Rule
+(`forwarder_mismatch`): a reference function of at most 4 instructions in
+one block, with one callee and no strings or imports, whose callee is
+matched, pairs only with a function whose sole callee is that partner (at
+most 8 instructions, 2 blocks). It applies in the extension and in the
+withdrawal.
+Kotor: named 246 right / 0 wrong (was 246 / 2), 6,122 rows (was 6,139);
+m12-002's expected-miss list is now empty. m12-001 unchanged (modules
+3,435 / 0.9784 / 0.9332). Test
+`a_forwarding_stub_is_not_paired_through_its_caller` fails without the
+rule. Also checked: swkotor2's 69,548-byte 0x435a30 is one function, a
+109-way dispatcher (15,556 instructions, no padding, 99 switch-case
+xrefs), not a merge.

@@ -1030,6 +1030,7 @@ fn extend_supported(
             let r = top.1;
             if clear(&top)
                 && best_right.get(&r).is_some_and(|back| back.1 == l && clear(back))
+                && !forwarder_mismatch(reference, target, l, r, pairs)
                 && pairs.accept(l, r)
             {
                 matches.push(row(reference, target, l, r, top.2, Evidence::CallGraph));
@@ -1575,6 +1576,38 @@ fn decode(
     }
 }
 
+/// A reference function that only forwards to another -- GCC's complete-
+/// object constructor stub is `push ebp; mov ebp,esp; pop ebp; jmp C2` --
+/// is identified by where it forwards, nothing else: it has no content of
+/// its own. So once its target is matched, its partner must be a forwarder
+/// to that target's partner, however its callers vote. MSVC emits no
+/// such stub, and on the Mac/Windows KOTOR II pair the extension placed two
+/// of them on their constructors' real callers.
+fn forwarder_mismatch(
+    reference: &Program,
+    target: &Program,
+    left: usize,
+    right: usize,
+    pairs: &Pairing,
+) -> bool {
+    let a = &reference.funcs[left];
+    let forwards = a.instructions <= 4
+        && a.blocks <= 1
+        && a.callees.len() == 1
+        && a.strings.is_empty()
+        && a.imports.is_empty();
+    if !forwards {
+        return false;
+    }
+    let Some(partner) = pairs.reference[a.callees[0]] else {
+        return false;
+    };
+    // The partner must forward too: reaching the target is not enough,
+    // since the constructor's real caller reaches it as well.
+    let b = &target.funcs[right];
+    !(b.callees == [partner] && b.instructions <= 8 && b.blocks <= 2)
+}
+
 /// Withdraws every matcher-committed pair (alignment, context, call-graph)
 /// that preserves no call edge of the final pairing. Content similarity
 /// alone does not identify a function: measured on a GCC Mac / MSVC
@@ -1608,7 +1641,9 @@ fn withdraw_unsupported(
             .filter_map(|row| {
                 let left = index_of[&row.reference.offset];
                 let right = pairs.reference[left].expect("a row is a committed pair");
-                (preserved(reference, target, left, right, pairs) == 0).then_some((left, right))
+                (preserved(reference, target, left, right, pairs) == 0
+                    || forwarder_mismatch(reference, target, left, right, pairs))
+                .then_some((left, right))
             })
             .collect();
         if unsupported.is_empty() {
@@ -1888,6 +1923,52 @@ mod tests {
             .find(|row| row.reference.offset == 0x400100)
             .map(|row| row.target.offset);
         assert_eq!(callee, Some(0x800100), "{:?}", report.matches);
+    }
+
+    /// One compiler emits a stub that only forwards to a function, the other
+    /// calls the function directly. The stub's caller is matched, and the
+    /// target caller also calls some open function: a caller vote alone
+    /// would pair the stub with it. A forwarder pairs only with a forwarder
+    /// to its callee's partner.
+    #[test]
+    fn a_forwarding_stub_is_not_paired_through_its_caller() {
+        let func = |entry: u64, name: &str, instructions: u32, blocks: u32| Func {
+            entry,
+            size: u64::from(instructions) * 3,
+            name: name.into(),
+            instructions,
+            blocks,
+            edges: blocks.saturating_sub(1),
+            max_block: instructions / blocks.max(1),
+            ..Func::default()
+        };
+        let link = |funcs: &mut Vec<Func>, from: usize, to: usize| {
+            funcs[from].calls += 1;
+            funcs[from].callees.push(to);
+            funcs[to].callers.push(from);
+        };
+        // ref: caller -> stub -> ctor
+        let mut left = vec![
+            func(0x400000, "caller", 40, 5),
+            func(0x400100, "stub", 4, 1),
+            func(0x400200, "ctor", 90, 9),
+        ];
+        link(&mut left, 0, 1);
+        link(&mut left, 1, 2);
+        // target: caller -> ctor, caller -> helper (nothing like the stub)
+        let mut right = vec![
+            func(0x800000, "caller", 40, 5),
+            func(0x800100, "FUN_00800100", 30, 4),
+            func(0x800200, "ctor", 90, 9),
+        ];
+        link(&mut right, 0, 2);
+        link(&mut right, 0, 1);
+        let reference = Program { name: "r".into(), funcs: left };
+        let target = Program { name: "t".into(), funcs: right };
+        let options = Options { semantic: false, ..Options::default() };
+        let report = diff(&reference, &target, &options);
+        let stub = report.matches.iter().find(|row| row.reference.offset == 0x400100);
+        assert!(stub.is_none(), "{:?}", report.matches);
     }
 
     /// The cross-compiler failure: a function one build has and the other
