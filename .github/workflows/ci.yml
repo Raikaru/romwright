@@ -482,6 +482,15 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --work "$RUNNER_TEMP/discovery/diff" \
             --report "$RUNNER_TEMP/discovery/diff.json"
+      - name: Transfer names across compilers on a real pair
+        env:
+          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+        run: |
+          # The Mac/Windows game builds are private, so a runner records
+          # the skip and its reason.
+          python3 tests/m12-002_cross_compiler.py \
+            --work "$RUNNER_TEMP/discovery/cross-compiler" \
+            --report "$RUNNER_TEMP/discovery/cross-compiler.json"
       - name: Measure token identity against the oracle per language
         env:
           ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native

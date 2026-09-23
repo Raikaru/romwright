@@ -1478,6 +1478,73 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         }
     }
 
+    // A pattern start that the function right above it branches to, over
+    // its own return, is that function's code. Ghidra refuses a start any
+    // flow reference already owns (checkAlreadyInFunctionAbove), but the
+    // branch may decode only after the pattern round accepted the start,
+    // when its owner is reached late. swkotor2 0x4cfd97: the `jge` past
+    // 0x4cfd80's early return, accepted on its push-ebx/esi/edi prologue,
+    // cut its owner to a 23-byte guard (eight such splits in that image).
+    // Only the adjacent owner absorbs: a far conditional branch is a tail
+    // call to a real function (swkotor2 0x76fa60's SSE2 test jumping 37 KB
+    // to the x87 fallback at 0x778b77, which has its own frame), and a
+    // called, declared or thunk entry is a function whoever branches to it.
+    {
+        let called: HashSet<u64> = calls.iter().map(|&(_, target)| target).collect();
+        let pattern_only: HashSet<u64> = imp
+            .pattern_starts
+            .iter()
+            .copied()
+            .filter(|entry| {
+                !called.contains(entry)
+                    && !thunk_candidates.contains(entry)
+                    && !imp.functions.iter().any(|f| f.entry == *entry)
+            })
+            .collect();
+        if !pattern_only.is_empty() {
+            let mut sorted: Vec<u64> = entries.clone();
+            sorted.sort_unstable();
+            sorted.dedup();
+            // Where each decoded return ends: a guard clause's return is the
+            // instruction right before the body it jumps over.
+            let return_ending_at: HashMap<u64, u64> = imp
+                .flow_shapes
+                .iter()
+                .filter(|shape| shape.kind == FlowKind::Return)
+                .map(|shape| (shape.address + u64::from(shape.length), shape.address))
+                .collect();
+            let owned: Vec<(u64, u64)> = imp
+                .flow_shapes
+                .iter()
+                .filter(|shape| shape.conditional)
+                .filter_map(|shape| shape.target.map(|target| (shape.address, target)))
+                .filter(|&(source, target)| source < target && pattern_only.contains(&target))
+                .collect();
+            for (source, target) in owned {
+                let owner = get_canonical_origin(source, &addr_origin);
+                // The owner is the entry immediately below the target, and a
+                // return of its own ends exactly where the target begins:
+                // the branch jumps over that return. The proven span is no
+                // evidence here -- it only ever grows, so an owner whose walk
+                // once ran on into the target's body reads past it (5 of
+                // swkotor2's 8 splits), and padding after a tail-calling
+                // function can read contiguous the same way.
+                let below = sorted.partition_point(|&entry| entry < target);
+                let returns_into = return_ending_at.get(&target).is_some_and(|&ret| {
+                    owner < ret && get_canonical_origin(ret, &addr_origin) == owner
+                });
+                if owner < source && below > 0 && sorted[below - 1] == owner && returns_into {
+                    merge_reached_candidate(
+                        target,
+                        owner,
+                        &pattern_only,
+                        &mut addr_origin,
+                        &mut proven_bodies,
+                    );
+                }
+            }
+        }
+    }
     // Canonicalize proven_bodies so descendant spans are merged into their root origins:
     let mut canon_bodies: std::collections::HashMap<u64, u64> =
         std::collections::HashMap::with_capacity(proven_bodies.len());
