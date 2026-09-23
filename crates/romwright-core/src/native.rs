@@ -3656,10 +3656,18 @@ fn sign_extend(value: u64, bits: u32) -> i64 {
 /// `SymbolUtilities.getDefaultLocalName`: `local_` and the offset's
 /// magnitude in hex; the type is `undefined<size>`.
 fn stack_frame(function: u64, accesses: &[(i64, u32)]) -> Vec<romwright_model::StackVariableRow> {
+    // A local ends at or below the parameter boundary: an access that
+    // straddles it (4 bytes at -1, nine of them on kotor2sub's i386 slice)
+    // is refused. Kept, it names bytes past the top of a 32-bit stack space,
+    // and the decompiler refuses to register the program ("Symbol local_1
+    // extends beyond the end of the address space"), so nothing decompiles.
     let mut slots: Vec<(i64, i64)> = accesses
         .iter()
         .filter(|&&(offset, size)| {
-            size > 0 && (-(64 * 1024)..=2048).contains(&offset) && offset < 0
+            size > 0
+                && (-(64 * 1024)..=2048).contains(&offset)
+                && offset < 0
+                && offset + i64::from(size) <= 0
         })
         .map(|&(offset, size)| (offset, offset + size as i64))
         .collect();
@@ -6851,6 +6859,17 @@ mod tests {
         assert!(!denied(&["LOAD"]));
         assert!(!denied(&["INT_OR"]));
         assert!(!denied(&[]));
+    }
+
+    /// A local must end at or below the parameter boundary: kept, a 4-byte
+    /// access at -1 names bytes past the top of a 32-bit stack space and
+    /// the decompiler refuses to load the whole program.
+    #[test]
+    fn a_stack_access_straddling_the_parameter_boundary_is_no_local() {
+        let frame = stack_frame(0x1000, &[(-1, 4), (-8, 4), (-4, 4)]);
+        let slots: Vec<(Option<i64>, Option<u64>)> =
+            frame.iter().map(|row| (row.offset, row.size)).collect();
+        assert_eq!(slots, vec![(Some(-8), Some(4)), (Some(-4), Some(4))]);
     }
 
     #[test]

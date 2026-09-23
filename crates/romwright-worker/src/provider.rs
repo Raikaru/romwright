@@ -876,8 +876,26 @@ impl NativeWorker {
                     // between 0x10 and 0x11), and the caller the 0x07 closer
                     // (ghidra_process.cc:146-149, 489).
                     self.expect_burst(0x10)?;
-                    let _ = self.read_until(0x11)?;
+                    let warnings = self.read_until(0x11)?;
                     self.expect_burst(burst::RESPONSE_CLOSE)?;
+                    // `doit` catches a failed `ghidra->init()` and still
+                    // sends an id (ghidra_process.cc:137-156, 187-200): the
+                    // slot it names was never filled, and every later
+                    // command fails with "No architecture registered".
+                    // Registration's own error is the one to report.
+                    if command == "registerProgram" {
+                        let warnings = String::from_utf8_lossy(&warnings);
+                        if let Some(error) = warnings.lines().find(|line| {
+                            ["Low-level Error:", "Recoverable Error:", "Marshaling error:"]
+                                .iter()
+                                .any(|prefix| line.starts_with(prefix))
+                        }) {
+                            return Err(WorkerError::Decompiler(format!(
+                                "registerProgram failed: {}",
+                                error.trim()
+                            )));
+                        }
+                    }
                     return Ok(text);
                 }
                 0x10 if in_response => {

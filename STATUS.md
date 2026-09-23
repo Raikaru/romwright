@@ -1,5 +1,24 @@
 # STATUS
 
+## Open state (2026-09-23)
+
+Read this first; everything below it is the dated log.
+
+- Gates green on this workstation: m12-001 (all rows, modules
+  0.9784/0.9332), m12-002 (cross-compiler pair, private inputs), m17-002,
+  m1-010; romwright-core 481/481, romwright-diff 21/21.
+- Failing, not attributed to a cause yet: m15-001 structuring (0.9232 vs
+  0.9) and m14-002 (`__memmove_sse2_unaligned_erms`), both identical at
+  HEAD per a stash A/B. m3-001 unscorable here (oracle
+  `bridge_sources_sha256` mismatch).
+- Known weak spots: CallGraph rows under content 0.9 (about two-thirds
+  right on the modules). PE function-start ownership is settled by three
+  special-case retraction rules rather than one pass after all
+  producers. Imports of 10k-function images take about two minutes and
+  0.7 GB.
+- Blocked: the desktop proof (needs an interactive Qt display) and the
+  import-cost gate thresholds (maintainer-reserved).
+
 ## Current phase/generation
 Stage 9 optional surfaces are implemented. Stage 4 remains the gated native
 workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
@@ -8594,3 +8613,55 @@ constructor. None is a second truth entry for its name. Test
 `an_open_callee_is_paired_through_its_matched_caller` fails with the pass
 removed. romwright-diff 21/21.
 
+## PE guard-clause splits and the Mac i386 decompile (2026-09-23)
+
+Windows, PE: a pattern start the function directly above it branches to,
+over its own return, is now merged into that function at settle time
+(`discovery.rs`, before proven-body canonicalization). Cause: the pattern
+round accepted a push-ebx/esi/edi prologue before its owner's body was
+decoded. 0x4cfd97 cut `SetupVertexProgramLights` to a 23-byte guard at
+0x4cfd80.
+swkotor2: 8 splits merged (0x473b69, 0x47aced, 0x4cfd97, 0x4e8300, 0x51f074,
+0x52e79f, 0x5c7487, 0x68ab40); each head grows by exactly its body. None is
+a 286 truth address. A first cut without the adjacency rule also merged
+0x778b77 and 0x778c48, x87 fallbacks the CRT's SSE2 dispatch reaches by far
+conditional tail jumps, each with its own frame. So only the entry directly
+below the target absorbs it, and only when a return of that entry's ends
+exactly at the target: the branch jumps over that return. The proven span
+was tried twice and dropped. An exact-end condition lost 5 of the 8 splits,
+because the span only grows and those owners' walks had once run into the
+target's body. `end >= target` merged all 8 only through that same
+staleness, and would also pass a padded tail call. The return predicate
+merges all 8 and keeps both CRT fallbacks. The PE evidence is swkotor2
+alone.
+Kotor 286: 221 right / 1 wrong (was 220/2). m17-002 identical with and
+without the change, but it sees only 3 pattern entries on the ELF corpus.
+m3-001 cannot score in either arm (oracle `bridge_sources_sha256`
+mismatch). Both arms carry this session's uncommitted edits, so that
+failure is not shown to predate them.
+
+Mac i386 decompile: closed. Nine stored stack locals (4 bytes at -1 or -3)
+straddled the parameter boundary. The preloaded function shell carries
+every function's locals, so `ghidra->init()` threw "Symbol local_1 extends
+beyond the end of the address space". `doit` swallowed that and still
+returned an arch id, so every later command read "No architecture
+registered". Fixes: `stack_frame` refuses a straddling access (test
+`a_stack_access_straddling_the_parameter_boundary_is_no_local`).
+`run_command` fails registration on a Low-level/Recoverable/Marshaling
+error in its warnings frame, so an old project reports the real cause.
+Re-imported, `kotor2sub_i386` 0x2f8bca decompiles; function counts are
+unchanged (m1-010 16,413 / 18,068). romwright-core 481/481 lib tests.
+
+## m12-002: cross-compiler name transfer gate (2026-09-23)
+
+`tests/m12-002_cross_compiler.py` imports the Mac i386 slice and the
+unpacked Windows swkotor2 fresh, diffs them as users run it (`nap`, no
+semantic), and scores two truths the matcher does not use:
+- the hand-verified named map, where a name is right at any of its truth
+  entries;
+- Mac-only names per evidence class.
+Measured: named 245/248 (0.9879), Mac-only Alignment 0.27%, CallGraph
+0.15%, Context 1.01%, 487 anchors. Thresholds: 0.98 / 235 right / 1% / 1% /
+2% / 400 anchors. Every state before this session's fixes fails them (8
+anchors; Mac-only 4.5% / 5.4%). The inputs are private, so CI registers the
+step and records the skip.
