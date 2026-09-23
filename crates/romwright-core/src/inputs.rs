@@ -110,6 +110,11 @@ impl Core {
 
     /// A path identifies the imported source; its current contents are not
     /// silently substituted for the bytes that produced the stored facts.
+    /// A path mismatch is not a substitution when the bytes are identical:
+    /// an import-cache restore replays the first import's `source_path`
+    /// verbatim, so same bytes under a new path (or name) must still
+    /// resolve. Identity is content, checked lazily only after both path
+    /// comparisons fail.
     pub(crate) fn resolve_program_input(
         &self,
         binary: &Path,
@@ -125,6 +130,7 @@ impl Core {
         let stored = self.db_path().join("artifacts").join(&input.binary_digest);
         if canonical != Path::new(&input.source_path)
             && canonical != stored.canonicalize().unwrap_or(stored)
+            && super::import_cache::digest(binary).as_deref() != Some(input.binary_digest.as_str())
         {
             return Err(native::ImportError::Bad(
                 "binary does not identify this program's imported source".into(),

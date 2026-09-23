@@ -581,7 +581,9 @@ pub struct InferenceReport {
     pub rounds: u8,
     pub stop_reason: InferenceStopReason,
     pub analyzed: u64,
-    /// Number of changed facts across completed rounds, not unique functions.
+    /// Every analyzed function entry in analysis order, across rounds:
+    /// re-analyzed callers repeat. Powers per-function progress rows.
+    pub analyzed_addresses: Vec<u64>,
     pub changed: u64,
     /// Workers the memory cap recycled while this pass ran. A module large
     /// enough to grow the decompiler's caches past the cap is the normal
@@ -715,6 +717,7 @@ impl WorkerPoolManager {
             rounds: 0,
             stop_reason: InferenceStopReason::Budget,
             analyzed: 0,
+            analyzed_addresses: Vec::new(),
             changed: 0,
             worker_recycles: 0,
         };
@@ -792,6 +795,7 @@ impl WorkerPoolManager {
                     Err(error) => return Err(error),
                 };
                 report.analyzed += 1;
+                report.analyzed_addresses.push(function.entry.offset);
                 if !externals.contains(&function.entry) {
                     let mut prototype = doc.prototype.expect("recovery requires a prototype");
                     // The decompiler's irregular inputs are evidence its own
@@ -897,6 +901,9 @@ struct JobRecord {
     detail: String,
     cancel: CancelToken,
     result: Option<Result<serde_json::Value, String>>,
+    /// Function this record analyzed, when it names one: per-function
+    /// progress rows for inference passes, or a decompile target.
+    address: Option<u64>,
 }
 
 struct Shared {
@@ -967,6 +974,10 @@ impl JobExecutor {
                 detail: String::new(),
                 cancel: req.cancel.clone(),
                 result: None,
+                address: match &kind {
+                    JobKind::DecompileDoc { address } => Some(*address),
+                    _ => None,
+                },
             },
         );
         state.order.push(id);
@@ -1065,6 +1076,7 @@ impl JobExecutor {
                     "operation": record.operation,
                     "state": record.state,
                     "detail": record.detail,
+                    "address": record.address,
                 }))
             })
             .collect();
@@ -1115,6 +1127,20 @@ fn executor_loop(inner: std::sync::Arc<ExecutorInner>) {
         let result = run_job(&mut caches, job.kind, &job.req);
         let mut state = inner.state.lock().expect("executor lock poisoned");
         if let Some(record) = state.records.get_mut(&job.id) {
+            // Inference reports carry their analyzed addresses: expand
+            // them into per-function progress rows now, while the
+            // report value is at hand.
+            let progress: Option<Vec<u64>> = match &result {
+                Ok(value) => value.get("analyzed_addresses").map(|array| {
+                    array
+                        .as_array()
+                        .map(|items| {
+                            items.iter().filter_map(serde_json::Value::as_u64).collect()
+                        })
+                        .unwrap_or_default()
+                }),
+                Err(_) => None,
+            };
             match &result {
                 Ok(_) => {
                     record.state = JobState::Succeeded;
@@ -1130,6 +1156,32 @@ fn executor_loop(inner: std::sync::Arc<ExecutorInner>) {
                 }
             }
             record.result = Some(result);
+            // A completed inference pass lists its functions, not
+            // itself: swap the parent out of page order for one row
+            // per analyzed address. The parent stays in records, so
+            // wait and status keep working; a pass that analyzed
+            // nothing (budget-exhausted round zero) leaves no rows.
+            if let Some(addresses) = progress {
+                let operation = record.operation;
+                let cancel = job.req.cancel.clone();
+                state.order.retain(|id| *id != job.id);
+                for address in addresses {
+                    let id = state.next_id;
+                    state.next_id = state.next_id.saturating_add(1);
+                    state.order.push(id);
+                    state.records.insert(
+                        id,
+                        JobRecord {
+                            operation,
+                            state: JobState::Succeeded,
+                            detail: "completed".into(),
+                            cancel: cancel.clone(),
+                            result: None,
+                            address: Some(address),
+                        },
+                    );
+                }
+            }
         }
         inner.finished.notify_all();
     }
@@ -1140,8 +1192,11 @@ fn run_job(
     kind: JobKind,
     req: &romwright_core::exec::ExecutionRequest,
 ) -> Result<serde_json::Value, String> {
+    // Explicit cancellation fails fast here; an expired deadline is the
+    // manager's graceful empty report, not a dispatch error (m2-006 pins
+    // rounds 0 / stop budget for budget_ms=0).
     req.cancel
-        .checkpoint(req.deadline)
+        .check_cancelled()
         .map_err(|error| error.to_string())?;
     if caches
         .get(&req.project_dir)
