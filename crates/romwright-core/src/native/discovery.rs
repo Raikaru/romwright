@@ -1851,6 +1851,15 @@ fn flow_discover_with_candidates<P: FlowProvider>(
     imp.branch_transfers.sort_unstable();
     imp.branch_transfers.dedup();
     record_branch_transfers(imp);
+    // Every round re-walks from its seeds and appends what it decodes, so
+    // the same instruction was recorded once per round: 2.56 M records for
+    // 930 k instructions by swkotor2's third round, all written to each
+    // switch-recovery scratch store and measured again at store time. An
+    // exact repeat carries nothing; first-seen order is kept.
+    {
+        let mut seen: HashSet<crate::native::FlowShape> = HashSet::with_capacity(imp.flow_shapes.len());
+        imp.flow_shapes.retain(|shape| seen.insert(*shape));
+    }
     Ok(())
 }
 

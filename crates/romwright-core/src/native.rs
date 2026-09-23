@@ -209,7 +209,7 @@ pub struct NativeThunk {
 
 /// One instruction as the walk decoded it, addresses aside from its own
 /// direct branch target left out: the shape a diff can compare.
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct FlowShape {
     pub address: u64,
     pub length: u8,
@@ -3040,19 +3040,38 @@ fn recover_switch_tables(imp: &mut NativeImport) -> usize {
         ));
         return 0;
     }
-    let addresses: Vec<String> = owners.iter().map(|entry| format!("{entry:#x}")).collect();
-    // One worker per chunk, as many at once as the host has cores: the
+    // One worker per lane, as many at once as the host has cores: the
     // decompiles are independent and each worker loads the language once.
+    // Never more lanes than cores: every lane is spawned at once, and more
+    // decompilers than cores made each slower.
     let lanes = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(1)
-        .clamp(1, 8);
-    // One chunk per lane, and never more chunks than lanes: `chunks()` with a
-    // capped size produced more pieces than lanes on a large image, and every
-    // piece was spawned at once, so the host ran more decompilers than it has
-    // cores and each got slower.
-    let chunk_size = addresses.len().div_ceil(lanes).max(1);
-    let chunks: Vec<&[String]> = addresses.chunks(chunk_size).collect();
+        .clamp(1, 8)
+        .min(owners.len());
+    // Lanes are balanced by body size, largest first onto the lightest
+    // lane. Contiguous address chunks put neighbouring giants in one lane:
+    // on libc five functions of 4-13 s each sat together and that lane ran
+    // 49 s while the rest idled; balanced, the phase is bounded near the
+    // single largest decompile.
+    let sizes: std::collections::HashMap<u64, u64> =
+        imp.functions.iter().map(|function| (function.entry, function.size)).collect();
+    let mut by_size: Vec<u64> = owners.clone();
+    by_size.sort_by_key(|entry| (std::cmp::Reverse(sizes.get(entry).copied().unwrap_or(0)), *entry));
+    let mut buckets: Vec<(u64, Vec<String>)> = vec![(0, Vec::new()); lanes];
+    for entry in by_size {
+        let lightest = buckets
+            .iter_mut()
+            .min_by_key(|(load, _)| *load)
+            .expect("at least one lane");
+        lightest.0 += sizes.get(&entry).copied().unwrap_or(0).max(1);
+        lightest.1.push(format!("{entry:#x}"));
+    }
+    let chunks: Vec<&[String]> = buckets
+        .iter()
+        .map(|(_, addresses)| addresses.as_slice())
+        .filter(|addresses| !addresses.is_empty())
+        .collect();
     let binary = scratch.path.join("artifacts").join(&input.binary_digest);
     let setup = started.elapsed().as_secs_f64();
     let lanes_started = std::time::Instant::now();
