@@ -15,7 +15,7 @@ Read this first; everything below it is the dated log.
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision: GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
+  precision: NDS arm9 0.905 / 0.997, GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
   0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.940 /
   0.995;
   NDS does not finish.
@@ -9067,3 +9067,36 @@ precision 0.999 to 0.995, no diagnostics (was degraded).
    as the PE32+ loader already did for x64 records.
 Regression: m3-001, m17-002, m8-002, m8-003, m12-001, ppc_sda unchanged;
 core lib 486. Tests: `pdata_records_seed_functions_in_code`.
+
+## NDS: overlay FAT, packing, one program each, calls into the module (2026-09-24)
+
+Pokemon HeartGold used to run over an hour and time out. It now imports
+in 504 s, with arm9 recall 0.905 and precision 0.997 against the ELF's
+named functions (m5-013: 10,053 functions, NitroMain decompiled; stock
+Ghidra reaches 0.770 there).
+1. A FAT entry is `{start, end}`; the loader read `end` as a size, so
+   every one of the 129 overlays mapped about a megabyte of unrelated ROM
+   and discovery walked each (77 s apiece).
+2. Overlay files are packed with the static module's backward LZ (OVT
+   flags bit 24); they are now unpacked and accepted only when the result
+   is exactly `ram_size`. A refused overlay is named in a Partial
+   diagnostic.
+3. Overlays share RAM, so each is now its own program `ov<N>` instead of
+   an overlapping mapping inside arm9.
+4. With the split, 731 arm9 functions that only overlays call went
+   missing. The container import now discovers arm9 last
+   (`sibling_call_host`) and seeds it with the overlay programs'
+   same-language direct calls into its code (`seed_from_siblings`). Each
+   target's mode comes from the call encoding, and a reading counts only
+   when its computed target equals the recorded one: flow records no
+   context for a `bl` that keeps its caller's mode, so 2,490 of the 3,124
+   targets had none. A console context holds from its address to the next
+   one; a Thumb seed below crt0 turned crt0 to Thumb, so the loader now
+   declares ARM state at both entries.
+5. The gate's ELF truth reader counted 13,533 `$a`/`$t`/`$d`/`$b`
+   mapping symbols, which this toolchain types FUNC, as functions (recall
+   read 0.374).
+Regression: m5-002, m10-001, core lib 488. Tests:
+`each_overlay_is_its_own_program_beside_the_static_images`,
+`a_packed_overlay_that_does_not_unpack_is_refused_by_name`,
+`sibling_calls_seed_the_host_in_the_mode_they_enter`.

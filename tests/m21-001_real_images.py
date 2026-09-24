@@ -47,7 +47,10 @@ def elf_functions(elf: Path) -> dict[int, tuple[int, str]]:
     truth: dict[int, tuple[int, str]] = {}
     for line in out.splitlines():
         parts = line.split()
-        if len(parts) >= 8 and parts[3] == "FUNC" and parts[6] != "UND":
+        # `$a`/`$t`/`$d`/`$b` are AAELF mapping symbols and local labels,
+        # typed FUNC by the pokeheartgold toolchain; they name no function.
+        if (len(parts) >= 8 and parts[3] == "FUNC" and parts[6] != "UND"
+                and not parts[7].startswith("$")):
             address = int(parts[1], 16) & ~1  # Thumb bit
             size = int(parts[2], 0)
             if address and (address not in truth or truth[address][0] < size):
@@ -106,24 +109,21 @@ IMAGES = [
      "ranges": None},
 ]
 
-# Degraded analyses known today, by the text of the diagnostic. Reported,
-# not failed; one that no longer occurs fails as stale so the record
-# tracks the defect.
-# Images whose import is known not to finish within its limit. As above:
-# reported, and stale once it does finish.
-EXPECTED_TIMEOUT = {
-    # Analysis runs over an hour: every overlay (134) is mapped over the
-    # same range inside the arm9 program.
-    "nds-pokeheartgold-arm9",
-}
+# Images whose import is known not to finish within its limit. Reported,
+# not failed; one that finishes fails as stale so the record tracks the
+# defect.
+EXPECTED_TIMEOUT: set[str] = set()
 DEFAULT_LIMIT_S = 1800
 
+# Degraded analyses known today, by the text of the diagnostic. As above:
+# reported, and stale once they no longer occur.
 EXPECTED_DEGRADED: dict[str, str] = {}
 
 # Measured 2026-09-23 (recall, precision), with a 0.01 margin. Raise them as
 # recovery improves; a drop below is a regression.
 FLOORS: dict[str, tuple[float, float]] = {
     "gba-pokeemerald": (0.859, 0.830),          # 0.869 / 0.840, 755 s, 2.3 GB
+    "nds-pokeheartgold-arm9": (0.894, 0.987),   # 0.905 / 0.997, 504 s
     "ps2-capcom-fighting-evolution": (0.887, 0.874),  # 0.897 / 0.884
     "ps2-dungeon-game": (0.780, 0.814),         # 0.791 / 0.824
     # 0.919 / 0.376. The map lists globals only: of the 1,246 "invented"

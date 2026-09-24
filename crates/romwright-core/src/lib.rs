@@ -2275,7 +2275,14 @@ impl Core {
             }
         }
         let mut images = native::load_container_with(binary, &artifact.bytes, false, map, raw, keys, &self.config)?;
-        for (suffix, imp) in &mut images {
+        // An image its siblings call into is discovered last, seeded with
+        // those calls; everything else keeps container order.
+        let order: Vec<usize> = (0..images.len())
+            .filter(|&index| !images[index].1.sibling_call_host)
+            .chain((0..images.len()).filter(|&index| images[index].1.sibling_call_host))
+            .collect();
+        for index in order {
+            let (suffix, imp) = &mut images[index];
             let mut selected = input.clone();
             selected.image_selector = suffix.clone();
             imp.input_context = Some(std::sync::Arc::new((self.db_path.clone(), selected)));
@@ -2285,7 +2292,18 @@ impl Core {
                 imp.diagnostics.retain(|diagnostic| {
                     !diagnostic.message.starts_with("loaded without analysis")
                 });
-                native::discover(imp)?;
+                if imp.sibling_call_host {
+                    let mut host = std::mem::take(&mut images[index].1);
+                    let siblings: Vec<&native::NativeImport> = images
+                        .iter()
+                        .enumerate()
+                        .filter(|&(other, _)| other != index)
+                        .map(|(_, (_, sibling))| sibling)
+                        .collect();
+                    native::seed_from_siblings(&mut host, &siblings);
+                    images[index].1 = host;
+                }
+                native::discover(&mut images[index].1)?;
             }
         }
         let mut stored = Vec::with_capacity(images.len());

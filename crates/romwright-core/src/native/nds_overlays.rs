@@ -5,12 +5,14 @@
 //! public offsets, reimplemented here without upstream code):
 //!
 //! - FAT at header `0x48` (offset) / `0x4C` (size): a run of
-//!   `{offset u32 LE, size u32 LE}` entries indexed by file id.
+//!   `{start u32 LE, end u32 LE}` file offsets indexed by file id.
 //! - ARM9 OVT at header `0x50` (offset) / `0x54` (size): a run of
 //!   32-byte entries, each
 //!   `{overlay_id u32, ram_addr u32, ram_size u32, bss_size u32,
 //!     static_init_start u32, static_init_end u32, file_id u32,
-//!     reserved u32}` (all LE).
+//!     flags u32}` (all LE); `flags` bit 24 marks the file as packed
+//!   with the backward LZ the ARM9 static module uses, bits 0-23 its
+//!   packed size.
 //!
 //! Each overlay's bytes live in the file at `FAT[file_id]`, and load
 //! at `ram_addr` with resident size `ram_size + bss_size` (the `bss`
@@ -18,13 +20,12 @@
 //! the game swaps them -- so overlapping load addresses are legal and
 //! no overlap check runs.
 //!
-//! Model: overlays join the ARM9 program as extra mappings named
-//! `ov<N>` (`N` = overlay id), so `store_import` mints one `modules`
-//! row per overlay (`ModuleRow { name: "ov<N>", load_vaddr: ram_addr,
-//! size, file_off: FAT offset }`). An `(overlay-id, addr)` pair binds
-//! through [`bind`] / [`bind_offset`] to its module, RAM address and
-//! file offset -- the hook a symbol reader (e.g. an mwldarm MAP with
-//! overlay-relative symbols) resolves through.
+//! Model: each overlay is its own program `ov<N>` (`N` = overlay id)
+//! beside `arm9` and `arm7`, mapping only its own bytes at `ram_addr`,
+//! so `store_import` mints one `modules` row for it. An
+//! `(overlay-id, addr)` pair binds through [`bind`] / [`bind_offset`] to
+//! its module, RAM address and file offset -- the hook a symbol reader
+//! (e.g. an mwldarm MAP with overlay-relative symbols) resolves through.
 
 use super::{Mapping, NativeImport};
 use romwright_model::{Address, ModuleRow};
@@ -63,6 +64,9 @@ pub struct DsOverlay {
     pub file_off: u64,
     /// File size of the overlay's bytes (from the FAT).
     pub file_size: u64,
+    /// The file holds the overlay packed (OVT flags bit 24); its RAM
+    /// image is what `MIi_UncompressBackward` makes of it.
+    pub compressed: bool,
 }
 
 impl DsOverlay {
@@ -92,10 +96,11 @@ impl DsOverlay {
     }
 
     /// File offset backing `addr`, when `addr` is in this overlay's
-    /// file-backed part (BSS has no file bytes and returns `None`).
+    /// file-backed part (BSS has no file bytes and returns `None`, and
+    /// neither does a packed overlay, whose file bytes are not its RAM).
     pub fn file_off_of_ram(&self, addr: u64) -> Option<u64> {
         let off = addr.checked_sub(self.ram_addr)?;
-        (off < self.ram_size && off < self.file_size).then(|| self.file_off + off)
+        (!self.compressed && off < self.ram_size && off < self.file_size).then(|| self.file_off + off)
     }
 }
 
@@ -161,6 +166,7 @@ pub fn parse(data: &[u8]) -> Vec<DsOverlay> {
             file_id: w(24),
             file_off: 0,
             file_size: 0,
+            compressed: w(28) & 0x0100_0000 != 0,
         };
         if overlay.ram_size == 0 {
             continue;
@@ -170,19 +176,17 @@ pub fn parse(data: &[u8]) -> Vec<DsOverlay> {
         if (overlay.file_id as usize) >= fat_count {
             continue;
         }
-        let (Some(f_off), Some(f_size)) = (u32_le(data, fat_at), u32_le(data, fat_at + 4)) else {
+        let (Some(f_off), Some(f_end)) = (u32_le(data, fat_at), u32_le(data, fat_at + 4)) else {
             continue;
         };
-        let (f_off, f_size) = (f_off as u64, f_size as u64);
-        if f_size == 0 {
+        let (f_off, f_end) = (f_off as u64, f_end as u64);
+        // A FAT entry is a start and an end offset. Read as a size, the
+        // end mapped a megabyte of other files behind every overlay of
+        // Pokemon HeartGold, and discovery walked each copy.
+        if f_end <= f_off || f_end > len {
             continue;
         }
-        let Some(f_end) = f_off.checked_add(f_size) else {
-            continue;
-        };
-        if f_end > len {
-            continue;
-        }
+        let f_size = f_end - f_off;
         out.push(DsOverlay {
             file_off: f_off,
             file_size: f_size,
@@ -213,13 +217,15 @@ pub fn modules(overlays: &[DsOverlay]) -> Vec<ModuleRow> {
         .collect()
 }
 
-/// Raw bytes each overlay contributes to an import: the FAT bytes,
-/// zero-padded to `ram_size` when the file holds fewer, plus
-/// `bss_size` zero bytes. Returns `(Mapping, name)` pairs in table
-/// order; entries whose bytes left the file are skipped.
-pub fn mappings_for(data: &[u8], overlays: &[DsOverlay]) -> Vec<(Mapping, String)> {
+/// The RAM image each overlay contributes to an import: its FAT bytes
+/// (unpacked when the OVT marks them packed), zero-padded to `ram_size`
+/// when the file holds fewer, plus `bss_size` zero bytes. Returns
+/// `(Mapping, name)` pairs in table order, and the names of packed
+/// overlays whose bytes did not unpack to exactly `ram_size`.
+pub fn mappings_for(data: &[u8], overlays: &[DsOverlay]) -> (Vec<(Mapping, String)>, Vec<String>) {
     let len = data.len() as u64;
     let mut out = Vec::with_capacity(overlays.len());
+    let mut refused = Vec::new();
     for ov in overlays {
         let Some(f_end) = ov.file_off.checked_add(ov.file_size) else {
             continue;
@@ -227,9 +233,20 @@ pub fn mappings_for(data: &[u8], overlays: &[DsOverlay]) -> Vec<(Mapping, String
         if f_end > len {
             continue;
         }
-        let start = ov.file_off as usize;
-        let end = start + ov.file_size as usize;
-        let mut bytes = data[start..end].to_vec();
+        let stored = &data[ov.file_off as usize..f_end as usize];
+        let mut bytes = if ov.compressed {
+            // The packed file ends where its footer does, so the bottom
+            // `MIi_UncompressBackward` starts from is the file's end.
+            match super::nds::uncompress_backward(stored, ov.ram_addr, ov.ram_addr + ov.file_size) {
+                Some(unpacked) if unpacked.len() as u64 == ov.ram_size => unpacked,
+                _ => {
+                    refused.push(ov.name());
+                    continue;
+                }
+            }
+        } else {
+            stored.to_vec()
+        };
         // A short file still loads a full `ram_size` window; the
         // missing tail reads as zeros, like BSS does.
         if (bytes.len() as u64) < ov.ram_size {
@@ -250,17 +267,36 @@ pub fn mappings_for(data: &[u8], overlays: &[DsOverlay]) -> Vec<(Mapping, String
             ov.name(),
         ));
     }
-    out
+    (out, refused)
 }
 
-/// Appends one mapping per overlay to the ARM9 `import` (mapping +
-/// `mapping_names` entry `ov<N>`), so `store_import` mints the
-/// matching `modules` rows. No-op for an empty overlay list.
-pub fn append_to_import(data: &[u8], overlays: &[DsOverlay], import: &mut NativeImport) {
-    for (mapping, name) in mappings_for(data, overlays) {
-        import.mappings.push(mapping);
-        import.mapping_names.push(name);
-    }
+/// One program per overlay, named `ov<N>`, holding only that overlay's
+/// mapping. Overlays share RAM, so they cannot sit in one address space:
+/// Pokemon HeartGold loads 129 of them into a few windows, and one
+/// program with every copy overlapping made address-keyed discovery and
+/// its stores conflate unrelated code. Calls from an overlay into the
+/// static ARM9 image leave its own program, like calls into a library.
+/// The second list names the overlays [`mappings_for`] refused.
+pub fn programs_for(
+    data: &[u8],
+    overlays: &[DsOverlay],
+    language: &str,
+) -> (Vec<(String, NativeImport)>, Vec<String>) {
+    let (mappings, refused) = mappings_for(data, overlays);
+    let programs = mappings
+        .into_iter()
+        .map(|(mapping, name)| {
+            let import = NativeImport {
+                mappings: vec![mapping],
+                mapping_names: vec![name.clone()],
+                format: "nds".into(),
+                language: language.into(),
+                ..Default::default()
+            };
+            (name, import)
+        })
+        .collect();
+    (programs, refused)
 }
 
 /// Finds the overlay with `overlay_id` that contains absolute RAM
@@ -345,9 +381,10 @@ mod tests {
             0x4220,
             &[1, 0x0211_0000, 0x80, 0, 0, 0, 1, 0],
         );
-        // FAT[0] -> 0x40 bytes at 0x4300; FAT[1] -> 0x80 bytes at 0x4340.
-        write_words(&mut data, 0x4240, &[0x4300, 0x40]);
-        write_words(&mut data, 0x4248, &[0x4340, 0x80]);
+        // FAT entries are {start, end}: FAT[0] -> 0x4300..0x4340,
+        // FAT[1] -> 0x4340..0x43C0.
+        write_words(&mut data, 0x4240, &[0x4300, 0x4340]);
+        write_words(&mut data, 0x4248, &[0x4340, 0x43C0]);
         data[0x4300..0x4340].fill(0xAA);
         data[0x4340..0x43C0].fill(0xBB);
         data
@@ -369,6 +406,7 @@ mod tests {
                 file_id: 0,
                 file_off: 0x4300,
                 file_size: 0x40,
+                compressed: false,
             }
         );
         assert_eq!(ov[1].overlay_id, 1);
@@ -421,7 +459,8 @@ mod tests {
     fn mappings_carry_overlay_bytes_with_zeroed_bss() {
         let data = cartridge();
         let ov = parse(&data);
-        let maps = mappings_for(&data, &ov);
+        let (maps, refused) = mappings_for(&data, &ov);
+        assert!(refused.is_empty());
         assert_eq!(maps.len(), 2);
         assert_eq!((maps[0].0.vaddr, maps[0].0.size), (0x0210_0000, 0x50));
         assert_eq!((maps[0].0.file_off, maps[0].1.as_str()), (0x4300, "ov0"));
@@ -431,21 +470,33 @@ mod tests {
     }
 
     #[test]
-    fn arm9_import_gains_one_mapping_per_overlay() {
+    fn each_overlay_is_its_own_program_beside_the_static_images() {
         let data = cartridge();
         let images = super::super::nds::import(&data).expect("cartridge");
-        assert_eq!(images.len(), 2);
-        let (name, arm9) = &images[0];
-        assert_eq!(name, "arm9");
-        assert_eq!(arm9.mapping_names, vec!["arm9", "ov0", "ov1"]);
-        assert_eq!(arm9.mappings.len(), 3);
-        assert_eq!(arm9.mappings[1].vaddr, 0x0210_0000);
-        assert_eq!(arm9.mappings[1].file_off, 0x4300);
-        assert_eq!(arm9.mappings[1].bytes[0], 0xAA);
-        assert_eq!(arm9.mappings[2].vaddr, 0x0211_0000);
-        assert_eq!(arm9.mappings[2].file_off, 0x4340);
-        // The ARM7 program is untouched by ARM9 overlays.
-        assert_eq!(images[1].1.mapping_names, vec!["arm7"]);
+        let names: Vec<&str> = images.iter().map(|(name, _)| name.as_str()).collect();
+        assert_eq!(names, ["arm9", "arm7", "ov0", "ov1"]);
+        // Overlays share RAM, so the static ARM9 program maps only itself.
+        assert_eq!(images[0].1.mapping_names, vec!["arm9"]);
+        let (_, ov0) = &images[2];
+        assert_eq!(ov0.language, images[0].1.language);
+        assert_eq!((ov0.mappings.len(), ov0.mappings[0].vaddr), (1, 0x0210_0000));
+        assert_eq!((ov0.mappings[0].file_off, ov0.mappings[0].bytes[0]), (0x4300, 0xAA));
+        assert_eq!(images[3].1.mappings[0].vaddr, 0x0211_0000);
+    }
+
+    /// A packed overlay is its unpacked RAM image or nothing: bytes that
+    /// do not unpack to `ram_size` are refused and named, never mapped as
+    /// code.
+    #[test]
+    fn a_packed_overlay_that_does_not_unpack_is_refused_by_name() {
+        let mut data = cartridge();
+        // OVT[1] flags: packed, 0x80 bytes; its file is 0xBB filler.
+        write_words(&mut data, 0x4220 + 28, &[0x0100_0080]);
+        let (programs, refused) = programs_for(&data, &parse(&data), "ARM:LE:32:v5t");
+        assert_eq!(refused, ["ov1"]);
+        assert_eq!(programs.len(), 1);
+        let images = super::super::nds::import(&data).expect("cartridge");
+        assert!(images[0].1.diagnostics.iter().any(|d| d.message.contains("ov1")));
     }
 
     #[test]
@@ -454,7 +505,7 @@ mod tests {
         write_words(&mut data, OVT_OFFSET_OFF, &[0, 0]);
         assert!(parse(&data).is_empty());
         let images = super::super::nds::import(&data).expect("still a cartridge");
-        assert_eq!(images[0].1.mappings.len(), 1);
+        assert_eq!(images.len(), 2);
     }
 
     #[test]
