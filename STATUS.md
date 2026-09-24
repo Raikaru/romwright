@@ -9248,3 +9248,12 @@ The facts were already stored; a reader had to join six tables to see them
 together. Building it surfaced the rebase defect above: glibc's
 `__memmove_sse2_unaligned_erms` read as "claimed by flow" with no symbol,
 although its symtab names it.
+
+## Opt-in resumable walk removed (2026-09-24)
+
+`ROMWRIGHT_INCREMENTAL_ROUNDS` resumed a round from the previous round's walk
+state. It never matched the batch walk (libc 31,991 xrefs against 33,050),
+and the flow cache now gets the same saving with identical facts. Removed:
+the flag, its branches, and three state fields that every round cloned for
+it (visited set, proven bodies, origin map), whether or not it was on. libc
+digest identical before and after.

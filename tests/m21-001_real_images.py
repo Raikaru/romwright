@@ -145,7 +145,7 @@ EXPECTED_DEGRADED: dict[str, str] = {}
 # Measured 2026-09-23 (recall, precision), with a 0.01 margin. Raise them as
 # recovery improves; a drop below is a regression.
 FLOORS: dict[str, tuple[float, float]] = {
-    "gba-pokeemerald": (0.859, 0.830),          # 0.869 / 0.840, 755 s, 2.3 GB
+    "gba-pokeemerald": (0.859, 0.830),          # 0.869 / 0.840, 522 s idle (smt-cloud), 2.0 GB
     "nds-pokeheartgold-arm9": (0.894, 0.987),   # 0.905 / 0.997, 504 s
     "ps2-capcom-fighting-evolution": (0.887, 0.874),  # 0.897 / 0.884
     "ps2-dungeon-game": (0.780, 0.814),         # 0.791 / 0.824
