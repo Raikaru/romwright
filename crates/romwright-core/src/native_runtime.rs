@@ -2159,6 +2159,16 @@ impl ConsoleSession {
         Ok(patterns)
     }
 
+    /// Whether the console process is still running. A console that died
+    /// answers nothing again: every later request fails at once.
+    pub(crate) fn is_alive(&mut self) -> bool {
+        if self.reaped {
+            return false;
+        }
+        let mut child = self.child.lock().unwrap_or_else(|error| error.into_inner());
+        matches!(child.try_wait(), Ok(None))
+    }
+
     /// Close stdin and wait for the child to exit.
     pub fn quit(mut self) -> Result<()> {
         let _ = self.send("quit\n");
