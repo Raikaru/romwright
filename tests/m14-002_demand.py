@@ -210,9 +210,23 @@ def main():
         walked = [row for row in rows if row["state"] == "walked"]
         if not walked:
             failures.append("no sampled function was walked at all")
+        # Batch analysis ends a body where another function starts. A start
+        # the loader declared bounds the demand walk too; one that only
+        # exists because some other function calls it is the batch pass's
+        # fact (the docstring's exemption), so a walk may run past it. glibc's
+        # `__memmove_sse2_unaligned_erms` is 7 bytes that fall into a body
+        # other entries call.
+        def split_elsewhere(row):
+            end = f"{int(row['entry'], 16) + row['batch_size']:08x}"
+            return end in batch and end not in seeds
+        for row in walked:
+            row["split_elsewhere"] = (row["batch_size"] is not None
+                                      and row["walked_size"] > row["batch_size"]
+                                      and split_elsewhere(row))
         overruns = [
             row for row in walked
             if row["batch_size"] is not None and row["walked_size"] > row["batch_size"]
+            and not row["split_elsewhere"]
         ]
         if overruns:
             failures.append(
@@ -256,8 +270,11 @@ def main():
                 f"{len(walked) - identical_facts} bodies differ from batch analysis, "
                 f"e.g. {short[0]['name']} -{short[0]['xrefs_missing']}"
                 if short else f"{len(walked) - identical_facts} bodies differ from batch")
-        if len(exact) != len(walked):
-            failures.append(f"{len(walked) - len(exact)} bodies differ in extent from batch")
+        differ = [row for row in walked if row not in exact and not row["split_elsewhere"]]
+        if differ:
+            failures.append(f"{len(differ)} bodies differ in extent from batch, "
+                            f"e.g. {differ[0]['name']} {differ[0]['walked_size']} vs "
+                            f"{differ[0]['batch_size']}")
         states = store_functions(loaded)
         analysed_rows = [entry for entry, (_, _, state) in states.items()
                          if state in ("walked", "undecodable")]
@@ -287,6 +304,7 @@ def main():
                 "median_decompile_seconds": round(
                     statistics.median(row["decompile_seconds"] for row in rows), 3),
                 "sampled": len(rows),
+                "split_elsewhere": sum(1 for row in walked if row["split_elsewhere"]),
                 "walked": len(walked),
                 "size_exact_vs_batch": len(exact),
                 "size_overruns_vs_batch": len(overruns),
