@@ -142,19 +142,20 @@ DEFAULT_LIMIT_S = 1800
 # reported, and stale once they no longer occur.
 EXPECTED_DEGRADED: dict[str, str] = {}
 
-# Measured 2026-09-23 (recall, precision), with a 0.01 margin. Raise them as
+# Measured 2026-09-24 (recall, precision), with a 0.01 margin. Raise them as
 # recovery improves; a drop below is a regression.
 FLOORS: dict[str, tuple[float, float]] = {
-    "gba-pokeemerald": (0.859, 0.830),          # 0.869 / 0.840, 522 s idle (smt-cloud), 2.0 GB
-    "nds-pokeheartgold-arm9": (0.894, 0.987),   # 0.905 / 0.997, 504 s
-    "ps2-capcom-fighting-evolution": (0.887, 0.874),  # 0.897 / 0.884
-    "ps2-dungeon-game": (0.780, 0.814),         # 0.791 / 0.824
-    # 0.919 / 0.376. The map lists globals only: of the 1,246 "invented"
-    # entries, 534 are jal targets and 678 open a stack frame; 34 have
-    # neither. Precision here is a floor on accuracy, not a measure of it.
-    "psv-need-for-speed-most-wanted": (0.794, 0.938),  # 0.804 / 0.948, 522 s
-    "psx-darkstalkers-3": (0.909, 0.366),
-    "x360-black-ops-2": (0.929, 0.985),         # 0.940 / 0.995, 153 s
+    "gba-pokeemerald": (0.963, 0.958),          # 0.9736 / 0.9689, 558 s idle (smt-cloud), 1.6 GB
+    "nds-pokeheartgold-arm9": (0.962, 0.987),   # 0.9729 / 0.9973
+    "ps2-capcom-fighting-evolution": (0.931, 0.979),  # 0.9413 / 0.9890
+    "ps2-dungeon-game": (0.930, 0.920),         # 0.9400 / 0.9305
+    # 0.9866 / 0.3660. The map lists globals only: of the 1,399 "invented"
+    # entries, 545 are jal targets, 678 open a stack frame, and 157 of the
+    # other 176 are leaf handlers a data word points at. Precision here is a
+    # floor on accuracy, not a measure of it.
+    "psx-darkstalkers-3": (0.976, 0.356),
+    "psv-need-for-speed-most-wanted": (0.962, 0.947),  # 0.9724 / 0.9570
+    "x360-black-ops-2": (0.973, 0.985),         # 0.9833 / 0.9956
 }
 
 

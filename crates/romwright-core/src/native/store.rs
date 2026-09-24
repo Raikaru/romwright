@@ -57,6 +57,77 @@ pub fn declared_entry_model(
 /// Two functions cannot share code (m8-002); strict containment only --
 /// an abutting neighbour (start == end) is a correct boundary, not an
 /// overlap. Sizes of 0 read as 1, matching the stored rows.
+/// Whether `entry` opens the way ARM code opens, in either instruction set:
+/// Thumb `push` or `push.w`, `bx lr` or a PC-relative literal load; ARM
+/// `stmdb sp!` with `lr`, `bx lr` or a PC-relative `ldr`.
+fn opens_like_arm_code(imp: &NativeImport, entry: u64) -> bool {
+    let read = |count: usize| {
+        imp.mappings.iter().find_map(|mapping| {
+            let offset = usize::try_from(entry.checked_sub(mapping.vaddr)?).ok()?;
+            mapping.bytes.get(offset..offset.checked_add(count)?).map(<[u8]>::to_vec)
+        })
+    };
+    let thumb = read(2).is_some_and(|b| {
+        let half = u16::from_le_bytes([b[0], b[1]]);
+        // Thumb-2 `push.w`/`stmdb sp!` opens with 0xe92d: the Vita compiler's
+        // frame, where agbcc's is the 16-bit `push`.
+        half & 0xfe00 == 0xb400 || half == 0x4770 || half >> 11 == 0b01001 || half == 0xe92d
+    });
+    let arm = read(4).is_some_and(|b| {
+        let word = u32::from_le_bytes([b[0], b[1], b[2], b[3]]);
+        word & 0xffff_4000 == 0xe92d_4000 || word == 0xe12f_ff1e || word & 0x0f7f_0000 == 0x051f_0000
+    });
+    thumb || arm
+}
+
+/// Functions only a call claims that neither open like code nor are called
+/// from anything trusted. Trust starts at functions that open like code or
+/// that the image itself names (`anchored`), and flows forward along direct
+/// calls into call-only functions.
+fn untrusted_call_chains(
+    imp: &NativeImport,
+    functions: &[NativeFunction],
+    only_called: impl Fn(u64) -> bool,
+    anchored: impl Fn(u64) -> bool,
+) -> std::collections::HashSet<u64> {
+    let mut bodies: Vec<(u64, u64)> = functions
+        .iter()
+        .map(|function| (function.entry, function.entry + function.size.max(1)))
+        .collect();
+    bodies.sort_unstable();
+    let owner = |address: u64| {
+        let index = bodies.partition_point(|&(start, _)| start <= address);
+        index
+            .checked_sub(1)
+            .filter(|&i| address < bodies[i].1)
+            .map(|i| bodies[i].0)
+    };
+    let mut callees: std::collections::HashMap<u64, Vec<u64>> = std::collections::HashMap::new();
+    for xref in imp.xrefs.iter().filter(|xref| xref.kind.contains("CALL")) {
+        if let Some(caller) = owner(xref.from) {
+            callees.entry(caller).or_default().push(xref.to & !1);
+        }
+    }
+    let mut trusted: std::collections::HashSet<u64> = functions
+        .iter()
+        .map(|function| function.entry)
+        .filter(|&entry| anchored(entry) || opens_like_arm_code(imp, entry))
+        .collect();
+    let mut pending: Vec<u64> = trusted.iter().copied().collect();
+    while let Some(caller) = pending.pop() {
+        for &callee in callees.get(&caller).map(Vec::as_slice).unwrap_or(&[]) {
+            if only_called(callee) && trusted.insert(callee) {
+                pending.push(callee);
+            }
+        }
+    }
+    functions
+        .iter()
+        .map(|function| function.entry)
+        .filter(|&entry| only_called(entry) && !trusted.contains(&entry))
+        .collect()
+}
+
 pub(super) fn const_entry_swallowed(entry: u64, size: u64, stronger: &[u64]) -> bool {
     stronger
         .iter()
@@ -268,6 +339,26 @@ pub fn store_import(
                     || mid_instruction(f.entry)
                     || (!declared.contains(&f.entry) && inside_declared(f.entry))))
         });
+        // On an interworking ARM image whose data shares the executable
+        // window, a direct call decoded from data names data too, and each
+        // such "function" calls more of it. A function only a call claims is
+        // kept when it opens like a function, or when something that does
+        // calls it; trust flows along calls from there. On pokeemerald this
+        // retracts 377 of 548 call-only functions in the data region and 3
+        // real ones.
+        if crate::native::low_bit_code_mode(&imp.language) && imp.language.starts_with("ARM") {
+            let only_called = |entry: u64| {
+                called.contains(&entry)
+                    && !declared.contains(&entry)
+                    && !patterned.contains(&entry)
+                    && !pointed.contains(&entry)
+                    && !consted.contains(&entry)
+                    && !thunked.contains(&entry)
+            };
+            let anchored = |entry: u64| declared.contains(&entry) || pointed.contains(&entry);
+            let retract = untrusted_call_chains(imp, &functions, only_called, anchored);
+            functions.retain(|f| !retract.contains(&f.entry));
+        }
     }
     let rows: Vec<FunctionRow> = functions
         .iter()

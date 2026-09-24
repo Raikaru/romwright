@@ -256,6 +256,8 @@ fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> Nat
         declared_regions: regions(cpu),
         format: "nds".into(),
         language: language.into(),
+        // One mapping carries the module's code and its data alike.
+        code_holds_data: true,
         ..Default::default()
     };
     import.functions.push(NativeFunction {

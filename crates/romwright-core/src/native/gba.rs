@@ -78,6 +78,8 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         mapping_names: vec!["rom".into()],
         format: "gba".into(),
         language: "ARM:LE:32:v4t".into(),
+        // The cartridge holds code and data in one window.
+        code_holds_data: true,
         ..Default::default()
     };
     // Two seeds, both from the header: the cartridge entry point the console

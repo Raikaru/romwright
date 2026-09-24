@@ -157,6 +157,55 @@ pub(super) fn collect(
     Ok(())
 }
 
+/// Pointer candidates that only jump tables name. A run of adjacent data
+/// words naming code is a jump table when one of them names an address a
+/// walk already decoded inside a body and none names a known entry: a
+/// switch's default case is also reached by the bounds check before the
+/// table is resolved, and a case is never an entry. The cases of a switch
+/// whose table discovery has not resolved yet would otherwise be coined as
+/// functions and split their owner (dungeon_game `graph_vram_size`: nine
+/// pieces). A vtable names entries, even where one method was decoded inside
+/// another's walk (dungeon_game `ThirdPersonCamera`: 12 methods, one a
+/// fall-through destructor). A target another word outside such runs names
+/// stays a candidate.
+pub(super) fn jump_table_targets(
+    import: &NativeImport,
+    interior: impl Fn(u64) -> bool,
+    entry: impl Fn(u64) -> bool,
+) -> std::collections::HashSet<u64> {
+    let mut words: Vec<(u64, u64)> = import
+        .xrefs
+        .iter()
+        .filter(|x| x.kind == "DATA" && x.provenance == "native-import:elf-pointer")
+        .map(|x| (x.from, x.to))
+        .collect();
+    words.sort_unstable();
+    words.dedup_by_key(|&mut (from, _)| from);
+    let width = if import.language.contains(":64:") { 8 } else { 4 };
+    let mut tables = std::collections::HashSet::new();
+    let mut elsewhere = std::collections::HashSet::new();
+    let mut start = 0;
+    for index in 1..=words.len() {
+        if index < words.len() && words[index].0 == words[index - 1].0 + width {
+            continue;
+        }
+        let run = &words[start..index];
+        let table = run.len() >= 2
+            && run.iter().any(|&(_, target)| interior(target))
+            && !run.iter().any(|&(_, target)| entry(target));
+        for &(_, target) in run {
+            if table {
+                tables.insert(target);
+            } else {
+                elsewhere.insert(target);
+            }
+        }
+        start = index;
+    }
+    tables.retain(|target| !elsewhere.contains(target));
+    tables
+}
+
 /// Types every word of every `.got` section as a pointer.
 ///
 /// Ghidra's loader does this before any analyzer runs:

@@ -52,12 +52,12 @@ ARM9_ELF_SHA256 = "9078d5d5ed64393a31d20e66b360d6cb05dd72b29de49f0e11b3ec54c866f
 # NitroSDK `crt0.c`: NitroMain is what crt0 transfers to; the build's map
 # places it here, and the ELF agrees.
 NITRO_MAIN = 0x02000CA4
-# The floors the last run proved (recall 0.9057, precision 0.9927, 10053
+# The floors the last run proved (recall 0.9742, precision 0.9933, 10807
 # functions), less 0.01. Stock Ghidra with its own NDS loader reaches recall
 # 0.7698 on the same module. 731 of the functions only overlays call, found
 # through the overlay programs' calls into the module.
-RECALL_FLOOR = 0.895
-PRECISION_FLOOR = 0.982
+RECALL_FLOOR = 0.964
+PRECISION_FLOOR = 0.983
 
 
 def sha256(path: Path) -> str:

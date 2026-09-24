@@ -688,6 +688,82 @@ fn mips_table_targets_need_code_evidence() {
 }
 
 #[test]
+fn mips_gap_starts_only_follow_a_body_that_ends_on_a_jump() {
+    let mut bytes = vec![0u8; 0x100];
+    let put = |bytes: &mut Vec<u8>, at: usize, word: u32| bytes[at..at + 4].copy_from_slice(&word.to_le_bytes());
+    // 0x00: a body ending `jr ra; nop`, zero padding, then a leaf.
+    put(&mut bytes, 0x00, 0x0080_1021); // move v0, a0
+    put(&mut bytes, 0x04, 0x03e0_0008); // jr ra (delay slot 0x08)
+    put(&mut bytes, 0x10, 0x0080_1021); // leaf after padding
+    put(&mut bytes, 0x14, 0x03e0_0008); // jr ra
+    // 0x40: a body whose walk stopped short of its end: what follows is its
+    // own continuation (`_Z7do_worki`), not a start.
+    put(&mut bytes, 0x40, 0x27bd_ffe8); // addiu sp, sp, -24
+    put(&mut bytes, 0x44, 0x0080_1021); // move v0, a0
+    put(&mut bytes, 0x48, 0x0080_1021); // move v0, a0
+    put(&mut bytes, 0x4c, 0x27bd_ffe8); // continuation that opens like a frame
+    put(&mut bytes, 0x50, 0x03e0_0008); // jr ra
+    let function = |entry: u64, size: u64| NativeFunction { entry, name: String::new(), size };
+    let imp = NativeImport {
+        language: "MIPS:LE:32:default".into(),
+        mappings: vec![Mapping { vaddr: 0x1000, size: 0x100, file_off: 0, flags: 5, bytes }],
+        functions: vec![function(0x1000, 0xc), function(0x1040, 0xc), function(0x10c0, 4)],
+        ..Default::default()
+    };
+    assert_eq!(mips_gap_starts(&imp), vec![0x1010]);
+}
+
+#[test]
+fn thumb1_table_entries_follow_an_end_and_open_like_code() {
+    let mut bytes = vec![0u8; 0x40];
+    let half = |bytes: &mut Vec<u8>, at: usize, value: u16| bytes[at..at + 2].copy_from_slice(&value.to_le_bytes());
+    half(&mut bytes, 0x06, 0xbd10); // pop {r4, pc}
+    half(&mut bytes, 0x08, 0x2001); // movs r0, #1: a function after a return
+    bytes[0x0c..0x10].copy_from_slice(&0x0800_0101u32.to_le_bytes()); // literal pool
+    half(&mut bytes, 0x10, 0x6802); // ldr r2, [r0]: a function after the pool
+    // Script bytecode: an unaligned ROM pointer, then bytes that read as
+    // `ldr r2, [r0, #0x20]`.
+    bytes[0x22..0x26].copy_from_slice(&0x0800_0101u32.to_le_bytes());
+    half(&mut bytes, 0x26, 0x6a02);
+    half(&mut bytes, 0x2e, 0xbd10); // pop {r4, pc}
+    half(&mut bytes, 0x30, 0x0000); // lsl r0, r0, #0: data, not an opener
+    let imp = NativeImport {
+        language: "ARM:LE:32:v4t".into(),
+        mappings: vec![Mapping { vaddr: 0x0800_0000, size: 0x40, file_off: 0, flags: 6, bytes }],
+        ..Default::default()
+    };
+    assert!(thumb1_table_entry(&imp, 0x0800_0008));
+    assert!(thumb1_table_entry(&imp, 0x0800_0010));
+    assert!(!thumb1_table_entry(&imp, 0x0800_0026), "an unaligned pointer is no literal pool");
+    assert!(!thumb1_table_entry(&imp, 0x0800_0030), "a zero halfword does not open a function");
+}
+
+#[test]
+fn jump_tables_name_interior_code_and_no_entries() {
+    let word = |from: u64, to: u64| NativeXref::with_provenance(from, to, "DATA", "native-import:elf-pointer");
+    let imp = NativeImport {
+        language: "r5900:LE:32:default".into(),
+        xrefs: vec![
+            // A switch: its default case (0x1048) is decoded, nothing is an entry.
+            word(0x9000, 0x1018),
+            word(0x9004, 0x1048),
+            word(0x9008, 0x1020),
+            // A vtable: one method (0x2008) was decoded inside another's walk.
+            word(0x9100, 0x2000),
+            word(0x9104, 0x2008),
+            word(0x9108, 0x2010),
+            // A lone word naming a case keeps it a candidate.
+            word(0x9200, 0x1020),
+        ],
+        ..Default::default()
+    };
+    let interior = |target: u64| target == 0x1048 || target == 0x2008;
+    let entry = |target: u64| target == 0x2000;
+    let tables = super::elf_pointers::jump_table_targets(&imp, interior, entry);
+    assert_eq!(tables, [0x1018, 0x1048].into_iter().collect());
+}
+
+#[test]
 fn truncated_elf_magic_errors_not_panics() {
     assert!(import_elf(b"\x7fELF").is_err());
     assert!(import_elf(b"\x7fELF\x02\x01").is_err());

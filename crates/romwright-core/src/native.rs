@@ -398,6 +398,16 @@ pub struct NativeImport {
     /// executable segments (Sony's `main`/`heap` layout), so tables live in
     /// the bytes of code mappings discovery did not decode.
     pub code_holds_data: bool,
+    /// The image ships without relocations, so a code address stored in its
+    /// data is visible only as a word: XEX, whose PE image has its base
+    /// relocations stripped at link time.
+    pub unrelocated_data_pointers: bool,
+    /// Entries the gap rule seeded (`mips_gap_starts`), over every round.
+    pub gap_starts: std::collections::HashSet<u64>,
+    /// Entries seeded from code pointers stored in tables or data words,
+    /// over every round: a handler reached through such a table is also a
+    /// computed-jump target, and stays a function when case labels go.
+    pub table_seeds: std::collections::HashSet<u64>,
     /// Other images of the same container call into this one: a DS
     /// overlay's program holds only the overlay, so a static-module
     /// function only overlays call is found through their calls. Such an
@@ -881,7 +891,8 @@ pub(crate) fn low_bit_code_mode(language: &str) -> bool {
 /// Code pointers stored as tables in executable bytes discovery has not
 /// decoded, for images whose code segments also carry their data. Only runs
 /// of two or more aligned words that each name an address in code count: a
-/// single word that happens to equal a code address is no table. A target
+/// single word that happens to equal a code address is no table -- except on
+/// ARM, where an odd word is a Thumb entry by its own low bit. A target
 /// inside code already decoded is a case label or interior address, not an
 /// entry, and is skipped. Candidates still face flow validation. Measured on
 /// PS2 Capcom Fighting Evolution: 1,679 of 2,199 missed functions had their
@@ -935,7 +946,18 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
             let raw: [u8; 4] = mapping.bytes[at..at + 4].try_into().expect("four bytes");
             let word = u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) });
             let target = if arm { word & !1 } else { word };
-            let aligned = if arm { target % 2 == 0 } else { target % 4 == 0 };
+            // On ARM the Thumb bit is the evidence a lone word lacks: data
+            // is at even addresses, so an odd word naming code is a Thumb
+            // entry, table or not. Vita NFS: 4,921 such words outside every
+            // body, 4,892 of them functions its map names.
+            if arm {
+                if word & 1 != 0 && in_code(target) {
+                    found.push(target);
+                }
+                address += 4;
+                continue;
+            }
+            let aligned = target % 4 == 0;
             if word != 0 && aligned && in_code(target) {
                 run.push(target);
             } else {
@@ -946,11 +968,126 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
         flush(&mut run, &mut found);
     }
     found.retain(|target| {
-        !known.contains(target) && !decoded(*target) && mips_function_evidence(imp, *target, be)
+        !known.contains(target)
+            && !decoded(*target)
+            && if arm { !thumb1(&imp.language) || thumb1_table_entry(imp, *target) } else { mips_function_evidence(imp, *target, be) }
     });
     found.sort_unstable();
     found.dedup();
     found
+}
+
+/// Code addresses stored as words in an unrelocated image's data mappings,
+/// outside every current body and not yet an entry: vtables, script-command
+/// tables and callback arrays. Measured on Black Ops 2 (XEX): 544 such words
+/// in `.rdata` and 659 more in `.data`, every one a function its map names,
+/// and 1,203 of the 1,677 functions the exception directory and calls
+/// missed. A word inside a body is a case label or return address, never
+/// taken.
+fn data_code_pointers(imp: &NativeImport) -> Vec<u64> {
+    if !imp.unrelocated_data_pointers {
+        return Vec::new();
+    }
+    let be = imp.language.contains(":BE:");
+    let mut bodies: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .filter(|function| function.size > 1)
+        .map(|function| (function.entry, function.entry + function.size))
+        .collect();
+    bodies.sort_unstable();
+    let owned = |address: u64| {
+        let index = bodies.partition_point(|&(start, _)| start <= address);
+        bodies[..index].iter().rev().take(8).any(|&(_, end)| address < end)
+    };
+    let code: Vec<(u64, u64)> = imp
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.flags & 4 != 0)
+        .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
+        .collect();
+    let in_code = |address: u64| code.iter().any(|&(lo, hi)| lo <= address && address < hi);
+    let known: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+    let mut found: Vec<u64> = imp
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.flags & 4 == 0)
+        .flat_map(|mapping| {
+            let skip = ((4 - mapping.vaddr % 4) % 4) as usize;
+            mapping.bytes.get(skip..).unwrap_or(&[]).chunks_exact(4).map(move |raw| {
+                let raw: [u8; 4] = raw.try_into().expect("four bytes");
+                u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
+            })
+        })
+        .filter(|&target| target % 4 == 0 && in_code(target) && !known.contains(&target) && !owned(target))
+        .collect();
+    found.sort_unstable();
+    found.dedup();
+    found
+}
+
+/// The first code after each body, on MIPS: skipping zero padding, the next
+/// word before the following entry that opens a frame or reaches `jr ra`
+/// soon. Code nothing calls or points at -- dead library code, callbacks
+/// reached through registers -- still sits between the functions that are
+/// found. PS2 dungeon_game: 97 such starts, 84 of them functions its symbol
+/// table names, against 153 functions nothing references at all. Only a
+/// body that ends on a jump and its delay slot has a gap after it; a start
+/// whose body never decodes is retracted after the last round.
+fn mips_gap_starts(imp: &NativeImport) -> Vec<u64> {
+    if !mips_language(&imp.language) {
+        return Vec::new();
+    }
+    let be = imp.language.contains(":BE:");
+    let mut bodies: Vec<(u64, u64)> = imp
+        .functions
+        .iter()
+        .map(|function| (function.entry, function.entry + function.size.max(1)))
+        .collect();
+    bodies.sort_unstable();
+    let word = |address: u64| -> Option<u32> {
+        imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0).find_map(|mapping| {
+            let at = usize::try_from(address.checked_sub(mapping.vaddr)?).ok()?;
+            let raw: [u8; 4] = mapping.bytes.get(at..at + 4)?.try_into().ok()?;
+            Some(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
+        })
+    };
+    let cases: std::collections::HashSet<u64> =
+        imp.switch_tables.values().flat_map(|targets| targets.iter().copied()).collect();
+    let mut found = Vec::new();
+    // A body that stops without a terminal instruction stopped for another
+    // reason, and what follows is its own code: `_Z7do_worki` in the mipsel
+    // corpus proves 64 of its 108 bytes, and its continuation is no start.
+    // MIPS ends on a jump and its delay slot: `jr ra`, `j`, or `b`. A `jr`
+    // through any other register is a dispatch whose table went unresolved,
+    // and what follows it is the cases (dungeon_game `graph_vram_size`: nine
+    // case blocks coined as functions).
+    let terminal = |end: u64| {
+        word(end.wrapping_sub(8)).is_some_and(|w| w == 0x03e0_0008 || w >> 26 == 2 || w >> 16 == 0x1000)
+    };
+    for pair in bodies.windows(2) {
+        let (_, end) = pair[0];
+        let (next, _) = pair[1];
+        if !terminal(end) {
+            continue;
+        }
+        let mut address = (end + 3) & !3;
+        while address < next && word(address) == Some(0) {
+            address += 4;
+        }
+        if address < next
+            && !cases.contains(&address)
+            && word(address).is_some()
+            && mips_function_evidence(imp, address, be)
+        {
+            found.push(address);
+        }
+    }
+    found
+}
+
+fn mips_language(language: &str) -> bool {
+    ["MIPS", "r5900", "PSX", "Allegrex"].iter().any(|family| language.starts_with(family))
 }
 
 /// Code evidence for a table target on MIPS: a stack-frame prologue
@@ -961,10 +1098,7 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
 /// where "points into code" alone took 1,624 against 1,924. Other
 /// architectures have no measured rule, and take nothing.
 fn mips_function_evidence(imp: &NativeImport, target: u64, be: bool) -> bool {
-    let mips = ["MIPS", "r5900", "PSX", "Allegrex"]
-        .iter()
-        .any(|family| imp.language.starts_with(family));
-    if !mips {
+    if !mips_language(&imp.language) {
         return false;
     }
     let word = |address: u64| -> Option<u32> {
@@ -1079,6 +1213,14 @@ fn const_data_targets(
             xref.kind == "DATA" && xref.provenance == "native-analysis:constant-propagation"
         })
         .filter(|xref| !arm || xref.to & 1 != 0)
+        .filter(|xref| !arm || thumb_start_evidence(import, xref.to & !1))
+        // The same for MIPS, whose code and data can share a segment too:
+        // on PS2 Capcom Fighting Evolution 47 of 1,016 const-seeded entries
+        // were functions; this keeps 41 of them and 8 of the rest.
+        .filter(|xref| {
+            !mips_language(&import.language)
+                || mips_function_evidence(import, xref.to, import.language.contains(":BE:"))
+        })
         .filter(|xref| {
             uses.get(&xref.from)
                 .is_none_or(|ops| !const_data_use_denied(ops))
@@ -1102,6 +1244,79 @@ fn const_data_targets(
     }
     targets
 }
+/// Whether the halfword at a Thumb constant's target opens a function the
+/// way Thumb code does: a `push` (with or without `lr`), a leaf's `bx lr`, or
+/// a PC-relative literal load. An odd constant is also any pointer to data
+/// at an odd address -- byte strings, graphics -- and on a cartridge whose
+/// data shares the executable window those decode as Thumb too. Measured on
+/// pokeemerald: of 878 real functions seeded this way, 849 open like this;
+/// of 316 seeded in the data region, 3 do. Each junk seed also rooted a chain
+/// of calls through more data (1,912 further invented functions).
+fn thumb_start_evidence(import: &NativeImport, target: u64) -> bool {
+    thumb_halfword(import, target)
+        .is_some_and(|first| first & 0xfe00 == 0xb400 || first == 0x4770 || first >> 11 == 0b01001)
+}
+
+fn thumb_halfword(import: &NativeImport, target: u64) -> Option<u16> {
+    import.mappings.iter().find_map(|mapping| {
+        let offset = usize::try_from(target.checked_sub(mapping.vaddr)?).ok()?;
+        let bytes = mapping.bytes.get(offset..offset.checked_add(2)?)?;
+        Some(u16::from_le_bytes([bytes[0], bytes[1]]))
+    })
+}
+
+/// Languages whose Thumb is 16-bit only (ARMv4T, ARMv5T): no Thumb-2 wide
+/// encodings, so the first halfword alone is the first instruction.
+fn thumb1(language: &str) -> bool {
+    language.starts_with("ARM:") && (language.ends_with(":v4t") || language.ends_with(":v5t"))
+}
+
+/// Whether a Thumb-1 table target is a function entry: it opens like one
+/// and it follows the end of something else. An odd word also points at
+/// byte-aligned data -- event-script bytecode, text -- whose bytes decode as
+/// Thumb too.
+///
+/// Opening: the start evidence above, or a first instruction that sets up
+/// an argument or a local (a `mov`, `cmp` or `add` immediate, a
+/// three-operand add or subtract, an `ldr`/`ldrb`/`ldrh` immediate). Data
+/// opens with shifts (a zero halfword is `lsl r0, r0, #0`), ALU and
+/// high-register operations, stores and branches instead.
+///
+/// Following an end: the halfword before is a `pop {.., pc}`, a `bx`/`blx`
+/// register, an unconditional `b`, or a `nop`; or, on a word boundary, zero
+/// padding or the high half of a literal-pool pointer into the image or a
+/// declared region. Script bytecode carries unaligned pointers of its own.
+///
+/// Of what the rule added without this filter, pokeemerald keeps 1,695 of
+/// the 1,704 functions its symbols name against 192
+/// of 1,455 others (script bytecode and data); the pokeheartgold ARM9
+/// keeps 765 of 778 against 2 of 52. Thumb-2 code opens with wide encodings
+/// this does not read; there (Vita NFS) the words need no filter: 11,323 of
+/// 11,453 name functions.
+fn thumb1_table_entry(import: &NativeImport, target: u64) -> bool {
+    let Some(first) = thumb_halfword(import, target) else {
+        return false;
+    };
+    let opens = thumb_start_evidence(import, target)
+        || matches!(first >> 11, 0b00011 | 0b00100 | 0b00101 | 0b00110 | 0b01101 | 0b01111 | 0b10001);
+    let Some(before) = target.checked_sub(2).and_then(|at| thumb_halfword(import, at)) else {
+        return false;
+    };
+    let ends = before & 0xff00 == 0xbd00
+        || before & 0xff87 == 0x4700
+        || before >> 11 == 0b11100
+        || before == 0x46c0;
+    let pointer_high = |half: u16| {
+        let low = u64::from(half) << 16;
+        let high = low | 0xffff;
+        let overlaps = |vaddr: u64, size: u64| vaddr <= high && low < vaddr.saturating_add(size);
+        import.mappings.iter().any(|mapping| overlaps(mapping.vaddr, mapping.size))
+            || import.declared_regions.iter().any(|region| overlaps(region.vaddr, region.size))
+    };
+    let aligned_end = target % 4 == 0 && (before == 0 || pointer_high(before));
+    opens && (ends || aligned_end)
+}
+
 // Destinations of stub-shaped unconditional jumps. A body that is only a
 // jump is a thunk even when its destination returns normally (Ghidra's
 // getSimpleFlow makes no noreturn distinction); the destination becomes a
@@ -1346,7 +1561,14 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         let targets = computed_flow_targets(imp);
         let callbacks = const_data_targets(imp, &mut session);
         let stubs = stub_jump_seeds(imp);
-        let tables_in_code = code_pointer_tables(imp);
+        let mut tables_in_code = code_pointer_tables(imp);
+        tables_in_code.extend(data_code_pointers(imp));
+        imp.table_seeds.extend(tables_in_code.iter().copied());
+        let gaps = mips_gap_starts(imp);
+        imp.gap_starts.extend(gaps.iter().copied());
+        tables_in_code.extend(gaps);
+        tables_in_code.sort_unstable();
+        tables_in_code.dedup();
         // Value-set analysis over p-code answers most dispatches without the
         // decompiler; the decompiler path is what a body this cannot follow
         // falls back to (and the accelerator can be switched off entirely,
@@ -1435,7 +1657,16 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         // adjacent code pointers are stronger evidence than one relocation,
         // and the candidate veto would drop them for bytes a walk from a
         // since-retracted entry once decoded.
+        let thumb_tables = imp.language.starts_with("ARM") && imp.code_holds_data;
         for &target in &tables_in_code {
+            // An ARM table target came from an odd word: it is Thumb code.
+            if thumb_tables {
+                imp.contexts.push(NativeContext {
+                    name: "LowBitCodeMode".into(),
+                    address: target,
+                    value: 1,
+                });
+            }
             imp.functions.push(NativeFunction {
                 entry: target,
                 name: format!("FUN_{target:08x}"),
@@ -1453,6 +1684,25 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     // Only a later round's walk reads it.
     imp.flow_cache = std::collections::BTreeMap::new();
     imp.flow_cache_walk_contexts = Vec::new();
+    // A gap seed is forced, not validated (the candidate veto rejects gap
+    // bytes a junk walk once decoded: Capcom lost 1.8 points of recall that
+    // way), so one whose body never decoded (still the forced seed's
+    // placeholder size of 1) is retracted here: undecodable
+    // padding before `.init` (mipsel corpus 0x20a94) is not a function.
+    if !imp.gap_starts.is_empty() {
+        let gaps = std::mem::take(&mut imp.gap_starts);
+        imp.functions.retain(|function| !(gaps.contains(&function.entry) && function.size <= 1));
+    }
+    // A pointer candidate the walk re-validates in a later round comes back
+    // as a function after its table demoted it (dungeon_game: its `.rodata`
+    // jump tables read as code pointers), and no round after the last table
+    // demotes again. Table-seeded handlers are spared: Capcom's are also
+    // computed-jump targets.
+    if !imp.switch_tables.is_empty() {
+        let spared = std::mem::take(&mut imp.table_seeds);
+        switch_tables::demote_case_blocks_among(imp, Some(&spared));
+        imp.table_seeds = spared;
+    }
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
     let tail_started = std::time::Instant::now();
