@@ -4,6 +4,7 @@
 //! cannot name overlays, registers, or split spaces, and Ghidra's own model
 //! does not pretend they can. Entities use compact stable IDs (spec 8.2).
 
+pub mod evidence;
 pub mod function_ir;
 pub mod matching;
 /// Stable ID for a program inside a project.

@@ -1947,6 +1947,57 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!("-- {} nodes, {} edges", nodes.len(), edges.len());
             }
         }
+        "evidence" => {
+            // Why one function exists: the rule that claimed it, the image's
+            // own name for it, what reaches it, and what analysis did.
+            let program = args.get(2).ok_or("evidence needs a program name")?.clone();
+            let address = args.get(3).ok_or("evidence needs an address")?;
+            let offset = u64::from_str_radix(address.trim().trim_start_matches("0x"), 16)
+                .map_err(|_| format!("not an address: {address}"))?;
+            let evidence = core
+                .function_evidence(&program, offset)
+                .map_err(|e| e.to_string())?
+                .ok_or_else(|| format!("no function covers {offset:#x} in {program}"))?;
+            if has_flag(args, "--json") {
+                println!("{}", serde_json::to_string_pretty(&evidence).map_err(|e| e.to_string())?);
+            } else {
+                println!(
+                    "{} at {} ({} bytes): {:?}, claimed by {}, analysis {}",
+                    evidence.name,
+                    evidence.entry,
+                    evidence.size,
+                    evidence.standing,
+                    evidence.producer,
+                    evidence.analysis_state.as_deref().unwrap_or("unknown")
+                );
+                if let Some((name, source)) = &evidence.symbol {
+                    println!("  symbol {name} ({source})");
+                }
+                for group in &evidence.incoming {
+                    let from: Vec<String> = group.from.iter().map(ToString::to_string).collect();
+                    println!(
+                        "  {} {} from {} [{}], e.g. {}",
+                        group.count,
+                        group.kind,
+                        group.source,
+                        group.evidence.as_deref().unwrap_or("unclassified"),
+                        from.join(", ")
+                    );
+                }
+                if let Some(thunk) = &evidence.thunk {
+                    println!("  thunk to {} ({})", thunk.thunked, thunk.provenance.source);
+                }
+                for signature in &evidence.signatures {
+                    println!(
+                        "  signature {} from {} ({:.2})",
+                        signature.name, signature.package, signature.confidence
+                    );
+                }
+                if evidence.traced {
+                    println!("  covered by an emulator trace");
+                }
+            }
+        }
         "provenance" => {
             // Every fact names the pass that produced it; this prints what
             // those names mean. With a program, only the classes it holds.

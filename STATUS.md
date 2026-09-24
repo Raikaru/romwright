@@ -9209,3 +9209,42 @@ m12-001 and m12-002 unchanged.
      walked entries; restored. It is neutral on GBA (identical digest).
 Regression: m3-001, m17-002, m8-002, m8-003, m5-002, m10-001, ppc_sda,
 m12-001, m12-002, m14-001 unchanged; core lib 489, diff 47, db 23.
+
+## ELF shared objects: addresses left behind by the rebase; declared extents (2026-09-24)
+
+`elf_image::prepare` moves a shared object or PIE to its image base, but it
+rebased only mappings, functions, externals and object sizes. It skipped
+`symbol_named`, `object_names`, `process_entry`, mode `contexts` and
+register contexts. As a result:
+- libc credited 50 of its 3,890 symtab functions to `symbol` and the rest to
+  `call`/`flow`;
+- discovery's declared set, which protects loader-declared starts from the
+  guard-clause merge, missed the same entries;
+- the process entry's calling-convention row sat outside every mapping.
+All of them are rebased now (register-context values too, which are SDA and
+TOC addresses). libc: 3,824 functions attributed to `symbol`.
+The corrected declared set exposed four constant-propagation seeds inside
+`printf_positional` and `__printf_buffer`, jump targets past the proven
+body turned into 6-11 KB "functions". A const seed strictly inside a symbol's
+declared extent is now retracted (`symbol_extents`, the image's own word that
+the range is one function). That also removed the four const entries the
+base already had (inside `argp_parse` and `__memmove_ssse3`). libc 4,004 to
+4,000 functions, all 3,890 symtab starts kept; xrefs, strings, stack and
+thunks identical. m12-001 optimisation 354 to 369 correct (recall 0.9195 to
+0.9225), modules 3,435 to 3,434; m3-001, m17-002, m8-002, m8-003, m1-010,
+ppc_sda, m14-001, m14-002, m15-001 pass.
+
+## One evidence record per function (2026-09-24)
+
+`evidence <program> <address>` (CLI) and `function_evidence` (API) answer
+"why is this a function" in one record. The record holds:
+- the rule that claimed the entry, and the image's own symbol for it;
+- the references that reach it, grouped by kind and by the pass that wrote
+  them (with each pass's `declared`/`decoded`/`inferred` class and sample
+  sites);
+- thunk and signature claims, trace coverage, and analysis state;
+- a standing: `declared`, `attested`, `pattern-only` or `unattested`.
+The facts were already stored; a reader had to join six tables to see them
+together. Building it surfaced the rebase defect above: glibc's
+`__memmove_sse2_unaligned_erms` read as "claimed by flow" with no symbol,
+although its symtab names it.
