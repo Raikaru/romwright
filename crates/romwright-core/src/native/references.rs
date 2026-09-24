@@ -4,21 +4,52 @@ use super::*;
 /// initial writable values; this inferred-reference policy does not change
 /// strict constant queries. A root or stripped entry that does not decode
 /// contributes no references and must not abort the whole image's import.
+/// What a console that died mid-round is replaced from: the image, and the
+/// round's reference context as its shards received it.
+struct Revival<'a> {
+    import: &'a NativeImport,
+    spec: crate::native_runtime::ReferenceShardSpec,
+    contexts: Vec<NativeRegisterContext>,
+}
+
+impl Revival<'_> {
+    /// Puts a fresh console with the round's context where a dead one was.
+    /// A console that cannot be replaced stays dead, and its lane's ranges
+    /// are refused as before.
+    fn revive(&self, session: &mut crate::native_runtime::ConsoleSession) {
+        let fresh = crate::native_runtime::ConsoleSession::new(&self.import.cfg).and_then(|mut fresh| {
+            fresh.load_mapped(self.import)?;
+            fresh.prepare_as_reference_shard(&self.spec, self.import)?;
+            fresh.sync_reference_context(&self.contexts);
+            Ok(fresh)
+        });
+        if let Ok(fresh) = fresh {
+            *session = fresh;
+        }
+    }
+}
+
 fn query_references(
     session: &mut crate::native_runtime::ConsoleSession,
     start: u64,
     end: u64,
-    mappings: &[Mapping],
+    revival: &Revival,
     refused: &std::sync::atomic::AtomicU64,
 ) -> Result<Option<Vec<crate::native_runtime::ReferenceFact>>> {
-    match session.optional_references(start, end, mappings, true) {
+    match session.optional_references(start, end, &revival.import.mappings, true) {
         Ok(facts) => Ok(facts),
         // One range the console cannot answer costs that range's references,
         // never the image. A 53 MB game executable always holds bytes that
         // are not instructions; the count is reported so the loss stays
-        // visible instead of being swallowed.
+        // visible instead of being swallowed. A range that killed its
+        // console must not cost every range after it: GBA asked its 60-900
+        // KB bodies of data-decoded junk first and refused all 12,677
+        // ranges of the round, instead of one.
         Err(_) => {
             refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            if !session.is_alive() {
+                revival.revive(session);
+            }
             Ok(None)
         }
     }
@@ -29,7 +60,7 @@ fn claim_references(
     session: &mut crate::native_runtime::ConsoleSession,
     ranges: &[(usize, u64, u64)],
     cursor: &std::sync::atomic::AtomicUsize,
-    mappings: &[Mapping],
+    revival: &Revival,
     refused: &std::sync::atomic::AtomicU64,
 ) -> Result<Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)>> {
     let mut facts = Vec::new();
@@ -38,7 +69,7 @@ fn claim_references(
         let Some(&(index, start, end)) = ranges.get(next) else {
             return Ok(facts);
         };
-        if let Some(found) = query_references(session, start, end, mappings, refused)? {
+        if let Some(found) = query_references(session, start, end, revival, refused)? {
             facts.push((index, found));
         }
     }
@@ -267,10 +298,11 @@ pub(super) fn infer_data_references(
         for &index in &batch {
             work[index].3 = false;
         }
-        let ranges: Vec<(usize, u64, u64)> = batch
+        let mut ranges: Vec<(usize, u64, u64)> = batch
             .iter()
             .map(|&index| (index, work[index].0, work[index].1))
             .collect();
+        ranges.sort_by_key(|&(index, start, end)| (std::cmp::Reverse(end - start), index));
         let wanted = shard_target.min(ranges.len()).saturating_sub(1);
         shards.truncate(wanted);
         if !prepared && !shards.is_empty() {
@@ -290,18 +322,20 @@ pub(super) fn infer_data_references(
             shards.extend(opened);
         }
         let keep = session.reference_contexts().len();
+        let revival = Revival {
+            import,
+            spec: session.reference_shard_spec(),
+            contexts: session.reference_contexts().to_vec(),
+        };
         let mut results: Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)> = Vec::new();
         let mut discovered: Vec<NativeRegisterContext> = Vec::new();
         if shards.is_empty() || ranges.len() < 2 {
             for &(index, start, end) in &ranges {
-                if let Some(facts) =
-                    query_references(session, start, end, &import.mappings, &refused)?
-                {
+                if let Some(facts) = query_references(session, start, end, &revival, &refused)? {
                     results.push((index, facts));
                 }
             }
         } else {
-            let mappings = &import.mappings;
             for shard in shards.iter_mut() {
                 shard.sync_reference_context(session.reference_contexts());
             }
@@ -316,12 +350,13 @@ pub(super) fn infer_data_references(
                         let ranges = &ranges;
                         let cursor = &cursor;
                         let refused = &refused;
+                        let revival = &revival;
                         handles.push(scope.spawn(move || {
-                            claim_references(shard, ranges, cursor, mappings, refused)
+                            claim_references(shard, ranges, cursor, revival, refused)
                         }));
                     }
                     let mut collected = vec![claim_references(
-                        session, &ranges, &cursor, mappings, &refused,
+                        session, &ranges, &cursor, &revival, &refused,
                     )?];
                     for handle in handles {
                         collected.push(handle.join().unwrap_or_else(|_| {

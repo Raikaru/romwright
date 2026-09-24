@@ -17,12 +17,9 @@ Read this first; everything below it is the dated log.
   precision: X360 0.940 / 0.995, PSX 0.919 / 0.376 (map lists globals
   only), NDS arm9 0.905 / 0.997, PS2 Capcom 0.897 / 0.884, GBA 0.869 /
   0.840, Vita NFS 0.805 / 0.948, PS2 dungeon 0.791 / 0.824.
-- Import cost, idle 4-core: GBA 522 s / 2.0 GB, swkotor2 76 s, libc 50 s;
+- Import cost, idle 4-core: GBA 506 s / 2.0 GB, swkotor2 72 s, libc 52 s;
   NDS (131 programs) about 500 s on this loaded workstation.
 - Known weak spots:
-  - Reference inference depends on query order: a console's flow can leave
-    mode contexts behind (2026-09-24 entry). Queries stay in address
-    order until each one leaves no context state.
   - GBA holds 60-900 KB junk bodies decoded from its data region; they cost
     precision (0.840) and most of the reference time.
   - CallGraph rows under content 0.9 are about two-thirds right on the
@@ -9271,3 +9268,23 @@ dispatch, and discovery rounds. The rest moved verbatim into `native/elf.rs`
 (862), `pe.rs` (371), `switch_tables.rs` (1,007), `references.rs` (571),
 `store.rs` (891) and `tests.rs` (3,038), with re-exports keeping every
 existing path. Zero warnings, core lib 489, libc fact digest identical.
+
+## A console that dies mid-round no longer takes its lane with it (2026-09-24)
+
+Correction to "Found and not shipped" above. The reference pass is not order
+dependent through contexts. Freezing context writes during queries
+(`allowContextSet(false)`) left the largest-first result exactly as broken,
+and its diagnostics showed why: 12,677 ranges refused, the whole of round
+one. A 60-900 KB junk body asked first killed its console, and every later
+query on that session failed at once. Address order only hid it by asking
+the killer last (one refusal). Now a query that fails on a dead console
+replaces it with a fresh one carrying the round's reference context
+(`Revival`, `ConsoleSession::is_alive`). The range is still counted as
+refused, but nothing after it is lost. The main session, which const targets
+and switch value-set analysis reuse after the pass, stays alive for them
+too. With that, ranges are asked largest first, so a huge body no longer
+holds the batch while the other lanes idle.
+smt-cloud: GBA references 225.5 to 195.7 s, total 530 to 506 s; GBA, libc and
+swkotor2 fact digests identical to address order; one refusal on GBA either
+way. The context freeze was reverted: it changed address-order facts and
+fixed nothing.
