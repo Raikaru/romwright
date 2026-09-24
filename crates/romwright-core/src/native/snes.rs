@@ -18,8 +18,7 @@ use super::{DeclaredRegion, Mapping, NativeFunction, NativeImport, Result};
 
 /// A copier (`.smc`) header is 512 bytes when present.
 const SMC_LEN: usize = 512;
-/// Internal header is 64 bytes; reset vector at +0x3C, checksum pair at +0x1C/+0x1E.
-const HEADER_LEN: usize = 64;
+/// Internal header: reset vector at +0x3C, checksum pair at +0x1C/+0x1E.
 const RESET_OFF: usize = 0x3C;
 const COMPLEMENT_OFF: usize = 0x1C;
 const CHECKSUM_OFF: usize = 0x1E;

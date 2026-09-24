@@ -265,20 +265,6 @@ impl PsKind {
             PsKind::Cmpu1 => "ps_cmpu1",
         }
     }
-
-    /// Whether the dotted (Rc) form exists.
-    fn has_rc(self) -> bool {
-        !matches!(
-            self,
-            PsKind::Unknown
-                | PsKind::Load { .. }
-                | PsKind::Store { .. }
-                | PsKind::Cmpo0
-                | PsKind::Cmpo1
-                | PsKind::Cmpu0
-                | PsKind::Cmpu1
-        )
-    }
 }
 
 /// Fully decoded fields shared by the disassembler and the lane emitter.

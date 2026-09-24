@@ -670,6 +670,7 @@ pub(crate) fn import_xci(data: &[u8], header_key: &[u8; 32], key_area_key: &[u8;
 /// Tries each Switch container in turn; None means none matched. An
 /// encrypted NCA hides its magic, so the NCA arm also pays for one header
 /// trial-decrypt before declining.
+#[cfg(test)]
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }

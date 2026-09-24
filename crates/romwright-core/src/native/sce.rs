@@ -340,8 +340,6 @@ pub(super) fn collect(data: &[u8], be: bool, e_type: u16, e_entry: u64, import: 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     /// A minimal sectionless SCE ELF32: one PT_LOAD at 0x81000000 holding
     /// `sce_module_info` (e_entry = its segment offset), one export entry
     /// naming module_start, and one SceLibc import with one function NID.

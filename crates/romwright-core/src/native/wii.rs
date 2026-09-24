@@ -21,13 +21,6 @@ fn u32_be(data: &[u8], off: usize) -> Result<u32> {
     Ok(u32::from_be_bytes(b.try_into().unwrap()))
 }
 
-fn u64_be(data: &[u8], off: usize) -> Result<u64> {
-    let b = data.get(off..off + 8).ok_or_else(|| {
-        super::ImportError::Bad("truncated Wii field".into())
-    })?;
-    Ok(u64::from_be_bytes(b.try_into().unwrap()))
-}
-
 /// True when the image is a Wii disc: GCM-shaped header with the Wii
 /// magic word at 0x18.
 pub(crate) fn is_wii_iso(data: &[u8]) -> bool {

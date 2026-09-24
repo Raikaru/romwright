@@ -75,7 +75,6 @@ enum ImmKind {
     I16,
     I32,
     I64,
-    Imm8Rel,
     Imm32Rel,
 }
 
@@ -84,8 +83,11 @@ struct OpInfo {
     imm: ImmKind,
 }
 
-fn op_info(op: u8, op2: Option<u8>, op3: Option<u8>, rex_w: bool) -> OpInfo {
+/// `op66`: an operand-size (0x66) prefix is present. It shrinks a 32-bit
+/// `iz` immediate to 16 bits unless REX.W promotes the operand to 64 bits.
+fn op_info(op: u8, op2: Option<u8>, rex_w: bool, op66: bool) -> OpInfo {
     use ImmKind::*;
+    let iz = if op66 && !rex_w { I16 } else { I32 };
     if op == 0x0f {
         let o2 = op2.unwrap_or(0);
         if o2 == 0x38 || o2 == 0x3a {
@@ -111,29 +113,29 @@ fn op_info(op: u8, op2: Option<u8>, op3: Option<u8>, rex_w: bool) -> OpInfo {
     }
     match op {
         0x80 | 0x82 => OpInfo { modrm: true, imm: I8 },
-        0x81 => OpInfo { modrm: true, imm: I32 },
+        0x81 => OpInfo { modrm: true, imm: iz },
         0x83 => OpInfo { modrm: true, imm: I8 },
         0x84..=0x8f => OpInfo { modrm: true, imm: None },
         0xc0 | 0xc1 => OpInfo { modrm: true, imm: I8 },
         0xc6 => OpInfo { modrm: true, imm: I8 },
-        0xc7 => OpInfo { modrm: true, imm: I32 },
+        0xc7 => OpInfo { modrm: true, imm: iz },
         0xd0..=0xd3 => OpInfo { modrm: true, imm: None },
         0xf6 | 0xf7 => OpInfo { modrm: true, imm: None },
         0xfe | 0xff => OpInfo { modrm: true, imm: None },
-        0x69 => OpInfo { modrm: true, imm: I32 },
+        0x69 => OpInfo { modrm: true, imm: iz },
         0x6b => OpInfo { modrm: true, imm: I8 },
         0xb0..=0xb7 => OpInfo { modrm: false, imm: I8 },
         0xb8..=0xbf => OpInfo {
             modrm: false,
-            imm: if rex_w { I64 } else { I32 },
+            imm: if rex_w { I64 } else { iz },
         },
         0x05 | 0x0d | 0x15 | 0x1d | 0x25 | 0x2d | 0x35 | 0x3d => {
-            OpInfo { modrm: false, imm: I32 }
+            OpInfo { modrm: false, imm: iz }
         }
-        0x68 => OpInfo { modrm: false, imm: I32 },
+        0x68 => OpInfo { modrm: false, imm: iz },
         0x6a => OpInfo { modrm: false, imm: I8 },
         0xa8 => OpInfo { modrm: false, imm: I8 },
-        0xa9 => OpInfo { modrm: false, imm: I32 },
+        0xa9 => OpInfo { modrm: false, imm: iz },
         0xa0..=0xa3 => OpInfo { modrm: false, imm: I32 },
         0xe4..=0xe7 => OpInfo { modrm: false, imm: I8 },
         0xcd => OpInfo { modrm: false, imm: I8 },
@@ -221,7 +223,6 @@ fn rel_span(op: u8, op2: Option<u8>, p: usize) -> Option<(u8, u8)> {
 pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
     let mut p = 0usize;
     let mut rex_w = false;
-    let mut rex_b = false;
     // Legacy prefixes + REX.
     loop {
         let c = b.get(p).copied().unwrap_or(0);
@@ -229,7 +230,6 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
             0x66 | 0x67 | 0xf2 | 0xf3 | 0x2e | 0x36 | 0x3e | 0x26 | 0x64 | 0x65 => p += 1,
             0x40..=0x4f => {
                 rex_w = c & 8 != 0;
-                rex_b = c & 1 != 0;
                 p += 1;
             }
             _ => break,
@@ -237,11 +237,9 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
     }
     let op = b.get(p).copied().unwrap_or(0);
     let op2 = b.get(p + 1).copied();
-    let op3 = b.get(p + 2).copied();
 
     // Immediate-length dependent on operand size prefix.
     let has_op66 = b[..p].contains(&0x66);
-    let _ = (rex_b, has_op66);
 
     // Control-flow classification first (using raw op inspection). Lengths
     // and relative totals include the consumed prefixes `p`: a prefixed
@@ -308,7 +306,7 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         return InstrInfo { len: len.min(15) as u8, flow: Flow::Next, rip_data: None, rel: None };
     }
 
-    let info = op_info(op, op2, op3, rex_w);
+    let info = op_info(op, op2, rex_w, has_op66);
     let mut len = p + 1usize; // prefixes + opcode
     if op == 0x0f {
         len = p + 2; // 0f + op2
@@ -342,7 +340,7 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         let reg = (modrm >> 3) & 7;
         let f_test_imm = match (op, reg) {
             (0xf6, 0) => Some(1),
-            (0xf7, 0) => Some(4),
+            (0xf7, 0) => Some(if has_op66 && !rex_w { 2 } else { 4 }),
             _ => None,
         };
         match f_test_imm.or(match info.imm {
@@ -350,7 +348,7 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
             ImmKind::I16 => Some(2),
             ImmKind::I32 => Some(4),
             ImmKind::I64 => Some(8),
-            ImmKind::None | ImmKind::Imm8Rel | ImmKind::Imm32Rel => None,
+            ImmKind::None | ImmKind::Imm32Rel => None,
         }) {
             Some(n) => len += n,
             None => {}
@@ -374,7 +372,6 @@ pub fn decode(b: &[u8], addr: u64) -> InstrInfo {
         ImmKind::I16 => len += 2,
         ImmKind::I32 => len += 4,
         ImmKind::I64 => len += 8,
-        ImmKind::Imm8Rel => len += 1,
         ImmKind::Imm32Rel => len += 4,
         ImmKind::None => {}
     }
@@ -526,6 +523,25 @@ mod tests {
         assert_eq!(info.len, 7);
         let info = decode(&bytes[11..], 0x40038b);
         assert_eq!(info.len, 7);
+    }
+
+    #[test]
+    fn operand_size_prefix_immediates() {
+        // A 0x66 prefix shrinks an `iz` immediate to 16 bits; REX.W
+        // (after the legacy prefix) keeps the 64-bit operand size instead.
+        let cases: [(&[u8], u8); 6] = [
+            (&[0x66, 0xb8, 0x34, 0x12], 4),                   // mov ax,0x1234
+            (&[0xb8, 0x78, 0x56, 0x34, 0x12], 5),             // mov eax,0x12345678
+            (&[0x66, 0x81, 0xc0, 0x34, 0x12], 5),             // add ax,0x1234
+            (&[0x66, 0xf7, 0xc0, 0x34, 0x12], 5),             // test ax,0x1234
+            (&[0x66, 0x48, 0x81, 0xc0, 0x78, 0x56, 0x34, 0x12], 8), // add rax,imm32
+            (&[0x66, 0x48, 0xb8, 1, 2, 3, 4, 5, 6, 7, 8], 11), // mov rax,imm64
+        ];
+        for (bytes, len) in cases {
+            let mut padded = bytes.to_vec();
+            padded.resize(15, 0x90);
+            assert_eq!(decode(&padded, 0x1000).len, len, "bytes {bytes:x?}");
+        }
     }
 
 }

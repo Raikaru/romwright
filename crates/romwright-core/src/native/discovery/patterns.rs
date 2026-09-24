@@ -342,7 +342,7 @@ pub(super) fn collect<P: FlowProvider>(
     applied: &mut Vec<crate::native::NativeContext>,
     provider: &mut P,
 ) -> super::Result<Vec<Candidate>> {
-    let mut refuse = |reason: &str, refused: &mut std::collections::BTreeMap<String, u64>| {
+    let refuse = |reason: &str, refused: &mut std::collections::BTreeMap<String, u64>| {
         *refused.entry(reason.to_string()).or_default() += 1;
     };
     let mut candidates = Vec::new();

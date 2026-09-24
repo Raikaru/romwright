@@ -111,7 +111,7 @@ pub fn cluster(steps: &[Step]) -> Clustered {
         }
         node
     }
-    let mut union = |parent: &mut Vec<usize>, left: usize, right: usize| {
+    let union = |parent: &mut Vec<usize>, left: usize, right: usize| {
         let (left, right) = (find(parent, left), find(parent, right));
         if left != right {
             parent[right.max(left)] = right.min(left);

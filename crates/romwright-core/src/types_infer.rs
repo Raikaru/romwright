@@ -351,7 +351,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
             let mut spill_alias: Option<(u64, u32)> = None;
-            let mut live = |facts: &mut Facts, input: &PcodeVarnode, class: Class| {
+            let live = |facts: &mut Facts, input: &PcodeVarnode, class: Class| {
                 if input.space == "register" && !defined.contains(&input.offset) {
                     facts.read_before_write.insert(input.offset);
                     facts.constrain(input, class);

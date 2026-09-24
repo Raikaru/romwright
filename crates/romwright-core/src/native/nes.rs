@@ -23,7 +23,6 @@ const TRAINER_LEN: usize = 0x200;
 const PRG_BASE: u64 = 0x8000;
 /// One mapped bank is 16 KiB; the CPU window is 32 KiB (`0x8000..=0xFFFF`).
 const BANK: u64 = 0x4000;
-const CPU_TOP: u64 = 0x1_0000;
 
 /// The console's own address map, declared not filled: a cartridge implies
 /// the 2 KiB work RAM, the PPU/APU registers and the mapper registers without

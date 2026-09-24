@@ -298,18 +298,6 @@ fn elements<'a>(text: &'a str, name: &str) -> Vec<Element<'a>> {
     found
 }
 
-/// Registers of the leading `<pentry>` elements; a non-register entry (a
-/// stack slot) ends the prefix, because a stack parameter is recovered by
-/// the decompiler's own model.
-/// Every single-register entry of an element that carries an integer or
-/// pointer value, in order.
-///
-/// A parameter or return list interleaves float entries with integer ones
-/// (`<pentry ... metatype="float">`), and they are different sequences: on
-/// the x86-64 spec the first six integer entries are RDI..R9 while the
-/// float entries are XMM0..XMM7. Mixing them makes parameter index `i`
-/// name the wrong register, which is how this first read reported fourteen
-/// parameters for a function of one.
 /// The float-classified single-register entries, in order.
 fn float_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     let mut registers = Vec::new();
@@ -329,6 +317,15 @@ fn float_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     registers
 }
 
+/// Every single-register entry of an element that carries an integer or
+/// pointer value, in order.
+///
+/// A parameter or return list interleaves float entries with integer ones
+/// (`<pentry ... metatype="float">`), and they are different sequences: on
+/// the x86-64 spec the first six integer entries are RDI..R9 while the
+/// float entries are XMM0..XMM7. Mixing them makes parameter index `i`
+/// name the wrong register, which is how this first read reported fourteen
+/// parameters for a function of one.
 fn integer_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
     let mut registers = Vec::new();
     for entry in elements(body, "pentry") {
@@ -344,18 +341,6 @@ fn integer_entries(body: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
         let names = register_names(entry.body, by_offset);
         if names.len() == 1 {
             registers.push(names.into_iter().next().expect("one name"));
-        }
-    }
-    registers
-}
-
-fn register_prefix(input: &str, by_offset: &BTreeMap<u64, &str>) -> Vec<String> {
-    let mut registers = Vec::new();
-    for entry in elements(input, "pentry") {
-        let names = register_names(entry.body, by_offset);
-        match names.len() {
-            1 => registers.push(names.into_iter().next().expect("one name")),
-            _ => break,
         }
     }
     registers

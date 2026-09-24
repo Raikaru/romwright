@@ -88,8 +88,6 @@ pub trait Image {
     fn read(&self, address: u64, size: u32) -> Option<u64>;
     /// True when `address` is inside a mapping that can be executed.
     fn executable(&self, address: u64) -> bool;
-    /// True when the image is big-endian.
-    fn big_endian(&self) -> bool;
     /// The extent of the function that already owns `address`, when one
     /// does.
     ///
@@ -990,9 +988,6 @@ mod tests {
         }
         fn executable(&self, address: u64) -> bool {
             (self.code.0..self.code.1).contains(&address)
-        }
-        fn big_endian(&self) -> bool {
-            false
         }
     }
 

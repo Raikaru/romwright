@@ -151,7 +151,7 @@ impl Value {
         match self {
             Value::Set(values) => Some((**values).clone()),
             Value::Const(value) => Some(vec![*value]),
-            Value::Strided { base, stride, lo, hi, guarded } => {
+            Value::Strided { base, stride, lo, hi, .. } => {
                 if hi < lo || hi - lo + 1 > MAX_TABLE {
                     return None;
                 }
@@ -2222,6 +2222,7 @@ struct DefIndex {
 }
 
 impl DefIndex {
+    #[cfg(test)]
     fn build(blocks: &[Block]) -> DefIndex {
         Self::build_with_entries(blocks, &[0])
     }
@@ -3274,9 +3275,6 @@ mod tests {
         fn executable(&self, address: u64) -> bool {
             (self.code.0..self.code.1).contains(&address)
         }
-        fn big_endian(&self) -> bool {
-            false
-        }
     }
 
     fn varnode(space: &str, offset: u64, size: u32) -> PcodeVarnode {
@@ -3360,9 +3358,6 @@ mod tests {
             }
             fn executable(&self, address: u64) -> bool {
                 self.0.executable(address)
-            }
-            fn big_endian(&self) -> bool {
-                false
             }
             fn owner(&self, address: u64) -> Option<(u64, u64)> {
                 (address >= 0x1400).then_some((0x1400, 0x2000))
@@ -5422,72 +5417,6 @@ mod tests {
             matches!(reached, Reach::One((1, _, _))),
             "narrowed seeds went {reached:?}"
         );
-    }
-
-
-
-
-
-    /// `cmp $8,%r8; cmp $4,%rcx` combined into one flag by BOOL_AND, then
-    /// `ja default` -- a bound on a different variable ANDed with the index
-    /// bound. The dispatch reads the index; a guard that kept only the first
-    /// comparison's bound dropped the one the dispatch needs.
-    fn and_guard_blocks() -> Vec<Block> {
-        let guard = Block {
-            instructions: vec![instruction(
-                0x1000,
-                vec![
-                    // A bound on a different variable, combined into the flag.
-                    op(
-                        "INT_LESS",
-                        Some(varnode("unique", 0x10, 1)),
-                        vec![varnode("register", 0x40, 8), varnode("const", 8, 8)],
-                    ),
-                    // The index bound the dispatch needs.
-                    op(
-                        "INT_LESS",
-                        Some(varnode("unique", 0x18, 1)),
-                        vec![varnode("register", 0x38, 8), varnode("const", 4, 8)],
-                    ),
-                    op(
-                        "BOOL_AND",
-                        Some(varnode("unique", 0x20, 1)),
-                        vec![varnode("unique", 0x10, 1), varnode("unique", 0x18, 1)],
-                    ),
-                    op(
-                        "CBRANCH",
-                        None,
-                        vec![varnode("ram", 0x1010, 8), varnode("unique", 0x20, 1)],
-                    ),
-                ],
-            )],
-            successors: vec![1],
-        };
-        let dispatch = Block {
-            instructions: vec![instruction(
-                0x1010,
-                vec![
-                    op(
-                        "INT_MULT",
-                        Some(varnode("unique", 0x20, 8)),
-                        vec![varnode("register", 0x38, 8), varnode("const", 8, 8)],
-                    ),
-                    op(
-                        "INT_ADD",
-                        Some(varnode("unique", 0x28, 8)),
-                        vec![varnode("unique", 0x20, 8), varnode("const", 0x9000, 8)],
-                    ),
-                    op(
-                        "LOAD",
-                        Some(varnode("unique", 0x30, 8)),
-                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x28, 8)],
-                    ),
-                    op("BRANCHIND", None, vec![varnode("unique", 0x30, 8)]),
-                ],
-            )],
-            successors: vec![],
-        };
-        vec![guard, dispatch]
     }
 
     #[test]

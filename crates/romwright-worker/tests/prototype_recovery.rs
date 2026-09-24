@@ -167,7 +167,6 @@ fn inferred_declarations_roundtrip_array_and_variadic_callback_pointers() {
     );
     assert_eq!(core.prototypes("types").unwrap(), vec![stored.clone()]);
     assert_eq!(db.revision(id).unwrap(), revision);
-    drop(db);
     drop(core);
     std::fs::remove_dir_all(root).unwrap();
 

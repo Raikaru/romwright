@@ -13,13 +13,6 @@
 
 use super::{err, Mapping, NativeImport, Result};
 
-fn u32_be(data: &[u8], off: usize) -> Result<u32> {
-    let b = data.get(off..off + 4).ok_or_else(|| {
-        super::ImportError::Bad("truncated field".into())
-    })?;
-    Ok(u32::from_be_bytes(b.try_into().unwrap()))
-}
-
 fn u32_le(data: &[u8], off: usize) -> Result<u32> {
     let b = data.get(off..off + 4).ok_or_else(|| {
         super::ImportError::Bad("truncated field".into())

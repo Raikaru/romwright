@@ -86,7 +86,7 @@ pub fn aes128_xts_decrypt(
     }
     let data_cipher = Aes128::new(key1.into());
     let tweak_cipher = Aes128::new(key2.into());
-    let mut tweak = sector.to_le_bytes();
+    let tweak = sector.to_le_bytes();
     let mut tweak16 = [0u8; 16];
     tweak16[..8].copy_from_slice(&tweak);
     tweak_cipher.encrypt_block((&mut tweak16).into());

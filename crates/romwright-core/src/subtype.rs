@@ -858,7 +858,7 @@ impl<'a> Collector<'a> {
 
     /// Propagate capabilities and structure along `sub <: sup` edges to a
     /// fixpoint, then resolve each variable to a `Ty`.
-    fn solve(mut self) -> Solution {
+    fn solve(self) -> Solution {
         // Edges: sub -> sup (sup's capabilities flow down to sub).
         let mut edges: BTreeMap<Var, BTreeSet<Var>> = BTreeMap::new();
         let mut nodes: BTreeMap<Var, Node> = BTreeMap::new();

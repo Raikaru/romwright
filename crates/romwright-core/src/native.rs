@@ -48,7 +48,6 @@ mod pe_unwind;
 pub(crate) mod ps3;
 pub(crate) mod psp;
 pub mod psx_overlays;
-pub(crate) mod psyq_sym;
 pub(crate) mod rel;
 mod sce;
 pub(crate) mod sja;
@@ -408,7 +407,9 @@ pub struct NativeImport {
     /// Reference facts of the last discovery round, per function range,
     /// with the digest of the round-level inputs they were inferred under.
     /// See `infer_data_references`.
-    pub reference_memo: std::collections::HashMap<(u64, u64), Vec<crate::native_runtime::ReferenceFact>>,
+    /// Keyed by range, with the digest of the decode contexts covering it
+    /// (`ContextPoints::covering`).
+    pub reference_memo: std::collections::HashMap<(u64, u64), (u64, Vec<crate::native_runtime::ReferenceFact>)>,
     pub reference_memo_inputs: Option<u64>,
     /// Starts this rule seeded from constant-propagated DATA facts: the
     /// only evidence that names the seeding pass, so the producer column
@@ -812,7 +813,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         register_contexts,
         ..Default::default()
     };
-    import.toolchain = detect_toolchain(data, &sections, &import);
+    import.toolchain = detect_toolchain(data, &sections);
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
@@ -828,7 +829,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
 
 // ---- ELF64 ----------------------------------------------------------------
 
-struct ElfSection {
+pub(crate) struct ElfSection {
     name: String,
     typ: u32,
     flags: u64,
@@ -931,7 +932,7 @@ fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>
 /// linkers stamp it; 14.x = MSVC 2015+). DOL: the mwcc runtime symbols
 /// (`__init_registers`, `__start`, `__ppc_eabi_init`) every CodeWarrior
 /// GC/Wii binary carries.
-fn detect_toolchain(data: &[u8], sections: &[ElfSection], imp: &NativeImport) -> Option<String> {
+fn detect_toolchain(data: &[u8], sections: &[ElfSection]) -> Option<String> {
     // ELF .comment.
     for section in sections {
         if section.name == ".comment" && section.size > 0 {
@@ -1242,7 +1243,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     collect_elf_section_starts(&sections, &mut functions);
     functions.sort_by_key(|f| f.entry);
     functions.dedup_by_key(|f| f.entry);
-    let mut contexts = Vec::new();
+    let contexts = Vec::new();
     let mut register_contexts = Vec::new();
     seed_ppc_sda_registers(
         elf_machine.machine,
@@ -1285,7 +1286,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
-    import.toolchain = detect_toolchain(data, &sections, &import);
+    import.toolchain = detect_toolchain(data, &sections);
     elf_image::prepare(data, &mut sections, &mut import, 8, be)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
     elf_pointers::collect(data, &sections, &mut import, 8, be, bias)?;
@@ -2116,7 +2117,7 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
     let mut found = Vec::new();
     for mapping in imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0) {
         let mut run: Vec<u64> = Vec::new();
-        let mut flush = |run: &mut Vec<u64>, found: &mut Vec<u64>| {
+        let flush = |run: &mut Vec<u64>, found: &mut Vec<u64>| {
             if run.len() >= 2 {
                 found.extend(run.iter().copied());
             }
@@ -2474,10 +2475,6 @@ impl vsa::Image for ImageView<'_> {
                 && address >= mapping.vaddr
                 && address < mapping.vaddr + mapping.size
         })
-    }
-
-    fn big_endian(&self) -> bool {
-        self.big_endian
     }
 
     fn owner(&self, address: u64) -> Option<(u64, u64)> {
@@ -3496,8 +3493,9 @@ fn arm_call_target_mode(image: &NativeImport, from: u64, to: u64) -> Option<u64>
 /// Runs discovery and reference inference for one loaded image.
 pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
-    let mut lanes = if imp.format == "dol" {
-        Some(discovery::discover_mapped(imp)?)
+    let mut ran = if imp.format == "dol" {
+        discovery::discover_mapped(imp)?;
+        true
     } else {
         elf_pointers::confirm_initializers(imp);
         discovery::discover_seeded(imp)
@@ -3515,7 +3513,7 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     // applied after the loop.
     let mut rounds_run = 0u64;
     for round in 0..4 {
-        if lanes.take().is_none() {
+        if !std::mem::take(&mut ran) {
             break;
         }
         rounds_run = round as u64 + 1;
@@ -3652,7 +3650,7 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         }
         imp.const_data_starts.extend(callbacks.iter().copied());
         let again = std::time::Instant::now();
-        lanes = discovery::discover_seeded(imp);
+        ran = discovery::discover_seeded(imp);
         phase(imp, "discovery", again);
     }
     if let Some(flow) = imp.flow.as_mut() {
@@ -3971,7 +3969,7 @@ fn sign_extend(value: u64, bits: u32) -> i64 {
         return value as i64;
     }
     let shift = 64 - bits;
-    (((value << shift) as i64) >> shift)
+    ((value << shift) as i64) >> shift
 }
 
 /// Ghidra's stack analyzer, from the accesses one function makes through
@@ -4029,6 +4027,47 @@ fn stack_frame(function: u64, accesses: &[(i64, u32)]) -> Vec<romwright_model::S
 /// bytes: the loader's register contexts, the call register, imported
 /// slots, decode contexts, and the call fixups installed for
 /// pattern-labelled functions that exist this round.
+/// Decode contexts by name, ordered by address, for asking which of them a
+/// range decodes under. A console context holds from its address to the
+/// next one of the same name, and a later one at the same address replaces
+/// an earlier one, as the console applies them in order.
+struct ContextPoints {
+    by_name: Vec<(String, Vec<(u64, u64)>)>,
+}
+
+impl ContextPoints {
+    fn new(contexts: &[NativeContext]) -> Self {
+        let mut by_name: std::collections::BTreeMap<&str, Vec<(u64, u64)>> = std::collections::BTreeMap::new();
+        for context in contexts {
+            by_name.entry(&context.name).or_default().push((context.address, context.value));
+        }
+        Self {
+            by_name: by_name
+                .into_iter()
+                .map(|(name, mut points)| {
+                    points.sort_by_key(|&(address, _)| address);
+                    (name.to_string(), points)
+                })
+                .collect(),
+        }
+    }
+
+    /// Digest of what `[start, end)` decodes under: each context's value in
+    /// force at `start`, and every point inside the range.
+    fn covering(&self, start: u64, end: u64) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        for (name, points) in &self.by_name {
+            let at = points.partition_point(|&(address, _)| address <= start);
+            let inside = points.partition_point(|&(address, _)| address < end);
+            name.hash(&mut hasher);
+            at.checked_sub(1).map(|index| points[index].1).hash(&mut hasher);
+            points[at..inside.max(at)].hash(&mut hasher);
+        }
+        hasher.finish()
+    }
+}
+
 fn reference_inputs_digest(import: &NativeImport, labels: &[(u64, String)]) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -4038,9 +4077,6 @@ fn reference_inputs_digest(import: &NativeImport, labels: &[(u64, String)]) -> u
     import.reference_call_register.hash(&mut hasher);
     for (slot, name) in &import.externals {
         (slot, name).hash(&mut hasher);
-    }
-    for context in &import.contexts {
-        (&context.name, context.address, context.value).hash(&mut hasher);
     }
     let sized: std::collections::HashSet<u64> = import
         .functions
@@ -4101,14 +4137,24 @@ fn infer_data_references(
     // identical; the same on a PowerPC game module, mipsel and PE64
     // corpus images). So those ranges reuse the last round's facts, and
     // only when the inputs the console reads for a range are the same:
-    // register contexts, the call register, external slots, decode
-    // contexts and the call fixups this round installs.
+    // register contexts, the call register, external slots and the call
+    // fixups this round installs, for the whole round; and the decode
+    // contexts covering the range itself. Every round adds mode contexts
+    // on ARM (GBA: 33,635 then 49,035), and made the whole memo stale
+    // when they were part of the round digest.
     let inputs = reference_inputs_digest(import, session.pattern_labels());
     let reusable = import.reference_memo_inputs == Some(inputs);
+    let modes = ContextPoints::new(&import.contexts);
     let mut pending: Vec<usize> = Vec::with_capacity(work.len());
     for index in 0..work.len() {
         let key = (work[index].0, work[index].1);
-        match import.reference_memo.get(&key).filter(|_| reusable && index < function_count) {
+        let covering = modes.covering(key.0, key.1);
+        match import
+            .reference_memo
+            .get(&key)
+            .filter(|(digest, _)| reusable && index < function_count && *digest == covering)
+            .map(|(_, facts)| facts)
+        {
             Some(facts) => {
                 work[index].2 = facts.clone();
                 work[index].3 = false;
@@ -4121,8 +4167,8 @@ fn infer_data_references(
     // lifting that function, so the pass scales with processes, not with
     // fewer requests. Shards start from the round's context and never read
     // one discovered inside it, so their facts equal a single session's.
-    // Discovery already opened these consoles on this image; they only need
-    // this pass's context, not another startup.
+    // The round opened these consoles on this image; they only need this
+    // pass's context, not another startup.
     let mut shards = lanes;
     let mut prepared = false;
     let shard_target = import.cfg.console_shards.max(1);
@@ -4255,7 +4301,7 @@ fn infer_data_references(
         import.reference_memo = work
             .iter()
             .take(function_count)
-            .map(|(start, end, facts, _)| ((*start, *end), facts.clone()))
+            .map(|(start, end, facts, _)| ((*start, *end), (modes.covering(*start, *end), facts.clone())))
             .collect();
         import.reference_memo_inputs = Some(inputs);
     }
@@ -6222,7 +6268,7 @@ mod tests {
             language: "x86:LE:64:default".into(),
             ..Default::default()
         };
-        drop(discovery::discover_seeded(&mut imp));
+        discovery::discover_seeded(&mut imp);
         // Unconfirmed candidate 0x1100 must NOT be promoted when console is absent/failing
         assert_eq!(imp.functions.len(), 1);
         assert_eq!(imp.functions[0].entry, 0x1000);
@@ -7743,6 +7789,7 @@ mod tests {
         assert_eq!(import.plt_resolver_slot, None);
     }
 
+    #[test]
     fn elf_plt_register_context_is_scoped() {
         use crate::native_runtime::find_console;
         let mut cfg = crate::session::RuntimeConfig::from_env();
@@ -7759,7 +7806,9 @@ mod tests {
             let mut import = import_elf(bytes).unwrap();
             import.cfg = cfg.clone();
             select_language(&mut import, &cfg).unwrap();
-            let mut session = discovery::discover_seeded(&mut import).unwrap().session;
+            assert!(discovery::discover_seeded(&mut import));
+            let mut session = crate::native_runtime::ConsoleSession::new(&import.cfg).unwrap();
+            session.load_mapped(&import).unwrap();
             import.xrefs.clear();
             infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
             let strict = session

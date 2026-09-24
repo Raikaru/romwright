@@ -1004,6 +1004,7 @@ fn spu_images(elf: &[u8]) -> Vec<Vec<u8>> {
 /// hands it to the ELF loader, overrides the language, and yields any
 /// embedded SPU images beside it. `None` means the magic does not match; a
 /// recognized-but-malformed file is `Some(Err(..))`.
+#[cfg(test)]
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }

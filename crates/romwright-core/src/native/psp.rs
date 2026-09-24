@@ -141,6 +141,7 @@ pub(crate) fn is_prx(data: &[u8]) -> bool {
 
 /// Loads the image. `None` means "not a PSP module"; encrypted images are
 /// decrypted first and import as the PRX they carry.
+#[cfg(test)]
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }
@@ -643,7 +644,7 @@ mod tests {
         // Loaded sections mirror their vaddrs: file_off = 0x100 + (vaddr - BASE).
         let mut file = vec![0u8; 0x100];
         let mut offs = Vec::new();
-        for (_, _, _, vaddr, _, _, _, _, bytes) in &sections {
+        for (_, _, _, vaddr, ..) in &sections {
             let off = if *vaddr == 0 {
                 0usize // placed later
             } else {

@@ -55,33 +55,6 @@ pub(crate) fn import_gcm(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
     Ok(vec![("dol".into(), imp)])
 }
 
-// ---------------------------------------------------------------- BIN/CUE
-
-/// True when the bytes are a `.cue` sheet (text naming a .bin track).
-pub(crate) fn is_cue(data: &[u8]) -> bool {
-    let head = &data[..data.len().min(256)];
-    head.windows(4).any(|w| w.eq_ignore_ascii_case(b"FILE"))
-        && head.windows(4).any(|w| w.eq_ignore_ascii_case(b"TRACK"))
-}
-
-/// Parses a `.cue` sheet for the track-1 `.bin` filename. The caller
-/// resolves the sibling file; we return the name it names.
-pub(crate) fn cue_track_bin(data: &[u8]) -> Option<String> {
-    let text = std::str::from_utf8(data).ok()?;
-    for line in text.lines() {
-        let line = line.trim();
-        if line.to_ascii_uppercase().starts_with("FILE") {
-            // FILE "name.bin" BINARY
-            let start = line.find('"')?;
-            let end = line.rfind('"')?;
-            if end > start {
-                return Some(line[start + 1..end].to_string());
-            }
-        }
-    }
-    None
-}
-
 // ---------------------------------------------------------------- PBP
 
 /// True when the image is a PSP EBOOT.PBP: `PBP\0` magic + version.
