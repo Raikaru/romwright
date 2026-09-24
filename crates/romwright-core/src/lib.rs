@@ -39,6 +39,7 @@ mod prototypes;
 pub mod qualified_prototypes;
 pub mod register_params;
 mod nonreturn;
+mod evidence;
 mod signatures;
 pub mod rtti;
 pub mod sdk_types;

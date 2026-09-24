@@ -1102,6 +1102,18 @@ impl ProjectDb {
         Ok(())
     }
 
+    /// The producer that claimed one function entry.
+    pub fn producer(&self, program: ProgramId, entry: &str) -> Result<Option<String>> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT producer FROM functions WHERE program_id = ?1 AND entry = ?2")?;
+        let mut rows = stmt.query(params![program.0, entry])?;
+        Ok(match rows.next()? {
+            Some(row) => Some(row.get(0)?),
+            None => None,
+        })
+    }
+
     /// Every function entry with the producer that claimed it.
     pub fn producers(&self, program: ProgramId) -> Result<Vec<(String, String)>> {
         let mut stmt = self

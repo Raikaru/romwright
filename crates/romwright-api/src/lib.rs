@@ -195,6 +195,11 @@ impl ApiService {
                 let program = string_param(params, "program")?;
                 value(self.core()?.recover_classes(&binary, &program))
             }
+            "function_evidence" => {
+                let program = string_param(params, "program")?;
+                let address = address_param(params, "address")?;
+                value(self.core()?.function_evidence(&program, address.offset))
+            }
             "signature_matches" => {
                 let program = string_param(params, "program")?;
                 value(self.core()?.signature_matches(&program))
