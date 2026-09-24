@@ -15,7 +15,7 @@ Read this first; everything below it is the dated log.
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision: NDS arm9 0.905 / 0.997, GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
+  precision: Vita NFS 0.804 / 0.948, NDS arm9 0.905 / 0.997, GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
   0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.940 /
   0.995;
   NDS does not finish.
