@@ -14,18 +14,24 @@ Read this first; everything below it is the dated log.
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision, stock Ghidra 12.1.3 on the same truth in brackets where run:
-  X360 0.983 / 0.996, PSX 0.987 / 0.366 [0.921 / 0.374] (map lists
-  globals only), NDS arm9 0.973 / 0.997, GBA 0.974 / 0.969, Vita NFS
-  0.972 / 0.957, PS2 Capcom 0.941 / 0.989 [0.756 / 0.998], PS2 dungeon
-  0.940 / 0.931 [0.736 / 0.986].
+  precision, stock Ghidra 12.1.3 on the same truth in brackets:
+  X360 0.983 / 0.996 [0.716 / 0.998, analysis ran out of heap], PSX
+  0.987 / 0.366 [0.921 / 0.374] (map lists globals only), NDS arm9
+  0.973 / 0.997 [0.769 / 0.998], GBA 0.974 / 0.969 [no result in 2 h],
+  Vita NFS 0.972 / 0.957 [0.704 / 0.966], PS2 Capcom 0.941 / 0.989
+  [0.756 / 0.998], PS2 dungeon 0.940 / 0.931 [0.736 / 0.986].
 - Import cost, idle 4-core: GBA 558 s / 1.6 GB, swkotor2 75 s, libc 50 s;
   NDS (131 programs) 288 s.
 - Known weak spots:
   - Precision trails stock where stock finds a quarter fewer functions:
     Capcom's 83 invented entries include 16 `jal` targets inside their
-    caller's symbol and 28 flow splits; dungeon's 55 are mostly splits
-    inside real functions.
+    caller's symbol and 28 flow splits; dungeon's 55 include 47 splits
+    inside real functions. A data word names code inside a function before
+    that function's owner is walked, so the owner's body stops at the
+    coined entry (dungeon `padExitPressMode`: 16 of 28 bytes, cut at a
+    return address that `.data` names). "The previous body falls into it"
+    does not separate them: on Capcom 246 real functions follow a
+    non-terminal body end, against 21 invented ones.
   - MIPS dead code is recovered one function per discovery round; a chain
     longer than the rounds left stops short (dungeon loses one this way).
   - CallGraph rows under content 0.9 are about two-thirds right on the
@@ -9302,18 +9308,27 @@ rest on this workstation):
 
 | image | before | after | stock Ghidra 12.1.3 |
 |---|---|---|---|
-| GBA pokeemerald | 0.869 / 0.840 | 0.9736 / 0.9689 | not yet run |
-| NDS arm9 | 0.905 / 0.997 | 0.9729 / 0.9973 | not yet run |
-| Vita NFS | 0.805 / 0.948 | 0.9724 / 0.9570 | not yet run |
-| X360 BO2 | 0.940 / 0.995 | 0.9833 / 0.9956 | not yet run |
+| GBA pokeemerald | 0.869 / 0.840 | 0.9736 / 0.9689 | no result: 2 h limit |
+| NDS arm9 | 0.905 / 0.997 | 0.9729 / 0.9973 | 0.7686 / 0.9984 |
+| Vita NFS | 0.805 / 0.948 | 0.9724 / 0.9570 | 0.7035 / 0.9657 |
+| X360 BO2 | 0.940 / 0.995 | 0.9833 / 0.9956 | 0.7161 / 0.9980 (partial) |
 | PS2 Capcom | 0.897 / 0.884 | 0.9413 / 0.9890 | 0.7562 / 0.9979 |
 | PS2 dungeon | 0.791 / 0.824 | 0.9400 / 0.9305 | 0.7356 / 0.9863 |
 | PSX DS3 | 0.919 / 0.376 | 0.9866 / 0.3660 | 0.9205 / 0.3743 |
 
-Stock is `analyzeHeadless` with the installed loaders and default analysis,
-its entries exported by `scripts/ExportFunctionScoring.java` and scored on
-the gate's truth and ranges (Capcom and dungeon on the same stripped
-copies). Floors now sit 0.01 under the "after" column.
+Stock is `analyzeHeadless` with the installed loaders (NdsLoader,
+XEXLoaderWV, gba-ghidra-loader, PsxLoader, ghidra-emotionengine-reloaded;
+Vita through the stock ELF loader) and default analysis. Its entries are
+exported by `scripts/ExportFunctionScoring.java` and scored on the gate's
+truth and ranges (Capcom and dungeon on the same stripped copies). Stock
+wall times on this loaded workstation: NDS 178 s, Vita 506 s, Capcom 410 s,
+dungeon 85 s. GBA was still analysing when the 2 h limit ended it. On
+X360 `PowerPCAddressAnalyzer` ran out of the default 2 GB heap after
+162 s, and the export holds what analysis had created by then; with 4 GB
+it ran out again and the headless run aborted. Recall leads stock on every
+image stock finished: by 18-27 points, and by 7 on PSX. Precision is
+within 0.01 of stock everywhere except dungeon (0.931 vs 0.986; see open
+state). Floors now sit 0.01 under the "after" column.
 
 Each rule below came from classifying one image's misses or inventions
 against its truth, and was kept only if the other images held:
