@@ -168,10 +168,13 @@ that count. `ROMWRIGHT_WORKER_MEMORY_CAP` bounds one decompiler worker's
 resident size in bytes (256 MiB by default, values under 16 MiB refused): a
 worker that grows past it is recycled mid-pass rather than failing the request
 that discovered the growth, and `benchmarks/reports/m11-001.json` records eight
-such recycles inside one bounded inference pass over a game module. Requests inside a batch or a reference round are independent, so
-shards change wall time and nothing else — `tests/m2-016_import_budget.py`
-asserts that a one-console import and an N-console import write identical
-function, xref, string, symbol and thunk sets.
+such recycles inside one bounded inference pass over a game module. Shards
+change wall time and nothing else -- `tests/m2-016_import_budget.py` asserts
+that a one-console import and an N-console import write identical function,
+xref, string, symbol and thunk sets -- but only while ranges are asked in
+address order: asking the largest first changed GBA's facts, because a
+console's flow can leave mode contexts behind (STATUS, 2026-09-24). Every
+variable the programs read is listed in [docs/environment.md](docs/environment.md).
 
 Native import staging and mapped-image XML use `ROMWRIGHT_SCRATCH`, defaulting
 to `$HOME/.cache/romwright/scratch`, rather than the system temporary directory.
