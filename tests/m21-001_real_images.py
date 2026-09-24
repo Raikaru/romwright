@@ -81,6 +81,24 @@ def msvc_map_functions(path: Path) -> dict[int, tuple[int, str]]:
     return truth
 
 
+def binmap_functions(path: Path) -> dict[int, tuple[int, str]]:
+    """Thumb records of an EA Vita EBOOT.BINMAP (layout: native/binmap.rs).
+
+    A record is `{name[152], address, size}`; the low address bit marks
+    Thumb code, as in ELF `st_value`. The even records all sit past the last
+    Thumb function (import stubs, vtables, constants), so the odd ones are
+    the image's functions."""
+    data = path.read_bytes()
+    truth = {}
+    for index in range(int.from_bytes(data[:4], "little")):
+        at = 16 + 160 * index
+        name = data[at:at + 152].split(b"\0")[0].decode("latin-1")
+        address, size = (int.from_bytes(data[at + 152 + i:at + 156 + i], "little") for i in (0, 4))
+        if address & 1 and not name.startswith(("_NID_", "_INID_", "_MNID_")):
+            truth[address & ~1] = (size, name)
+    return truth
+
+
 def strip(source: Path, work: Path) -> Path:
     out = work / f"{source.name}.stripped"
     subprocess.run(["llvm-strip", "--strip-all", "-o", str(out), str(source)], check=True)
@@ -104,6 +122,11 @@ IMAGES = [
     {"id": "psx-darkstalkers-3", "image": "psx-darkstalkers-3/VS.EXE", "program": "psx",
      # The map names `.text` only; `.rdata` shares the executable segment.
      "truth": ("psx-map", "psx-darkstalkers-3/VS.MAP"), "ranges": [(0x801395F0, 0x8018ED2C)]},
+    {"id": "psv-need-for-speed-most-wanted", "image": "psv-need-for-speed-most-wanted/eboot.elf",
+     "program": "vita", "truth": ("binmap", "psv-need-for-speed-most-wanted/EBOOT.BINMAP"),
+     # The one executable segment also holds rodata; code ends where the
+     # map's first stub or data record begins.
+     "ranges": [(0x81000000, 0x8167A1BC)]},
     {"id": "x360-black-ops-2", "image": "x360-call-of-duty-black-ops-2/default_mp_script.exe",
      "program": "x360.xex", "truth": ("msvc-map", "x360-call-of-duty-black-ops-2/default_mp_script.map"),
      "ranges": None},
@@ -129,6 +152,7 @@ FLOORS: dict[str, tuple[float, float]] = {
     # 0.919 / 0.376. The map lists globals only: of the 1,246 "invented"
     # entries, 534 are jal targets and 678 open a stack frame; 34 have
     # neither. Precision here is a floor on accuracy, not a measure of it.
+    "psv-need-for-speed-most-wanted": (0.794, 0.938),  # 0.804 / 0.948, 522 s
     "psx-darkstalkers-3": (0.909, 0.366),
     "x360-black-ops-2": (0.929, 0.985),         # 0.940 / 0.995, 153 s
 }
@@ -207,7 +231,7 @@ def run_image(spec: dict, corpus: Path, work: Path) -> dict:
         if line.startswith("TIMINGS "):
             diagnostics = json.loads(line[len("TIMINGS "):]).get("diagnostics", [])
     truth = {"elf": elf_functions, "psx-map": psx_map_functions,
-             "msvc-map": msvc_map_functions}[kind](truth_file)
+             "msvc-map": msvc_map_functions, "binmap": binmap_functions}[kind](truth_file)
     row = score(project, spec["program"], truth, spec["ranges"])
     row.update(seconds=round(seconds, 1),
                peak_rss_mb=round(max(peak_kb, before) / 1024) if peak_kb > before else None,
