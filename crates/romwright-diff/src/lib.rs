@@ -143,6 +143,39 @@ pub enum Evidence {
     Context,
 }
 
+/// How far a row can be trusted, by its evidence class, from the precision
+/// each class measured against symbol truth (m12-001, 2026-09-24: twins,
+/// optimisation levels and a PowerPC game's modules).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, serde::Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Confidence {
+    /// Identity evidence: 7,081 judged rows, none wrong.
+    Exact,
+    /// Assigned by call-graph structure: alignment 0.915 over 682 judged,
+    /// call graph 0.870 over 108.
+    Likely,
+    /// Context moves (0.667 over 12 judged) and classes no gate has judged
+    /// yet (profile, global, semantic): check before relying on them.
+    Tentative,
+}
+
+impl Evidence {
+    pub fn confidence(self) -> Confidence {
+        match self {
+            Evidence::Name
+            | Evidence::Import
+            | Evidence::Body
+            | Evidence::Masked
+            | Evidence::Shape
+            | Evidence::String => Confidence::Exact,
+            Evidence::Alignment | Evidence::CallGraph => Confidence::Likely,
+            Evidence::Context | Evidence::Profile | Evidence::Global | Evidence::Semantic => {
+                Confidence::Tentative
+            }
+        }
+    }
+}
+
 /// One matched pair.
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct MatchRow {
@@ -152,6 +185,7 @@ pub struct MatchRow {
     pub target_name: String,
     pub score: f64,
     pub evidence: Evidence,
+    pub confidence: Confidence,
 }
 
 /// A name the diff would port: `entry` in the target takes `name` from the
@@ -162,6 +196,7 @@ pub struct PortedName {
     pub name: String,
     pub score: f64,
     pub evidence: Evidence,
+    pub confidence: Confidence,
 }
 
 /// The whole answer: what matched, what would be renamed, and the sizes of
@@ -175,6 +210,9 @@ pub struct DiffReport {
     pub anchors: usize,
     pub matches: Vec<MatchRow>,
     pub names: Vec<PortedName>,
+    /// What the caller should know about how this diff was run, e.g. a
+    /// side matched without semantic signatures.
+    pub warnings: Vec<String>,
 }
 
 /// True for a name analysis coined from an address rather than read from the
@@ -932,6 +970,7 @@ fn propagate(
             name: row.reference_name.clone(),
             score: row.score,
             evidence: row.evidence,
+            confidence: row.confidence,
         })
         .collect();
     DiffReport {
@@ -942,6 +981,7 @@ fn propagate(
         anchors,
         matches,
         names,
+        warnings: Vec::new(),
     }
 }
 
@@ -1488,6 +1528,7 @@ fn decode(
             matches[index].target_name = target.funcs[right].name.clone();
             matches[index].score = content;
             matches[index].evidence = Evidence::Context;
+            matches[index].confidence = Evidence::Context.confidence();
         }
     };
     for _ in 0..ROUNDS {
@@ -1673,6 +1714,7 @@ fn row(
         target_name: target.funcs[right].name.clone(),
         score,
         evidence,
+        confidence: evidence.confidence(),
     }
 }
 
