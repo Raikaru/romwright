@@ -47,6 +47,15 @@ impl ProjectDb {
         Ok(())
     }
 
+    /// Whether any function of `program` has been indexed.
+    pub fn has_semantic_signatures(&self, program: ProgramId) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM semantic_signatures WHERE program_id = ?1)",
+            params![program.0],
+            |row| row.get(0),
+        )?)
+    }
+
     /// Every semantic signature row held for `program`, entry order.
     pub fn semantic_signatures(
         &self,

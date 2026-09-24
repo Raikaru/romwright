@@ -851,9 +851,39 @@ impl Core {
             Some(name) => name.to_string(),
             None => romwright_diff::Program::only_program(&other).map_err(diff_error)?,
         };
+        // The semantic class reads stored signatures; a side without them
+        // silently loses the only content term that carries identity across
+        // a compiler change. The target is indexed from its own captured
+        // input; the reference project is read-only, so it is named instead.
+        let mut warnings = Vec::new();
+        if options.semantic {
+            let id = self.db.program_id(target)?;
+            if !self.db.has_semantic_signatures(id)? {
+                match self
+                    .program_input(target)
+                    .and_then(|input| self.index_semantics_from(input, target))
+                {
+                    Ok(indexed) => warnings.push(format!(
+                        "indexed {indexed} semantic signatures for {target}, which had none"
+                    )),
+                    Err(error) => warnings.push(format!(
+                        "{target} has no semantic signatures and could not be indexed ({error}); \
+                         it is matched without them"
+                    )),
+                }
+            }
+            if !other.has_semantic_signatures(other.program_id(&reference_name)?)? {
+                warnings.push(format!(
+                    "{reference_name} has no semantic signatures and is matched without them; \
+                     run `romwright-cli index-semantics <binary> {reference_name} --project {}`",
+                    reference_project.display()
+                ));
+            }
+        }
         let left = romwright_diff::Program::load(&other, &reference_name).map_err(diff_error)?;
         let right = romwright_diff::Program::load(&self.db, target).map_err(diff_error)?;
-        let report = romwright_diff::diff(&left, &right, options);
+        let mut report = romwright_diff::diff(&left, &right, options);
+        report.warnings = warnings;
         if apply && !report.names.is_empty() {
             let id = self.db.program_id(target)?;
             let renames: Vec<(romwright_model::Address, String)> = report
@@ -881,6 +911,11 @@ impl Core {
     /// Replaces whatever the last pass wrote, so re-indexing after an
     /// edit cannot leave stale signatures beside fresh ones.
     pub fn index_semantics(&self, binary: &Path, program: &str) -> Result<usize> {
+        self.index_semantics_from(self.resolve_program_input(binary, program)?, program)
+    }
+
+    /// `index_semantics` over the input the program was imported from.
+    fn index_semantics_from(&self, input: romwright_model::ProgramInput, program: &str) -> Result<usize> {
         let id = self.db.program_id(program)?;
         let entries: Vec<romwright_model::Address> =
             self.db.functions(id)?.into_iter().map(|row| row.entry).collect();
@@ -891,7 +926,7 @@ impl Core {
             .map(|region| (region.start.offset, region.start.offset.saturating_add(region.size)))
             .collect();
         let mut rows: Vec<romwright_model::SemanticSignatureRow> = Vec::new();
-        self.live.with(&self.resolve_program_input(binary, program)?, program, None, |live| {
+        self.live.with(&input, program, None, |live| {
             for entry in &entries {
                 let walk = live.walk(entry.offset)?;
                 if walk.instructions == 0 {
@@ -1739,7 +1774,7 @@ impl Core {
         let functions = self.db.functions(id)?;
         let entries: std::collections::HashSet<u64> =
             functions.iter().map(|f| f.entry.offset).collect();
-        let mut pool: std::collections::BTreeSet<u64> = self
+        let pool: std::collections::BTreeSet<u64> = self
             .db
             .xrefs(id)?
             .into_iter()

@@ -1409,6 +1409,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     has_flag(args, "--apply"),
                 )
                 .map_err(|e| e.to_string())?;
+            for warning in &report.warnings {
+                eprintln!("warning: {warning}");
+            }
             if has_flag(args, "--json") {
                 println!(
                     "{}",
@@ -1417,15 +1420,28 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             } else {
                 for row in &report.matches {
                     println!(
-                        "{}  {}  {:.3}  {:?}  {} -> {}",
+                        "{}  {}  {:.3}  {:?} ({:?})  {} -> {}",
                         row.reference,
                         row.target,
                         row.score,
                         row.evidence,
+                        row.confidence,
                         row.reference_name,
                         row.target_name
                     );
                 }
+                let mut by_confidence = std::collections::BTreeMap::new();
+                for row in &report.matches {
+                    *by_confidence.entry(format!("{:?}", row.confidence).to_lowercase()).or_insert(0usize) += 1;
+                }
+                println!(
+                    "-- confidence: {}",
+                    by_confidence
+                        .iter()
+                        .map(|(label, count)| format!("{count} {label}"))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
                 println!(
                     "-- matched {} of {} target functions against {} reference functions ({} anchors); {} names {}",
                     report.matches.len(),
