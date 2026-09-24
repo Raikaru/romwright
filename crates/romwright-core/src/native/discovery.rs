@@ -52,10 +52,20 @@ struct ConsoleProvider {
     session: ConsoleSession,
     /// Extra consoles on the same image; one flow batch splits across them.
     shards: Vec<ConsoleSession>,
-    decoded: Option<HashMap<u64, FlowResult>>,
+    decoded: Option<std::collections::BTreeMap<u64, FlowResult>>,
+    /// Set when `decoded` holds an earlier round's walk: the contexts that
+    /// walk set, and every context address known, by name. A context this
+    /// walk sets that the last one did not drops what it could re-mode.
+    remodel: Option<Remodel>,
     failure: Option<NativeRuntimeError>,
     /// Instructions the consoles decoded for this walk.
     instructions: u64,
+}
+
+struct Remodel {
+    previous: std::collections::HashSet<(String, u64, u64)>,
+    points: HashMap<String, std::collections::BTreeSet<u64>>,
+    set: Vec<crate::native::NativeContext>,
 }
 
 /// Splits one flow batch across the shard consoles. Requests inside a batch
@@ -105,6 +115,18 @@ impl ConsoleProvider {
 
 impl FlowProvider for ConsoleProvider {
     fn set_context(&mut self, name: &str, address: u64, value: u64) {
+        if let (Some(remodel), Some(decoded)) = (self.remodel.as_mut(), self.decoded.as_mut()) {
+            let points = remodel.points.entry(name.to_string()).or_default();
+            if !remodel.previous.contains(&(name.to_string(), address, value)) {
+                let next = points.range(address + 1..).next().copied().unwrap_or(u64::MAX);
+                let stale: Vec<u64> = decoded.range(address..next).map(|(&key, _)| key).collect();
+                for key in stale {
+                    decoded.remove(&key);
+                }
+            }
+            points.insert(address);
+            remodel.set.push(crate::native::NativeContext { name: name.to_string(), address, value });
+        }
         let context = [crate::native::NativeContext {
             name: name.to_string(),
             address,
@@ -123,8 +145,8 @@ impl FlowProvider for ConsoleProvider {
     }
 
     fn flow(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
-        // Seeded walking already visits each instruction once. Only the
-        // section sweep has decoded results worth retaining and reusing.
+        // A walk visits each instruction once; the cache serves the next
+        // round's walk and the section sweep.
         let Some(decoded) = self.decoded.as_mut() else {
             let flows = flow_batch_sharded(&mut self.session, &mut self.shards, addresses)
                 .unwrap_or_else(|error| {
@@ -239,10 +261,21 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     import.pattern_labels = session.pattern_labels().to_vec();
     super::phase(import, "patterns", patterns_started);
     let flow_started = std::time::Instant::now();
+    forget_remodeled_flows(import);
+    let mut points: HashMap<String, std::collections::BTreeSet<u64>> = HashMap::new();
+    for context in import.contexts.iter().chain(&import.flow_cache_walk_contexts) {
+        points.entry(context.name.clone()).or_default().insert(context.address);
+    }
+    let previous = import
+        .flow_cache_walk_contexts
+        .iter()
+        .map(|context| (context.name.clone(), context.address, context.value))
+        .collect();
     let mut provider = ConsoleProvider {
         session,
         shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),
-        decoded: None,
+        decoded: Some(std::mem::take(&mut import.flow_cache)),
+        remodel: Some(Remodel { previous, points, set: Vec::new() }),
         failure: None,
         instructions: 0,
     };
@@ -257,10 +290,50 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     }
     super::phase(import, "flow", flow_started);
     import.flow = Some(provider.flow_stats());
+    import.flow_cache = provider.decoded.take().unwrap_or_default();
+    import.flow_cache_contexts = import.contexts.len();
+    import.flow_cache_walk_contexts = provider.remodel.take().map(|remodel| remodel.set).unwrap_or_default();
     Some(ConsoleLanes {
         session: provider.session,
         shards: provider.shards,
     })
+}
+
+/// Drops the cached flow a context added since the last walk could change:
+/// a console context holds from its address to the next one of the same
+/// name, so everything in between may now decode in another mode.
+fn forget_remodeled_flows(import: &mut NativeImport) {
+    let added = import.flow_cache_contexts.min(import.contexts.len());
+    if added == import.contexts.len() || import.flow_cache.is_empty() {
+        return;
+    }
+    let mut ranges: Vec<(u64, u64)> = import.contexts[added..]
+        .iter()
+        .map(|context| {
+            let next = import
+                .contexts
+                .iter()
+                .filter(|other| other.name == context.name && other.address > context.address)
+                .map(|other| other.address)
+                .min()
+                .unwrap_or(u64::MAX);
+            (context.address, next)
+        })
+        .collect();
+    ranges.sort_unstable();
+    let mut merged: Vec<(u64, u64)> = Vec::with_capacity(ranges.len());
+    for (start, end) in ranges {
+        match merged.last_mut() {
+            Some(last) if start <= last.1 => last.1 = last.1.max(end),
+            _ => merged.push((start, end)),
+        }
+    }
+    for (start, end) in merged {
+        let stale: Vec<u64> = import.flow_cache.range(start..end).map(|(&key, _)| key).collect();
+        for key in stale {
+            import.flow_cache.remove(&key);
+        }
+    }
 }
 
 pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes> {
@@ -284,7 +357,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
         .collect();
     let mut candidates = Vec::new();
     let mut addresses = Vec::with_capacity(cursors.len());
-    let mut decoded = HashMap::new();
+    let mut decoded = std::collections::BTreeMap::new();
     // Stripped images retain calls in code that is not reachable from startup.
     // Walk section bytes by the decoder's lengths, including after terminators.
     while !cursors.is_empty() {
@@ -328,6 +401,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
         session,
         shards: ConsoleSession::open_image_shards(import, import.cfg.console_shards.max(1) - 1),
         decoded: Some(decoded),
+        remodel: None,
         failure: None,
         instructions: 0,
     };

@@ -291,6 +291,16 @@ pub struct NativeImport {
     pub thunk_settled: std::collections::HashSet<u64>,
     /// Address ranges the last walk decoded, merged and sorted.
     pub decoded_ranges: Vec<(u64, u64)>,
+    /// Every instruction a walk decoded, kept across discovery rounds: a
+    /// round re-walks from all seeds, and Ghidra's own analysis never
+    /// disassembles an instruction twice. A mode context added after a
+    /// round drops what it could re-mode (`flow_cache_contexts`).
+    pub flow_cache: std::collections::BTreeMap<u64, crate::native_runtime::FlowResult>,
+    /// How many of `contexts` the cached results were decoded under.
+    pub flow_cache_contexts: usize,
+    /// The contexts the walk that filled `flow_cache` set as it went; a
+    /// later walk setting one it did not drops what that context re-modes.
+    pub flow_cache_walk_contexts: Vec<NativeContext>,
     /// Dispatches value-set analysis resolved, and refused, over every
     /// round: the measurement that says whether the decompiler is still
     /// needed in the switch round at all.
@@ -3648,6 +3658,9 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     if let Some(flow) = imp.flow.as_mut() {
         flow.rounds = rounds_run;
     }
+    // Only a later round's walk reads it.
+    imp.flow_cache = std::collections::BTreeMap::new();
+    imp.flow_cache_walk_contexts = Vec::new();
     // Whether a branch target is a function can only be answered once every
     // pass that creates one has run.
     let tail_started = std::time::Instant::now();

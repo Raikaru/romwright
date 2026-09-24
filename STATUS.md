@@ -9100,3 +9100,37 @@ Regression: m5-002, m10-001, core lib 488. Tests:
 `each_overlay_is_its_own_program_beside_the_static_images`,
 `a_packed_overlay_that_does_not_unpack_is_refused_by_name`,
 `sibling_calls_seed_the_host_in_the_mode_they_enter`.
+
+## Flow results kept across discovery rounds (2026-09-24)
+
+Each discovery round used to start a fresh console and re-decode every
+instruction from all seeds (GBA: 3.09 M decodes over 4 rounds). Decoded flow
+now survives the rounds (`NativeImport::flow_cache`), as it does in Ghidra's
+own analysis, which never disassembles an instruction twice. A console
+context holds from its address to the next context of the same name. So
+before a walk, a context added to the image drops cached flow from its
+address to that next point. During a walk, a context the walk sets that the
+previous walk did not set drops that same range before anything there is
+decoded. A first version handled only the image contexts; on GBA it lost 13
+functions (4 real, the ARM `STWI_*` routines in Thumb code) and was
+corrected.
+Measured on smt-cloud (idle, 4 cores), base against cache:
+- GBA 808 s to 604 s (flow 431 to 275 s), the same 16,402 functions, one
+  non-truth body in a data region 128 to 148 bytes;
+- swkotor2 115 to 96 s, all fact digests identical (functions, xrefs,
+  strings, stack, thunks, features);
+- libc 62 s either way, digests identical.
+Regression: m3-001, m17-002, m8-002, m8-003, m5-002, m1-010, ppc_sda,
+m14-001, m12-001 unchanged; core lib 488.
+
+## m14-002: split-elsewhere extents classified; green on idle hardware (2026-09-24)
+
+The demand walk's `__memmove_sse2_unaligned_erms` ran 1,362 bytes where
+batch says 7: batch ends it at `FUN_0018e7c7`, a start that exists only
+because other code calls it. The gate's own contract assigns such facts to
+the batch pass, so a walked body may now exceed batch only when batch ends
+it at an entry the loader never declared. Every other extent difference
+still fails, and the count is reported (`split_elsewhere`). The median-open
+failure was machine load: on smt-cloud the gate passes with a median
+0.323 s (analyse 0.024 s + decompile 0.297 s), worst 1.355 s, 20/20
+reference-identical. Locally, under load 12-16, the median read 0.672 s.
