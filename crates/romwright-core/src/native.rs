@@ -354,6 +354,9 @@ pub struct NativeImport {
     /// loader leaves such a function's name alone and only marks it an entry
     /// point (`ElfProgramBuilder.createEntryFunction`, :790-794).
     pub symbol_named: Vec<u64>,
+    /// `[start, end)` of every symbol-table function the image gives a size,
+    /// sorted: the image's own word that the range is one function.
+    pub symbol_extents: Vec<(u64, u64)>,
     /// How wide the widest proven access to a location is, by address. A
     /// location whose address is only taken proves no width and is absent.
     pub reference_widths: Vec<(u64, u64)>,
@@ -782,6 +785,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             .or_insert((u8::MAX, f.name.clone(), f.size.max(1)));
     }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
+    let symbol_extents = declared_extents(&symbol_functions);
     functions.extend(
         symbol_functions
             .into_iter()
@@ -801,6 +805,7 @@ fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         diagnostics: notes,
         process_entry,
         symbol_named,
+        symbol_extents,
         format: "elf32".into(),
         elf_machine: Some(elf_machine),
         mappings,
@@ -932,6 +937,17 @@ fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>
 /// linkers stamp it; 14.x = MSVC 2015+). DOL: the mwcc runtime symbols
 /// (`__init_registers`, `__start`, `__ppc_eabi_init`) every CodeWarrior
 /// GC/Wii binary carries.
+/// Sorted `[start, end)` extents of the sized symbol-table functions.
+fn declared_extents(symbols: &std::collections::HashMap<u64, (u8, String, u64)>) -> Vec<(u64, u64)> {
+    let mut extents: Vec<(u64, u64)> = symbols
+        .iter()
+        .filter(|(_, (_, _, size))| *size > 1)
+        .map(|(&entry, (_, _, size))| (entry, entry.saturating_add(*size)))
+        .collect();
+    extents.sort_unstable();
+    extents
+}
+
 fn detect_toolchain(data: &[u8], sections: &[ElfSection]) -> Option<String> {
     // ELF .comment.
     for section in sections {
@@ -1235,6 +1251,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
             .or_insert((u8::MAX, f.name.clone(), f.size.max(1)));
     }
     let symbol_named: Vec<u64> = symbol_functions.keys().copied().collect();
+    let symbol_extents = declared_extents(&symbol_functions);
     functions.extend(
         symbol_functions
             .into_iter()
@@ -1279,6 +1296,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         contexts,
         register_contexts,
         symbol_named,
+        symbol_extents,
         format: "ELF".into(),
         elf_machine: Some(elf_machine),
         ..Default::default()
@@ -4731,11 +4749,22 @@ pub fn store_import(
                 .checked_sub(1)
                 .is_some_and(|i| decoded[i].0 < entry && entry < decoded[i].1)
         };
+        // Inside a symbol's declared extent is inside that function, however
+        // short its proven body: libc `printf_positional` declares 9,174
+        // bytes and proves 2,316, and constant propagation seeded four of its
+        // jump targets past that as 6-11 KB "functions".
+        let inside_declared = |entry: u64| {
+            let index = imp.symbol_extents.partition_point(|&(start, _)| start < entry);
+            index
+                .checked_sub(1)
+                .is_some_and(|i| entry < imp.symbol_extents[i].1)
+        };
         functions.retain(|f| {
             !(consted.contains(&f.entry)
                 && (const_entry_swallowed(f.entry, f.size, &stronger)
                     || accessed.contains(&f.entry)
-                    || mid_instruction(f.entry)))
+                    || mid_instruction(f.entry)
+                    || (!declared.contains(&f.entry) && inside_declared(f.entry))))
         });
     }
     let rows: Vec<FunctionRow> = functions
