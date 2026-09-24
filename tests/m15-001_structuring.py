@@ -32,6 +32,10 @@ Three claims:
    through `structuring::structure` in Rust, and the total it cannot
    structure is compared with stock's. Both sides count the same category,
    so neither may score a `break` as structured while the other does not.
+   That category is edges of the collapsed graph: stock merges parallel
+   edges when it collapses a region (`BlockGraph::selfIdentify` ->
+   `dedup`), so ours is scored on its collapsed edges too, with the
+   original edges behind them reported beside it.
 
 4. **The baseline is recorded.** The number of edges stock's structuring
    could not structure, over the scored functions, is written to the report.
