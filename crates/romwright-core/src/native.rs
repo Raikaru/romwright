@@ -374,6 +374,11 @@ pub struct NativeImport {
     /// executable segments (Sony's `main`/`heap` layout), so tables live in
     /// the bytes of code mappings discovery did not decode.
     pub code_holds_data: bool,
+    /// Other images of the same container call into this one: a DS
+    /// overlay's program holds only the overlay, so a static-module
+    /// function only overlays call is found through their calls. Such an
+    /// image is discovered after its siblings and seeded from them.
+    pub sibling_call_host: bool,
     /// Loader-declared initializer entry points, also requiring valid flow.
     pub initializer_candidates: Vec<u64>,
     /// Names an initializer array gives its targets: the array names the
@@ -3389,6 +3394,95 @@ fn demote_case_blocks(imp: &mut NativeImport) {
     });
 }
 
+/// Seeds `host` with the calls its already-discovered `siblings` make into
+/// its code: a direct call is as good a function start there as it is in
+/// the caller's own image. Only siblings in the host's language count (a
+/// DS ARM7 shares main RAM but not the ARM9's instruction set). Where the
+/// language switches modes by the low bit, the target's mode is read from
+/// the call itself, and a call whose encoding does not reach its recorded
+/// target seeds nothing: flow records no context for a `bl` that keeps
+/// its caller's mode, and a Thumb start seeded without one decodes as ARM.
+/// On Pokemon HeartGold, 731 ARM9 functions only overlays call.
+pub(crate) fn seed_from_siblings(host: &mut NativeImport, siblings: &[&NativeImport]) {
+    let executable = |address: u64| {
+        host.mappings
+            .iter()
+            .any(|m| m.flags & 4 != 0 && address >= m.vaddr && address - m.vaddr < m.size)
+    };
+    let modes = low_bit_code_mode(&host.language);
+    let mut known: std::collections::HashSet<u64> = host.functions.iter().map(|f| f.entry).collect();
+    let mut seeds = Vec::new();
+    for sibling in siblings.iter().filter(|sibling| sibling.language == host.language) {
+        for xref in &sibling.xrefs {
+            if xref.kind != "UNCONDITIONAL_CALL" || !executable(xref.to) || known.contains(&xref.to) {
+                continue;
+            }
+            let mode = if modes {
+                match arm_call_target_mode(sibling, xref.from, xref.to) {
+                    Some(mode) => Some(mode),
+                    None => continue,
+                }
+            } else {
+                None
+            };
+            known.insert(xref.to);
+            seeds.push((xref.to, mode));
+        }
+    }
+    for (entry, mode) in seeds {
+        if let Some(value) = mode {
+            host.contexts.push(NativeContext { name: "LowBitCodeMode".into(), address: entry, value });
+        }
+        host.functions.push(NativeFunction { entry, name: format!("FUN_{entry:08x}"), size: 1 });
+    }
+}
+
+/// The mode (`1` Thumb, `0` ARM) a direct call at `from` enters `to` in,
+/// from the call's own encoding: a Thumb `bl` pair or an ARM `bl` keeps
+/// the caller's mode, the `blx` forms switch it. Each reading is accepted
+/// only if its computed target is `to` (ARM ARM, A8.8.25 BL, BLX
+/// (immediate)), which also decides between the two readings.
+fn arm_call_target_mode(image: &NativeImport, from: u64, to: u64) -> Option<u64> {
+    let big = image.language.contains(":BE:");
+    let bytes = |at: u64, count: usize| -> Option<&[u8]> {
+        image.mappings.iter().find_map(|m| {
+            let offset = usize::try_from(at.checked_sub(m.vaddr)?).ok()?;
+            m.bytes.get(offset..offset.checked_add(count)?)
+        })
+    };
+    let half = |at: u64| {
+        bytes(at, 2).map(|b| if big { u16::from_be_bytes([b[0], b[1]]) } else { u16::from_le_bytes([b[0], b[1]]) })
+    };
+    let signed = |value: u32, bits: u32| i64::from(((value << (32 - bits)) as i32) >> (32 - bits));
+    if let (Some(high), Some(low)) = (half(from), half(from + 2)) {
+        if high & 0xf800 == 0xf000 && matches!(low & 0xf800, 0xf800 | 0xe800) {
+            let offset = (signed(u32::from(high & 0x7ff), 11) << 12) + i64::from(low & 0x7ff) * 2;
+            let target = (from as i64 + 4 + offset) as u64;
+            if low & 0xf800 == 0xf800 && target == to {
+                return Some(1);
+            }
+            if low & 0xf800 == 0xe800 && target & !3 == to {
+                return Some(0);
+            }
+        }
+    }
+    if from % 4 == 0 {
+        let word = bytes(from, 4).map(|b| {
+            let b = [b[0], b[1], b[2], b[3]];
+            if big { u32::from_be_bytes(b) } else { u32::from_le_bytes(b) }
+        })?;
+        let offset = signed(word & 0x00ff_ffff, 24) * 4;
+        let target = (from as i64 + 8 + offset) as u64;
+        if word >> 25 == 0x7d && target + u64::from((word >> 24) & 1) * 2 == to {
+            return Some(1);
+        }
+        if word & 0x0f00_0000 == 0x0b00_0000 && word >> 28 != 0xf && target == to {
+            return Some(0);
+        }
+    }
+    None
+}
+
 /// Runs discovery and reference inference for one loaded image.
 pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
@@ -5824,6 +5918,57 @@ mod tests {
             "{:?}",
             imp.diagnostics
         );
+    }
+
+    /// Only direct calls from same-language siblings seed the host, each in
+    /// the mode its encoding enters, and a call whose bytes do not reach
+    /// its recorded target seeds nothing.
+    #[test]
+    fn sibling_calls_seed_the_host_in_the_mode_they_enter() {
+        let code = |vaddr, bytes: Vec<u8>| Mapping { vaddr, size: bytes.len() as u64, file_off: 0, flags: 5, bytes };
+        let thumb_bl = |from: u64, to: u64| {
+            let offset = to.wrapping_sub(from + 4) as u32;
+            let high = 0xf000 | ((offset >> 12) & 0x7ff) as u16;
+            let low = 0xf800 | ((offset >> 1) & 0x7ff) as u16;
+            [high.to_le_bytes(), low.to_le_bytes()].concat()
+        };
+        let arm_bl = |from: u64, to: u64| (0xeb00_0000 | ((to.wrapping_sub(from + 8) as u32 >> 2) & 0x00ff_ffff)).to_le_bytes().to_vec();
+        let base = 0x021e_5900;
+        let mut bytes = vec![0u8; 0x40];
+        bytes[0x04..0x08].copy_from_slice(&thumb_bl(base + 0x04, 0x0200_0010));
+        bytes[0x08..0x0c].copy_from_slice(&thumb_bl(base + 0x08, 0x0200_0010));
+        bytes[0x10..0x14].copy_from_slice(&arm_bl(base + 0x10, 0x0200_0020));
+        bytes[0x18..0x1c].copy_from_slice(&arm_bl(base + 0x18, 0x0200_0080));
+        let mut host = NativeImport {
+            language: "ARM:LE:32:v5t".into(),
+            mappings: vec![code(0x0200_0000, vec![0; 0x100])],
+            functions: vec![NativeFunction { entry: 0x0200_0000, name: "arm9_entry".into(), size: 1 }],
+            ..Default::default()
+        };
+        let overlay = NativeImport {
+            language: "ARM:LE:32:v5t".into(),
+            mappings: vec![code(base, bytes)],
+            xrefs: vec![
+                NativeXref::new(base + 0x04, 0x0200_0010, "UNCONDITIONAL_CALL"),
+                NativeXref::new(base + 0x08, 0x0200_0010, "UNCONDITIONAL_CALL"),
+                NativeXref::new(base + 0x10, 0x0200_0020, "UNCONDITIONAL_CALL"),
+                // The bytes at 0x18 call 0x02000080, not the recorded target.
+                NativeXref::new(base + 0x18, 0x0200_0040, "UNCONDITIONAL_CALL"),
+                NativeXref::new(base + 0x1c, 0x0200_0030, "DATA"),
+                NativeXref::new(base + 0x20, 0x0300_0000, "UNCONDITIONAL_CALL"),
+            ],
+            ..Default::default()
+        };
+        let arm7 = NativeImport {
+            language: "ARM:LE:32:v4t".into(),
+            xrefs: vec![NativeXref::new(0x0238_0000, 0x0200_0050, "UNCONDITIONAL_CALL")],
+            ..Default::default()
+        };
+        seed_from_siblings(&mut host, &[&overlay, &arm7]);
+        let entries: Vec<u64> = host.functions.iter().map(|f| f.entry).collect();
+        assert_eq!(entries, [0x0200_0000, 0x0200_0010, 0x0200_0020]);
+        let modes: Vec<(u64, u64)> = host.contexts.iter().map(|c| (c.address, c.value)).collect();
+        assert_eq!(modes, [(0x0200_0010, 1), (0x0200_0020, 0)]);
     }
 
     /// A table in a segment that mixes code and data names strings as well

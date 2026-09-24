@@ -15,8 +15,9 @@ mode must travel with every computed target, or half the module stays
 unreached.
 
 Assertions
-  1. The cartridge yields two programs with the documented languages,
-     `ARM:LE:32:v5t` for the ARM9 and `ARM:LE:32:v4t` for the ARM7.
+  1. The cartridge yields a program per processor with the documented
+     languages, `ARM:LE:32:v5t` for the ARM9 and `ARM:LE:32:v4t` for the
+     ARM7, and one per ARM9 overlay, whose unpacked RAM image it maps.
   2. The ARM9 module is unpacked: its mapping spans the decompressed size,
      which is larger than the header's stored size.
   3. `NitroMain`, reached only through crt0's `bx r1`, is a function with a
@@ -51,12 +52,12 @@ ARM9_ELF_SHA256 = "9078d5d5ed64393a31d20e66b360d6cb05dd72b29de49f0e11b3ec54c866f
 # NitroSDK `crt0.c`: NitroMain is what crt0 transfers to; the build's map
 # places it here, and the ELF agrees.
 NITRO_MAIN = 0x02000CA4
-# The floors the last run proved (recall 0.6144, precision 0.9924, 6822
-# functions). Stock Ghidra with its own NDS loader reaches recall 0.7698 on
-# the same module; the gap is discovery-time switch recovery on Thumb
-# `add pc` tables, tracked as the next task.
-RECALL_FLOOR = 0.61
-PRECISION_FLOOR = 0.99
+# The floors the last run proved (recall 0.9057, precision 0.9927, 10053
+# functions), less 0.01. Stock Ghidra with its own NDS loader reaches recall
+# 0.7698 on the same module. 731 of the functions only overlays call, found
+# through the overlay programs' calls into the module.
+RECALL_FLOOR = 0.895
+PRECISION_FLOOR = 0.982
 
 
 def sha256(path: Path) -> str:
@@ -113,10 +114,25 @@ def main() -> int:
         programs = {name: (identifier, language) for identifier, name, language in
                     store.execute("SELECT id, name, language FROM programs")}
         arm9, arm7 = f"{ROM}.arm9", f"{ROM}.arm7"
-        assert set(programs) == {arm9, arm7}, f"programs: {sorted(programs)}"
+        # Overlays share RAM, so each is a program of its own beside the two
+        # static modules: one per OVT entry, `{id, ram, ram_size, bss, ...}`.
+        data = rom.read_bytes()
+        ovt_off, ovt_size = (int.from_bytes(data[at:at + 4], "little") for at in (0x50, 0x54))
+        overlays = {}
+        for at in range(ovt_off, ovt_off + ovt_size, 32):
+            words = [int.from_bytes(data[at + i:at + i + 4], "little") for i in range(0, 32, 4)]
+            overlays[f"{ROM}.ov{words[0]}"] = words[2] + words[3]
+        assert set(programs) == {arm9, arm7} | set(overlays), (
+            f"programs: {sorted(set(programs) ^ ({arm9, arm7} | set(overlays)))}")
         assert programs[arm9][1] == "ARM:LE:32:v5t", programs[arm9]
         assert programs[arm7][1] == "ARM:LE:32:v4t", programs[arm7]
         identifier = programs[arm9][0]
+        # Overlay files are packed like the static module; each maps its
+        # unpacked RAM image plus BSS, never the packed bytes.
+        ov0 = programs[f"{ROM}.ov0"][0]
+        (ov0_size,) = store.execute(
+            "SELECT size FROM memory_regions WHERE program_id = ?", (ov0,)).fetchone()
+        assert ov0_size == overlays[f"{ROM}.ov0"], (ov0_size, overlays[f"{ROM}.ov0"])
 
         # 2. The module is unpacked: the header stores the compressed size.
         stored = int.from_bytes(rom.read_bytes()[0x2C:0x30], "little")

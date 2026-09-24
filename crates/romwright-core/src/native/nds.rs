@@ -178,7 +178,7 @@ fn compressed_static_end(module: &[u8]) -> Option<u64> {
 /// copying literals or `(length nibble) + 3` bytes from `index + 2` ahead.
 /// Returns the module with the decompressed tail, or `None` when the footer
 /// does not describe the bytes it sits in.
-fn uncompress_backward(module: &[u8], ram: u64, bottom: u64) -> Option<Vec<u8>> {
+pub(super) fn uncompress_backward(module: &[u8], ram: u64, bottom: u64) -> Option<Vec<u8>> {
     let bottom = usize::try_from(bottom.checked_sub(ram)?).ok()?;
     if bottom < 8 || bottom > module.len() {
         return None;
@@ -263,24 +263,45 @@ fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> Nat
         name: format!("{cpu}_entry"),
         size: 1,
     });
+    // Both processors start in ARM state. A console context holds from its
+    // address to the next one, so a Thumb start declared below crt0 (as a
+    // call from an overlay seeds) would otherwise read crt0 as Thumb.
+    import.contexts.push(super::NativeContext {
+        name: "LowBitCodeMode".into(),
+        address: descriptor.entry,
+        value: 0,
+    });
     import
 }
 
 /// Loads both processors' images. The first is the ARM9, which the console
 /// boots; each carries its own language, mapping and entry seed. ARM9
-/// overlays (P1.6) join the ARM9 program as extra `ov<N>` mappings, so
-/// `store_import` mints one `modules` row per overlay.
+/// overlays (P1.6) follow as programs `ov<N>` of their own: they share RAM
+/// with each other, so none can join the ARM9 address space.
 pub(crate) fn import(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    const ARM9: &str = "ARM:LE:32:v5t";
     let Some((arm9, arm7)) = parse(data) else {
         return super::err("not a Nintendo DS cartridge");
     };
-    let mut arm9_import = image(data, "arm9", "ARM:LE:32:v5t", &arm9);
     let overlays = super::nds_overlays::parse(data);
-    super::nds_overlays::append_to_import(data, &overlays, &mut arm9_import);
-    Ok(vec![
-        ("arm9".into(), arm9_import),
+    let mut arm9_image = image(data, "arm9", ARM9, &arm9);
+    // Overlays call the static module; their programs are discovered
+    // first and seed it.
+    arm9_image.sibling_call_host = !overlays.is_empty();
+    let (overlay_programs, refused) = super::nds_overlays::programs_for(data, &overlays, ARM9);
+    if !refused.is_empty() {
+        arm9_image.diagnose(
+            romwright_model::DiagnosticSeverity::Partial,
+            "loader",
+            format!("packed overlays that did not unpack to their RAM size: {}", refused.join(", ")),
+        );
+    }
+    let mut images = vec![
+        ("arm9".into(), arm9_image),
         ("arm7".into(), image(data, "arm7", "ARM:LE:32:v4t", &arm7)),
-    ])
+    ];
+    images.extend(overlay_programs);
+    Ok(images)
 }
 
 #[cfg(test)]
