@@ -7,9 +7,8 @@ Read this first; everything below it is the dated log.
 - Gates green on this workstation: m12-001 (all rows, modules
   0.9784/0.9332), m12-002 (cross-compiler pair, private inputs), m17-002,
   m1-010, m3-001; romwright-core 481/481, romwright-diff 21/21.
-- Failing, not attributed to a cause yet: m15-001 structuring (0.9232 vs
-  0.9) and m14-002 (`__memmove_sse2_unaligned_erms`), both identical at
-  HEAD per a stash A/B.
+- m15-001 and m14-002 are green again (2026-09-24 entries below): both
+  were measurement defects, not analysis regressions.
 - m3-001 passes (1,640 DWARF functions, recall 1.0, 0 unattributed) when
   run with `--oracle-dir` on freshly generated oracles. The 13 tracked
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
@@ -9134,3 +9133,18 @@ still fails, and the count is reported (`split_elsewhere`). The median-open
 failure was machine load: on smt-cloud the gate passes with a median
 0.323 s (analyse 0.024 s + decompile 0.297 s), worst 1.355 s, 20/20
 reference-identical. Locally, under load 12-16, the median read 0.672 s.
+
+
+## m15-001: ours scored on the category stock counts (2026-09-24)
+
+Ours read 0.9232 of stock against a 0.9 bar after 13cc4a6f, which began
+tracking the original edges behind each collapsed edge (`origins`, one
+printed jump each) and counted those. Stock counts edges of its collapsed
+graph, and it merges parallel edges when it collapses a region:
+`BlockGraph::selfIdentify` ends in `dedup` (block.cc:930). The gate now
+scores ours on the same category (`Structured::virtualised`, one per
+collapsed edge turned into a jump) and reports the original edges beside
+it; `unstructured` still lists every original edge for emission.
+libc: stock 2,525, ours 2,129 (0.8432; better on 117 functions, worse on
+61 by at most 6). The 0.7907 first recorded predates 13cc4a6f's polarity
+and component changes.

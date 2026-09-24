@@ -1167,8 +1167,13 @@ impl Core {
                     );
                     object.insert(
                         "ours".into(),
+                        // Stock's count is over the collapsed graph, whose
+                        // parallel edges it merges; ours is scored on the
+                        // same category, and the original edges behind it
+                        // (one printed jump each) are reported beside it.
                         serde_json::json!({
-                            "unstructured": ours.unstructured_edges(),
+                            "unstructured": ours.virtualised,
+                            "original_edges": ours.unstructured_edges(),
                             "duplicated": ours.duplicated.len(),
                         }),
                     );

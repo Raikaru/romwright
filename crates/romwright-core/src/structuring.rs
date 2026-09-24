@@ -89,9 +89,14 @@ pub enum Region {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Structured {
     pub region: Region,
-    /// Edges that could not be placed in a construct, as (from, to) block
-    /// indices: the measure stock's `structureGraph` reports too.
+    /// Original edges that could not be placed in a construct, as (from,
+    /// to) block indices: one printed jump each.
     pub unstructured: Vec<(usize, usize)>,
+    /// Edges of the collapsed graph turned into jumps: the measure stock's
+    /// `structureGraph` reports, because `BlockGraph::selfIdentify` dedups
+    /// parallel edges when it collapses a region (block.cc:930), so one
+    /// collapsed edge stands for every original edge behind it.
+    pub virtualised: usize,
     /// Tails duplicated to avoid a jump, by block index.
     pub duplicated: Vec<usize>,
 }
@@ -259,6 +264,7 @@ pub fn structure_from(
         return Ok(Structured {
             region: Region::Sequence(Vec::new()),
             unstructured: Vec::new(),
+            virtualised: 0,
             duplicated: Vec::new(),
         });
     }
@@ -267,6 +273,7 @@ pub fn structure_from(
         entry,
         checkpoint,
         unstructured: Vec::new(),
+        virtualised: 0,
         duplicated: Vec::new(),
         regions: (0..blocks).map(Region::Block).collect(),
     };
@@ -274,6 +281,7 @@ pub fn structure_from(
     Ok(Structured {
         region,
         unstructured: state.unstructured,
+        virtualised: state.virtualised,
         duplicated: state.duplicated,
     })
 }
@@ -283,6 +291,7 @@ struct State<'a> {
     entry: usize,
     checkpoint: &'a dyn Fn() -> Result<(), String>,
     unstructured: Vec<(usize, usize)>,
+    virtualised: usize,
     duplicated: Vec<usize>,
     /// The region each surviving node stands for.
     regions: Vec<Region>,
@@ -301,6 +310,7 @@ impl State<'_> {
                 for pred in self.graph.predecessors[node].clone() {
                     if let Some(origins) = self.graph.origins.get(&(pred, node)) {
                         self.unstructured.extend_from_slice(origins);
+                        self.virtualised += 1;
                     }
                 }
             }
@@ -753,6 +763,7 @@ impl State<'_> {
                     self.unstructured.extend(origins);
                 }
             }
+            self.virtualised += inner.virtualised;
             for node in &inner.duplicated {
                 self.duplicated.push(order[*node]);
             }
@@ -885,6 +896,7 @@ impl State<'_> {
         if let Some(origins) = self.graph.origins.remove(&(from, to)) {
             self.unstructured.extend(origins);
         }
+        self.virtualised += 1;
         Ok(true)
     }
 }
@@ -1069,6 +1081,7 @@ mod tests {
             regions: (0..6).map(Region::Block).collect(),
             checkpoint: &|| Ok(()),
             unstructured: Vec::new(),
+            virtualised: 0,
             duplicated: Vec::new(),
         };
         let mut live = state.graph.reachable(0);
