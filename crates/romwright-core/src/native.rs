@@ -309,17 +309,7 @@ pub struct NativeImport {
     /// rather than silently dropped: bounding wall time must not
     /// masquerade as coverage.
     pub switch_decompiler_skipped: usize,
-    /// What the flow walk already did, kept so a later round resumes
-    /// instead of re-walking the image. A round exists because a computed
-    /// target found late creates a function whose body has to be walked;
-    /// only that body is new, and on a 43000-function module re-walking
-    /// everything to find a few hundred addresses is most of the wall time.
-    pub walk_visited: std::collections::HashSet<u64>,
-    /// Furthest instruction attributed to each origin, accumulated.
-    pub walk_proven: std::collections::HashMap<u64, u64>,
-    /// Which origin owns each decoded address, accumulated.
-    pub walk_origin: std::collections::HashMap<u64, u64>,
-    /// Entries the walk has already started from.
+    /// Entries the walk has started from, over every round.
     pub walk_entries: std::collections::HashSet<u64>,
     /// The decoded shape of every instruction the walk read: address, byte
     /// length, flow kind, whether the flow is conditional, and the single

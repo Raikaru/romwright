@@ -632,11 +632,12 @@ changing any fact-affecting switch misses the key and re-analyses, which the
 gate also checks. `ROMWRIGHT_NO_IMPORT_CACHE=1` switches it off, as a gate that
 measures import cost must.
 
-A resumable walk -- later rounds walking only new seeds instead of the whole
-image -- is implemented and **off by default** (`ROMWRIGHT_INCREMENTAL_ROUNDS=1`):
-it takes libc from 111 s to 79 s, but its fact set is not yet byte-identical
-to the batch walk (31991 xrefs against 33050), and a second analyser that
-disagrees with the first is not worth the seconds.
+Later rounds re-walk from every seed, but the instructions an earlier round
+decoded are kept (`NativeImport::flow_cache`) rather than asked of the console
+again; a mode context new to the image or to the walk drops what it could
+re-mode. GBA 808 to 604 s, fact digests identical. An opt-in walk that resumed
+from the previous round's state was removed: its facts never matched the
+batch walk's.
 
 ### Jump tables without the decompiler, and better than stock
 
