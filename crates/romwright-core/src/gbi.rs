@@ -333,18 +333,18 @@ pub fn enc_enddl() -> (u32, u32) {
     (0xDF << 24, 0)
 }
 
-fn words_to_bytes(words: &[(u32, u32)]) -> Vec<u8> {
-    let mut out = Vec::with_capacity(words.len() * 8);
-    for &(w0, w1) in words {
-        out.extend_from_slice(&w0.to_be_bytes());
-        out.extend_from_slice(&w1.to_be_bytes());
-    }
-    out
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn words_to_bytes(words: &[(u32, u32)]) -> Vec<u8> {
+        let mut out = Vec::with_capacity(words.len() * 8);
+        for &(w0, w1) in words {
+            out.extend_from_slice(&w0.to_be_bytes());
+            out.extend_from_slice(&w1.to_be_bytes());
+        }
+        out
+    }
 
     fn names(cmds: &[GbiCmd]) -> Vec<&'static str> {
         cmds.iter().map(|c| c.name).collect()

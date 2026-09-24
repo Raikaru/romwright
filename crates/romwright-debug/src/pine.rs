@@ -124,6 +124,7 @@ fn pb_u32_field(field: u32, value: u32, out: &mut Vec<u8>) {
 }
 
 /// Encodes a string field: tag + length-delimited bytes.
+#[cfg(test)]
 fn pb_string_field(field: u32, value: &str, out: &mut Vec<u8>) {
     encode_varint(((field as u64) << 3) | 2, out); // wire type 2: LEN.
     encode_varint(value.len() as u64, out);

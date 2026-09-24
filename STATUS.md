@@ -9148,3 +9148,64 @@ it; `unstructured` still lists every original edge for emission.
 libc: stock 2,525, ours 2,129 (0.8432; better on 117 functions, worse on
 61 by at most 6). The 0.7907 first recorded predates 13cc4a6f's polarity
 and component changes.
+
+## diff: confidence labels, and no silent semantic-less matching (2026-09-24)
+
+Every match row and ported name now carries `confidence`, derived from
+its evidence class and the precision m12-001 measured against symbol
+truth:
+- `exact`: body, masked, shape, import, name, string; 7,081 judged rows,
+  none wrong.
+- `likely`: alignment 0.915 over 682, call graph 0.870 over 108.
+- `tentative`: context 0.667 over 12, plus profile, global and semantic,
+  which no gate has judged yet.
+The CLI prints the label per row and a per-label summary; `--json` carries
+the field. The semantic class reads stored signatures, and a side without
+them used to lose it silently. `diff` now indexes the target from its own
+captured input when it has none. The reference project is read-only by
+contract, so for it `diff` warns and names the `index-semantics` command
+to run. Warnings travel in `DiffReport::warnings` and print to stderr.
+Smoke test (m12-001 aarch64 pair): the first run indexed 16 target
+signatures and warned about the reference; the second run only warned.
+m12-001 and m12-002 unchanged.
+
+## Reference memo per range; warnings to zero; three latent bugs (2026-09-24)
+
+- The reference memo was all-or-nothing on a round digest that included
+  every decode context. ARM adds mode contexts each round (GBA 33,635 to
+  49,035), so no range was ever reused there. Decode contexts now key each
+  range on the points that cover it (`ContextPoints::covering`); the rest
+  stays round-level. GBA re-infers 1,684, 1,255 and 938 ranges in rounds
+  2-4, where it used to re-infer all 14-16 k. smt-cloud: GBA 604 to 522 s,
+  swkotor2 102 to 76 s, libc 58 to 50 s; fact digests identical on all
+  three.
+- Found and not shipped: reference inference depends on query order. Asking
+  for the largest ranges first, to keep console lanes busy, cut GBA to
+  12,704 functions, 37,633 xrefs and 0 stack variables; reverting only the
+  sort restored identical digests. The console's flow can leave mode
+  contexts behind in its context database, so a giant junk body decoded
+  early re-modes later queries. [INFERENCE: mechanism; the dependence is
+  measured.] Lanes claim ranges dynamically, so this is also a latent
+  nondeterminism risk. The fix is for each reference query to leave no
+  context changes in the console; open.
+- Where the remaining GBA reference time goes: bodies of 60-900 KB decoded
+  from the ROM's data region (0x08E-0x08F) take up to 30 s each, since
+  propagation is superlinear in body size. That is the same junk that holds
+  GBA precision at 0.840.
+- Compiler warnings 55 to 0 (workspace, all targets). Dead code deleted
+  (unused keyless loader wrappers kept under `cfg(test)`; `psyq_sym`
+  removed); `ConsoleLanes` removed, since callers only asked whether
+  discovery ran, and the discovery consoles now close when their walk ends.
+- `elf_plt_register_context_is_scoped` had lost its `#[test]` in 0c40e583
+  and never ran; it runs again and passes.
+- Bugs found by the cleanup:
+  1. The x86 length decoder ignored the 0x66 operand-size prefix, sizing
+     `iz` immediates at 4 bytes (`66 b8 34 12` decoded as 6);
+     `operand_size_prefix_immediates` covers it.
+  2. The PS2 ISO loader looked for the BOOT2 executable in the root
+     directory only; it now resolves the full `cdrom0:\DIR\FILE;1` path
+     (throwaway probe only, since the module has no ISO fixture).
+  3. d8808cd3, an indexing change, had narrowed entry mode contexts to
+     walked entries; restored. It is neutral on GBA (identical digest).
+Regression: m3-001, m17-002, m8-002, m8-003, m5-002, m10-001, ppc_sda,
+m12-001, m12-002, m14-001 unchanged; core lib 489, diff 47, db 23.

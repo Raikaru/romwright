@@ -139,6 +139,7 @@ pub(crate) fn is_cia(data: &[u8]) -> bool {
 }
 
 /// Tries each 3DS container in turn; None means none matched.
+#[cfg(test)]
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }
@@ -246,10 +247,9 @@ fn ncch_counter(
         counter[12..].copy_from_slice(&(region_base as u32).to_be_bytes());
         return Ok(counter);
     }
-    let mut nonce = [0u8; 8];
-    for (i, byte) in partition_id.iter().enumerate() {
-        nonce[i] = partition_id[7 - i];
-    }
+    // The counter carries the partition id byte-reversed.
+    let mut nonce = *partition_id;
+    nonce.reverse();
     let mut counter = crypto::ctr_counter(&nonce, 0);
     counter[8] = region;
     Ok(counter)
@@ -556,10 +556,6 @@ fn import_ncch_slice(ncch: &[u8], base: u64, keys: &super::keys::KeyStore) -> Re
 }
 
 /// Imports a lone NCCH image.
-fn import_ncch(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
-    import_ncch_with(data, &super::keys::KeyStore::empty())
-}
-
 fn import_ncch_with(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     match import_ncch_slice(data, 0, keys)? {
         Some(imp) => Ok(vec![(".code".into(), imp)]),
@@ -585,10 +581,6 @@ fn ncsd_media_unit(data: &[u8]) -> Result<u64> {
 /// (3dbrew "CCI"). Empty slots and CFA/data partitions without `.code` are
 /// skipped; a partition that is recognised but corrupt is remembered, and
 /// only fails the import when nothing else yielded an image.
-fn import_ncsd(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
-    import_ncsd_with(data, &super::keys::KeyStore::empty())
-}
-
 fn import_ncsd_with(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String, NativeImport)>> {
     if data.len() < 0x160 || data[0x100..0x104] != *b"NCSD" {
         return err("not an NCSD image");

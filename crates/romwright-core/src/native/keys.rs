@@ -145,7 +145,7 @@ impl KeyStore {
     /// hex may carry `0x`, spaces, or colons. A malformed line is skipped, not
     /// fatal — real `prod.keys` files carry comments and section headers.
     fn parse_text(&mut self, text: &str, path: &Path) -> Result<(), ImportError> {
-        for (lineno, line) in text.lines().enumerate() {
+        for line in text.lines() {
             let line = line.trim();
             if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
                 continue;

@@ -212,19 +212,14 @@ impl FlowProvider for ConsoleProvider {
     }
 }
 
-/// The consoles a finished discovery hands to later passes: the session that
-/// walked the image, plus its shards on the same image.
-pub(super) struct ConsoleLanes {
-    pub session: ConsoleSession,
-    pub shards: Vec<ConsoleSession>,
-}
-
 /// ELF/PE retain structural facts when the optional console is unavailable.
 /// All supported languages use the same mapped addresses and flow worklist.
-pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes> {
+/// Whether discovery ran: false when the image has nothing to walk or the
+/// console could not, which the import's diagnostics then say.
+pub(super) fn discover_seeded(import: &mut NativeImport) -> bool {
     if import.mappings.is_empty() {
         import.diagnose(romwright_model::DiagnosticSeverity::Info, "discovery", "the image has no mapped bytes");
-        return None;
+        return false;
     }
     if import
         .cfg
@@ -233,29 +228,29 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
         .map_or(true, |path| !path.is_file())
     {
         import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", "no SLEIGH console is configured");
-        return None;
+        return false;
     }
     let mut session = match ConsoleSession::new(&import.cfg) {
         Ok(session) => session,
         Err(error) => {
             import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console did not start: {error}"));
-            return None;
+            return false;
         }
     };
     if let Err(error) = session.load_mapped(import) {
         import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console did not load the image: {error}"));
-        return None;
+        return false;
     }
     let patterns_started = std::time::Instant::now();
     let ranges = code_ranges(import);
     if ranges.is_empty() {
-        return None;
+        return false;
     }
     let patterns = match session.function_patterns(&ranges) {
         Ok(patterns) => patterns,
         Err(error) => {
             import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console refused the pattern search: {error}"));
-            return None;
+            return false;
         }
     };
     import.pattern_labels = session.pattern_labels().to_vec();
@@ -282,21 +277,18 @@ pub(super) fn discover_seeded(import: &mut NativeImport) -> Option<ConsoleLanes>
     let walked = flow_discover_with_candidates(import, &[], Some(&patterns), &mut provider);
     if let Err(error) = walked {
         import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console-driven flow failed: {error}"));
-        return None;
+        return false;
     }
     if let Some(failure) = provider.failure.as_ref().map(ToString::to_string) {
         import.diagnose(romwright_model::DiagnosticSeverity::Degraded, "discovery", format!("console-driven flow failed: {failure}"));
-        return None;
+        return false;
     }
     super::phase(import, "flow", flow_started);
     import.flow = Some(provider.flow_stats());
     import.flow_cache = provider.decoded.take().unwrap_or_default();
     import.flow_cache_contexts = import.contexts.len();
     import.flow_cache_walk_contexts = provider.remodel.take().map(|remodel| remodel.set).unwrap_or_default();
-    Some(ConsoleLanes {
-        session: provider.session,
-        shards: provider.shards,
-    })
+    true
 }
 
 /// Drops the cached flow a context added since the last walk could change:
@@ -336,7 +328,7 @@ fn forget_remodeled_flows(import: &mut NativeImport) {
     }
 }
 
-pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes> {
+pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<()> {
     let mut session =
         ConsoleSession::new(&import.cfg).map_err(|e| ImportError::Bad(e.to_string()))?;
     session
@@ -344,7 +336,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
         .map_err(|e| ImportError::Bad(e.to_string()))?;
     let ranges = code_ranges(import);
     if ranges.is_empty() {
-        return Ok(ConsoleLanes { session, shards: Vec::new() });
+        return Ok(());
     }
     let in_code = |address| {
         ranges
@@ -410,10 +402,7 @@ pub(super) fn discover_mapped(import: &mut NativeImport) -> Result<ConsoleLanes>
         return Err(ImportError::Bad(error.to_string()));
     }
     import.flow = Some(provider.flow_stats());
-    Ok(ConsoleLanes {
-        session: provider.session,
-        shards: provider.shards,
-    })
+    Ok(())
 }
 fn get_canonical_origin(mut addr: u64, addr_origin: &std::collections::HashMap<u64, u64>) -> u64 {
     let mut hops = 0;
@@ -1805,7 +1794,7 @@ fn flow_discover_with_candidates<P: FlowProvider>(
         imp.contexts.extend(
             entry_modes
                 .iter()
-                .filter(|(entry, _)| entries_set.contains(entry))
+                .filter(|(entry, _)| entries.contains(entry))
                 .map(|&(entry, mode)| crate::native::NativeContext {
                     name: "LowBitCodeMode".into(),
                     address: entry,

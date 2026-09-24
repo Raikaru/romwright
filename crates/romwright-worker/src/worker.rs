@@ -15,8 +15,6 @@ use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 
 use crate::provider::ProgramProvider;
 use crate::wire::{self, burst, decode_burst, encode_addr_element};
-#[cfg(test)]
-use crate::wire::{encode_burst, encode_string_stream};
 
 /// Worker failure.
 #[derive(Debug, thiserror::Error)]

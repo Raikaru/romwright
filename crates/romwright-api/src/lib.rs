@@ -890,7 +890,6 @@ fn write_http(stream: &mut TcpStream, status: &str, body: &str) -> Result<(), Ap
 mod tests {
     use super::*;
     use std::io::{Read, Write};
-    use std::path::Path;
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
     static COUNTER: AtomicU64 = AtomicU64::new(0);

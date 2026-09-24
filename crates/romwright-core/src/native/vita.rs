@@ -311,7 +311,6 @@ fn parse_layout(data: &[u8]) -> Result<SelfLayout> {
 /// One program header's sizes plus its `segment_info` payload locator.
 struct Segment {
     filesz: u64,
-    memsz: u64,
     payload_off: usize,
     payload_len: usize,
     compression: u64,
@@ -345,7 +344,6 @@ fn read_segments(data: &[u8], layout: &SelfLayout) -> Result<Vec<Segment>> {
         }
         segments.push(Segment {
             filesz,
-            memsz,
             payload_off,
             payload_len,
             compression,
@@ -612,6 +610,7 @@ pub(crate) fn is_self(data: &[u8]) -> bool {
 /// True for an already-decrypted Vita module ELF: 32-bit LE ARM
 /// `ET_SCE_EXEC`. Those import through the plain ELF path (`super::sce`
 /// reads their module info); this detector just names them.
+#[cfg(test)]
 pub(crate) fn is_vita_elf(data: &[u8]) -> bool {
     if data.len() < 20 || data[0..4] != *b"\x7fELF" || data[4] != 1 || data[5] != 1 {
         return false;
@@ -641,6 +640,7 @@ fn import_self(data: &[u8], keys: &super::keys::KeyStore) -> Result<Vec<(String,
 }
 
 /// Unwrap a Vita SELF to its ARMv7 image; None when the magic doesn't match.
+#[cfg(test)]
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
     import_with(data, &super::keys::KeyStore::empty())
 }

@@ -130,7 +130,7 @@ fn section_bytes<'a>(
 }
 
 /// Parses one CIE's augmentation, leaving the encodings an FDE needs.
-fn read_cie(bytes: &[u8], mut cursor: usize, base: u64, width: usize, be: bool) -> Option<Cie> {
+fn read_cie(bytes: &[u8], mut cursor: usize, width: usize) -> Option<Cie> {
     let version = *bytes.get(cursor)?;
     cursor += 1;
     if version != 1 && version != 3 {
@@ -294,7 +294,7 @@ pub(super) fn collect(
         };
         cursor += id_size;
         if identifier == 0 {
-            if let Some(cie) = read_cie(frame, cursor, frame_addr, width, be) {
+            if let Some(cie) = read_cie(frame, cursor, width) {
                 cies.insert(record, cie);
             }
             cursor = end;

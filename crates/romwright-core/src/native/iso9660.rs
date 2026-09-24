@@ -73,12 +73,9 @@ fn read_file<'a>(data: &'a [u8], extent: usize, size: usize) -> Option<&'a [u8]>
     data.get(base..base + size)
 }
 
-/// Resolve a `cdrom0:\PATH;1` boot path against the root directory.
-fn resolve_path<'a>(
-    data: &'a [u8],
-    root: &DirEntry,
-    path: &str,
-) -> Option<&'a [u8]> {
+/// Resolve a `cdrom0:\PATH;1` boot path against the root directory to the
+/// directory record it names.
+fn resolve_path(data: &[u8], root: &DirEntry, path: &str) -> Option<DirEntry> {
     // `cdrom0:\DIR\FILE;1` — split off the device and version.
     let path = path
         .trim_start_matches("cdrom0:")
@@ -99,7 +96,12 @@ fn resolve_path<'a>(
             e.name.eq_ignore_ascii_case(component)
         })?;
         if components.peek().is_none() {
-            return read_file(data, found.extent, found.size);
+            return Some(DirEntry {
+                extent: found.extent,
+                size: found.size,
+                is_dir: found.is_dir,
+                name: found.name.clone(),
+            });
         }
         if !found.is_dir {
             return None;
@@ -146,33 +148,27 @@ pub(crate) fn import(data: &[u8]) -> Result<Vec<(String, NativeImport)>, ImportE
     };
     let root_entries = read_dir(data, root.extent, root.size);
 
-    // SYSTEM.CNF names the boot executable; fall back to the first ELF.
+    // SYSTEM.CNF names the boot executable as a full `cdrom0:\DIR\FILE;1`
+    // path, which may sit below the root; fall back to the first ELF.
     let cnf = root_entries
         .iter()
         .find(|e| e.name.eq_ignore_ascii_case("SYSTEM.CNF"))
         .and_then(|e| read_file(data, e.extent, e.size));
-    let boot = cnf.and_then(|bytes| boot_path(bytes));
+    let boot = cnf
+        .and_then(boot_path)
+        .and_then(|path| resolve_path(data, &root, &path))
+        .filter(|entry| !entry.is_dir);
 
     let mut images: Vec<(String, NativeImport)> = Vec::new();
     let mut elfs: Vec<&DirEntry> = root_entries
         .iter()
         .filter(|e| !e.is_dir && e.name.to_uppercase().ends_with(".ELF"))
         .collect();
-    // The boot path may name a non-.ELF file (SLUS_205.79); include it.
-    if let Some(path) = &boot {
-        let name = path
-            .rsplit(['\\', '/'])
-            .next()
-            .unwrap_or("")
-            .split(';')
-            .next()
-            .unwrap_or("");
-        if !elfs.iter().any(|e| e.name.eq_ignore_ascii_case(name)) {
-            if let Some(entry) =
-                root_entries.iter().find(|e| e.name.eq_ignore_ascii_case(name))
-            {
-                elfs.insert(0, entry);
-            }
+    // The boot path may name a non-.ELF file (SLUS_205.79) or one outside
+    // the root; include it.
+    if let Some(entry) = &boot {
+        if !elfs.iter().any(|e| e.extent == entry.extent) {
+            elfs.insert(0, entry);
         }
     }
     for entry in elfs {
@@ -196,16 +192,8 @@ pub(crate) fn import(data: &[u8]) -> Result<Vec<(String, NativeImport)>, ImportE
         ));
     }
     // Boot image first when SYSTEM.CNF named one.
-    if let Some(path) = &boot {
-        let name = path
-            .rsplit(['\\', '/'])
-            .next()
-            .unwrap_or("")
-            .split(';')
-            .next()
-            .unwrap_or("")
-            .trim_end_matches(".ELF")
-            .trim_end_matches(".elf");
+    if let Some(entry) = &boot {
+        let name = entry.name.trim_end_matches(".ELF").trim_end_matches(".elf");
         if let Some(index) = images.iter().position(|(s, _)| s == name) {
             images.swap(0, index);
         }
