@@ -360,6 +360,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         format: "xex".into(),
         language: "PowerPC:BE:64:Xenon-32addr".into(),
         process_entry: Some(entry_addr),
+        unrelocated_data_pointers: true,
         ..Default::default()
     };
     import.functions.push(NativeFunction {

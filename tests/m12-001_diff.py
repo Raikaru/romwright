@@ -103,11 +103,10 @@ EXPECTED_TWINS_MISSES = {"mipsel_cpp_o2": {"0x20940"}}
 # the same stale-exemption tripwire. Both modules link at 0x80680000, so
 # same-address coincidences across them carry no identity: 0x8069eb58 is
 # one stub slot with crossed spellings (EXI2_Poll vs Hu_IsStub, same
-# bytes both directions), and 0x8069ffd4/0x8068312c are identical-shape
-# twins (EXIDeselect vs CheckDVDError) 40 bytes apart. Name truth splits
-# what neither bytes nor shape can.
+# bytes both directions). Name truth splits what neither bytes nor shape
+# can.
 EXPECTED_MODULES_MISSES = {
-    "base->boot": {"0x8069eb58", "0x8069ffd4"},
+    "base->boot": {"0x8069eb58"},
     "boot->base": {"0x8069eb58"},
 }
 

@@ -5,23 +5,29 @@
 Read this first; everything below it is the dated log.
 
 - Gates green on this workstation: m21-001 (7 real images), m12-001
-  (modules 0.9781/0.9329), m12-002, m17-002, m15-001 (0.8432 of stock),
+  (modules 0.9810/0.9416), m12-002, m17-002, m15-001 (0.8432 of stock),
   m14-001, m14-002 (idle hardware; its median-open budget fails under this
   machine's load), m1-010, m3-001, m5-013, m8-002, m8-003; romwright-core
-  489, romwright-diff 47, romwright-db 23. Workspace compiler warnings: 0.
+  492, romwright-diff 47, romwright-db 23. Workspace compiler warnings: 0.
 - m3-001 passes (1,640 DWARF functions, recall 1.0, 0 unattributed) when
   run with `--oracle-dir` on freshly generated oracles. The 13 tracked
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision: X360 0.940 / 0.995, PSX 0.919 / 0.376 (map lists globals
-  only), NDS arm9 0.905 / 0.997, PS2 Capcom 0.897 / 0.884, GBA 0.869 /
-  0.840, Vita NFS 0.805 / 0.948, PS2 dungeon 0.791 / 0.824.
-- Import cost, idle 4-core: GBA 506 s / 2.0 GB, swkotor2 72 s, libc 52 s;
-  NDS (131 programs) about 500 s on this loaded workstation.
+  precision, stock Ghidra 12.1.3 on the same truth in brackets where run:
+  X360 0.983 / 0.996, PSX 0.987 / 0.366 [0.921 / 0.374] (map lists
+  globals only), NDS arm9 0.973 / 0.997, GBA 0.974 / 0.969, Vita NFS
+  0.972 / 0.957, PS2 Capcom 0.941 / 0.989 [0.756 / 0.998], PS2 dungeon
+  0.940 / 0.931 [0.736 / 0.986].
+- Import cost, idle 4-core: GBA 558 s / 1.6 GB, swkotor2 75 s, libc 50 s;
+  NDS (131 programs) 288 s.
 - Known weak spots:
-  - GBA holds 60-900 KB junk bodies decoded from its data region; they cost
-    precision (0.840) and most of the reference time.
+  - Precision trails stock where stock finds a quarter fewer functions:
+    Capcom's 83 invented entries include 16 `jal` targets inside their
+    caller's symbol and 28 flow splits; dungeon's 55 are mostly splits
+    inside real functions.
+  - MIPS dead code is recovered one function per discovery round; a chain
+    longer than the rounds left stops short (dungeon loses one this way).
   - CallGraph rows under content 0.9 are about two-thirds right on the
     modules.
   - PE function-start ownership is settled by three special-case retraction
@@ -9288,3 +9294,75 @@ smt-cloud: GBA references 225.5 to 195.7 s, total 530 to 506 s; GBA, libc and
 swkotor2 fact digests identical to address order; one refusal on GBA either
 way. The context freeze was reverted: it changed address-order facts and
 fixed nothing.
+
+## Real images: evidence for every seed that is not a call (2026-09-24)
+
+m21-001, recall / precision before -> after (GBA on idle smt-cloud, the
+rest on this workstation):
+
+| image | before | after | stock Ghidra 12.1.3 |
+|---|---|---|---|
+| GBA pokeemerald | 0.869 / 0.840 | 0.9736 / 0.9689 | not yet run |
+| NDS arm9 | 0.905 / 0.997 | 0.9729 / 0.9973 | not yet run |
+| Vita NFS | 0.805 / 0.948 | 0.9724 / 0.9570 | not yet run |
+| X360 BO2 | 0.940 / 0.995 | 0.9833 / 0.9956 | not yet run |
+| PS2 Capcom | 0.897 / 0.884 | 0.9413 / 0.9890 | 0.7562 / 0.9979 |
+| PS2 dungeon | 0.791 / 0.824 | 0.9400 / 0.9305 | 0.7356 / 0.9863 |
+| PSX DS3 | 0.919 / 0.376 | 0.9866 / 0.3660 | 0.9205 / 0.3743 |
+
+Stock is `analyzeHeadless` with the installed loaders and default analysis,
+its entries exported by `scripts/ExportFunctionScoring.java` and scored on
+the gate's truth and ranges (Capcom and dungeon on the same stripped
+copies). Floors now sit 0.01 under the "after" column.
+
+Each rule below came from classifying one image's misses or inventions
+against its truth, and was kept only if the other images held:
+
+- **Thumb constants need a Thumb opening** (`thumb_start_evidence`: push,
+  `bx lr`, or a PC-relative `ldr`). On pokeemerald, 849 of 878 real
+  const-seeded functions open like this, against 3 of 316 seeded in the
+  data region.
+- **Call-only ARM functions need a trusted caller** (`untrusted_call_chains`
+  in `store.rs`): trust starts at declared or pointed-to functions and
+  flows along calls. GBA: 377 of 548 call-only data-region functions
+  retracted, 3 of them real.
+- **An odd word naming code is a Thumb entry** on ARM images whose one
+  segment holds code and data. Vita: 4,892 of 4,921 such words name
+  functions. NDS and GBA now declare `code_holds_data` too (one mapping
+  each). On Thumb-1 (v4t, v5t), the target must also open like code and
+  follow an end (`thumb1_table_entry`). The pokeemerald cartridge's event
+  scripts are byte-aligned and reached through odd words: without the
+  filter GBA rose to 0.977 recall at 0.572 precision (27,053 functions).
+- **MIPS const seeds need MIPS function evidence.** Capcom keeps 41 of 47
+  real const-seeded functions and 8 of 969 junk ones.
+- **The first code after a MIPS body is a start** (`mips_gap_starts`), when
+  the body ends on `jr ra`, `j` or `b` plus its delay slot, and the word
+  there shows function evidence. A body that stops on anything else was cut
+  short (mipsel `_Z7do_worki` proves 64 of its 108 bytes). A `jr` through
+  another register is an unresolved dispatch, so what follows it is cases.
+  A gap seed whose body never decodes is retracted after the last round.
+  Without that, undecodable padding before `.init` became a one-byte
+  function, and m12-001 twins fell to 0.9995.
+- **XEX data words naming code are entries** (`data_code_pointers`, for
+  unrelocated images only): 1,203 of 1,203 were functions of the map.
+- **Case blocks are demoted once more at settle**, sparing table seeds.
+  A pointer candidate re-validated after its table's round came back as a
+  function. Without the spare, Capcom recall fell to 0.795.
+- **Jump-table words are not pointer candidates**
+  (`elf_pointers::jump_table_targets`). A run of adjacent ELF data words is
+  a switch table when one of them names code a walk already decoded as
+  interior and none names a known entry. Before this, dungeon_game's
+  `graph_vram_size` was cut into ten pieces: its second switch's cases were
+  coined as functions before their owner was walked. The first version of
+  the rule ignored entries and dropped 5 real `ThirdPersonCamera` vtable
+  methods; one destructor had been decoded as a fall-through. Dungeon:
+  precision 0.9213 -> 0.9305, recall 0.9413 -> 0.9400. The one loss is a
+  dead-code chain that ran out of rounds (see open state). m12-001 modules:
+  3,448 -> 3,467 correct.
+
+m12-001's `0x8069ffd4` module exemption now matches and was removed.
+
+Unchanged: libc and swkotor2 fact digests (all six) on smt-cloud; m3-001
+(1,640/1,640), m8-003 (3,676 bodies), m12-002 (246/246), m14-001, m17-002;
+romwright-core 492 (3 new: gap starts, Thumb-1 table entries, jump-table
+runs).

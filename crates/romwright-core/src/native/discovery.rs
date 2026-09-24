@@ -1019,9 +1019,14 @@ fn flow_discover_with_candidates<P: FlowProvider>(
                 .map(|candidate| candidate.address)
                 .collect()
         } else {
+            let jump_tables = super::elf_pointers::jump_table_targets(
+                imp,
+                |target| visited.contains(&target) && !entries_set.contains(&target),
+                |target| entries_set.contains(&target),
+            );
             imp.reloc_candidates
                 .iter()
-                .chain(imp.pointer_candidates.iter())
+                .chain(imp.pointer_candidates.iter().filter(|target| !jump_tables.contains(target)))
                 .chain(imp.initializer_candidates.iter())
                 .chain(candidates.iter())
                 // A tail call's target is a candidate, never a conclusion: it

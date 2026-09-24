@@ -988,19 +988,46 @@ pub(super) fn recover_switch_tables(imp: &mut NativeImport) -> usize {
 /// walk gives the block to the function that jumps to it. A target anything
 /// calls or points at keeps its function.
 pub(super) fn demote_case_blocks(imp: &mut NativeImport) {
+    demote_case_blocks_among(imp, None);
+}
+
+/// `demote_case_blocks`, sparing the entries in `spared` when given.
+pub(super) fn demote_case_blocks_among(imp: &mut NativeImport, spared: Option<&std::collections::HashSet<u64>>) {
     let targets: std::collections::HashSet<u64> = imp
         .switch_tables
         .values()
         .flat_map(|targets| targets.iter().copied())
         .collect();
+    // A word of the jump table itself is no evidence for its own case label:
+    // the ELF pointer scan reads a table in `.rodata` as code pointers
+    // (dungeon_game: 163 case labels "pointed at" that way). A table word is
+    // one whose neighbour names a case target of the same switch.
+    let data: std::collections::HashMap<u64, u64> = imp
+        .xrefs
+        .iter()
+        .filter(|xref| xref.kind == "DATA")
+        .map(|xref| (xref.from, xref.to))
+        .collect();
+    let table_word = |from: u64, to: u64| {
+        imp.switch_tables.values().any(|cases| {
+            cases.contains(&to)
+                && [from.wrapping_sub(4), from + 4]
+                    .iter()
+                    .any(|neighbour| data.get(neighbour).is_some_and(|other| cases.contains(other)))
+        })
+    };
     let evidenced: std::collections::HashSet<u64> = imp
         .xrefs
         .iter()
-        .filter(|xref| xref.kind.ends_with("CALL") || xref.kind == "DATA")
+        .filter(|xref| {
+            xref.kind.ends_with("CALL")
+                || (xref.kind == "DATA" && !(targets.contains(&xref.to) && table_word(xref.from, xref.to)))
+        })
         .map(|xref| xref.to)
         .collect();
     imp.functions.retain(|function| {
         !(targets.contains(&function.entry)
+            && spared.is_none_or(|spared| !spared.contains(&function.entry))
             && function.name.starts_with("FUN_")
             && !evidenced.contains(&function.entry))
     });
