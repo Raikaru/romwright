@@ -84,6 +84,34 @@ pub(super) fn prepare(
     for (address, _) in &mut import.object_sizes {
         *address = rebase(*address)?;
     }
+    // Every address the parse recorded before this point moves with the
+    // image. Left behind, a shared object's symbol-table entries missed the
+    // `symbol` producer and discovery's declared set (libc: 50 of ~3,900
+    // named functions attributed to their symbol), and the process entry's
+    // convention row landed outside every mapping.
+    if let Some(entry) = import.process_entry.as_mut() {
+        *entry = rebase(*entry)?;
+    }
+    for address in &mut import.symbol_named {
+        *address = rebase(*address)?;
+    }
+    for (start, end) in &mut import.symbol_extents {
+        *start = rebase(*start)?;
+        *end = rebase(*end)?;
+    }
+    for (address, _) in &mut import.object_names {
+        *address = rebase(*address)?;
+    }
+    for context in &mut import.contexts {
+        context.address = rebase(context.address)?;
+    }
+    // The ranges and their values: the parse seeds only SDA bases and
+    // PPC64 TOC pointers here, which are addresses too.
+    for context in &mut import.register_contexts {
+        context.start = rebase(context.start)?;
+        context.end = rebase(context.end)?;
+        context.value = rebase(context.value)?;
+    }
     for section in sections.iter_mut().filter(|s| s.flags & 2 != 0) {
         section.addr = rebase(section.addr)?;
     }
