@@ -1,28 +1,34 @@
 # STATUS
 
-## Open state (2026-09-23)
+## Open state (2026-09-24)
 
 Read this first; everything below it is the dated log.
 
-- Gates green on this workstation: m12-001 (all rows, modules
-  0.9784/0.9332), m12-002 (cross-compiler pair, private inputs), m17-002,
-  m1-010, m3-001; romwright-core 481/481, romwright-diff 21/21.
-- m15-001 and m14-002 are green again (2026-09-24 entries below): both
-  were measurement defects, not analysis regressions.
+- Gates green on this workstation: m21-001 (7 real images), m12-001
+  (modules 0.9781/0.9329), m12-002, m17-002, m15-001 (0.8432 of stock),
+  m14-001, m14-002 (idle hardware; its median-open budget fails under this
+  machine's load), m1-010, m3-001, m5-013, m8-002, m8-003; romwright-core
+  489, romwright-diff 47, romwright-db 23. Workspace compiler warnings: 0.
 - m3-001 passes (1,640 DWARF functions, recall 1.0, 0 unattributed) when
   run with `--oracle-dir` on freshly generated oracles. The 13 tracked
   mipsel/PE oracle files still carry a pre-13cc4a6f bridge digest; CI never
   scores those rows.
 - Real-image function recovery (m21-001, private images), recall /
-  precision: Vita NFS 0.804 / 0.948, NDS arm9 0.905 / 0.997, GBA 0.869 / 0.840, PS2 Capcom 0.897 / 0.884, PS2 dungeon
-  0.791 / 0.824, PSX 0.919 / 0.376 (map lists globals only), X360 0.940 /
-  0.995;
-  NDS does not finish.
-- Known weak spots: CallGraph rows under content 0.9 (about two-thirds
-  right on the modules). PE function-start ownership is settled by three
-  special-case retraction rules rather than one pass after all
-  producers. Imports of 10k-function images take about two minutes and
-  0.7 GB.
+  precision: X360 0.940 / 0.995, PSX 0.919 / 0.376 (map lists globals
+  only), NDS arm9 0.905 / 0.997, PS2 Capcom 0.897 / 0.884, GBA 0.869 /
+  0.840, Vita NFS 0.805 / 0.948, PS2 dungeon 0.791 / 0.824.
+- Import cost, idle 4-core: GBA 522 s / 2.0 GB, swkotor2 76 s, libc 50 s;
+  NDS (131 programs) about 500 s on this loaded workstation.
+- Known weak spots:
+  - Reference inference depends on query order: a console's flow can leave
+    mode contexts behind (2026-09-24 entry). Queries stay in address
+    order until each one leaves no context state.
+  - GBA holds 60-900 KB junk bodies decoded from its data region; they cost
+    precision (0.840) and most of the reference time.
+  - CallGraph rows under content 0.9 are about two-thirds right on the
+    modules.
+  - PE function-start ownership is settled by three special-case retraction
+    rules rather than one pass after all producers.
 - Blocked: the desktop proof (needs an interactive Qt display) and the
   import-cost gate thresholds (maintainer-reserved).
 
@@ -9257,3 +9263,11 @@ and the flow cache now gets the same saving with identical facts. Removed:
 the flag, its branches, and three state fields that every round cloned for
 it (visited set, proven bodies, origin map), whether or not it was on. libc
 digest identical before and after.
+
+## native.rs split into cohesive modules (2026-09-24)
+
+`native.rs` was 8,491 lines. It is now 1,779: the core types, container
+dispatch, and discovery rounds. The rest moved verbatim into `native/elf.rs`
+(862), `pe.rs` (371), `switch_tables.rs` (1,007), `references.rs` (571),
+`store.rs` (891) and `tests.rs` (3,038), with re-exports keeping every
+existing path. Zero warnings, core lib 489, libc fact digest identical.
