@@ -1,0 +1,42 @@
+[package]
+name = "romwright-desktop"
+edition.workspace = true
+version.workspace = true
+license.workspace = true
+# eframe/egui 0.36 and egui_dock 0.21 require 1.95.
+rust-version = "1.95"
+description = "Pure-Rust Romwright workstation: egui shell rendered through wgpu"
+
+[[bin]]
+name = "romwright-desktop"
+path = "src/main.rs"
+
+[dependencies]
+romwright-core = { path = "../romwright-core" }
+romwright-model = { path = "../romwright-model" }
+romwright-worker-client = { path = "../romwright-worker-client" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# wgpu renderer only: `wgpu_no_default_features` keeps eframe off glow, and the
+# explicit `wgpu` feature list below leaves out the GLES (glow) backend.
+eframe = { version = "0.36.2", default-features = false, features = [
+    "accesskit",
+    "default_fonts",
+    "wayland",
+    "x11",
+    "wgpu_no_default_features",
+] }
+egui = "0.36.2"
+egui_extras = { version = "0.36.2", default-features = false }
+egui-wgpu = { version = "0.36.2", default-features = false }
+egui_dock = { version = "0.21.1", features = ["serde"] }
+wgpu = { version = "30", default-features = false, features = [
+    "std",
+    "parking_lot",
+    "wgsl",
+    "vulkan",
+    "metal",
+    "dx12",
+] }
+pollster = "1"
+png = "0.18"
