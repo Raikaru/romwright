@@ -31,6 +31,33 @@ pub struct DecodedDocument {
         romwright_model::function_ir::ControlFlowCut,
         romwright_model::function_ir::ControlFlowCut,
     )>,
+    /// Who produced the printed tokens (docs/ownership.md); set when the
+    /// Rust printer printed this document.
+    pub print_stats: Option<crate::printc::PrintStats>,
+    /// Where each printed jump table's addresses came from, in document order
+    /// (`<jumptable>` attributes our `jumptable.cc` hunk writes when the
+    /// import stored a table for the branch). Empty when the function has no
+    /// jump table.
+    pub switch_sources: Vec<SwitchSource>,
+}
+
+/// How the dispatch table the import stored for a branch related to what
+/// `jumptable.cc` recovered for it (`JumpTable::recoverStored`).
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct SwitchSource {
+    /// The indirect branch.
+    pub branch: u64,
+    /// No stored table (`none`: `jumptable.cc` is the only source),
+    /// `confirmed` (it recovered exactly the stored addresses), `applied`
+    /// (it differed or failed, the stored table was installed), `observed`
+    /// (it differed, the stored table was only compared).
+    pub state: &'static str,
+    /// Distinct addresses `jumptable.cc` recovered; `None` when it failed.
+    pub stock: Option<u64>,
+    /// Distinct addresses in the stored table.
+    pub stored: u64,
+    /// Distinct addresses in both.
+    pub common: u64,
 }
 
 // funcdata.cc and jumptable.cc packed element tables.
@@ -65,6 +92,14 @@ const ATTRIB_OPREF: u32 = 41;
 const ATTRIB_VARREF: u32 = 42;
 const ATTRIB_INDENT: u32 = 38;
 const ATTRIB_SYMREF: u32 = 68;
+/// jumptable.cc `ATTRIB_LABEL` ("label", 131): a jump-table destination's
+/// case value.
+const ATTRIB_LABEL: u32 = 131;
+/// `JumpTable::encode` attributes of our `jumptable.cc` hunk.
+const ATTRIB_STOREDOUT: u32 = 401;
+const ATTRIB_STOCKSIZE: u32 = 402;
+const ATTRIB_STOREDSIZE: u32 = 403;
+const ATTRIB_COMMONSIZE: u32 = 404;
 
 const TAG_ELEMENT_START: u8 = 0x40;
 const TAG_ELEMENT_END: u8 = 0x80;
@@ -153,6 +188,14 @@ struct Ctx {
     datatype_id: Option<u64>,
     indent: Option<i64>,
     content_seen: bool,
+    /// A jump-table destination's case label (`ATTRIB_LABEL`).
+    dest_label: Option<u64>,
+    /// A jump table's stored-table relation (`ATTRIB_STOREDOUT`, `STOCKSIZE`,
+    /// `STOREDSIZE`, `COMMONSIZE`).
+    stored_out: Option<u64>,
+    stock_size: Option<i64>,
+    stored_size: Option<u64>,
+    common_size: Option<u64>,
 }
 
 impl Ctx {
@@ -177,7 +220,10 @@ struct SwitchCollector {
     table_depth: Option<usize>,
     branch: Option<Address>,
     targets: Vec<Address>,
+    /// Whether each target carried a case label.
+    labelled: Vec<bool>,
     tables: Vec<JumpTable>,
+    sources: Vec<SwitchSource>,
     result: Option<Vec<JumpTable>>,
     failed: bool,
 }
@@ -207,14 +253,43 @@ impl SwitchCollector {
                     self.failed |= self.branch.replace(address).is_some();
                 } else {
                     self.targets.push(address);
+                    self.labelled.push(ctx.dest_label.is_some());
                 }
             } else {
                 self.failed = true;
             }
         }
         if ctx.id == JUMPTABLE && self.table_depth == Some(depth) {
+            // Ghidra appends a folded guard's target last with no case
+            // label (`JumpBasic::foldInOneGuard` -> `addBlockToSwitch(..,
+            // NO_LABEL)`; `JumpTable::encode` writes no label for it). It is
+            // where the guard sends an out-of-range index, not a place the
+            // indirect branch goes -- and as a block start after Ghidra's
+            // clean-up it is often not even the guard's own target -- so it
+            // is not a target here. Only the trailing unlabelled entry of a
+            // labelled table is that default; a table without labels at all
+            // is kept whole.
+            let labelled = std::mem::take(&mut self.labelled);
+            if self.targets.len() > 1
+                && labelled.last() == Some(&false)
+                && labelled[..labelled.len() - 1].iter().any(|&label| label)
+            {
+                self.targets.pop();
+            }
             match self.branch.take() {
                 Some(branch) if !self.targets.is_empty() => {
+                    self.sources.push(SwitchSource {
+                        branch: branch.offset,
+                        state: match ctx.stored_out {
+                            Some(1) => "confirmed",
+                            Some(2) => "applied",
+                            Some(3) => "observed",
+                            _ => "none",
+                        },
+                        stock: ctx.stock_size.and_then(|size| u64::try_from(size).ok()),
+                        stored: ctx.stored_size.unwrap_or(0),
+                        common: ctx.common_size.unwrap_or(0),
+                    });
                     self.tables.push(JumpTable {
                         branch,
                         targets: std::mem::take(&mut self.targets),
@@ -237,11 +312,11 @@ impl SwitchCollector {
         }
     }
 
-    fn finish(self) -> Option<Vec<JumpTable>> {
+    fn finish(self) -> (Option<Vec<JumpTable>>, Vec<SwitchSource>) {
         if self.failed || self.function_depth.is_some() || self.table_depth.is_some() {
-            None
+            (None, Vec::new())
         } else {
-            self.result
+            (self.result, self.sources)
         }
     }
 }
@@ -338,11 +413,75 @@ pub fn decode_tokens_with_ram_space(
 
 /// Decode tokens and recovered native metadata in one pass. Missing or
 /// incomplete structural data stays unknown, never a guessed empty result.
+///
+/// The tokens come from the Rust printer (crate::printc) over the printer IR
+/// the same response carries, not from PrintC's markup; a response with C
+/// but no usable IR is a semantic error, not a silent PrintC fallback.
 pub fn decode_document_with_ram_space(
     packed: &[u8],
     ram_space_index: Option<u64>,
 ) -> DecodedDocument {
-    decode_packed(packed, ram_space_index, true)
+    let mut decoded = decode_packed(packed, ram_space_index, true);
+    if decoded.semantic_error.is_none() {
+        // The decompiler prints no C of its own unless it structured the
+        // function itself (ROMWRIGHT_NATIVE_STRUCTURE), so the printer IR, not
+        // PrintC's markup, says whether this response has C.
+        let printed = crate::printc::sections(packed).and_then(|sections| match sections.printer_ir {
+            Some(blob) => crate::printc::render_with_stats(blob).map(Some),
+            None if decoded.tokens.is_empty() => Ok(None),
+            None => Err(
+                "the response has no printer IR (ghidra_opt predates native/romwright_printir.hh)".to_string(),
+            ),
+        });
+        match printed {
+            Ok(Some((markup, stats))) => {
+                decoded.tokens = decode_tokens_with_ram_space(&markup, ram_space_index);
+                if let Some(function_ir) = decoded.function_ir.as_mut() {
+                    // Only the types the document does not already carry: the spelling pass reads the ones it has
+                    // as the decompiler encoded them, and a second description of the same id spells it differently.
+                    let known: std::collections::BTreeSet<u64> = function_ir
+                        .high_variables
+                        .iter()
+                        .flat_map(|high| std::iter::once(&high.data_type).chain(high.symbol.iter().map(|symbol| &symbol.data_type)))
+                        .chain(decoded.prototype.iter().flat_map(|prototype| {
+                            std::iter::once(&prototype.return_type).chain(prototype.parameters.iter().map(|parameter| &parameter.data_type))
+                        }))
+                        .filter_map(|ty| ty.id)
+                        .collect();
+                    function_ir.cast_types = stats
+                        .cast_types
+                        .iter()
+                        .filter(|ty| ty.id.is_none_or(|id| !known.contains(&id)))
+                        .cloned()
+                        .collect();
+                    apply_cast_edits(function_ir, &stats.cast_edits);
+                }
+                // An undeclared callee's prototype is read off its calls. With the decompiler's casts that was
+                // off the calls as cast (the casts retype constants and implied arguments to what the callee's
+                // parameter requires); the worker's cast pass leaves the types the decompiler inferred, which
+                // measured better on Dark Cloud and Fatal Frame (docs/types-port.md).
+                // `ROMWRIGHT_RUST_CASTS_CALLS=cast` reads them off the calls as cast, as before.
+                let calls_as_cast = std::env::var("ROMWRIGHT_RUST_CASTS_CALLS").is_ok_and(|mode| mode == "cast");
+                for call in stats.call_types.iter().filter(|_| calls_as_cast) {
+                    let Some(prototype) = decoded.call_prototypes.get_mut(&OperationId(call.time)) else {
+                        continue;
+                    };
+                    if let Some(params) = &call.params {
+                        for (parameter, ty) in prototype.parameters.iter_mut().zip(params) {
+                            parameter.data_type = ty.clone();
+                        }
+                    }
+                    if let Some(ret) = &call.ret {
+                        prototype.return_type = ret.clone();
+                    }
+                }
+                decoded.print_stats = Some(stats);
+            }
+            Ok(None) => {}
+            Err(error) => decoded.semantic_error = Some(format!("Rust printer: {error}")),
+        }
+    }
+    decoded
 }
 
 fn decode_packed(
@@ -502,6 +641,21 @@ fn decode_packed(
                             ctx.address_offset = value.unsigned();
                         }
                         ATTRIB_OFFSET => {}
+                        ATTRIB_LABEL if collect_metadata && ctx.id == DEST => {
+                            ctx.dest_label = value.unsigned();
+                        }
+                        ATTRIB_STOREDOUT if collect_metadata && ctx.id == JUMPTABLE => {
+                            ctx.stored_out = value.unsigned();
+                        }
+                        ATTRIB_STOCKSIZE if collect_metadata && ctx.id == JUMPTABLE => {
+                            ctx.stock_size = value.signed();
+                        }
+                        ATTRIB_STOREDSIZE if collect_metadata && ctx.id == JUMPTABLE => {
+                            ctx.stored_size = value.unsigned();
+                        }
+                        ATTRIB_COMMONSIZE if collect_metadata && ctx.id == JUMPTABLE => {
+                            ctx.common_size = value.unsigned();
+                        }
                         _ => {}
                     }
                 }
@@ -531,20 +685,22 @@ fn decode_packed(
         Ok(None) => (None, Vec::new(), None),
         Err(error) => (None, Vec::new(), Some(error)),
     };
+    let (jump_tables, switch_sources) = match switches {
+        Some(collector) if complete => collector.finish(),
+        _ => (None, Vec::new()),
+    };
     DecodedDocument {
         tokens,
         prototype: recovered.prototype,
         call_prototypes: recovered.call_prototypes,
         call_targets: recovered.call_targets,
-        jump_tables: if complete {
-            switches.and_then(SwitchCollector::finish)
-        } else {
-            None
-        },
+        jump_tables,
+        switch_sources,
         storage: recovered.storage,
         function_ir,
         semantic_error,
         cut_projection,
+        print_stats: None,
     }
 }
 
@@ -571,13 +727,24 @@ mod tests {
     }
 
     #[test]
+    fn c_without_printer_ir_is_a_semantic_error() {
+        // doc_global.bin predates the printer IR: PrintC's markup alone is
+        // not printed C anymore, and is never a silent fallback.
+        let decoded =
+            decode_document_with_ram_space(include_bytes!("../fixtures/doc_global.bin"), Some(3));
+        let error = decoded.semantic_error.expect("C without printer IR");
+        assert!(error.contains("no printer IR"), "{error}");
+    }
+
+    #[test]
     fn global_token_resolves_both_its_value_and_consuming_operation() {
         use romwright_model::function_ir::{Opcode, Operand};
 
         // Real native response for: float scale(float x) { return x * multiplier; }
         // Its global token carries both VARREF and OPREF, including operation zero.
-        let decoded =
-            decode_document_with_ram_space(include_bytes!("../fixtures/doc_global.bin"), Some(3));
+        // The capture predates the printer IR, so its PrintC markup is decoded
+        // directly; the Rust printer reproduces that markup byte for byte.
+        let decoded = decode_packed(include_bytes!("../fixtures/doc_global.bin"), Some(3), true);
         assert!(
             decoded.semantic_error.is_none(),
             "{:?}",
@@ -616,8 +783,8 @@ mod tests {
     #[test]
     fn inferred_stack_declarations_preserve_signed_loop_exits() {
         use romwright_core::func_ir::{Pipeline, TransformContext};
-        let mut decoded =
-            decode_document_with_ram_space(include_bytes!("../fixtures/doc_cuts.bin"), Some(3));
+        // A capture predating the printer IR: its PrintC markup is decoded.
+        let mut decoded = decode_packed(include_bytes!("../fixtures/doc_cuts.bin"), Some(3), true);
         let ir = decoded.function_ir.as_mut().unwrap();
         let pipeline = Pipeline::from_names(&[]).unwrap();
         let context = TransformContext::default();
@@ -707,5 +874,134 @@ mod tests {
         let mut pipeline = Pipeline::default();
         pipeline.add(Pass::Analyze(Box::new(WrongWidth))).unwrap();
         assert!(pipeline.run(&ir, &TransformContext::default()).is_err());
+    }
+}
+
+/// Gives the semantic IR the CAST operations `ActionSetCasts` would have put in the p-code. The
+/// worker decides the casts of a native-cast function after the p-code was exported, so the IR
+/// arrives without them; type evidence is read off the IR and needs them (a cast is where a value
+/// changes type). The new values copy the shape of the decompiler's own: a unique, the size of the
+/// value they stand for.
+fn apply_cast_edits(ir: &mut romwright_model::function_ir::FunctionIr, edits: &[crate::printc::casts::IrEdit]) {
+    use crate::printc::casts::IrEdit;
+    use romwright_model::function_ir::{IrOperation, IrSpace, IrValue, Operand, ValueId};
+    use romwright_model::function_ir::Opcode;
+    if edits.is_empty() {
+        return;
+    }
+    let mut next_value = ir.values.keys().map(|id| id.0).max().unwrap_or(0) + 1;
+    let mut done = std::collections::BTreeSet::new();
+    // `ActionSetCasts` walks the ops in block order, an op's input slots in order and then its output, and
+    // the new values take the next ids: the worker decided them statement by statement, so put them in that
+    // order (a stable sort keeps a replacement before the cast it is followed by).
+    let position: std::collections::BTreeMap<u64, usize> = ir
+        .blocks
+        .iter()
+        .flat_map(|block| &block.operations)
+        .enumerate()
+        .map(|(index, op)| (op.id.0, index))
+        .collect();
+    let mut edits: Vec<&IrEdit> = edits.iter().collect();
+    edits.sort_by_key(|edit| match edit {
+        IrEdit::Output { op, .. } => (position.get(op).copied().unwrap_or(usize::MAX), usize::MAX),
+        IrEdit::Input { op, slot, .. } | IrEdit::Replace { op, slot } => {
+            (position.get(op).copied().unwrap_or(usize::MAX), *slot)
+        }
+    });
+    for edit in edits {
+        // An op read by several statements is cast once.
+        let key = match edit {
+            IrEdit::Output { op, .. } => (0, *op, 0),
+            IrEdit::Input { op, slot, .. } => (1, *op, *slot),
+            IrEdit::Replace { op, slot } => (2, *op, *slot),
+        };
+        if !done.insert(key) {
+            continue;
+        }
+        let (op_id, slot) = match edit {
+            IrEdit::Output { op, .. } => (*op, 0),
+            IrEdit::Input { op, slot, .. } | IrEdit::Replace { op, slot } => (*op, *slot),
+        };
+        let Some((block, index)) = ir.blocks.iter().enumerate().find_map(|(block, b)| {
+            b.operations.iter().position(|op| op.id.0 == op_id).map(|index| (block, index))
+        }) else {
+            continue;
+        };
+        let operation = &ir.blocks[block].operations[index];
+        let address = operation.address.clone();
+        match edit {
+            IrEdit::Output { cast, .. } => {
+                let Some(original) = operation.output else { continue };
+                let Some(shape) = ir.values.get(&original) else { continue };
+                let fresh = ValueId(next_value);
+                next_value += 1;
+                let value = IrValue {
+                    id: fresh,
+                    space: IrSpace::Index(2),
+                    offset: Some(0x1000_0000 + fresh.0),
+                    input: false,
+                    persistent: false,
+                    address_tied: false,
+                    unaffected: false,
+                    volatile: false,
+                    pieces: Vec::new(),
+                    ..shape.clone()
+                };
+                ir.values.insert(fresh, value);
+                ir.blocks[block].operations[index].output = Some(fresh);
+                ir.blocks[block].operations.insert(
+                    index + 1,
+                    IrOperation {
+                        id: OperationId(*cast),
+                        address,
+                        opcode: Opcode::CAST,
+                        output: Some(original),
+                        inputs: vec![Operand::Value(fresh)],
+                    },
+                );
+            }
+            IrEdit::Input { cast, .. } => {
+                let Some(Operand::Value(input)) = operation.inputs.get(slot).cloned() else { continue };
+                let Some(shape) = ir.values.get(&input) else { continue };
+                let fresh = ValueId(next_value);
+                next_value += 1;
+                let value = IrValue {
+                    id: fresh,
+                    space: IrSpace::Index(2),
+                    offset: Some(0x1000_0000 + fresh.0),
+                    input: false,
+                    persistent: false,
+                    address_tied: false,
+                    unaffected: false,
+                    volatile: false,
+                    pieces: Vec::new(),
+                    ..shape.clone()
+                };
+                ir.values.insert(fresh, value);
+                ir.blocks[block].operations[index].inputs[slot] = Operand::Value(fresh);
+                ir.blocks[block].operations.insert(
+                    index,
+                    IrOperation {
+                        id: OperationId(*cast),
+                        address,
+                        opcode: Opcode::CAST,
+                        output: Some(fresh),
+                        inputs: vec![Operand::Value(input)],
+                    },
+                );
+            }
+            IrEdit::Replace { .. } => {
+                let Some(Operand::Value(input)) = operation.inputs.get(slot).cloned() else { continue };
+                let earlier = ir
+                    .blocks
+                    .iter()
+                    .flat_map(|b| &b.operations)
+                    .find(|op| op.opcode == Opcode::CAST && op.output == Some(input))
+                    .and_then(|op| op.inputs.first().cloned());
+                if let Some(earlier) = earlier {
+                    ir.blocks[block].operations[index].inputs[slot] = earlier;
+                }
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@
 //!
 //! - **Render** ([`render_doc_text`]): Break tokens end a line and indent
 //!   the next by their `indent` count, every other token appends its
-//!   text. This mirrors `desktop/romwright-qt/src/decompiler_view.cpp`
+//!   text. This mirrors `crates/romwright-desktop/src/panels/decompiler/source.rs`
 //!   ("Break tokens end a line and indent the next").
 //! - **Deterministic temporaries** ([`TempNamer`]): decompiler-generated
 //!   locals (`uVar1`, `local_10`, …) become `temp_v0`/`temp_f0`-shaped
@@ -47,13 +47,24 @@ use std::collections::BTreeMap;
 use romwright_model::{DecompDoc, StackVariableRow, TokenKind};
 use romwright_model::function_ir::OperationId;
 
+mod addresses;
+pub use addresses::{Named, address_names};
+mod token_edits;
+mod machine;
+pub use machine::{Machine, MachineCode};
+mod canonical;
+mod conform;
 mod declarations;
 pub use declarations::DeclaredPrototypes;
 mod dependencies;
 mod globals;
+mod imports;
+mod locals;
 mod storage;
+mod struct_params;
 pub(crate) use storage::UnitLayouts;
 use globals::GlobalRef;
+pub(crate) use imports::stdcall_imports_enabled;
 
 /// Honesty marker stem emitted where structuring failed.
 pub const IRREGULAR_STEM: &str = "irregular";
@@ -70,6 +81,23 @@ pub struct M2cOptions {
     /// Semantic passes the native backend must apply before presentation.
     /// Unknown or unapplied passes fail emission instead of publishing C.
     pub transforms: Vec<String>,
+    /// Wall-clock bound for a whole export job; `None` is the interactive
+    /// default (`exec::DEFAULT_BUDGET`). Whole-program exports need more.
+    pub budget: Option<std::time::Duration>,
+    /// Names the project's own headers already declare (`--context`): the
+    /// export neither redeclares them nor disagrees with their types.
+    pub declared: std::collections::BTreeSet<String>,
+    /// The project's header itself (`--context`): the printed function is made
+    /// to agree with the types it declares (see `conform`).
+    pub context: String,
+    /// The program's compiler id (`programs.compiler`): the key of the
+    /// printer's compiler rules. Empty is unknown.
+    pub compiler: String,
+    /// Environment the decompiler worker gets for this export (the printing
+    /// variant of `match_search`); empty is the stock printing.
+    pub worker_env: Vec<(String, String)>,
+    /// The import-table slots (virtual addresses) of a 32-bit Windows image whose calls are `__stdcall` (`imports`).
+    pub stdcall_imports: std::collections::BTreeSet<u64>,
 }
 
 impl Default for M2cOptions {
@@ -79,8 +107,88 @@ impl Default for M2cOptions {
             emit_stack_struct: true,
             emit_globals: true,
             transforms: crate::func_ir::default_pass_names(),
+            budget: None,
+            declared: std::collections::BTreeSet::new(),
+            context: String::new(),
+            compiler: String::new(),
+            worker_env: Vec::new(),
+            stdcall_imports: std::collections::BTreeSet::new(),
         }
     }
+}
+
+/// The functions and objects a C header declares (typedefs, macros and types
+/// excluded), for [`M2cOptions::declared`].
+pub fn declared_names(header: &str) -> std::collections::BTreeSet<String> {
+    fn identifier<'a>(node: tree_sitter::Node<'_>, source: &'a str) -> Option<&'a str> {
+        let mut node = node;
+        loop {
+            if node.kind() == "identifier" {
+                return Some(&source[node.byte_range()]);
+            }
+            // `(*name[])(args)`: the parentheses hold the declarator without naming the field
+            node = match node.child_by_field_name("declarator") {
+                Some(inner) => inner,
+                None if node.kind() == "parenthesized_declarator" && locals::enabled("ROMWRIGHT_EXPORT_CONTEXT_NAMES") => {
+                    node.named_child(0)?
+                }
+                None => return None,
+            };
+        }
+    }
+    fn walk(node: tree_sitter::Node<'_>, source: &str, names: &mut std::collections::BTreeSet<String>) {
+        if node.kind() == "function_definition" {
+            return;
+        }
+        if node.kind() == "declaration" {
+            let mut cursor = node.walk();
+            for declarator in node.children_by_field_name("declarator", &mut cursor) {
+                let declarator = if declarator.kind() == "init_declarator" {
+                    declarator.child_by_field_name("declarator").unwrap_or(declarator)
+                } else {
+                    declarator
+                };
+                if let Some(name) = identifier(declarator, source) {
+                    names.insert(name.to_string());
+                }
+            }
+        }
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            walk(child, source, names);
+        }
+    }
+    let mut names = std::collections::BTreeSet::new();
+    let mut parser = tree_sitter::Parser::new();
+    if parser.set_language(&tree_sitter_c::LANGUAGE.into()).is_ok()
+        && let Some(tree) = parser.parse(header, None)
+    {
+        walk(tree.root_node(), header, &mut names);
+    }
+    names
+}
+
+/// `extern` lines of a declaration block whose name the project declares.
+fn without_declared(text: &str, declared: &std::collections::BTreeSet<String>) -> String {
+    if declared.is_empty() {
+        return text.to_string();
+    }
+    text.split_inclusive('\n')
+        .filter(|line| {
+            let Some(rest) = line.strip_prefix("extern ") else { return true };
+            let head = rest.split(['(', '[', ';']).next().unwrap_or("");
+            let name: String = head
+                .trim_end()
+                .chars()
+                .rev()
+                .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            !declared.contains(&name)
+        })
+        .collect()
 }
 
 /// Store-supplied context [`emit_doc`] cannot read from the document.
@@ -96,6 +204,12 @@ pub struct FuncInputs<'a> {
     pub keep: &'a [String],
     /// Authoritative C declarations, before native type recovery loses qualifiers.
     pub asserted_prototypes: Option<&'a DeclaredPrototypes>,
+    /// The global pointer in force at the function's entry, where the
+    /// architecture has one (decides which globals were small data).
+    pub gp: Option<u64>,
+    /// The function's machine code and what it says about addresses (see
+    /// `machine`, `addresses`).
+    pub machine: Option<Machine<'a>>,
 }
 /// What emission produced, besides the text itself.
 #[derive(Clone, Debug)]
@@ -128,6 +242,10 @@ fn render_named_doc(
     let mut out = String::new();
     for (index, token) in doc.tokens.iter().enumerate() {
         if token.kind == TokenKind::Break {
+            if let Some(text) = storage.get(&index) {
+                out.push_str(text);
+                continue;
+            }
             out.push('\n');
             let indent = token.indent.unwrap_or(0).clamp(0, 256) as usize;
             out.extend(std::iter::repeat_n(' ', indent));
@@ -140,9 +258,23 @@ fn render_named_doc(
                 TokenKind::Type => token.symbol_id.zip(token.datatype_id)
                     .and_then(|identity| declarations.get(&identity).map(String::as_str))
                     .or_else(|| token.datatype_id.and_then(|id| type_names.get(&id).copied())),
+                // The printer's own loop headers (`while (true)`); C89 has no `true`.
+                TokenKind::Syntax => match token.text.as_str() {
+                    "true" => Some("1"),
+                    "false" => Some("0"),
+                    _ => None,
+                },
                 _ => None,
             };
-            out.push_str(storage.get(&index).map(String::as_str).or(replacement).unwrap_or(token.text.as_str()));
+            let single = (token.kind == TokenKind::Variable).then(|| single_float_literal(doc, token)).flatten();
+            out.push_str(
+                storage
+                    .get(&index)
+                    .map(String::as_str)
+                    .or(replacement)
+                    .or(single.as_deref())
+                    .unwrap_or(token.text.as_str()),
+            );
         }
     }
     out
@@ -161,6 +293,27 @@ fn boolean_constant(doc: &DecompDoc, token: &romwright_model::DecompToken) -> Op
         && native.size == Some(1)
         && native.offset == Some(value))
         .then_some(text)
+}
+
+/// A 4-byte float constant, spelled `f`-suffixed: an unsuffixed C literal is a
+/// double, and `x * 0.5` is then a double multiplication (a library call on a
+/// target without double hardware) where the machine code multiplied floats.
+fn single_float_literal(doc: &DecompDoc, token: &romwright_model::DecompToken) -> Option<String> {
+    let text = token.text.trim();
+    if !is_unsuffixed_float_literal(text) {
+        return None;
+    }
+    let value = doc.function_ir.as_ref()?.values.get(&token.varnode?)?;
+    (value.space == romwright_model::function_ir::IrSpace::Index(0) && value.size == Some(4))
+        .then(|| format!("{text}f"))
+}
+
+/// `0.5`, `-1e-3`, `800.0`: a decimal floating literal without a suffix.
+fn is_unsuffixed_float_literal(text: &str) -> bool {
+    let digits = text.strip_prefix('-').unwrap_or(text);
+    digits.bytes().all(|b| b.is_ascii_digit() || matches!(b, b'.' | b'e' | b'E' | b'+' | b'-'))
+        && digits.bytes().next().is_some_and(|b| b.is_ascii_digit())
+        && digits.bytes().any(|b| matches!(b, b'.' | b'e' | b'E'))
 }
 
 fn primitive_types(doc: &DecompDoc) -> BTreeMap<u64, &'static str> {
@@ -188,6 +341,7 @@ fn primitive_types(doc: &DecompDoc) -> BTreeMap<u64, &'static str> {
             collect(&high.data_type, &mut result, 0);
             if let Some(symbol) = &high.symbol { collect(&symbol.data_type, &mut result, 0); }
         }
+        for cast_type in &ir.cast_types { collect(cast_type, &mut result, 0); }
     }
     result
 }
@@ -659,11 +813,11 @@ fn emit_function_text(
         }
     }
     if opts.emit_globals && !globals.is_empty() {
-        out.push_str(&globals::render(globals));
+        out.push_str(&without_declared(&globals::render(globals), &opts.declared));
         out.push('\n');
     }
     if !dependencies.is_empty() {
-        out.push_str(dependencies);
+        out.push_str(&without_declared(dependencies, &opts.declared));
         out.push('\n');
     }
     out.push_str(&body);
@@ -761,17 +915,50 @@ pub(crate) fn emit_doc_in_unit(
             namer.for_generated(name, hint.as_deref());
         }
     }
-    let dependencies = dependencies::from_doc(doc, inputs.keep, opts.emit_globals, inputs.asserted_prototypes)?;
-    let globals = if opts.emit_globals {
-        globals::from_doc(doc, layouts)?
+    let mut dependencies = dependencies::from_doc(doc, inputs.keep, opts.emit_globals, inputs.asserted_prototypes, opts.compiler.starts_with("msvc") || opts.compiler.starts_with("mingw"))?;
+    let mut globals = if opts.emit_globals {
+        globals::from_doc(doc, layouts, inputs.machine.as_ref().and_then(|machine| machine.code.little_endian()), &opts.declared)?
     } else {
         globals::Globals::default()
     };
+    // a function used as a value and called: the callee's declaration says more than the global's `int f();`, and the two disagree
+    // on the return type (`ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF=off` keeps both)
+    if (opts.compiler.starts_with("msvc") || opts.compiler.starts_with("mingw")) && locals::enabled("ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF") {
+        globals.refs.retain(|global| {
+            !(global.definition.is_empty() && global.declaration == format!("int {}()", global.name) && dependencies.declared.contains(&global.name))
+        });
+    }
+    if let Some(machine) = &inputs.machine {
+        for (index, text) in token_edits::edits(doc, machine) {
+            globals.replacements.entry(index).or_insert(text);
+        }
+    }
+    for (index, text) in locals::edits(doc, namer.mapping()) {
+        globals.replacements.entry(index).or_insert(text);
+    }
     let body = render_transformed(doc, opts, namer.mapping(), &dependencies.names, &globals.replacements)?;
     let body = match inputs.asserted_prototypes {
         Some(prototypes) => prototypes.definition(&doc.address, body)?,
         None => body,
     };
+    let body = canonical::apply(&body, &opts.compiler);
+    let body = match &inputs.machine {
+        Some(machine) => {
+            let (body, refs, functions) = {
+                let declared = |name: &str| {
+                    dependencies.text.contains(&format!(" {name}(")) || globals.refs.iter().any(|global| global.name == name)
+                };
+                addresses::rewrite(&body, machine.constants, machine.names, &declared)
+            };
+            globals.refs.extend(refs);
+            dependencies.text.push_str(&functions);
+            body
+        }
+        None => body,
+    };
+    let (body, prelude) = conform_text(body, &mut dependencies.text, &mut globals.refs, inputs.gp, opts);
+    // After `conform`: the project's own declaration, not the decompiler's, is what the header finally says.
+    let body = struct_params::cast_struct_params(doc, body);
     let cuts: Vec<_> = doc
         .function_ir
         .as_ref()
@@ -810,7 +997,7 @@ pub(crate) fn emit_doc_in_unit(
     warnings.extend(dependencies.warnings);
     warnings.extend(globals.warnings);
     warnings.extend(unresolved_values(doc));
-    Ok(emit_function_text(
+    let mut emitted = emit_function_text(
         body,
         namer,
         inputs.stack,
@@ -820,7 +1007,62 @@ pub(crate) fn emit_doc_in_unit(
         &irregular_inputs,
         warnings,
         opts,
-    ))
+    );
+    emitted.text.insert_str(0, prelude);
+    Ok(emitted)
+}
+
+/// Spells the printed function and its declarations for the project's compiler
+/// and makes them agree with the project's own declarations (`conform`).
+fn conform_text(
+    body: String,
+    dependencies: &mut String,
+    globals: &mut [globals::GlobalRef],
+    gp: Option<u64>,
+    opts: &M2cOptions,
+) -> (String, &'static str) {
+    let (mut body, mut uses_code) = conform::spelled(&body);
+    for global in globals.iter_mut() {
+        let (text, code) = conform::spelled(&format!("extern {};", global.declaration));
+        uses_code |= code;
+        if let Some(declaration) = text.strip_prefix("extern ").and_then(|t| t.strip_suffix(';')) {
+            global.declaration = declaration.to_string();
+        }
+    }
+    let (text, code) = conform::spelled(dependencies);
+    uses_code |= code;
+    *dependencies = text;
+    if let Some(gp) = gp {
+        let mut sizes = conform::Decls::new();
+        sizes.add_source(&opts.context);
+        let names = conform::gp_arrays(
+            globals
+                .iter()
+                .filter(|global| !opts.declared.contains(&global.name))
+                .map(|global| (global.name.as_str(), global.declaration.as_str(), global.address)),
+            gp,
+            &sizes,
+        );
+        for global in globals.iter_mut().filter(|global| names.contains(&global.name)) {
+            global.declaration.push_str("[]");
+        }
+        body = conform::index_arrays(&body, &names);
+    }
+    // The project's header last: where it and the printed declarations disagree
+    // (the printed ones are the lines it makes the export leave out) it is right.
+    let mut decls = conform::Decls::new();
+    decls.add_source(&globals::render(globals));
+    decls.add_source(dependencies);
+    decls.remember_printed();
+    decls.add_source(&opts.context);
+    decls.zero_compare = opts.compiler.starts_with("msvc");
+    decls.string_ops = opts.compiler.starts_with("msvc");
+    decls.void_pointer_arithmetic = crate::compiler::rules::applies(
+        "mwcc-void-pointer-arithmetic",
+        &crate::compiler::rules::Ctx::new(&opts.compiler, "", ""),
+    );
+    let body = conform::apply(&body, &decls);
+    imports::stdcall_calls(body, globals, &opts.stdcall_imports, uses_code)
 }
 
 /// Best-effort function name for the stack-struct title: the last
@@ -860,6 +1102,38 @@ mod tests {
             "void sample(void) {}".into(), TempNamer::new(), &[], &[], "", &[], &[], Vec::new(), &opts,
         );
         assert!(!clean.irregular);
+    }
+
+    #[test]
+    fn only_decimal_floating_literals_take_the_single_precision_suffix() {
+        for text in ["0.5", "-500.0", "800.0", "1e-3", "3.25"] {
+            assert!(is_unsuffixed_float_literal(text), "{text}");
+        }
+        for text in ["0x40", "12", "0.5f", "x.5", "", "-", "temp_f0"] {
+            assert!(!is_unsuffixed_float_literal(text), "{text}");
+        }
+    }
+
+    #[test]
+    fn a_header_declares_the_names_the_export_leaves_out() {
+        let header = "#ifndef X\n#define X\ntypedef unsigned int u32;\nextern u32 gRngValue;\n\
+            extern const unsigned char sDigits[];\nu16 Random(void);\nvoid *memset(void *s, int c, u32 n);\n#endif\n";
+        let declared = declared_names(header);
+        assert_eq!(
+            declared.iter().map(String::as_str).collect::<Vec<_>>(),
+            ["Random", "gRngValue", "memset", "sDigits"]
+        );
+        let text = "extern int gRngValue; /* 0x3005d80 */\nextern int other;\nextern unsigned short Random(void);\n";
+        assert_eq!(without_declared(text, &declared), "extern int other;\n");
+    }
+
+    #[test]
+    fn a_table_of_function_pointers_is_a_declared_name() {
+        let header = "extern void (*BCommJmpTbl[])(ENE_WRK *ew);\nextern void (*handler)(int);\nextern int plain;\n";
+        let declared = declared_names(header);
+        assert_eq!(declared.iter().map(String::as_str).collect::<Vec<_>>(), ["BCommJmpTbl", "handler", "plain"]);
+        let text = "extern unsigned char BCommJmpTbl[84]; /* 0x322720 */\nextern int other;\n";
+        assert_eq!(without_declared(text, &declared), "extern int other;\n");
     }
 
     #[test]

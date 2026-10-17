@@ -3,8 +3,11 @@
 //! thin CLI on top; interactive/session consumers use this library so the
 //! same protocol code serves the CLI, the worker pool, and the UI runtime.
 pub mod doc;
+mod layout;
 mod prototype;
+pub mod printc;
 pub mod provider;
+pub mod struct_types;
 mod semantic;
 pub mod specs;
 pub mod structure;
