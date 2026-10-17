@@ -1,0 +1,15 @@
+# Your retail image and everything derived from it stay out of version control.
+/orig/
+/build/
+/asm/
+/assets/
+/*.ld
+/undefined_syms_auto.txt
+/undefined_funcs_auto.txt
+/.splache
+/build.ninja
+/.ninja_*
+/.romwright/
+/config/toolchain.local.json
+/decompiled/
+__pycache__/

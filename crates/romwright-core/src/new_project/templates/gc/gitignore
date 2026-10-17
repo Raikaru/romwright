@@ -1,0 +1,9 @@
+# Your retail files and everything derived from them stay out of version control.
+/orig/
+/build/
+/build.ninja
+/.ninja_*
+/.romwright/
+/config/toolchain.local.json
+/decompiled/
+__pycache__/

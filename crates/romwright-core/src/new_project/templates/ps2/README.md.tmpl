@@ -1,0 +1,82 @@
+# {{NAME}}
+
+A decompilation project for the PlayStation 2 executable `{{IMAGE}}`
+(sha1 `{{SHA1}}`), bootstrapped by `romwright new-project` (romwright {{ROMWRIGHT}}).
+
+The retail image is not part of this repository and neither is anything
+derived from its bytes (`asm/`, `assets/`, `build/` are ignored): put your own
+dump at `orig/{{IMAGE}}` and the project rebuilds it.
+
+## Quick start
+
+```sh
+python3 -m pip install -r requirements.txt   # splat64 {{SPLAT}} and ninja
+python3 configure.py                         # fetch tools, split the image, write build.ninja
+ninja                                        # build, link, compare with the retail sha1
+```
+
+A fresh project builds the whole image from assembly and the last step prints
+`OK build/{{IMAGE}} sha1 {{SHA1}}`. If it ever prints `MISMATCH`, the message
+names the first differing offset, its address and the function containing it.
+
+## What was detected
+
+{{DETECTED}}
+
+{{EVIDENCE}}
+{{FAMILY_NOTE}}
+
+Compiler profile: `{{COMPILER}}` ({{KIND}}). Flags are in
+`config/project.json` (`compiler.cflags`); they are a starting point, not
+calibrated for this game.
+
+## Tools
+
+`config/toolchain.json` pins every tool this project downloads: URL, sha256,
+version, license and where the bytes came from. `configure.py` fetches them into
+`build/tools/` with `tools/download_tool.py` (standard library only), checking the
+sha256 before anything is extracted or run. romwright itself downloads nothing.
+
+* The MWCC PS2 compilers are proprietary, and the ee-gcc builds are third-party
+  archives of unverified build provenance (GCC itself is GPL; the bundled Sony and
+  SN Systems parts may not be). They are fetched from the decomp.me compilers
+  project's release assets; use them only if you are entitled to. Nothing in this
+  repository grants that right.
+* To use tools you already have, write a toolchain profile (JSON, the format in
+  romwright's `docs/toolchains.md`) and pass `python3 configure.py --toolchain profile.json`,
+  or save it as `config/toolchain.local.json` (ignored by git). Each tool the
+  profile names (`compiler`, `as`, `ld`, `objcopy`, `wibo`, `objdiff-cli`) replaces the
+  downloaded one; the rest still come from the manifest.
+* `--manifest FILE` substitutes another manifest, e.g. one whose URLs are
+  `file://` copies for an offline machine.
+
+## Decompiling a function
+
+Every function is its own `asm/main/NNNN/<name>.s` ({{ASM_UNITS}} of them). To replace one
+with C:
+
+```sh
+python3 configure.py swap <name-or-0xADDRESS> [--src my_function.c]
+# edit src/main/NNNN/<name>.c until `ninja` is green again
+```
+
+`swap` changes that function's entry in `config/{{IMAGE}}.yaml` from `asm` to `c`
+and creates `src/main/NNNN/<name>.c`; the next `ninja` compiles it into the same
+slot of the link. The C file must produce exactly the retail bytes of the function
+(it is a whole-function replacement, not an `INCLUDE_ASM` file). `include/romwright_types.h`
+has the base types and `include/romwright_protos.h` the prototypes romwright recovered.
+`objdiff.json` lists every C unit with its retail target object, so objdiff shows the
+difference while you work and `ninja progress` writes `build/report.json`.
+
+## Layout
+
+| Path | What |
+| --- | --- |
+| `config/{{IMAGE}}.yaml` | splat config: the whole file split into header, code and trailer segments |
+| `config/symbol_addrs.txt` | names, addresses and sizes romwright recovered |
+| `config/undefined_syms.txt` | absolute names for data the link cannot find an object for |
+| `config/checksum.sha1` | the retail sha1 `ninja` checks against |
+| `config/project.json` | project facts: image, layout, compiler evidence and flags |
+| `include/` | base types and recovered prototypes |
+| `src/` | your C units |
+| `decompiled/` | optional non-matching reference C from romwright (`--decompile`), not built |

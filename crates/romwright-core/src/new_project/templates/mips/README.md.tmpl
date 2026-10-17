@@ -1,0 +1,70 @@
+# {{NAME}}
+
+A decompilation project for the {{PLATFORM}} image `{{IMAGE}}`
+(sha1 `{{SHA1}}`), bootstrapped by `romwright new-project` (romwright {{ROMWRIGHT}}).
+
+The retail image is not part of this repository and neither is anything
+derived from its bytes (`asm/`, `assets/`, `build/` are ignored): put your own
+dump at `orig/{{IMAGE}}` and the project rebuilds it.
+
+## Quick start
+
+```sh
+python3 -m pip install -r requirements.txt   # splat64 {{SPLAT}} and ninja
+python3 configure.py                         # fetch tools, split the image, write build.ninja
+ninja                                        # build, link, compare with the retail sha1
+```
+
+A fresh project builds the whole image from assembly and the last step prints
+`OK build/{{IMAGE}} sha1 {{SHA1}}`. If it ever prints `MISMATCH`, the message
+names the first differing offset, its address and the function containing it.
+
+## What was detected
+
+{{DETECTED}}
+
+{{EVIDENCE}}
+The version is the detector's default for that evidence class, not a proof of the exact
+build; if a function will not match at any flag set, try the neighbouring compilers in
+`config/toolchain.json` (`--compiler ID` at generation time lists the known ones).
+
+Compiler profile: `{{COMPILER}}` ({{KIND}}). Flags are in `config/project.json`
+(`compiler.cflags`); they are a starting point, not calibrated for this game.
+
+{{NOTES}}
+## Tools
+
+`config/toolchain.json` pins every tool this project downloads: URL, sha256,
+version, license and where the bytes came from. `configure.py` fetches them into
+`build/tools/` with `tools/download_tool.py` (standard library only), checking the
+sha256 before anything is extracted or run. romwright itself downloads nothing.
+
+* The assembler, linker and objcopy are GNU binutils 2.40 (GPL) from decompals'
+  release, which accepts `-EB`/`-EL` and the MIPS ISA levels these platforms use.
+* The compilers are proprietary or third-party builds of unverified provenance
+  (IDO, PSY-Q, Metrowerks) or GPL builds (gcc). They are fetched from the release
+  assets the decomp.me compilers images use; use them only if you are entitled to.
+  Nothing in this repository grants that right.
+* To use tools you already have, write a toolchain profile (JSON, the format in
+  romwright's `docs/toolchains.md`) and pass `python3 configure.py --toolchain profile.json`,
+  or save it as `config/toolchain.local.json` (ignored by git).
+* `--manifest FILE` substitutes another manifest, e.g. one whose URLs are
+  `file://` copies for an offline machine.
+
+## Decompiling a function
+
+Every function is its own `asm/<segment>/NNNN/<name>.s` ({{ASM_UNITS}} of them). To replace one
+with C:
+
+```sh
+python3 configure.py swap <name-or-0xADDRESS> [--src my_function.c]
+# edit src/<segment>/NNNN/<name>.c until `ninja` is green again
+ninja progress                               # objdiff report (build/report.json)
+```
+
+`romwright-cli match <name-or-0xADDRESS> [--write]` run in this directory tries alternative
+printings of the function with this project's compiler and flags and keeps the closest.
+
+Limits of this project:
+
+{{LIMITS}}

@@ -1,0 +1,38 @@
+# {{NAME}}
+
+A per-function decompilation workspace for the Windows executable `{{IMAGE}}` (sha256 `{{SHA256}}`), written by romwright {{ROMWRIGHT}} (`romwright-cli new-project`).
+
+**This repository does not rebuild `{{IMAGE}}`.** A PC game is linked from objects, a vendor C runtime and import libraries that are not recovered here, so there is no whole-executable checksum to hit. What there is, per function, is the retail bytes, romwright's decompiled C, a pinned compiler of the right era, and objdiff to compare them. That is the model reccmp-based projects use, and the `// FUNCTION: {{PROJECT_UPPER}} 0xADDRESS` line in every source file is the annotation reccmp reads.
+
+## What is here
+
+* `src/<shard>/<function>.c` ({{UNITS}} files): romwright's decompiled C, one function per file, marked `NON_MATCHING`. It reads the retail function; it does not reproduce its bytes until `build.py report` says so.
+* `orig/target/<shard>/<function>.obj`: each function's retail bytes as an i386 COFF object, with the relocations a compiler would have left: {{CALL_RELOCS}} direct calls/jumps to other functions (`REL32`) and {{DATA_RELOCS}} absolute operands that name a function or data location (`DIR32`, data as `DAT_<address>` unless the image names it). An operand romwright did not recognise stays retail bytes and shows as a difference.
+* `include/romwright_types.h`: the type names decompiled C uses, as Visual C++ parses them (`__int64` for the 64-bit integers). `include/protos.h`: the recovered prototypes with their calling conventions (`__stdcall`, `__fastcall`; `__thiscall` is left out, Visual C's C mode has no such keyword).
+* `config/project.json` (units, compiler, flags), `config/functions.tsv` (address, size, name, convention, files), `config/symbols.txt` ({{SYMBOLS}} symbols: functions, labels, imports), `config/toolchain.json` (the pinned tools).
+* `objdiff.json`: one unit per function; open this directory in the objdiff GUI, or let `build.py report` score everything.
+* `configure.py`, `build.py`: below.
+
+## Compiler
+
+`{{COMPILER}}` with `{{FLAGS}}`. {{COMPILER_WHY}} (romwright's detector said `{{DETECTED}}`; the flags are the era's usual release flags, not calibrated to this game: pass the ones the game was built with to `configure.py --flags`).
+
+The Visual C++ compilers are proprietary (hosted by the decomp.me compilers project's sources; pinned by sha256 in `config/toolchain.json`); romwright downloads nothing. `configure.py` fetches the pins, verifies each digest, and runs `cl.exe` through `wibo`.
+
+## Quick start
+
+```sh
+python3 configure.py              # fetch the pinned compiler, wibo, objdiff-cli
+python3 build.py                  # compile every unit with the era's compiler -> build/obj/
+python3 build.py report           # objdiff per-function match percentages -> build/progress.{json,tsv}
+```
+
+`build.py report` prints how many functions compile, how many match exactly (objdiff 100%), how many reach 90%, and writes `build/progress.tsv` (per function: percent, status `matched`/`near`/`non-matching`). A matched function is ready to lose its `NON_MATCHING` marker; the rest is yours: rewrite the C until the compiler of the era reproduces the bytes.
+
+**Reading objdiff here.** The retail side of each unit is one function cut out of a linked image. Calls and jumps to other recovered functions, and absolute operands the analysis resolved, are relocations on both sides; compiler decoration (`_f@8`) is stripped from the compiled object so both sides name the function `f`. Jump tables, string literals and data accessed with an offset are not relocated the same way and show as differences. A decompilation this far from the original source will rarely reach 100% untouched: objdiff is a way to compare, not a pass/fail gate.
+
+## Limits
+
+* No whole-image rebuild and no `sha1` to verify: the match is per function.
+* `__thiscall` (C++ member) functions: Visual C++'s C compiler has no such keyword, so the definition is written `__fastcall` with an unused `edx` parameter after `this` (the same prologue and `ret N`); their callers are not rewritten, so a caller's stack cleanup can differ.
+* The compiler era is a default for the linker version in the image; a game that mixes libraries from other eras, or was built with `/G5`, `/Ob2`, `/GL` or other flags, needs `configure.py --flags`.

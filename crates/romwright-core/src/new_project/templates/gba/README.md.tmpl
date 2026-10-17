@@ -1,0 +1,81 @@
+# {{NAME}}
+
+A decompilation project for the Game Boy Advance ROM `{{IMAGE}}`
+(sha1 `{{SHA1}}`), bootstrapped by `romwright new-project` (romwright {{ROMWRIGHT}}).
+
+The retail ROM is not part of this repository and neither is anything derived
+from its bytes (`asm/`, `build/` are ignored): put your own dump at
+`orig/{{IMAGE}}` and the project rebuilds it.
+
+## Quick start
+
+```sh
+python3 -m pip install -r requirements.txt   # ninja
+python3 configure.py                         # fetch tools, write the link script and build.ninja
+ninja                                        # assemble, link, compare with the retail sha1
+```
+
+A fresh project builds the whole ROM from assembly and the last step prints
+`OK build/{{IMAGE}} sha1 {{SHA1}}`. If it ever prints `MISMATCH`, the message
+names the first differing offset, its address and the unit containing it.
+
+## What was detected
+
+{{DETECTED}}
+
+{{EVIDENCE}}
+The compiler is a default for that evidence class, not a proof of the exact build:
+agbcc is the compiler pret's GBA decompilations reproduce, and `pret/agbcc` also
+ships `old_agbcc` and `agbcc_arm` (some games need one of them; set
+`compiler.cflags` or swap the binary with a toolchain profile).
+
+## Tools
+
+`config/toolchain.json` pins every tool this project downloads: URL, sha256,
+version, license and where the bytes came from. `configure.py` fetches them into
+`build/tools/` with `tools/download_tool.py` (standard library only), checking the
+sha256 before anything is extracted or run. romwright itself downloads nothing.
+
+* `binutils-arm-none-eabi` is the Arm GNU Toolchain (GCC and binutils, GPL); the
+  project only runs `as`, `ld`, `objcopy` and `cpp` from it.
+* `agbcc` is the `pret/agbcc` release binary (GCC 2.95-derived, GPL; the release
+  has no license file of its own). Nintendo's AGB SDK headers in it are
+  Nintendo's. Use it only if you are entitled to.
+* To use tools you already have, write a toolchain profile (JSON, the format in
+  romwright's `docs/toolchains.md`) and pass `python3 configure.py --toolchain profile.json`,
+  or save it as `config/toolchain.local.json` (ignored by git). The tool keys are
+  `as`, `ld`, `objcopy`, `cpp`, `compiler` (agbcc) and `objdiff-cli`.
+
+## Decompiling a function
+
+Every function is its own `asm/main/NNNN/<name>.s` ({{ASM_UNITS}} of them), in
+GNU `as` unified syntax, with its literal pool as labelled `.4byte`s. To replace one
+with C:
+
+```sh
+python3 configure.py swap <name-or-0xADDRESS> [--src my_function.c]
+# edit src/main/NNNN/<name>.c until `ninja` is green again
+```
+
+`swap` turns the unit's entry in `config/units.json` from `asm` into `c`; the next
+`ninja` compiles it (cpp, then agbcc, then `as`) and links its `.text` into the
+same slot. A C unit that is longer than its slot stops the link ("cannot move
+location counter backwards"); literals and data it emits are not linked (the retail
+bytes are already in the ROM), so it can only name symbols by `extern`.
+`include/romwright_types.h` has the base types and `include/romwright_protos.h` the
+prototypes romwright recovered. `objdiff.json` lists every C unit with its retail
+target object; `ninja progress` writes `build/report.json`.
+
+## Layout
+
+| Path | What |
+| --- | --- |
+| `config/units.json` | the whole ROM as units: header, asm functions, data ranges, C units |
+| `config/symbols.txt` | names, addresses, sizes and modes romwright recovered |
+| `config/symbols.ld` | absolute names for data no object defines |
+| `config/header.json` | cartridge header fields; `tools/header.py` writes `asm/header.s` and computes the complement check |
+| `config/checksum.sha1` | the retail sha1 `ninja` checks against |
+| `config/project.json` | project facts: image, compiler evidence and flags |
+| `include/` | base types, recovered prototypes, assembly macros |
+| `src/` | your C units |
+| `decompiled/` | optional non-matching reference C from romwright (`--decompile`), not built |

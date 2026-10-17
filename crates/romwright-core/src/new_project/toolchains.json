@@ -1,0 +1,1606 @@
+{
+ "schema": 1,
+ "revision": "2026-10-15",
+ "note": "Pinned tool sources for generated projects (see docs/new-project.md). romwright never downloads or bundles these; the generated configure.py fetches and verifies them. Edit this file to update pins; every asset needs url, sha256, size and archive (raw|tar.gz|tar.xz|zip).",
+ "tools": [
+  {
+   "id": "binutils-mips-ps2-decompals",
+   "version": "v0.10",
+   "role": "binutils",
+   "platform": "ps2",
+   "provides": {
+    "as": "mips-ps2-decompals-as",
+    "ld": "mips-ps2-decompals-ld",
+    "objcopy": "mips-ps2-decompals-objcopy",
+    "objdump": "mips-ps2-decompals-objdump",
+    "readelf": "mips-ps2-decompals-readelf",
+    "ar": "mips-ps2-decompals-ar",
+    "nm": "mips-ps2-decompals-nm",
+    "strip": "mips-ps2-decompals-strip"
+   },
+   "license": "GPL-3.0-or-later (GNU Binutils 2.40 with decompals PS2 patches)",
+   "provenance": "https://github.com/decompals/binutils-mips-ps2-decompals release v0.10 (2026-06-04); sha256 computed by downloading the release assets (the release publishes no digests)",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/binutils-mips-ps2-decompals/releases/download/v0.10/binutils-mips-ps2-decompals-linux-x86-64.tar.gz",
+     "sha256": "9fe31ea3ee1a37536f9f0e2e12c668e7c3cb99e59f5154bd2f1fc4762473094c",
+     "size": 7547265,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/binutils-mips-ps2-decompals/releases/download/v0.10/binutils-mips-ps2-decompals-macos-arm64.tar.gz",
+     "sha256": "948cc736e01b2c135168caabfb616f6ed8efe89f1dad1ed8ef1ca74acb1b742c",
+     "size": 6258397,
+     "archive": "tar.gz"
+    },
+    "windows-x86_64": {
+     "url": "https://github.com/decompals/binutils-mips-ps2-decompals/releases/download/v0.10/binutils-mips-ps2-decompals-windows-x86-64.zip",
+     "sha256": "2bb5904ee174e04f1600cc70ffdb3dc36b0efa4d1892ea446be588ba8dc6198c",
+     "size": 7547922,
+     "archive": "zip"
+    }
+   }
+  },
+  {
+   "id": "wibo",
+   "version": "1.2.0",
+   "role": "runtime",
+   "platform": "any",
+   "provides": {
+    "wibo": "wibo"
+   },
+   "license": "MIT",
+   "provenance": "https://github.com/decompals/wibo release 1.2.0; sha256 as published by GitHub release asset digests",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/wibo/releases/download/1.2.0/wibo-x86_64",
+     "sha256": "13f86a2d618f0dbe67179d349625345eabf9b46450295cb4c904e49f6aff85af",
+     "size": 7256672,
+     "archive": "raw"
+    },
+    "linux-i686": {
+     "url": "https://github.com/decompals/wibo/releases/download/1.2.0/wibo-i686",
+     "sha256": "2575d3b0a2f408b2c2b0850db56f1af5d005a138394a6774eba77b6708ecc304",
+     "size": 7172552,
+     "archive": "raw"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/decompals/wibo/releases/download/1.2.0/wibo-macos",
+     "sha256": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",
+     "size": 4682736,
+     "archive": "raw"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/wibo/releases/download/1.2.0/wibo-macos",
+     "sha256": "2b3000ef6a7a490c24ccd71967735ae0005e218922e51806cca1b8d77fd3cf7c",
+     "size": 4682736,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "objdiff-cli",
+   "version": "v3.6.1",
+   "role": "report",
+   "platform": "any",
+   "provides": {
+    "objdiff-cli": "objdiff-cli"
+   },
+   "license": "Apache-2.0 OR MIT",
+   "provenance": "https://github.com/encounter/objdiff release v3.6.1; sha256 as published by GitHub release asset digests",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-x86_64",
+     "sha256": "72688707d5a7f30daebf5a4f65f74c6dab17ee6e09a230a187e327900345eecf",
+     "size": 6536112,
+     "archive": "raw"
+    },
+    "linux-aarch64": {
+     "url": "https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-linux-aarch64",
+     "sha256": "bcb10a52f35f5639aa96600e75dbd9bbe99de9dbfdd5443d70b21b4f744979f9",
+     "size": 5831616,
+     "archive": "raw"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-macos-arm64",
+     "sha256": "4ef0896ba8986f1adea6202d6e52a471deb1d126b071d23e88e8c00c250da7fd",
+     "size": 6480016,
+     "archive": "raw"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-macos-x86_64",
+     "sha256": "59a4ee9d2fa0369c9cb76d579564aec8c9bfcce16d51acccdb872a80d4b14de8",
+     "size": 6916640,
+     "archive": "raw"
+    },
+    "windows-x86_64": {
+     "url": "https://github.com/encounter/objdiff/releases/download/v3.6.1/objdiff-cli-windows-x86_64.exe",
+     "sha256": "c1e418ebbedb1f6392ed1098c14423c48fab70f0b0f4094299b05a03d36773ae",
+     "size": 7013888,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-990721",
+   "version": "gcc2.9-990721",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-990721.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:21:20Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-990721.tar.xz",
+     "sha256": "ad2ea68afff2be25d21a1d51a75e8a0eea8f259018e6580622355cd01b95676b",
+     "size": 2171180,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-991111-01-dtls13010",
+   "version": "gcc2.9-991111-01-dtls13010",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-991111-01-dtls13010.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-04-10T08:31:38Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-991111-01-dtls13010.tar.gz",
+     "sha256": "3ab52a7ea962100f2a7df3e04d3e7a758aad669eb365251682e769b755d9d586",
+     "size": 5319436,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-991111-01",
+   "version": "gcc2.9-991111-01",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-991111-01.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:26:14Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-991111-01.tar.xz",
+     "sha256": "ed684fd98f89d36b0121caab311052089103e3b36241fcef4338cc9ea41c75b8",
+     "size": 2174148,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-991111",
+   "version": "gcc2.9-991111",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "bin/ee-gcc.exe",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-991111.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-02T19:20:36Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-991111.tar.gz",
+     "sha256": "9ebbb042eb1e5d33d772293c5e9286a54dbec29865a3d7fbb398c97436f33583",
+     "size": 3494403,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-991111-i386",
+   "version": "gcc2.9-991111",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-991111.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:21:21Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-991111.tar.xz",
+     "sha256": "99cb5db603cd985b50fc6851157020ad69489f2227309ccf825bd43ac7bc19dd",
+     "size": 2170168,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.9-991111a",
+   "version": "gcc2.9-991111a",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.9-991111a.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:22:14Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.9-991111a.tar.xz",
+     "sha256": "f07d1f38afa847197fb816237dbce64e79b2d37b738cb93fa4df3ac7aa1d16f3",
+     "size": 2170052,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.95.2-273a",
+   "version": "gcc2.95.2-273a",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "bin/ee-gcc.exe",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.95.2-273a.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-11-26T14:55:53Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.95.2-273a.tar.gz",
+     "sha256": "ee9d9a7fccb59aebfa78a5587f6f8059660b91f705acddbc292ad2243c8e562e",
+     "size": 2387864,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.95.3-114",
+   "version": "gcc2.95.3-114",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "bin/ee-gcc.exe",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.95.3-114.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-11-26T14:55:51Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.95.3-114.tar.gz",
+     "sha256": "dbc2c8c764631788d4cbb4c848c3cb0002fded0f4a95bae39e6d8b794391a6cb",
+     "size": 2358901,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.95.3-136",
+   "version": "gcc2.95.3-136",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "bin/ee-gcc.exe",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.95.3-136.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-11-26T14:55:49Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.95.3-136.tar.gz",
+     "sha256": "3b6ae6897229ad005aaf1b0afaa1f3cb46e74b4c21a42e01130c07c0c598067f",
+     "size": 2394639,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc2.96",
+   "version": "gcc2.96",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc2.96.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:22:09Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc2.96.tar.xz",
+     "sha256": "0590d2ca9da8f5903889d66761220d14b47a8d14ba987ca53db84a1650a1fd0a",
+     "size": 2754768,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc3.2-030210-beta2",
+   "version": "gcc3.2-030210-beta2",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "bin/ee-gcc.exe",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc3.2-030210-beta2.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-02-10T21:47:52Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc3.2-030210-beta2.tar.gz",
+     "sha256": "5244521973d3fa9712cc9f945e6e45c489d69d846ca6639b0c07c3e885a923a1",
+     "size": 7870231,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc3.2-030926",
+   "version": "gcc3.2-030926",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc3.2-030926.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2025-02-10T20:49:28Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc3.2-030926.tar.gz",
+     "sha256": "6b92b61e40f80835b165d14fadd57d4046dbee82195599f791626180fe79b8e9",
+     "size": 11747681,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ee-gcc3.2-040921",
+   "version": "gcc3.2-040921",
+   "role": "compiler",
+   "family": "ee-gcc",
+   "platform": "ps2",
+   "runtime": "i386-linux",
+   "entry": "bin/ee-gcc",
+   "license": "GCC for the Emotion Engine is GPL-2.0 (Sony/SCEI source release); this binary build is a third-party archive hosted by the decomp.me compilers project and its build is not independently verified. Bundled assemblers/linker/libraries may be proprietary Sony or SN Systems software.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset ee-gcc3.2-040921.tar.xz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-07-16T19:22:00Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/ee-gcc3.2-040921.tar.xz",
+     "sha256": "8c60ca7482523190e999524a7e4de2379dcf7ffee543c1b5663bfdf6a80ebf0f",
+     "size": 3857776,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-2.3.3-000906",
+   "version": "2.3.3-000906",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-2.3.3-000906.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-20T19:14:15Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-2.3.3-000906.tar.gz",
+     "sha256": "c2a4e463f8f7b324350d6bfb26d6daed83f4d5cb46df8b20dcfec8617b22ad5d",
+     "size": 1181298,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-2.4-001213",
+   "version": "2.4-001213",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-2.4-001213.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-20T19:14:15Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-2.4-001213.tar.gz",
+     "sha256": "0ebe09436b4163c3a109b0431517281501d2de1bd5a0b049d33057710a943e3e",
+     "size": 1216571,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0-011126",
+   "version": "3.0-011126",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0-011126.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-03-18T19:43:13Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0-011126.tar.gz",
+     "sha256": "b83fef398fd765aaeb48576dae0fa0751bf9c1496036d0d878e7a2a0e71c2a7f",
+     "size": 1064442,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1-020123",
+   "version": "3.0.1-020123",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1-020123.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-03-18T19:43:12Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1-020123.tar.gz",
+     "sha256": "72d823d85943c92ca13378e93d56ac1870298ccbfda0ef8a2efb9650692e968c",
+     "size": 1065101,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b103-040528",
+   "version": "3.0.1b103-040528",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b103-040528.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-19T07:55:42Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b103-040528.tar.gz",
+     "sha256": "a6db36760445e18da840bda70f3e7b97dc563ba421d13651c121e8867013c0c9",
+     "size": 1583949,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b119-040914",
+   "version": "3.0.1b119-040914",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b119-040914.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:41:03Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b119-040914.tar.gz",
+     "sha256": "5c6984d5d52f21b62b6bc9161749bde7bb14e136fbee41f0f4df7fcee7b06c13",
+     "size": 1575818,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b145-050209",
+   "version": "3.0.1b145-050209",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b145-050209.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:46:00Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b145-050209.tar.gz",
+     "sha256": "d021f7d02ab63da770c13dc246637276141321ca08221ee2333a7acadf82482b",
+     "size": 2537751,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b151-050317",
+   "version": "3.0.1b151-050317",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b151-050317.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:47:51Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b151-050317.tar.gz",
+     "sha256": "5050a211954f0828cf1c0f56333943407d20f7e85bc68b23e3c539bb5d8ee947",
+     "size": 2537984,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b198-051011",
+   "version": "3.0.1b198-051011",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b198-051011.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:54:23Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b198-051011.tar.gz",
+     "sha256": "436af8060249e7ea0aa2dfa98a86b4667ee3716b3384cca577c52c5b68e4934a",
+     "size": 2542222,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b205-051227",
+   "version": "3.0.1b205-051227",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b205-051227.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:54:22Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b205-051227.tar.gz",
+     "sha256": "456cdfc1894f20bcaecc627ff674222888f093c3ec37c91e4f0fe6baae3b5a9d",
+     "size": 2542401,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b210-060308",
+   "version": "3.0.1b210-060308",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b210-060308.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:53:58Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b210-060308.tar.gz",
+     "sha256": "456746b70862a744a0be75585a4e163a142111843661cbb7e483230dd85502c5",
+     "size": 2542538,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b44-030325",
+   "version": "3.0.1b44-030325",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b44-030325.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-19T07:40:59Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b44-030325.tar.gz",
+     "sha256": "90d99e3e6272369215b317548fe2626694aa1ead57cec0251f7343d266d9b0ed",
+     "size": 1361303,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b51-030512",
+   "version": "3.0.1b51-030512",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b51-030512.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-20T18:59:31Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b51-030512.tar.gz",
+     "sha256": "985fce55737848ce46c145cd357df247a3cd12d1c944d8cc325cfe46cde5a124",
+     "size": 1362919,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b74-030811",
+   "version": "3.0.1b74-030811",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b74-030811.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:01:10Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b74-030811.tar.gz",
+     "sha256": "5c14bea69f68cf46498a4eab3e18ea89aff289e6e12c613c55ff2d05b06dd23c",
+     "size": 1544882,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b75-030916",
+   "version": "3.0.1b75-030916",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b75-030916.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-19T07:55:54Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b75-030916.tar.gz",
+     "sha256": "f665dc6ce76f3551097a87cd1c36672d93cd23b10021ca412fbd23d38e3444d8",
+     "size": 1544930,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b87-031208",
+   "version": "3.0.1b87-031208",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b87-031208.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:02:48Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b87-031208.tar.gz",
+     "sha256": "3718581319518c9a3cece4ded2951a5e7828123c069c9bbc4d854e8b1c46b718",
+     "size": 1467894,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.1b95-040309",
+   "version": "3.0.1b95-040309",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.1b95-040309.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T13:37:44Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.1b95-040309.tar.gz",
+     "sha256": "6f9357a1e74b48e43466c8bcb7af9b1b3d69fa870eb9b37269708cd579351bbc",
+     "size": 2004191,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0.3-020716",
+   "version": "3.0.3-020716",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0.3-020716.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-03-18T19:43:13Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0.3-020716.tar.gz",
+     "sha256": "63f89baae691403294724178efbcfc9e1b9ac48151536b6a321b17eb8f9970e5",
+     "size": 1064904,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0b38-030307",
+   "version": "3.0b38-030307",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0b38-030307.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-19T07:35:19Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0b38-030307.tar.gz",
+     "sha256": "db3d0606c77d4335d2ad884a1285a4bc3b9e68cdd6161dd46d6e2a2cd3313276",
+     "size": 1237047,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0b50-030527",
+   "version": "3.0b50-030527",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0b50-030527.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-19T07:37:09Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0b50-030527.tar.gz",
+     "sha256": "74afc8c7cc13d129d3da205ebaed749a3f5eb789a321c7a669709f11d3d7c653",
+     "size": 1239131,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwcps2-3.0b52-030722",
+   "version": "3.0b52-030722",
+   "role": "compiler",
+   "family": "mwcc-ps2",
+   "platform": "ps2",
+   "runtime": "wibo",
+   "entry": "mwccps2.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for PlayStation 2). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwcps2-3.0b52-030722.tar.gz; the release tag is mutable, so the sha256 below pins the bytes seen on 2026-10-11 (asset updated 2024-05-18T12:58:15Z)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwcps2-3.0b52-030722.tar.gz",
+     "sha256": "5c2f5f96c0a360cc6d4fc866226768f7ab9b290777bcd5cadeeba030b1d596a5",
+     "size": 1239522,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "clang-22.1.8",
+   "version": "22.1.8",
+   "role": "cross-compiler",
+   "family": "clang",
+   "platform": "scaffold",
+   "entry": "bin/clang",
+   "license": "Apache-2.0 WITH LLVM-exception",
+   "provenance": "https://github.com/llvm/llvm-project release llvmorg-22.1.8 (2026-06-16), assets LLVM-22.1.8-Linux-X64 / Linux-ARM64 / macOS-ARM64 .tar.xz; sha256 as published by the GitHub release asset digests. One clang compiles for ARM, AArch64, x86-64 and PowerPC (`--target=`), so the non-matching scaffolds (3DS, Switch, PS3, PS4, Vita, Xbox 360) use it to check that their decompiled C compiles. The archive holds a single top-level directory; the compiler is `<that directory>/bin/clang`.",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-Linux-X64.tar.xz",
+     "sha256": "df0e1ecf16caf3489a272a5eea4eec9b0d82878f6477fa309504f918a0006384",
+     "size": 1938859476,
+     "archive": "tar.xz"
+    },
+    "linux-aarch64": {
+     "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-Linux-ARM64.tar.xz",
+     "sha256": "805efad2bb91cb4967fa569e0881d10c0f69c04461cf671cccbae19f547acc34",
+     "size": 1771004928,
+     "archive": "tar.xz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/llvm/llvm-project/releases/download/llvmorg-22.1.8/LLVM-22.1.8-macOS-ARM64.tar.xz",
+     "sha256": "f260f4f7c0d430828a81ae8a3826a1d63fc0963ec2459489308cc23b1f7eab4f",
+     "size": 1479903744,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "binutils-arm-none-eabi",
+   "version": "13.3.rel1",
+   "role": "binutils",
+   "platform": "gba",
+   "provides": {
+    "as": "*/bin/arm-none-eabi-as",
+    "ld": "*/bin/arm-none-eabi-ld",
+    "objcopy": "*/bin/arm-none-eabi-objcopy",
+    "objdump": "*/bin/arm-none-eabi-objdump",
+    "readelf": "*/bin/arm-none-eabi-readelf",
+    "nm": "*/bin/arm-none-eabi-nm",
+    "cpp": "*/bin/arm-none-eabi-cpp"
+   },
+   "license": "GPL-3.0-or-later (GNU Binutils 2.42 and GCC 13.3 as built and distributed by Arm; the archive also holds newlib under its own licenses)",
+   "provenance": "https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads release 13.3.rel1 (binrel); sha256 as published in the `.sha256asc` file next to each archive. The archive has one version-named top directory, so members are globs (`*/bin/arm-none-eabi-as`). The whole archive (about 150 MB) is extracted; the project runs as, ld, objcopy and cpp.",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz",
+     "sha256": "95c011cee430e64dd6087c75c800f04b9c49832cc1000127a92a97f9c8d83af4",
+     "size": 147343268,
+     "archive": "tar.xz"
+    },
+    "linux-aarch64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-aarch64-arm-none-eabi.tar.xz",
+     "sha256": "c8824bffd057afce2259f7618254e840715f33523a3d4e4294f471208f976764",
+     "size": 145688708,
+     "archive": "tar.xz"
+    },
+    "macos-arm64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-darwin-arm64-arm-none-eabi.tar.xz",
+     "sha256": "fb6921db95d345dc7e5e487dd43b745e3a5b4d5c0c7ca4f707347148760317b4",
+     "size": 128649856,
+     "archive": "tar.xz"
+    },
+    "macos-x86_64": {
+     "url": "https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-darwin-x86_64-arm-none-eabi.tar.xz",
+     "sha256": "1ab00742d1ed0926e6f227df39d767f8efab46f5250505c29cb81f548222d794",
+     "size": 138514276,
+     "archive": "tar.xz"
+    }
+   }
+  },
+  {
+   "id": "agbcc",
+   "version": "pret/agbcc release (2026-01-20 asset)",
+   "role": "compiler",
+   "family": "agbcc",
+   "platform": "gba",
+   "entry": "bin/agbcc",
+   "license": "GPL-2.0 (agbcc is GCC 2.95 with the AGB patches; the repository has no separate license file for the release); include/ and lib/ carry Nintendo AGB SDK headers and newlib, under their own terms",
+   "provenance": "https://github.com/pret/agbcc release `release` (tag from 2023-09-03; the asset was replaced 2026-01-20, so the tag is mutable and the sha256 pins these bytes): agbcc.tar.gz holds bin/agbcc, bin/old_agbcc, bin/agbcc_arm, include/ and lib/ (x86-64 Linux, dynamically linked). decomp.me's `gba/agbcc` compiler is built from this same URL; GitHub reports the asset digest sha256:bcf0197e... .",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/pret/agbcc/releases/download/release/agbcc.tar.gz",
+     "sha256": "bcf0197e3e27d8e08506a142e25fa68ea7f6679a98347a6406804eb3f9ff4d29",
+     "size": 5100773,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "dtk",
+   "version": "v1.8.4",
+   "role": "splitter",
+   "platform": "gc",
+   "provides": {
+    "dtk": "dtk"
+   },
+   "license": "MIT OR Apache-2.0 (encounter/decomp-toolkit)",
+   "provenance": "https://github.com/encounter/decomp-toolkit release v1.8.4 (the version dtk-template pins by tag); sha256 as published by GitHub release asset digests",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-linux-x86_64",
+     "sha256": "7c86b1994401bde0cad1d308e6c04cccb65e85453ccc5062ac12baab3b03d320",
+     "size": 9034920,
+     "archive": "raw"
+    },
+    "linux-aarch64": {
+     "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-linux-aarch64",
+     "sha256": "889a551d57916772f21a29c997579e0508f268c96bcbc946a0a66bff029cf97c",
+     "size": 8052152,
+     "archive": "raw"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-macos-arm64",
+     "sha256": "5ba1fd76adf937847277a1ebe2238b698df0020c3dbbde23ecb126f00fb10353",
+     "size": 8512048,
+     "archive": "raw"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-macos-x86_64",
+     "sha256": "84bcab745a070bb970cf4bc0d69ddce9f6a58d5de257999ccc8adfa1567d17c9",
+     "size": 9411040,
+     "archive": "raw"
+    },
+    "windows-x86_64": {
+     "url": "https://github.com/encounter/decomp-toolkit/releases/download/v1.8.4/dtk-windows-x86_64.exe",
+     "sha256": "6a693e95aa4d30acccc673343302a4abdfa3146bd0fb15cb1a2bce924cbc782a",
+     "size": 8442880,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "sjiswrap",
+   "version": "v1.2.2",
+   "role": "runtime",
+   "platform": "gc",
+   "provides": {
+    "sjiswrap": "sjiswrap.exe"
+   },
+   "license": "MIT OR Apache-2.0 (encounter/sjiswrap)",
+   "provenance": "https://github.com/encounter/sjiswrap release v1.2.2 (a 32-bit Windows executable, run through wibo; it makes MWCC read UTF-8 sources as Shift-JIS); sha256 as published by GitHub release asset digests",
+   "assets": {
+    "any": {
+     "url": "https://github.com/encounter/sjiswrap/releases/download/v1.2.2/sjiswrap-windows-x86.exe",
+     "sha256": "01d50fa1148cfc3c3b16658c6c9b1c0d9f5324cde79ed6c09ef8353af9d63adf",
+     "size": 347648,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "mwcc-gc-wii-20251118",
+   "version": "20251118",
+   "role": "compiler",
+   "family": "mwcc-gc-wii",
+   "platform": "gc",
+   "runtime": "wibo",
+   "entry": "mwcceppc.exe",
+   "license": "Proprietary (Metrowerks CodeWarrior for GameCube and Wii). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.dev compilers bundle.",
+   "provenance": "https://files.decomp.dev/compilers_20251118.zip, the bundle dtk-template's tools/download_tool.py fetches by date tag (`compilers_<tag>.zip`, 77 MB: GC/1.0 .. GC/3.0a5.2, Wii/1.0 .. Wii/1.7, plus other platforms; only GC/ and Wii/ are extracted). The tag is a date, the file is immutable by convention; the sha256 pins the bytes seen on 2026-10-14. Each compiler is a directory `<GC|Wii>/<version>/` holding mwcceppc.exe, mwldeppc.exe, mwasmeppc.exe and lmgr326b.dll.",
+   "assets": {
+    "any": {
+     "url": "https://files.decomp.dev/compilers_20251118.zip",
+     "sha256": "69b0d4980a2eccea4ae6e70b486714b5190cb6c75e3bc7b8fb5878a8854d0d1c",
+     "size": 77332914,
+     "archive": "zip",
+     "include": [
+      "GC/",
+      "Wii/"
+     ]
+    }
+   }
+  },
+  {
+   "id": "ido5.3",
+   "version": "5.3 (ido-static-recomp v1.2)",
+   "role": "compiler",
+   "family": "ido",
+   "platform": "n64",
+   "runtime": "native",
+   "entry": "cc",
+   "license": "IDO (the SGI IRIX MIPSpro 5.3/7.1 C compiler) is proprietary SGI software; ido-static-recomp (decompals) is a static recompilation of it produced from an IDO binary, and the release tarball is a derived binary. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/decompals/ido-static-recomp release v1.2 (published 2024-11-12), assets ido-5.3-recomp-linux.tar.gz / -linux-arm / -macos, the files decomp.me's n64/ido5.3 images download; the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14. The archive is flat (cc, cfe, as0, as1, uopt, ...).",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-5.3-recomp-linux.tar.gz",
+     "sha256": "ab5c741561f80913d58c8b074771f23941a3edd312505a8ebed6d1dfeb65e506",
+     "size": 4811055,
+     "archive": "tar.gz"
+    },
+    "linux-aarch64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-5.3-recomp-linux-arm.tar.gz",
+     "sha256": "b6844c986fa65d7de4ce10b27583769a5ec7a88ae37a151f6dc66c929d3e1c92",
+     "size": 5021903,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-5.3-recomp-macos.tar.gz",
+     "sha256": "5b1ca006ee4b158ffba0422fc3f00b9b330f9036f279bae2ea1b4703317ad9c0",
+     "size": 7893662,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-5.3-recomp-macos.tar.gz",
+     "sha256": "5b1ca006ee4b158ffba0422fc3f00b9b330f9036f279bae2ea1b4703317ad9c0",
+     "size": 7893662,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "ido7.1",
+   "version": "7.1 (ido-static-recomp v1.2)",
+   "role": "compiler",
+   "family": "ido",
+   "platform": "n64",
+   "runtime": "native",
+   "entry": "cc",
+   "license": "IDO (the SGI IRIX MIPSpro 5.3/7.1 C compiler) is proprietary SGI software; ido-static-recomp (decompals) is a static recompilation of it produced from an IDO binary, and the release tarball is a derived binary. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/decompals/ido-static-recomp release v1.2 (published 2024-11-12), assets ido-7.1-recomp-linux.tar.gz / -linux-arm / -macos, the files decomp.me's n64/ido7.1 images download; the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14. The archive is flat (cc, cfe, as0, as1, uopt, ...).",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-7.1-recomp-linux.tar.gz",
+     "sha256": "0d411696e178fcca34c31c3bf02011b928d7fd9c1fa7f8bf45070e0781b58e15",
+     "size": 2967081,
+     "archive": "tar.gz"
+    },
+    "linux-aarch64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-7.1-recomp-linux-arm.tar.gz",
+     "sha256": "d74443a65b1e7c92c7853c60a80de97b40c7b374eb0565d67b754d86bbf5f123",
+     "size": 3121306,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-7.1-recomp-macos.tar.gz",
+     "sha256": "7f75570ed1ca14e6161b84b10743d440c685f27291bfbfaf87c6a82236553bc6",
+     "size": 5380998,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/decompals/ido-static-recomp/releases/download/v1.2/ido-7.1-recomp-macos.tar.gz",
+     "sha256": "7f75570ed1ca14e6161b84b10743d440c685f27291bfbfaf87c6a82236553bc6",
+     "size": 5380998,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "binutils-mips-2.6",
+   "version": "2.6 (decompals/mips-binutils-2.6)",
+   "role": "support",
+   "platform": "n64",
+   "license": "GPL-2.0-or-later (GNU binutils 2.6, built by decompals)",
+   "provenance": "https://github.com/decompals/mips-binutils-2.6 release `main`, asset binutils-2.6-linux.tar.gz / -mac.tar.gz (the `as` the KMC-style gcc 2.7.2 drives in decomp.me's n64/gcc2.7.2kmc); third-party build hosted as a GitHub release asset; the sha256 pins the bytes seen on 2026-10-14 (release assets can be replaced)",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/mips-binutils-2.6/releases/download/main/binutils-2.6-linux.tar.gz",
+     "sha256": "405a7ddb29a0b2eb472b167e8f15472223df1eff3093a5ff31d6e545d3a6c670",
+     "size": 2086122,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/mips-binutils-2.6/releases/download/main/binutils-2.6-mac.tar.gz",
+     "sha256": "9e7ab09bb1663da824d39025acec645061032f6223d39ed022f8b669a9895ba7",
+     "size": 476719,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/decompals/mips-binutils-2.6/releases/download/main/binutils-2.6-mac.tar.gz",
+     "sha256": "9e7ab09bb1663da824d39025acec645061032f6223d39ed022f8b669a9895ba7",
+     "size": 476719,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "gcc2.7.2kmc",
+   "version": "2.7.2 (decompals/mips-gcc-2.7.2)",
+   "role": "compiler",
+   "family": "gcc-mips",
+   "platform": "n64",
+   "runtime": "native",
+   "entry": "gcc",
+   "requires": [
+    "binutils-mips-2.6"
+   ],
+   "license": "GPL-2.0-or-later (GCC 2.7.2). Stands in for KMC GCC 2.7.2 (Nintendo's SDK compiler, proprietary), which it matches for the games that use it per decomp.me's n64/gcc2.7.2kmc profile.",
+   "provenance": "https://github.com/decompals/mips-gcc-2.7.2 release `main`, asset gcc-2.7.2-linux.tar.gz / -mac.tar.gz; third-party build hosted as a GitHub release asset; the sha256 pins the bytes seen on 2026-10-14 (release assets can be replaced)",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/decompals/mips-gcc-2.7.2/releases/download/main/gcc-2.7.2-linux.tar.gz",
+     "sha256": "ff3e299c1d952c0a5cb39f7790a208d0c547cf93986eb5607f820c935cedc288",
+     "size": 3445739,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/decompals/mips-gcc-2.7.2/releases/download/main/gcc-2.7.2-mac.tar.gz",
+     "sha256": "fa25cd694fc7e5e986210afd7dfa4e48f23e53a210e183e9b6851cc9e230c1f9",
+     "size": 1993506,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/decompals/mips-gcc-2.7.2/releases/download/main/gcc-2.7.2-mac.tar.gz",
+     "sha256": "fa25cd694fc7e5e986210afd7dfa4e48f23e53a210e183e9b6851cc9e230c1f9",
+     "size": 1993506,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "binutils-papermario",
+   "version": "2.6 (pmret/binutils-papermario)",
+   "role": "support",
+   "platform": "n64",
+   "license": "GPL-2.0-or-later (GNU binutils 2.6 with Paper Mario patches)",
+   "provenance": "https://github.com/pmret/binutils-papermario release `master`, asset linux.tar.gz / mac.tar.gz; third-party build hosted as a GitHub release asset; the sha256 pins the bytes seen on 2026-10-14 (release assets can be replaced)",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/pmret/binutils-papermario/releases/download/master/linux.tar.gz",
+     "sha256": "c3cd88db47ac41f78b557042c7e7ad47ac9c04cee6f0d1069a489c1c9e8c103c",
+     "size": 318021,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/pmret/binutils-papermario/releases/download/master/mac.tar.gz",
+     "sha256": "7c1680dbbd207bc6e85d113da601dd75d93e1f982282b1f4bef0b25c15c5432c",
+     "size": 299969,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/pmret/binutils-papermario/releases/download/master/mac.tar.gz",
+     "sha256": "7c1680dbbd207bc6e85d113da601dd75d93e1f982282b1f4bef0b25c15c5432c",
+     "size": 299969,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "gcc2.8.1pm",
+   "version": "2.8.1 (pmret/gcc-papermario)",
+   "role": "compiler",
+   "family": "gcc-mips",
+   "platform": "n64",
+   "runtime": "native",
+   "entry": "gcc",
+   "requires": [
+    "binutils-papermario"
+   ],
+   "license": "GPL-2.0-or-later (GCC 2.8.1 with Paper Mario patches)",
+   "provenance": "https://github.com/pmret/gcc-papermario release `master`, asset linux.tar.gz / mac.tar.gz; third-party build hosted as a GitHub release asset; the sha256 pins the bytes seen on 2026-10-14 (release assets can be replaced)",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/pmret/gcc-papermario/releases/download/master/linux.tar.gz",
+     "sha256": "1156cf0d6a88a64c20e2a10fc9445d99cb9a38518f432b1669528dfa82ebb45f",
+     "size": 3823261,
+     "archive": "tar.gz"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/pmret/gcc-papermario/releases/download/master/mac.tar.gz",
+     "sha256": "772efc8272a992401f9a9a3faef58ef2f4b6028e792afa0015d894de96fe584e",
+     "size": 2375560,
+     "archive": "tar.gz"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/pmret/gcc-papermario/releases/download/master/mac.tar.gz",
+     "sha256": "772efc8272a992401f9a9a3faef58ef2f4b6028e792afa0015d894de96fe584e",
+     "size": 2375560,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "maspsx",
+   "version": "423ffc6 (mkst/maspsx)",
+   "role": "support",
+   "platform": "psx",
+   "license": "MIT",
+   "provenance": "https://github.com/mkst/maspsx at commit 423ffc6bca05e53f9b7ab06159d0cbe71111bc90 (the commit decomp.me's ps1/maspsx images pin), source zip; the archive holds maspsx-<commit>/maspsx.py (Python 3, standard library)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/maspsx/archive/423ffc6bca05e53f9b7ab06159d0cbe71111bc90.zip",
+     "sha256": "3894086ee2c662f2cbc565a1b1fdd0e2231a2a90db132fe788eba1a6cb7d62d2",
+     "size": 55298,
+     "archive": "zip"
+    }
+   }
+  },
+  {
+   "id": "psyq3.3",
+   "version": "PSY-Q 3.3",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq3.3/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq3.3.tar.gz (the files decomp.me's ps1/psyq3.3 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq3.3.tar.gz",
+     "sha256": "6acc5bf3a2e406c35ec77b63f6f77986a2d61502906967f0f32ea75911e7f16f",
+     "size": 1016863,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq3.5",
+   "version": "PSY-Q 3.5",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq3.5/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq3.5.tar.gz (the files decomp.me's ps1/psyq3.5 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq3.5.tar.gz",
+     "sha256": "0f9dff42081ad3cc3a1e2f740797b99c28657c3cfe6406deb9de4d176bd5387e",
+     "size": 1062923,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq3.6",
+   "version": "PSY-Q 3.6",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq3.6/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq3.6.tar.gz (the files decomp.me's ps1/psyq3.6 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq3.6.tar.gz",
+     "sha256": "9445f4cd871ca85b764b8d2746b6122750af17ecfe2d6e8aae41d15461d8c41d",
+     "size": 2306488,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.0",
+   "version": "PSY-Q 4.0",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.0/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.0.tar.gz (the files decomp.me's ps1/psyq4.0 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.0.tar.gz",
+     "sha256": "f25a4f6f044eb1b344bbbd3291aa9a4fc1a1124fc637eae9522c0a117d940e28",
+     "size": 2391794,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.1",
+   "version": "PSY-Q 4.1",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.1/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.1.tar.gz (the files decomp.me's ps1/psyq4.1 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.1.tar.gz",
+     "sha256": "2a2650ceb5eaa73fdc581bec4a85ccaa6ff9eeea8a4810be25a638f3cd2ebac4",
+     "size": 1780674,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.3",
+   "version": "PSY-Q 4.3",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.3/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.3.tar.gz (the files decomp.me's ps1/psyq4.3 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.3.tar.gz",
+     "sha256": "577038d66507d3aa5423de0ba3f540e121a4f60f637f4794aa4350135d4f9a46",
+     "size": 1638876,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.4",
+   "version": "PSY-Q 4.4",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.4/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.4.tar.gz (the files decomp.me's ps1/psyq4.4 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.4.tar.gz",
+     "sha256": "72e73934bab0d51933eb95af514afb14f3d432f01530eac3ddb16dfbb57ab66c",
+     "size": 1911982,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.5",
+   "version": "PSY-Q 4.5",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.5/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.5.tar.gz (the files decomp.me's ps1/psyq4.5 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.5.tar.gz",
+     "sha256": "75f28034f6844f0f7633e3f17443727865c8955da1cd19147db2c760b40f14f7",
+     "size": 2274837,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psyq4.6",
+   "version": "PSY-Q 4.6",
+   "role": "compiler",
+   "family": "psyq",
+   "platform": "psx",
+   "runtime": "wibo",
+   "entry": "psyq4.6/CC1PSX.EXE",
+   "requires": [
+    "wibo",
+    "maspsx"
+   ],
+   "license": "PSY-Q (SN Systems / Sony Computer Entertainment) is proprietary; CC1PSX is GCC 2.7.x/2.8.x modified by SN Systems. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/mkst/esa release `psyq-binaries`, asset psyq4.6.tar.gz (the files decomp.me's ps1/psyq4.6 image downloads; CC1PSX.EXE, CPPPSX.EXE, ASPSX.EXE ...); the release publishes no digests, so the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/mkst/esa/releases/download/psyq-binaries/psyq4.6.tar.gz",
+     "sha256": "635603e09a452c9c2923492fea8b8eb051959dd94f240933b88e94866814b894",
+     "size": 2367287,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "psp-gcc-1.7.1",
+   "version": "psp-gcc 1.7.1 (Allegrex GCC)",
+   "role": "compiler",
+   "family": "psp-gcc",
+   "platform": "psp",
+   "runtime": "i386-linux",
+   "entry": "psp/bin/gcc",
+   "license": "GPL (GCC for the Allegrex, pspdev toolchain); this archive is a third-party build and ships empty binutils placeholders: the project drives only `cc1` through the gcc driver (`-S`) and assembles with its own binutils.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset psp-gcc-1.7.1.tar.gz; the release publishes a digest for this asset and it is the one pinned",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/psp-gcc-1.7.1.tar.gz",
+     "sha256": "55d4267b1d74855157501d5fd61ed31b68d961a737306b5831b582a2d58f3484",
+     "size": 7412657,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "mwccpsp-3.0.1-219",
+   "version": "3.0.1 build 219",
+   "role": "compiler",
+   "family": "mwcc-psp",
+   "platform": "psp",
+   "runtime": "wibo",
+   "entry": "mwccpsp.exe",
+   "requires": [
+    "wibo"
+   ],
+   "license": "Metrowerks CodeWarrior for PSP is proprietary. romwright and this manifest grant no right to use it; use it only if you are entitled to.",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwccpsp_3.0.1_219.tar.gz (mwccpsp.exe, LMGR8C.DLL); the tag is mutable, the sha256 pins the bytes seen on 2026-10-14",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwccpsp_3.0.1_219.tar.gz",
+     "sha256": "81a2a8664d779901f6fa2f298b663b4b0feeb1d7f6613fd14531f51e66926d78",
+     "size": 1414150,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "dsd",
+   "version": "v0.12.1",
+   "role": "report",
+   "platform": "nds",
+   "provides": {
+    "dsd": "dsd"
+   },
+   "license": "MIT",
+   "provenance": "https://github.com/AetiasHax/ds-decomp release v0.12.1 (2026-09-07); sha256 as published by GitHub release asset digests. `dsd` extracts and rebuilds ROMs (ds-rom inside), analyses and delinks the ARM9 program and its overlays, and writes the linker script for mwldarm.",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/AetiasHax/ds-decomp/releases/download/v0.12.1/dsd-linux-x86_64",
+     "sha256": "256edde804dd8e5d7bc4c0e4187f85244ee4cd1f42bb427502e01fda6af43ceb",
+     "size": 11882688,
+     "archive": "raw"
+    },
+    "macos-arm64": {
+     "url": "https://github.com/AetiasHax/ds-decomp/releases/download/v0.12.1/dsd-macos-arm64",
+     "sha256": "1bbb57fe66a37123a7e9a64459b174956ea69ea103ad3dfd2766f18ca63057c7",
+     "size": 9836288,
+     "archive": "raw"
+    },
+    "macos-x86_64": {
+     "url": "https://github.com/AetiasHax/ds-decomp/releases/download/v0.12.1/dsd-macos-x86_64",
+     "sha256": "21adcef119d6e9b6bb853b0e5cc626bc4c086d28d45abc9a91b715c78631a044",
+     "size": 10905912,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "dsrom",
+   "version": "v0.8.0",
+   "role": "report",
+   "platform": "nds",
+   "provides": {
+    "dsrom": "dsrom"
+   },
+   "license": "MIT",
+   "provenance": "https://github.com/AetiasHax/ds-rom release v0.8.0 (2026-07-21); sha256 as published by GitHub release asset digests. The standalone ds-rom CLI (`dsrom extract` / `dsrom build`); dsd v0.12.1 embeds the same library, and the project uses `dsd rom` for the build.",
+   "assets": {
+    "linux-x86_64": {
+     "url": "https://github.com/AetiasHax/ds-rom/releases/download/v0.8.0/dsrom-linux-x86_64",
+     "sha256": "b12e3c594a880c5399d659bbc5e4148e33b63696a6b168a7645fd069466c1b3e",
+     "size": 6089784,
+     "archive": "raw"
+    }
+   }
+  },
+  {
+   "id": "mwccarm",
+   "version": "decomp.me compilers asset (CodeWarrior for Nintendo DS 1.2 / 2.0 / dsi)",
+   "role": "compiler",
+   "family": "mwcc-arm",
+   "platform": "nds",
+   "runtime": "wibo",
+   "entry": "mwccarm.exe",
+   "provides": {
+    "license": "mwccarm/license.dat"
+   },
+   "license": "Proprietary (Metrowerks / NXP CodeWarrior for Nintendo DS); no license is granted by this manifest",
+   "provenance": "https://github.com/decompme/compilers release `compilers`, asset mwccarm.zip (the mutable tag; the sha256 pins these bytes and equals pret/pokeheartgold's workflows/assets/mwccarm.zip). The archive holds mwccarm/<1.2|2.0|dsi>/<version>/ with mwccarm.exe, mwldarm.exe, mwasmarm.exe and the DLLs they load, plus one mwccarm/license.dat that must sit beside the executables (configure.py copies it). The compiler is mwccarm/<compiler.mw_version>/mwccarm.exe.",
+   "assets": {
+    "any": {
+     "url": "https://github.com/decompme/compilers/releases/download/compilers/mwccarm.zip",
+     "sha256": "dc386e37b2176e960954a733de928337d9b7e7620b9e94228008c31774339ace",
+     "size": 51684965,
+     "archive": "zip"
+    }
+   }
+  },
+  {
+   "id": "msvc4.2",
+   "version": "cl 10.20.6166 (Visual C++ 4.2)",
+   "role": "compiler",
+   "family": "msvc",
+   "platform": "pc",
+   "runtime": "wibo",
+   "entry": "MSVC420-df2c13aad74c094988c6c7e784234c2e778a0e91/bin/CL.EXE",
+   "provides": {
+    "include": "MSVC420-df2c13aad74c094988c6c7e784234c2e778a0e91/include",
+    "link": "MSVC420-df2c13aad74c094988c6c7e784234c2e778a0e91/bin/LINK.EXE"
+   },
+   "license": "Proprietary (Microsoft Visual C++). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project's sources.",
+   "provenance": "decomp.me compilers platforms/win32/msvc4.2 (itsmattkc/MSVC420 commit df2c13a); sha256 of the commit zip as downloaded 2026-10-15",
+   "assets": {
+    "any": {
+     "url": "https://github.com/itsmattkc/MSVC420/archive/df2c13aad74c094988c6c7e784234c2e778a0e91.zip",
+     "sha256": "7947618912e2c2f48f987631e29e318e56ccda551a7b65364c8a3f743e719ac5",
+     "size": 32774700,
+     "archive": "zip",
+     "include": [
+      "MSVC420-df2c13aad74c094988c6c7e784234c2e778a0e91/bin/",
+      "MSVC420-df2c13aad74c094988c6c7e784234c2e778a0e91/include/"
+     ]
+    }
+   }
+  },
+  {
+   "id": "msvc6.0",
+   "version": "cl 12.00.8168 (Visual C++ 6.0)",
+   "role": "compiler",
+   "family": "msvc",
+   "platform": "pc",
+   "runtime": "wibo",
+   "entry": "Bin/CL.EXE",
+   "provides": {
+    "include": "Include",
+    "link": "Bin/LINK.EXE"
+   },
+   "license": "Proprietary (Microsoft Visual C++). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project's sources.",
+   "provenance": "decomp.me compilers platforms/win32/msvc6.0 (OmniBlade/decomp.me release msvcwin9x, msvc6.0.tar.gz); sha256 pins the bytes downloaded 2026-10-15 (the asset is dated 2023-07-04)",
+   "assets": {
+    "any": {
+     "url": "https://github.com/OmniBlade/decomp.me/releases/download/msvcwin9x/msvc6.0.tar.gz",
+     "sha256": "5c81e9c2ab0ac5545022c1418a23392cb514db950cf6dcb1f48327270403fcd3",
+     "size": 6260393,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "msvc7.0",
+   "version": "cl 13.00.9466 (Visual C++ .NET 2002)",
+   "role": "compiler",
+   "family": "msvc",
+   "platform": "pc",
+   "runtime": "wibo",
+   "entry": "Bin/cl.exe",
+   "provides": {
+    "include": "Include",
+    "link": "Bin/link.exe"
+   },
+   "license": "Proprietary (Microsoft Visual C++). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project's sources.",
+   "provenance": "decomp.me compilers platforms/win32/msvc7.0 (roblabla/MSVC-7.0-Portable release); sha256 pins the bytes downloaded 2026-10-15",
+   "assets": {
+    "any": {
+     "url": "https://github.com/roblabla/MSVC-7.0-Portable/releases/download/release/msvc7.0.tar.gz",
+     "sha256": "9b995af7ff4b31f7d8cc91194f54e21a0a07ff6be360a94e9aa3686649b3f072",
+     "size": 11686116,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "msvc7.1",
+   "version": "cl 13.10.3077 (Visual C++ .NET 2003)",
+   "role": "compiler",
+   "family": "msvc",
+   "platform": "pc",
+   "runtime": "wibo",
+   "entry": "Bin/cl.exe",
+   "provides": {
+    "include": "Include",
+    "link": "Bin/link.exe"
+   },
+   "license": "Proprietary (Microsoft Visual C++). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project's sources.",
+   "provenance": "decomp.me compilers platforms/win32/msvc7.1 (OmniBlade/decomp.me release msvcwin9x, asset msvc7.0.tar.gz, whose cl.exe reports 13.10.3077); sha256 pins the bytes downloaded 2026-10-15",
+   "assets": {
+    "any": {
+     "url": "https://github.com/OmniBlade/decomp.me/releases/download/msvcwin9x/msvc7.0.tar.gz",
+     "sha256": "49eba7f9f72644f6f872a4176baeac544e8b5dfb2be1f47bb4d439b1136ffeac",
+     "size": 33368894,
+     "archive": "tar.gz"
+    }
+   }
+  },
+  {
+   "id": "msvc8.0",
+   "version": "cl 14.00.50727.42 (Visual C++ 2005)",
+   "role": "compiler",
+   "family": "msvc",
+   "platform": "pc",
+   "runtime": "wibo",
+   "entry": "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/bin/cl.exe",
+   "provides": {
+    "include": "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/include",
+    "platform_sdk_include": "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/PlatformSDK/Include",
+    "link": "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/bin/link.exe"
+   },
+   "license": "Proprietary (Microsoft Visual C++). romwright and this manifest grant no rights to it; use only if you are entitled to. Hosted by the decomp.me compilers project's sources.",
+   "provenance": "decomp.me compilers platforms/win32/msvc8.0 (widberg/msvc8.0 commit d6c4aa2); sha256 of the commit zip as downloaded 2026-10-15",
+   "assets": {
+    "any": {
+     "url": "https://github.com/widberg/msvc8.0/archive/d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1.zip",
+     "sha256": "51c33ecf8a340f39b97ee722e35634a064fc72ca7c246d7d5b307e80e1981def",
+     "size": 65693671,
+     "archive": "zip",
+     "include": [
+      "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/bin/",
+      "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/include/",
+      "msvc8.0-d6c4aa208c8345c78a9f68ba6ef911ee94c6a6e1/PlatformSDK/Include/"
+     ]
+    }
+   }
+  }
+ ]
+}
