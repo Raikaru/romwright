@@ -7,17 +7,19 @@ members = [
     "crates/romwright-cli",
     "crates/romwright-worker",
     "crates/romwright-worker-client",
-    "crates/romwright-qt-bridge",
     "crates/romwright-api",
     "crates/romwright-debug",
     "crates/romwright-sig",
     "crates/romwright-diff",
     "crates/romwright-facts",
+    "crates/romwright-desktop",
 ]
+# Vendored dependency, not a workspace crate (see [patch] below).
+exclude = ["third_party/kuna-sleigh"]
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.90"
 version = "0.5.0"
 license = "Apache-2.0"
 repository = "https://github.com/Raikaru/romwright"
@@ -34,3 +36,52 @@ regex = "1"
 # A wrapped address is a wrong answer, not a fast one: the AArch64 switch
 # crash was only visible because a gate happened to run a checked build.
 overflow-checks = true
+
+# What ships. `release` stays the fast-to-build development profile (the tests
+# and the gates' own builds use it); `dist` is what `packaging/` builds and
+# what the memory gates (`tests/m7-001`, `m7-002`, `m7-003`) measure, so that
+# they measure the binaries a user runs. Whole-program optimisation with one
+# code-generation unit: the binaries are 19% smaller (`romwright-cli` 23.7 ->
+# 19.3 MB), and the importer's resident code, which a resident-size gate
+# counts, is 4 MB less (a tiny import's RssFile 15 -> 11 MB), with import speed
+# the same or better (`benchmarks/reports/memory_fix_*.md`,
+# `docs/import-speed.md`). The price is build time: about twice as long.
+[profile.dist]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
+# The long-lived service (`romwright-api`) is the one binary that stays resident
+# for a whole session beside a decompiler, and its frozen envelope
+# (`benchmarks/reports/session-envelope.json`) counts that: a round of requests
+# touches 2 MB of its code, and the kernel maps the 64 KiB around every touched
+# page, so what is resident follows the binary's size (6.6-8.2 MB of a 12 MB
+# text segment), not its working set. Optimised for size it is 14.9 MB instead
+# of 17.3 and a session is 1.5-1.8 MB smaller. The importer's own crates
+# (`romwright-core` and the SLEIGH decoder) keep full optimisation: they are the
+# code the CLI imports with, cold in a session, and a size-optimised importer is
+# 1.7x slower (`z`; `s` costs 5-20%). `panic = "abort"` would shave more and is
+# not used: the structurer and the merge pass catch a panic in one function
+# (`catch_unwind`) and report it for that function, which a long-lived service
+# must not turn into a dead process. See `docs/releasing.md`.
+[profile.dist-service]
+inherits = "dist"
+opt-level = "s"
+
+[profile.dist-service.package.romwright-core]
+opt-level = 3
+
+[profile.dist-service.package.kuna-sleigh]
+opt-level = 3
+
+[profile.dist-service.package.kuna-base]
+opt-level = 3
+
+[profile.dist-service.package.kuna-num]
+opt-level = 3
+
+# kuna-sleigh with Ghidra's constructor-walk depth (64) instead of the C++
+# port's unchecked 32, and the console's 74 operand states instead of 20 per
+# constructor; third_party/kuna-sleigh/Cargo.toml, docs/third-party.md.
+[patch."https://github.com/noelo-Lab/kuna"]
+kuna-sleigh = { path = "third_party/kuna-sleigh" }

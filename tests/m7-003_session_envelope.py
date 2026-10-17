@@ -9,7 +9,7 @@ second.
 
 Per locked corpus entry this drives one long-lived `romwright-api` process through
 the same request sequence for several identical rounds, sampling the *process
-tree*'s resident size (the service plus the SLEIGH console child it spawns for
+tree*'s resident size (the service plus the decompiler child it spawns for
 `decompile_doc`) every 25 ms. It then requires:
 
   * the peak tree RSS to stay inside `benchmarks/reports/session-envelope.json`,
@@ -47,10 +47,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
-from cost import HEADROOM, check_envelope, record_envelope  # noqa: E402
+from cost import HEADROOM, build_shipped, check_envelope, record_envelope, shipped_binary  # noqa: E402
 
 ENVELOPE = ROOT / "benchmarks" / "reports" / "session-envelope.json"
-# Warm-up is measured but excluded: the console child settles over the first
+# Warm-up is measured but excluded: the decompiler child settles over the first
 # few requests, and that descent is not what this gate is looking for.
 WARMUP = 4
 ROUNDS = 8
@@ -108,7 +108,7 @@ class Sampler(threading.Thread):
             self.stop.wait(SAMPLE_SECONDS)
 
 
-def sequence(program: str, binary: Path, address: str, console: bool
+def sequence(program: str, binary: Path, address: str, decompile: bool
              ) -> list[tuple[str, dict]]:
     requests: list[tuple[str, dict]] = [
         ("functions", {"program": program}),
@@ -118,7 +118,7 @@ def sequence(program: str, binary: Path, address: str, console: bool
         ("search", {"program": program, "term": "main"}),
         ("xrefs", {"program": program, "address": address}),
     ]
-    if console:
+    if decompile:
         requests.append(("decompile_doc", {"program": program,
                                            "binary": str(binary),
                                            "address": address}))
@@ -127,7 +127,7 @@ def sequence(program: str, binary: Path, address: str, console: bool
 
 def native_address(program: str, project: Path) -> str:
     listing = subprocess.run(
-        [str(ROOT / "target/release/romwright-cli"), "functions", program,
+        [str(shipped_binary(ROOT, "romwright-cli")), "functions", program,
          "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
     for line in listing.splitlines():
@@ -137,19 +137,19 @@ def native_address(program: str, project: Path) -> str:
     raise AssertionError("the native store has no function named main")
 
 
-def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict:
+def drive(identifier: str, binary: Path, temporary: Path, decompile: bool) -> dict:
     project = temporary / "project"
     imported = subprocess.run(
-        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
+        [str(shipped_binary(ROOT, "romwright-cli")), "import", str(binary),
          "--name", "session", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert imported.returncode == 0, (
         f"{identifier}: import failed: {imported.stderr}")
     address = native_address("session", project)
-    requests = sequence("session", binary, address, console)
+    requests = sequence("session", binary, address, decompile)
 
     service = subprocess.Popen(
-        [str(ROOT / "target/release/romwright-api"), "--project", str(project)],
+        [str(shipped_binary(ROOT, "romwright-api")), "--project", str(project)],
         cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL, text=True, bufsize=1)
     sampler = Sampler(service.pid)
@@ -179,6 +179,13 @@ def drive(identifier: str, binary: Path, temporary: Path, console: bool) -> dict
                     f"{identifier}: {method} failed: {line[:200]}")
             if not warming:
                 rounds.append(tree_rss_kb(service.pid))
+        # One client asking one question after another keeps one decompiler:
+        # the executor starts a job thread, and the decompiler child each
+        # holds, only when a job finds none free.
+        children = len(descendants(service.pid)) - 1
+        assert children <= 1, (
+            f"{identifier}: the session holds {children} decompiler processes "
+            f"after sequential requests")
         service.stdin.close()
         assert service.wait(timeout=30) == 0, (
             f"{identifier}: the service exited {service.returncode}")
@@ -243,21 +250,20 @@ def main() -> int:
                         help="record the envelope; refuses to overwrite one")
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-api",
-                    "-p", "romwright-cli"], cwd=ROOT, check=True)
+    build_shipped(ROOT, "romwright-api", "romwright-cli")
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"]
                if entry.get("status") == "ok" and entry.get("unstripped_twin")]
     assert len(entries) >= 20, f"only {len(entries)} corpus entries are usable"
 
-    console = bool(os.environ.get("ROMWRIGHT_CONSOLE")) or (
-        ROOT / "native/build/decomp_native").is_file()
-    skipped = [] if console else [
-        "decompile_doc: no SLEIGH console, so the session holds no console child"]
+    decompile = Path(os.environ.get(
+        "ROMWRIGHT_GHIDRA_OPT", ROOT / "native/build/ghidra_opt")).is_file()
+    skipped = [] if decompile else [
+        "decompile_doc: no native decompiler, so the session holds no decompiler child"]
 
     rows = [drive(f"{entry['architecture']}_{entry['variant']}",
                   arguments.corpus_dir / entry["unstripped_twin"],
-                  Path(directory), console)
+                  Path(directory), decompile)
             for entry in entries
             for directory in [tempfile.mkdtemp(prefix="m7-003-")]]
 
@@ -302,8 +308,8 @@ def main() -> int:
                f"{abs(metrics['session.drift_excess_ms.max']):.2f}ms "
                f"{'past' if metrics['session.drift_excess_ms.max'] > 0 else 'inside'}"
                f" its drift bound, every entry inside the recorded envelope")
-    if not console:
-        summary += "; decompile_doc skipped without a console"
+    if not decompile:
+        summary += "; decompile_doc skipped without a native decompiler"
 
     if arguments.report:
         arguments.report.parent.mkdir(parents=True, exist_ok=True)

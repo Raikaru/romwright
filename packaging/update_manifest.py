@@ -31,7 +31,7 @@ def main() -> int:
     output = args.output.resolve()
     # A directory names every file below it, so a release set is manifested by
     # its own directory rather than by a hand-kept list that platform-specific
-    # names (`.exe`, the CPack archive) break. The manifest never lists itself.
+    # names (`.exe`, the desktop archive) break. The manifest never lists itself.
     paths = []
     for artifact in args.artifacts:
         resolved = artifact.resolve()

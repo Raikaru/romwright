@@ -567,6 +567,140 @@ impl WorkerPool {
     }
 }
 
+/// What the prototype pass does with one function's recovery request.
+#[derive(Debug)]
+enum Recovery {
+    Doc(Box<DecompDoc>),
+    /// The job's budget ran out: the pass returns what it has.
+    OutOfBudget,
+    /// The decompiler refused the function with an exception.
+    DecompilerFailure,
+    /// The request lost its worker (see `InferenceReport::worker_deaths`).
+    WorkerDeath,
+}
+
+/// Splits a recovery result into the failures confined to one function,
+/// which the pass skips and counts, and those that end the pass:
+/// cancellation, a stale revision, a store or core failure, a missing or
+/// unusable decompiler. `run_worker` has already mapped cancellation, the
+/// deadline and a late result to their own errors and dropped the session,
+/// so a lost worker that reaches here is that function's own failure and the
+/// next request spawns a fresh one.
+fn triage_recovery(result: PoolResult<DecompDoc>) -> PoolResult<Recovery> {
+    use romwright_worker::WorkerError;
+    match result {
+        Ok(doc) => Ok(Recovery::Doc(Box::new(doc))),
+        Err(PoolError::Deadline(_)) => Ok(Recovery::OutOfBudget),
+        Err(PoolError::Worker(WorkerError::Decompiler(_))) => Ok(Recovery::DecompilerFailure),
+        Err(PoolError::Worker(
+            WorkerError::Process(_) | WorkerError::Io(_) | WorkerError::Protocol(_),
+        )) => Ok(Recovery::WorkerDeath),
+        Err(error) => Err(error),
+    }
+}
+
+/// The callees whose results a function returns, when every value it returns
+/// is one: each `RETURN` carries a value, and each value is a `CALL` or
+/// `CALLIND` output, possibly through casts and moves. `return g();` and
+/// `g();` compile to the same code when the compiler leaves the callee's
+/// register alone, so such a function has no evidence of its own that it
+/// returns a value. An unresolved indirect callee is `u64::MAX`.
+fn forwarded_callees(ir: &romwright_model::function_ir::FunctionIr) -> Option<Vec<u64>> {
+    use romwright_model::function_ir::{Opcode, Operand};
+    let defining: HashMap<_, _> = ir
+        .blocks
+        .iter()
+        .flat_map(|block| &block.operations)
+        .filter_map(|operation| operation.output.map(|output| (output, operation)))
+        .collect();
+    let origin = |mut value| {
+        for _ in 0..8 {
+            let operation = defining.get(&value)?;
+            match operation.opcode {
+                Opcode::CALL => {
+                    return Some(match operation.inputs.first() {
+                        Some(Operand::Value(id)) => {
+                            ir.values.get(id).and_then(|callee| callee.offset).unwrap_or(u64::MAX)
+                        }
+                        _ => u64::MAX,
+                    });
+                }
+                Opcode::CALLIND => return Some(u64::MAX),
+                Opcode::CAST
+                | Opcode::COPY
+                | Opcode::SUBPIECE
+                | Opcode::INT_ZEXT
+                | Opcode::INT_SEXT => match operation.inputs.first() {
+                    Some(Operand::Value(next)) => value = *next,
+                    _ => return None,
+                },
+                _ => return None,
+            }
+        }
+        None
+    };
+    let mut callees = Vec::new();
+    let mut returns = 0;
+    for operation in ir.blocks.iter().flat_map(|block| &block.operations) {
+        if operation.opcode != Opcode::RETURN {
+            continue;
+        }
+        returns += 1;
+        let mut any = false;
+        for input in operation.inputs.iter().skip(1) {
+            let Operand::Value(value) = input else { continue };
+            callees.push(origin(*value)?);
+            any = true;
+        }
+        if !any {
+            return None;
+        }
+    }
+    (returns > 0).then_some(callees)
+}
+
+/// The forwarding functions whose results nothing in the binary evidences:
+/// no direct caller reads it, it is not a trap, and no callee it forwards is
+/// evidenced either (a callee is evidenced when a caller reads it, when it
+/// holds a trap, when it is unresolved or not a function of the image (an
+/// import stub), or when it forwards an evidenced
+/// callee in turn). A function that forwards the result of a syscall stub
+/// returns a value even if only a function pointer ever calls it; one that
+/// forwards a helper nobody reads has the helper's guess and no more.
+fn unevidenced_forwarders(
+    forwarding: &HashMap<u64, Vec<u64>>,
+    result_read: &std::collections::BTreeSet<u64>,
+    traps: &std::collections::BTreeSet<u64>,
+    known: &HashSet<u64>,
+) -> HashSet<u64> {
+    let mut evidenced: HashSet<u64> = HashSet::new();
+    loop {
+        let mut grew = false;
+        for (function, callees) in forwarding {
+            if evidenced.contains(function) {
+                continue;
+            }
+            let evidence = result_read.contains(function)
+                || traps.contains(function)
+                || callees.iter().any(|callee| {
+                    *callee == u64::MAX
+                        || !known.contains(callee)
+                        || result_read.contains(callee)
+                        || traps.contains(callee)
+                        || evidenced.contains(callee)
+                });
+            if evidence {
+                evidenced.insert(*function);
+                grew = true;
+            }
+        }
+        if !grew {
+            break;
+        }
+    }
+    forwarding.keys().filter(|function| !evidenced.contains(function)).copied().collect()
+}
+
 #[derive(Clone, Copy, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum InferenceStopReason {
@@ -589,11 +723,39 @@ pub struct InferenceReport {
     /// enough to grow the decompiler's caches past the cap is the normal
     /// reason, and the count is the cost of bounding it.
     pub worker_recycles: u64,
+    /// Functions the decompiler refused with an exception. Each is skipped
+    /// and keeps its stored prototype, as Ghidra's parameter-ID command
+    /// skips a function whose decompile fails; one refusal must not cost
+    /// the whole program's pass.
+    pub decompiler_failures: u64,
+    /// Functions whose request lost its worker: the decompiler process died
+    /// (a native crash on that function), or its stream broke or violated
+    /// the protocol. The session is discarded with the request, the next
+    /// request spawns a fresh worker, and the function keeps its stored
+    /// prototype exactly as for a refusal.
+    pub worker_deaths: u64,
+}
+
+/// A decompiled function with everything a frontend shows beside the token
+/// stream: the decompile post-processing the desktop decompiler panel shows.
+#[derive(Clone, Debug)]
+pub struct DecompiledFunction {
+    pub doc: DecompDoc,
+    /// Stored signatures of the document's direct callees (argument hints),
+    /// keyed by callee entry offset.
+    pub call_signatures: std::collections::BTreeMap<u64, String>,
+    /// Entry of the stored function containing the requested address: the
+    /// first retained SSA operation need not be the entry.
+    pub function_entry: Option<Address>,
+    /// Native CFG with shared layered layout; `None` without function IR.
+    pub graph: Option<romwright_core::graph::NativeGraph>,
+    /// Cost of laying out `graph` (`BRIDGE-GRAPH` on stderr).
+    pub layout_ms: f64,
 }
 
 /// Owns the pool selected for the current API program and binary.
 ///
-/// API and Qt callers keep one manager per Core handle. Switching binaries,
+/// API and desktop callers keep one manager per Core handle. Switching binaries,
 /// programs, or image bases drops the warm worker and starts a fresh pool on
 /// the next decompile.
 pub struct WorkerPoolManager {
@@ -665,6 +827,58 @@ impl WorkerPoolManager {
         Ok(doc)
     }
 
+    /// [`Self::decompile_doc`] plus the post-processing every frontend
+    /// shows: native CFG layout (timed; `BRIDGE-GRAPH` on stderr), stored
+    /// callee signatures and the containing function's entry. Checks the
+    /// request's deadline and cancellation once more before answering.
+    pub fn decompile_function(
+        &mut self,
+        core: &romwright_core::Core,
+        req: &romwright_core::exec::ExecutionRequest,
+        address: &Address,
+    ) -> PoolResult<DecompiledFunction> {
+        use romwright_model::function_ir::{Opcode, Operand};
+        let doc = self.decompile_doc(core, req, address)?;
+        let started = Instant::now();
+        let graph = doc.function_ir.as_ref().map(romwright_core::graph::native_layout);
+        let layout = started.elapsed();
+        if let Some(graph) = &graph {
+            eprintln!("BRIDGE-GRAPH {layout:?} nodes={}", graph.nodes.len());
+        }
+        let mut callees = HashSet::new();
+        if let Some(ir) = &doc.function_ir {
+            for operation in ir.blocks.iter().flat_map(|block| &block.operations) {
+                if operation.opcode == Opcode::CALL
+                    && let Some(Operand::Value(id)) = operation.inputs.first()
+                    && let Some(offset) = ir.values.get(id).and_then(|value| value.offset)
+                {
+                    callees.insert(offset);
+                }
+            }
+        }
+        let call_signatures = core
+            .prototypes(&req.program)?
+            .into_iter()
+            .filter(|row| callees.contains(&row.function.offset))
+            .map(|row| (row.function.offset, row.signature))
+            .collect();
+        let function_entry = core
+            .functions(&req.program)?
+            .into_iter()
+            .filter(|function| function.entry.space == address.space && function.entry.offset <= address.offset)
+            .max_by_key(|function| function.entry.offset)
+            .filter(|function| address.offset < function.entry.offset.saturating_add(function.size.max(1)))
+            .map(|function| function.entry);
+        core.check_execution(req)?;
+        Ok(DecompiledFunction {
+            doc,
+            call_signatures,
+            function_entry,
+            graph,
+            layout_ms: layout.as_secs_f64() * 1000.0,
+        })
+    }
+
     /// Fresh native hints cannot use previous inferred no-return flags as seeds.
     /// Publish only after the entire input-revision snapshot has been analyzed.
     /// The request supplies the resolved binary, program, revision, and
@@ -720,6 +934,8 @@ impl WorkerPoolManager {
             analyzed_addresses: Vec::new(),
             changed: 0,
             worker_recycles: 0,
+            decompiler_failures: 0,
+            worker_deaths: 0,
         };
         if Instant::now() >= deadline {
             return Ok(report);
@@ -740,8 +956,32 @@ impl WorkerPoolManager {
             .filter(|symbol| symbol.external)
             .map(|symbol| symbol.address)
             .collect();
+        // The merge refines only the decompiler's own recovery. What a user
+        // asserted or an import supplied is read before the first round can
+        // overwrite an inferred row.
+        let protected: HashSet<u64> = store
+            .prototypes(id)?
+            .iter()
+            .filter(|row| romwright_core::types_infer::prototypes::protected(row))
+            .map(|row| row.function.offset)
+            .collect();
+        let mut parameter_types = None;
+        let mut variadic_fixed: HashMap<u64, romwright_model::FuncProto> = HashMap::new();
+        let mut forwarding: HashMap<u64, Vec<u64>> = HashMap::new();
+        let float_layout = core.float_register_layout(req)?;
+        let mut ir_overlap: HashMap<u64, std::collections::BTreeSet<usize>> = HashMap::new();
+        // Aligned register pairs a function hands whole to a callee's declared
+        // 8-byte parameter (`types_infer::pair_params`), by function, from the
+        // function's latest recovery.
+        let pair_layout = core.pair_layout(req)?;
+        // `ROMWRIGHT_JOIN_PAIRS=0` turns the pass off, as `ROMWRIGHT_INFERRED_TYPES=0`
+        // does for the type upgrades, so a measurement can name its effect.
+        let join_pairs = std::env::var("ROMWRIGHT_JOIN_PAIRS").map_or(true, |value| value != "0");
+        let mut pair_sightings: HashMap<u64, Vec<romwright_core::types_infer::pair_params::Sighting>> =
+            HashMap::new();
         let mut functions = store.functions(id)?;
         functions.retain(|function| function.entry.space == romwright_model::AddressSpace::Ram);
+        let known: HashSet<u64> = functions.iter().map(|function| function.entry.offset).collect();
         let mut edges = store.call_edges(id)?;
         edges.retain(|(from, to)| {
             from.space == romwright_model::AddressSpace::Ram
@@ -789,15 +1029,49 @@ impl WorkerPoolManager {
                 let restarts_before = pool.restarts;
                 let result = pool.recover_doc(function.entry.offset, deadline, &req.cancel);
                 report.worker_recycles += pool.restarts - restarts_before;
-                let doc = match result {
-                    Ok(doc) => doc,
-                    Err(PoolError::Deadline(_)) => return Ok(report),
-                    Err(error) => return Err(error),
+                let doc = match triage_recovery(result)? {
+                    Recovery::Doc(doc) => *doc,
+                    Recovery::OutOfBudget => return Ok(report),
+                    Recovery::DecompilerFailure => {
+                        report.decompiler_failures += 1;
+                        continue;
+                    }
+                    Recovery::WorkerDeath => {
+                        report.worker_deaths += 1;
+                        continue;
+                    }
                 };
                 report.analyzed += 1;
                 report.analyzed_addresses.push(function.entry.offset);
                 if !externals.contains(&function.entry) {
                     let mut prototype = doc.prototype.expect("recovery requires a prototype");
+                    if let Some(ir) = doc.function_ir.as_ref() {
+                        let found = romwright_core::types_infer::register_overlap::overlapped_ir(ir, &float_layout);
+                        if !found.is_empty() {
+                            ir_overlap.entry(function.entry.offset).or_default().extend(found);
+                        }
+                    }
+                    if let Some(ir) = doc.function_ir.as_ref().filter(|_| join_pairs) {
+                        let found = romwright_core::types_infer::pair_params::carry_forward(
+                            pair_sightings.get(&function.entry.offset).map(Vec::as_slice),
+                            romwright_core::types_infer::pair_params::sightings(
+                                ir,
+                                &doc.call_prototypes,
+                                &pair_layout,
+                            ),
+                        );
+                        if !found.is_empty() {
+                            pair_sightings.insert(function.entry.offset, found);
+                        }
+                    }
+                    match doc.function_ir.as_ref().and_then(forwarded_callees) {
+                        Some(callees) => {
+                            forwarding.insert(function.entry.offset, callees);
+                        }
+                        None => {
+                            forwarding.remove(&function.entry.offset);
+                        }
+                    }
                     // The decompiler's irregular inputs are evidence its own
                     // model had no slot for; the pass is off unless asked.
                     romwright_core::register_params::augment(
@@ -812,16 +1086,87 @@ impl WorkerPoolManager {
             if Instant::now() >= deadline {
                 return Ok(report);
             }
+            // The first round recovered every function, which is the callee
+            // signature set the inference solves against; later rounds reuse
+            // its answer, since the p-code it reads does not change. The
+            // pass repairs a variadic function's register-save area and, with
+            // `inferred_types`, upgrades the slots' types.
+            let struct_mode = romwright_model::structs::StructMode::from_env();
+            if parameter_types.is_none() {
+                match core.parameter_types(req, &recovered) {
+                    Ok(types) => parameter_types = Some(types),
+                    Err(_) if req.cancel.is_cancelled() => return Err(PoolError::Cancelled),
+                    Err(_) if Instant::now() >= deadline => return Ok(report),
+                    Err(error) => return Err(error.into()),
+                }
+            }
+            let types = parameter_types.as_ref().expect("computed above");
+            let unevidenced = unevidenced_forwarders(&forwarding, &types.result_read, &types.opaque, &known);
+            let mut layouts: Vec<romwright_model::structs::StructLayout> = Vec::new();
+            for (address, prototype) in &mut recovered {
+                if protected.contains(&address.offset) {
+                    continue;
+                }
+                // A recovery that starts from a stored variadic prototype
+                // inherits its `...` and loses the fixed parameters, so a
+                // repaired function keeps its first round's prototype: the
+                // register-save area is a fact of its body, which the
+                // callee prototypes do not change.
+                if let Some(repaired) = variadic_fixed.get(&address.offset) {
+                    *prototype = repaired.clone();
+                    continue;
+                }
+                types.apply(address.offset, prototype, req.config.inferred_types);
+                if struct_mode.infers() && req.config.inferred_types {
+                    layouts.extend(types.apply_structs(address.offset, prototype));
+                }
+                // A function that only forwards a callee's result, with no
+                // evidence anywhere along the chain that it is a value.
+                if unevidenced.contains(&address.offset) {
+                    romwright_core::types_infer::prototypes::void_return(prototype);
+                }
+                if prototype.variadic && types.variadic.contains_key(&address.offset) {
+                    variadic_fixed.insert(address.offset, prototype.clone());
+                }
+                // An aligned register pair the body hands whole to a callee's
+                // declared 8-byte parameter is one parameter, not two.
+                if let Some(found) = pair_sightings.get(&address.offset) {
+                    romwright_core::types_infer::pair_params::join(
+                        prototype,
+                        found,
+                        &pair_layout,
+                        &types.target,
+                    );
+                }
+            }
+            // Rows another producer owns are never overwritten, and a body
+            // the decompiler cannot fully read (`ParameterTypes::opaque`), or
+            // whose float parameter register the body reads at another width
+            // (`locks_overlapping_input`: locked, it fails to decompile),
+            // gets no prototype: an absent row leaves its callers' call
+            // sites to the decompiler's own argument recovery.
+            recovered.retain(|(address, prototype)| {
+                !protected.contains(&address.offset)
+                    && !types.opaque.contains(&address.offset)
+                    && !types.locks_overlapping_input(address.offset, prototype, ir_overlap.get(&address.offset))
+            });
+            // The layouts the retained prototypes name are stored with them.
+            let named: std::collections::HashSet<String> = recovered
+                .iter()
+                .flat_map(|(_, prototype)| &prototype.parameters)
+                .filter_map(|parameter| parameter.data_type.target.as_deref()?.name.clone())
+                .collect();
+            layouts.retain(|layout| named.contains(layout.name.split("_p").next().unwrap_or(&layout.name)));
             let changed = req.cancel.publish(deadline, || {
-                core.persist_inferred_prototypes(&req.program, revision, &recovered)
+                let at = core.persist_struct_layouts(&req.program, revision, &layouts)?;
+                core.persist_inferred_prototypes(&req.program, at, &recovered)
             })?;
             report.rounds += 1;
             report.changed += changed.len() as u64;
-            // The merge is the only mutation accepted between these rounds.
-            // A concurrent edit after it is still rejected by the next check.
-            if !changed.is_empty() {
-                revision += 1;
-            }
+            // The stores above are the only mutations accepted between these
+            // rounds. A concurrent edit after them is still rejected by the
+            // next check.
+            revision = store.revision(id)?;
             pending.clear();
             for function in changed {
                 if let Some(owners) = callers.get(&function.offset) {
@@ -863,7 +1208,7 @@ pub enum JobKind {
     InferPrototypes,
     InferNonreturning,
     MatchSource {
-        prepared: romwright_core::matching::PreparedMatch,
+        prepared: Box<romwright_core::matching::PreparedMatch>,
     },
     Matching {
         operation: romwright_model::matching::MatchingOperation,
@@ -895,12 +1240,62 @@ struct Job {
     req: romwright_core::exec::ExecutionRequest,
 }
 
+/// What a finished job answers with.
+///
+/// A decompiled document is megabytes of JSON, and a `serde_json::Value` tree
+/// of it costs five to ten times its text. The document is therefore
+/// serialized once, straight from the typed struct, into the text the reply
+/// carries (`Document`), and the service writes that text into its envelope
+/// without ever building the tree. Every other job answers with a small
+/// report and keeps the tree. The keys of a `Document` come in the struct's
+/// field order, those of a `Tree` in `serde_json`'s sorted order; both are
+/// the same JSON value.
+#[derive(Clone, Debug)]
+pub enum JobOutput {
+    Tree(serde_json::Value),
+    Document(Box<serde_json::value::RawValue>),
+}
+
+impl JobOutput {
+    /// The answer as a tree, for the callers that need to look inside it
+    /// (a `Document` is parsed back).
+    pub fn into_value(self) -> Result<serde_json::Value, serde_json::Error> {
+        match self {
+            JobOutput::Tree(value) => Ok(value),
+            JobOutput::Document(text) => serde_json::from_str(text.get()),
+        }
+    }
+
+    /// The functions an inference report analyzed (`analyzed_addresses`);
+    /// only a report carries them.
+    fn analyzed_addresses(&self) -> Option<Vec<u64>> {
+        let JobOutput::Tree(value) = self else {
+            return None;
+        };
+        value.get("analyzed_addresses").map(|array| {
+            array
+                .as_array()
+                .map(|items| items.iter().filter_map(serde_json::Value::as_u64).collect())
+                .unwrap_or_default()
+        })
+    }
+}
+
+impl serde::Serialize for JobOutput {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            JobOutput::Tree(value) => value.serialize(serializer),
+            JobOutput::Document(text) => text.serialize(serializer),
+        }
+    }
+}
+
 struct JobRecord {
     operation: &'static str,
     state: JobState,
     detail: String,
     cancel: CancelToken,
-    result: Option<Result<serde_json::Value, String>>,
+    result: Option<Result<JobOutput, String>>,
     /// Function this record analyzed, when it names one: per-function
     /// progress rows for inference passes, or a decompile target.
     address: Option<u64>,
@@ -912,6 +1307,11 @@ struct Shared {
     order: Vec<u64>,
     next_id: u64,
     shutdown: bool,
+    /// Job threads not running a job: waiting for one, or just started.
+    available: usize,
+    /// Job threads started, and the most the executor may start.
+    spawned: usize,
+    max: usize,
 }
 
 struct ExecutorInner {
@@ -924,10 +1324,15 @@ struct ExecutorInner {
 ///
 /// The HTTP service stays responsive because a `decompile_doc` or an
 /// inference pass no longer holds the request loop: `submit` returns a job id
-/// immediately and a fixed set of worker threads drains the queue. Each
+/// immediately and worker threads drain the queue. Each
 /// thread opens its own `Core` on the project — the store is SQLite, so a
 /// second connection is a second reader — and keeps a `WorkerPoolManager` so
 /// warm decompiler children are reused across jobs on the same thread.
+///
+/// Threads start when a job finds none free, up to the configured count, so
+/// one client asking one question after another has one thread, one `Core`
+/// and one warm decompiler, not as many of each as the host has cores (each
+/// a decompiler process and a parsed program of its own).
 ///
 /// Cancellation is cooperative: `cancel` sets the job's token, a queued job
 /// is dropped before it starts, and a running job's token is polled between
@@ -935,11 +1340,12 @@ struct ExecutorInner {
 /// stop.
 pub struct JobExecutor {
     inner: std::sync::Arc<ExecutorInner>,
-    workers: Vec<std::thread::JoinHandle<()>>,
+    workers: std::sync::Mutex<Vec<std::thread::JoinHandle<()>>>,
 }
 
 impl JobExecutor {
-    /// Spawns `workers` job threads. `workers == 0` is treated as one.
+    /// An executor of at most `workers` job threads (`0` is one), started as
+    /// jobs need them.
     pub fn new(workers: usize) -> Self {
         let inner = std::sync::Arc::new(ExecutorInner {
             state: std::sync::Mutex::new(Shared {
@@ -948,16 +1354,14 @@ impl JobExecutor {
                 order: Vec::new(),
                 next_id: 1,
                 shutdown: false,
+                available: 0,
+                spawned: 0,
+                max: workers.max(1),
             }),
             queued: std::sync::Condvar::new(),
             finished: std::sync::Condvar::new(),
         });
-        let mut handles = Vec::with_capacity(workers.max(1));
-        for _ in 0..workers.max(1) {
-            let inner = std::sync::Arc::clone(&inner);
-            handles.push(std::thread::spawn(move || executor_loop(inner)));
-        }
-        Self { inner, workers: handles }
+        Self { inner, workers: std::sync::Mutex::new(Vec::new()) }
     }
 
     /// Enqueues a job and returns its id. The request is already resolved, so
@@ -982,6 +1386,16 @@ impl JobExecutor {
         );
         state.order.push(id);
         state.queue.push_back(Job { id, kind, req });
+        // A job with no free thread to take it starts one, within the limit.
+        while state.available < state.queue.len() && state.spawned < state.max {
+            let inner = std::sync::Arc::clone(&self.inner);
+            state.spawned += 1;
+            state.available += 1;
+            self.workers
+                .lock()
+                .expect("executor workers poisoned")
+                .push(std::thread::spawn(move || executor_loop(inner)));
+        }
         self.inner.queued.notify_one();
         id
     }
@@ -996,7 +1410,9 @@ impl JobExecutor {
             "state": record.state,
             "detail": record.detail,
             "result": record.result.as_ref().map(|r| match r {
-                Ok(value) => value.clone(),
+                Ok(output) => output.clone().into_value().unwrap_or_else(
+                    |error| serde_json::json!({ "error": error.to_string() }),
+                ),
                 Err(error) => serde_json::json!({ "error": error }),
             }),
         }))
@@ -1033,7 +1449,7 @@ impl JobExecutor {
     }
 
     /// Blocks until the job reaches a terminal state and returns its result.
-    pub fn wait(&self, id: u64) -> Option<Result<serde_json::Value, String>> {
+    pub fn wait(&self, id: u64) -> Option<Result<JobOutput, String>> {
         let mut state = self.inner.state.lock().expect("executor lock poisoned");
         loop {
             match state.records.get(&id) {
@@ -1045,6 +1461,38 @@ impl JobExecutor {
                     ) =>
                 {
                     return record.result.clone();
+                }
+                Some(_) => {
+                    state = self
+                        .inner
+                        .finished
+                        .wait(state)
+                        .expect("executor lock poisoned");
+                }
+            }
+        }
+    }
+
+    /// [`JobExecutor::wait`] for a caller that is the result's only reader (a
+    /// request that submitted the job and answers with it): the executor
+    /// does not keep the result afterwards, only the job's row. A session
+    /// that asks a thousand questions would otherwise hold a thousand
+    /// decompiled documents.
+    pub fn wait_take(&self, id: u64) -> Option<Result<JobOutput, String>> {
+        let mut state = self.inner.state.lock().expect("executor lock poisoned");
+        loop {
+            match state.records.get_mut(&id) {
+                None => return None,
+                Some(record)
+                    if matches!(
+                        record.state,
+                        JobState::Succeeded | JobState::Failed | JobState::Cancelled
+                    ) =>
+                {
+                    // Moved out, not cloned: a decompiled document is
+                    // megabytes of text, and a copy of it was held for the
+                    // length of the reply.
+                    return record.result.take();
                 }
                 Some(_) => {
                     state = self
@@ -1097,7 +1545,8 @@ impl Drop for JobExecutor {
         self.inner.queued.notify_all();
         // Cancellation must reach child-process cleanup before the owning
         // application exits and destroys the worker threads themselves.
-        for worker in self.workers.drain(..) {
+        let workers = std::mem::take(&mut *self.workers.lock().unwrap_or_else(|poisoned| poisoned.into_inner()));
+        for worker in workers {
             let _ = worker.join();
         }
     }
@@ -1116,6 +1565,7 @@ fn executor_loop(inner: std::sync::Arc<ExecutorInner>) {
                     return;
                 }
                 if let Some(job) = state.queue.pop_front() {
+                    state.available = state.available.saturating_sub(1);
                     if let Some(record) = state.records.get_mut(&job.id) {
                         record.state = JobState::Running;
                     }
@@ -1126,19 +1576,13 @@ fn executor_loop(inner: std::sync::Arc<ExecutorInner>) {
         };
         let result = run_job(&mut caches, job.kind, &job.req);
         let mut state = inner.state.lock().expect("executor lock poisoned");
+        state.available += 1;
         if let Some(record) = state.records.get_mut(&job.id) {
             // Inference reports carry their analyzed addresses: expand
             // them into per-function progress rows now, while the
             // report value is at hand.
             let progress: Option<Vec<u64>> = match &result {
-                Ok(value) => value.get("analyzed_addresses").map(|array| {
-                    array
-                        .as_array()
-                        .map(|items| {
-                            items.iter().filter_map(serde_json::Value::as_u64).collect()
-                        })
-                        .unwrap_or_default()
-                }),
+                Ok(output) => output.analyzed_addresses(),
                 Err(_) => None,
             };
             match &result {
@@ -1183,7 +1627,48 @@ fn executor_loop(inner: std::sync::Arc<ExecutorInner>) {
                 }
             }
         }
+        prune_results(&mut state);
+        drop(state);
         inner.finished.notify_all();
+    }
+}
+
+/// The results the executor keeps for a client that asks later (`status`),
+/// newest first; the rows stay, the older results go. Together with
+/// [`JobExecutor::wait_take`] this bounds what a long session holds.
+const KEPT_RESULTS: usize = 64;
+const KEPT_ROWS: usize = 4096;
+
+fn prune_results(state: &mut Shared) {
+    let finished = |record: &JobRecord| !matches!(record.state, JobState::Queued | JobState::Running);
+    let kept = state.records.values().filter(|record| record.result.is_some()).count();
+    if kept > KEPT_RESULTS {
+        let mut drop_count = kept - KEPT_RESULTS;
+        for id in &state.order {
+            if drop_count == 0 {
+                break;
+            }
+            if let Some(record) = state.records.get_mut(id).filter(|record| finished(record) && record.result.is_some()) {
+                record.result = None;
+                drop_count -= 1;
+            }
+        }
+    }
+    if state.order.len() > KEPT_ROWS {
+        let excess = state.order.len() - KEPT_ROWS;
+        let mut removed = Vec::new();
+        for id in &state.order {
+            if removed.len() == excess {
+                break;
+            }
+            if state.records.get(id).is_some_and(finished) {
+                removed.push(*id);
+            }
+        }
+        for id in &removed {
+            state.records.remove(id);
+        }
+        state.order.retain(|id| !removed.contains(id));
     }
 }
 
@@ -1191,7 +1676,7 @@ fn run_job(
     caches: &mut HashMap<PathBuf, (romwright_core::Core, WorkerPoolManager)>,
     kind: JobKind,
     req: &romwright_core::exec::ExecutionRequest,
-) -> Result<serde_json::Value, String> {
+) -> Result<JobOutput, String> {
     // Explicit cancellation fails fast here; an expired deadline is the
     // manager's graceful empty report, not a dispatch error (m2-006 pins
     // rounds 0 / stop budget for budget_ms=0).
@@ -1219,32 +1704,129 @@ fn run_job(
         }
     };
     let (core, manager) = (&*core, manager);
+    let tree = |report: Result<serde_json::Value, serde_json::Error>| {
+        report.map(JobOutput::Tree).map_err(|error| error.to_string())
+    };
     match kind {
+        // The typed document goes to text and is dropped; no tree of it is
+        // ever built (`JobOutput`).
         JobKind::DecompileDoc { address } => manager
             .decompile_doc(core, req, &Address::ram(address))
             .map_err(|error| error.to_string())
-            .and_then(|doc| serde_json::to_value(doc).map_err(|e| e.to_string())),
+            .and_then(|doc| {
+                serde_json::value::to_raw_value(&doc)
+                    .map(JobOutput::Document)
+                    .map_err(|error| error.to_string())
+            }),
         JobKind::InferPrototypes => manager
             .infer_prototypes(core, req)
             .map_err(|error| error.to_string())
-            .and_then(|report| serde_json::to_value(report).map_err(|e| e.to_string())),
+            .and_then(|report| tree(serde_json::to_value(report))),
         JobKind::InferNonreturning => manager
             .infer_nonreturning(core, req)
             .map_err(|error| error.to_string())
-            .and_then(|report| serde_json::to_value(report).map_err(|e| e.to_string())),
+            .and_then(|report| tree(serde_json::to_value(report))),
         JobKind::MatchSource { prepared } => core
             .run_matching(req, &prepared)
             .map_err(|error| error.to_string())
-            .and_then(|report| serde_json::to_value(report).map_err(|error| error.to_string())),
+            .and_then(|report| tree(serde_json::to_value(report))),
         JobKind::Matching { operation } => core
             .run_matching_operation(req, operation)
-            .map_err(|error| error.to_string()),
+            .map_err(|error| error.to_string())
+            .map(JobOutput::Tree),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn recovery_of(error: PoolError) -> PoolResult<Recovery> {
+        triage_recovery(Err(error))
+    }
+
+    #[test]
+    fn a_document_answer_is_the_same_value_as_its_tree() {
+        let text = r#"{"tokens":[{"text":"x"}],"revision":0,"address":{"offset":4096}}"#;
+        let document = JobOutput::Document(serde_json::value::RawValue::from_string(text.into()).unwrap());
+        let tree = JobOutput::Tree(serde_json::from_str(text).unwrap());
+        assert_eq!(
+            document.clone().into_value().unwrap(),
+            tree.clone().into_value().unwrap()
+        );
+        // Both serialize to JSON that reads back as the one value.
+        let written = |output: &JobOutput| -> serde_json::Value {
+            serde_json::from_str(&serde_json::to_string(output).unwrap()).unwrap()
+        };
+        assert_eq!(written(&document), written(&tree));
+        // Only a report names the functions it analyzed.
+        assert_eq!(document.analyzed_addresses(), None);
+        let report = JobOutput::Tree(serde_json::json!({"analyzed_addresses": [16, 32]}));
+        assert_eq!(report.analyzed_addresses(), Some(vec![16, 32]));
+    }
+
+    #[test]
+    fn a_forwarded_result_needs_evidence_somewhere_along_the_chain() {
+        use std::collections::BTreeSet;
+        // 1 -> 2 -> 3 (leaf), 4 -> 5 -> stub 9 (a trap), 6 -> an import (7).
+        let forwarding: HashMap<u64, Vec<u64>> =
+            HashMap::from([(1, vec![2]), (2, vec![3]), (4, vec![5]), (5, vec![9]), (6, vec![7])]);
+        let known: HashSet<u64> = HashSet::from([1, 2, 3, 4, 5, 6, 9]);
+        let none: BTreeSet<u64> = BTreeSet::new();
+        let traps = BTreeSet::from([9]);
+        let void = unevidenced_forwarders(&forwarding, &none, &traps, &known);
+        assert_eq!(void, HashSet::from([1, 2]), "a leaf nobody reads is no evidence; a trap and an import are");
+        // A caller that reads the leaf's result evidences the whole chain.
+        let read = BTreeSet::from([3]);
+        assert!(unevidenced_forwarders(&forwarding, &read, &traps, &known).is_empty());
+        // An unresolved indirect callee is never void.
+        let indirect: HashMap<u64, Vec<u64>> = HashMap::from([(1, vec![u64::MAX])]);
+        assert!(unevidenced_forwarders(&indirect, &none, &none, &known).is_empty());
+    }
+
+    #[test]
+    fn a_function_whose_worker_is_lost_is_skipped_not_fatal() {
+        use romwright_worker::WorkerError;
+        for error in [
+            WorkerError::Process("decompiler died".into()),
+            WorkerError::Io(std::io::Error::from(std::io::ErrorKind::BrokenPipe)),
+            WorkerError::Protocol("unexpected burst 0x7f in command stream".into()),
+        ] {
+            assert!(
+                matches!(recovery_of(error.into()), Ok(Recovery::WorkerDeath)),
+                "worker loss must be counted and skipped"
+            );
+        }
+        assert!(matches!(
+            recovery_of(WorkerError::Decompiler("Low-level Error".into()).into()),
+            Ok(Recovery::DecompilerFailure)
+        ));
+    }
+
+    #[test]
+    fn cancellation_deadline_stale_and_setup_failures_still_end_the_pass() {
+        use romwright_worker::WorkerError;
+        assert!(matches!(
+            recovery_of(PoolError::Deadline(Duration::ZERO)),
+            Ok(Recovery::OutOfBudget)
+        ));
+        assert!(matches!(
+            recovery_of(PoolError::Cancelled),
+            Err(PoolError::Cancelled)
+        ));
+        assert!(matches!(
+            recovery_of(PoolError::StaleRevision(1, 2)),
+            Err(PoolError::StaleRevision(1, 2))
+        ));
+        assert!(matches!(
+            recovery_of(PoolError::MemCap(2, 1)),
+            Err(PoolError::MemCap(2, 1))
+        ));
+        assert!(matches!(
+            recovery_of(WorkerError::Setup("registerProgram: no".into()).into()),
+            Err(PoolError::Worker(WorkerError::Setup(_)))
+        ));
+    }
 
     #[cfg(unix)]
     #[test]

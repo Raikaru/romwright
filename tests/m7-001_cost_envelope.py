@@ -37,7 +37,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
-from cost import HEADROOM, check_envelope, measure, record_envelope  # noqa: E402
+from cost import (HEADROOM, build_shipped, check_envelope, measure,  # noqa: E402
+                  record_envelope, shipped_binary)
 
 ENVELOPE = ROOT / "benchmarks" / "reports" / "cost-envelope.json"
 
@@ -45,9 +46,12 @@ ENVELOPE = ROOT / "benchmarks" / "reports" / "cost-envelope.json"
 def native(binary: Path) -> tuple[float, int]:
     with tempfile.TemporaryDirectory(prefix="m7-001-native-") as temporary:
         elapsed, peak, code = measure(
-            [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
+            [str(shipped_binary(ROOT, "romwright-cli")), "import", str(binary),
              "--name", "cost", "--project", str(Path(temporary) / "project")],
-            cwd=ROOT)
+            cwd=ROOT,
+            # A cached import is a file copy (docs/environment.md): the gate
+            # measures the analysis, cold, every time.
+            environment=dict(os.environ, ROMWRIGHT_NO_IMPORT_CACHE="1"))
     assert code == 0, f"native import of {binary.name} exited {code}"
     return elapsed, peak
 
@@ -72,8 +76,7 @@ def main() -> int:
         "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
-                   cwd=ROOT, check=True)
+    build_shipped(ROOT, "romwright-cli")
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"] if entry.get("status") == "ok"]
     assert len(entries) >= 20, f"only {len(entries)} corpus entries are usable"
