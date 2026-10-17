@@ -1,24 +1,33 @@
 # The desktop workstation
 
-`desktop/romwright-qt` is a Qt 6 Widgets workstation over the same Core API the
-CLI and scripts use. It links the core as a static Rust library, so a launched
-window needs no helper process and no JVM.
+`romwright-desktop` (`crates/romwright-desktop`) is the Romwright workstation:
+an egui shell rendered by wgpu (Vulkan, Metal or DX12; no OpenGL), calling
+`romwright_core::Core` directly on worker threads. It links the Core
+statically and embeds its fonts, so a launched window needs no JVM and no
+runtime data beside the `romwright-worker` it decompiles through.
 
 ## Build and package
 
-Qt 6.4 or newer with the Widgets and Concurrent modules, CMake 3.21, a C++17
-compiler, and `cargo` for the bridge library.
+A Rust toolchain of at least 1.95 (the egui/eframe minimum) is the only
+requirement; there is no C++ toolchain or UI framework to install.
 
 ```console
-$ cmake -S desktop/romwright-qt -B build/romwright-qt -DCMAKE_BUILD_TYPE=Release
-$ cmake --build build/romwright-qt --config Release --target romwright-qt
-$ cmake --build build/romwright-qt --config Release --target package
+$ cargo build --profile dist -p romwright-desktop -p romwright-worker -p romwright-cli
+$ python3 packaging/package_desktop.py --output build/desktop-package
 ```
 
-The `package` target writes a CPack `TGZ` named
-`romwright-<version>-<system>-<machine>.tar.gz` beside the build tree. Extract it
-anywhere; the archive carries the executable, and the executable carries the
-core.
+`package_desktop.py` runs the same `cargo build --profile dist` (the shipping
+profile of `Cargo.toml`; pass `--no-build` to package
+an existing one; it reads `$CARGO_TARGET_DIR` when set) and writes
+`romwright-<version>-<system>-<machine>.tar.gz`. The archive holds one
+top-level directory with `bin/romwright-desktop`, `bin/romwright-worker`,
+`bin/romwright-cli`, and `share/doc/romwright/` carrying `LICENSE`, `NOTICE`,
+`THIRD_PARTY_NOTICES.md` and the SIL OFL licences of the bundled Inter and
+JetBrains Mono fonts. Extract it anywhere: the app finds the worker and the
+CLI beside itself (the CLI is what **Create project** runs), the desktop
+executable carries the core, and the CLI carries the `new-project` templates
+and the tool manifest it writes into a repository. `docs/releasing.md` stages
+the archive with the other release artifacts.
 
 ## Launch
 
@@ -26,59 +35,205 @@ core.
      launch is gated offscreen by tests/m6-003_desktop_package.py -->
 
 ```sh
-romwright-qt --project DIR --program PROGRAM --binary PATH
+romwright-desktop --project DIR --program PROGRAM --binary PATH [--address HEX] [--theme NAME]
 ```
 
-`--project` is the SQLite project the CLI writes; a program imported by
-`romwright-cli import` opens directly. Panels read the store: functions, symbols,
-references, strings, listing, graph, types, patches, bookmarks and jobs. Edits
-go through the same journalled commands as the CLI, so `undo` reverses a rename
-made in either.
+| Flag | Meaning |
+|---|---|
+| `-p`, `--project DIR` | SQLite project directory (default `.romwright`) |
+| `-n`, `--program NAME` | program to open |
+| `-b`, `--binary PATH` | binary path (the gate imports it) |
+| `-a`, `--address HEX` | initial address for the listing, decompiler and references |
+| `--theme NAME` | `system`, `dark`, `light` or `contrast` |
+| `--gate`, `--store-only` | offscreen UI gate (below) |
+| `--project-image IMAGE` | with `--gate`: also gate Program setup's new project and the Match panel on this image (below) |
+| `--matching-gate CONFIG.json` | offscreen matching workflow gate (below) |
+| `--screenshot PATH` | render offscreen until idle and write one PNG |
+| `--panel ID` | with `--screenshot`: raise that panel first; repeatable |
+| `--size WxH`, `--scale F` | offscreen size in points (default 1440x900) and pixels per point (default 1) |
+| `--timeout SECONDS` | screenshot idle wait (default 120); matching gate limit (default 60) |
 
-Use `--program` (or `-n`), not `--name`: Qt's X11 argument handling consumes
-`--name` before the application parser sees it. An optional `--address`
-opens the initial listing, decompiler and references without another Go action.
+`--project` is the SQLite project the CLI writes; a program imported by
+`romwright-cli import` opens directly. Panels read the store: Functions,
+Listing, Decompiler, Graph, Xrefs, Facts (symbols, strings, search), Types,
+Memory, Analyst (bookmarks and patches), Vtables, Jobs, Program setup and
+Match, plus the Matching workspace. Edits go through the same journalled
+commands as the CLI, so `undo` reverses a rename made in either.
 
 Decoding and decompiling need SLEIGH language data from the pinned Ghidra
 install, exactly as they do on the command line
 (`docs/getting-started.md`). Everything that reads the store works without it.
 
-## What the gate proves
+### Themes and settings
 
-`tests/m6-003_desktop_package.py` builds the archive with the three commands
-above, extracts it into a clean prefix, and launches the *extracted* binary
-offscreen with **every `ROMWRIGHT_*` variable removed**. The app then reports two
-facts it measures itself:
+The theme follows the system light/dark preference unless `--theme` or
+**View → Theme** chooses `dark`, `light` or `contrast` (high contrast). Every
+panel takes its colours, fonts and sizes from the shared theme. The theme,
+recent projects and per-program dock layouts persist in
+`$XDG_CONFIG_HOME/romwright/desktop.json` (`%APPDATA%` on Windows,
+`~/.config` when neither is set). Contributors adding panels follow
+`crates/romwright-desktop/PANELS.md`.
+
+## Headless rendering
+
+`--gate`, `--matching-gate` and `--screenshot` render the real window through
+wgpu into an offscreen texture: no window, no display server. The app asks
+for a hardware adapter first and falls back to the platform's software
+adapter, so a machine without a GPU still renders:
+
+| Platform | Software adapter |
+|---|---|
+| Linux | Mesa lavapipe (Vulkan), from `mesa-vulkan-drivers` |
+| Windows | WARP through DX12, part of Windows |
+| macOS | Metal (every supported Mac has a Metal device) |
+
+Each headless mode prints the adapter it chose on stderr
+(`ui gate: rendering offscreen on llvmpipe (LLVM ...) (Vulkan)` with
+lavapipe). To force lavapipe on a machine that also has a GPU, point the
+Vulkan loader at its manifest:
+
+<!-- not gated: needs Mesa's lavapipe manifest at a distribution-specific
+     path; CI runs the gate on a GPU-less runner instead -->
+
+```sh
+VK_DRIVER_FILES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+  romwright-desktop --screenshot shot.png --project DIR --program PROGRAM --theme dark
+```
+
+## The UI gate
+
+`--gate` drives the real shell and panels and prints one
+`{"metrics": {...}}` line, the format `benchmarks/ui_gate.py` parses: the
+decompiler source and graph interaction checks (`ui.source.*` and the graph
+selection/self-loop booleans), import, function list
+load and filter, decompiler/listing sync, graph fetch/layout/paint, xrefs,
+program switching, install and analysis metrics. `--store-only` stops after
+the list and filter.
+
+`benchmarks/ui_gate.py` runs it against `--app` (default
+`$ROMWRIGHT_DESKTOP_APP`, then `$CARGO_TARGET_DIR/release/romwright-desktop`,
+then `target/release/romwright-desktop`), aggregates `--runs` samples and
+checks them against the frozen thresholds.
+`tests/filter_latency.sh`, `tests/largest_graph_desktop.sh` and
+`tests/package_install_smoke.sh` are focused wrappers over it.
+
+### What the gate proves
+
+`tests/m6-003_desktop_package.py` builds the archive with the packaging
+command above, extracts it into a clean prefix, and launches the *extracted*
+binary headless with **every `ROMWRIGHT_*` variable removed**. The app then
+reports two facts it measures itself:
 
 | Metric | Meaning |
 |---|---|
-| `ui.install.prefix_ok` | the executable is not running from a build tree |
+| `ui.install.prefix_ok` | the executable is not running from a cargo build tree (no `.fingerprint`, `deps` + `build` or `CACHEDIR.TAG` beside it) |
 | `ui.install.store_only_ok` | the store-facing workflow completed with no `ROMWRIGHT_*` variable set |
 
-Both are false when they should be: a build-tree binary reports
+Both are false when they should be: a binary run from `target/release` reports
 `prefix_ok: false`, and setting any `ROMWRIGHT_*` variable reports
 `store_only_ok: false`.
 
 The older `ui.install.ok` metric in `benchmarks/reports/ui-gate.json` is not
 measured — the app reads it from `ROMWRIGHT_UI_INSTALL_OK`, which the harness
-sets. It is left in place because changing a metric definition is reserved to
-the human; `STATUS.md` records the proposal to retire it.
+(`tests/package_install_smoke.sh`) sets. It is left in place because changing
+a metric definition is reserved to the human; `STATUS.md` records the proposal
+to retire it.
 
-The gate reports the platform it ran on, so the evidence names its own
-coverage: the CI `qt` job runs it on Linux, macOS and Windows, and a local run
-covers only that machine.
+The gate reports the platform and the wgpu adapter it ran on, so the evidence
+names its own coverage: the CI `desktop` job runs it on GitHub-hosted Linux,
+macOS and Windows runners (Linux has no GPU and renders on lavapipe), and a
+local run covers only that machine.
 
-The same packaged gate also exercises source range selection/copy, selected-symbol
-follow/rename, folding/reveal, read-only editing and exclusion of inline hints
-from copied C. The `ui.source.*` booleans report those observed behaviors.
+The same packaged gate also exercises source range selection/copy,
+selected-symbol follow/rename, folding/reveal, read-only editing and exclusion
+of inline hints from copied C. The `ui.source.*` booleans report those
+observed behaviors.
 
-Native analysis progress is a separate Linux corpus-job check, with generated
-inputs, Qt and the patched native engine built before launch. It does not run
-inside the portable package job, which has no native corpus/runtime prerequisites.
+Native analysis progress is a separate Linux corpus-job check
+(`tests/m14-004_ui_progress.py`), with generated inputs and the patched native
+engine built before launch. It does not run inside the portable package job,
+which has no native corpus/runtime prerequisites.
+
+### The project gate
+
+`--gate --project-image IMAGE` extends the run with the two project
+features. `IMAGE` is a Windows PE32 (`tests/fixtures-src/tiny_pe32.exe`): the
+one retail-format image whose repository needs no downloaded toolchain to be
+written. After the ordinary stages the gate imports it as a second program,
+opens it, and drives the panels the way an analyst does:
+
+1. **Program setup > Create project** runs `romwright-cli new-project` on the
+   open image (the CLI beside the app, `$ROMWRIGHT_CLI` when set) and the gate
+   reads back what the panel holds: `ui.new_project.ms`,
+   `ui.new_project.files` (files written, not counting the retail copy and the
+   store), `ui.new_project.readme`, `ui.new_project.config`
+   (`config/project.json` exists), `ui.new_project.job_logged` (the Jobs panel
+   shows the job as succeeded) and `ui.new_project.image`.
+2. The Match panel takes the new repository as its root without being told
+   (`ui.match.root_follows_project`). The repository is given the host's
+   `clang` as its compile check (`config/toolchain.local.json`, then the
+   repository's own `configure.py --no-fetch --compiler <clang id>`), the
+   largest function is selected, and **Run match** is driven with a budget of
+   6 variants. After three painted frames the gate counts what the table
+   showed: `ui.match.rows`, `ui.match.rendered_rows` (must equal the rows),
+   `ui.match.compiled_rows` (at least one), `ui.match.default_percent`,
+   `ui.match.best_percent` (never below the default), `ui.match.decompiles`,
+   `ui.match.compiles`, `ui.match.function` and `ui.match.ms`.
+
+The gate fails, and names the check, when any of these is wrong. It needs the
+pinned Ghidra install, the built decompiler worker, `python3` and `clang`
+(`$CLANG` or `PATH`), so it is not part of the portable package job;
+`tests/m6-007_desktop_projects.py` runs it from the extracted archive. The
+clang compile check is the one docs/pc-project.md describes for an
+unidentified PE: the percent column counts equal instruction words, not an
+objdiff score, and says nothing about the retail compiler.
+
+## New project and Match
+
+**Program setup > New project** is `romwright-cli new-project` for the open
+image. The fields are the output directory (a directory beside the project
+store named for the program, until edited), an optional name, an optional
+platform (`--platform`, for a container the magic does not identify) and the
+`--decompile` selection, which defaults to `none` because the CLI's default for
+the 3DS, Switch, PS3, PS4, Vita and Xbox 360 scaffold is a whole-image
+decompile that takes hours. **Create project** runs as a job: the CLI's
+progress lines are the Jobs panel's progress, Cancel stops the child process,
+and the finished entry carries the CLI's summary and the next command to run
+(`cd REPO && python3 configure.py && ninja` for the byte-matching platforms,
+`python3 build.py` for the scaffold and PC repositories). The image is the
+Binary field, which is the program's captured copy unless edited; the repository
+is named after the program, not after the copy's content hash. Every platform
+`new-project` supports is available here (docs/new-project.md); the
+tools themselves are fetched by the repository's `configure.py`, never by the
+app.
+
+**Match** (View menu; `--panel match` for a screenshot) is `romwright-cli
+match` for the function at the cursor (docs/match.md). It takes the repository
+the last **Create project** wrote, or the parent of the open store when the app
+was opened on a repository's own `.romwright`, and a variant budget (the CLI's
+default). **Run match** prints the function in the bounded set of alternative
+ways, compiles each with the repository's compiler and scores it against the
+retail bytes, as a job with Cancel. The table is the CLI's: one row per
+variant with the printed C's hash (`= #N` when it printed the same C as an
+earlier row), the match percent, `yes`/`no` for an exact object, differing
+bytes outside relocation fields, and the decompile and compile times; the best
+row is starred, a variant that did not compile shows its first error in red,
+and the footer repeats the CLI's summary line. **Copy C** (row menu) copies a
+variant's source; **Write best** writes the best compiling variant to the
+repository's `src/` (`match --write`) for `configure.py swap` to install. The
+repository's tools must already be installed (`python3 configure.py`), as for
+the CLI.
+
+What the panels leave to the CLI: the scaffold platforms' `--keys` (your
+console keys for an encrypted container), `--map` and `--raw/--language` (a flat
+dump), `--fact-pack`, `--toolchain` profiles and `--cflags`, and the match
+search's `--time` and `--plan`. **Create project** reports what the CLI wrote
+and the next command; it never installs a tool, and `match` needs the tools
+`configure.py` installs.
 
 ## Filtering by evidence
 
-The Xrefs dock carries an evidence selector: **All evidence**, `declared`,
+The Xrefs panel carries an evidence selector: **All evidence**, `declared`,
 `decoded` or `inferred`. The store applies the filter, so the row count is
 the service's answer rather than a client-side pass over rows already
 fetched. The UI gate records 13 declared of 19 rows on `libc`
@@ -104,8 +259,8 @@ the typed JSON contracts described in [core-api.md](core-api.md#matching-workspa
    supply **Explicit alternatives**. Set compilation and wall-clock budgets first. Search
    retains the baseline and each attempted immutable candidate; **Cancel**
    stops the owned compiler job.
-3. **Pin selection** protects source bytes. Pins remain correct across UTF-8
-   source and Qt's UTF-16 editor offsets. Clear pins explicitly to change
+3. **Pin selection** protects source bytes. Pins are UTF-8 byte ranges, so
+   they stay correct across non-ASCII source. Clear pins explicitly to change
    protected text. Candidate selection and history provide reversible trials;
    unsaved edits must be saved or discarded before leaving them.
    Closing a window also offers **Save**, **Discard** and **Cancel**. Save
@@ -128,18 +283,18 @@ diagnostics remain available when a concise mismatch row is insufficient.
 **History**, **Project patch** and **Diagnostics** share the evidence side;
 the source editor stays visible while switching between them.
 
-The executable's `--matching-gate CONFIG.json` mode drives the real widgets,
-dialogs, compiler and project verifier. The measured Linux run in
+`--matching-gate CONFIG.json` drives the real workspace, dialogs, compiler and
+project verifier through the whole workflow offscreen and writes the matching
+workflow report (`elapsed_ms`, `mismatch_rows`, `history_rows` and the
+workflow booleans); an optional `dialog_images` directory captures each
+dialog it answers. The committed
 `benchmarks/reports/matching-workflow.json` covers mismatch diagnosis, search,
 Unicode pins, undo, calibration, context regression, verified source apply,
-private export/import and exact replay. This is local Qt runtime evidence,
-not a cross-platform release or whole-game matching claim.
+private export/import and exact replay; it was recorded on Linux before the
+desktop moved to Rust and is not a cross-platform release or whole-game
+matching claim.
 
-## Dark workbench layout
-
-The default theme now styles the entire Qt application: menus, toolbars,
-docks, tabs, tables, editors, dialogs and status bar share the analysis-view
-palette. Existing light and high-contrast preferences remain supported.
+## Workbench layout
 
 The default workspace is arranged for side-by-side analysis:
 
@@ -152,11 +307,11 @@ The default workspace is arranged for side-by-side analysis:
 - **Bottom:** xrefs and optional detail panes, including memory, jobs, types
   and analyst data. Matching has its own workspace rather than a bottom pane.
 
-The top navigation toolbar holds **Analysis/Matching** modes, image selection,
+The top toolbar holds the **Analysis/Matching** modes, image selection,
 address navigation, back/forward, decompile and refresh. Enter activates the
 selected function or navigates the address field; `Alt+Left` and `Alt+Right`
-traverse history. **Program setup** opens the project/binary and rename/comment
-controls without leaving a large form above the disassembly.
+traverse history. **Program setup** holds the project/binary and
+rename/comment controls without a large form above the disassembly.
 
 Listing selection keeps the loaded viewport stable. Home/End select its first
 and last instructions; a single click selects a row, while a double click on
@@ -167,10 +322,10 @@ of which evidence column was clicked. Superseded filter, reference, listing
 and decompiler responses cannot replace the current view.
 
 Source-cursor and graph-node selections retain the installed decompilation.
-Rapid source selections coalesce listing/xref reads instead of queueing a
-request per keypress. The native text editor supports mouse/keyboard range
-selection, word selection, Copy, PageUp/PageDown and Home/End, with both
-scrollbars. Reverse synchronization does not replace an active text selection.
+Source selections settle before the listing and xrefs follow, instead of
+queueing a request per keypress. The source view supports mouse/keyboard
+range selection, word selection, Copy, PageUp/PageDown and Home/End.
+Reverse synchronization does not replace an active text selection.
 
 The source gutter shows line numbers and clickable fold markers.
 `Ctrl+Shift+[` folds/unfolds the current block; `Ctrl+Shift+]` expands all.
@@ -185,31 +340,32 @@ The graph uses the active document's complete native `FunctionIr`, not a second
 bounded disassembly request. Native block IDs preserve distinct blocks that
 share an address, empty blocks, disconnected blocks and loops. Node addresses
 are retained-operation navigation anchors, not claimed machine-code extents.
-The title reports block/edge counts. Source and graph share the revision-aware
-document cache; unavailable native IR is reported rather than replaced with an
+The title reports block/edge counts. Source and graph share one decompilation
+per function; unavailable native IR is reported rather than replaced with an
 incomplete graph.
 
-**Search → Command palette** (`Ctrl+Shift+P`) filters real menu actions and
+The **Command palette** (`Ctrl+Shift+P`) filters the real menu actions and
 supports keyboard activation. **Byte-pattern search** reads the committed
 program image, accepts `??` wildcards, reports errors and empty results, and
-explicitly caps the display at 256 matches. The Facts pane's **Search** tab
+explicitly caps the display at 256 matches. The Facts panel's **Search** tab
 searches symbols, strings and comments.
 
 Types' save/propagate controls write through the Core API; stack variables
-have their own ordinal, independent of structure fields. The form scrolls
-inside its dock. Memory loads the selected context when shown; the graph follows
-the active native document. Superseded program/region/type/analyst/vtable results
-cannot replace a newer request. Opening a project creates a separately bound window. Image switches
-use captured project binaries and clear cross-program navigation history;
-editing the setup fields alone does not change the active image.
+have their own ordinal, independent of structure fields. Memory loads the
+selected context when shown; the graph follows the active native document.
+Superseded program/region/type/analyst/vtable results cannot replace a newer
+request. Opening a project starts a separate window. Image switches use
+captured project binaries and clear cross-program navigation history; editing
+the setup fields alone does not change the active image.
 
-The Jobs pane keeps a bounded completed log and opens full multiline details
-on double-click. **Dismiss selected** removes a log entry only: native work
-continues. Matching's separate **Cancel** control cancels its compiler job.
+The Jobs panel keeps a bounded completed log. **Dismiss** removes a log entry
+only: native work continues. Matching's separate **Cancel** control cancels its
+compiler job.
 
-Saved layouts are preserved. Choose **View → Reset workbench layout** to
-adopt the new arrangement in an existing project. Individual panes can still
-be shown, hidden, floated and resized through the View menu.
+Saved layouts are preserved per program. Choose **View → Reset workbench
+layout** to adopt the default arrangement. Individual panels can still be
+shown, hidden, docked and resized through the View menu, which also raises
+tabbed panels.
 
 Function navigation separates the containing function from the instruction
 cursor. Following an interior branch target preserves that function's source
@@ -217,45 +373,29 @@ and CFG instead of attempting to decompile the target as a new entry. The
 function browser exposes the complete row count through bounded lazy pages;
 address navigation locates its row under the active filter/sort. Fetching an
 ordinary scroll page does not snap the browser back to the active function.
-The listing has horizontal scrolling, with operand hit testing accounting for
-the scroll offset. View-menu actions raise tabified panes as well as showing
-them.
 
-Additional native Linux checks at 150% scaling exercised full-width address
-entry, a horizontally scrolled branch operand, interior navigation, name-sort
-and filter anchoring, and keyboard navigation to the final function page.
-These checks do not establish other-platform behavior.
+`package_desktop.py` builds the worker in the same `cargo build` as the app,
+so a fresh desktop build does not launch an older-schema worker.
 
-CMake builds the native Rust worker together with the Qt bridge so a fresh
-desktop build does not accidentally launch an older-schema worker.
+## Earlier workbench evidence
 
-The original interaction evidence remains in
-[`workbench-interactions.json`](../benchmarks/reports/workbench-interactions.json).
-The follow-up
+These reports were recorded on Linux before the desktop moved to Rust; they
+describe the workflows the Rust panels reproduce, not runs of
+`romwright-desktop`:
+[`workbench-interactions.json`](../benchmarks/reports/workbench-interactions.json),
 [`workbench-acceptance.json`](../benchmarks/reports/workbench-acceptance.json)
-records the repaired native failures, sustained two-function navigation,
-real MWCC matching, secondary-pane/dialog checks and four layout/scale cases.
-The `ls` analysis gate now completes without the earlier control-flow-cut or
-dynamic-hash errors. The native patch's compatibility boundary is documented
-in [upstream-ghidra.md](upstream-ghidra.md#romwright-native-compatibility-extensions).
+(repaired native failures, sustained two-function navigation, real MWCC
+matching, secondary-pane/dialog checks and four layout/scale cases) and
+[`workbench-quality.json`](../benchmarks/reports/workbench-quality.json)
+(20 function switches and 2,220 source key events over 89.8 seconds with a
+maximum 56 ms heartbeat gap). The native patch's compatibility boundary is
+documented in
+[upstream-ghidra.md](upstream-ghidra.md#romwright-native-compatibility-extensions).
 
-The follow-up quality evidence is
-[`workbench-quality.json`](../benchmarks/reports/workbench-quality.json).
-The earlier run's 531 ms maximum heartbeat gap led to profiling: parsing a
-29.6 MB response alone occupied the GUI thread for 436 ms. Response parsing
-and token/address projection now run off-thread. The follow-up exercised 20
-function switches and 2,220 source key events over 89.8 seconds, with two native
-decompilations and a maximum 56 ms heartbeat gap. This does not establish
-IDA/Ghidra interaction parity or eliminate every possible UI stall.
-
-Real MWCC `PADClamp` now matches instructions and relocations. Whole-object
+Real MWCC `PADClamp` matches instructions and relocations. Whole-object
 bytes remain different because the split target and compiler output carry
 different object metadata; see [toolchains.md](toolchains.md#user-owned-matching-profiles).
 Real Dolphin acceptance read two live memory pages over one connection, checked
 the disc ID against independent image metadata, and returned to file mode.
-Private game memory/source captures are not published.
-
-Evidence remains local Linux/Qt coverage. The existing CI matrix runs the
-packaged source gate on Linux, Windows and macOS, but the updated Windows/macOS
-binaries were not executed during this acceptance run. No cross-platform
+Private game memory/source captures are not published. No cross-platform
 certification or whole-game matching claim follows.
