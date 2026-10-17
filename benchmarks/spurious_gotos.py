@@ -68,7 +68,7 @@ MODELS = load("structuring_models", ROOT / "benchmarks/structuring_models.py")
 DIFF = MODELS.DIFF
 
 HOME = Path.home()
-CORPUS = HOME / "ventris-corpus/extracted"
+CORPUS = HOME / "romwright-corpus/extracted"
 IMAGES = {
     "gba-pokeemerald": {
         "elf": CORPUS / "gba-pokeemerald/pokeemerald.elf",

@@ -53,8 +53,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 CLI = ROOT / "target/release/romwright-cli"
 API = ROOT / "target/release/romwright-api"
-CORPUS = next((p for p in (Path.home() / "ventris-corpus", Path.home() / "romwright-corpus")
-               if p.is_dir()), Path.home() / "ventris-corpus")
+CORPUS = Path.home() / "romwright-corpus"
 NDS_DIR = CORPUS / "extracted/nds-pokeheartgold"
 ROM = "pokeheartgold.us.nds"
 GC_DIR = CORPUS / "extracted/gc-animal-crossing"

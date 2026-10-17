@@ -7,7 +7,7 @@
     "commit": "c63620eb6904e8e43c004e93cb85ae91d2ff5c73"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-dark-cloud/SCUS_971.11",
+    "path": "~/romwright-corpus/extracted/ps2-dark-cloud/SCUS_971.11",
     "sha1": "d9965d6908a334a5dfc982f3384428ad42048d54"
   },
   "program": "ps2-dk",
@@ -47,7 +47,7 @@
     "rm -rf ps2/build/ntsc",
     "git submodule update --init --recursive tools/mwccgap tools/m2c",
     "mkdir -p tools/compilers/mw && mv tools/compilers/mw/2.3.3 tools/compilers/mw/2.3.3.repo 2>/dev/null || rm -rf tools/compilers/mw/2.3.3; mkdir -p tools/compilers/mw/2.3.3 && cp {tool:mwcps2-2.3.3-000906}/mwccps2.exe tools/compilers/mw/2.3.3/mwccmips.exe && cp {tool:mwcps2-2.3.3-000906}/LMGR326B.DLL {tool:mwcps2-2.3.3-000906}/asm_r5900_elf.exe {tool:mwcps2-2.3.3-000906}/mwldps2.exe tools/compilers/mw/2.3.3/",
-    "mkdir -p rom/ntsc/extracted/iso && ln -sf {retail} rom/ntsc/extracted/iso/SCUS_971.11 && for f in TITLE.BIN DUN.BIN; do ln -sf ~/ventris-corpus/extracted/ps2-dark-cloud/modules/$f rom/ntsc/extracted/iso/$f; done",
+    "mkdir -p rom/ntsc/extracted/iso && ln -sf {retail} rom/ntsc/extracted/iso/SCUS_971.11 && for f in TITLE.BIN DUN.BIN; do ln -sf ~/romwright-corpus/extracted/ps2-dark-cloud/modules/$f rom/ntsc/extracted/iso/$f; done",
     "scripts/build/cmake.sh setup",
     "scripts/build/cmake.sh ctx"
   ],

@@ -10,7 +10,7 @@ driver
   2. maps each truth module to the program wave_units placed it in (console_research.wave_units),
   3. copies the project (`facts add-donor` opens it read-write), writes the per-program truth TSV,
   4. calls `romwright facts add-donor --pack P --project <copy> --program <p> --truth <tsv>
-     --donor <json> [--prototypes ~/ventris-scratch/factpack/prototypes/<game>.tsv]`.
+     --donor <json> [--prototypes ~/romwright-scratch/factpack/prototypes/<game>.tsv]`.
 
 It then writes `<pack>.manifest.json`: tools fingerprint, per-donor counts (truth rows, programs,
 unplaced modules, bodies and prototypes the pack ended up holding) and the pack's own meta.
@@ -41,7 +41,7 @@ sys.path.insert(0, str(HERE))
 import units  # noqa: E402
 
 RUNS = Path.home() / "runs" / "FactEval"
-PROTOTYPES = Path.home() / "ventris-scratch" / "factpack" / "prototypes"
+PROTOTYPES = Path.home() / "romwright-scratch" / "factpack" / "prototypes"
 
 
 def log(message: str) -> None:
@@ -151,7 +151,7 @@ def main() -> int:
     parser.add_argument("--work", type=Path, default=RUNS / "build-work")
     parser.add_argument("--fingerprint", default=None, help="prefer the cached projects of this tool fingerprint")
     parser.add_argument("--ghidra", type=Path, default=Path.home() / "ghidra_12.1.3_PUBLIC")
-    parser.add_argument("--ghidra-opt", type=Path, default=Path.home() / "ventris" / "native" / "build" / "ghidra_opt")
+    parser.add_argument("--ghidra-opt", type=Path, default=HERE.parents[1] / "native" / "build" / "ghidra_opt")
     parser.add_argument("--worker", type=Path, default=None, help="romwright-worker (default: beside --cli)")
     parser.add_argument("--jobs", type=int, default=3, help="donors prepared concurrently (pack writes are serial)")
     parser.add_argument("--timeout", type=int, default=3600, help="seconds per `facts add-donor`")

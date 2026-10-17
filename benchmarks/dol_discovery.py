@@ -9,7 +9,7 @@ read just before it. Nothing is written outside --work and --out.
 
   dol_discovery.py --work DIR --out J \
       --cli before=BIN_BEFORE/romwright-cli --cli after=BIN_AFTER/romwright-cli \
-      [--corpus ~/ventris-corpus/extracted] [--reps 2] [slug ...]
+      [--corpus ~/romwright-corpus/extracted] [--reps 2] [slug ...]
 
 Scoring: truth is the rows of module `main` (`--module all` scores every module,
 for a disc import whose RELs are linked into the program); an entry is a hit
@@ -118,7 +118,7 @@ def main() -> None:
     parser.add_argument("--cli", action="append", required=True, metavar="LABEL=PATH")
     parser.add_argument("--work", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    parser.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     parser.add_argument("--reps", type=int, default=1)
     parser.add_argument("--module", default="main", help="truth module to score, or 'all'")
     parser.add_argument("--disc", help="image file inside the slug directory (default main.dol)")

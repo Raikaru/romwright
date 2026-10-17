@@ -1420,7 +1420,7 @@ def compare_reports(paths: list[Path]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    parser.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     parser.add_argument("--cache", type=Path, default=Path.home() / ".cache" / "romwright" / "ownership")
     parser.add_argument("--target-dir", type=Path, help="cargo target dir of the instrumented build")
     parser.add_argument("--cov-build", type=Path, help="ownership_build_coverage.sh output dir")

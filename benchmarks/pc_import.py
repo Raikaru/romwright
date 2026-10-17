@@ -12,7 +12,7 @@ driver is the fast loop and the source of the per-function miss/invented lists.
 A no-truth image (`--no-truth NAME=PATH`, e.g. a retail game) goes through `console_research.run_no_truth`:
 success, wall time, function counts, agreement of the two tools.
 
-    CARGO_TARGET_DIR=~/runs/X/ventris/target benchmarks/pc_import.py --corpus ~/ventris-corpus/extracted \\
+    CARGO_TARGET_DIR=~/runs/X/romwright/target benchmarks/pc_import.py --corpus ~/romwright-corpus/extracted \\
         --work ~/runs/X/pc-work --out benchmarks/reports/pc_import_discovery_<tag>.json [--stock] [--images ids]
 """
 from __future__ import annotations
@@ -164,7 +164,7 @@ def measure(args, tools, spec: dict, corpus: Path, cache: Path) -> dict:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    p.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     p.add_argument("--work", type=Path, required=True)
     p.add_argument("--cache", type=Path, default=Path.home() / ".cache" / "romwright" / "pc-import")
     p.add_argument("--out", type=Path, required=True)

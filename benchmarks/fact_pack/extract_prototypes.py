@@ -21,11 +21,11 @@ void`, plus pointers to them). The parser knows nothing of repo types, so:
 * C++ members take a leading `void * this` (static members do not).
 
 Rebuild from scratch (needs `c++filt` from binutils for `_Z` names):
-    python3 -m venv ~/ventris-scratch/factpack/venv
-    ~/ventris-scratch/factpack/venv/bin/pip install tree-sitter tree-sitter-c tree-sitter-cpp
+    python3 -m venv ~/romwright-scratch/factpack/venv
+    ~/romwright-scratch/factpack/venv/bin/pip install tree-sitter tree-sitter-c tree-sitter-cpp
     python3 fetch_donors.py                       # repos/<game> at the pinned commits
-    ~/ventris-scratch/factpack/venv/bin/python extract_prototypes.py [GAME...]
-    ~/ventris-scratch/factpack/venv/bin/python extract_prototypes.py --table   # per-game report
+    ~/romwright-scratch/factpack/venv/bin/python extract_prototypes.py [GAME...]
+    ~/romwright-scratch/factpack/venv/bin/python extract_prototypes.py --table   # per-game report
 Rows the native C parser rejects are listed by the throwaway validator in
 `--rejects DIR/<game>.tsv` (name<TAB>error) and dropped on the next run.
 """
@@ -48,8 +48,8 @@ sys.path.insert(0, str(Path(__file__).parent))
 import itanium_names  # noqa: E402
 import mwcc_names  # noqa: E402
 
-SCRATCH = Path.home() / "ventris-scratch" / "factpack"
-CORPUS = Path.home() / "ventris-corpus" / "extracted"
+SCRATCH = Path.home() / "romwright-scratch" / "factpack"
+CORPUS = Path.home() / "romwright-corpus" / "extracted"
 EXTS_C = {".c"}
 EXTS_CPP = {".cpp", ".cc", ".cxx", ".hpp", ".hh", ".hxx"}
 EXTS_H = {".h"}

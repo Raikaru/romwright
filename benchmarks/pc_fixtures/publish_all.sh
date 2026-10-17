@@ -2,7 +2,7 @@
 # Publishes every PC truth fixture from the build outputs under $B (the layout scripts_*.sh and the cmake
 # builds write). usage: publish_all.sh [ids...]   (default: all)
 set -e
-R=~/runs/PcImport; B=$R/build; C=~/ventris-corpus/extracted; T=$R/pc_truth.py
+R=~/runs/PcImport; B=$R/build; C=~/romwright-corpus/extracted; T=$R/pc_truth.py
 want=" $* "
 M8="MSVC 14.00.50727.42 (Visual C++ 2005, widberg/msvc8.0@936f93b9e9e92943ed5c9398d24712a32c2e9fe4: cl.exe 14.00.50727.42 + link.exe 8.00.50727.42 under wine 11.0 / Fedora wine-core 11.0-3.fc44), static CRT libcmt.lib 8.0"
 MG32="GCC 16.2.1 MinGW-w64 13.0.0 (Fedora 44 mingw32-gcc 16.2.1-1.fc44), i686-w64-mingw32, GNU ld 2.46"

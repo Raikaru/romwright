@@ -7,7 +7,7 @@
     "commit": "58bcee16a279f8ee2bc2a7e9d341a33b325d4151"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-god-hand/SLUS_215.03",
+    "path": "~/romwright-corpus/extracted/ps2-god-hand/SLUS_215.03",
     "sha1": "b3ab71dfca85cc5fd9336404da93f0c0c2e811e6"
   },
   "program": "ps2-gh",
@@ -57,7 +57,7 @@
   "symbols": [
     {
       "kind": "truth_tsv",
-      "path": "~/ventris-corpus/extracted/ps2-god-hand/truth/functions.tsv"
+      "path": "~/romwright-corpus/extracted/ps2-god-hand/truth/functions.tsv"
     },
     {
       "kind": "splat",

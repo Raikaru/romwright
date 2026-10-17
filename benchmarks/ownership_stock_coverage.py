@@ -44,7 +44,7 @@ def main() -> int:
     parser.add_argument("--cov-build", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--source-root", type=Path)
-    parser.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    parser.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--out", type=Path, required=True)

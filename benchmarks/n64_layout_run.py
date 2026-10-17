@@ -3,7 +3,7 @@
 needs for its timing columns: `<out>/<slug>.json` with the wall time and the load average read before
 and after, and whether the import printed `degraded` (an import that did is not a valid measurement).
 
-    n64_layout_run.py --cli-dir DIR --corpus ~/ventris-corpus/extracted --out OUT slug [slug ...]
+    n64_layout_run.py --cli-dir DIR --corpus ~/romwright-corpus/extracted --out OUT slug [slug ...]
 
 `--cli-dir` holds `romwright-cli` and the `romwright-worker` it spawns from beside its own executable
 (build both: a missing worker makes every import `degraded`). The import cache is switched off so a

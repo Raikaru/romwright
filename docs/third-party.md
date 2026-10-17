@@ -887,7 +887,7 @@ What it relies on, and where each fact comes from:
   measured on that ROM, not read from a source: at every stream the length
   equals what inflates.
 - **Truth** (benchmarks only, never an importer input):
-  `~/ventris-corpus/extracted/n64-<slug>/truth/{layout.json,functions.tsv}`
+  `~/romwright-corpus/extracted/n64-<slug>/truth/{layout.json,functions.tsv}`
   from the matching decomps (`zeldaret/oot`, `zeldaret/mm`, `n64decomp/sm64`,
   `n64decomp/banjo-kazooie`, `pmret/papermario`, `n64decomp/perfect_dark`,
   `sonicdcer/sf64`, `VetriTheRetri/ssb-decomp-re`, `AngheloAlf/drmario64`; GPL

@@ -41,7 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CORPUS = Path.home() / "ventris-corpus" / "extracted"
+CORPUS = Path.home() / "romwright-corpus" / "extracted"
 
 # Truth for games whose `truth/meta.json` does not exist: (relative image, truth id, source).
 SUPPLEMENT = {

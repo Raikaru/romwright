@@ -7,7 +7,7 @@
     "commit": "36a18ca4459480f7080e33f2ec413ef8485250e5"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-ratchet-clank/SCUS_971.99",
+    "path": "~/romwright-corpus/extracted/ps2-ratchet-clank/SCUS_971.99",
     "sha1": "72fd1de379dafd8f243dceeb3be50980f3fd3cd5"
   },
   "program": "ps2-rc",
@@ -34,7 +34,7 @@
   "symbols": [
     {
       "kind": "truth_tsv",
-      "path": "~/ventris-corpus/extracted/ps2-ratchet-clank/truth/functions.tsv"
+      "path": "~/romwright-corpus/extracted/ps2-ratchet-clank/truth/functions.tsv"
     },
     {
       "kind": "splat",

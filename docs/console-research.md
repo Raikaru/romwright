@@ -1595,7 +1595,7 @@ needs none: a 4x4 product is already `a * b + c * d`).
 ## Truth-contract images: `--corpus-wave` (2026-10-09, HarnessWave)
 
 `benchmarks/console_research.py --corpus-wave` runs every image a corpus
-builder staged under `~/ventris-corpus/extracted/<id>/truth/`, with no entry
+builder staged under `~/romwright-corpus/extracted/<id>/truth/`, with no entry
 in the script: the image spec is read from `meta.json`. The built-in list and
 the frozen m21 gate (`tests/m21-001_real_images.py` floors) are untouched; the
 new images are **not** in m21's floors. The code is `benchmarks/console_research.py`
@@ -2117,7 +2117,7 @@ tens to hundreds of shared "gap" entries on PSP, NDS, PSX and GC (real code the 
 **Truth audit (PSP stubs).** `truth/functions.pre-pspaudit.tsv` keeps the old table, `truth/pspaudit-changes.tsv` lists every added row with its evidence, `meta.json` `notes` carries the marker
 "PSP TRUTH AUDIT 2026-10-14". Each of the five images has `.sceStub.text[.<library>]` sections: 8-byte stubs, every first word `jr ra` (checked), no truth row overlapping. Added as unverified 8-byte rows
 (`sceStub_<addr>`): Hot Pixel 233, Melodie 99, Pac-Man Rally 200, Camera 01 206, Tetris 187. It raises stock's precision as much as ours (Hot Pixel stock 0.9633 -> 0.9988) and moves no verified metric; recall
-rows change for both tools alike. The audit script was a throwaway (`~/ventris-scratch/ImportPrecision/pspaudit.py`).
+rows change for both tools alike. The audit script was a throwaway (`~/romwright-scratch/ImportPrecision/pspaudit.py`).
 
 **The fixes** (all generic; six `flag` rules in `compiler_rules/common.json`, read by `interior_entries`, switchable with `ROMWRIGHT_COMPILER_RULES_DISABLE`, `docs/compiler-rules.md` Appendix D; three non-rule fixes):
 
@@ -2655,7 +2655,7 @@ of the scored ranges, Dark Chronicle's 7%, Dark Cloud's 4%).
 
 Truth functions that none of ours covers and that start 64 or more bytes past the end of our
 previous function (the miss class the sweep and the data pointers address; current truth, same
-classifier as `~/ventris-scratch/ps2-diag/ps2_classify.py`, adapted to read the projects of
+classifier as `~/romwright-scratch/ps2-diag/ps2_classify.py`, adapted to read the projects of
 `benchmarks/ps2_discovery.py`): God Hand 109 -> 0, Fatal Frame 167 -> 1, Digital Devil Saga 52 -> 1,
 Persona 4 43 -> 0, Dark Chronicle 40 -> 2, Dark Cloud 38 -> 1, Ratchet & Clank 4 -> 3, PAL 4 -> 3.
 Functions covered by none of ours, all distances: 343 -> 11, 253 -> 17, 133 -> 11, 160 -> 5,
@@ -2672,7 +2672,7 @@ from the code they follow (STATUS.md, Ps2Recall).
 ## Reproduce
 
 All from the repository root. The harness reads the private corpus
-(`~/ventris-corpus/extracted`), `native/build/ghidra_opt` and
+(`~/romwright-corpus/extracted`), `native/build/ghidra_opt` and
 `readelf`; m22 also needs agbcc and objdiff; m22-002 needs the P4 CI kit in
 `/var/tmp/p4ci`, wibo, m2c and objdiff (see its supplement).
 
@@ -3183,7 +3183,7 @@ Totals: {'games': 8, 'exact': 8, 'lineage': 0, 'abstained': 0, 'wrong': 0}
 # fixtures (nih-vps-u: toolchains unpacked under ~/runs/PcImport as benchmarks/pc_fixtures/wenv.sh and the scripts expect)
 benchmarks/pc_fixtures/scripts_q2_msvc8.sh; scripts_q2dll_msvc8.sh; scripts_q2game_msvc8_debug.sh; scripts_wq_msvc42.sh
 cmake -S <ioq3> -B build -DCMAKE_TOOLCHAIN_FILE=benchmarks/pc_fixtures/mingw32.cmake ... ; scripts_doom_mingw.sh i686 OUT -O2
-benchmarks/pc_fixtures/publish_all.sh            # benchmarks/pc_truth.py -> ~/ventris-corpus/extracted/pc-*
+benchmarks/pc_fixtures/publish_all.sh            # benchmarks/pc_truth.py -> ~/romwright-corpus/extracted/pc-*
 # measurement (fresh import per arm; the harness sets ROMWRIGHT_NO_IMPORT_CACHE and ROMWRIGHT_NO_FACT_PACK)
 CARGO_TARGET_DIR=<target> benchmarks/pc_import.py --work W --out ours.json --arms ours
 CARGO_TARGET_DIR=<target> benchmarks/pc_import.py --work W --cache C --out stock.json --arms stock

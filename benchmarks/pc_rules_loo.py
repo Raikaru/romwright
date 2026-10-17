@@ -6,7 +6,7 @@ For every rule: one fresh import of every fixture with the rule switched off
 every difference is real; a rule `helps` a fixture when recall or precision improves and neither worsens,
 `hurts` in the reverse case, `mixed` when both happen. Also the all-off arm (every PE rule disabled).
 
-    CARGO_TARGET_DIR=~/runs/X/ventris/target benchmarks/pc_rules_loo.py --work ~/runs/X/pc-work \\
+    CARGO_TARGET_DIR=~/runs/X/romwright/target benchmarks/pc_rules_loo.py --work ~/runs/X/pc-work \\
         --out benchmarks/reports/pc_rules_loo_<tag>.json
 """
 from __future__ import annotations
@@ -50,7 +50,7 @@ def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--work", type=Path, required=True)
     p.add_argument("--out", type=Path, required=True)
-    p.add_argument("--corpus", type=Path, default=Path.home() / "ventris-corpus" / "extracted")
+    p.add_argument("--corpus", type=Path, default=Path.home() / "romwright-corpus" / "extracted")
     p.add_argument("--images", default="")
     p.add_argument("--rules", default=",".join(RULES))
     p.add_argument("--only-arms", default="", help="run just these arms (rule ids, ALL, base) into --work and stop: several processes "

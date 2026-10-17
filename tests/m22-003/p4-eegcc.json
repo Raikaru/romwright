@@ -7,7 +7,7 @@
     "commit": "509519da5809d4958d55520e7d257b75cb69cd51"
   },
   "retail": {
-    "path": "~/ventris-corpus/extracted/ps2-persona-4/SLUS_217.82",
+    "path": "~/romwright-corpus/extracted/ps2-persona-4/SLUS_217.82",
     "sha1": "4eeec0360cf2715535d9f7e52eb69d786fb0158c"
   },
   "program": "ps2-p4",
@@ -44,7 +44,7 @@
   "symbols": [
     {
       "kind": "truth_tsv",
-      "path": "~/ventris-corpus/extracted/ps2-persona-4/truth/functions.tsv"
+      "path": "~/romwright-corpus/extracted/ps2-persona-4/truth/functions.tsv"
     },
     {
       "kind": "splat",

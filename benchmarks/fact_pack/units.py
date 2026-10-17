@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "benchmarks"))
 
 DEFAULT_ENV_KEY = "4f53cda18c2b"  # console_research.env_key({}): the default import environment
-CORPUS = Path.home() / "ventris-corpus" / "extracted"
+CORPUS = Path.home() / "romwright-corpus" / "extracted"
 CACHE = Path.home() / ".cache" / "romwright" / "research-eval"
 TSV_HEADER = "start\tsize\tname\tmodule\tverified"
 
