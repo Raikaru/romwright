@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# M0-006 acceptance: build the CPack release archive, extract to a clean
+# M0-006 acceptance: build the desktop release archive, extract to a clean
 # installation prefix, run the offscreen gate on libc, and verify that all
 # six metrics pass (including ui.install.ok: true).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_DIR="${ROMWRIGHT_BUILD_DIR:-/tmp/romwright-qt-build}"
+PACKAGE_DIR="${ROMWRIGHT_PACKAGE_DIR:-$ROOT/build/desktop-package}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 
 if [ ! -f "$BINARY" ]; then
@@ -13,12 +13,10 @@ if [ ! -f "$BINARY" ]; then
     exit 1
 fi
 
-# Step 1: Build the CPack package.
-cmake --build "$BUILD_DIR" --target package >/dev/null
-
-PACKAGE="$(ls -t "$BUILD_DIR"/romwright-*.tar.gz 2>/dev/null | head -n1)"
+# Step 1: Build the release archive.
+PACKAGE="$(python3 "$ROOT/packaging/package_desktop.py" --output "$PACKAGE_DIR" | tail -n1)"
 if [ -z "$PACKAGE" ] || [ ! -f "$PACKAGE" ]; then
-    echo "no CPack package found in $BUILD_DIR" >&2
+    echo "no desktop package written to $PACKAGE_DIR" >&2
     exit 1
 fi
 
@@ -28,9 +26,9 @@ trap 'rm -rf "$INSTALL_DIR"' EXIT
 
 tar -xzf "$PACKAGE" -C "$INSTALL_DIR"
 
-INSTALLED_APP="$(find "$INSTALL_DIR" -name romwright-qt -type f -perm -111 | head -n1)"
+INSTALLED_APP="$(find "$INSTALL_DIR" -name romwright-desktop -type f -perm -111 | head -n1)"
 if [ -z "$INSTALLED_APP" ] || [ ! -x "$INSTALLED_APP" ]; then
-    echo "installed romwright-qt not found in $INSTALL_DIR" >&2
+    echo "installed romwright-desktop not found in $INSTALL_DIR" >&2
     exit 1
 fi
 
@@ -38,7 +36,7 @@ fi
 PROJECT="$INSTALL_DIR/project"
 REPORT="$INSTALL_DIR/ui-gate.json"
 
-QT_QPA_PLATFORM=offscreen ROMWRIGHT_UI_INSTALL_OK=1 python3 "$ROOT/benchmarks/ui_gate.py" \
+ROMWRIGHT_UI_INSTALL_OK=1 python3 "$ROOT/benchmarks/ui_gate.py" \
     --app "$INSTALLED_APP" \
     --binary "$BINARY" \
     --program libc \

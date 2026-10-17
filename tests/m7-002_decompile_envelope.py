@@ -41,7 +41,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "benchmarks"))
-from cost import HEADROOM, check_envelope, measure, record_envelope  # noqa: E402
+from cost import (HEADROOM, build_shipped, check_envelope, measure,  # noqa: E402
+                  record_envelope, shipped_binary)
 
 ENVELOPE = ROOT / "benchmarks" / "reports" / "decompile-envelope.json"
 FUNCTION = "main"
@@ -50,7 +51,7 @@ FUNCTION = "main"
 def native_address(program: str, project: Path) -> str:
     """The address the native store gave the wanted function."""
     listing = subprocess.run(
-        [str(ROOT / "target/release/romwright-cli"), "functions", program,
+        [str(shipped_binary(ROOT, "romwright-cli")), "functions", program,
          "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True, check=True).stdout
     for line in listing.splitlines():
@@ -64,14 +65,14 @@ def native_decompile(binary: Path, identifier: str, temporary: Path
                      ) -> tuple[float, int, str, int]:
     project = temporary / "native"
     setup = subprocess.run(
-        [str(ROOT / "target/release/romwright-cli"), "import", str(binary),
+        [str(shipped_binary(ROOT, "romwright-cli")), "import", str(binary),
          "--name", "cost", "--project", str(project)],
         cwd=ROOT, capture_output=True, text=True)
     assert setup.returncode == 0, f"{identifier}: native import failed: {setup.stderr}"
     address = native_address("cost", project)
     output = temporary / "native.c"
     wall, peak, code = measure(
-        [str(ROOT / "target/release/romwright-cli"), "decompile", str(binary), address,
+        [str(shipped_binary(ROOT, "romwright-cli")), "decompile", str(binary), address,
          "--name", "cost", "--project", str(project)], cwd=ROOT, output=output)
     assert code == 0, f"{identifier}: native decompile exited {code}"
     body = output.read_text()
@@ -119,8 +120,7 @@ def main() -> int:
         "ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC"))))
     arguments = parser.parse_args()
 
-    subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"],
-                   cwd=ROOT, check=True)
+    build_shipped(ROOT, "romwright-cli")
     manifest = json.loads((arguments.corpus_dir / "manifest.json").read_text())
     entries = [entry for entry in manifest["entries"]
                if entry.get("status") == "ok" and entry.get("unstripped_twin")]

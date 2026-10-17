@@ -179,8 +179,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-      - name: Install corpus and console build tools
-        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential binutils-dev zlib1g-dev libzstd-dev cmake qt6-base-dev
+      - name: Install corpus build tools
+        run: sudo apt-get update && sudo apt-get install -y llvm lld clang build-essential zlib1g-dev mesa-vulkan-drivers
       - name: Install pinned Ghidra release
         run: |
           curl --fail --location --retry 3 https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.3_build/ghidra_12.1.3_PUBLIC_20260817.zip --output "$RUNNER_TEMP/ghidra.zip"
@@ -194,11 +194,7 @@ jobs:
           python3 tests/m1-008b_scoring_test.py
           git diff --exit-code
           test -z "$(git ls-files --others --exclude-standard)"
-      - name: Build native discovery console
-        run: bash native/build_console.sh --jobs 2
       - name: Verify native function constant propagation
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: cargo test -p romwright-core native_runtime::tests::constant_propagation -- --nocapture
       - name: Generate matching discovery gate inputs
         run: |
@@ -224,8 +220,6 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA"
       - name: Enforce complete M1 discovery gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 benchmarks/discovery_gate.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
@@ -233,51 +227,37 @@ jobs:
             --scoring-dir "$RUNNER_TEMP/discovery/scoring" \
             --report "$RUNNER_TEMP/discovery/discovery-report.json"
       - name: Enforce the measured import budget
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m2-016_import_budget.py \
             --report "$RUNNER_TEMP/discovery/import-budget.json"
       - name: Check the committed library declarations against the archive
         run: python3 scripts/gen_library_prototypes.py --check
       - name: Apply declared prototypes to the imports an image names
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-009_library_prototypes.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/library-prototypes.json"
       - name: Type the words DT_PLTGOT reserves
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-007_got_pointers.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/got-pointers.json"
       - name: Render the image's own widths, exits and names
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-011_widths_exits_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/widths-exits-names.json"
       - name: Record the facts the exact token accounting names
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-012_remaining_facts.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/remaining-facts.json"
       - name: Type an initializer slot from the array that holds it
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-021_initializer_slots.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/initializer-slots.json"
       - name: Label a code address as code
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-020_label_prefixes.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
@@ -302,8 +282,6 @@ jobs:
           python3 tests/m4-016_class_direction.py \
             --report "$RUNNER_TEMP/discovery/class-direction.json"
       - name: Record how wide each data access is
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-015_reference_widths.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
@@ -313,106 +291,76 @@ jobs:
           python3 tests/m4-014_worker_resolution.py \
             --report "$RUNNER_TEMP/discovery/worker-resolution.json"
       - name: Override the branch that leaves a function for another entry
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-013_shared_returns.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/shared-returns.json"
       - name: Put each stub's override on the branch that transfers
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-010_stub_transfers.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/stub-transfers.json"
       - name: Correct the PLT header's flow from the image's ABI
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-006_plt_header.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/plt-header.json"
       - name: Pass the store's transfer facts to the decompiler
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-005_thunk_flow.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/thunk-flow.json"
       - name: Pass the store's data facts to the decompiler
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-004_data_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/data-names.json"
       - name: Select every language from the install's own opinion data
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-023_language_selection.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/language-selection.json"
       - name: Apply declarations in the language's own type names
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-025_declaration_types.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/declaration-types.json"
       - name: Record the try ranges the exception tables declare
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-024_exception_annotations.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/exception-annotations.json"
       - name: Type the words that hold addresses as pointers
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-027_pointer_slots.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/pointer-slots.json"
       - name: Hold the name a mangled name was mangled from
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-028_demangled_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/demangled-names.json"
       - name: Name the addresses the dynamic table declares
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-029_dynamic_tags.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/dynamic-tags.json"
       - name: Type a slot from what the image declares its target is
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-030_pointer_targets.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/pointer-targets.json"
       - name: Bound the one name we coin to its section
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-031_section_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/section-names.json"
       - name: Score every function producer on its own
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m17-002_producer_classes.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/reports/m17-002.json"
       - name: Find functions by the shape of the graph
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m17-001_cfg_functions.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
@@ -420,60 +368,51 @@ jobs:
       - name: Build the native desktop analysis gate
         run: |
           bash native/build_ghidra_opt.sh --jobs 2
-          cmake -S desktop/romwright-qt -B build/romwright-qt -DCMAKE_BUILD_TYPE=Release
-          cmake --build build/romwright-qt --config Release --target romwright-qt --parallel 2
+          cargo build --release -p romwright-desktop -p romwright-worker
       - name: Answer every query now, and say what is missing
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m14-003_facts_so_far.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/reports/m14-003.json"
       - name: Show facts so far in the window, then fill them in
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m14-004_ui_progress.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/reports/m14-004.json"
-      - name: Infer parameter and return types from p-code
+      - name: Run the desktop UI gate on libc
+        # No GPU on the runner: the desktop renders on Mesa lavapipe.
+        # ui.install.ok is the harness-supplied flag the packaging tests set.
         env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
+          ROMWRIGHT_UI_INSTALL_OK: "1"
+        run: |
+          python3 benchmarks/ui_gate.py \
+            --app target/release/romwright-desktop \
+            --runs 1 \
+            --output "$RUNNER_TEMP/reports/ui-gate.json"
+      - name: Infer parameter and return types from p-code
         run: |
           python3 tests/m16-001_types.py \
             --report "$RUNNER_TEMP/reports/m16-001.json"
       - name: Structure our control-flow graphs with stock's structuring
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m15-001_structuring.py \
             --report "$RUNNER_TEMP/reports/m15-001.json"
       - name: Analyse one function on demand
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m14-002_demand.py \
             --report "$RUNNER_TEMP/reports/m14-002.json"
       - name: Load without analysing, and reuse an unchanged import
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m14-001_interactive_import.py \
             --report "$RUNNER_TEMP/discovery/interactive-import.json"
       - name: Recover jump tables without the decompiler
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m13-001_vsa_switch.py --report "$RUNNER_TEMP/discovery/vsa-switch.json"
       - name: Import a Switch module with no JVM
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # Retail dump; the gate skips with a reason on a runner.
           python3 tests/m5-017_switch_module.py --report "$RUNNER_TEMP/discovery/switch-module.json"
       - name: Port names across builds and score the diff
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # The game modules are not on a runner, so the modules rows are
           # skipped there; the corpus rows and the cross-optimisation rows
@@ -483,16 +422,12 @@ jobs:
             --work "$RUNNER_TEMP/discovery/diff" \
             --report "$RUNNER_TEMP/discovery/diff.json"
       - name: Score function recovery on real game images
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # The game images are private; a runner records each skip.
           python3 tests/m21-001_real_images.py \
             --work "$RUNNER_TEMP/discovery/real-images" \
             --report "$RUNNER_TEMP/discovery/real-images.json"
       - name: Transfer names across compilers on a real pair
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # The Mac/Windows game builds are private, so a runner records
           # the skip and its reason.
@@ -500,8 +435,6 @@ jobs:
             --work "$RUNNER_TEMP/discovery/cross-compiler" \
             --report "$RUNNER_TEMP/discovery/cross-compiler.json"
       - name: Measure token identity against the oracle per language
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # The parity rows include the mipsel corpus rows the oracle matrix
           # does not score; they are built into a corpus of their own so every
@@ -513,105 +446,77 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/parity-corpus" \
             --report "$RUNNER_TEMP/discovery/language-parity.json"
       - name: Publish measured improvement over stock as one milestone
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m4-002_improvement_milestone.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/improvement-milestone.json"
       - name: Enforce set-level thunk parity
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-008_thunk_parity.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/thunk-parity.json"
       - name: Enforce linkage stub naming
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-009_linkage_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/linkage-names.json"
       - name: Enforce initializer-array naming
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-010_initializer_names.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/initializer-names.json"
       - name: Enforce pattern-label naming
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-011_pattern_labels.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/pattern-labels.json"
       - name: Enforce the tail-call promotion gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-007_tailcall_promotion.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --report "$RUNNER_TEMP/discovery/promotion.json"
       - name: Measure the cost envelope against stock Ghidra
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m7-001_cost_envelope.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/cost-envelope.json"
       - name: Measure the decompile cost envelope against stock Ghidra
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m7-002_decompile_envelope.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA" \
             --report "$RUNNER_TEMP/discovery/decompile-envelope.json"
       - name: Bound the long-lived session envelope
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m7-003_session_envelope.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/session-envelope.json"
       - name: Gate recovered body extents against DWARF ranges
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m8-003_body_extents.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/body-extents.json"
       - name: Enforce the M3 DWARF ground-truth gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m3-001_dwarf_truth.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/oracle" \
             --report "$RUNNER_TEMP/discovery/dwarf-truth.json"
       - name: Enforce the Game Boy Advance platform gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-001_gba.py \
             --report "$RUNNER_TEMP/discovery/gba-platform.json"
       - name: Enforce the Nintendo DS platform gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-002_nds.py \
             --report "$RUNNER_TEMP/discovery/nds-platform.json"
       - name: Enforce the PlayStation and Nintendo 64 platform gates
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m5-003_psx.py \
             --report "$RUNNER_TEMP/discovery/psx-platform.json"
@@ -623,31 +528,23 @@ jobs:
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/ground-truth-baseline.json"
       - name: Enforce the M3 ground-truth regression gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m3-003_regression.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --report "$RUNNER_TEMP/discovery/ground-truth-regression.json"
       - name: Verify reference analysis contracts
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 tests/m2-002_context.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --ghidra "$ROMWRIGHT_GHIDRA"
           cargo test -p romwright-core -- --nocapture
       - name: Enforce complete M2 data-reference gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 benchmarks/xref_gate.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
             --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
             --report "$RUNNER_TEMP/discovery/data-xref-report.json"
       - name: Enforce the tail-call reference gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           # Scores against the xref oracle the data-reference gate just
           # generated; the default oracle dir is a gitignored cache that a
@@ -657,8 +554,6 @@ jobs:
             --oracle-dir "$RUNNER_TEMP/discovery/xref-oracle" \
             --report "$RUNNER_TEMP/discovery/tailcall.json"
       - name: Enforce complete M2 string gate
-        env:
-          ROMWRIGHT_CONSOLE: ${{ github.workspace }}/native/build/decomp_native
         run: |
           python3 benchmarks/string_gate.py \
             --corpus-dir "$RUNNER_TEMP/discovery/corpus" \
@@ -673,6 +568,7 @@ jobs:
             ${{ runner.temp }}/discovery/*-report.json
             ${{ runner.temp }}/discovery/corpus/manifest.json
             ${{ runner.temp }}/reports/m14-004.json
+            ${{ runner.temp }}/reports/ui-gate.json
       - name: Retain data-reference evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -711,8 +607,8 @@ jobs:
           git diff --exit-code
           test -z "$(git ls-files --others --exclude-standard)"
 
-  qt:
-    name: Qt desktop (${{ matrix.os }})
+  desktop:
+    name: Desktop (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -722,44 +618,35 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: Setup MSVC
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-      - name: Install Qt on Ubuntu
+      # Headless rendering takes a hardware adapter when the runner has one,
+      # else the platform's software adapter: Mesa lavapipe on Linux
+      # (installed here), WARP through DX12 on Windows; macOS renders on Metal.
+      - name: Install the software Vulkan adapter
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build qt6-base-dev
-      - name: Install Qt on macOS
-        if: runner.os == 'macOS'
-        run: brew install qt
-      - name: Install Qt on Windows
-        if: runner.os == 'Windows'
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: "6.7.3"
-          arch: win64_msvc2019_64
-          cache: true
-      - name: Configure desktop
-        shell: bash
-        run: |
-          EXTRA_CMAKE_ARGS=()
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            EXTRA_CMAKE_ARGS=("-DCMAKE_C_COMPILER=cl" "-DCMAKE_CXX_COMPILER=cl")
-          fi
-          cmake -S desktop/romwright-qt -B build/romwright-qt -G Ninja -DCMAKE_BUILD_TYPE=Release "${EXTRA_CMAKE_ARGS[@]}"
-      - name: Build desktop
-        run: cmake --build build/romwright-qt --config Release --target romwright-qt
-      - name: Build installer archive
-        run: cmake --build build/romwright-qt --config Release --target package
+          sudo apt-get install -y mesa-vulkan-drivers
+      - name: Build the desktop
+        run: cargo build --profile dist -p romwright-desktop -p romwright-worker -p romwright-cli
       - name: Package, install and launch the desktop
         shell: bash
         run: |
           python3 tests/m6-003_desktop_package.py \
-            --build-dir build/romwright-qt \
+            --package-dir build/desktop-package \
             --report "$RUNNER_TEMP/desktop-package-${{ runner.os }}.json"
+      - name: Render a headless screenshot
+        shell: bash
+        run: |
+          target/dist/romwright-desktop --gate --store-only \
+            --project "$RUNNER_TEMP/screenshot-project" --program tiny \
+            --binary tests/fixtures-src/tiny_bin --address 00400466 --theme dark \
+            --screenshot "$RUNNER_TEMP/desktop-${{ runner.os }}.png"
       - name: Upload desktop package evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: desktop-package-${{ runner.os }}
-          path: ${{ runner.temp }}/desktop-package-${{ runner.os }}.json
+          path: |
+            ${{ runner.temp }}/desktop-package-${{ runner.os }}.json
+            ${{ runner.temp }}/desktop-${{ runner.os }}.png
+            build/desktop-package/romwright-*.tar.gz

@@ -21,6 +21,34 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+# The binaries a gate measures are the ones that ship (`Cargo.toml`): the
+# `dist` profile, which `packaging/` builds, not the faster-to-build `release`
+# the development tests use, and for the long-lived service its own
+# size-optimised `dist-service`. The envelopes count resident size, and the
+# shipped binaries' resident code is smaller than a development build's.
+SHIPPED_PROFILE = "dist"
+SHIPPED_PROFILES = {"romwright-api": "dist-service"}
+
+
+def shipped_profile(name: str) -> str:
+    return SHIPPED_PROFILES.get(name, SHIPPED_PROFILE)
+
+
+def shipped_binary(root: Path, name: str) -> Path:
+    """Where `build_shipped` puts a binary."""
+    return root / "target" / shipped_profile(name) / name
+
+
+def build_shipped(root: Path, *packages: str) -> None:
+    """Builds the packages, each with the profile it ships with."""
+    for profile in sorted({shipped_profile(package) for package in packages}):
+        command = ["cargo", "build", "-q", "--profile", profile]
+        for package in packages:
+            if shipped_profile(package) == profile:
+                command += ["-p", package]
+        subprocess.run(command, cwd=root, check=True)
+
+
 # Host noise moves peak RSS by a few percent; a quarter is generous without
 # hiding a real regression, which shows up as a multiple.
 HEADROOM = 1.25

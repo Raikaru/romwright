@@ -11,5 +11,8 @@ romwright-debug = { path = "../romwright-debug" }
 romwright-worker-client = { path = "../romwright-worker-client" }
 romwright-model = { path = "../romwright-model" }
 serde = { workspace = true }
-serde_json = { workspace = true }
+serde_json = { workspace = true, features = ["raw_value"] }
 thiserror = { workspace = true }
+
+[target.'cfg(all(target_os = "linux", target_env = "gnu"))'.dependencies]
+libc = "0.2"

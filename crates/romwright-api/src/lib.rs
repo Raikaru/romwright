@@ -7,6 +7,7 @@
 use romwright_core::Core;
 use romwright_debug::{BackendKind, DebugBackend, DebugCommand};
 use romwright_model::{Address, AddressSpace};
+use romwright_worker_client::JobOutput;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::io::{self, BufRead, BufReader, Read, Write};
@@ -45,7 +46,7 @@ struct ResponseEnvelope {
     api: u64,
     id: Value,
     #[serde(skip_serializing_if = "Option::is_none")]
-    result: Option<Value>,
+    result: Option<JobOutput>,
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<ErrorEnvelope>,
 }
@@ -94,7 +95,7 @@ impl ApiService {
                 }),
             },
         };
-        serde_json::to_string(&response).unwrap_or_else(|error| {
+        encode(&response).unwrap_or_else(|error| {
             format!(
                 "{{\"api\":{API_VERSION},\"id\":null,\"error\":{{\"code\":\"encode\",\"message\":{}}}}}",
                 serde_json::to_string(&error.to_string()).unwrap_or_else(|_| "\"encode\"".into())
@@ -122,7 +123,28 @@ impl ApiService {
         }
     }
 
-    fn dispatch(&self, method: &str, params: &Value) -> Result<Value, DispatchError> {
+    /// The answer to one request. `decompile_doc` answers with the document's
+    /// text, which goes into the reply as it is; every other method answers
+    /// with a tree (`dispatch_tree`).
+    fn dispatch(&self, method: &str, params: &Value) -> Result<JobOutput, DispatchError> {
+        match method {
+            "decompile_doc" => {
+                let address = address_param(params, "address")?;
+                require_ram(&address)?;
+                let req = self.job_request(params)?;
+                let id = self.executor.submit(
+                    romwright_worker_client::JobKind::DecompileDoc {
+                        address: address.offset,
+                    },
+                    req,
+                );
+                self.job_output(id)
+            }
+            _ => self.dispatch_tree(method, params).map(JobOutput::Tree),
+        }
+    }
+
+    fn dispatch_tree(&self, method: &str, params: &Value) -> Result<Value, DispatchError> {
         match method {
             "ping" => Ok(json!({"service": "romwright-core", "api": API_VERSION})),
             "architectures" => value(self.core()?.architectures()),
@@ -449,18 +471,6 @@ impl ApiService {
                     .submit(romwright_worker_client::JobKind::InferPrototypes, req);
                 self.job_result(id)
             }
-            "decompile_doc" => {
-                let address = address_param(params, "address")?;
-                require_ram(&address)?;
-                let req = self.job_request(params)?;
-                let id = self.executor.submit(
-                    romwright_worker_client::JobKind::DecompileDoc {
-                        address: address.offset,
-                    },
-                    req,
-                );
-                self.job_result(id)
-            }
             "rename" => {
                 let program = string_param(params, "program")?;
                 let address = address_param(params, "address")?;
@@ -613,7 +623,9 @@ impl ApiService {
         let recipe = from_param(params, "recipe")?;
         let prepared =
             Core::prepare_matching(request, &target, &source, context.as_deref(), recipe)?;
-        Ok(romwright_worker_client::JobKind::MatchSource { prepared })
+        Ok(romwright_worker_client::JobKind::MatchSource {
+            prepared: Box::new(prepared),
+        })
     }
 
     /// Resolves one execution request for a worker job: the program's current
@@ -636,12 +648,19 @@ impl ApiService {
 
     /// Blocks until a submitted job finishes and returns its result, mapping a
     /// job failure to a worker error and a missing id to a request error.
-    fn job_result(&self, id: u64) -> Result<Value, DispatchError> {
-        match self.executor.wait(id) {
-            Some(Ok(result)) => Ok(result),
+    fn job_output(&self, id: u64) -> Result<JobOutput, DispatchError> {
+        match self.executor.wait_take(id) {
+            Some(Ok(output)) => Ok(output),
             Some(Err(error)) => Err(DispatchError::Worker(error)),
             None => Err(DispatchError::Request(format!("unknown job {id}"))),
         }
+    }
+
+    /// [`ApiService::job_output`] for a job whose answer is a tree.
+    fn job_result(&self, id: u64) -> Result<Value, DispatchError> {
+        self.job_output(id)?
+            .into_value()
+            .map_err(|error| DispatchError::Request(format!("decode result: {error}")))
     }
 }
 
@@ -669,6 +688,20 @@ impl DispatchError {
             Self::UnknownMethod(_) => "unknown_method",
         }
     }
+}
+
+/// One reply as a line of JSON. A document's text is the bulk of its reply, so
+/// the buffer starts at the size the reply will need: growing it by doubling
+/// would hold the old and the new buffer at once at every step.
+fn encode(response: &ResponseEnvelope) -> Result<String, serde_json::Error> {
+    let size = match &response.result {
+        Some(JobOutput::Document(text)) => text.get().len() + 256,
+        _ => 256,
+    };
+    let mut buffer = Vec::with_capacity(size);
+    serde_json::to_writer(&mut buffer, response)?;
+    // serde_json writes UTF-8 only; the conversion is a check, not a copy.
+    String::from_utf8(buffer).map_err(<serde_json::Error as serde::ser::Error>::custom)
 }
 
 fn failure(id: Value, code: impl Into<String>, message: String) -> ResponseEnvelope {
@@ -920,6 +953,32 @@ mod tests {
         assert_eq!(response["id"], 7);
         assert_eq!(response["result"]["service"], "romwright-core");
         assert!(response.get("error").is_none());
+    }
+
+    #[test]
+    fn a_document_reply_carries_its_text_as_it_is() {
+        // The text of a decompiled document goes into the envelope without a
+        // tree: the reply holds the text byte for byte, and parses to what the
+        // tree reply for the same value parses to.
+        let text = r#"{"tokens":[{"text":"x"}],"address":{"offset":4198400},"revision":0}"#;
+        let document = JobOutput::Document(serde_json::value::RawValue::from_string(text.into()).unwrap());
+        let tree = JobOutput::Tree(serde_json::from_str(text).unwrap());
+        let reply = |result| {
+            encode(&ResponseEnvelope {
+                api: API_VERSION,
+                id: json!(9),
+                result: Some(result),
+                error: None,
+            })
+            .unwrap()
+        };
+        let raw = reply(document);
+        assert!(raw.contains(text), "{raw}");
+        let from_raw: Value = serde_json::from_str(&raw).unwrap();
+        let from_tree: Value = serde_json::from_str(&reply(tree)).unwrap();
+        assert_eq!(from_raw, from_tree);
+        assert_eq!(from_raw["id"], 9);
+        assert_eq!(from_raw["result"]["address"]["offset"], 4198400);
     }
 
     #[test]
