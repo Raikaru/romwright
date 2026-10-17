@@ -460,31 +460,4 @@ mod tests {
             "deadline left a descendant running after its driver exited"
         );
     }
-
-    #[test]
-    fn cancellation_interrupts_native_console_initialization() {
-        use std::os::unix::fs::PermissionsExt;
-        let stamp = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let script =
-            std::env::temp_dir().join(format!("romwright-console-{}-{stamp}", std::process::id()));
-        std::fs::write(&script, "#!/bin/sh\nsleep 5\n").unwrap();
-        std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o700)).unwrap();
-        let mut request = request(Duration::from_secs(10));
-        request.config.console_path = Some(script.clone());
-        let cancel = request.cancel.clone();
-        let canceller = std::thread::spawn(move || {
-            std::thread::sleep(Duration::from_millis(100));
-            cancel.cancel();
-        });
-        let start = Instant::now();
-        let result =
-            crate::native_runtime::ConsoleSession::new_controlled(&request.config, &request);
-        canceller.join().unwrap();
-        std::fs::remove_file(script).unwrap();
-        assert!(result.is_err());
-        assert!(start.elapsed() < Duration::from_secs(2));
-    }
 }

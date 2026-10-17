@@ -3,6 +3,19 @@ use crate::{Core, CoreError, Result};
 use romwright_model::{Address, DecompType, FactKind, FactProvenance, FuncProto, PrototypeRow};
 use std::fmt::{Display, Write};
 
+/// A recovered prototype as the C declaration the decompiler's parser reads.
+///
+/// The parser needs an identifier. Names remain owned by the function table:
+/// native inferred application never applies this transport name.
+pub(crate) fn transport_signature(prototype: &FuncProto) -> Result<String> {
+    let mut signature = String::new();
+    function_prefix(&prototype.return_type, &prototype.calling_convention, &mut signature)?;
+    signature.push_str("__romwright_inferred");
+    parameters(prototype, &mut signature)?;
+    suffix(&prototype.return_type, &mut signature)?;
+    Ok(signature)
+}
+
 impl Core {
     /// Persists one completed recovery round against its input revision.
     /// The database retains assertions and advances only for changed facts.
@@ -15,17 +28,7 @@ impl Core {
         let id = self.db.program_id(program)?;
         let mut rows = Vec::with_capacity(recovered.len());
         for (address, prototype) in recovered {
-            let mut signature = String::new();
-            function_prefix(
-                &prototype.return_type,
-                &prototype.calling_convention,
-                &mut signature,
-            )?;
-            // The parser needs an identifier. Names remain owned by the function
-            // table: native inferred application never applies this transport name.
-            signature.push_str("__romwright_inferred");
-            parameters(prototype, &mut signature)?;
-            suffix(&prototype.return_type, &mut signature)?;
+            let signature = transport_signature(prototype)?;
             let mut return_type = String::new();
             declaration(&prototype.return_type, "", &mut return_type)?;
             return_type.truncate(return_type.trim_end().len());

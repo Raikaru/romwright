@@ -2989,6 +2989,128 @@ impl ProjectDb {
         Ok(rows)
     }
 
+    /// Stores struct layouts (a `type_defs` row of kind `struct` and its
+    /// `type_fields` rows), each replacing the stored layout of the same name.
+    /// A name another source owns (a different `provenance`) is left alone:
+    /// an analyst's or a debug stream's type outranks a synthesized one.
+    /// With `owner` set, every struct layout that source stored before and
+    /// that is not among `layouts` is removed first, so a reimport leaves no
+    /// stale layouts. Returns how many layouts changed; the revision advances
+    /// only when some did and `owner` is set (an import's own facts).
+    pub fn store_struct_layouts(
+        &self,
+        program: ProgramId,
+        owner: Option<&str>,
+        layouts: &[(TypeDefRow, Vec<TypeFieldRow>)],
+    ) -> Result<usize> {
+        let tx = self.conn.unchecked_transaction()?;
+        let mut changed = 0usize;
+        if let Some(owner) = owner {
+            let keep: std::collections::HashSet<&str> =
+                layouts.iter().map(|(def, _)| def.name.as_str()).collect();
+            let stale: Vec<String> = {
+                let mut stmt = tx.prepare(
+                    "SELECT name FROM type_defs
+                     WHERE program_id = ?1 AND kind = 'struct' AND provenance = ?2",
+                )?;
+                stmt.query_map(params![program.0, owner], |row| row.get::<_, String>(0))?
+                    .collect::<std::result::Result<Vec<_>, _>>()?
+            };
+            for name in stale.iter().filter(|name| !keep.contains(name.as_str())) {
+                tx.execute(
+                    "DELETE FROM type_fields WHERE program_id = ?1 AND type_name = ?2",
+                    params![program.0, name],
+                )?;
+                tx.execute(
+                    "DELETE FROM type_defs WHERE program_id = ?1 AND name = ?2",
+                    params![program.0, name],
+                )?;
+                changed += 1;
+            }
+        }
+        for (def, fields) in layouts {
+            let existing: Option<(String, String, Option<i64>)> = tx
+                .query_row(
+                    "SELECT provenance, kind, size FROM type_defs WHERE program_id = ?1 AND name = ?2",
+                    params![program.0, def.name],
+                    |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+                )
+                .optional()?;
+            if let Some((provenance, kind, size)) = &existing {
+                if *provenance != def.provenance || kind != "struct" {
+                    continue;
+                }
+                let same_size = size.map(|size| size as u64) == def.size;
+                let old: Vec<TypeFieldRow> = {
+                    let mut stmt = tx.prepare(
+                        "SELECT type_name, ordinal, field_name, offset, size, type_ref
+                         FROM type_fields WHERE program_id = ?1 AND type_name = ?2
+                         ORDER BY ordinal",
+                    )?;
+                    stmt.query_map(params![program.0, def.name], map_type_field)?
+                        .collect::<std::result::Result<Vec<_>, _>>()?
+                };
+                if same_size && old == *fields {
+                    continue;
+                }
+            }
+            tx.execute(
+                "DELETE FROM type_fields WHERE program_id = ?1 AND type_name = ?2",
+                params![program.0, def.name],
+            )?;
+            tx.execute(
+                "INSERT INTO type_defs(
+                     program_id, name, kind, definition, size, alignment, base_type, provenance,
+                     primitive, element_count
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                 ON CONFLICT(program_id, name) DO UPDATE SET
+                     kind = excluded.kind, definition = excluded.definition,
+                     size = excluded.size, alignment = excluded.alignment,
+                     base_type = excluded.base_type, provenance = excluded.provenance,
+                     primitive = excluded.primitive, element_count = excluded.element_count",
+                params![
+                    program.0,
+                    def.name,
+                    def.kind,
+                    def.definition,
+                    def.size,
+                    def.alignment,
+                    def.base_type,
+                    def.provenance,
+                    def.primitive.map(romwright_model::PrimitiveKind::as_str),
+                    def.element_count
+                ],
+            )?;
+            let mut stmt = tx.prepare(
+                "INSERT INTO type_fields(
+                     program_id, type_name, ordinal, field_name, offset, size, type_ref
+                 ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            )?;
+            for row in fields {
+                stmt.execute(params![
+                    program.0,
+                    row.type_name,
+                    row.ordinal,
+                    row.field_name,
+                    row.offset,
+                    row.size,
+                    row.type_ref
+                ])?;
+            }
+            changed += 1;
+        }
+        // A source that stores its layouts whole (an import) changes the
+        // program's facts. A synthesized layout is derived from the bodies
+        // and regenerable, and nothing computed earlier depends on it until a
+        // prototype names it: it must not stale the decompiles other
+        // processes are running against the same project.
+        if changed > 0 && owner.is_some() {
+            self.bump_and_record(&tx, program, "struct-layouts", &changed.to_string())?;
+        }
+        tx.commit()?;
+        Ok(changed)
+    }
+
     /// Lists the type graph and its provenance-bearing edges.
     pub fn type_graph(&self, program: ProgramId) -> Result<(Vec<TypeGraphNode>, Vec<TypeLinkRow>)> {
         let nodes = self
@@ -3376,23 +3498,33 @@ impl ProjectDb {
                 .and_then(|index| extents.get(index))
                 .filter(|(_, end, _)| address.offset < *end)
                 .map(|(_, _, name)| name.clone());
-            // The module covering the address, when the program declares
-            // modules (REL sections, overlays, container images).
-            let module = self
+            // Every module covering the address (REL sections, overlays,
+            // container images): a program whose modules overlap names each.
+            let covering: Vec<_> = self
                 .modules(id)?
                 .into_iter()
-                .find(|module| {
-                    module.load_vaddr.offset <= address.offset
+                .filter(|module| {
+                    module.load_vaddr.space == address.space
+                        && module.load_vaddr.offset <= address.offset
                         && address.offset - module.load_vaddr.offset < module.size
                 })
-                .map(|module| module.name);
-            found.push(romwright_model::LocationRow {
-                program: program.program,
-                language: program.language,
-                region,
-                function,
-                module,
-            });
+                .collect();
+            // A program no module row covers still maps the address.
+            let owners: Vec<Option<romwright_model::ModuleRow>> = if covering.is_empty() {
+                vec![None]
+            } else {
+                covering.into_iter().map(Some).collect()
+            };
+            for module in owners {
+                found.push(romwright_model::LocationRow {
+                    program: program.program.clone(),
+                    language: program.language.clone(),
+                    region: region.clone(),
+                    function: function.clone(),
+                    module_id: module.as_ref().map(|module| module.module_id),
+                    module: module.map(|module| module.name),
+                });
+            }
         }
         Ok(found)
     }
@@ -4410,6 +4542,53 @@ mod tests {
         assert_eq!(db.datatypes(id).unwrap()[0].name, "int");
         db.replace_comments(id, &[]).unwrap();
         assert!(db.comments(id).unwrap().is_empty());
+    }
+
+    #[test]
+    fn struct_layouts_replace_by_name_and_keep_what_another_source_owns() {
+        use romwright_model::structs::{DEBUG_SOURCE, INFERRED_SOURCE, StructField, StructLayout};
+        let db = ProjectDb::open_in_memory().unwrap();
+        let id = db.upsert_program("p", "x86:LE:64:default", &prov()).unwrap();
+        let layout = |name: &str, provenance: &str, offsets: &[u64]| {
+            StructLayout {
+                name: name.into(),
+                size: 0x20,
+                provenance: provenance.into(),
+                fields: offsets
+                    .iter()
+                    .map(|offset| StructField {
+                        name: format!("field_0x{offset:x}"),
+                        offset: *offset,
+                        size: 4,
+                        type_ref: "int".into(),
+                    })
+                    .collect(),
+            }
+            .rows()
+        };
+        // A debug stream's layout, stored as the owner of that source.
+        db.store_struct_layouts(id, Some(DEBUG_SOURCE), &[layout("Node", DEBUG_SOURCE, &[0, 4]), layout("Gone", DEBUG_SOURCE, &[0])])
+            .unwrap();
+        let before = db.revision(id).unwrap();
+        // An inferred layout never replaces a name the debug stream owns.
+        let changed = db.store_struct_layouts(id, None, &[layout("Node", INFERRED_SOURCE, &[0, 8, 16])]).unwrap();
+        assert_eq!(changed, 0);
+        assert_eq!(db.revision(id).unwrap(), before, "nothing changed, the revision stays");
+        let rows = db.type_fields(id, Some("Node")).unwrap();
+        assert_eq!(rows.iter().map(|r| r.offset).collect::<Vec<_>>(), vec![0, 4]);
+        // The same layout again is no change; a different one replaces its fields whole.
+        assert_eq!(db.store_struct_layouts(id, None, &[layout("fn_1_arg0", INFERRED_SOURCE, &[0, 4, 8])]).unwrap(), 1);
+        assert_eq!(db.store_struct_layouts(id, None, &[layout("fn_1_arg0", INFERRED_SOURCE, &[0, 4, 8])]).unwrap(), 0);
+        assert_eq!(db.store_struct_layouts(id, None, &[layout("fn_1_arg0", INFERRED_SOURCE, &[0, 12])]).unwrap(), 1);
+        let rows = db.type_fields(id, Some("fn_1_arg0")).unwrap();
+        assert_eq!(rows.iter().map(|r| r.offset).collect::<Vec<_>>(), vec![0, 12], "no stale field of the old layout");
+        assert_eq!(db.revision(id).unwrap(), before, "a synthesized layout stales nothing computed against the project");
+        // A reimport of the debug source drops its layouts the new stream no longer states.
+        db.store_struct_layouts(id, Some(DEBUG_SOURCE), &[layout("Node", DEBUG_SOURCE, &[0, 4])]).unwrap();
+        assert!(db.revision(id).unwrap() > before, "an import's own layouts are facts");
+        let names: Vec<String> = db.type_defs(id).unwrap().into_iter().map(|d| d.name).collect();
+        assert_eq!(names, vec!["Node".to_string(), "fn_1_arg0".to_string()]);
+        assert!(db.type_fields(id, Some("Gone")).unwrap().is_empty());
     }
 
     #[test]

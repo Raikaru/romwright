@@ -3,7 +3,7 @@
 //! Ghidra's BSim matches functions by hashing normalised p-code features
 //! of a function's data-flow, so two builds of the same source match even
 //! when the instruction encodings differ. This module is that idea over
-//! the p-code the console already produces (`ConsoleSession::pcode_batch`):
+//! the p-code SLEIGH already produces (`SleighLifter::lift` in romwright-core):
 //! a per-function feature multiset, a fixed-size signature hashed from
 //! it, and a similarity in [0,1].
 //!

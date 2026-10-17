@@ -1,7 +1,10 @@
 //! Passes read the shared SSA graph. Evidence and diagnostics cannot mutate
 //! it; transforms propose checked operation edits; one structuring pass may
 //! propose original CFG edge cuts. The native backend applies the plan before
-//! PrintC and returns the resulting semantic graph and presentation together.
+//! printing and returns the resulting semantic graph and presentation
+//! together. The worker keeps cuts only when the printed function (after the
+//! Rust structuring models) has fewer gotos than without them
+//! ([`Plan::withdraw_cuts`] otherwise).
 pub mod types;
 
 use crate::structuring;
@@ -69,6 +72,18 @@ pub struct Plan {
     pub cuts: Vec<ControlFlowCut>,
     pub evidence: BTreeMap<ValueId, Class>,
     pub reports: Vec<PassReport>,
+}
+impl Plan {
+    /// Withdraws the structuring pass's cuts, e.g. when rendering them
+    /// printed no fewer gotos than the native structuring alone.
+    pub fn withdraw_cuts(&mut self) {
+        self.cuts.clear();
+        for report in &mut self.reports {
+            if report.role == PassRole::Structure {
+                report.items = 0;
+            }
+        }
+    }
 }
 
 pub trait EvidencePass {

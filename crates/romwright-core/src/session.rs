@@ -10,6 +10,7 @@
 //! variables may seed defaults (the CLI's env surface stays), but services
 //! take an explicit value — never call `std::env` themselves.
 
+use crate::artifact::SharedBytes;
 use crate::native::NativeImport;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -29,15 +30,13 @@ pub struct RuntimeConfig {
     pub library_prototypes: PathBuf,
     /// Spec root directory (pspec/cspec/tspec/coretypes + registers.txt).
     pub spec_root: PathBuf,
-    /// SLEIGH console binary (disasm / console discovery), if built.
-    pub console_path: Option<PathBuf>,
     /// Selected Ghidra language id (defaults to x86-64).
     pub language_id: String,
-    /// Installed processor directory used by the SLEIGH console.
+    /// Installed processor directory the in-process SLEIGH lifter reads.
     pub language_dir: PathBuf,
     /// Compiled .sla used by the raw-SLEIGH worker hook.
     pub sla_path: Option<PathBuf>,
-    /// Ghidra 12.1.3 install root (console language lookup).
+    /// Ghidra 12.1.3 install root (SLEIGH language lookup).
     pub ghidra_install: PathBuf,
     /// Peak RSS permitted for one worker process (bytes).
     pub worker_memory_cap: u64,
@@ -48,9 +47,11 @@ pub struct RuntimeConfig {
     /// True when `language_dir` came from an explicit pin; a pinned
     /// directory survives adopting an image's own language.
     pub language_dir_pinned: bool,
-    /// Consoles used for batch-parallel work (flow batches, reference
-    /// rounds). Requests inside one batch or round are independent, so
-    /// sharding them changes wall time, never facts.
+    /// Lanes one discovery flow batch is split across (in-process SLEIGH
+    /// decoders) and propagation lanes a reference round is split across.
+    /// Each lane keeps the mode switches its own decodes committed, so the
+    /// count shapes what is found on images that mix instruction sets and
+    /// must be the same on every host (`DEFAULT_CONSOLE_SHARDS`).
     pub console_shards: usize,
     /// Recover jump tables by value-set analysis over p-code before asking
     /// the decompiler (m13-001). On: measured against truth on libc -- every
@@ -66,48 +67,73 @@ pub struct RuntimeConfig {
     /// Let the decompiler answer the dispatches value-set analysis refused.
     /// On by default; off measures the accelerator alone.
     pub switch_decompiler: bool,
+    /// Ask the switch stage about the indirect jumps the reference pass
+    /// bounded but could not finish a table for, and the walk's list lacks
+    /// (`infer_data_references`). On by default (`ROMWRIGHT_NO_BRANCHIND_CANDIDATES`);
+    /// off measures the walk's list alone.
+    pub branchind_candidates: bool,
+    /// Recover the table of an indirect jump inside the reference flow
+    /// (`native_runtime::propagation::jump`). On by default
+    /// (`ROMWRIGHT_NO_BRANCHIND_RECOVERY`); it is the value-set pass, so
+    /// `switch_vsa` off turns it off too.
+    pub branchind_recovery: bool,
+    /// Work units one switch decompile may spend before the decompiler
+    /// refuses it (`native_runtime::SWITCH_WORK_BUDGET`;
+    /// `ROMWRIGHT_SWITCH_WORK_BUDGET` overrides, 0 is unlimited). A count, not
+    /// a time, so the same function gets the same answer on every host; it is
+    /// part of the import cache's key because it changes what is recovered.
+    pub switch_work_budget: u64,
+    /// Seconds one switch decompile may run before its worker is killed
+    /// (`native_runtime::SWITCH_WALL_GUARD`, `ROMWRIGHT_SWITCH_WALL_SECS`
+    /// overrides). A backstop, never what decides a function's answer: one it
+    /// kills makes the import degraded.
+    pub switch_wall_guard_secs: u64,
     /// Recover parameters passed in registers that no shipped prototype
     /// model claims (m4-001). Off by default: II.1 reserves enabling an M4
     /// pass, so it changes user-visible output only when asked.
     pub register_params: bool,
+    /// Merge the p-code type inference into the prototypes the
+    /// `infer_prototypes` job persists (`types_infer::prototypes`). On:
+    /// measured on the console ROM imports (200 sampled functions per
+    /// image, 2026-10-08) DWARF type-slot agreement rose gba 0.258 -> 0.372,
+    /// nds 0.493 -> 0.605, ps2-dungeon 0.344 -> 0.426 with arity unchanged.
+    /// `ROMWRIGHT_INFERRED_TYPES=0` turns it off for ablation.
+    pub inferred_types: bool,
     /// Promote the target of a proven tail call to a function (m5-007).
     /// Stock Ghidra does not create these, so the pass moves output past
     /// the frozen baseline; off by default for the same II.1 reason.
     pub promote_tailcalls: bool,
+    /// The compiler id the importer records instead of detecting one
+    /// (`romwright-cli import --compiler`, `ROMWRIGHT_COMPILER`). `None`
+    /// lets the detectors decide.
+    pub compiler: Option<String>,
+    /// The file of per-function signatures the struct pass hands one decompile
+    /// (`ROMWRIGHT_STRUCT_OVERLAY` for the worker, `struct_pass`); never
+    /// stored with the project. Set by the pass on the request it makes.
+    pub struct_overlay: Option<PathBuf>,
+    /// Environment the decompiler worker gets on top of the process's own, set
+    /// per request: the printing variant of the near-miss search
+    /// (`match_search::PrintVariant::env`, docs/match.md). Empty by default,
+    /// which is today's output byte for byte.
+    pub worker_env: Vec<(String, String)>,
 }
 
-/// One console per physical core, capped at eight. Each shard is a separate
-/// process decoding and lifting a function, so SMT siblings contend on the
-/// same execution units: on a 6-core/12-thread host the libc reference pass
-/// measured 2.86 s at six shards against 3.09 s at eight and 3.11 s at
-/// twelve. Hyperthread counts are used only where core counts are unknown.
-fn default_console_shards() -> usize {
-    let logical = std::thread::available_parallelism()
-        .map(|parallelism| parallelism.get())
-        .unwrap_or(1);
-    let physical = std::fs::read_to_string("/proc/cpuinfo")
-        .ok()
-        .map(|cpuinfo| {
-            let mut cores = std::collections::BTreeSet::new();
-            let mut package = None;
-            for line in cpuinfo.lines() {
-                let Some((key, value)) = line.split_once(':') else {
-                    continue;
-                };
-                match key.trim() {
-                    "physical id" => package = Some(value.trim().to_string()),
-                    "core id" => {
-                        cores.insert((package.clone(), value.trim().to_string()));
-                    }
-                    _ => {}
-                }
-            }
-            cores.len()
-        })
-        .filter(|cores| *cores >= 1)
-        .unwrap_or(logical);
-    physical.min(logical).clamp(1, 8)
-}
+/// Decoder lanes by default: four, on every host.
+///
+/// The lane count is part of the answer. Each lane is a decoder with its own
+/// context database, into which its decodes commit the mode switches their
+/// bytes carry (`globalset`), and which lane decodes an address depends on how
+/// a batch is split: the same Vita image imported with one, four and eight
+/// lanes holds 62 to 64 rows that differ (function extents, Thumb contexts, a
+/// few branch references, all in the import stubs at 0x8167a3fc-0x8167c4d6),
+/// and two runs with four lanes hold none. So the count must not follow the
+/// host (it used to be one per physical core, capped at eight, and so changed
+/// with a core count, a `taskset` or a container's CPU limit), and four is
+/// what the reference measurements were taken at. A host with fewer cores
+/// time-slices the lanes; one with more leaves cores idle in the decode phases
+/// (`ROMWRIGHT_CONSOLE_SHARDS` chooses another count, and then owns the
+/// differences).
+const DEFAULT_CONSOLE_SHARDS: usize = 4;
 
 impl Default for RuntimeConfig {
     fn default() -> Self {
@@ -209,23 +235,6 @@ impl RuntimeConfig {
         let spec_root = std::env::var("ROMWRIGHT_SPECS")
             .map(PathBuf::from)
             .unwrap_or_else(|_| repo_root.join("native/specs"));
-        let console_path = std::env::var("ROMWRIGHT_CONSOLE")
-            .map(PathBuf::from)
-            .ok()
-            .or_else(|| {
-                for candidate in [
-                    PathBuf::from("native/build/decomp_native"),
-                    PathBuf::from("../../native/build/decomp_native"),
-                    PathBuf::from("../native/build/decomp_native"),
-                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                        .join("../../native/build/decomp_native"),
-                ] {
-                    if candidate.is_file() {
-                        return Some(candidate);
-                    }
-                }
-                None
-            });
         let sla_path = std::env::var("ROMWRIGHT_SLA")
             .ok()
             .filter(|p| {
@@ -237,7 +246,7 @@ impl RuntimeConfig {
             .ok()
             .and_then(|value| value.parse::<usize>().ok())
             .filter(|shards| *shards >= 1)
-            .unwrap_or_else(default_console_shards);
+            .unwrap_or(DEFAULT_CONSOLE_SHARDS);
         Self {
             library_prototypes,
             worker_path,
@@ -249,7 +258,6 @@ impl RuntimeConfig {
             language_id,
             language_dir,
             language_dir_pinned,
-            console_path,
             sla_path,
             ghidra_install: install,
             worker_memory_cap: worker_memory_cap(
@@ -264,17 +272,32 @@ impl RuntimeConfig {
                 .map(|value| crate::func_ir::parse_pass_names(&value))
                 .unwrap_or_else(crate::func_ir::default_pass_names),
             console_shards,
+            compiler: std::env::var("ROMWRIGHT_COMPILER").ok().filter(|id| !id.trim().is_empty()),
+            struct_overlay: None,
+            worker_env: Vec::new(),
             register_params: std::env::var_os("ROMWRIGHT_REGISTER_PARAMS").is_some(),
+            inferred_types: std::env::var_os("ROMWRIGHT_INFERRED_TYPES").is_none_or(|value| value != "0"),
             promote_tailcalls: std::env::var_os("ROMWRIGHT_PROMOTE_TAILCALLS").is_some(),
             // Both on unless switched off, so the two switch paths can be
             // measured separately without rebuilding.
             switch_vsa: std::env::var_os("ROMWRIGHT_NO_SWITCH_VSA").is_none(),
             switch_decompiler: std::env::var_os("ROMWRIGHT_NO_SWITCH_DECOMPILER").is_none(),
+            branchind_candidates: std::env::var_os("ROMWRIGHT_NO_BRANCHIND_CANDIDATES").is_none(),
+            branchind_recovery: std::env::var_os("ROMWRIGHT_NO_BRANCHIND_RECOVERY").is_none(),
+            switch_work_budget: std::env::var("ROMWRIGHT_SWITCH_WORK_BUDGET")
+                .ok()
+                .and_then(|raw| raw.parse().ok())
+                .unwrap_or(crate::native_runtime::SWITCH_WORK_BUDGET),
+            switch_wall_guard_secs: std::env::var("ROMWRIGHT_SWITCH_WALL_SECS")
+                .ok()
+                .and_then(|raw| raw.parse().ok())
+                .filter(|secs| *secs >= 1)
+                .unwrap_or(crate::native_runtime::SWITCH_WALL_GUARD.as_secs()),
         }
     }
 
-    /// Adopts the language a loaded image declares. The SLEIGH console
-    /// resolves an id inside one installed processor directory, so the
+    /// Adopts the language a loaded image declares. The SLEIGH language
+    /// lookup resolves an id inside one installed processor directory, so the
     /// directory follows the id unless the caller pinned one.
     pub fn adopt_language(&mut self, id: &str) {
         if self.language_id != id {
@@ -316,11 +339,21 @@ pub struct MemoryRegion {
 #[derive(Debug)]
 pub struct ProgramImage {
     path: PathBuf,
-    map: Arc<[u8]>,
+    map: SharedBytes,
     regions: Vec<MemoryRegion>,
     relocations: Vec<crate::native::MemoryRelocation>,
-    patches: BTreeMap<u64, Vec<u8>>,
+    patches: BTreeMap<u64, Patch>,
 }
+
+/// Bytes that override what a region reads: owned by the image, or a range of
+/// the mapped backing (a snapshot holds each patch once, beside its region).
+#[derive(Debug)]
+enum Patch {
+    Owned(Vec<u8>),
+    Backed { start: usize, len: usize },
+}
+
+mod snapshot;
 
 impl ProgramImage {
     /// Captures `binary` and derives regions from the existing native loader
@@ -342,7 +375,7 @@ impl ProgramImage {
         program: Option<&str>,
         raw_base: Option<u64>,
     ) -> crate::Result<Self> {
-        let map: Arc<[u8]> = std::fs::read(binary)?.into();
+        let map: SharedBytes = std::fs::read(binary)?.into();
         let images = match crate::native::parse_container(&map) {
             Ok(images) => images,
             Err(_)
@@ -380,23 +413,35 @@ impl ProgramImage {
         project: &Path,
         input: &romwright_model::ProgramInput,
     ) -> crate::Result<Self> {
+        // A worker the importing process started is handed the mapped image
+        // its parent already derived, so it neither reads nor re-parses the
+        // input (which for a disc is gigabytes) and shares the pages.
+        if let Some(digest) = crate::inputs::inherited_snapshot(input) {
+            let artifact = crate::artifact::Artifact::open(project, &digest)?;
+            return Self::from_snapshot(artifact.path, artifact.bytes);
+        }
         let (artifact, import) = crate::inputs::parse(project, input)?;
         Ok(Self::from_import(artifact.path, artifact.bytes, import))
     }
 
-    fn from_import(path: PathBuf, map: Arc<[u8]>, import: crate::native::NativeImport) -> Self {
+    /// Whether a mapping's bytes differ from the file at its offset:
+    /// decompressed or loader-synthesized bytes override file contents.
+    fn is_patch(map: &[u8], mapping: &crate::native::Mapping) -> bool {
+        let stored = usize::try_from(mapping.file_off)
+            .ok()
+            .and_then(|offset| map.get(offset..offset.checked_add(mapping.bytes.len())?));
+        stored != Some(mapping.bytes.as_slice())
+    }
+
+    fn from_import(path: PathBuf, map: SharedBytes, import: crate::native::NativeImport) -> Self {
         let mut patches = BTreeMap::new();
         let regions = import
             .mappings
             .into_iter()
             .map(|mapping| {
                 let file_size = mapping.bytes.len() as u64;
-                let stored = usize::try_from(mapping.file_off)
-                    .ok()
-                    .and_then(|offset| map.get(offset..offset.checked_add(mapping.bytes.len())?));
-                // Decompressed or loader-synthesized bytes override file contents.
-                if stored != Some(mapping.bytes.as_slice()) {
-                    patches.insert(mapping.vaddr, mapping.bytes);
+                if Self::is_patch(&map, &mapping) {
+                    patches.insert(mapping.vaddr, Patch::Owned(mapping.bytes));
                 }
                 MemoryRegion {
                     vaddr: mapping.vaddr,
@@ -428,7 +473,7 @@ impl ProgramImage {
 
     /// Applies a sparse patch (offset -> bytes) over the mapped image.
     pub fn patch(&mut self, vaddr: u64, bytes: Vec<u8>) {
-        self.patches.insert(vaddr, bytes);
+        self.patches.insert(vaddr, Patch::Owned(bytes));
     }
 
     /// Reads `size` bytes at `vaddr`. Within a region: file-backed bytes
@@ -485,7 +530,11 @@ impl ProgramImage {
                     .copy_from_slice(&relocation.bytes[src..src + (end - start) as usize]);
             }
         }
-        for (p, bytes) in &self.patches {
+        for (p, patch) in &self.patches {
+            let bytes = match patch {
+                Patch::Owned(bytes) => bytes.as_slice(),
+                Patch::Backed { start, len } => self.map.get(*start..*start + *len)?,
+            };
             let pend = p + bytes.len() as u64;
             let ostart = vaddr.max(*p);
             let oend = (vaddr + size).min(pend);
@@ -558,7 +607,7 @@ mod tests {
         let path = dir.join("img.bin");
         let data: Vec<u8> = (0..0x1000u64).map(|i| (i % 251) as u8).collect();
         std::fs::write(&path, &data).unwrap();
-        let map: Arc<[u8]> = data.into();
+        let map: SharedBytes = data.into();
         let mut img = ProgramImage {
             path,
             map,

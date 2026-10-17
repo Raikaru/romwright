@@ -10,7 +10,13 @@ romwright-model = { path = "../romwright-model" }
 romwright-db = { path = "../romwright-db" }
 romwright-sig = { path = "../romwright-sig" }
 romwright-diff = { path = "../romwright-diff" }
+romwright-facts = { path = "../romwright-facts" }
 romwright-debug = { path = "../romwright-debug" }
+# In-process SLEIGH lifting (`native_runtime::lift`). Apache-2.0; see
+# docs/third-party.md and THIRD_PARTY_NOTICES.md.
+kuna-sleigh = { git = "https://github.com/noelo-Lab/kuna", rev = "c4f735f903026ec486a47f395e0e9944069e95e5" }
+kuna-base = { git = "https://github.com/noelo-Lab/kuna", rev = "c4f735f903026ec486a47f395e0e9944069e95e5" }
+kuna-num = { git = "https://github.com/noelo-Lab/kuna", rev = "c4f735f903026ec486a47f395e0e9944069e95e5" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 base64 = { workspace = true }
@@ -19,12 +25,14 @@ tree-sitter-c = "0.24"
 object = { version = "0.37", default-features = false, features = ["read", "std"] }
 similar = "2.7"
 sha2 = "0.10"
+sha1 = "0.10"
 thiserror = { workspace = true }
 libc = "0.2"
 aes = "0.9.3"
 cbc = "0.2.1"
 lzxd = "0.2.7"
 miniz_oxide = "0.9.1"
-zstd = "0.13"
-lz4_flex = "0.11"
+# GameCube/Wii disc images (RVZ, WIA, WBFS, Wii partitions), read lazily.
+# MIT OR Apache-2.0; see docs/third-party.md and THIRD_PARTY_NOTICES.md.
+nod = "=2.0.0-alpha.9"
 

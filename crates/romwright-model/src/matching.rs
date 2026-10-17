@@ -417,7 +417,7 @@ pub enum WorkspaceOperation {
         workspace: u64,
     },
     Import {
-        request: WorkspaceImport,
+        request: Box<WorkspaceImport>,
     },
 }
 

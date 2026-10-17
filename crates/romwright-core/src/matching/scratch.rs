@@ -5,7 +5,6 @@ use crate::{Core, Result, artifact::Artifact};
 use object::{Object, ObjectSymbol};
 use std::io::Read;
 use std::path::Path;
-use std::sync::Arc;
 
 /// Remote compiler selection is explicit; no platform-specific defaults apply.
 pub struct ScratchExportOptions<'a> {
@@ -19,7 +18,7 @@ pub struct ScratchExportOptions<'a> {
 const MAX_TARGET_BYTES: usize = 1000 * 1024;
 
 impl Core {
-    fn scratch_target(&self, program: &str, symbol: &str, explicit: Option<&Path>) -> Result<(Arc<[u8]>, String)> {
+    fn scratch_target(&self, program: &str, symbol: &str, explicit: Option<&Path>) -> Result<(crate::artifact::SharedBytes, String)> {
         if let Some(path) = explicit {
             let mut bytes = Vec::new();
             std::fs::File::open(path)?.take((MAX_TARGET_BYTES + 1) as u64).read_to_end(&mut bytes)?;

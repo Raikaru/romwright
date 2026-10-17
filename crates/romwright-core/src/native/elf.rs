@@ -68,6 +68,72 @@ pub(super) fn parse_elf32_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSect
     Ok((sections, shstr))
 }
 
+/// Whether a PSP image's `.symtab` values are offsets into their sections.
+///
+/// An image the toolchain left unlinked at base 0 (`e_type` 0xffa0) keeps
+/// the object-file convention: a symbol's value is an offset into its
+/// section, whose `sh_addr` (0x40 for `.text`, which follows the 0x24-byte
+/// `.init` at 64-byte alignment) is not in it, and the loaded address is
+/// `sh_addr + value`; the code bytes and their `jal` targets are already
+/// final (Puzzle Bobble Pocket: every `jal` target minus 0x40 is a `.symtab`
+/// value). A linked PRX carries absolute values. Which one a file uses is read
+/// off its symbols: a defined symbol of a loaded section that only an
+/// offset reading puts inside the section (`value < sh_addr`, `value <= size`)
+/// votes for relative; one only an absolute reading does (`value > size`,
+/// inside `[sh_addr, sh_addr + size]`) votes for absolute. Symbols inside
+/// both readings (low addresses) and ties vote for neither: absolute.
+fn psp_symbols_are_section_relative(
+    data: &[u8],
+    be: bool,
+    e_type: u16,
+    sections: &[ElfSection],
+) -> bool {
+    const ET_SCE_PSPRELEXEC: u16 = 0xffa0;
+    const SHN_LORESERVE: u16 = 0xff00;
+    if e_type != ET_SCE_PSPRELEXEC {
+        return false;
+    }
+    let (mut relative, mut absolute) = (0usize, 0usize);
+    for table in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
+        let count = table.size as usize / 16;
+        for i in 0..count {
+            let at = table.off as usize + i * 16;
+            let (Ok(value), Ok(shndx)) = (
+                if be { u32_be_at(data, at + 4) } else { u32_at(data, at + 4) },
+                if be { u16_be_at(data, at + 14) } else { u16_at(data, at + 14) },
+            ) else {
+                break;
+            };
+            if shndx == 0 || shndx >= SHN_LORESERVE {
+                continue;
+            }
+            let Some(section) = sections.get(shndx as usize).filter(|s| s.flags & 0x2 != 0) else {
+                continue;
+            };
+            let value = value as u64;
+            let (addr, size) = (section.addr, section.size);
+            let as_offset = value <= size;
+            let as_address = value >= addr && value <= addr + size;
+            match (as_offset, as_address) {
+                (true, false) => relative += 1,
+                (false, true) => absolute += 1,
+                _ => {}
+            }
+        }
+    }
+    relative > absolute
+}
+
+fn section_relative_symbol(relative: bool, sections: &[ElfSection], shndx: u16, value: u64) -> u64 {
+    const SHN_LORESERVE: u16 = 0xff00;
+    if !relative || shndx == 0 || shndx >= SHN_LORESERVE {
+        return value;
+    }
+    sections
+        .get(shndx as usize)
+        .map_or(value, |section| value.wrapping_add(section.addr) & 0xffff_ffff)
+}
+
 /// ELF32 import (Phase 4 target: GameCube PowerPC BE, PS2 MIPS BE).
 /// Symbols use 16-byte Elf32_Sym entries. Relative relocations, pointers,
 /// unwind indexes and linkage metadata share the ELF64 implementation.
@@ -136,6 +202,7 @@ pub(super) fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     let mut abs_symbols: Vec<(String, u64)> = Vec::new();
     let mut contexts: Vec<NativeContext> = Vec::new();
     // SHT_SYMTAB (2) and SHT_DYNSYM (11): 16-byte Elf32_Sym.
+    let psp_relative = psp_symbols_are_section_relative(data, be, elf_machine.e_type, &sections);
     for s in sections.iter().filter(|s| s.typ == 2 || s.typ == 11) {
         let strtab = sections
             .get(s.link as usize)
@@ -154,6 +221,7 @@ pub(super) fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
             let info = data[hdr + 12];
             let shndx = rd16(hdr + 14)?;
             let value = rd32(hdr + 4)? as u64;
+            let value = section_relative_symbol(psp_relative, &sections, shndx, value);
             let size = rd32(hdr + 8)? as u64;
             let name = strtab
                 .get(name_off..)
@@ -227,7 +295,12 @@ pub(super) fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
     // procedures the symtab may have stripped. The symtab's spelling
     // wins where both exist; debug info only adds coverage.
     let mdebug_started = std::time::Instant::now();
-    let mdebug_functions = mdebug::collect(data, &sections, be);
+    let mdebug::DebugInfo {
+        functions: mdebug_functions,
+        prototypes: debug_prototypes,
+        structs: debug_structs,
+        locals: debug_locals,
+    } = mdebug::collect(data, &sections, be);
     for f in &mdebug_functions {
         symbol_functions
             .entry(f.entry)
@@ -250,6 +323,7 @@ pub(super) fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         &functions,
         &mut register_contexts,
     );
+    seed_mips_gp_register(data, be, elf_machine.machine, &abs_symbols, &sections, &mut register_contexts);
     let mut import = NativeImport {
         diagnostics: notes,
         process_entry,
@@ -264,10 +338,17 @@ pub(super) fn import_elf32(data: &[u8], be: bool) -> Result<NativeImport> {
         object_sizes,
         object_names,
         contexts,
+        debug_prototypes,
+        debug_structs,
+        debug_locals,
         register_contexts,
         ..Default::default()
     };
-    import.toolchain = detect_toolchain(data, &sections);
+    import.image_facts = crate::compiler::ImageFacts::from_elf(
+        data,
+        sections.iter().map(|s| (s.name.as_str(), s.typ, s.off, s.size)),
+    );
+    import.unrelocated_data_pointers = stripped_mips_executable(&import);
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
@@ -292,6 +373,17 @@ pub(crate) struct ElfSection {
     pub(super) size: u64,
     pub(super) link: u32,
     pub(super) entry_size: u64,
+}
+
+/// A MIPS executable (`ET_EXEC`, so no relocations) that ships without a
+/// symbol table: the PS2 `SLUS_*` and PSP `BOOT.BIN` programs the corpus
+/// stages. No symbol and no relocation says where code starts or which data
+/// word is an address, so discovery sweeps the code for the first
+/// instruction after every return (`discovery::discover_mapped`) and reads
+/// the data words that name code (`data_code_pointers`), as for a DOL.
+pub(super) fn stripped_mips_executable(import: &NativeImport) -> bool {
+    import.symbol_named.is_empty()
+        && import.elf_machine.is_some_and(|machine| machine.machine == 8 && machine.e_type == 2)
 }
 
 fn collect_elf_section_starts(sections: &[ElfSection], functions: &mut Vec<NativeFunction>) {
@@ -380,12 +472,6 @@ fn parse_elf_sections(data: &[u8], be: bool) -> Result<(Vec<ElfSection>, Vec<u8>
     Ok((sections, shstr))
 }
 
-/// Detect the producing toolchain from the image's own markers.
-/// ELF: the `.comment` section's `GCC: (GNU) x.y.z` / `clang version`
-/// strings. PE: the linker major.minor in the optional header (MSVC
-/// linkers stamp it; 14.x = MSVC 2015+). DOL: the mwcc runtime symbols
-/// (`__init_registers`, `__start`, `__ppc_eabi_init`) every CodeWarrior
-/// GC/Wii binary carries.
 /// Sorted `[start, end)` extents of the sized symbol-table functions.
 fn declared_extents(symbols: &std::collections::HashMap<u64, (u8, String, u64)>) -> Vec<(u64, u64)> {
     let mut extents: Vec<(u64, u64)> = symbols
@@ -395,32 +481,6 @@ fn declared_extents(symbols: &std::collections::HashMap<u64, (u8, String, u64)>)
         .collect();
     extents.sort_unstable();
     extents
-}
-
-fn detect_toolchain(data: &[u8], sections: &[ElfSection]) -> Option<String> {
-    // ELF .comment.
-    for section in sections {
-        if section.name == ".comment" && section.size > 0 {
-            let off = section.off as usize;
-            let end = (off + section.size as usize).min(data.len());
-            let text = String::from_utf8_lossy(&data[off..end]);
-            for chunk in text.split('\0') {
-                let chunk = chunk.trim();
-                if let Some(version) = chunk.strip_prefix("GCC: (GNU) ") {
-                    return Some(format!("gcc {}", version.trim()));
-                }
-                if let Some(version) = chunk.strip_prefix("GCC: ") {
-                    return Some(format!("gcc {}", version.trim()));
-                }
-                if let Some(version) = chunk.strip_prefix("clang version ") {
-                    return Some(format!("clang {}", version.trim()));
-                }
-            }
-        }
-    }
-    // DOL detection lives in store_import: the mwcc runtime symbols it
-    // keys on arrive via --map, which applies after dol::import returns.
-    None
 }
 
 /// Ghidra's rule, verbatim: `e_entry` of an executable (`ET_EXEC`) or shared
@@ -693,7 +753,12 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     // procedures the symtab may have stripped. The symtab's spelling
     // wins where both exist; debug info only adds coverage.
     let mdebug_started = std::time::Instant::now();
-    let mdebug_functions = mdebug::collect(data, &sections, be);
+    let mdebug::DebugInfo {
+        functions: mdebug_functions,
+        prototypes: debug_prototypes,
+        locals: debug_locals,
+        structs: debug_structs,
+    } = mdebug::collect(data, &sections, be);
     for f in &mdebug_functions {
         symbol_functions
             .entry(f.entry)
@@ -718,6 +783,7 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         &functions,
         &mut register_contexts,
     );
+    seed_mips_gp_register(data, be, elf_machine.machine, &abs_symbols, &sections, &mut register_contexts);
     // PPC64 OPD: each descriptor's `toc_ptr` is the function's `r2` value.
     // Ghidra sets it over the function's range (markupDescriptorEntry
     // :636-644); we seed one range per function the descriptor named.
@@ -743,6 +809,9 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
         process_entry,
         object_names,
         contexts,
+        debug_prototypes,
+        debug_structs,
+        debug_locals,
         register_contexts,
         symbol_named,
         symbol_extents,
@@ -753,7 +822,10 @@ pub fn import_elf(data: &[u8]) -> Result<NativeImport> {
     if !mdebug_functions.is_empty() {
         phase(&mut import, "mdebug", mdebug_started);
     }
-    import.toolchain = detect_toolchain(data, &sections);
+    import.image_facts = crate::compiler::ImageFacts::from_elf(
+        data,
+        sections.iter().map(|s| (s.name.as_str(), s.typ, s.off, s.size)),
+    );
     elf_image::prepare(data, &mut sections, &mut import, 8, be)?;
     let bias = elf_bases(data).map(|(_, bias)| bias).unwrap_or(0);
     elf_pointers::collect(data, &sections, &mut import, 8, be, bias)?;

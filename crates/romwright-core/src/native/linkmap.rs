@@ -55,6 +55,11 @@ pub struct MapSymbol {
     pub subsection: String,
     /// Linker-defined row (command-file symbol, not linked code).
     pub linker_defined: bool,
+    /// The overlay (id from the linker's `SDK_OVERLAY.<name>.ID` row) the
+    /// row sits in, `None` for the static module and for grammars with no
+    /// overlay notion. Overlays share RAM, so an address alone does not
+    /// name a symbol: `(overlay, address)` does.
+    pub overlay: Option<u32>,
 }
 
 /// A parsed MAP: records plus memory-map extents.
@@ -204,6 +209,10 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
     }
     let mut map = LinkerMap::default();
     let mut subsection = String::new();
+    // The overlay a `# .<name>` group belongs to, read from the linker's
+    // own `SDK_OVERLAY.<name>.ID` row under it; `<name>.bss` continues it.
+    let mut group = String::new();
+    let mut overlay: Option<u32> = None;
     let mut in_memory = false;
     for raw in text.lines() {
         let line = raw.strip_suffix('\r').unwrap_or(raw);
@@ -223,6 +232,11 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
                 continue;
             }
             subsection = header.to_string();
+            let base = header.strip_suffix(".bss").unwrap_or(header);
+            if base != group {
+                group = base.to_string();
+                overlay = None;
+            }
             in_memory = false;
             continue;
         }
@@ -252,6 +266,9 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
             in_memory = false;
         }
         if let Some((address, name)) = parse_mw_linker_defined(line) {
+            if name.starts_with("SDK_OVERLAY.") && name.ends_with(".ID") {
+                overlay = u32::try_from(address).ok();
+            }
             map.symbols.push(MapSymbol {
                 address,
                 size: 0,
@@ -261,11 +278,14 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
                 section: String::new(),
                 subsection: subsection.clone(),
                 linker_defined: true,
+                overlay,
             });
             continue;
         }
         if trimmed == "Linker generated symbols:" {
             subsection = String::new();
+            group = String::new();
+            overlay = None;
             continue;
         }
         let Some((address, size, section, name, tu)) = parse_mw_layout_row(line) else {
@@ -284,6 +304,7 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
                     section,
                     subsection: subsection.clone(),
                     linker_defined: false,
+                    overlay,
                 });
             }
             continue;
@@ -314,6 +335,7 @@ fn parse_mwldarm(text: &str) -> LinkerMap {
             section,
             subsection: subsection.clone(),
             linker_defined: false,
+            overlay,
         });
     }
     map
@@ -387,6 +409,7 @@ fn parse_psyq(text: &str) -> LinkerMap {
                 section: String::new(),
                 subsection: String::new(),
                 linker_defined: false,
+                overlay: None,
             });
         }
     }
@@ -475,6 +498,7 @@ fn parse_gnuld(text: &str) -> LinkerMap {
                 section: input_section.clone(),
                 subsection: output_section.clone(),
                 linker_defined: false,
+                overlay: None,
             });
         }
     }
@@ -534,6 +558,7 @@ fn parse_msvc(text: &str) -> LinkerMap {
             section: String::new(),
             subsection: String::new(),
             linker_defined: false,
+            overlay: None,
         });
     }
     map
@@ -572,6 +597,7 @@ fn parse_flat(text: &str) -> LinkerMap {
             section: String::new(),
             subsection: String::new(),
             linker_defined: false,
+            overlay: None,
         });
     }
     map
@@ -635,6 +661,7 @@ pub fn parse_sym(bytes: &[u8]) -> Option<LinkerMap> {
             section: String::new(),
             subsection: String::new(),
             linker_defined: address == u32::MAX as u64,
+            overlay: None,
         });
     }
     // A real .SYM is address-ordered; random binary that survived the
@@ -764,6 +791,7 @@ fn parse_dtk_splat(text: &str) -> LinkerMap {
             section,
             subsection: String::new(),
             linker_defined: false,
+            overlay: None,
         });
     }
     map
@@ -897,10 +925,11 @@ pub fn parse_file(path: &Path) -> std::io::Result<LinkerMap> {
 /// Merge MAP records into an import before discovery, mirroring what the
 /// ELF symtab paths establish: FUNC rows seed named functions (linker
 /// ground truth outranks discovery coinage), OBJECT rows ride the
-/// object size/name fields, `$t`/`$a` rows ride mode contexts. Only rows
-/// inside an executable mapping are taken, which is what keeps overlay
-/// records out of a static-module import until M-C gives them programs
-/// of their own.
+/// object size/name fields, `$t`/`$a` rows ride mode contexts. A row binds
+/// by `(overlay, address)`: overlays share RAM, so a row tagged with an
+/// overlay lands only in that overlay's program, and an untagged row only
+/// in a program that is no overlay. Rows must also sit inside an
+/// executable mapping to seed code.
 pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
     let in_code = |address: u64| {
         imp.mappings.iter().any(|mapping| {
@@ -913,6 +942,9 @@ pub fn apply_to_import(imp: &mut super::NativeImport, map: &LinkerMap) {
         imp.functions.iter().map(|function| function.entry).collect();
     for symbol in &map.symbols {
         if symbol.address == 0 || symbol.linker_defined {
+            continue;
+        }
+        if symbol.overlay != imp.overlay_id {
             continue;
         }
         if symbol.name == "$t" {
@@ -1197,6 +1229,7 @@ mod tests {
             section: ".text".into(),
             subsection: ".OVY_0".into(),
             linker_defined: false,
+            overlay: Some(0),
         });
         apply_to_import(&mut imp, &map);
         let renamed = imp.functions.iter().find(|f| f.entry == 0x02000ca4).unwrap();
@@ -1211,5 +1244,55 @@ mod tests {
             .contexts
             .iter()
             .any(|c| c.name == "TMode" && c.address == 0x02000ca4 && c.value == 1));
+    }
+
+    // Two overlays share 0x021E5900; `.field` names its id only through
+    // its `SDK_OVERLAY.field.ID` row, `.bss` continues the group, and the
+    // `.main` rows after them are the static module again.
+    const OVERLAY_SAMPLE: &str = concat!(
+        "# Link map of _start\n",
+        "  1](OvA,func) found in global a.o\n",
+        "# .OVY_0\n",
+        "#>00000000          SDK_OVERLAY.OVY_0.ID (linker command file)\n",
+        "  021E5900 00000010 .text   ov00_021E5900\t(a.o)\n",
+        "  021E5A00 00000004 .data   ov0_data\t(a.o)\n",
+        "# .OVY_0.bss\n",
+        "  021E5B00 00000004 .bss    ov0_bss\t(a.o)\n",
+        "# .field\n",
+        "#>00000001          SDK_OVERLAY.field.ID (linker command file)\n",
+        "  021E5900 00000020 .text   FieldMap_VBlankCallback\t(f.o)\n",
+        "# .main\n",
+        "  02000800 00000024 .text   _start\t(main.o)\n",
+    );
+
+    #[test]
+    fn overlay_rows_bind_by_overlay_id_and_address() {
+        use super::super::{Mapping, NativeImport};
+        let map = parse(OVERLAY_SAMPLE);
+        let overlay_of = |name: &str| map.symbols.iter().find(|s| s.name == name).unwrap().overlay;
+        assert_eq!(overlay_of("ov00_021E5900"), Some(0));
+        assert_eq!(overlay_of("ov0_bss"), Some(0));
+        assert_eq!(overlay_of("FieldMap_VBlankCallback"), Some(1));
+        assert_eq!(overlay_of("_start"), None);
+        let program = |overlay_id: Option<u32>, vaddr: u64| NativeImport {
+            mappings: vec![Mapping { vaddr, size: 0x1000, file_off: 0, flags: 7, bytes: vec![] }],
+            overlay_id,
+            ..Default::default()
+        };
+        let names = |imp: &NativeImport| {
+            imp.functions.iter().map(|f| (f.entry, f.name.clone())).collect::<Vec<_>>()
+        };
+        let mut ov0 = program(Some(0), 0x021e5000);
+        apply_to_import(&mut ov0, &map);
+        assert_eq!(names(&ov0), vec![(0x021e5900, "ov00_021E5900".to_string())]);
+        let mut ov1 = program(Some(1), 0x021e5000);
+        apply_to_import(&mut ov1, &map);
+        assert_eq!(names(&ov1), vec![(0x021e5900, "FieldMap_VBlankCallback".to_string())]);
+        let mut ov2 = program(Some(2), 0x021e5000);
+        apply_to_import(&mut ov2, &map);
+        assert!(ov2.functions.is_empty());
+        let mut main = program(None, 0x02000000);
+        apply_to_import(&mut main, &map);
+        assert_eq!(names(&main), vec![(0x02000800, "_start".to_string())]);
     }
 }

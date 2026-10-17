@@ -15,7 +15,12 @@ use std::path::Path;
 mod discovery;
 pub(crate) mod dol;
 mod gba;
+mod mwcc_runtime;
+mod pool_extent;
 mod n64;
+pub mod n64_codec;
+pub mod n64_discovery;
+pub mod n64_segments;
 mod nds;
 pub mod nds_overlays;
 mod psx;
@@ -49,6 +54,10 @@ pub(crate) mod ps3;
 pub(crate) mod psp;
 pub mod psx_overlays;
 pub(crate) mod rel;
+pub(crate) mod disc;
+mod archive;
+pub(crate) mod cue;
+mod yaz0;
 mod sce;
 pub(crate) mod sja;
 pub(crate) mod snes;
@@ -64,12 +73,15 @@ mod elf;
 mod pe;
 mod references;
 mod store;
-mod switch_tables;
+pub(crate) mod switch_tables;
+pub mod tally;
+mod programs;
+pub(crate) use programs::discover_all as discover_programs;
 use romwright_model::{FunctionRow, MemoryRegion, ProgramSummary, Provenance, XrefRow};
 pub use elf::{elf_image_base, import_elf};
 pub(crate) use elf::ElfSection;
 use elf::{elf_bases, import_elf32, parse_elf32_sections};
-pub use pe::{import_pe, pe_image_base};
+pub use pe::{import_pe, pe_image_base, stdcall_import_slots};
 pub use references::close_call_targets;
 use references::infer_data_references;
 pub use store::{
@@ -78,7 +90,6 @@ pub use store::{
     ELF_POINTER_SOURCE, ENTRY_CONVENTION_SOURCE, PROCESS_ENTRY_MODEL, SHARED_RETURN_SOURCE,
     declared_entry_model, store_import,
 };
-pub(crate) use switch_tables::scratch_root;
 use switch_tables::{
     ScratchDir, demote_case_blocks, recover_switch_tables, recover_switch_tables_native,
     switch_candidates,
@@ -206,6 +217,26 @@ pub const PLT_RESERVED_SOURCE: &str = "native-import:plt-reserved";
 /// A name on the pinned list of functions Ghidra ships as non-returning.
 pub const KNOWN_NAME_SOURCE: &str = "native-import:known-name";
 
+/// One module of an image that loads several into one address space: the
+/// extent the store records as a `modules` row (`locate` names it, and a
+/// reference between two of them is a `module_xrefs` row).
+#[derive(Clone, Debug)]
+pub struct NativeModule {
+    pub name: String,
+    /// `dol`, `rel`, ...
+    pub kind: String,
+    /// Where the module's bytes came from inside the container.
+    pub file_id: String,
+    pub load_vaddr: u64,
+    pub size: u64,
+    /// Where the module's stored bytes begin in the image the user imported
+    /// (the cartridge; the disc, with a CISO's blocks undone): the FAT entry
+    /// of an NDS overlay, a REL's or the DOL's place on the disc, a segment's
+    /// first ROM part. A packed module's offset is where its packed stream
+    /// starts, not where its decoded bytes sit.
+    pub file_off: u64,
+}
+
 /// A loader-bound data relocation that names a symbol: `copies` marks the
 /// COPY form, where the loader duplicates the symbol's bytes at `address`.
 #[derive(Clone, Debug)]
@@ -306,6 +337,14 @@ pub struct NativeImport {
     /// of the function that held each at the time: Ghidra runs its switch
     /// analyzer again on a function whose body changed, and so does this.
     pub switch_asked: std::collections::HashMap<u64, u64>,
+    /// Tables value-set analysis answered in this switch round but left for
+    /// the decompiler to confirm (`switch_tables::settle_deferred_tables`):
+    /// the decompiler's answer for the function, which finds the dispatches
+    /// nested in it, wins; a branch it leaves unanswered gets this one.
+    pub switch_deferred: std::collections::BTreeMap<u64, Vec<u64>>,
+    /// Tables the last reference pass stored whose cases reach bytes no walk
+    /// decoded: a reason for another round (`infer_data_references`).
+    pub reference_tables_added: usize,
     /// Entries an earlier discovery run created as ordinary functions; a
     /// later run does not turn one into a thunk, as `CreateFunctionCmd`
     /// decides thunk-ness only when it creates the function.
@@ -404,6 +443,9 @@ pub struct NativeImport {
     pub unrelocated_data_pointers: bool,
     /// Entries the gap rule seeded (`mips_gap_starts`), over every round.
     pub gap_starts: std::collections::HashSet<u64>,
+    /// Entries the after-fill rule seeded (`discovery::after_fill_starts`): the
+    /// code above falls into them, and they are functions all the same.
+    pub fill_starts: std::collections::HashSet<u64>,
     /// Entries seeded from code pointers stored in tables or data words,
     /// over every round: a handler reached through such a table is also a
     /// computed-jump target, and stays a function when case labels go.
@@ -444,6 +486,17 @@ pub struct NativeImport {
     pub plt_candidates: Vec<(u64, u64)>,
     pub relocations: Vec<MemoryRelocation>,
     pub register_contexts: Vec<NativeRegisterContext>,
+    /// Prototypes the image's own debug stream states (Metrowerks DWARF 1),
+    /// by function entry, each type already spelled in C the decompiler's
+    /// parser takes. Applied to the program as `native-import:debug-info`.
+    pub debug_prototypes: Vec<mdebug::DebugPrototype>,
+    /// The struct layouts the same stream states, which those prototypes name
+    /// (`native-import:debug-info`). Stored as `type_defs`/`type_fields`.
+    pub debug_structs: Vec<romwright_model::structs::StructLayout>,
+    /// Stack locals the same stream places, entry-relative, for the
+    /// functions whose prologue frame size the code states. Laid over the
+    /// propagated stack frame at store time (`mdebug::merge_debug_locals`).
+    pub debug_locals: Vec<mdebug::DebugLocal>,
     /// Loader-enabled register propagation across calls during reference analysis.
     pub reference_call_register: Option<&'static str>,
     /// ELF section-address code roots and exclusive bounds, not function seeds.
@@ -457,11 +510,12 @@ pub struct NativeImport {
     pub language: String,
     /// Loader-selected base compiler specification; absent for raw/default images.
     pub compiler: Option<String>,
-    /// Toolchain that produced the image, detected from the image's own
-    /// markers (ELF `.comment`, PE Rich header, DOL mwcc runtime symbols).
-    /// Distinct from `compiler`: that is the SLEIGH spec, this is the
-    /// producing toolchain.
-    pub toolchain: Option<String>,
+    /// Byte-level compiler evidence the loader read (ELF `.comment`, section
+    /// names, the PE linker version); input to `compiler::identify`.
+    pub image_facts: crate::compiler::ImageFacts,
+    /// The compiler identity (`compiler::identify`), set once the loader and
+    /// any linker MAP have supplied symbols and before discovery runs.
+    pub identity: Option<crate::compiler::Detection>,
     /// What an ELF header said about its machine: the primary and secondary
     /// keys the install's opinion data is queried with.
     pub elf_machine: Option<crate::opinion::ElfMachine>,
@@ -481,6 +535,17 @@ pub struct NativeImport {
     /// Names for the leading mappings, when the platform names them. A
     /// cartridge has one window called ROM, not one called `0`.
     pub mapping_names: Vec<String>,
+    /// The overlay this program is, when the platform pages code through
+    /// overlays that share RAM (a DS ARM9 overlay id). A linker MAP binds
+    /// a symbol by `(overlay id, address)`: a row tagged with an overlay
+    /// lands only in that overlay's program, and an untagged row only in a
+    /// program that is no overlay.
+    pub overlay_id: Option<u32>,
+    /// Loadable modules the image combines in one address space (a GameCube
+    /// DOL with the RELs placed beside it). When empty the store records
+    /// one module per mapping; when set, these rows replace them so a
+    /// reference is cross-module only when it crosses one of these.
+    pub modules: Vec<NativeModule>,
     /// Console request accounting for the flow phase, when it ran.
     pub flow: Option<romwright_model::FlowStats>,
     /// Pattern accounting for the pattern phase, when it ran.
@@ -665,6 +730,16 @@ pub(crate) fn parse_container_with(
     if nds::is_cartridge(data) {
         return nds::import(data);
     }
+    // A ROM whose layout was discovered is several programs when overlays
+    // share addresses; otherwise the one program the loader makes.
+    if n64::is_rom(data) || n64::is_swapped_dump(data) {
+        return n64::import_programs(data);
+    }
+    // A cartridge's RAM images beyond the ROM (copied, packed or multiboot
+    // code) are programs of their own when several share a run window.
+    if gba::is_cartridge(data) {
+        return gba::import_container(data);
+    }
     if let Some(result) = containers::import(data) {
         return result;
     }
@@ -844,6 +919,7 @@ pub fn load_container_with(
         .canonicalize()
         .unwrap_or_else(|_| binary.to_path_buf());
     let mut loaded = Vec::with_capacity(images.len());
+    let mut identified: Vec<(String, crate::compiler::Detection)> = Vec::new();
     for (suffix, mut imp) in images {
         if let Some((scratch, input)) = &captured {
             let mut input = input.clone();
@@ -864,6 +940,15 @@ pub fn load_container_with(
         if let Some(bin_map) = &bin_map {
             binmap::apply_to_import(&mut imp, bin_map);
         }
+        // An image of a container the detectors can say nothing about (an
+        // overlay, a REL module) was built with the compiler of the container's
+        // earlier image for the same language.
+        let identity = crate::compiler::identify_in_container(&imp, &identified);
+        imp.diagnose(romwright_model::DiagnosticSeverity::Info, "compiler", identity.summary());
+        if !identity.is_unknown() {
+            identified.push((imp.language.clone(), identity.clone()));
+        }
+        imp.identity = Some(identity);
         phase(&mut imp, "parse", parse_started);
         imp.analysed = analyse;
         if analyse {
@@ -917,14 +1002,27 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
         let index = bodies.partition_point(|&(start, _)| start <= address);
         bodies[..index].iter().rev().take(8).any(|&(_, end)| address < end)
     };
-    let code: Vec<(u64, u64)> = imp
-        .mappings
-        .iter()
-        .filter(|mapping| mapping.flags & 4 != 0)
-        .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
-        .collect();
+    // An unrelocated image's data is flagged executable too (PS2 `.data` is
+    // `WAX`): only the ranges calls reach hold code.
+    let code: Vec<(u64, u64)> = if imp.unrelocated_data_pointers {
+        discovery::call_dense_ranges(imp)
+    } else {
+        imp.mappings
+            .iter()
+            .filter(|mapping| mapping.flags & 4 != 0)
+            .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
+            .collect()
+    };
     let in_code = |address: u64| code.iter().any(|&(lo, hi)| lo <= address && address < hi);
     let known: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+    let (pool, read) = if arm && thumb1(&imp.language) {
+        (
+            thumb_literal_words(imp),
+            imp.xrefs.iter().filter(|x| x.kind == "READ").map(|x| x.to).collect(),
+        )
+    } else {
+        Default::default()
+    };
     let mut found = Vec::new();
     for mapping in imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0) {
         let mut run: Vec<u64> = Vec::new();
@@ -970,7 +1068,7 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
     found.retain(|target| {
         !known.contains(target)
             && !decoded(*target)
-            && if arm { !thumb1(&imp.language) || thumb1_table_entry(imp, *target) } else { mips_function_evidence(imp, *target, be) }
+            && if arm { !thumb1(&imp.language) || thumb1_table_entry(imp, *target, &pool, &read) } else { mips_function_evidence(imp, *target, be) }
     });
     found.sort_unstable();
     found.dedup();
@@ -983,7 +1081,9 @@ fn code_pointer_tables(imp: &NativeImport) -> Vec<u64> {
 /// in `.rdata` and 659 more in `.data`, every one a function its map names,
 /// and 1,203 of the 1,677 functions the exception directory and calls
 /// missed. A word inside a body is a case label or return address, never
-/// taken.
+/// taken, and neither is a run of adjacent words that is a jump table: one
+/// names an address a walk decoded inside a body and none names an entry (the
+/// cases of a switch whose table is not resolved yet; a vtable names entries).
 fn data_code_pointers(imp: &NativeImport) -> Vec<u64> {
     if !imp.unrelocated_data_pointers {
         return Vec::new();
@@ -1000,26 +1100,46 @@ fn data_code_pointers(imp: &NativeImport) -> Vec<u64> {
         let index = bodies.partition_point(|&(start, _)| start <= address);
         bodies[..index].iter().rev().take(8).any(|&(_, end)| address < end)
     };
-    let code: Vec<(u64, u64)> = imp
-        .mappings
-        .iter()
-        .filter(|mapping| mapping.flags & 4 != 0)
-        .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
-        .collect();
+    // An unrelocated image's data is flagged executable too (PS2 `.data` is
+    // `WAX`): only the ranges calls reach hold code.
+    let code: Vec<(u64, u64)> = if imp.unrelocated_data_pointers {
+        discovery::call_dense_ranges(imp)
+    } else {
+        imp.mappings
+            .iter()
+            .filter(|mapping| mapping.flags & 4 != 0)
+            .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
+            .collect()
+    };
     let in_code = |address: u64| code.iter().any(|&(lo, hi)| lo <= address && address < hi);
     let known: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
-    let mut found: Vec<u64> = imp
-        .mappings
-        .iter()
-        .filter(|mapping| mapping.flags & 4 == 0)
-        .flat_map(|mapping| {
-            let skip = ((4 - mapping.vaddr % 4) % 4) as usize;
-            mapping.bytes.get(skip..).unwrap_or(&[]).chunks_exact(4).map(move |raw| {
-                let raw: [u8; 4] = raw.try_into().expect("four bytes");
-                u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
-            })
-        })
-        .filter(|&target| target % 4 == 0 && in_code(target) && !known.contains(&target) && !owned(target))
+    let mut named: Vec<u64> = Vec::new();
+    for mapping in imp.mappings.iter().filter(|mapping| mapping.flags & 4 == 0) {
+        let skip = ((4 - mapping.vaddr % 4) % 4) as usize;
+        let mut run: Vec<u64> = Vec::new();
+        let flush = |run: &mut Vec<u64>, named: &mut Vec<u64>| {
+            let table = run.len() >= 2
+                && run.iter().any(|&target| owned(target))
+                && !run.iter().any(|target| known.contains(target));
+            if !table {
+                named.extend(run.iter().copied());
+            }
+            run.clear();
+        };
+        for raw in mapping.bytes.get(skip..).unwrap_or(&[]).chunks_exact(4) {
+            let raw: [u8; 4] = raw.try_into().expect("four bytes");
+            let target = u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) });
+            if target % 4 == 0 && in_code(target) {
+                run.push(target);
+            } else {
+                flush(&mut run, &mut named);
+            }
+        }
+        flush(&mut run, &mut named);
+    }
+    let mut found: Vec<u64> = named
+        .into_iter()
+        .filter(|target| !known.contains(target) && !owned(*target))
         .collect();
     found.sort_unstable();
     found.dedup();
@@ -1048,7 +1168,7 @@ fn mips_gap_starts(imp: &NativeImport) -> Vec<u64> {
     let word = |address: u64| -> Option<u32> {
         imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0).find_map(|mapping| {
             let at = usize::try_from(address.checked_sub(mapping.vaddr)?).ok()?;
-            let raw: [u8; 4] = mapping.bytes.get(at..at + 4)?.try_into().ok()?;
+            let raw: [u8; 4] = mapping.bytes.get(at..at.checked_add(4)?)?.try_into().ok()?;
             Some(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
         })
     };
@@ -1104,7 +1224,7 @@ fn mips_function_evidence(imp: &NativeImport, target: u64, be: bool) -> bool {
     let word = |address: u64| -> Option<u32> {
         imp.mappings.iter().find_map(|mapping| {
             let at = usize::try_from(address.checked_sub(mapping.vaddr)?).ok()?;
-            let raw: [u8; 4] = mapping.bytes.get(at..at + 4)?.try_into().ok()?;
+            let raw: [u8; 4] = mapping.bytes.get(at..at.checked_add(4)?)?.try_into().ok()?;
             Some(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) })
         })
     };
@@ -1155,7 +1275,7 @@ fn const_data_use_denied(ops: &[String]) -> bool {
 }
 fn const_data_targets(
     import: &mut NativeImport,
-    session: &mut crate::native_runtime::ConsoleSession,
+    lifter: &mut crate::native_runtime::SleighLifter,
 ) -> Vec<u64> {
     let entries: std::collections::HashSet<u64> = import
         .functions
@@ -1170,7 +1290,7 @@ fn const_data_targets(
         })
     };
     // Lift only what can become a seed: most const facts point at data.
-    // One batch per round; facts the console cannot lift stay allowed
+    // One batch per round; facts that do not decode stay allowed
     // (recall-preserving: an unknown use seeds, the spurious floors judge).
     let mut froms: Vec<u64> = import
         .xrefs
@@ -1184,13 +1304,11 @@ fn const_data_targets(
     froms.sort_unstable();
     froms.dedup();
     let mut uses: std::collections::HashMap<u64, Vec<String>> = std::collections::HashMap::new();
-    if let Ok(lifted) = session.pcode_batch(&froms) {
-        for instruction in lifted {
-            uses.insert(
-                instruction.address,
-                instruction.ops.iter().map(|op| op.opcode.clone()).collect(),
-            );
-        }
+    for instruction in lifter.lift(&froms) {
+        uses.insert(
+            instruction.address,
+            instruction.ops.iter().map(|op| op.opcode.clone()).collect(),
+        );
     }
     // On a low-bit-mode language the low bit of a DATA value is the
     // instruction-set mode, not address: 0x02000ca5 *is* the 0x02000ca4
@@ -1206,6 +1324,8 @@ fn const_data_targets(
     // and its ELF sections already separate code from data.
     let mode = low_bit_code_mode(&import.language);
     let arm = import.language.starts_with("ARM:");
+    // i386 PE: the displacement of a memory operand (a jump table behind its function) is data.
+    let operand_data = pe::x86_operands::memory_operand_only_targets(import);
     let mut targets: Vec<u64> = import
         .xrefs
         .iter()
@@ -1214,6 +1334,11 @@ fn const_data_targets(
         })
         .filter(|xref| !arm || xref.to & 1 != 0)
         .filter(|xref| !arm || thumb_start_evidence(import, xref.to & !1))
+        // A `lui`/`lis` alone makes a round constant (a base, a limit, a
+        // mask), not a code address. Const seeds on a 64 KiB boundary:
+        // 3 of 3 invented (bond 0x80010000, base 0x80690000, Animal Crossing
+        // 0x80010000) against 0 symbols named.
+        .filter(|xref| arm || xref.to & 0xffff != 0)
         // The same for MIPS, whose code and data can share a segment too:
         // on PS2 Capcom Fighting Evolution 47 of 1,016 const-seeded entries
         // were functions; this keeps 41 of them and 8 of the rest.
@@ -1225,6 +1350,7 @@ fn const_data_targets(
             uses.get(&xref.from)
                 .is_none_or(|ops| !const_data_use_denied(ops))
         })
+        .filter(|xref| !operand_data.contains(&xref.to))
         .map(|xref| xref.to)
         .map(|target| if mode { target & !1 } else { target })
         .filter(|&target| !entries.contains(&target) && in_code(target))
@@ -1244,6 +1370,25 @@ fn const_data_targets(
     }
     targets
 }
+/// Every word a Thumb `ldr rN, [pc, #imm]` names, read off the bytes of the
+/// code mappings: the literal pools. The halfword stream is not decoded --
+/// the code that loads a pool is often not decoded yet when its neighbours
+/// are seeded -- so a data halfword shaped like the load adds a word, which
+/// only ever makes a pool of something that is not one.
+fn thumb_literal_words(imp: &NativeImport) -> std::collections::HashSet<u64> {
+    let mut words = std::collections::HashSet::new();
+    for mapping in imp.mappings.iter().filter(|mapping| mapping.flags & 4 != 0) {
+        for (index, raw) in mapping.bytes.chunks_exact(2).enumerate() {
+            let half = u16::from_le_bytes([raw[0], raw[1]]);
+            if half >> 11 == 0b01001 {
+                let at = mapping.vaddr + 2 * index as u64;
+                words.insert(((at + 4) & !3) + (u64::from(half & 0xff) << 2));
+            }
+        }
+    }
+    words
+}
+
 /// Whether the halfword at a Thumb constant's target opens a function the
 /// way Thumb code does: a `push` (with or without `lr`), a leaf's `bx lr`, or
 /// a PC-relative literal load. An odd constant is also any pointer to data
@@ -1283,9 +1428,19 @@ fn thumb1(language: &str) -> bool {
 /// high-register operations, stores and branches instead.
 ///
 /// Following an end: the halfword before is a `pop {.., pc}`, a `bx`/`blx`
-/// register, an unconditional `b`, or a `nop`; or, on a word boundary, zero
-/// padding or the high half of a literal-pool pointer into the image or a
-/// declared region. Script bytecode carries unaligned pointers of its own.
+/// register, an unconditional `b`, or a `nop`; or, on a word boundary, the
+/// word before is a literal-pool word some instruction loads (`pool`, read
+/// off the bytes; `read`, the loads of decoded code, rule out an entry that
+/// is itself a loaded word) with
+/// the high half of a pointer into the image or a declared region, or zero
+/// padding that follows such an end or such a pool word. Script bytecode
+/// carries pointers of its own, aligned ones among them, and a command that
+/// ends in a pointer is followed by the next command exactly as a pool is by
+/// a function; but nothing loads those pointers. pokeemerald, over every odd
+/// word that names an opening halfword on a word boundary: of the entries
+/// after a pointer half, 4,354 functions and 24 others follow a loaded
+/// pointer, 1 and 174 an unloaded one; of the entries after a zero halfword,
+/// 1,906 and 7 follow an end or a loaded pool word, 0 and 36 anything else.
 ///
 /// Of what the rule added without this filter, pokeemerald keeps 1,695 of
 /// the 1,704 functions its symbols name against 192
@@ -1293,7 +1448,16 @@ fn thumb1(language: &str) -> bool {
 /// keeps 765 of 778 against 2 of 52. Thumb-2 code opens with wide encodings
 /// this does not read; there (Vita NFS) the words need no filter: 11,323 of
 /// 11,453 name functions.
-fn thumb1_table_entry(import: &NativeImport, target: u64) -> bool {
+fn thumb1_table_entry(
+    import: &NativeImport,
+    target: u64,
+    pool: &std::collections::HashSet<u64>,
+    read: &std::collections::HashSet<u64>,
+) -> bool {
+    // A word a decoded instruction loads is data, whatever it decodes as.
+    if read.contains(&target) || read.contains(&(target & !3)) {
+        return false;
+    }
     let Some(first) = thumb_halfword(import, target) else {
         return false;
     };
@@ -1302,10 +1466,10 @@ fn thumb1_table_entry(import: &NativeImport, target: u64) -> bool {
     let Some(before) = target.checked_sub(2).and_then(|at| thumb_halfword(import, at)) else {
         return false;
     };
-    let ends = before & 0xff00 == 0xbd00
-        || before & 0xff87 == 0x4700
-        || before >> 11 == 0b11100
-        || before == 0x46c0;
+    let ends_at = |half: u16| {
+        half & 0xff00 == 0xbd00 || half & 0xff87 == 0x4700 || half >> 11 == 0b11100 || half == 0x46c0
+    };
+    let ends = ends_at(before);
     let pointer_high = |half: u16| {
         let low = u64::from(half) << 16;
         let high = low | 0xffff;
@@ -1313,7 +1477,10 @@ fn thumb1_table_entry(import: &NativeImport, target: u64) -> bool {
         import.mappings.iter().any(|mapping| overlaps(mapping.vaddr, mapping.size))
             || import.declared_regions.iter().any(|region| overlaps(region.vaddr, region.size))
     };
-    let aligned_end = target % 4 == 0 && (before == 0 || pointer_high(before));
+    let loaded = pool.contains(&target.wrapping_sub(4));
+    let padded = before == 0
+        && (loaded || target.checked_sub(4).and_then(|at| thumb_halfword(import, at)).is_some_and(ends_at));
+    let aligned_end = target % 4 == 0 && (padded || (loaded && pointer_high(before)));
     opens && (ends || aligned_end)
 }
 
@@ -1502,7 +1669,10 @@ fn arm_call_target_mode(image: &NativeImport, from: u64, to: u64) -> Option<u64>
 /// Runs discovery and reference inference for one loaded image.
 pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     let discovery_started = std::time::Instant::now();
-    let mut ran = if imp.format == "dol" {
+    let mut ran = if imp.format == "dol" || elf::stripped_mips_executable(imp) {
+        if imp.format != "dol" {
+            elf_pointers::confirm_initializers(imp);
+        }
         discovery::discover_mapped(imp)?;
         true
     } else {
@@ -1526,40 +1696,34 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
             break;
         }
         rounds_run = round as u64 + 1;
-        // The reference pass reads bytes through a console that has decoded
-        // nothing but what the recorded contexts say. The discovery console
-        // has probed thousands of candidates by now, and every probe wrote
-        // the mode switches its bytes carried into that console's one
-        // context database (SLEIGH `globalset`), so crt0 of a DS ROM read as
-        // Thumb there and yielded no references at all.
-        let console_started = std::time::Instant::now();
+        // The reference pass decodes through lanes that have decoded nothing
+        // but what the recorded contexts say. The discovery walk has probed
+        // thousands of candidates by now, and every probe wrote the mode
+        // switches its bytes carried into that decoder's one context database
+        // (SLEIGH `globalset`), so crt0 of a DS ROM read as Thumb there and
+        // yielded no references at all.
         let references_started = std::time::Instant::now();
-        let mut session = match crate::native_runtime::ConsoleSession::new(&imp.cfg) {
-            Ok(session) => session,
-            Err(error) => {
-                imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "references", format!("reference console did not start: {error}"));
-                break;
-            }
-        };
-        if let Err(error) = session.load_mapped(imp) {
-            imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "references", format!("reference console did not load the image: {error}"));
-            break;
-        }
-        let shards = crate::native_runtime::ConsoleSession::open_image_shards(
-            imp,
-            imp.cfg.console_shards.max(1) - 1,
-        );
-        phase(imp, "console", console_started);
         let references_only = std::time::Instant::now();
         seed_mips_entry_register(imp);
-        infer_data_references(imp, &mut session, shards)?;
+        infer_data_references(imp)?;
         phase(imp, "references-only", references_only);
         phase(imp, "references", references_started);
         if round == 3 {
             break;
         }
+        // P-code is lifted in process, from the image and contexts of this
+        // round.
+        let lifter_started = std::time::Instant::now();
+        let mut lifter = match crate::native_runtime::SleighLifter::mapped_pooled(&imp.cfg, imp) {
+            Ok(lifter) => lifter,
+            Err(error) => {
+                imp.diagnose(romwright_model::DiagnosticSeverity::Degraded, "references", format!("SLEIGH lifter did not load the image: {error}"));
+                break;
+            }
+        };
+        tally::add("lifter-open", lifter_started);
         let targets = computed_flow_targets(imp);
-        let callbacks = const_data_targets(imp, &mut session);
+        let callbacks = const_data_targets(imp, &mut lifter);
         let stubs = stub_jump_seeds(imp);
         let mut tables_in_code = code_pointer_tables(imp);
         tables_in_code.extend(data_code_pointers(imp));
@@ -1567,6 +1731,9 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         let gaps = mips_gap_starts(imp);
         imp.gap_starts.extend(gaps.iter().copied());
         tables_in_code.extend(gaps);
+        let jumped = discovery::jump_starts_after_fill(imp);
+        imp.fill_starts.extend(jumped.iter().copied());
+        tables_in_code.extend(jumped);
         tables_in_code.sort_unstable();
         tables_in_code.dedup();
         // Value-set analysis over p-code answers most dispatches without the
@@ -1587,7 +1754,10 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
         let mut tables = 0;
         let mut remaining = candidates.iter().map(|&(branch, _, _)| branch).count();
         if imp.cfg.switch_vsa && !candidates.is_empty() {
-            let (added, unresolved) = recover_switch_tables_native(imp, &mut session, &candidates);
+            // Round 2 is the last that asks about switches (round 3 stops
+            // after references).
+            let (added, unresolved) =
+                recover_switch_tables_native(imp, &mut lifter, &candidates, round == 2);
             tables += added;
             remaining = unresolved.len();
             // Only the branches value-set analysis could not follow are
@@ -1607,13 +1777,25 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
             }
         }
         phase(imp, "switch-vsa", switch_started);
-        if remaining > 0 && imp.cfg.switch_decompiler {
-            tables += recover_switch_tables(imp);
-        } else if tables > 0 {
+        // Case blocks of the round's tables are withdrawn once, after both
+        // paths: the decompiler path does it for its own tables, so value-
+        // set tables need it only when the decompiler added none.
+        // The round's lifter is done; the decompiler stage is the one that
+        // follows it, and it needs none of the decoders.
+        drop(lifter);
+        let decompiled = if remaining > 0 && imp.cfg.switch_decompiler {
+            recover_switch_tables(imp)
+        } else {
+            0
+        };
+        let settled = switch_tables::settle_deferred_tables(imp);
+        if decompiled == 0 && tables > 0 {
             demote_case_blocks(imp);
         }
+        tables += decompiled + settled;
         if targets.is_empty()
             && tables == 0
+            && imp.reference_tables_added == 0
             && callbacks.is_empty()
             && stubs.is_empty()
             && tables_in_code.is_empty()
@@ -1717,6 +1899,7 @@ pub(crate) fn discover(imp: &mut NativeImport) -> Result<()> {
     name_linkage_stubs(imp);
     apply_initializer_labels(imp);
     apply_pattern_labels(imp);
+    mwcc_runtime::name_register_sleds(imp);
     // A word a reference landed on, whose bytes are a function's entry: the
     // references have to exist first, which is why this is not a loader pass
     // (m4-027).
@@ -1855,6 +2038,73 @@ fn seed_mips_entry_register(imp: &mut NativeImport) {
         .collect();
     imp.register_contexts.extend(seeds);
 }
+
+/// Registers whose loader-established value is stored per function entry
+/// (decode points) and handed to the decompiler through
+/// `getTrackedRegisters`: the PowerPC EABI small-data bases and the MIPS
+/// global pointer.
+pub const STORED_BASE_REGISTERS: [&str; 3] = ["r13", "r2", "gp"];
+
+/// The MIPS global pointer for non-PIC images, seeded over every executable
+/// section so `$gp`-relative loads and stores resolve to the small-data
+/// objects they address (`lw v0, -0x3a14(gp)` -> the global at
+/// `_gp - 0x3a14`) instead of `pcGpffffc5ec`-style register-relative
+/// names. Value: the `_gp` ABS symbol when the image declares a non-zero
+/// one, else `ri_gp_value` from `.reginfo` (`Elf32_RegInfo`, offset 20),
+/// which stripped console executables still carry. PIC/abicalls images
+/// (`EF_MIPS_PIC`/`EF_MIPS_CPIC`) derive `gp` from `t9` in each prologue,
+/// so no image-wide value is seeded for them.
+pub(crate) fn seed_mips_gp_register(
+    data: &[u8],
+    be: bool,
+    machine: u16,
+    abs: &[(String, u64)],
+    sections: &[ElfSection],
+    register_contexts: &mut Vec<NativeRegisterContext>,
+) {
+    // EM_MIPS (8) and EM_MIPS_RS3_LE (10).
+    if machine != 8 && machine != 10 {
+        return;
+    }
+    let read32 = |offset: usize| {
+        data.get(offset..offset + 4).map(|bytes| {
+            let bytes: [u8; 4] = bytes.try_into().unwrap();
+            if be { u32::from_be_bytes(bytes) } else { u32::from_le_bytes(bytes) }
+        })
+    };
+    // ELF32 e_flags; ELF64 MIPS images are PIC in practice and skipped.
+    let is_elf32 = data.get(4) == Some(&1);
+    let Some(flags) = is_elf32.then(|| read32(36)).flatten() else { return };
+    if flags & 0x6 != 0 {
+        return;
+    }
+    let reginfo = || {
+        let section = sections.iter().find(|section| section.name == ".reginfo" && section.size >= 24)?;
+        read32(usize::try_from(section.off).ok()?.checked_add(20)?).map(u64::from)
+    };
+    let Some(gp) = abs
+        .iter()
+        .find_map(|(name, value)| (name == "_gp" && *value != 0).then_some(*value))
+        .or_else(reginfo)
+        .filter(|value| *value != 0)
+    else {
+        return;
+    };
+    register_contexts.extend(
+        sections
+            .iter()
+            .filter(|section| section.flags & 4 != 0 && section.size != 0)
+            .filter_map(|section| {
+                Some(NativeRegisterContext {
+                    start: section.addr,
+                    end: section.addr.checked_add(section.size)?,
+                    register: "gp".into(),
+                    value: gp,
+                })
+            }),
+    );
+}
+
 /// Small-data-area bases for PowerPC EABI, seeded as loader-established
 /// register ranges so every consumer takes them through the register
 /// channel: the console's reference pass folds `r13`-/`r2`-relative access
@@ -1932,9 +2182,10 @@ pub(crate) fn seed_ppc_sda_registers(
     }
 }
 
-/// Expand SDA register ranges at every recovered function entry. The console
-/// consumes the full ranges; the worker's tracked-register callback is keyed
-/// by entry, including functions discovered after the loader established them.
+/// Expand stored base-register ranges (SDA bases, MIPS `gp`) at every
+/// recovered function entry. The console consumes the full ranges; the
+/// worker's tracked-register callback is keyed by entry, including functions
+/// discovered after the loader established them.
 pub(crate) fn sda_decode_points(
     register_contexts: &[NativeRegisterContext],
     functions: &[NativeFunction],
@@ -1944,7 +2195,7 @@ pub(crate) fn sda_decode_points(
     entries.dedup();
     let mut points = std::collections::BTreeMap::new();
     for context in register_contexts.iter()
-        .filter(|context| context.register == "r13" || context.register == "r2")
+        .filter(|context| STORED_BASE_REGISTERS.contains(&context.register.as_str()))
     {
         let first = entries.partition_point(|entry| *entry < context.start);
         for &entry in entries[first..].iter().take_while(|entry| **entry < context.end) {

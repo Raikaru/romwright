@@ -105,8 +105,8 @@ pub(super) fn prepare(
     for context in &mut import.contexts {
         context.address = rebase(context.address)?;
     }
-    // The ranges and their values: the parse seeds only SDA bases and
-    // PPC64 TOC pointers here, which are addresses too.
+    // The ranges and their values: the parse seeds only SDA bases, the MIPS
+    // global pointer and PPC64 TOC pointers here, which are addresses too.
     for context in &mut import.register_contexts {
         context.start = rebase(context.start)?;
         context.end = rebase(context.end)?;

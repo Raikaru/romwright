@@ -6,7 +6,10 @@
 
 pub mod cfg_functions;
 pub mod demand;
+pub mod export;
+pub mod new_project;
 pub mod matching;
+pub mod match_search;
 pub mod import_cache;
 pub mod artifact;
 pub mod exec;
@@ -14,10 +17,10 @@ pub mod inputs;
 pub mod func_ir;
 pub(crate) mod sha256;
 pub mod gte;
-pub mod gte_lift;
 pub mod library_types;
 pub mod demangle;
 pub mod bridge;
+pub mod compiler;
 pub mod architecture;
 pub mod disasm;
 pub mod ir;
@@ -34,6 +37,8 @@ pub mod speclint;
 pub mod vu;
 pub mod facts;
 pub mod subtype;
+pub mod struct_types;
+mod struct_pass;
 pub mod types_infer;
 mod prototypes;
 pub mod qualified_prototypes;
@@ -46,6 +51,7 @@ pub mod sdk_types;
 pub mod cross_module;
 pub mod emit_m2c;
 pub mod fact_sync;
+pub mod fact_pack;
 pub mod gbi;
 pub mod gekko;
 pub mod rsp_parity;
@@ -274,9 +280,9 @@ impl Core {
     pub fn function_at(&self, program: &str, offset: u64) -> Result<Option<FunctionRow>> {
         Ok(self.db.function_at(self.db.program_id(program)?, offset)?)
     }
-    /// One listing window (CORE-007): SLEIGH console rows when configured,
-    /// bounded + overscan, stable ids. Errors honestly when the console is
-    /// not available (needs binutils-devel to build; see RuntimeConfig).
+    /// One listing window (CORE-007): in-process SLEIGH rows, bounded +
+    /// overscan, stable ids. Instruction bytes come from the listing's
+    /// `Bytes` lines, sized by the program's own SLEIGH decoder.
     pub fn listing_window(
         &self,
         binary: &std::path::Path,
@@ -284,30 +290,8 @@ impl Core {
         count: u32,
         overscan_fraction: f32,
     ) -> Result<romwright_model::ListingWindow> {
-        let source = listing::ConsoleListingSource::new(self.config.clone(), binary);
-        let mut window = listing::window(&source, start, count, overscan_fraction)?;
-        // Enrich rows with raw instruction bytes: the decoder gives the
-        // length, the mapped image gives the bytes. Rows whose bytes cannot
-        // be read stay empty rather than failing the window.
-        for row in &mut window.rows {
-            if row.kind != romwright_model::ListingRowKind::Instruction {
-                continue;
-            }
-            let bytes = self
-                .mem_native(binary, row.address.offset, 16)
-                .unwrap_or_default();
-            if bytes.is_empty() {
-                continue;
-            }
-            let info = crate::disasm::decode(&bytes, row.address.offset);
-            let len = (info.len as usize).clamp(1, bytes.len());
-            row.bytes = bytes[..len].iter().map(|b| format!("{b:02x}")).collect();
-        }
-        Ok(window)
-    }
-    /// Single-instruction control-flow resolution from p-code (m1-001).
-    pub fn console_flow(&self, binary: &Path, address: u64) -> Result<native_runtime::FlowResult> {
-        Ok(native_runtime::console_flow(&self.config, binary, address)?)
+        let source = listing::SleighListingSource::new(self.config.clone(), binary);
+        Ok(listing::window(&source, start, count, overscan_fraction)?)
     }
 
 
@@ -1408,6 +1392,7 @@ impl Core {
         let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
         let table = std::fs::read_to_string(specs.join("registers.txt"))?;
         let conventions = register_params::Conventions::parse(&cspec, &table);
+        let machine = conventions.machine(&language);
         // The model with the longest register parameter list is the one a
         // compiler uses for ordinary functions; a spec that names none
         // leaves nothing to map a constraint onto.
@@ -1490,7 +1475,12 @@ impl Core {
                     all
                 };
                 let pcode = live.pcode(&addresses)?;
-                let solution = crate::subtype::solve_with(&pcode, &std::collections::BTreeMap::new(), &killed);
+                let solution = crate::subtype::solve_with(
+                    &pcode,
+                    &std::collections::BTreeMap::new(),
+                    &killed,
+                    &machine,
+                );
                 let params = parameter_slots
                     .iter()
                     .filter_map(|(_, offset)| {
@@ -1536,6 +1526,7 @@ impl Core {
                         &float_slot_offsets,
                         &int_ret,
                         &float_return_slots,
+                        &machine,
                     );
                     signatures.assert(
                         *entry_offset,
@@ -1563,7 +1554,9 @@ impl Core {
             for _round in 0..8 {
                 solutions = lifted
                     .iter()
-                    .map(|(_, _, pcode)| crate::subtype::solve_with(pcode, &callees, &killed))
+                    .map(|(_, _, pcode)| {
+                        crate::subtype::solve_with(pcode, &callees, &killed, &machine)
+                    })
                     .collect();
                 // caller→callee: join each observed argument type into the
                 // callee's inferred signature.
@@ -1595,7 +1588,7 @@ impl Core {
             for ((entry_offset, instructions, pcode), solution) in
                 lifted.iter().zip(solutions.iter())
             {
-                let facts = crate::types_infer::infer(pcode);
+                let facts = crate::types_infer::infer(pcode, &machine);
                 let parameters: Vec<String> = parameter_slots
                     .iter()
                     .map(|(_, offset)| facts.get(*offset).name())
@@ -1752,6 +1745,7 @@ impl Core {
         let cspec = std::fs::read_to_string(specs.join("cspec.xml"))?;
         let table = std::fs::read_to_string(specs.join("registers.txt"))?;
         let conventions = register_params::Conventions::parse(&cspec, &table);
+        let machine = conventions.machine(&language);
         let Some(model) = conventions.default() else {
             return Ok(Vec::new());
         };
@@ -1839,7 +1833,7 @@ impl Core {
                     .take_while(|i| i.address <= instruction.address)
                     .cloned()
                     .collect();
-                let facts = crate::types_infer::infer(&prefix);
+                let facts = crate::types_infer::infer(&prefix, &machine);
                 // The site's signature is the class of the value last
                 // written to each argument register before the call.
                 let site_ints: Vec<romwright_model::type_evidence::Class> = parameter_slots
@@ -1877,7 +1871,7 @@ impl Core {
                             .map(|input| input.offset)
                     }
                 });
-                let site_facts = crate::types_infer::infer(&prefix);
+                let site_facts = crate::types_infer::infer(&prefix, &machine);
                 let mut spilled_write: std::collections::BTreeSet<u64> =
                     std::collections::BTreeSet::new();
                 let mut last_write: std::collections::BTreeSet<u64> =
@@ -1940,7 +1934,7 @@ impl Core {
                                     .collect();
                                 live.pcode(&addresses).ok()
                             })
-                            .map(|pcode| crate::types_infer::infer(&pcode));
+                            .map(|pcode| crate::types_infer::infer(&pcode, &machine));
                         let Some(candidate_facts) = candidate_facts else {
                             return true; // undecodable: nothing to contradict
                         };
@@ -2257,9 +2251,11 @@ impl Core {
         raw: Option<(u64, &str)>,
         keys: &native::keys::KeyStore,
     ) -> Result<Vec<ProgramSummary>> {
-        let bytes = std::fs::read(binary)?;
+        // A `.cue` sheet stands for the data track's `.bin` beside it.
+        let resolved = native::cue::resolve(binary)?;
+        let binary = resolved.as_ref();
         let map_bytes = map.map(std::fs::read).transpose()?.map(Into::into);
-        let (artifact, input) = inputs::capture(&self.db_path, binary, bytes.into(), map_bytes, raw, keys)?;
+        let (artifact, input) = inputs::capture_file(&self.db_path, binary, map_bytes, raw, keys)?;
         let binary = artifact.path.as_path();
         let map_path = input.map_digest.as_ref().map(|digest| self.db_path.join("artifacts").join(digest));
         let map = map_path.as_deref();
@@ -2316,37 +2312,7 @@ impl Core {
             }
         }
         let mut images = native::load_container_with(binary, &artifact.bytes, false, map, raw, keys, &self.config)?;
-        // An image its siblings call into is discovered last, seeded with
-        // those calls; everything else keeps container order.
-        let order: Vec<usize> = (0..images.len())
-            .filter(|&index| !images[index].1.sibling_call_host)
-            .chain((0..images.len()).filter(|&index| images[index].1.sibling_call_host))
-            .collect();
-        for index in order {
-            let (suffix, imp) = &mut images[index];
-            let mut selected = input.clone();
-            selected.image_selector = suffix.clone();
-            imp.input_context = Some(std::sync::Arc::new((self.db_path.clone(), selected)));
-            if analyse {
-                imp.analysed = true;
-                // The loader's "not analysed" note no longer holds.
-                imp.diagnostics.retain(|diagnostic| {
-                    !diagnostic.message.starts_with("loaded without analysis")
-                });
-                if imp.sibling_call_host {
-                    let mut host = std::mem::take(&mut images[index].1);
-                    let siblings: Vec<&native::NativeImport> = images
-                        .iter()
-                        .enumerate()
-                        .filter(|&(other, _)| other != index)
-                        .map(|(_, (_, sibling))| sibling)
-                        .collect();
-                    native::seed_from_siblings(&mut host, &siblings);
-                    images[index].1 = host;
-                }
-                native::discover(&mut images[index].1)?;
-            }
-        }
+        native::discover_programs(&mut images, &self.db_path, &input, analyse)?;
         let mut stored = Vec::with_capacity(images.len());
         for (suffix, imp) in &images {
             let program = if suffix.is_empty() {
@@ -2400,22 +2366,16 @@ impl Core {
 
     /// Lift the p-code at `addresses` into the typed IR (`ir::IrInstruction`)
     /// — the normalized form analyses consume. The binary is imported
-    /// natively so the session decodes under the program's real language.
+    /// natively so the lifter decodes under the program's real language.
     pub fn ir_native(
         &self,
         binary: &Path,
         addresses: &[u64],
     ) -> Result<Vec<ir::IrInstruction>> {
         let import = native::load_native(binary)?;
-        let mut session = native_runtime::ConsoleSession::new(&import.cfg)
+        let mut lifter = native_runtime::SleighLifter::mapped(&import.cfg, &import)
             .map_err(CoreError::NativeRuntime)?;
-        session
-            .load_mapped(&import)
-            .map_err(CoreError::NativeRuntime)?;
-        let pcode = session
-            .pcode_batch(addresses)
-            .map_err(CoreError::NativeRuntime)?;
-        Ok(ir::lift_all(&pcode))
+        Ok(ir::lift_all(&lifter.lift(addresses)))
     }
 
     /// Exhaustive length sweep over a mapped range plus point queries
@@ -2459,7 +2419,13 @@ impl Core {
         base: Option<u64>,
     ) -> Result<String> {
         let request = self.execution_request(binary, program, base, exec::DEFAULT_BUDGET)?;
-        let text = native_runtime::decompile_native(&request, address)?;
+        let text = self
+            .decompile_texts_structs(&request, &[address.to_string()])?
+            .into_values()
+            .next()
+            .ok_or_else(|| {
+                native_runtime::NativeRuntimeError(format!("no decompilation for {address}"))
+            })?;
         self.check_execution(&request)?;
         Ok(text)
     }
@@ -2476,7 +2442,7 @@ impl Core {
         base: Option<u64>,
     ) -> Result<std::collections::BTreeMap<String, String>> {
         let request = self.execution_request(binary, program, base, exec::DEFAULT_BUDGET)?;
-        let texts = native_runtime::decompile_native_batch(&request, addresses)?;
+        let texts = self.decompile_texts_structs(&request, addresses)?;
         self.check_execution(&request)?;
         Ok(texts)
     }
@@ -2530,8 +2496,19 @@ impl Core {
         entry: Option<u64>,
         opts: &emit_m2c::M2cOptions,
     ) -> Result<serde_json::Value> {
-        let mut request = self.execution_request(binary, program, None, exec::DEFAULT_BUDGET)?;
+        let budget = opts.budget.unwrap_or(exec::DEFAULT_BUDGET);
+        let mut request = self.execution_request(binary, program, None, budget)?;
         let id = self.db.program_id(program)?;
+        // The printer's compiler rules are keyed by the program's compiler.
+        let opts = &emit_m2c::M2cOptions {
+            compiler: self.db.program_compiler(id).unwrap_or_default(),
+            stdcall_imports: if emit_m2c::stdcall_imports_enabled() {
+                std::fs::read(binary).map(|data| native::stdcall_import_slots(&data)).unwrap_or_default()
+            } else {
+                Default::default()
+            },
+            ..opts.clone()
+        };
         let revision = request.revision;
         let mut functions = self.functions(program)?;
         if functions.is_empty() {
@@ -2546,6 +2523,10 @@ impl Core {
         for sym in self.symbols(program)? {
             keep.push(sym.name.clone());
         }
+        let address_names = emit_m2c::address_names(
+            functions.iter().map(|f| (f.entry.offset, f.name.as_str())),
+            self.symbols(program)?.iter().map(|s| (s.address.offset, s.name.as_str())),
+        );
         if let Some(entry) = entry {
             functions.retain(|function| function.entry.offset == entry);
             if functions.is_empty() {
@@ -2556,6 +2537,7 @@ impl Core {
         }
 
         request.config.ir_passes = opts.transforms.clone();
+        request.config.worker_env = opts.worker_env.clone();
         crate::func_ir::Pipeline::from_names(&request.config.ir_passes)
             .map_err(native::ImportError::Bad)?;
         // Batch-decompile every function to a DecompDoc.
@@ -2563,7 +2545,7 @@ impl Core {
             .iter()
             .map(|f| format!("{:x}", f.entry.offset))
             .collect();
-        let mut docs = native_runtime::decompile_native_docs(&request, &addresses)?;
+        let (mut docs, struct_warnings) = self.decompile_docs_structs(&request, &addresses)?;
 
         // Group functions into output units: by TU when splits are given,
         // else one unit per function.
@@ -2591,11 +2573,26 @@ impl Core {
 
         std::fs::create_dir_all(outdir).map_err(CoreError::Io)?;
         let asserted_prototypes = emit_m2c::DeclaredPrototypes::new(self.db.prototypes(id)?);
+        let gp_at_entry: std::collections::BTreeMap<u64, u64> = self
+            .db
+            .decode_contexts(id)?
+            .into_iter()
+            .filter(|(_, name, _)| name == "gp")
+            .map(|(address, _, value)| (address.offset, value))
+            .collect();
         let mut files = Vec::new();
         let mut pending = Vec::new();
         let mut irregular_count = 0usize;
         let mut rewrite_count = 0usize;
-        let mut warnings = Vec::new();
+        let mut warnings: Vec<serde_json::Value> = struct_warnings
+            .into_iter()
+            .map(|message| serde_json::json!({ "message": message }))
+            .collect();
+        let struct_table = struct_types::StructTable::load(
+            &self.db,
+            id,
+            romwright_model::structs::StructMode::from_env(),
+        )?;
         for (unit, fns) in &units {
             let mut text = String::new();
             let layouts = if opts.emit_globals {
@@ -2603,6 +2600,21 @@ impl Core {
                     .map_err(native::ImportError::Bad)?
             } else {
                 emit_m2c::UnitLayouts::default()
+            };
+            // The structs the unit's functions name are part of the context
+            // the printed function is made to agree with.
+            let unit_opts = {
+                let names: String = fns
+                    .iter()
+                    .filter_map(|f| docs.get(&format!("{:08x}", f.entry.offset)))
+                    .map(emit_m2c::render_doc_text)
+                    .collect();
+                let definitions = struct_table.definitions(&names, &opts.context);
+                if definitions.is_empty() {
+                    opts.clone()
+                } else {
+                    emit_m2c::M2cOptions { context: format!("{}\n{definitions}", opts.context), ..opts.clone() }
+                }
             };
             for f in fns {
                 request.cancel.checkpoint(request.deadline)?;
@@ -2619,14 +2631,19 @@ impl Core {
                     register_params::augment(&request.config, request.language.as_str(), prototype, &doc.storage);
                 }
                 let stack = self.db.stack_variables(id, Some(&f.entry))?;
+                let bytes = self.mem_native(binary, f.entry.offset, f.size as usize).unwrap_or_default();
+                let machine_code = emit_m2c::MachineCode::new(request.language.as_str(), f.entry.offset, &bytes);
+                let address_pairs = machine_code.address_pairs(|address| self.mem_native(binary, address, 1).is_ok());
                 let inputs = emit_m2c::FuncInputs {
                     stack: &stack,
                     generated_extra: &[],
                     keep: &keep,
                     asserted_prototypes: Some(&asserted_prototypes),
+                    gp: gp_at_entry.get(&f.entry.offset).copied(),
+                    machine: Some(emit_m2c::Machine { code: &machine_code, constants: &address_pairs, names: &address_names }),
                 };
-                let emitted =
-                    emit_m2c::emit_doc_in_unit(doc, &inputs, opts, &layouts).map_err(native::ImportError::Bad)?;
+                let emitted = emit_m2c::emit_doc_in_unit(doc, &inputs, &unit_opts, &layouts)
+                    .map_err(native::ImportError::Bad)?;
                 if emitted.irregular {
                     irregular_count += 1;
                 }
@@ -2645,6 +2662,11 @@ impl Core {
                     .sum::<usize>();
                 text.push_str(&emitted.text);
                 text.push_str("\n\n");
+            }
+            // The struct definitions the unit's text names, before all of it.
+            let definitions = struct_table.definitions(&text, &opts.context);
+            if !definitions.is_empty() {
+                text.insert_str(0, &format!("{definitions}\n"));
             }
             if text.trim().is_empty() {
                 continue;

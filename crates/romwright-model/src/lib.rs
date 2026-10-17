@@ -9,6 +9,7 @@ pub mod function_ir;
 pub mod matching;
 /// Stable ID for a program inside a project.
 pub mod provenance;
+pub mod structs;
 pub mod type_evidence;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -199,20 +200,34 @@ pub struct FactProvenance {
     pub confidence: Option<f64>,
 }
 
+impl FactProvenance {
+    /// The shared sentence for this fact's class (`provenance::CLASSES`),
+    /// or `None` when nothing explains the source. Every surface that shows
+    /// a fact reads this rather than the serialized `explanation` field.
+    pub fn explanation(&self) -> Option<&'static str> {
+        provenance::explain(&self.source)
+    }
+
+    /// What kind of evidence the class rests on, or `None` for an unknown
+    /// source.
+    pub fn evidence(&self) -> Option<provenance::EvidenceKind> {
+        provenance::evidence(&self.source)
+    }
+}
+
 impl serde::Serialize for FactProvenance {
     /// Adds `explanation` from the shared table: a consumer that shows a fact
     /// can always say what proved it, without mapping the string itself.
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         use serde::ser::SerializeStruct;
-        let class = provenance::class(&self.source);
         let mut row = serializer.serialize_struct("FactProvenance", 5)?;
         row.serialize_field("kind", &self.kind)?;
         row.serialize_field("source", &self.source)?;
         row.serialize_field("confidence", &self.confidence)?;
-        row.serialize_field("explanation", &class.map(|entry| entry.explanation))?;
+        row.serialize_field("explanation", &self.explanation())?;
         // What kind of evidence this is: the image said so, the decoder proved
         // it, or a pass concluded it.
-        row.serialize_field("evidence", &class.map(|entry| entry.evidence))?;
+        row.serialize_field("evidence", &self.evidence())?;
         row.end()
     }
 }
@@ -235,7 +250,10 @@ pub struct ProgramRow {
 
 /// Where one address lands in one program: the region that maps it, and the
 /// function containing it when a function does. Images overlap -- a PE and an
-/// ELF can both start at `0x400000` -- so an address alone names no program.
+/// ELF can both start at `0x400000`, and two DS overlays load into one RAM
+/// window -- so an address alone names no program and no module. One row is
+/// answered per (program, covering module); a program with no module row
+/// over the address answers one row with `module: None`.
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, PartialEq)]
 pub struct LocationRow {
     pub program: String,
@@ -249,6 +267,11 @@ pub struct LocationRow {
     /// programs and for addresses no module covers.
     #[serde(default)]
     pub module: Option<String>,
+    /// The `modules` row behind `module`. Two overlays of one window carry
+    /// the same name in no program but distinct ids in a project, so the id
+    /// is what a caller keeps to say *which* overlay an address was in.
+    #[serde(default)]
+    pub module_id: Option<i64>,
 }
 
 /// One overlay module a program holds: a REL image, a PSX overlay, one CPU
@@ -567,13 +590,13 @@ pub struct PhaseTiming {
     pub seconds: f64,
 }
 
-/// What the flow phase asked of the SLEIGH console. Batched flow is a claim
+/// What the flow phase asked of its decoders. Batched flow is a claim
 /// about `instructions` per `requests`, which no machine speed can flatter.
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize)]
 pub struct FlowStats {
-    /// Commands written to every console during discovery.
+    /// Batches handed to the in-process SLEIGH flow decoders.
     pub requests: u64,
-    /// Instructions the console decoded for the flow walk.
+    /// Instructions decoded for the flow walk.
     pub instructions: u64,
     /// Discovery rounds that ran. Every phase timing is a sum over these,
     /// because each round re-walks what the previous one grew, so a

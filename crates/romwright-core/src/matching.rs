@@ -83,33 +83,24 @@ impl Core {
         splits: &[crate::native::linkmap::SplitExtent],
         target_root: &Path,
         candidate_root: &Path,
+        options: &crate::export::ObjdiffOptions,
     ) -> Result<serde_json::Value> {
         let outdir = resolve_path(outdir)?;
         let functions = self.functions(program)?;
-        let mut units =
-            std::collections::BTreeMap::<&str, Vec<&crate::native::linkmap::SplitExtent>>::new();
-        for extent in splits {
-            if !extent.tu.is_empty() {
-                units.entry(&extent.tu).or_default().push(extent);
-            }
-        }
-        let mut rows = Vec::with_capacity(units.len());
-        for (tu, extents) in units {
-            let stem = tu.trim_end_matches(".c").trim_end_matches(".cpp");
+        let text = |path: PathBuf| path.to_string_lossy().into_owned();
+        let mut paths = |stem: &str| -> Result<(String, String)> {
             let (target, candidate) = distinct_objects(
                 &outdir.join(target_root).join(format!("{stem}.o")),
                 &outdir.join(candidate_root).join(format!("{stem}.o")),
             )?;
-            let names: Vec<_> = functions.iter().filter(|function| {
-                extents.iter().any(|extent| function.entry.offset >= extent.start && function.entry.offset < extent.end)
-            }).map(|function| serde_json::json!({
-                "name": function.name, "vram": format!("{:#x}", function.entry.offset), "size": function.size,
-            })).collect();
-            rows.push(serde_json::json!({
-                "name": format!("{program}/{stem}"), "target_path": target, "base_path": candidate,
-                "metadata": {"auto_generated": false, "source_path": tu, "functions": names},
-            }));
-        }
+            Ok((text(target), text(candidate)))
+        };
+        // dtk's gap units are target objects only; the split that writes
+        // them may not have run yet, so they are not required to exist.
+        let auto_target = |object: &str| {
+            text(resolve_path(&outdir.join(target_root).join(object)).unwrap_or_else(|_| outdir.join(target_root).join(object)))
+        };
+        let rows = crate::export::objdiff_units(program, &functions, splits, options, &mut paths, &auto_target)?;
         let count = rows.len();
         let config = serde_json::json!({
             "min_version": "2.0.0-beta.5", "custom_make": "ninja", "build_target": false, "units": rows,

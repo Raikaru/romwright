@@ -16,11 +16,16 @@
 //!   sibling `.line` section is a separate per-function line table this
 //!   reader does not need for symbol recovery.
 //!
-//! Both readers recover procedure entries only: address, name, size.
-//! Line programs, locals, and types are parsed far enough to skip but
-//! carry no destination in the import model today.
+//! Both readers recover procedure entries: address, name, size. The
+//! DWARF 1 reader (`dwarf1`) also recovers each subprogram's return type,
+//! parameters, locals and the type graph behind them, and turns the
+//! prototypes whose types the decompiler can spell into `DebugPrototype`s.
+//! The ECOFF reader recovers procedures only. Line programs are not read.
+
+mod dwarf1;
 
 use super::{ElfSection, NativeFunction};
+pub(crate) use dwarf1::{DebugLocal, DebugPrototype};
 
 /// SHT_MIPS_DEBUG: the section type both formats arrive under.
 const SHT_MIPS_DEBUG: u32 = 0x7000_0005;
@@ -28,27 +33,6 @@ const SHT_MIPS_DEBUG: u32 = 0x7000_0005;
 /// ECOFF symbolic-header magics (`magicSym`, `magicSym2` in
 /// `include/coff/symconst.h`), read in the image's own endianness.
 const ECOFF_MAGIC: [u16; 2] = [0x7009, 0x1992];
-
-/// DWARF 1 tag numbers this reader consumes.
-const DWARF1_TAG_GLOBAL_SUBROUTINE: u16 = 0x06;
-const DWARF1_TAG_COMPILE_UNIT: u16 = 0x11;
-const DWARF1_TAG_SUBROUTINE: u16 = 0x14;
-const DWARF1_TAG_INLINED_SUBROUTINE: u16 = 0x1f;
-
-/// DWARF 1 attribute numbers (the code's high nibble field).
-const DWARF1_AT_NAME: u16 = 0x003;
-const DWARF1_AT_LOW_PC: u16 = 0x011;
-const DWARF1_AT_HIGH_PC: u16 = 0x012;
-
-/// DWARF 1 form numbers (the code's low nibble field).
-const DWARF1_FORM_ADDR: u16 = 1;
-const DWARF1_FORM_REF: u16 = 2;
-const DWARF1_FORM_BLOCK2: u16 = 3;
-const DWARF1_FORM_BLOCK4: u16 = 4;
-const DWARF1_FORM_DATA2: u16 = 5;
-const DWARF1_FORM_DATA4: u16 = 6;
-const DWARF1_FORM_DATA8: u16 = 7;
-const DWARF1_FORM_STRING: u16 = 8;
 
 /// ECOFF symbol types (`st*`, `include/coff/symconst.h`).
 const ECOFF_ST_PROC: u32 = 6;
@@ -67,13 +51,29 @@ const ECOFF_SYMR_SIZE: usize = 12;
 const ECOFF_EXTR_SIZE: usize = 16;
 const ECOFF_AUX_SIZE: usize = 4;
 
-/// Functions the image's `.debug` stream declares, whatever format it is.
+/// What an image's `.debug` stream declares, whatever format it is.
+#[derive(Debug, Default)]
+pub(crate) struct DebugInfo {
+    pub functions: Vec<NativeFunction>,
+    /// Prototypes the stream states, by entry, for functions whose every
+    /// type has a C spelling. Only the DWARF 1 reader produces these.
+    pub prototypes: Vec<DebugPrototype>,
+    /// Scalar stack locals the stream places, entry-relative, for functions
+    /// whose prologue frame size the code states. DWARF 1 only.
+    pub locals: Vec<DebugLocal>,
+    /// Struct layouts the stream states (`native-import:debug-info`); the
+    /// prototypes above name the structs they point at. DWARF 1 only.
+    pub structs: Vec<romwright_model::structs::StructLayout>,
+}
+
+/// Functions and prototypes the image's `.debug` stream declares.
 ///
-/// `be` is the ELF's endianness; both formats store their scalar fields
-/// in it. Returns an empty vector when no debug section exists or the
+/// `be` is the ELF's endianness; the ECOFF reader reads its scalar fields
+/// in it (the Metrowerks stream is little-endian, as the MIPS targets that
+/// use it are). Returns nothing when no debug section exists or the
 /// section's content matches neither grammar.
-pub(crate) fn collect(data: &[u8], sections: &[ElfSection], be: bool) -> Vec<NativeFunction> {
-    let mut functions = Vec::new();
+pub(crate) fn collect(data: &[u8], sections: &[ElfSection], be: bool) -> DebugInfo {
+    let mut info = DebugInfo::default();
     for section in sections {
         if section.typ != SHT_MIPS_DEBUG || section.size == 0 {
             continue;
@@ -91,14 +91,138 @@ pub(crate) fn collect(data: &[u8], sections: &[ElfSection], be: bool) -> Vec<Nat
             u16::from_le_bytes([blob[0], blob[1]])
         };
         if ECOFF_MAGIC.contains(&magic) && blob.len() >= ECOFF_HDRR_SIZE {
-            functions.extend(ecoff_functions(data, section.off, be));
-        } else if u16::from_le_bytes([blob[4], blob[5]]) == DWARF1_TAG_COMPILE_UNIT {
-            functions.extend(dwarf1_functions(blob));
+            info.functions.extend(ecoff_functions(data, section.off, be));
+        } else if u16::from_le_bytes([blob[4], blob[5]]) == dwarf1::TAG_COMPILE_UNIT {
+            let stream = dwarf1::Dwarf1::parse(blob);
+            let functions = stream.functions();
+            let function_names: std::collections::BTreeSet<&str> =
+                functions.iter().map(|f| f.name.as_str()).collect();
+            let structs = stream.structs(&function_names);
+            info.prototypes.extend(stream.prototypes_named(&structs.names));
+            info.structs.extend(structs.layouts);
+            info.functions.extend(functions.iter().cloned());
+            for subprogram in &stream.subprograms {
+                let code = code_at(data, sections, subprogram.entry, MIPS_PROLOGUE_BYTES);
+                if let Some(frame) = code.and_then(|code| mips_frame_size(code, be)) {
+                    info.locals.extend(stream.stack_locals(subprogram, frame));
+                }
+            }
         }
     }
-    functions.sort_by_key(|f| f.entry);
-    functions.dedup_by_key(|f| f.entry);
-    functions
+    info.functions.sort_by_key(|f| f.entry);
+    info.functions.dedup_by_key(|f| f.entry);
+    info.prototypes.sort_by_key(|p| p.entry);
+    info.prototypes.dedup_by_key(|p| p.entry);
+    info.locals.sort_by_key(|l| (l.entry, l.offset));
+    info.locals.dedup_by_key(|l| (l.entry, l.offset));
+    info.structs.sort_by(|a, b| a.name.cmp(&b.name));
+    info.structs.dedup_by(|a, b| a.name == b.name);
+    info
+}
+
+/// How many bytes of a function's start the frame-size decode reads: the
+/// prologue's `addiu sp` sits among the first instructions.
+const MIPS_PROLOGUE_BYTES: usize = 64;
+
+/// The file bytes of an allocated executable section at a virtual address.
+fn code_at<'a>(data: &'a [u8], sections: &[ElfSection], address: u64, len: usize) -> Option<&'a [u8]> {
+    let section = sections.iter().find(|s| {
+        s.flags & 0x2 != 0 && s.flags & 0x4 != 0 && s.typ != 8 && s.addr <= address && address < s.addr + s.size
+    })?;
+    let start = section.off.checked_add(address - section.addr)? as usize;
+    let end = (start + len).min(section.off as usize + section.size as usize);
+    data.get(start..end)
+}
+
+/// The bytes a MIPS prologue subtracts from the stack pointer: the first
+/// `addiu sp, sp, -N` or `daddiu sp, sp, -N` among the leading instructions
+/// (opcodes 0x09/0x19, rs = rt = 29). `None` for a frameless function.
+fn mips_frame_size(code: &[u8], be: bool) -> Option<u64> {
+    code.as_chunks::<4>().0.iter().find_map(|word| {
+        let word = if be {
+            u32::from_be_bytes([word[0], word[1], word[2], word[3]])
+        } else {
+            u32::from_le_bytes([word[0], word[1], word[2], word[3]])
+        };
+        let immediate = word as u16;
+        (matches!(word >> 16, 0x27bd | 0x67bd) && immediate & 0x8000 != 0)
+            .then(|| u64::from(0x1_0000 - u32::from(immediate)))
+    })
+}
+
+/// The stack variables an import holds, with the debug stream's locals laid
+/// over them. A debug local replaces every propagated slot it overlaps (the
+/// stack analyzer names slots by access, the compiler named this one) and
+/// takes the name the source gave it, made unique within the function. Its
+/// row says where it came from in `storage` (`...:debug-info`) and carries
+/// its C type name so a core type can be applied. Ordinals are renumbered
+/// per function in offset order.
+pub(crate) fn merge_debug_locals(
+    existing: &[romwright_model::StackVariableRow],
+    locals: &[DebugLocal],
+) -> Vec<romwright_model::StackVariableRow> {
+    use romwright_model::{Address, StackVariableRow};
+    use std::collections::{BTreeMap, HashSet};
+    let mut by_function: BTreeMap<u64, Vec<StackVariableRow>> = BTreeMap::new();
+    for row in existing {
+        by_function.entry(row.function.offset).or_default().push(row.clone());
+    }
+    let mut debug: BTreeMap<u64, Vec<&DebugLocal>> = BTreeMap::new();
+    for local in locals {
+        debug.entry(local.entry).or_default().push(local);
+    }
+    for (entry, locals) in debug {
+        let rows = by_function.entry(entry).or_default();
+        let mut used: HashSet<String> = rows.iter().map(|r| r.name.clone()).collect();
+        for local in locals {
+            let (start, end) = (local.offset, local.offset + local.size as i64);
+            rows.retain(|r| match (r.offset, r.size) {
+                (Some(o), Some(s)) => o + s as i64 <= start || o >= end,
+                _ => true,
+            });
+            let base = sanitize_identifier(&local.name);
+            let mut name = base.clone();
+            let mut n = 1;
+            while !used.insert(name.clone()) {
+                n += 1;
+                name = format!("{base}_{n}");
+            }
+            rows.push(StackVariableRow {
+                function: Address::ram(entry),
+                ordinal: 0,
+                name,
+                storage: format!("Stack[-0x{:x}]:{}:debug-info", -local.offset, local.size),
+                type_name: Some(
+                    local.c_type.clone().unwrap_or_else(|| format!("undefined{}", local.size)),
+                ),
+                offset: Some(local.offset),
+                size: Some(local.size),
+            });
+        }
+    }
+    let mut out = Vec::with_capacity(existing.len() + locals.len());
+    for (_, mut rows) in by_function {
+        rows.sort_by_key(|r| r.offset.unwrap_or(i64::MAX));
+        for (ordinal, mut row) in rows.into_iter().enumerate() {
+            row.ordinal = ordinal as u32;
+            out.push(row);
+        }
+    }
+    out
+}
+
+/// A C identifier from a debug name: other characters become `_`, an empty
+/// or digit-leading name gains a `local_` prefix.
+fn sanitize_identifier(name: &str) -> String {
+    let cleaned: String = name
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .collect();
+    if cleaned.is_empty() || cleaned.starts_with(|c: char| c.is_ascii_digit()) {
+        format!("local_{cleaned}")
+    } else {
+        cleaned
+    }
 }
 
 // ---- ECOFF / mdebug ---------------------------------------------------------
@@ -451,119 +575,6 @@ fn ecoff_functions(data: &[u8], section_off: u64, be: bool) -> Vec<NativeFunctio
     functions.into_values().collect()
 }
 
-// ---- Metrowerks DWARF 1 -----------------------------------------------------
-
-/// One decoded DIE: tag, plus the attributes this reader keeps.
-struct Dwarf1Entry {
-    tag: u16,
-    name: Option<String>,
-    low_pc: Option<u64>,
-    high_pc: Option<u64>,
-}
-
-/// Reads one DIE. Metrowerks' `length` covers the whole record including
-/// itself, so the next DIE sits at `off + length`. A record shorter than
-/// a tag is a null entry (end-of-children marker or inter-unit padding)
-/// and advances exactly four bytes.
-fn dwarf1_entry(blob: &[u8], off: usize) -> Option<(Dwarf1Entry, usize)> {
-    let length = u32::from_le_bytes(blob.get(off..off + 4)?.try_into().ok()?) as usize;
-    if length < 6 {
-        return Some((
-            Dwarf1Entry { tag: 0, name: None, low_pc: None, high_pc: None },
-            off + length.max(4),
-        ));
-    }
-    let end = off.checked_add(length)?;
-    if end > blob.len() {
-        return None;
-    }
-    let tag = u16::from_le_bytes(blob.get(off + 4..off + 6)?.try_into().ok()?);
-    let mut entry = Dwarf1Entry { tag, name: None, low_pc: None, high_pc: None };
-    let mut p = off + 6;
-    while p + 2 <= end {
-        let code = u16::from_le_bytes(blob.get(p..p + 2)?.try_into().ok()?);
-        p += 2;
-        let attr = code >> 4;
-        let form = code & 0xf;
-        let fixed = match form {
-            DWARF1_FORM_ADDR | DWARF1_FORM_REF | DWARF1_FORM_DATA4 => 4,
-            DWARF1_FORM_DATA2 => 2,
-            DWARF1_FORM_DATA8 => 8,
-            _ => 0,
-        };
-        if fixed > 0 {
-            let value = blob.get(p..p + fixed)?;
-            if attr == DWARF1_AT_LOW_PC || attr == DWARF1_AT_HIGH_PC {
-                let v = match fixed {
-                    4 => u32::from_le_bytes(value.try_into().ok()?) as u64,
-                    8 => u64::from_le_bytes(value.try_into().ok()?),
-                    _ => u16::from_le_bytes(value.try_into().ok()?) as u64,
-                };
-                if attr == DWARF1_AT_LOW_PC {
-                    entry.low_pc = Some(v);
-                } else {
-                    entry.high_pc = Some(v);
-                }
-            }
-            p += fixed;
-        } else if form == DWARF1_FORM_BLOCK2 {
-            let n = u16::from_le_bytes(blob.get(p..p + 2)?.try_into().ok()?) as usize;
-            p += 2 + n;
-        } else if form == DWARF1_FORM_BLOCK4 {
-            let n = u32::from_le_bytes(blob.get(p..p + 4)?.try_into().ok()?) as usize;
-            p += 4 + n;
-        } else if form == DWARF1_FORM_STRING {
-            let rest = blob.get(p..end)?;
-            let nul = rest.iter().position(|c| *c == 0).unwrap_or(rest.len());
-            if attr == DWARF1_AT_NAME {
-                entry.name = Some(String::from_utf8_lossy(&rest[..nul]).into_owned());
-            }
-            p += nul + 1;
-        } else {
-            // An unknown form makes the record's tail unreadable; the
-            // length field still frames it, so the stream stays aligned.
-            break;
-        }
-    }
-    Some((entry, end))
-}
-
-/// Parses a Metrowerks DWARF 1 `.debug` stream: every subroutine DIE with
-/// a `low_pc` becomes a function, sized by `high_pc - low_pc` when the
-/// high bound is present.
-fn dwarf1_functions(blob: &[u8]) -> Vec<NativeFunction> {
-    let mut functions = Vec::new();
-    let mut off = 0usize;
-    while off + 6 <= blob.len() {
-        let Some((entry, next)) = dwarf1_entry(blob, off) else {
-            break;
-        };
-        off = next;
-        if !matches!(
-            entry.tag,
-            DWARF1_TAG_GLOBAL_SUBROUTINE | DWARF1_TAG_SUBROUTINE | DWARF1_TAG_INLINED_SUBROUTINE
-        ) {
-            continue;
-        }
-        let Some(low) = entry.low_pc else {
-            continue;
-        };
-        if low == 0 {
-            continue;
-        }
-        let size = entry
-            .high_pc
-            .and_then(|high| high.checked_sub(low))
-            .unwrap_or(0);
-        let name = entry
-            .name
-            .filter(|n| !n.is_empty())
-            .unwrap_or_else(|| format!("FUN_{low:08x}"));
-        functions.push(NativeFunction { entry: low, name, size });
-    }
-    functions
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -668,7 +679,7 @@ mod tests {
     fn mdebug_ecoff_recovers_procedures() {
         let blob = ecoff_blob();
         let sections = vec![section(".debug", 0, blob.len() as u64)];
-        let functions = collect(&blob, &sections, false);
+        let functions = collect(&blob, &sections, false).functions;
         let by_name: std::collections::HashMap<&str, &NativeFunction> =
             functions.iter().map(|f| (f.name.as_str(), f)).collect();
         assert_eq!(by_name["func_a"].entry, 0x1000);
@@ -703,7 +714,7 @@ mod tests {
         // Compile unit: sibling, language, producer, name.
         let cu = s(0x0258, "MW MIPS C Compiler");
         let cn = s(0x0038, "E:\\jam\\x.c");
-        entry(&mut b, DWARF1_TAG_COMPILE_UNIT, &[
+        entry(&mut b, dwarf1::TAG_COMPILE_UNIT, &[
             a4(0x0012, 0),
             a4(0x0136, 1),
             cu,
@@ -711,17 +722,17 @@ mod tests {
         ]);
         // Named subroutine: sibling, low_pc, high_pc, name.
         let n1 = s(0x0038, "pl2d_jump_rate");
-        entry(&mut b, DWARF1_TAG_GLOBAL_SUBROUTINE, &[
+        entry(&mut b, dwarf1::TAG_GLOBAL_SUBROUTINE, &[
             a4(0x0012, 0),
             a4(0x0111, 0x1299a0),
             a4(0x0121, 0x1299dc),
             n1,
         ]);
         // Unnamed subroutine: low_pc only.
-        entry(&mut b, DWARF1_TAG_SUBROUTINE, &[a4(0x0111, 0x140000)]);
+        entry(&mut b, dwarf1::TAG_SUBROUTINE, &[a4(0x0111, 0x140000)]);
         // Null entry, then a second unit so the walk continues past it.
         b.extend_from_slice(&4u32.to_le_bytes());
-        entry(&mut b, DWARF1_TAG_COMPILE_UNIT, &[a4(0x0136, 1)]);
+        entry(&mut b, dwarf1::TAG_COMPILE_UNIT, &[a4(0x0136, 1)]);
         b
     }
 
@@ -729,7 +740,7 @@ mod tests {
     fn mdebug_dwarf1_recovers_subroutines() {
         let blob = dwarf1_blob();
         let sections = vec![section(".debug", 0, blob.len() as u64)];
-        let functions = collect(&blob, &sections, false);
+        let functions = collect(&blob, &sections, false).functions;
         assert_eq!(functions.len(), 2);
         assert_eq!(functions[0].entry, 0x1299a0);
         assert_eq!(functions[0].name, "pl2d_jump_rate");
@@ -740,15 +751,76 @@ mod tests {
     }
 
     #[test]
+    fn a_mips_prologue_states_the_frame_size() {
+        let words: [u32; 4] = [0x3c1c0000, 0x279c0000, 0x27bdffd0, 0xafbf002c];
+        let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
+        assert_eq!(mips_frame_size(&bytes, false), Some(0x30));
+        let big: Vec<u8> = words.iter().flat_map(|w| w.to_be_bytes()).collect();
+        assert_eq!(mips_frame_size(&big, true), Some(0x30));
+        // daddiu sp, sp, -0x100
+        assert_eq!(mips_frame_size(&0x67bdff00u32.to_le_bytes(), false), Some(0x100));
+        // A leaf: no stack adjustment, and a positive immediate is no frame.
+        assert_eq!(mips_frame_size(&0x03e00008u32.to_le_bytes(), false), None);
+        assert_eq!(mips_frame_size(&0x27bd0030u32.to_le_bytes(), false), None);
+    }
+
+    #[test]
+    fn debug_locals_replace_the_slots_they_overlap_and_keep_the_rest() {
+        use romwright_model::{Address, StackVariableRow};
+        let row = |function: u64, ordinal: u32, offset: i64, size: u64| StackVariableRow {
+            function: Address::ram(function),
+            ordinal,
+            name: format!("local_{:x}", -offset),
+            storage: format!("Stack[-0x{:x}]:{size}", -offset),
+            type_name: Some(format!("undefined{size}")),
+            offset: Some(offset),
+            size: Some(size),
+        };
+        let existing = vec![row(0x2000, 0, -0x30, 8), row(0x2000, 1, -0x10, 4), row(0x3000, 0, -8, 4)];
+        let local = |name: &str, offset: i64, size: u64| DebugLocal {
+            entry: 0x2000,
+            name: name.into(),
+            c_type: Some("int".into()),
+            size,
+            offset,
+        };
+        // `count` overlaps the 8-byte slot at -0x30; `local_10` is a name the
+        // debug stream also uses, so the second one is made unique.
+        let merged = merge_debug_locals(
+            &existing,
+            &[local("count", -0x2c, 4), local("local_10", -0x20, 4), local("9bad name", -0x18, 4)],
+        );
+        let of = |entry: u64| -> Vec<(u32, String, i64, String)> {
+            merged
+                .iter()
+                .filter(|r| r.function.offset == entry)
+                .map(|r| (r.ordinal, r.name.clone(), r.offset.unwrap(), r.storage.clone()))
+                .collect()
+        };
+        assert_eq!(
+            of(0x2000),
+            [
+                (0, "count".to_string(), -0x2c, "Stack[-0x2c]:4:debug-info".to_string()),
+                (1, "local_10_2".to_string(), -0x20, "Stack[-0x20]:4:debug-info".to_string()),
+                (2, "local_9bad_name".to_string(), -0x18, "Stack[-0x18]:4:debug-info".to_string()),
+                (3, "local_10".to_string(), -0x10, "Stack[-0x10]:4".to_string()),
+            ]
+        );
+        // Another function is untouched.
+        assert_eq!(of(0x3000).len(), 1);
+        assert_eq!(merged.iter().find(|r| r.name == "count").unwrap().type_name.as_deref(), Some("int"));
+    }
+
+    #[test]
     fn mdebug_ignores_other_sections() {
         let blob = dwarf1_blob();
         // A PROGBITS .debug (DWARF2+ style) is not this reader's grammar.
         let mut s = section(".debug", 0, blob.len() as u64);
         s.typ = 1;
-        assert!(collect(&blob, &[s], false).is_empty());
+        assert!(collect(&blob, &[s], false).functions.is_empty());
         // A MIPS_DEBUG section that is neither grammar yields nothing.
         let junk = vec![0xabu8; 64];
         let s = section(".line", 0, 64);
-        assert!(collect(&junk, &[s], false).is_empty());
+        assert!(collect(&junk, &[s], false).functions.is_empty());
     }
 }

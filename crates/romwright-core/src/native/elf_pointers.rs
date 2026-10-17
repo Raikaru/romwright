@@ -157,7 +157,7 @@ pub(super) fn collect(
     Ok(())
 }
 
-/// Pointer candidates that only jump tables name. A run of adjacent data
+/// Pointer (and, on a PE, relocation) candidates that only jump tables name. A run of adjacent data
 /// words naming code is a jump table when one of them names an address a
 /// walk already decoded inside a body and none names a known entry: a
 /// switch's default case is also reached by the bounds check before the
@@ -173,10 +173,24 @@ pub(super) fn jump_table_targets(
     interior: impl Fn(u64) -> bool,
     entry: impl Fn(u64) -> bool,
 ) -> std::collections::HashSet<u64> {
+    let pe_tables = import.format == "PE"
+        && crate::compiler::rules::applies("pe-jump-table-relocs", &crate::compiler::ctx_of(import));
     let mut words: Vec<(u64, u64)> = import
         .xrefs
         .iter()
-        .filter(|x| x.kind == "DATA" && x.provenance == "native-import:elf-pointer")
+        .filter(|x| {
+            x.kind == "DATA"
+                && (x.provenance == "native-import:elf-pointer"
+                    // A PE's relocated data words are the same evidence: a table of case
+                    // labels in `.rdata` (GCC) or behind the function (MSVC) is a run of
+                    // adjacent relocated words naming code.
+                    || (pe_tables
+                        && x.provenance == "native-import:pe-reloc"
+                        // only words that name code: a table of structs interleaves names and handlers
+                        && import.mappings.iter().any(|m| {
+                            m.flags & 4 != 0 && x.to >= m.vaddr && x.to - m.vaddr < m.size
+                        })))
+        })
         .map(|x| (x.from, x.to))
         .collect();
     words.sort_unstable();
@@ -190,9 +204,13 @@ pub(super) fn jump_table_targets(
             continue;
         }
         let run = &words[start..index];
+        let interior_words = run.iter().filter(|&&(_, target)| interior(target)).count();
+        let entry_words = run.iter().filter(|&&(_, target)| entry(target)).count();
+        // A PE's table sits among other relocated words, and one of its case labels may coincide with
+        // an entry a walk reached; a run most of whose words are decoded inside bodies is still a table.
         let table = run.len() >= 2
-            && run.iter().any(|&(_, target)| interior(target))
-            && !run.iter().any(|&(_, target)| entry(target));
+            && interior_words > 0
+            && (entry_words == 0 || (pe_tables && interior_words > entry_words));
         for &(_, target) in run {
             if table {
                 tables.insert(target);
@@ -329,13 +347,12 @@ pub(super) fn collect_got(
 }
 
 pub(super) fn confirm_initializers(import: &mut NativeImport) {
-    use crate::native_runtime::{ConsoleSession, FlowKind};
+    use crate::native_runtime::{FlowKind, SleighFlow};
     let candidates: Vec<_> = import.initializer_candidates.iter().copied()
         .filter(|a| !import.functions.iter().any(|f| f.entry == *a)).collect();
     if candidates.is_empty() { return; }
-    let Ok(mut session) = ConsoleSession::new(&import.cfg) else { return; };
-    if session.load_mapped(import).is_err() { return; }
-    let flows = session.try_flow_batch(&candidates);
+    let Ok(mut decoder) = SleighFlow::mapped_pooled(&import.cfg, import) else { return; };
+    let flows = decoder.flow(&candidates);
     for (entry, flow) in candidates.into_iter().zip(flows) {
         if flow.address == entry && flow.length != 0 && !matches!(flow.kind, FlowKind::Bad | FlowKind::Unimpl) {
             import.functions.push(super::NativeFunction { entry, name: format!("FUN_{entry:08x}"), size: 1 });

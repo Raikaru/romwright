@@ -4,68 +4,13 @@ use std::collections::BTreeSet;
 
 const SOURCE: &str = "native-flow nonreturn recovery";
 
-// Ghidra 12.1.3 Base/data/{Elf,PE}FunctionsThatDoNotReturn (Apache-2.0).
-// NoReturnFunctionAnalyzer strips leading underscores before exact matching.
-pub(crate) fn known_no_return(format: &str, name: &str) -> bool {
-    let name = name.trim_start_matches('_');
-    match format {
-        "ELF" | "elf32" => matches!(
-            name,
-            "exit"
-                | "cexit"
-                | "c_exit"
-                | "abort"
-                | "reboot"
-                | "longjmp"
-                | "longjmp_chk"
-                | "siglongjmp"
-                | "panic"
-                | "stack_chk_fail"
-                | "cxa_throw"
-                | "cxa_terminate"
-                | "cxa_call_unexpected"
-                | "cxa_bad_cast"
-                | "Unwind_Resume"
-                | "assert_fail"
-                | "assert_rtn"
-                | "fortify_fail"
-                | "ZSt9terminatev"
-                | "ZN10__cxxabiv111__terminateEPFvvE"
-                | "pthread_exit"
-        ),
-        "PE" => matches!(
-            name,
-            "abort"
-                | "CxxThrowException"
-                | "CxxThrowException@8"
-                | "CxxFrameHandler3"
-                | "crtExitProcess"
-                | "ExitProcess"
-                | "ExitThread"
-                | "exit"
-                | "ExRaiseAccessViolation"
-                | "ExRaiseDatatypeMisalignment"
-                | "ExRaiseStatus"
-                | "FreeLibraryAndExitThread"
-                | "invalid_parameter_noinfo_noreturn"
-                | "invoke_watson"
-                | "KeBugCheck"
-                | "KeBugCheckEx"
-                | "longjmp"
-                | "quick_exit"
-                | "RpcRaiseException"
-                | "terminate"
-                | "raise_securityfailure"
-                | "report_rangecheckfailure"
-                | "?_Xregex_error@std@@YAXW4error_type@regex_constant@1@@Z"
-                | "?_Xbad_alloc@std@@YAXXZ"
-                | "?_Xlength_error@std@@YAXPBD@Z"
-                | "?_Xout_of_range@std@@YAXPBD@Z"
-                | "?_Xbad_function_call@std@@YAXXZ"
-                | "?terminate@@YAXXZ"
-        ),
-        _ => false,
-    }
+/// Whether `name` is a function every program of this compiler and format
+/// knows never returns. The names are data: the `nonreturn-names` rules in
+/// `compiler_rules/` (Ghidra 12.1.3 Base/data/{Elf,PE}FunctionsThatDoNotReturn,
+/// Apache-2.0; `NoReturnFunctionAnalyzer` strips leading underscores before
+/// exact matching).
+pub(crate) fn known_no_return(ctx: &crate::compiler::rules::Ctx, name: &str) -> bool {
+    crate::compiler::rules::known_no_return(ctx, name)
 }
 
 #[derive(serde::Serialize)]
@@ -127,9 +72,7 @@ impl crate::Core {
                 ImportError::Bad("nonreturn input and stored language differ".into()).into(),
             );
         }
-        let mut session =
-            crate::native_runtime::ConsoleSession::new_controlled(&import.cfg, request)?;
-        session.load_mapped(&import)?;
+        let mut flow = crate::native_runtime::SleighFlow::mapped(&import.cfg, &import)?;
         request.cancel.checkpoint(request.deadline)?;
         let mut known = BTreeSet::new();
         let mut blocked = BTreeSet::new();
@@ -146,10 +89,12 @@ impl crate::Core {
                 }
             }
         }
+        let compiler = self.db.program_compiler(id).unwrap_or_default();
+        let rules = crate::compiler::rules::Ctx::new(&compiler, &import.language, &import.format);
         for function in &stored {
             if function.entry.space == AddressSpace::Ram
                 && !blocked.contains(&function.entry.offset)
-                && known_no_return(&import.format, &function.name)
+                && known_no_return(&rules, &function.name)
             {
                 known.insert(function.entry.offset);
             }
@@ -179,9 +124,7 @@ impl crate::Core {
                 }
                 .into());
             }
-            session
-                .flow_batch(addresses)
-                .map_err(|error| ImportError::Bad(error.to_string()))
+            Ok(flow.flow(addresses))
         })?;
         let mut affected = BTreeSet::new();
         for target in analysis.non_returning.iter().copied().chain(

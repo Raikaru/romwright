@@ -121,7 +121,14 @@ pub(crate) fn is_nca(data: &[u8]) -> bool {
 /// modules. ExeFS has no magic — the shape is a table of (name, offset,
 /// size) entries whose names are the module files.
 pub(crate) fn is_exefs(data: &[u8]) -> bool {
-    if data.len() < 0x20 {
+    // The loop below reads sixteen 16-byte entries; a shorter file (a REL
+    // fixture is 200 bytes) cannot hold the table and used to panic here.
+    if data.len() < 0x100 {
+        return false;
+    }
+    // A bare NSO0 module starts with its own magic: its flags word sits where
+    // the first entry's size would, and reads as a plausible file table.
+    if data.starts_with(b"NSO0") {
         return false;
     }
     // ExeFS header: up to 16 file entries of (name[8], offset u32, size
@@ -707,6 +714,15 @@ mod tests {
     use super::*;
     use aes::cipher::{BlockCipherEncrypt, KeyInit};
     use aes::Aes128;
+
+    /// A 200-byte file (a GameCube REL fixture) cannot hold an ExeFS's
+    /// sixteen-entry table; detection used to index past its end.
+    #[test]
+    fn a_short_file_is_not_an_exefs_and_does_not_panic() {
+        for length in [0usize, 0x20, 200, 0xff] {
+            assert!(!is_exefs(&vec![0u8; length]));
+        }
+    }
 
     /// The GF(2^128) x-step of the XTS tweak schedule — the same field
     /// operation `native::crypto` applies, mirrored here so fixtures can be

@@ -1,0 +1,342 @@
+{
+  "family": "common",
+  "rules": [
+    {
+      "id": "nonreturn-libc-elf",
+      "kind": "nonreturn-names",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "formats": [
+        "ELF",
+        "elf32"
+      ],
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ghidra-12.1.3 ElfFunctionsThatDoNotReturn"
+      ],
+      "note": "C library and kernel entry points that never return, by the name an ELF symbol table gives them (leading underscores ignored). The names are the library's, not the compiler's, so every detected compiler is covered.",
+      "params": {
+        "names": [
+          "exit",
+          "cexit",
+          "c_exit",
+          "abort",
+          "reboot",
+          "longjmp",
+          "longjmp_chk",
+          "siglongjmp",
+          "panic",
+          "stack_chk_fail",
+          "assert_fail",
+          "assert_rtn",
+          "fortify_fail",
+          "pthread_exit"
+        ]
+      }
+    },
+    {
+      "id": "nonreturn-windows-crt",
+      "kind": "nonreturn-names",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ghidra-12.1.3 PEFunctionsThatDoNotReturn"
+      ],
+      "note": "Windows CRT and kernel entry points that never return, by PE symbol name (leading underscores ignored).",
+      "params": {
+        "names": [
+          "abort",
+          "CxxThrowException",
+          "CxxThrowException@8",
+          "CxxFrameHandler3",
+          "crtExitProcess",
+          "ExitProcess",
+          "ExitThread",
+          "exit",
+          "ExRaiseAccessViolation",
+          "ExRaiseDatatypeMisalignment",
+          "ExRaiseStatus",
+          "FreeLibraryAndExitThread",
+          "invalid_parameter_noinfo_noreturn",
+          "invoke_watson",
+          "KeBugCheck",
+          "KeBugCheckEx",
+          "longjmp",
+          "quick_exit",
+          "RpcRaiseException",
+          "terminate",
+          "raise_securityfailure",
+          "report_rangecheckfailure",
+          "?_Xregex_error@std@@YAXW4error_type@regex_constant@1@@Z",
+          "?_Xbad_alloc@std@@YAXXZ",
+          "?_Xlength_error@std@@YAXPBD@Z",
+          "?_Xout_of_range@std@@YAXPBD@Z",
+          "?_Xbad_function_call@std@@YAXXZ",
+          "?terminate@@YAXXZ"
+        ]
+      }
+    },
+    {
+      "id": "canonical-char-negative-equality",
+      "kind": "c-canonical",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "A negative constant compared with a char is false wherever char is unsigned; the same byte compared with its unsigned spelling is the same test on every target.",
+      "params": {
+        "fn": "char_negative_equality"
+      }
+    },
+    {
+      "id": "canonical-fuse-mask-statements",
+      "kind": "c-canonical",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "A narrow counter the decompiler masks on every assignment is fused back into one masked statement.",
+      "params": {
+        "fn": "fuse_mask_statements"
+      }
+    },
+    {
+      "id": "canonical-narrow-locals",
+      "kind": "c-canonical",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "A 32-bit local every assignment of which masks to 8 or 16 bits is that narrow type, and is declared so.",
+      "params": {
+        "fn": "narrow_locals"
+      }
+    },
+    {
+      "id": "canonical-narrow-uses",
+      "kind": "c-canonical",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "Uses of a narrowed local lose the mask that the narrow type now performs.",
+      "params": {
+        "fn": "narrow_uses"
+      }
+    },
+    {
+      "id": "canonical-guarded-loops",
+      "kind": "c-canonical",
+      "compilers": [
+        "mwcc-ps2"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "Loop inversion's folded guard is written as the loop test again, so it compiles back to a test of the counter. Derived on Persona 4 (MWCC). Leave-one-out over the seven PS2 C-output lanes (m22 objdiff match, rule off -> on): neutral on dds, ff, gh, dk and dc; it lowered the mean match of both held-out ee-gcc 2.9x lanes that it touched (Ratchet & Clank 63.150 -> 63.118, 2 functions worse; R&C PAL 55.912 -> 55.902, 1 worse) and improved none, so it is keyed to the compiler it was derived on and no longer covers ee-gcc. Programs of an unknown compiler keep it.",
+      "params": {
+        "fn": "guarded_loops"
+      }
+    },
+    {
+      "id": "canonical-strict-greater-constant",
+      "kind": "c-canonical",
+      "compilers": [
+        "mwcc-ps2-2.4"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": [
+        "ps2-persona-4"
+      ],
+      "note": "`K < x` is written `x >= K + 1`: MWCC compiles the strict form to a set-less-than into the assembler temporary and the non-strict form into the result register, the shape a source of the original produces. Derived on Persona 4 (MWCC 3.0.1; the pinned m22-002 lane 1 loses 2 exact functions with it off). Leave-one-out over the seven PS2 C-output lanes (m22 objdiff match, rule off -> on): neutral on dds, ff, gh, rc, rcpal; it helped Dark Chronicle (MWCC 3.0, linker stamp 2.4: exact 31 -> 33, mean 60.976 -> 61.045) and hurt Dark Cloud (MWCC 2.3.3, linker stamp 2.3: exact 27 -> 26, 10 functions better and 9 worse). The two are told apart by the Metrowerks linker stamp in the compiler id (`mwcc-ps2-2.4` against `mwcc-ps2-2.3`), so the rule is keyed to the era it was derived and measured on. A program of an unknown compiler keeps it.",
+      "params": {
+        "fn": "strict_greater_constant"
+      }
+    },
+    {
+      "id": "tailcall-promotion",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "status": "candidate",
+      "origin": "learned",
+      "derived_from": [],
+      "note": "A direct branch out of a function whose target is code, sits in no body another entry proved, and whose own flow decodes to a terminator is a tail call to a function; its target is promoted to a function entry (discovery's `promote_tailcalls`). Stock Ghidra creates none of these. The global `ROMWRIGHT_PROMOTE_TAILCALLS` switch still turns it on for every program. Measured over the 48 wave games whose compiler is detected (leave-one-out, ENABLE against default): it trades a few recall points for precision almost everywhere (34 games hurt, 2 help, 12 neutral; no compiler family helps without hurting another game of the same family), so it stays a candidate and off."
+    },
+    {
+      "id": "literal-pool-extent",
+      "kind": "literal-pool-extent",
+      "compilers": [
+        "agbcc",
+        "mwcc-arm"
+      ],
+      "languages": [
+        "ARM"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "gba-pokeemerald",
+        "gba-fire-emblem-sacred-stones",
+        "nds-pokeheartgold",
+        "gba-kh-chain-of-memories",
+        "gba-nascar-heat-2002"
+      ],
+      "note": "These compilers put each function's literal pool right behind the function, and the symbol size they emit runs through it, so the flow walk's proven body (which ends at the last return) reads short: 0.43-0.83 of the GBA and NDS functions that truth sizes. The size of a function is extended through the pool its own PC-relative word loads name, never past the next entry, never over a decoded instruction, never over more words than its own loads can name, and never over a size the image's symbol table declared. Found on pokeemerald, Fire Emblem 8 and pokeheartgold; the two guards came from kh-chain-of-memories (a pool in the middle of a function) and nascar-heat-2002 (hand-written assembly sharing one pool), which are therefore derived, not held out. Held out (LOO, size_exact on -> off): golden-sun 0.318 -> 0.981, klonoa 0.168 -> 0.957, dragon-quest-iv 0.469 -> 0.992, kh-358-2-days 0.439 -> 0.995, kh-recoded 0.459 -> 0.997, pokemon-platinum 0.567 -> 0.999, world-ends-with-you 0.440 -> 0.994; recall, precision and decompile success unchanged.",
+      "params": {
+        "isas": [
+          "thumb",
+          "arm"
+        ]
+      }
+    },
+    {
+      "id": "landing-pad-not-entry",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "psp-hot-pixel"
+      ],
+      "note": "An address the image's own exception tables (`.gcc_except_table` call-site records, read through `.eh_frame`) name as a landing pad is a block of the function whose frame description holds the call site: the unwinder enters it, nothing else does, so no call, branch or pointer names it, and the gap rule and the data scan coin it as a function after a `jr ra`. It is retracted as an entry unless something calls it or the image declares it. Hot Pixel: none of 9,983 truth functions is a landing pad, 554 of the 656 entries inside verified functions are."
+    },
+    {
+      "id": "wide-switch-case-blocks",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "MIPS",
+        "r5900",
+        "PSX",
+        "Allegrex"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "psp-pac-man-rally"
+      ],
+      "note": "The case blocks of a dispatch no table was recovered for are retracted as entries when a run of code pointers names them (`interior_entries`). Past 64 words a run is read as a switch's table only when its targets lie within 64 KiB of each other and it is at most 4,096 words: a table of function pointers spans the image. Value-set analysis and the decompiler both stop at 1,024 table entries (Pac-Man Rally's 1,151-entry switch at 0x109b0 made 258 functions of its 24-byte case blocks)."
+    },
+    {
+      "id": "ido-leaf-return-pair",
+      "kind": "flag",
+      "compilers": [
+        "ido"
+      ],
+      "unknown": false,
+      "languages": [
+        "MIPS"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "n64-super-mario-64"
+      ],
+      "note": "IDO ends a function that opens no frame with a second `jr ra; nop` after its own. An uncalled, unpointed `jr ra; nop` that follows exactly one return of the frameless function above is that function's second return, not a function. Super Mario 64: 320 of 3,813 truth functions end so, none of the 2,968 that open a frame do, and 332 entries inside verified functions are these."
+    },
+    {
+      "id": "epilogue-not-entry",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "MIPS",
+        "r5900",
+        "PSX",
+        "Allegrex"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "n64-dr-mario-64"
+      ],
+      "note": "An entry whose first instruction is `lw $ra, N($sp)` gives back a frame it never built, and one whose first instruction is `b .+8` (a branch over its own delay slot) jumps nowhere: both are the dead tail of the function above, laid out after a loop that never exits (IDO's `while (1)` bodies end `j top; nop` and the dead `b end; nop` and epilogue follow). No truth function of the corpus opens either way (SM64, Dr. Mario 64, Hot Pixel, God Hand: 0 of 14,000+ checked for `lw ra`); the rule retracted 6 entries in SM64 and 9 in Dr. Mario 64."
+    },
+    {
+      "id": "case-run-in-one-function",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "MIPS",
+        "r5900",
+        "PSX",
+        "Allegrex"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "psp-hot-pixel",
+        "psp-pac-man-rally"
+      ],
+      "note": "The case blocks of a dispatch wherever its table puts the default: a run of three or more code pointers in data (4,096 words at most, targets within 64 KiB) none of which is a function by itself (nothing calls it, the image declares none, none opens a frame, none is a bare `jr ra`) and all of which lie between one function the evidence names and the next, with an indirect `jr` after a `slt`-family bounds compare in that function above the last of them. A run that holds more than one table's words or the words of functions is judged by group, the candidates grouped by the function the evidence names above them, and only a group of 64 or more is retracted (smaller ones are a block of uncalled methods as often as a switch). The older run rule needs the lowest target of the whole run within 16 bytes of the `jr` and at most 64 words (a table can follow another table's words, and the default can sit before the dispatch)."
+    },
+    {
+      "id": "branch-table-after-dispatch",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "MIPS",
+        "r5900",
+        "PSX",
+        "Allegrex"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "psp-tetris"
+      ],
+      "note": "`jr rX; delay` (X not ra) followed by `b L; slot` or `j L; slot` pairs one after another is a dispatch into a table of branches (a copy loop entered at an offset): each pair is a case of the function that jumps in. The first pair must follow the `jr`, the rest follow a pair already read so. Entries nothing calls and the image does not declare are retracted."
+    }
+  ]
+}

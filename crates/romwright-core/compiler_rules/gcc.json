@@ -1,0 +1,49 @@
+{
+  "family": "gcc",
+  "rules": [
+    {
+      "id": "nonreturn-itanium-eh",
+      "kind": "nonreturn-names",
+      "compilers": ["gcc", "clang", "ee-gcc", "sn-prodg", "allegrex-gcc", "agbcc", "n64-gcc", "devkitarm-gcc", "devkitppc-gcc", "devkita64-gcc"],
+      "unknown": true,
+      "formats": ["ELF", "elf32"],
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": ["ghidra-12.1.3 ElfFunctionsThatDoNotReturn"],
+      "note": "Itanium C++ ABI runtime entry points that never return (throw, terminate, unwind resume, the std::terminate mangled names). Emitted by GNU and LLVM runtimes; CodeWarrior and MSVC have their own.",
+      "params": {
+        "names": [
+          "cxa_throw",
+          "cxa_terminate",
+          "cxa_call_unexpected",
+          "cxa_bad_cast",
+          "Unwind_Resume",
+          "ZSt9terminatev",
+          "ZN10__cxxabiv111__terminateEPFvvE"
+        ]
+      }
+    },
+    {
+      "id": "thumb-pop-bx-is-return",
+      "kind": "flag",
+      "compilers": ["agbcc", "gcc", "devkitarm-gcc", "mwcc-arm"],
+      "unknown": true,
+      "languages": ["ARM"],
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": ["gba-pokeemerald"],
+      "note": "A Thumb `pop {..rX..}; bx rX` is a function return, not a computed jump. agbcc and older GCC return this way from nearly every function; as switch candidates they made recovery decompile 12,607 pokeemerald owners (budget-capped at 1,024, 1,400 s) to find no table. Read by discovery's indirect-jump list and by the VSA nested-dispatch scan."
+    },
+    {
+      "id": "thumb-frame-teardown-entry",
+      "kind": "flag",
+      "compilers": ["agbcc", "gcc", "devkitarm-gcc", "mwcc-arm"],
+      "unknown": true,
+      "languages": ["ARM"],
+      "status": "on",
+      "origin": "migrated",
+      "derived_from": ["gba-pokeemerald"],
+      "note": "A Thumb entry whose first instruction gives back a frame it never built (`add sp,#imm` or a `pop`) is the tail of the function above, reached by a `bl` the compiler used as a long jump (agbcc does, past a conditional branch's range). Such an entry is refused as a function start. pokeemerald: 13 entries against none of the 15,856 FUNC symbols."
+    }
+  ]
+}

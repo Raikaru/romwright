@@ -1,80 +1,5 @@
 use super::*;
 
-/// One console reference query. ConstantPropagationAnalyzer's default trusts
-/// initial writable values; this inferred-reference policy does not change
-/// strict constant queries. A root or stripped entry that does not decode
-/// contributes no references and must not abort the whole image's import.
-/// What a console that died mid-round is replaced from: the image, and the
-/// round's reference context as its shards received it.
-struct Revival<'a> {
-    import: &'a NativeImport,
-    spec: crate::native_runtime::ReferenceShardSpec,
-    contexts: Vec<NativeRegisterContext>,
-}
-
-impl Revival<'_> {
-    /// Puts a fresh console with the round's context where a dead one was.
-    /// A console that cannot be replaced stays dead, and its lane's ranges
-    /// are refused as before.
-    fn revive(&self, session: &mut crate::native_runtime::ConsoleSession) {
-        let fresh = crate::native_runtime::ConsoleSession::new(&self.import.cfg).and_then(|mut fresh| {
-            fresh.load_mapped(self.import)?;
-            fresh.prepare_as_reference_shard(&self.spec, self.import)?;
-            fresh.sync_reference_context(&self.contexts);
-            Ok(fresh)
-        });
-        if let Ok(fresh) = fresh {
-            *session = fresh;
-        }
-    }
-}
-
-fn query_references(
-    session: &mut crate::native_runtime::ConsoleSession,
-    start: u64,
-    end: u64,
-    revival: &Revival,
-    refused: &std::sync::atomic::AtomicU64,
-) -> Result<Option<Vec<crate::native_runtime::ReferenceFact>>> {
-    match session.optional_references(start, end, &revival.import.mappings, true) {
-        Ok(facts) => Ok(facts),
-        // One range the console cannot answer costs that range's references,
-        // never the image. A 53 MB game executable always holds bytes that
-        // are not instructions; the count is reported so the loss stays
-        // visible instead of being swallowed. A range that killed its
-        // console must not cost every range after it: GBA asked its 60-900
-        // KB bodies of data-decoded junk first and refused all 12,677
-        // ranges of the round, instead of one.
-        Err(_) => {
-            refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            if !session.is_alive() {
-                revival.revive(session);
-            }
-            Ok(None)
-        }
-    }
-}
-
-/// One lane of a sharded round: claim ranges until the round is drained.
-fn claim_references(
-    session: &mut crate::native_runtime::ConsoleSession,
-    ranges: &[(usize, u64, u64)],
-    cursor: &std::sync::atomic::AtomicUsize,
-    revival: &Revival,
-    refused: &std::sync::atomic::AtomicU64,
-) -> Result<Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)>> {
-    let mut facts = Vec::new();
-    loop {
-        let next = cursor.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-        let Some(&(index, start, end)) = ranges.get(next) else {
-            return Ok(facts);
-        };
-        if let Some(found) = query_references(session, start, end, revival, refused)? {
-            facts.push((index, found));
-        }
-    }
-}
-
 /// The address width the language id declares (`ARM:LE:32:v5t`), which is
 /// the width a stack offset travels in.
 fn language_pointer_bits(language: &str) -> u32 {
@@ -154,14 +79,27 @@ pub(super) fn stack_frame(function: u64, accesses: &[(i64, u32)]) -> Vec<romwrig
 /// an earlier one, as the console applies them in order.
 struct ContextPoints {
     by_name: Vec<(String, Vec<(u64, u64)>)>,
+    /// The dispatch tables the import stored, by branch address with a digest
+    /// of the targets: a range's flow follows them.
+    tables: Vec<(u64, u64)>,
 }
 
 impl ContextPoints {
-    fn new(contexts: &[NativeContext]) -> Self {
+    fn new(contexts: &[NativeContext], tables: &std::collections::HashMap<u64, Vec<u64>>) -> Self {
+        use std::hash::{Hash, Hasher};
         let mut by_name: std::collections::BTreeMap<&str, Vec<(u64, u64)>> = std::collections::BTreeMap::new();
         for context in contexts {
             by_name.entry(&context.name).or_default().push((context.address, context.value));
         }
+        let mut tables: Vec<(u64, u64)> = tables
+            .iter()
+            .map(|(branch, targets)| {
+                let mut hasher = std::collections::hash_map::DefaultHasher::new();
+                targets.hash(&mut hasher);
+                (*branch, hasher.finish())
+            })
+            .collect();
+        tables.sort_unstable();
         Self {
             by_name: by_name
                 .into_iter()
@@ -170,11 +108,13 @@ impl ContextPoints {
                     (name.to_string(), points)
                 })
                 .collect(),
+            tables,
         }
     }
 
     /// Digest of what `[start, end)` decodes under: each context's value in
-    /// force at `start`, and every point inside the range.
+    /// force at `start`, and every point inside the range, and the dispatch
+    /// tables of the branches inside it.
     fn covering(&self, start: u64, end: u64) -> u64 {
         use std::hash::{Hash, Hasher};
         let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -185,6 +125,9 @@ impl ContextPoints {
             at.checked_sub(1).map(|index| points[index].1).hash(&mut hasher);
             points[at..inside.max(at)].hash(&mut hasher);
         }
+        let first = self.tables.partition_point(|&(branch, _)| branch < start);
+        let last = self.tables.partition_point(|&(branch, _)| branch < end);
+        self.tables[first..last.max(first)].hash(&mut hasher);
         hasher.finish()
     }
 }
@@ -213,15 +156,21 @@ fn reference_inputs_digest(import: &NativeImport, labels: &[(u64, String)]) -> u
     hasher.finish()
 }
 
-pub(super) fn infer_data_references(
-    import: &mut NativeImport,
-    session: &mut crate::native_runtime::ConsoleSession,
-    lanes: Vec<crate::native_runtime::ConsoleSession>,
-) -> Result<()> {
-    use crate::native_runtime::ReferenceKind;
-    session
-        .prepare_reference_context(import)
-        .map_err(|error| ImportError::Bad(format!("reference context: {error}")))?;
+/// The reference pass: in-process propagation lanes, one per hardware thread.
+/// The round's context is fixed while its queries run; what callers show of a
+/// call target's register is merged after the round and adopted, sorted.
+pub(super) fn infer_data_references(import: &mut NativeImport) -> Result<()> {
+    if std::env::var_os("ROMWRIGHT_TRACE_BRANCHIND").is_some() {
+        let first = import.mappings.iter().map(|m| m.vaddr).min().unwrap_or(0);
+        let bytes: u64 = import.mappings.iter().map(|m| m.size).sum();
+        eprintln!("REFPASS {} prog={first:#x}+{bytes:#x} functions={} tables={}", import.language, import.functions.len(), import.switch_tables.len());
+    }
+    let lane_target = super::discovery::lanes_for(import);
+    let mut lanes = crate::native_runtime::open_reference_lanes(import, lane_target);
+    if lanes.is_empty() {
+        return Err(ImportError::Bad("reference context: no propagation lane started".into()));
+    }
+    let mut context = crate::native_runtime::ReferenceContext::new(import, &lanes[0]);
     let functions = import
         .functions
         .iter()
@@ -243,7 +192,7 @@ pub(super) fn infer_data_references(
                 .any(|function| function.entry == start && function.size > 1)
         })
         .copied();
-    // Ranges the console could not answer. Counted, not hidden.
+    // Ranges a lane could not answer. Counted, not hidden.
     let refused = std::sync::atomic::AtomicU64::new(0);
     let mut work = functions
         .map(|range| range.map(|(start, end)| (start, end, Vec::new(), true)))
@@ -255,17 +204,17 @@ pub(super) fn infer_data_references(
     // Rounds re-infer every function, but a function whose range and
     // round-level inputs are unchanged gets the same facts (measured on
     // swkotor2: 29,604 repeated ranges over three rounds, every one
-    // identical; the same on a PowerPC game module, mipsel and PE64
-    // corpus images). So those ranges reuse the last round's facts, and
-    // only when the inputs the console reads for a range are the same:
-    // register contexts, the call register, external slots and the call
-    // fixups this round installs, for the whole round; and the decode
-    // contexts covering the range itself. Every round adds mode contexts
-    // on ARM (GBA: 33,635 then 49,035), and made the whole memo stale
-    // when they were part of the round digest.
-    let inputs = reference_inputs_digest(import, session.pattern_labels());
+    // identical; the same on a PowerPC game module, mipsel and PE64 corpus
+    // images). So those ranges reuse the last round's facts, and only when
+    // the inputs a range's propagation reads are the same: register
+    // contexts, the call register, external slots and the call fixups this
+    // round installs, for the whole round; and the decode contexts and
+    // stored dispatch tables covering the range itself. Every round adds
+    // mode contexts on ARM (GBA: 33,635 then 49,035), and made the whole
+    // memo stale when they were part of the round digest.
+    let inputs = reference_inputs_digest(import, &import.pattern_labels);
     let reusable = import.reference_memo_inputs == Some(inputs);
-    let modes = ContextPoints::new(&import.contexts);
+    let modes = ContextPoints::new(&import.contexts, &import.switch_tables);
     let mut pending: Vec<usize> = Vec::with_capacity(work.len());
     for index in 0..work.len() {
         let key = (work[index].0, work[index].1);
@@ -284,123 +233,73 @@ pub(super) fn infer_data_references(
         }
     }
     let mut adopted_any = false;
-    // One console per hardware thread: the per-function cost is the console
-    // lifting that function, so the pass scales with processes, not with
-    // fewer requests. Shards start from the round's context and never read
-    // one discovered inside it, so their facts equal a single session's.
-    // The round opened these consoles on this image; they only need this
-    // pass's context, not another startup.
-    let mut shards = lanes;
-    let mut prepared = false;
-    let shard_target = import.cfg.console_shards.max(1);
+    let mut jumps = JumpReport::default();
     loop {
         let batch = std::mem::take(&mut pending);
         for &index in &batch {
             work[index].3 = false;
         }
-        let mut ranges: Vec<(usize, u64, u64)> = batch
-            .iter()
-            .map(|&index| (index, work[index].0, work[index].1))
-            .collect();
+        let mut ranges: Vec<(usize, u64, u64)> = batch.iter().map(|&index| (index, work[index].0, work[index].1)).collect();
         ranges.sort_by_key(|&(index, start, end)| (std::cmp::Reverse(end - start), index));
-        let wanted = shard_target.min(ranges.len()).saturating_sub(1);
-        shards.truncate(wanted);
-        if !prepared && !shards.is_empty() {
-            let spec = session.reference_shard_spec();
-            // A shard is an optimization: one that cannot take the context is
-            // dropped, and the pass stays correct on the remaining lanes.
-            shards.retain_mut(|shard| shard.prepare_as_reference_shard(&spec, import).is_ok());
-            prepared = true;
-        }
-        if shards.len() < wanted {
-            let spec = session.reference_shard_spec();
-            let mut opened = crate::native_runtime::ConsoleSession::open_image_shards(
-                import,
-                wanted - shards.len(),
-            );
-            opened.retain_mut(|shard| shard.prepare_as_reference_shard(&spec, import).is_ok());
-            shards.extend(opened);
-        }
-        let keep = session.reference_contexts().len();
-        let revival = Revival {
-            import,
-            spec: session.reference_shard_spec(),
-            contexts: session.reference_contexts().to_vec(),
+        let used = lanes.len().min(ranges.len().max(1));
+        // Function cost varies by orders of magnitude, so lanes claim the
+        // next range instead of taking a fixed stride: one huge function must
+        // not decide the round's wall time.
+        let cursor = std::sync::atomic::AtomicUsize::new(0);
+        type Found = (usize, Vec<crate::native_runtime::ReferenceFact>);
+        let outcome: Vec<(Vec<Found>, Vec<(u64, u64)>, JumpReport)> = {
+            let (context, import, ranges, cursor, refused) = (&context, &*import, &ranges, &cursor, &refused);
+            std::thread::scope(|scope| {
+                let handles: Vec<_> = lanes
+                    .iter_mut()
+                    .take(used)
+                    .map(|lane| {
+                        scope.spawn(move || {
+                            let mut found: Vec<Found> = Vec::new();
+                            let mut contexts: Vec<(u64, u64)> = Vec::new();
+                            let mut jumps = JumpReport::default();
+                            loop {
+                                let next = cursor.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let Some(&(index, start, end)) = ranges.get(next) else { break };
+                                match context.query(lane, import, start, end) {
+                                    Ok(Some(answer)) => {
+                                        found.push((index, answer.facts));
+                                        contexts.extend(answer.contexts);
+                                        jumps.take(answer.truncated, answer.recovered, answer.refused);
+                                    }
+                                    Ok(None) => {}
+                                    // One range a lane cannot answer costs that
+                                    // range's references, never the image.
+                                    Err(_) => {
+                                        refused.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                    }
+                                }
+                            }
+                            (found, contexts, jumps)
+                        })
+                    })
+                    .collect();
+                handles.into_iter().map(|handle| handle.join().unwrap_or_default()).collect()
+            })
         };
-        let mut results: Vec<(usize, Vec<crate::native_runtime::ReferenceFact>)> = Vec::new();
-        let mut discovered: Vec<NativeRegisterContext> = Vec::new();
-        if shards.is_empty() || ranges.len() < 2 {
-            for &(index, start, end) in &ranges {
-                if let Some(facts) = query_references(session, start, end, &revival, &refused)? {
-                    results.push((index, facts));
+        let mut discovered: Vec<(u64, u64)> = Vec::new();
+        for (found, contexts, report) in outcome {
+            jumps.merge(report);
+            for (index, facts) in found {
+                let known = &mut work[index].2;
+                if known.is_empty() {
+                    *known = facts;
+                } else {
+                    known.extend(facts);
+                    known.sort_unstable_by_key(|fact| (fact.from, fact.to, fact.kind as u8));
+                    known.dedup();
                 }
             }
-        } else {
-            for shard in shards.iter_mut() {
-                shard.sync_reference_context(session.reference_contexts());
-            }
-            // Function cost varies by orders of magnitude, so lanes claim the
-            // next range instead of taking a fixed stride: one huge function
-            // must not decide the round's wall time.
-            let cursor = std::sync::atomic::AtomicUsize::new(0);
-            let outcome: Result<Vec<_>> =
-                std::thread::scope(|scope| {
-                    let mut handles = Vec::with_capacity(shards.len());
-                    for shard in shards.iter_mut() {
-                        let ranges = &ranges;
-                        let cursor = &cursor;
-                        let refused = &refused;
-                        let revival = &revival;
-                        handles.push(scope.spawn(move || {
-                            claim_references(shard, ranges, cursor, revival, refused)
-                        }));
-                    }
-                    let mut collected = vec![claim_references(
-                        session, &ranges, &cursor, &revival, &refused,
-                    )?];
-                    for handle in handles {
-                        collected.push(handle.join().unwrap_or_else(|_| {
-                            Err(ImportError::Bad("reference shard panicked".into()))
-                        })?);
-                    }
-                    Ok(collected)
-                });
-            for lane in outcome? {
-                results.extend(lane);
-            }
-            for shard in shards.iter_mut() {
-                discovered.extend(shard.drain_discovered_contexts(keep));
-            }
-        }
-        for (index, facts) in results {
-            let known = &mut work[index].2;
-            if known.is_empty() {
-                *known = facts;
-            } else {
-                known.extend(facts);
-                known.sort_unstable_by_key(|fact| (fact.from, fact.to, fact.kind as u8));
-                known.dedup();
-            }
+            discovered.extend(contexts);
         }
         // Finish local evidence before applying this round's call context.
-        // Shard order must not decide the context list, so merge sorted.
-        discovered.extend(session.drain_discovered_contexts(keep));
-        discovered.sort_by(|left, right| {
-            (left.start, left.end, &left.register, left.value).cmp(&(
-                right.start,
-                right.end,
-                &right.register,
-                right.value,
-            ))
-        });
-        discovered.dedup_by(|left, right| {
-            left.start == right.start
-                && left.end == right.end
-                && left.register == right.register
-                && left.value == right.value
-        });
-        adopted_any |= !discovered.is_empty();
-        let mut targets = session.adopt_reference_contexts(discovered);
+        let mut targets = context.adopt(discovered);
+        adopted_any |= !targets.is_empty();
         targets.sort_unstable();
         targets.dedup();
         for target in targets {
@@ -415,6 +314,150 @@ pub(super) fn infer_data_references(
             break;
         }
     }
+    // The lanes have answered every range; the decoders they hold are free for
+    // what follows (a lifter for the propagated linkages) instead of both
+    // being alive.
+    drop(lanes);
+    finish_references(import, work, function_count, &refused, adopted_any, inputs, &modes)?;
+    // After the facts: demoting a case block may remove a function this
+    // pass framed, which the next round's pass rebuilds anyway.
+    settle_jumps(import, jumps);
+    Ok(())
+}
+
+/// What the reference flow made of the indirect jumps no table was stored
+/// for, over one pass: the jumps it turned into calls (with the shape of the
+/// computation that makes their target), the tables it recovered itself, and
+/// the jumps it asked the recovery about and was refused.
+#[derive(Default)]
+struct JumpReport {
+    truncated: Vec<(u64, crate::native_runtime::JumpShape)>,
+    recovered: Vec<(u64, crate::native_runtime::JumpShape, Vec<u64>)>,
+    refused: Vec<(u64, crate::native_runtime::JumpShape, crate::native_runtime::Refusal)>,
+}
+
+impl JumpReport {
+    fn take(
+        &mut self,
+        truncated: Vec<(u64, crate::native_runtime::JumpShape)>,
+        recovered: Vec<(u64, crate::native_runtime::JumpShape, Vec<u64>)>,
+        refused: Vec<(u64, crate::native_runtime::JumpShape, crate::native_runtime::Refusal)>,
+    ) {
+        self.truncated.extend(truncated);
+        self.recovered.extend(recovered);
+        self.refused.extend(refused);
+    }
+
+    fn merge(&mut self, other: JumpReport) {
+        self.take(other.truncated, other.recovered, other.refused);
+    }
+}
+
+/// Keeps what the pass learned of indirect jumps: the tables the flow
+/// recovered are stored as the switch stage stores its own (a table, and a
+/// `COMPUTED_JUMP` reference from the branch to each case), so the walk
+/// follows the cases and later rounds start from them; the jumps that
+/// compute their target from an index and stayed calls are asked of the
+/// switch stage of this round, whether or not the walk listed them.
+fn settle_jumps(import: &mut NativeImport, mut report: JumpReport) {
+    use crate::native_runtime::JumpShape;
+    report.truncated.sort_unstable_by_key(|&(branch, shape)| (branch, shape as u8));
+    report.truncated.dedup();
+    report.recovered.sort_unstable_by(|left, right| (left.0, &left.2).cmp(&(right.0, &right.2)));
+    report.recovered.dedup_by_key(|entry| entry.0);
+    report.refused.sort_unstable_by_key(|&(branch, shape, reason)| (branch, shape as u8, format!("{reason:?}")));
+    report.refused.dedup();
+    if std::env::var_os("ROMWRIGHT_TRACE_BRANCHIND").is_some() {
+        let known: std::collections::HashSet<u64> = import.indirect_jumps.iter().copied().collect();
+        let count = |shape: JumpShape| report.truncated.iter().filter(|&&(_, s)| s == shape).count();
+        let missing = report.truncated.iter().filter(|(branch, _)| !known.contains(branch)).count();
+        eprintln!(
+            "REFSTAT truncated={} island={} table_load={} pointer={} not_in_indirect_jumps={missing} recovered={} refused={}",
+            report.truncated.len(),
+            count(JumpShape::Island),
+            count(JumpShape::TableLoad),
+            count(JumpShape::Pointer),
+            report.recovered.len(),
+            report.refused.len(),
+        );
+    }
+    let mut reaching_new = 0;
+    let mut stored = 0;
+    for (branch, _, targets) in &report.recovered {
+        if import.switch_tables.contains_key(branch) {
+            continue;
+        }
+        for &target in targets {
+            import.xrefs.push(NativeXref::with_provenance(*branch, target, "COMPUTED_JUMP", SWITCH_PROVENANCE));
+        }
+        // A table whose every case the walk already decoded changes no body;
+        // only one reaching bytes nothing read is a reason to walk again.
+        let reaches_new = targets.iter().any(|&target| {
+            let index = import.decoded_ranges.partition_point(|&(start, _)| start <= target);
+            !index.checked_sub(1).is_some_and(|i| target < import.decoded_ranges[i].1)
+        });
+        import.switch_tables.insert(*branch, targets.clone());
+        stored += 1;
+        reaching_new += usize::from(reaches_new);
+    }
+    import.reference_tables_added = reaching_new;
+    if stored > 0 {
+        switch_tables::demote_case_blocks(import);
+    }
+    // The walk lists the indirect jumps it decoded; the flow of this pass met
+    // others (a body the walk had not reached, or decoded in another mode).
+    // The recovery bounded the index of some of them and could not finish:
+    // the table leaves the traced range, is a single case, did not hold over
+    // the flow it opened, or a computed jump found no table to read. Those
+    // are the switch stage's to answer (value-set analysis with its facts,
+    // then the decompiler), whether or not the walk listed them. A jump with
+    // nothing that bounds the index (a function pointer loaded from an array
+    // is the common one: about 2,400 of them on pokeemerald, which the decompiler
+    // refuses in turn and which would crowd the owner budget) and one handed
+    // a pointer are calls, not dispatches.
+    if import.cfg.branchind_candidates {
+        use crate::native_runtime::Refusal;
+        let asked: Vec<u64> = report
+            .refused
+            .iter()
+            .filter(|&&(_, shape, reason)| {
+                shape != JumpShape::Pointer
+                    && matches!(reason, Refusal::Outside | Refusal::TooFewTargets | Refusal::Unstable | Refusal::NoStridedLoad)
+            })
+            .map(|&(branch, _, _)| branch)
+            .filter(|branch| !import.switch_tables.contains_key(branch))
+            .collect();
+        if std::env::var_os("ROMWRIGHT_TRACE_BRANCHIND").is_some() {
+            let known: std::collections::HashSet<u64> = import.indirect_jumps.iter().copied().collect();
+            for &(branch, shape, reason) in &report.refused {
+                if asked.contains(&branch) && !known.contains(&branch) {
+                    eprintln!("CANDIDATE {branch:#x} {shape:?} {reason:?}");
+                }
+            }
+        }
+        let before = import.indirect_jumps.len();
+        import.indirect_jumps.extend(asked);
+        if import.indirect_jumps.len() != before {
+            import.indirect_jumps.sort_unstable();
+            import.indirect_jumps.dedup();
+        }
+    }
+}
+
+/// What a pass keeps of its facts: the memo for the next round, the linkage
+/// thunks propagated caller context resolves, the stack frames, the access
+/// widths and the references themselves.
+#[allow(clippy::too_many_arguments)]
+fn finish_references(
+    import: &mut NativeImport,
+    work: Vec<(u64, u64, Vec<crate::native_runtime::ReferenceFact>, bool)>,
+    function_count: usize,
+    refused: &std::sync::atomic::AtomicU64,
+    adopted_any: bool,
+    inputs: u64,
+    modes: &ContextPoints,
+) -> Result<()> {
+    use crate::native_runtime::ReferenceKind;
     // Keep this round's facts for the next one only when nothing was
     // adopted mid-pass: a reused range is not re-queried, so it cannot
     // re-discover a caller context the next round's fresh console would
@@ -452,13 +495,15 @@ pub(super) fn infer_data_references(
         .collect();
     let mut linked = Vec::new();
     let mut thunked: Vec<NativeThunk> = Vec::new();
-    let mut addresses = Vec::with_capacity(candidates.len().min(1024));
-    for chunk in candidates.chunks(1024) {
-        addresses.clear();
-        addresses.extend(chunk.iter().map(|&index| work[index].0));
-        let shapes = session
-            .linkage_batch(&addresses)
-            .map_err(|error| ImportError::Bad(format!("propagated linkage: {error}")))?;
+    let addresses: Vec<u64> = candidates.iter().map(|&index| work[index].0).collect();
+    let all_shapes = if addresses.is_empty() {
+        Vec::new()
+    } else {
+        crate::native_runtime::SleighLifter::mapped_pooled(&import.cfg, import)
+            .map(|mut lifter| lifter.linkages(&addresses, false))
+            .map_err(|error| ImportError::Bad(format!("propagated linkage: {error}")))?
+    };
+    for (chunk, shapes) in candidates.chunks(1024).zip(all_shapes.chunks(1024)) {
         for (&index, shape) in chunk.iter().zip(shapes) {
             let (start, end, facts, _) = &work[index];
             let Some(limit) = start
@@ -506,8 +551,18 @@ pub(super) fn infer_data_references(
     // Publish no partial pass if any query fails.
     let pointer_bits = language_pointer_bits(&import.language);
     // A pass covers every function, and a later round covers them again with
-    // more of the image known: the frames are this pass's, not a sum.
+    // more of the image known: the frames, the references and the access
+    // widths are this pass's, not a sum. A fact an earlier round laid down on
+    // a flow that was cut short (a dispatch whose table was not stored yet
+    // reads as a call there) must not outlive the round that knows better.
     import.stack_variables.clear();
+    import.xrefs.retain(|xref| xref.provenance != "native-analysis:constant-propagation");
+    import.reference_widths.clear();
+    let mut width_index: std::collections::HashMap<u64, usize> =
+        std::collections::HashMap::with_capacity(import.reference_widths.len());
+    for (index, &(address, _)) in import.reference_widths.iter().enumerate() {
+        width_index.entry(address).or_insert(index);
+    }
     for (index, (start, _, facts, _)) in work.into_iter().enumerate() {
         // The frame this function's own accesses describe. Roots that are
         // not functions carry no frame.
@@ -537,13 +592,18 @@ pub(super) fn infer_data_references(
             {
                 continue;
             }
-            match import
-                .reference_widths
-                .iter_mut()
-                .find(|(address, _)| *address == fact.to)
-            {
-                Some((_, width)) => *width = (*width).max(fact.size as u64),
-                None => import.reference_widths.push((fact.to, fact.size as u64)),
+            // `find` over the list was 99% of this function's own CPU on GBA
+            // (47k locations, scanned per fact); the index answers the same
+            // first entry.
+            match width_index.entry(fact.to) {
+                std::collections::hash_map::Entry::Occupied(slot) => {
+                    let width = &mut import.reference_widths[*slot.get()].1;
+                    *width = (*width).max(fact.size as u64);
+                }
+                std::collections::hash_map::Entry::Vacant(slot) => {
+                    slot.insert(import.reference_widths.len());
+                    import.reference_widths.push((fact.to, fact.size as u64));
+                }
             }
         }
         if low_bit_code_mode(&import.language) {
@@ -591,7 +651,9 @@ pub fn close_call_targets(imp: &mut NativeImport) {
             .mappings
             .iter()
             .any(|m| m.flags & 0x4 != 0 && x.to >= m.vaddr && x.to < m.vaddr + m.size);
-        if !in_code || known.contains(&x.to) {
+        // A call into fill is junk decoded as code calling more of it
+        // (`discovery::opens_with_fill`), not a function.
+        if !in_code || known.contains(&x.to) || super::discovery::opens_with_fill(imp, x.to) {
             continue;
         }
         known.insert(x.to);

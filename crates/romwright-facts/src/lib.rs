@@ -22,6 +22,9 @@
 //! (`serve_tcp`): `{"method":"push_facts","params":{"bundle":{…}}}` and
 //! `{"method":"pull_facts","params":{"binary_sha256":…,"signatures":[…]}}`.
 
+pub mod mask;
+pub mod pack;
+
 use rusqlite::{params, Connection};
 use serde_json::{json, Value};
 use thiserror::Error;
@@ -41,6 +44,9 @@ pub enum FactsError {
     /// Transport I/O failed.
     #[error("io: {0}")]
     Io(#[from] std::io::Error),
+    /// A fact pack was unreadable, of another version, or misused.
+    #[error("fact pack: {0}")]
+    Pack(String),
 }
 
 pub type Result<T> = std::result::Result<T, FactsError>;

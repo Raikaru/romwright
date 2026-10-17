@@ -94,6 +94,14 @@ pub const CLASSES: &[Class] = &[
         derives_confidence: false,
     },
     Class {
+        source: "native-import:debug-info",
+        explanation:         "A prototype the image's own debug stream states for a function: the \
+         compiler wrote the return and parameter types, applied only when \
+         every type in it is one the decompiler already has.",
+        evidence: EvidenceKind::Declared,
+        derives_confidence: false,
+    },
+    Class {
         source: "native-import:plt-reserved",
         explanation:         "A word the System V ABI reserves at DT_PLTGOT -- the .dynamic \
          address, the link-map, the resolver -- each of which holds a pointer.",
@@ -235,6 +243,24 @@ pub const CLASSES: &[Class] = &[
         explanation: "The name a mangled name was mangled from, applied beside it: the \
          mangled name is kept as the evidence, and the name it encodes is what \
          a reader sees.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:mwcc-demangle",
+        explanation: "The name a CodeWarrior-mangled name was mangled from (`Class::method(int)`), \
+         applied beside it: the mangled name stays as the function's linkage name and \
+         the name it encodes is what a reader sees.",
+        evidence: EvidenceKind::Inferred,
+        derives_confidence: false,
+    },
+    Class {
+        source: "native-analysis:mwcc-prototype",
+        explanation: "The parameter list a CodeWarrior-mangled name spells, for the functions \
+         whose arity the name proves (a free function, a constructor, a destructor with its \
+         delete flag, a const member). The return type is not proved (the mangling carries \
+         none), and a member that is not const is left alone because the mangling marks no \
+         static member.",
         evidence: EvidenceKind::Inferred,
         derives_confidence: false,
     },

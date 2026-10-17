@@ -1,0 +1,194 @@
+{
+  "family": "pe",
+  "rules": [
+    {
+      "id": "pe-jump-table-relocs",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-ioq3-ded-mingw32"
+      ],
+      "note": "Relocation candidates that only a run of adjacent relocated data words names are the case labels of a jump table, not functions: a run of two or more words naming code, with a word that names an address decoded inside a body and no word that names an entry (or mostly such words), is a table. The ELF pointer-candidate rule, applied to a PE's relocated words (GCC puts the table in .rdata; a case label is never an entry).",
+      "params": {}
+    },
+    {
+      "id": "pe-dense-case-tables",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-glquake-msvc42"
+      ],
+      "note": "A run of three or more adjacent relocated data words naming code, none an entry, most of whose targets do not follow function fill (int3, nop, zero), is a table of case labels packed inside one routine, even when no walk has decoded the labels: compilers start functions on fill. Complements pe-jump-table-relocs, which needs a label already decoded inside a body.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-memory-operands",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:LE:32"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-glquake-msvc42"
+      ],
+      "note": "A code address a relocation or a propagated constant names only as the displacement of a memory operand ([index*scale+disp32], [disp32], moffs) is data the program reads: the jump table behind its function in Visual C++ i386 output. A reference that uses the address as a value (push offset, mov reg, imm32, a pointer in a data table) keeps it a candidate.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-scope-tables",
+      "kind": "flag",
+      "compilers": [
+        "msvc"
+      ],
+      "unknown": false,
+      "languages": [
+        "x86:LE:32"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-quake2-refgl-msvc8"
+      ],
+      "note": "The filter and handler words of a structured-exception scope-table record ({level, filter or 0, handler}, Visual C++ 7.0 and later) name blocks of the function that pushed the table: not entries, not evidence of a function.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-local-calls",
+      "kind": "flag",
+      "compilers": [
+        "msvc"
+      ],
+      "unknown": false,
+      "languages": [
+        "x86:LE:32"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-quake2-game-msvc8"
+      ],
+      "note": "A block that only its predecessor calls and that starts exactly where the predecessor's body ends (Visual C++ __finally blocks and lock regions) belongs to that function; it is folded into it instead of being a function of its own.",
+      "params": {}
+    },
+    {
+      "id": "pe-import-stub-position",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-ioq3-ded-mingw32"
+      ],
+      "note": "An `ff 25` that resolves to an import slot is a linkage stub only behind alignment fill, a ret, zero fill, the previous stub or at the section start; right after other instructions it is the function's own tail call through the import table.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-trailing-data",
+      "kind": "flag",
+      "compilers": [
+        "msvc"
+      ],
+      "unknown": false,
+      "languages": [
+        "x86:LE:32"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-quake2-game-msvc8-debug"
+      ],
+      "note": "A block right behind a function (where its body ends) whose address only that function takes as a value is the data a compiler puts behind the code that uses it (a Debug build's run-time-check frame description, a jump table), not a function: it is dropped.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-fill-starts",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-quake2-msvc8"
+      ],
+      "note": "The boundary sweep treats `int3` and no-op instructions as the fill between two functions on an x86 PE: the first instruction after a `ret` and its fill, on a 4-byte boundary, is a candidate function start (the walk's own validity checks still judge it). Compilers lay functions out contiguously on fill, so an unreferenced function behind another one is found from its neighbour.",
+      "params": {}
+    },
+    {
+      "id": "pe-x86-case-runs",
+      "kind": "flag",
+      "compilers": [
+        "*"
+      ],
+      "unknown": true,
+      "languages": [
+        "x86:LE:32"
+      ],
+      "formats": [
+        "PE"
+      ],
+      "status": "on",
+      "origin": "learned",
+      "derived_from": [
+        "pc-ioq3-ded-mingw32"
+      ],
+      "note": "Four or more adjacent relocated words naming code that all lie between two entries with evidence of their own (a call, a symbol, an accepted pattern, a linkage stub), none such an entry, are the case labels of one function's switch: a label that only those words name is dropped. The stretch-of-one-function form of pe-jump-table-relocs, for tables no walk reached (a GCC table whose labels follow loop-alignment fill).",
+      "params": {}
+    }
+  ]
+}

@@ -33,10 +33,42 @@ pub struct BbGraph {
     pub edges: Vec<BbEdge>,
 }
 
+/// One laid-out native block. `id` is the stable block identity; `address`
+/// is its first operation's RAM offset and `last` its highest operation
+/// offset (both none for an empty block).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NativeGraphNode {
+    pub id: u64,
+    pub address: Option<u64>,
+    pub last: Option<u64>,
+    pub operations: usize,
+    pub x: i64,
+    pub y: i64,
+}
+
+/// The complete native CFG of one function with shared layered layout
+/// positions: what every UI renders (API JSON, desktop typed).
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct NativeGraph {
+    pub nodes: Vec<NativeGraphNode>,
+    pub edges: Vec<BbEdge>,
+}
+
+impl BbEdgeKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            BbEdgeKind::True => "true",
+            BbEdgeKind::False => "false",
+            BbEdgeKind::Unconditional => "unconditional",
+            BbEdgeKind::Call => "call",
+        }
+    }
+}
+
 /// Every exported native block and successor is retained, including empty
 /// blocks, loops and disconnected components. Calls are operations, not CFG
 /// successors; no architecture-specific byte decoder or walk limit is used.
-pub fn native_graph(ir: &romwright_model::function_ir::FunctionIr) -> serde_json::Value {
+pub fn native_layout(ir: &romwright_model::function_ir::FunctionIr) -> NativeGraph {
     use romwright_model::function_ir::Opcode;
     let graph = BbGraph {
         nodes: ir.blocks.iter().map(|block| BbNode {
@@ -56,26 +88,43 @@ pub fn native_graph(ir: &romwright_model::function_ir::FunctionIr) -> serde_json
         }).collect(),
     };
     let layout = layered_layout(&graph);
-    let positions: HashMap<_, _> = layout.iter().map(|node| (node.address, node)).collect();
-    let nodes: Vec<_> = ir.blocks.iter().map(|block| {
-        let position = positions[&block.id.0];
-        serde_json::json!({
-            "id": block.id.0.to_string(),
-            "address": block.operations.first().map(|op| format!("0x{:x}", op.address.offset)),
-            "operations": block.operations.len(),
-            "x": position.x, "y": position.y,
-        })
+    let positions: HashMap<_, _> = layout.iter().map(|node| (node.address, (node.x, node.y))).collect();
+    let nodes = ir.blocks.iter().map(|block| {
+        let (x, y) = positions[&block.id.0];
+        NativeGraphNode {
+            id: block.id.0,
+            address: block.operations.first().map(|op| op.address.offset),
+            last: block.operations.iter().map(|op| op.address.offset).max(),
+            operations: block.operations.len(),
+            x,
+            y,
+        }
     }).collect();
-    let edges: Vec<_> = graph.edges.iter().map(|edge| serde_json::json!({
-        "from": edge.from.to_string(), "to": edge.to.to_string(),
-        "kind": match edge.kind {
-            BbEdgeKind::True => "true", BbEdgeKind::False => "false",
-            _ => "unconditional",
-        },
-    })).collect();
-    serde_json::json!({
-        "source": "native_function_ir", "complete": true, "nodes": nodes, "edges": edges,
-    })
+    NativeGraph { nodes, edges: graph.edges }
+}
+
+impl NativeGraph {
+    /// The JSON shape (`function_bb_graph`, `decompile_doc.graph`).
+    pub fn to_json(&self) -> serde_json::Value {
+        let nodes: Vec<_> = self.nodes.iter().map(|node| serde_json::json!({
+            "id": node.id.to_string(),
+            "address": node.address.map(|offset| format!("0x{offset:x}")),
+            "operations": node.operations,
+            "x": node.x, "y": node.y,
+        })).collect();
+        let edges: Vec<_> = self.edges.iter().map(|edge| serde_json::json!({
+            "from": edge.from.to_string(), "to": edge.to.to_string(),
+            "kind": edge.kind.as_str(),
+        })).collect();
+        serde_json::json!({
+            "source": "native_function_ir", "complete": true, "nodes": nodes, "edges": edges,
+        })
+    }
+}
+
+/// [`native_layout`] as JSON.
+pub fn native_graph(ir: &romwright_model::function_ir::FunctionIr) -> serde_json::Value {
+    native_layout(ir).to_json()
 }
 
 /// Longest-path layering after excluding DFS feedback edges from ranking.
@@ -257,7 +306,7 @@ mod tests {
                 IrBlock { id: BlockId(2), operations: vec![], predecessors: vec![], successors: vec![] },
             ],
             values: BTreeMap::new(), high_variables: vec![], type_evidence: BTreeMap::new(),
-            control_flow_cuts: vec![], passes: vec![], diagnostics: vec![],
+            control_flow_cuts: vec![], passes: vec![], diagnostics: vec![], cast_types: vec![],
         };
         let result = native_graph(&ir);
         let nodes = result["nodes"].as_array().unwrap();

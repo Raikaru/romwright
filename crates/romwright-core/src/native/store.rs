@@ -6,6 +6,8 @@ use super::*;
 pub const PROCESS_ENTRY_MODEL: &str = "processEntry";
 /// The rule that proved it: an ABI-reserved entry point, not an analysis.
 pub const ENTRY_CONVENTION_SOURCE: &str = "native-import:entry-convention";
+/// The rule that read an i386 PE function's stack purge off its `ret`.
+pub const X86_CONVENTION_SOURCE: &str = "native-analysis:x86-convention";
 /// A name the dynamic table itself carries.
 pub const DYNAMIC_LABEL_SOURCE: &str = "native-import:dynamic-tag";
 /// A branch that leaves its function for another function's entry.
@@ -156,6 +158,16 @@ pub fn store_import(
             functions[i].size = end.saturating_sub(functions[i].entry).max(1);
         }
     }
+    // Visual C++'s `__finally` blocks and lock regions are called like procedures and belong to the function
+    // before them (pe/local_calls.rs).
+    functions = pe::local_calls::fold(imp, functions);
+    // An i386 PE: the models its functions' own code proves (below) and the runtime's float-to-integer helper, which the
+    // stripped image does not name and the compiler spec's call fixup finds by name (pe/x86_conventions.rs).
+    let x86_analysis = pe::x86_conventions::analyse(imp);
+    if let Some(helper) = x86_analysis.float_to_int.iter().min()
+        && let Some(function) = functions.iter_mut().find(|function| function.entry == *helper && function.name.starts_with("FUN_")) {
+            function.name = "__ftol".into();
+        }
     let pid = db.upsert_program(program, &imp.language, &native_provenance())?;
     // Publish the loader identity with the program itself: a native worker
     // reopening this store must see the same immutable input the import
@@ -163,22 +175,12 @@ pub fn store_import(
     if let Some((_, input)) = imp.input_context.as_deref() {
         db.set_program_input(pid, input)?;
     }
-    if let Some(toolchain) = &imp.toolchain {
-        db.set_program_compiler(pid, toolchain)?;
-    }
-    // DOL toolchain: the mwcc runtime symbols are the fingerprint, and
-    // they arrive via --map after dol::import returns — so detection
-    // runs here, not in the loader.
-    if imp.toolchain.is_none() && imp.format.eq_ignore_ascii_case("dol") {
-        let mwcc = imp.functions.iter().any(|f| {
-            matches!(
-                f.name.as_str(),
-                "__init_registers" | "__start" | "__ppc_eabi_init"
-            )
-        });
-        if mwcc {
-            db.set_program_compiler(pid, "mwcc")?;
-        }
+    // The canonical compiler id: what the detectors read off the image, or
+    // what `--compiler` set. An import that never ran identification (a
+    // hand-built image) records nothing, so a recorded id is always one a
+    // detector or the user stated.
+    if let Some(identity) = &imp.identity {
+        db.set_program_compiler(pid, &identity.id)?;
     }
     let mut regions = imp
         .mappings
@@ -197,8 +199,28 @@ pub fn store_import(
         .collect::<Vec<_>>();
     // Every mapped region is a module the program loads: DOL sections,
     // ELF segments, REL images. `locate` names the module an address
-    // belongs to from these rows.
-    for region in &regions {
+    // belongs to from these rows. An image that declares its own modules
+    // (a DOL with its RELs) records those instead: a reference between two
+    // sections of one module is not a cross-module reference.
+    for module in &imp.modules {
+        db.insert_module(
+            pid,
+            &romwright_model::ModuleRow {
+                module_id: 0,
+                program: program.to_string(),
+                name: module.name.clone(),
+                kind: module.kind.clone(),
+                file_id: module.file_id.clone(),
+                load_vaddr: romwright_model::Address::ram(module.load_vaddr),
+                size: module.size,
+                file_off: module.file_off,
+                resident: true,
+            },
+        )?;
+    }
+    // `regions` is still one per mapping here, so a region's file offset is
+    // its mapping's.
+    for (region, mapping) in regions.iter().zip(&imp.mappings).filter(|_| imp.modules.is_empty()) {
         db.insert_module(
             pid,
             &romwright_model::ModuleRow {
@@ -213,7 +235,7 @@ pub fn store_import(
                 file_id: String::new(),
                 load_vaddr: region.start.clone(),
                 size: region.size,
-                file_off: 0,
+                file_off: mapping.file_off,
                 resident: true,
             },
         )?;
@@ -226,6 +248,9 @@ pub fn store_import(
         permissions: mapping_permissions(region.flags),
         source: "native-import:platform-map".into(),
     }));
+    if imp.format == "PE" {
+        regions = pe::carve_import_slots(regions, &imp.externals, if imp.language.contains(":64:") { 8 } else { 4 });
+    }
     db.replace_memory_regions(pid, &regions)?;
     let swept_strings = strings::discover(imp);
     db.replace_strings(
@@ -355,10 +380,18 @@ pub fn store_import(
                     && !consted.contains(&entry)
                     && !thunked.contains(&entry)
             };
-            let anchored = |entry: u64| declared.contains(&entry) || pointed.contains(&entry);
+            // The entry point the image itself names (a cartridge header's branch) is as declared as a symbol: the
+            // calls it makes are trusted even when its code opens no way a compiler's frame does (a `noreturn`
+            // `main` that saves no register).
+            let anchored = |entry: u64| declared.contains(&entry) || pointed.contains(&entry) || Some(entry) == imp.process_entry;
             let retract = untrusted_call_chains(imp, &functions, only_called, anchored);
             functions.retain(|f| !retract.contains(&f.entry));
         }
+    }
+    // A compiler that puts each function's literal pool right behind it
+    // counts the pool in the function's size; the walk proves the body only.
+    if let Some((thumb, arm)) = crate::compiler::rules::literal_pool_isas(&crate::compiler::ctx_of(imp)) {
+        super::pool_extent::extend(imp, &mut functions, thumb, arm);
     }
     let rows: Vec<FunctionRow> = functions
         .iter()
@@ -412,7 +445,20 @@ pub fn store_import(
     db.replace_function_features(pid, &measured)?;
     // The frame each function's own stack accesses describe, so the worker
     // can hand the decompiler the same declared locals stock's does.
-    db.replace_stack_variables(pid, &imp.stack_variables)?;
+    // Where the image's own debug stream places a local, the compiler's
+    // name and type replace the analyzer's `local_<hex>` slot.
+    if imp.debug_locals.is_empty() {
+        db.replace_stack_variables(pid, &imp.stack_variables)?;
+    } else {
+        let held: Vec<_> = imp
+            .debug_locals
+            .iter()
+            .filter(|local| stored.contains(&local.entry))
+            .cloned()
+            .collect();
+        let rows = super::mdebug::merge_debug_locals(&imp.stack_variables, &held);
+        db.replace_stack_variables(pid, &rows)?;
+    }
     // The instruction set at every point discovery settled: a mapping symbol,
     // a pattern's declared mode, a computed target's low bit, and each
     // entry's decoded mode. The last value written for an address wins, in
@@ -540,6 +586,25 @@ pub fn store_import(
         })
         .collect();
     symbols.extend(derived);
+    // MWCC-mangled names derive the same way: the mangled name stays as the
+    // linkage name (the function's own row, or the symbol read from the
+    // image) and the name it encodes is what a reader sees. Functions are
+    // named in the function table, not here, so they join the symbols
+    // examined.
+    symbols.retain(|symbol| symbol.source != crate::qualified_prototypes::mangled::DISPLAY_SOURCE);
+    let mwcc = crate::qualified_prototypes::mangled::display_symbols(
+        functions
+            .iter()
+            .map(|f| (romwright_model::Address::ram(f.entry), f.name.as_str(), false))
+            .chain(
+                symbols
+                    .iter()
+                    .filter(|symbol| symbol.address.space == romwright_model::AddressSpace::Ram)
+                    .filter(|symbol| symbol.source != DEMANGLE_SOURCE)
+                    .map(|symbol| (symbol.address.clone(), symbol.name.as_str(), symbol.external)),
+            ),
+    );
+    symbols.extend(mwcc);
     db.replace_symbols(pid, &symbols)?;
     let xrows: Vec<XrefRow> = imp
         .xrefs
@@ -827,6 +892,21 @@ pub fn store_import(
         .into_iter()
         .collect();
     db.replace_inferred_calling_conventions(pid, ENTRY_CONVENTION_SOURCE, &conventions)?;
+    // An i386 PE's callee-pops functions: the decompiler's own resolution cannot tell `__stdcall` from `__cdecl`
+    // (pe/x86_conventions.rs).
+    let x86: Vec<romwright_model::CallingConventionRow> = x86_analysis.conventions
+        .into_iter()
+        .map(|(entry, model)| romwright_model::CallingConventionRow {
+            function: romwright_model::Address::ram(entry),
+            convention: model,
+            provenance: romwright_model::FactProvenance {
+                kind: romwright_model::FactKind::Inferred,
+                source: X86_CONVENTION_SOURCE.into(),
+                confidence: None,
+            },
+        })
+        .collect();
+    db.replace_inferred_calling_conventions(pid, X86_CONVENTION_SOURCE, &x86)?;
     // The image's own exception tables: a range and the handler it enters,
     // not a rendering. The worker turns them into the comment Ghidra's
     // analyzer writes (m4-024).
@@ -846,12 +926,17 @@ pub fn store_import(
         })
         .collect();
     db.replace_exception_sites(pid, ELF_EXCEPTION_SOURCE, &sites)?;
+    // The weakest evidence first: a later inferred row replaces an earlier one.
+    apply_mangled_prototypes(db, pid, imp)?;
+    apply_symbol_library_prototypes(db, pid, imp)?;
     apply_library_prototypes(db, pid, imp)?;
+    store_debug_structs(db, pid, imp)?;
+    apply_debug_prototypes(db, pid, imp)?;
     // A name on Ghidra's own pinned list is a declared exit: without the fact
     // the decompiler walks past the call and takes the next function's body
     // with it.
     for function in &imp.functions {
-        if crate::nonreturn::known_no_return(&imp.format, &function.name) {
+        if crate::nonreturn::known_no_return(&crate::compiler::ctx_of(imp), &function.name) {
             db.set_return_behavior(
                 pid,
                 &romwright_model::ReturnBehaviorRow {
@@ -893,7 +978,7 @@ pub fn store_import(
         program: program.to_string(),
         functions: functions.len() as u64,
         language: imp.language.clone(),
-        compiler: imp.toolchain.clone().unwrap_or_default(),
+        compiler: imp.identity.as_ref().map(|found| found.id.clone()).unwrap_or_default(),
         phases: imp.phases.clone(),
         flow: imp.flow,
         patterns: imp.patterns_seen.clone(),
@@ -917,11 +1002,68 @@ fn mapping_permissions(flags: u64) -> String {
     )
 }
 
-/// Types the imports the pinned C library archive declares.
+/// The type names the decompiler's parser resolves for this image's language:
+/// its core-type document plus the base types the compiler spec declares a
+/// width for (the decompiler asks the worker for a name it does not hold, and
+/// the worker answers from the same document, m4-025). `None` when the
+/// language cannot be resolved, and the caller applies nothing.
+fn parser_types(imp: &NativeImport) -> Option<std::collections::HashSet<String>> {
+    // What this language's own core-type document declares decides which
+    // declarations can be applied: the parser resolves nothing else, and one
+    // unresolvable name fails the whole decompile (m4-022).
+    let (_, specs, _, _) =
+        crate::native_runtime::language_decompile_config(&imp.cfg, &imp.language).ok()?;
+    let mut known_types = crate::library_types::core_type_names(&specs)?;
+    known_types.extend(crate::library_types::language_base_types(&specs).into_keys());
+    Some(known_types)
+}
+
+/// Types the functions whose MWCC-mangled names state their parameters.
 ///
-/// The name has to come from the image: an external symbol, or a stub the
-/// linkage pass named after the slot it reads. A name the archive omits, or one
-/// whose declared types the decompiler does not have, stays untyped.
+/// The mangling proves the parameter list, not the return type, and it does
+/// not say whether a non-const member takes `this` (see
+/// `qualified_prototypes::mangled`). It is the weakest evidence a prototype
+/// has here, so it is merged before the type archive and the debug stream:
+/// `merge_inferred_prototypes` lets a later inferred row replace it, an
+/// assertion is never overwritten, and `types_infer::prototypes::protected`
+/// keeps the decompiler's own recovery from replacing it.
+fn apply_mangled_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+) -> Result<()> {
+    let Some(known_types) = parser_types(imp) else {
+        return Ok(());
+    };
+    merge_mangled_prototypes(db, pid, imp, &known_types)
+}
+
+fn merge_mangled_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+    known_types: &std::collections::HashSet<String>,
+) -> Result<()> {
+    let rows = crate::qualified_prototypes::mangled::prototype_rows(
+        imp.functions.iter().map(|function| (function.entry, function.name.as_str())),
+        known_types,
+    );
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let revision = db.revision(pid)?;
+    db.merge_inferred_prototypes(pid, revision, &rows)?;
+    Ok(())
+}
+
+/// Types what the pinned library archive declares: the imports, and every
+/// function whose MWCC-mangled name lets a qualified declaration
+/// (`Class::method`, an overload spelling) resolve.
+///
+/// The name has to come from the image: an external symbol, a stub the
+/// linkage pass named after the slot it reads, or a mangled symbol. A name
+/// the archive omits, or one whose declared types the decompiler does not
+/// have, stays untyped.
 fn apply_library_prototypes(
     db: &ProjectDb,
     pid: romwright_model::ProgramId,
@@ -930,6 +1072,99 @@ fn apply_library_prototypes(
     let Some(table) = crate::library_types::load(&imp.cfg.library_prototypes) else {
         return Ok(());
     };
+    let Some(known_types) = parser_types(imp) else {
+        return Ok(());
+    };
+    merge_library_prototypes(db, pid, imp, &table, &known_types)
+}
+
+/// Provenance of library declarations applied to functions only the image's
+/// symbol table names (`.symtab`, or the debug stream's procedure names).
+pub const SYMBOL_LIBRARY_SOURCE: &str = "native-import:symbol-library-prototype";
+
+/// Types the functions the image's own symbol table names after a declaration
+/// the pinned library table holds (`cos`, `scalbn`, `isnan`, ...), the way
+/// stock Ghidra's "apply function data types" does by name, or after one of the
+/// compiler's run-time helpers (`__adddf3`, `__udivdi3`, `__aeabi_dadd`) whose
+/// signatures GCC Internals and the Arm RTABI document
+/// (`library_types::helpers`, spelled in the language's own type widths).
+///
+/// A name in a symbol table is the toolchain's statement of what the function
+/// is, but a game may define its own `index` or `time`, so this is weaker than
+/// every other prototype source: it is merged before the import-name pass
+/// (whose names are the library's own), the debug stream outranks it, a user's
+/// assertion is never overwritten, and its provenance is its own so a
+/// consumer can discount it. It applies only where the image names the
+/// function: a stripped image has no such names and gets nothing.
+fn apply_symbol_library_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+) -> Result<()> {
+    if imp.symbol_named.is_empty() {
+        return Ok(());
+    }
+    let Some(known_types) = parser_types(imp) else {
+        return Ok(());
+    };
+    let mut table = crate::library_types::load(&imp.cfg.library_prototypes).unwrap_or(
+        crate::library_types::Table {
+            archive: String::new(),
+            archive_sha256: String::new(),
+            functions: Default::default(),
+        },
+    );
+    // The compiler's run-time helpers, spelled in this language's own widths;
+    // the C library table keeps a name both hold.
+    let helpers_path = imp.cfg.library_prototypes.with_file_name("runtime_helpers.json");
+    if let Some(helpers) = crate::library_types::helpers::load(&helpers_path)
+        && let Ok((_, specs, _, _)) =
+            crate::native_runtime::language_decompile_config(&imp.cfg, &imp.language)
+        && let Some(widths) = crate::library_types::helpers::Widths::from_specs(&specs)
+    {
+        for (name, declaration) in
+            crate::library_types::helpers::declarations(&helpers, &widths, &known_types)
+        {
+            table.functions.entry(name).or_insert(declaration);
+        }
+    }
+    merge_symbol_library_prototypes(db, pid, imp, &table, &known_types)
+}
+
+fn merge_symbol_library_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+    table: &crate::library_types::Table,
+    known_types: &std::collections::HashSet<String>,
+) -> Result<()> {
+    let symbols: std::collections::HashSet<u64> = imp.symbol_named.iter().copied().collect();
+    let named: Vec<(u64, &str)> = imp
+        .functions
+        .iter()
+        .filter(|function| symbols.contains(&function.entry) && table.functions.contains_key(function.name.as_str()))
+        .map(|function| (function.entry, function.name.as_str()))
+        .collect();
+    let applied = crate::qualified_prototypes::declared_qualified_for(table, named, known_types);
+    if applied.is_empty() {
+        return Ok(());
+    }
+    let rows: Vec<romwright_model::PrototypeRow> = applied
+        .iter()
+        .map(|prototype| prototype.to_prototype_row(SYMBOL_LIBRARY_SOURCE, known_types))
+        .collect();
+    let revision = db.revision(pid)?;
+    db.merge_inferred_prototypes(pid, revision, &rows)?;
+    Ok(())
+}
+
+fn merge_library_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+    table: &crate::library_types::Table,
+    known_types: &std::collections::HashSet<String>,
+) -> Result<()> {
     let imports: std::collections::HashSet<&str> = imp
         .externals
         .iter()
@@ -938,12 +1173,78 @@ fn apply_library_prototypes(
     let named: Vec<(u64, &str)> = imp
         .functions
         .iter()
-        .filter(|function| imports.contains(function.name.as_str()))
+        .filter(|function| {
+            imports.contains(function.name.as_str())
+                || crate::qualified_prototypes::mwcc_demangle::demangle(&function.name).is_some()
+        })
         .map(|function| (function.entry, function.name.as_str()))
         .collect();
-    // What this language's own core-type document declares decides which
-    // declarations can be applied: the parser resolves nothing else, and one
-    // unresolvable name fails the whole decompile (m4-022).
+    let applied = crate::qualified_prototypes::declared_qualified_for(table, named, known_types);
+    if applied.is_empty() {
+        return Ok(());
+    }
+    let rows: Vec<romwright_model::PrototypeRow> = applied
+        .iter()
+        .map(|prototype| prototype.to_prototype_row(crate::library_types::SOURCE, known_types))
+        .collect();
+    let revision = db.revision(pid)?;
+    db.merge_inferred_prototypes(pid, revision, &rows)?;
+    Ok(())
+}
+
+/// Provenance of prototypes read from the image's own debug stream.
+pub const DEBUG_INFO_SOURCE: &str = "native-import:debug-info";
+
+/// The debug stream's structs the project may hold: one named like a symbol of
+/// the image would collide with it in the C the project prints
+/// (`typedef struct Foo Foo;` beside `extern int Foo;`), so it is left out and
+/// the prototypes that name it keep `void *`.
+fn storable_debug_structs(imp: &NativeImport) -> impl Iterator<Item = &romwright_model::structs::StructLayout> {
+    let taken: std::collections::HashSet<&str> = imp
+        .object_names
+        .iter()
+        .map(|(_, name)| name.as_str())
+        .chain(imp.externals.iter().map(|(_, name)| name.as_str()))
+        .collect();
+    imp.debug_structs.iter().filter(move |layout| !taken.contains(layout.name.as_str()))
+}
+
+/// Stores the struct layouts the image's debug stream states as `type_defs` /
+/// `type_fields` rows of source `native-import:debug-info`, the layouts the
+/// worker answers when a prototype names one (`romwright_model::structs`).
+/// They are exact, so a reimport replaces them whole.
+fn store_debug_structs(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+) -> Result<()> {
+    if imp.debug_structs.is_empty() {
+        return Ok(());
+    }
+    debug_assert_eq!(DEBUG_INFO_SOURCE, romwright_model::structs::DEBUG_SOURCE);
+    let rows: Vec<_> = storable_debug_structs(imp).map(|layout| layout.rows()).collect();
+    db.store_struct_layouts(pid, Some(DEBUG_INFO_SOURCE), &rows)?;
+    Ok(())
+}
+
+/// Types the functions the image's debug stream gives a prototype for.
+///
+/// The compiler wrote these, so they outrank every inference (`protected`
+/// in `types_infer::prototypes`) and the type archive, and a user's
+/// assertion outranks them (`insert_prototypes` never lets an inferred fact
+/// overwrite an asserted one). Only functions the import holds are typed,
+/// and only with names the language's own type documents declare: the
+/// prototype stage already spelled every type in C, and a name the parser
+/// does not know would fail the whole decompile, so a prototype with one is
+/// left out rather than approximated.
+fn apply_debug_prototypes(
+    db: &ProjectDb,
+    pid: romwright_model::ProgramId,
+    imp: &NativeImport,
+) -> Result<()> {
+    if imp.debug_prototypes.is_empty() {
+        return Ok(());
+    }
     let Ok((_, specs, _, _)) =
         crate::native_runtime::language_decompile_config(&imp.cfg, &imp.language)
     else {
@@ -952,31 +1253,361 @@ fn apply_library_prototypes(
     let Some(mut known_types) = crate::library_types::core_type_names(&specs) else {
         return Ok(());
     };
-    // Plus the base types the compiler spec declares a width for: the
-    // decompiler asks the worker for a name it does not hold, and the worker
-    // answers from the same document (m4-025).
     known_types.extend(crate::library_types::language_base_types(&specs).into_keys());
-    let applied = crate::library_types::declared_for(&table, named, &known_types);
-    if applied.is_empty() {
+    // The structs the same stream states are stored below and named by the
+    // prototypes; the parser asks the worker for them by name.
+    known_types.extend(storable_debug_structs(imp).map(|layout| layout.name.clone()));
+    let held: std::collections::HashSet<u64> = imp.functions.iter().map(|f| f.entry).collect();
+    let identifier = |text: &str| {
+        let mut bytes = text.bytes();
+        matches!(bytes.next(), Some(b'_' | b'a'..=b'z' | b'A'..=b'Z'))
+            && bytes.all(|b| b == b'_' || b.is_ascii_alphanumeric())
+    };
+    // A name the C parser would read as a type or keyword cannot declare a
+    // parameter or the function.
+    let usable = |text: &str| {
+        identifier(text)
+            && !known_types.contains(text)
+            && !matches!(text, "struct" | "union" | "enum" | "signed" | "unsigned" | "const" | "volatile" | "long" | "char" | "short" | "int" | "float" | "double" | "void" | "register" | "static" | "extern" | "typedef" | "auto" | "sizeof" | "return" | "if" | "else" | "for" | "while" | "do" | "switch" | "case" | "default" | "break" | "continue" | "goto" | "inline")
+    };
+    let mut rows = Vec::new();
+    for prototype in imp.debug_prototypes.iter().filter(|p| held.contains(&p.entry)) {
+        let declaration = crate::library_types::Declaration {
+            return_type: prototype.return_type.clone(),
+            varargs: prototype.variadic,
+            parameters: prototype
+                .parameters
+                .iter()
+                .enumerate()
+                .map(|(index, (name, data_type))| crate::library_types::Parameter {
+                    name: if usable(name) { name.clone() } else { format!("param_{}", index + 1) },
+                    data_type: data_type.clone(),
+                })
+                .collect(),
+            scope: None,
+            calling_convention: None,
+            this_type: None,
+        };
+        if !crate::library_types::representable(&declaration, &known_types) {
+            continue;
+        }
+        let name = if usable(&prototype.name) {
+            prototype.name.clone()
+        } else {
+            format!("FUN_{:08x}", prototype.entry)
+        };
+        rows.push(romwright_model::PrototypeRow {
+            function: romwright_model::Address::ram(prototype.entry),
+            signature: crate::library_types::signature(&name, &declaration),
+            calling_convention: None,
+            return_type: Some(declaration.return_type.clone()),
+            provenance: romwright_model::FactProvenance {
+                kind: romwright_model::FactKind::Inferred,
+                source: DEBUG_INFO_SOURCE.into(),
+                confidence: None,
+            },
+        });
+    }
+    if rows.is_empty() {
         return Ok(());
     }
-    let rows: Vec<romwright_model::PrototypeRow> = applied
-        .iter()
-        .map(
-            |(address, signature, declaration)| romwright_model::PrototypeRow {
-                function: romwright_model::Address::ram(*address),
-                signature: signature.clone(),
-                calling_convention: None,
-                return_type: Some(declaration.return_type.clone()),
-                provenance: romwright_model::FactProvenance {
-                    kind: romwright_model::FactKind::Inferred,
-                    source: crate::library_types::SOURCE.into(),
-                    confidence: None,
-                },
-            },
-        )
-        .collect();
     let revision = db.revision(pid)?;
     db.merge_inferred_prototypes(pid, revision, &rows)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod mwcc_names {
+    use super::*;
+    use crate::library_types::{Declaration, Parameter, Table};
+    use crate::native::NativeFunction;
+    use crate::qualified_prototypes::mangled::{DISPLAY_SOURCE, PROTOTYPE_SOURCE};
+    use romwright_model::{FactKind, FactProvenance, PrototypeRow};
+
+    fn known() -> std::collections::HashSet<String> {
+        ["void", "int", "uint", "char", "float", "undefined4", "UberBond"]
+            .iter()
+            .map(|name| (*name).to_string())
+            .collect()
+    }
+
+    fn image() -> NativeImport {
+        let function = |entry, name: &str| NativeFunction {
+            entry,
+            size: 0x20,
+            name: name.into(),
+        };
+        NativeImport {
+            language: "PowerPC:BE:32:default".into(),
+            functions: vec![
+                function(0x8000_1000, "Update__8UberBondCFPcUi"),
+                function(0x8000_1100, "DrawFontChar__Fiiii"),
+                function(0x8000_1200, "AINetwork_ResetRoute__FP11AIRoute_tagP7obj_tagT1"),
+                function(0x8000_1300, "main"),
+                function(0x8000_1400, "Load__8UberBondFPc"),
+            ],
+            ..Default::default()
+        }
+    }
+
+    fn stored(imp: &NativeImport) -> (ProjectDb, romwright_model::ProgramId) {
+        let db = ProjectDb::open_in_memory().unwrap();
+        let pid = db
+            .upsert_program("p", &imp.language, &crate::native::native_provenance())
+            .unwrap();
+        store_import(&db, "p", imp, None).unwrap();
+        (db, pid)
+    }
+
+    /// A function's mangled name stays its linkage name and a display symbol
+    /// carries the name it encodes, as the Itanium path does for `_ZTIi`.
+    #[test]
+    fn a_mangled_function_keeps_its_linkage_name_and_gains_a_display_symbol() {
+        let (db, pid) = stored(&image());
+        let functions = db.functions(pid).unwrap();
+        assert!(functions.iter().any(|f| f.name == "Update__8UberBondCFPcUi"));
+        let display: Vec<(u64, String)> = db
+            .symbols(pid)
+            .unwrap()
+            .into_iter()
+            .filter(|symbol| symbol.source == DISPLAY_SOURCE)
+            .map(|symbol| (symbol.address.offset, symbol.name))
+            .collect();
+        assert!(display.contains(&(0x8000_1000, "UberBond::Update(char*, unsigned int) const".into())));
+        assert!(display.contains(&(0x8000_1100, "DrawFontChar(int, int, int, int)".into())));
+        // A back-reference name demangles in the import dialect.
+        assert!(display.contains(&(
+            0x8000_1200,
+            "AINetwork_ResetRoute(AIRoute_tag*, obj_tag*, obj_tag*)".into()
+        )));
+        // A plain C name gets no display symbol; a re-store replaces, not appends.
+        assert!(display.iter().all(|(address, _)| *address != 0x8000_1300));
+        store_import(&db, "p", &image(), None).unwrap();
+        let again = db
+            .symbols(pid)
+            .unwrap()
+            .into_iter()
+            .filter(|symbol| symbol.source == DISPLAY_SOURCE)
+            .count();
+        assert_eq!(again, display.len());
+    }
+
+    #[test]
+    fn mangled_parameters_become_prototype_facts_with_their_own_provenance() {
+        let imp = image();
+        let (db, pid) = stored(&imp);
+        merge_mangled_prototypes(&db, pid, &imp, &known()).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        let at = |entry: u64| rows.iter().find(|row| row.function.offset == entry).unwrap();
+        assert_eq!(
+            at(0x8000_1000).signature,
+            "undefined4 Update(UberBond * this, char * param_1, uint param_2)"
+        );
+        assert_eq!(
+            at(0x8000_1100).signature,
+            "undefined4 DrawFontChar(int param_1, int param_2, int param_3, int param_4)"
+        );
+        // Arity of the expanded back-reference: three parameters, not two.
+        assert_eq!(
+            at(0x8000_1200).signature,
+            "undefined4 AINetwork_ResetRoute(void * param_1, void * param_2, void * param_3)"
+        );
+        assert!(rows.iter().all(|row| row.function.offset != 0x8000_1300));
+        // `Load__8UberBondFPc` may be static: no prototype is claimed for it.
+        assert!(rows.iter().all(|row| row.function.offset != 0x8000_1400));
+        assert!(rows.iter().all(|row| row.provenance.source == PROTOTYPE_SOURCE));
+        // Weaker than everything else: an assertion survives a re-merge, and a
+        // later inferred source replaces it.
+        let assertion = PrototypeRow {
+            function: romwright_model::Address::ram(0x8000_1100),
+            signature: "int DrawFontChar(int x, int y, int w, int h)".into(),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance {
+                kind: FactKind::Asserted,
+                source: "user".into(),
+                confidence: None,
+            },
+        };
+        db.set_prototype(pid, &assertion).unwrap();
+        let stronger = PrototypeRow {
+            function: romwright_model::Address::ram(0x8000_1000),
+            signature: "int Update(UberBond * this, char * path, uint flags)".into(),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance {
+                kind: FactKind::Inferred,
+                source: crate::library_types::SOURCE.into(),
+                confidence: None,
+            },
+        };
+        let revision = db.revision(pid).unwrap();
+        db.merge_inferred_prototypes(pid, revision, std::slice::from_ref(&stronger)).unwrap();
+        merge_mangled_prototypes(&db, pid, &imp, &known()).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        let at = |entry: u64| rows.iter().find(|row| row.function.offset == entry).unwrap();
+        assert_eq!(at(0x8000_1100).signature, assertion.signature, "an assertion was overwritten");
+        // The mangled pass runs first in an import, so a later source wins; the
+        // order in `store_import` is what this pins.
+        merge_library_prototypes(
+            &db,
+            pid,
+            &imp,
+            &Table {
+                archive: "t".into(),
+                archive_sha256: "t".into(),
+                functions: std::collections::HashMap::from([(
+                    "UberBond::Update".to_string(),
+                    Declaration {
+                        return_type: "int".into(),
+                        varargs: false,
+                        parameters: vec![Parameter { name: "path".into(), data_type: "char *".into() }],
+                        scope: None,
+                        calling_convention: Some("__thiscall".into()),
+                        this_type: None,
+                    },
+                )]),
+            },
+            &known(),
+        )
+        .unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        let update = rows.iter().find(|row| row.function.offset == 0x8000_1000).unwrap();
+        assert_eq!(update.provenance.source, crate::library_types::SOURCE);
+        // The table's qualified declaration reached the row with its receiver
+        // and convention: `declared_qualified_for` is the header-prototype path.
+        assert_eq!(update.signature, "int Update(UberBond * this, char * path)");
+        assert_eq!(update.calling_convention.as_deref(), Some("__thiscall"));
+    }
+
+    fn libm_table() -> Table {
+        Table {
+            archive: "t".into(),
+            archive_sha256: "t".into(),
+            functions: std::collections::HashMap::from([(
+                "isnan".to_string(),
+                Declaration {
+                    return_type: "int".into(),
+                    varargs: false,
+                    parameters: vec![Parameter { name: "__value".into(), data_type: "float".into() }],
+                    scope: None,
+                    calling_convention: None,
+                    this_type: None,
+                },
+            )]),
+        }
+    }
+
+    /// A function the symbol table names after a library declaration gets it,
+    /// under its own provenance; a function the table merely lists under a
+    /// name nothing in the image gave, and a name the table lacks, get nothing.
+    #[test]
+    fn symbol_named_library_functions_are_typed_with_their_own_provenance() {
+        let function = |entry, name: &str| NativeFunction { entry, size: 0x20, name: name.into() };
+        let imp = NativeImport {
+            language: "PowerPC:BE:32:default".into(),
+            functions: vec![function(0x8000_2000, "isnan"), function(0x8000_2100, "game_update"), function(0x8000_2200, "isnan")],
+            symbol_named: vec![0x8000_2000, 0x8000_2100],
+            ..Default::default()
+        };
+        let (db, pid) = stored(&imp);
+        merge_symbol_library_prototypes(&db, pid, &imp, &libm_table(), &known()).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        let named = rows.iter().find(|row| row.function.offset == 0x8000_2000).unwrap();
+        assert_eq!(named.provenance.source, SYMBOL_LIBRARY_SOURCE);
+        assert_eq!(named.signature, "int isnan(float __value)");
+        assert!(rows.iter().all(|row| row.function.offset != 0x8000_2100), "a name the table lacks");
+        assert!(rows.iter().all(|row| row.function.offset != 0x8000_2200), "not named by the symbol table");
+    }
+
+    /// The symbol pass is the weakest: the debug stream, an assertion and the
+    /// import-name pass all replace or outrank it.
+    #[test]
+    fn symbol_library_prototypes_yield_to_stronger_sources() {
+        let function = |entry, name: &str| NativeFunction { entry, size: 0x20, name: name.into() };
+        let imp = NativeImport {
+            language: "PowerPC:BE:32:default".into(),
+            functions: vec![function(0x8000_2000, "isnan"), function(0x8000_2100, "isnan")],
+            symbol_named: vec![0x8000_2000, 0x8000_2100],
+            ..Default::default()
+        };
+        let (db, pid) = stored(&imp);
+        let assertion = PrototypeRow {
+            function: romwright_model::Address::ram(0x8000_2000),
+            signature: "int isnan(double d)".into(),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance { kind: FactKind::Asserted, source: "user".into(), confidence: None },
+        };
+        db.set_prototype(pid, &assertion).unwrap();
+        merge_symbol_library_prototypes(&db, pid, &imp, &libm_table(), &known()).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        assert_eq!(rows.iter().find(|row| row.function.offset == 0x8000_2000).unwrap().signature, assertion.signature);
+        // A later inferred row (the import-name or debug pass) replaces it.
+        let stronger = PrototypeRow {
+            function: romwright_model::Address::ram(0x8000_2100),
+            signature: "int isnan(double d)".into(),
+            calling_convention: None,
+            return_type: Some("int".into()),
+            provenance: FactProvenance { kind: FactKind::Inferred, source: DEBUG_INFO_SOURCE.into(), confidence: None },
+        };
+        let revision = db.revision(pid).unwrap();
+        db.merge_inferred_prototypes(pid, revision, std::slice::from_ref(&stronger)).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        assert_eq!(rows.iter().find(|row| row.function.offset == 0x8000_2100).unwrap().provenance.source, DEBUG_INFO_SOURCE);
+    }
+
+    /// A run-time helper the symbol table names is typed through the same
+    /// pass, in the language's own widths: `double` is two registers' worth,
+    /// `DImode` is `longlong` on a 32-bit language.
+    #[test]
+    fn symbol_named_runtime_helpers_are_typed_in_the_languages_widths() {
+        use crate::library_types::{helpers, BaseType};
+        let base: std::collections::BTreeMap<String, BaseType> = [
+            ("int", 4, "int"), ("uint", 4, "uint"), ("longlong", 8, "int"), ("ulonglong", 8, "uint"),
+            ("float", 4, "float"), ("double", 8, "float"),
+        ]
+        .into_iter()
+        .map(|(name, size, metatype)| (name.to_string(), BaseType { size, metatype }))
+        .collect();
+        let widths = helpers::Widths { base, pointer_size: 4 };
+        let mut known = known();
+        known.extend(["longlong", "ulonglong", "double"].map(String::from));
+        let row = |ret: &str, parameters: &[&str]| helpers::Row {
+            return_mode: ret.into(),
+            parameters: parameters
+                .iter()
+                .enumerate()
+                .map(|(index, mode)| helpers::RowParameter { name: format!("p{index}"), mode: (*mode).into() })
+                .collect(),
+        };
+        let table = Table {
+            archive: String::new(),
+            archive_sha256: String::new(),
+            functions: helpers::declarations(
+                &helpers::Helpers {
+                    functions: std::collections::HashMap::from([
+                        ("__adddf3".to_string(), row("df", &["df", "df"])),
+                        ("__udivdi3".to_string(), row("udi", &["udi", "udi"])),
+                    ]),
+                },
+                &widths,
+                &known,
+            ),
+        };
+        let function = |entry, name: &str| NativeFunction { entry, size: 0x20, name: name.into() };
+        let imp = NativeImport {
+            language: "PowerPC:BE:32:default".into(),
+            functions: vec![function(0x8000_3000, "__adddf3"), function(0x8000_3100, "__udivdi3")],
+            symbol_named: vec![0x8000_3000, 0x8000_3100],
+            ..Default::default()
+        };
+        let (db, pid) = stored(&imp);
+        merge_symbol_library_prototypes(&db, pid, &imp, &table, &known).unwrap();
+        let rows = db.prototypes(pid).unwrap();
+        let at = |entry: u64| rows.iter().find(|row| row.function.offset == entry).unwrap();
+        assert_eq!(at(0x8000_3000).signature, "double __adddf3(double p0, double p1)");
+        assert_eq!(at(0x8000_3100).signature, "ulonglong __udivdi3(ulonglong p0, ulonglong p1)");
+        assert_eq!(at(0x8000_3000).provenance.source, SYMBOL_LIBRARY_SOURCE);
+    }
 }

@@ -1,4 +1,5 @@
-//! Native (no-JVM) runtime services: SLEIGH console + the decompiler worker.
+//! Native (no-JVM) runtime services: the in-process SLEIGH lifter, flow and
+//! reference passes, and the decompiler worker.
 //!
 //! These were CLI-local until the review that tightened the facade contract
 //! (a GUI — the intended consumer — could not reuse `decompile` /
@@ -12,16 +13,29 @@
 //! the CLI's env surface is preserved while everything below it is honest
 //! about its inputs.
 
+#[cfg(test)]
 use crate::native::NativeImport;
 use crate::session::RuntimeConfig;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::time::Duration;
+mod disasm;
+mod flow;
 mod image;
-use image::MappedImage;
-
-/// Exact refusal from `Propagation::run` in `native/romwright_constants.hh`:
-/// the range has no decodable flow, so it carries no propagation facts.
-const UNDECODABLE: &str = "Constant propagation requires decodable function flow";
+mod lift;
+mod linkage;
+#[cfg(test)]
+mod oracle;
+mod patterns;
+mod propagation;
+mod reference_pass;
+pub use disasm::{disasm_native, listing_native};
+pub use flow::SleighFlow;
+pub(crate) use lift::{release_idle_decoders, set_single_program, single_program};
+pub use lift::SleighLifter;
+pub(crate) use reference_pass::{DemandReferences, ReferenceContext, open_lanes as open_reference_lanes};
+pub(crate) use patterns::FunctionPatterns;
+pub(crate) use propagation::{JumpShape, Refusal};
 
 /// Facade error for the native runtime (string-typed: these are setup and
 /// child-process failures, reported verbatim to the caller).
@@ -80,157 +94,6 @@ fn mode_register_alias(spec_root: &std::path::Path, language: &str) -> Option<St
         }
     }
     None
-}
-
-pub fn find_console(cfg: &RuntimeConfig) -> Result<PathBuf> {
-    if let Some(ref p) = cfg.console_path {
-        if p.is_file() {
-            return Ok(p.clone());
-        }
-    }
-    err(
-        "SLEIGH console missing: build native/build_console.sh (needs binutils-devel) or configure console_path",
-    )
-}
-
-fn mapped_console(cfg: &RuntimeConfig, binary: &Path) -> Result<Option<ConsoleSession>> {
-    let Some(import) = MappedImage::parse_binary(cfg, binary)? else {
-        return Ok(None);
-    };
-    let mut configured = cfg.clone();
-    configured.language_id = import.language.clone();
-    if let Some(directory) =
-        crate::architecture::directory_for_id(&cfg.ghidra_install, &import.language)
-            .ok()
-            .flatten()
-    {
-        configured.language_dir = directory;
-    }
-    let mut session = ConsoleSession::new(&configured)?;
-    // Reuse the bounded context batches: sending thousands of context
-    // commands before reading their replies can deadlock both pipes.
-    session.load_mapped(&import)?;
-    Ok(Some(session))
-}
-
-fn console_output(cfg: &RuntimeConfig, binary: &Path, address: &str) -> Result<String> {
-    let hex_addr = if address.starts_with("0x") {
-        address.to_string()
-    } else {
-        format!("0x{address}")
-    };
-    if let Some(mut session) = mapped_console(cfg, binary)? {
-        session.send(&format!(
-            "map function {hex_addr} func\nload function func\ndisassemble\n"
-        ))?;
-        read_until_prompt(&mut session.reader)?;
-        read_until_prompt(&mut session.reader)?;
-        return read_until_prompt(&mut session.reader);
-    }
-    let console = find_console(cfg)?;
-    let ghroot = cfg.ghidra_install.to_string_lossy().into_owned();
-    let langs = cfg.language_dir.to_string_lossy().into_owned();
-    let bfd_target = bfd_target_for(&cfg.language_id, binary)?;
-    let load_script = if cfg.language_id.starts_with("x86:") {
-        format!(
-            "load file {} {}\nadjust vma 0x400000\n",
-            bfd_target,
-            binary.display()
-        )
-    } else {
-        format!("load file {} {}\n", bfd_target, binary.display())
-    };
-    let script =
-        format!("{load_script}map function {hex_addr} func\nload function func\ndisassemble\n",);
-    let mut child = Command::new(&console)
-        .arg("-s")
-        .arg(&langs)
-        .env("SLEIGHHOME", &ghroot)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| NativeRuntimeError(format!("console spawn: {e}")))?;
-    use std::io::Write as _;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| NativeRuntimeError("console stdin".into()))?
-        .write_all(script.as_bytes())
-        .map_err(|e| NativeRuntimeError(format!("console write: {e}")))?;
-    let out = child
-        .wait_with_output()
-        .map_err(|e| NativeRuntimeError(format!("console wait: {e}")))?;
-    Ok(String::from_utf8_lossy(&out.stdout).into_owned())
-}
-
-fn instruction_line(line: &str) -> bool {
-    let Some((address, _)) = line.trim().split_once(':') else {
-        return false;
-    };
-    let address = address.trim().trim_start_matches("0x");
-    !address.is_empty() && u64::from_str_radix(address, 16).is_ok()
-}
-
-fn structural_line(line: &str) -> bool {
-    let line = line.trim();
-    line.starts_with("Function ")
-        || line.starts_with("Block ")
-        || line.starts_with("Label ")
-        || line.starts_with("Data ")
-        || line.starts_with("Bytes ")
-}
-
-fn filtered_listing(output: &str, count: u32, include_structural: bool) -> Vec<String> {
-    let mut instructions = 0u32;
-    let mut lines = Vec::new();
-    for line in output.lines() {
-        let is_instruction = instruction_line(line);
-        let is_structural = include_structural && structural_line(line);
-        if !is_instruction && !is_structural {
-            continue;
-        }
-        if is_instruction {
-            if instructions >= count {
-                break;
-            }
-            instructions += 1;
-        }
-        lines.push(line.to_string());
-    }
-    lines
-}
-
-/// Performs `disasm`: one function mapped + disassembled by the
-/// SLEIGH console, returning only address-prefixed instruction lines.
-pub fn disasm_native(
-    cfg: &RuntimeConfig,
-    binary: &Path,
-    address: &str,
-    count: u32,
-) -> Result<String> {
-    let output = console_output(cfg, binary, address)?;
-    let lines = filtered_listing(&output, count, false);
-    if lines.is_empty() {
-        return err("console produced no listing");
-    }
-    Ok(lines.join("\n"))
-}
-
-/// Runs the same console request as `disasm_native`, preserving structural
-/// marker lines for the Core listing parser.
-pub fn listing_native(
-    cfg: &RuntimeConfig,
-    binary: &Path,
-    address: &str,
-    count: u32,
-) -> Result<String> {
-    let output = console_output(cfg, binary, address)?;
-    let lines = filtered_listing(&output, count, true);
-    if !lines.iter().any(|line| instruction_line(line)) {
-        return err("console produced no listing");
-    }
-    Ok(lines.join("\n"))
 }
 
 /// Resolves the decompile inputs for a program language id: the compiled
@@ -324,6 +187,10 @@ fn worker_command(
     }
     let input = serde_json::to_string(&request.input)
         .map_err(|error| NativeRuntimeError(format!("encode captured input: {error}")))?;
+    // The worker maps the image this process derived, so its memory does not
+    // grow with the input or with the number of workers.
+    let image = crate::inputs::snapshot_binding(&request.project_dir, &request.input)
+        .map_err(|error| NativeRuntimeError(format!("program image snapshot: {error}")))?;
     let remaining = request
         .deadline
         .saturating_duration_since(std::time::Instant::now());
@@ -339,16 +206,22 @@ fn worker_command(
         .env("ROMWRIGHT_LANGUAGE_DIR", lang_dir)
         .env("ROMWRIGHT_SLA", sla)
         .env("ROMWRIGHT_PROGRAM_INPUT", input)
+        .env(crate::inputs::SNAPSHOT_ENV, image)
         .env("ROMWRIGHT_IR_PASSES", cfg.ir_passes.join(","))
         .env("WORKER_ACTION", "decompile")
         .env(
             "WORKER_DECOMPILE_TIMEOUT_SECS",
             remaining.as_secs().saturating_add(1).to_string(),
         )
-        .env_remove("WORKER_STRUCTURED");
+        .env_remove("WORKER_STRUCTURED")
+        .env_remove("ROMWRIGHT_STRUCT_OVERLAY");
     if structured {
         command.env("WORKER_STRUCTURED", "1");
     }
+    if let Some(overlay) = &cfg.struct_overlay {
+        command.env("ROMWRIGHT_STRUCT_OVERLAY", overlay);
+    }
+    command.envs(cfg.worker_env.iter().map(|(key, value)| (key, value)));
     Ok(command)
 }
 
@@ -461,11 +334,87 @@ pub fn decompile_native_docs(
         .map_err(|e| NativeRuntimeError(format!("invalid structured worker batch: {e}")))
 }
 
+/// The decompiler's own count of the work one switch decompile may do
+/// (`romwright_budget.hh`: an action run, an op a rule pool visits, a rule
+/// tried, and the loops that dominate the big functions, one unit each; about
+/// 5 to 10 million units a second). The limit decides on what the function
+/// costs, never on how long the host took to do it, so a function is finished
+/// or refused the same way on every run.
+///
+/// Calibrated on the dispatchers the corpus asks about (`ROMWRIGHT_WORK_TRACE`,
+/// STATUS.md 2026-10-10). Of 482 owners on psv the median costs 86 thousand
+/// units and the 99th percentile 29 million; the heaviest of psv, AW and capcom
+/// then cost, in millions, 1513, 778, 740, 237 (AW 0x8273d480), 226 (psv
+/// 0x8130ffc0), 193, 182 (capcom 0x1ab430), 158, 117, 114, 102 and 102, and
+/// below them 56 (psv) and 12 (AW, capcom). The limit sits in the empty stretch
+/// between 56 and 102 million: everything above it is refused on every run, on
+/// every host, and names itself in the import's notes. Each of those was
+/// refused or not by the 60 s wall-clock limit this replaces according to the
+/// host's load (20 to 40 s on an idle one, 59 s and a timeout on a busy one),
+/// which is the nondeterminism. Which side of the limit capcom's two near 102
+/// million fall on is visible in the reference score: answered, their tables
+/// turn five functions the truth names into case blocks and recall reads
+/// 0.9412; refused, 0.9418 (m21-001 at limits of 110 and 60 million).
+pub(crate) const SWITCH_WORK_BUDGET: u64 = 75_000_000;
+
+/// How long one switch decompile may run on the wall clock before its
+/// worker is killed. Only a backstop for a decompile that stopped charging
+/// work (a hang): the work budget is what ends a runaway one, long before
+/// this. A function the guard kills is reported apart from a refusal
+/// (`SwitchRecovery::wall_clock`), because the answer then depends on the
+/// host and the import must not be kept.
+pub(crate) const SWITCH_WALL_GUARD: Duration = Duration::from_secs(900);
+
+/// The exception type the decompiler raises when a decompile passes its work
+/// budget (`WorkBudgetExceeded`, ghidra_process.cc).
+const WORK_BUDGET_EXCEEDED: &str = "WorkBudgetExceeded";
+
+/// One line of the worker's `--switches` answer.
+#[derive(serde::Deserialize)]
+struct SwitchResponse {
+    address: u64,
+    result: std::result::Result<Vec<romwright_model::JumpTable>, String>,
+    /// The failure was the wall-clock guard.
+    #[serde(default)]
+    wall_clock: bool,
+}
+
 #[derive(Default)]
 pub(crate) struct SwitchRecovery {
     pub tables: Vec<romwright_model::JumpTable>,
     pub completed: usize,
     pub failures: Vec<String>,
+    /// Functions the decompiler refused for passing the work budget: the same
+    /// answer on every host, so the import stays reproducible.
+    pub over_budget: Vec<String>,
+    /// Functions whose worker the wall-clock guard killed. Whether one of
+    /// these finished depended on the load of the host.
+    pub wall_clock: Vec<String>,
+}
+
+impl SwitchRecovery {
+    /// Files one function's answer: its tables, or why it has none. A refusal
+    /// for the work budget and a kill by the wall-clock guard are told apart
+    /// from the decompiler's own errors, because only the first is the same
+    /// answer on every host.
+    fn record(&mut self, response: SwitchResponse) {
+        match response.result {
+            Ok(tables) => {
+                self.completed += 1;
+                self.tables.extend(tables);
+            }
+            Err(error) => {
+                let failure = format!("{:#x}: {error}", response.address);
+                if response.wall_clock {
+                    self.wall_clock.push(failure);
+                } else if error.contains(WORK_BUDGET_EXCEEDED) {
+                    self.over_budget.push(failure);
+                } else {
+                    self.failures.push(failure);
+                }
+            }
+        }
+    }
 }
 
 /// Compact, independently bounded function results. A child failure retains
@@ -475,11 +424,6 @@ pub(crate) fn recover_native_switches(
     request: &crate::exec::ExecutionRequest,
     addresses: &[String],
 ) -> Result<SwitchRecovery> {
-    #[derive(serde::Deserialize)]
-    struct Response {
-        address: u64,
-        result: std::result::Result<Vec<romwright_model::JumpTable>, String>,
-    }
     let mut pending = addresses
         .iter()
         .map(|address| {
@@ -491,20 +435,24 @@ pub(crate) fn recover_native_switches(
     if pending.is_empty() {
         return Ok(recovery);
     }
+    let command_started = std::time::Instant::now();
     let mut command = worker_command(request, addresses, false)?;
-    command.arg("--switches").env(
-        "WORKER_DECOMPILE_TIMEOUT_SECS",
-        crate::exec::DEFAULT_BUDGET.as_secs().to_string(),
-    );
+    crate::native::tally::add("switch-command", command_started);
+    command
+        .arg("--switches")
+        .env("WORKER_DECOMPILE_TIMEOUT_SECS", request.config.switch_wall_guard_secs.to_string())
+        .env("ROMWRIGHT_WORK_BUDGET", request.config.switch_work_budget.to_string());
     let limit = usize::try_from(request.config.worker_memory_cap).unwrap_or(usize::MAX);
+    let run_started = std::time::Instant::now();
     let out = crate::exec::run_command(&mut command, request, None, limit)
         .map_err(|error| NativeRuntimeError(error.to_string()))?;
+    crate::native::tally::add("switch-worker", run_started);
     for line in out
         .stdout
         .split(|byte| *byte == b'\n')
         .filter(|line| !line.is_empty())
     {
-        let response: Response = match serde_json::from_slice(line) {
+        let response: SwitchResponse = match serde_json::from_slice(line) {
             Ok(response) => response,
             Err(error) => {
                 recovery
@@ -520,15 +468,7 @@ pub(crate) fn recover_native_switches(
             ));
             break;
         }
-        match response.result {
-            Ok(tables) => {
-                recovery.completed += 1;
-                recovery.tables.extend(tables);
-            }
-            Err(error) => recovery
-                .failures
-                .push(format!("{:#x}: {error}", response.address)),
-        }
+        recovery.record(response);
     }
     if !out.status.success() {
         recovery.failures.push(format!(
@@ -573,69 +513,6 @@ pub(crate) fn program_image_base(program: &str, project_dir: &Path) -> Option<u6
         .filter(|region| region.source == "native-import")
         .map(|region| region.start.offset)
         .min()
-}
-
-/// Reads console output until the interactive prompt "[decomp]> " is seen.
-/// The prompt carries no trailing newline, so `read_line` deadlocks; the
-/// console also buffers, so the read must be byte-wise.
-/// One console output line, or the prompt that means the console has said all
-/// it intends to.
-///
-/// The prompt carries no newline, so a reader that waits for one waits for
-/// ever: a MIPS image whose BFD target the console refused answered
-/// `Execution error: No architecture loaded` and then the prompt, and an
-/// import that expected one `FLOW` line per address hung on the second read
-/// for fourteen minutes before this existed.
-enum ConsoleOutput {
-    Line(String),
-    Prompt(String),
-}
-
-fn read_line_or_prompt(
-    reader: &mut std::io::BufReader<std::process::ChildStdout>,
-) -> Result<ConsoleOutput> {
-    use std::io::Read as _;
-    const PROMPT: &[u8] = b"[decomp]> ";
-    let mut buf: Vec<u8> = Vec::with_capacity(256);
-    let mut byte = [0u8; 1];
-    loop {
-        let read = reader
-            .read(&mut byte)
-            .map_err(|e| NativeRuntimeError(format!("console read: {e}")))?;
-        if read == 0 {
-            return err("console closed before answering");
-        }
-        buf.push(byte[0]);
-        if byte[0] == b'\n' {
-            return Ok(ConsoleOutput::Line(
-                String::from_utf8_lossy(&buf).into_owned(),
-            ));
-        }
-        if buf.ends_with(PROMPT) {
-            return Ok(ConsoleOutput::Prompt(
-                String::from_utf8_lossy(&buf).into_owned(),
-            ));
-        }
-    }
-}
-
-fn read_until_prompt(reader: &mut std::io::BufReader<std::process::ChildStdout>) -> Result<String> {
-    use std::io::Read as _;
-    const PROMPT: &[u8] = b"[decomp]> ";
-    let mut buf: Vec<u8> = Vec::new();
-    let mut byte = [0u8; 1];
-    loop {
-        let n = reader
-            .read(&mut byte)
-            .map_err(|e| NativeRuntimeError(format!("console read: {e}")))?;
-        if n == 0 {
-            return err("console closed before prompt");
-        }
-        buf.push(byte[0]);
-        if buf.ends_with(PROMPT) {
-            return Ok(String::from_utf8_lossy(&buf).into_owned());
-        }
-    }
 }
 
 /// Maps the configured Ghidra language id + binary format to the BFD target
@@ -690,7 +567,7 @@ pub struct ConstantVarnode {
     pub size: u32,
 }
 
-/// One p-code varnode as the console prints it: `<space>:<offset>:<size>`.
+/// One p-code varnode, its space named as the translator names it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PcodeVarnode {
     pub space: String,
@@ -707,17 +584,6 @@ impl PcodeVarnode {
     /// temporary or a constant.
     pub fn is_persistent(&self) -> bool {
         self.space == "register" || self.space == "stack"
-    }
-    fn parse(text: &str) -> Option<Self> {
-        let mut parts = text.rsplitn(3, ':');
-        let size = parts.next()?.parse().ok()?;
-        let offset = u64::from_str_radix(parts.next()?.trim_start_matches("0x"), 16).ok()?;
-        let space = parts.next()?.to_string();
-        Some(Self {
-            space,
-            offset,
-            size,
-        })
     }
 }
 
@@ -818,7 +684,7 @@ pub struct FlowResult {
 
 /// Bounded SLEIGH evidence for an indirect transfer through a pointer slot.
 /// A slot alone is not an imported function: the loader must establish its identity.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LinkageResult {
     pub address: u64,
     /// Proven linkage-shape extent, even when its slot needs caller context.
@@ -835,1381 +701,58 @@ pub(crate) struct LinkageContext {
     pub target: u64,
 }
 
-#[derive(Debug, serde::Deserialize)]
-pub(crate) struct FunctionPatterns {
-    pub alignment: u64,
-    pub rules: Vec<FunctionPatternRule>,
-    pub matches: Vec<FunctionPatternMatch>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub(crate) struct FunctionPatternRule {
-    pub file: String,
-    pub actions: Vec<FunctionPatternAction>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub(crate) struct FunctionPatternAction {
-    pub kind: String,
-    pub attributes: std::collections::BTreeMap<String, String>,
-}
-
-#[derive(Debug, serde::Deserialize)]
-pub(crate) struct FunctionPatternMatch {
-    pub address: u64,
-    pub rule: usize,
-}
-
-pub fn console_flow(cfg: &RuntimeConfig, binary: &Path, address: u64) -> Result<FlowResult> {
-    if let Some(mut session) = mapped_console(cfg, binary)? {
-        return session.flow(address);
-    }
-    let console = find_console(cfg)?;
-    let ghroot = cfg.ghidra_install.to_string_lossy().into_owned();
-    let langs = cfg.language_dir.to_string_lossy().into_owned();
-
-    let target = bfd_target_for(&cfg.language_id, binary)?;
-    let mappings = crate::native::load_native_mappings(binary).unwrap_or_default();
-    let adjust_vma = mappings
-        .iter()
-        .find(|m| address >= m.vaddr && address < m.vaddr + m.size)
-        .or_else(|| mappings.first())
-        .map(|m| m.vaddr.wrapping_sub(m.file_off))
-        .unwrap_or(0);
-
-    let script = if cfg.language_id.starts_with("x86:") {
-        format!(
-            "load file {} {}\nflow 0x{:x}\nquit\n",
-            target,
-            binary.display(),
-            address
-        )
-    } else {
-        format!(
-            "load file {} {}\nadjust vma 0x{:x}\nflow 0x{:x}\nquit\n",
-            target,
-            binary.display(),
-            adjust_vma,
-            address
-        )
+/// Pointer-sized constants of one range under the strict policy (no
+/// reference-inference heuristics): what tests that pin that policy ask.
+#[cfg(test)]
+pub(crate) fn strict_constants(
+    cfg: &RuntimeConfig,
+    import: &NativeImport,
+    start: u64,
+    end: u64,
+) -> Result<Vec<ConstantFact>> {
+    let mut lane = propagation::Propagator::mapped(cfg, import)?;
+    let (functions, tables) = Default::default();
+    let query = propagation::Query {
+        start,
+        end,
+        trust_writable: false,
+        seeds: &[],
+        tracked: None,
+        mode_register: None,
+        externals: &[],
+        functions: &functions,
+        tables: &tables,
+        recover: false,
     };
-    let mut child = Command::new(&console)
-        .arg("-s")
-        .arg(&langs)
-        .env("SLEIGHHOME", &ghroot)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .map_err(|e| NativeRuntimeError(format!("console spawn: {e}")))?;
-
-    use std::io::Write as _;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| NativeRuntimeError("console stdin".into()))?
-        .write_all(script.as_bytes())
-        .map_err(|e| NativeRuntimeError(format!("console write: {e}")))?;
-
-    let out = child
-        .wait_with_output()
-        .map_err(|e| NativeRuntimeError(format!("console wait: {e}")))?;
-
-    let stdout = String::from_utf8_lossy(&out.stdout);
-    parse_flow_output(&stdout, address)
-}
-
-fn parse_address_token(text: &str) -> Option<u64> {
-    let clean = text
-        .trim()
-        .trim_start_matches(|c: char| c.is_alphabetic() || c == ':');
-    let hex = clean.trim_start_matches("0x");
-    (!hex.is_empty())
-        .then(|| u64::from_str_radix(hex, 16).ok())
-        .flatten()
-}
-
-fn parse_flow_output(stdout: &str, expected_addr: u64) -> Result<FlowResult> {
-    for line in stdout.lines() {
-        let line = line.trim();
-        if let Some(rest) = line.strip_prefix("FLOW ") {
-            let mut addr = expected_addr;
-            let mut length = 1u8;
-            let mut fallthrough = None;
-            let mut kind = FlowKind::Fallthrough;
-            let mut targets = Vec::new();
-            let mut pure_jump = false;
-            let mut no_op = false;
-            let mut terminal = false;
-            let mut conditional = false;
-            let mut return_op = false;
-            let mut delay_slots = Vec::new();
-            let mut mode = None;
-            let mut target_modes = Vec::new();
-            let mut metadata = 0u8;
-
-            for part in rest.split_whitespace() {
-                if let Some(val) = part.strip_prefix("len=") {
-                    length = val.parse().unwrap_or(1);
-                } else if let Some(val) = part.strip_prefix("fall=") {
-                    if val != "none" {
-                        fallthrough = parse_address_token(val);
-                    }
-                } else if let Some(val) = part.strip_prefix("kind=") {
-                    kind = match val {
-                        "BRANCH" => FlowKind::Branch,
-                        "CBRANCH" => FlowKind::CBranch,
-                        "BRANCHIND" => FlowKind::BranchInd,
-                        "CALL" => FlowKind::Call,
-                        "CALLIND" => FlowKind::CallInd,
-                        "RETURN" => FlowKind::Return,
-                        "BAD" => FlowKind::Bad,
-                        "UNIMPL" => FlowKind::Unimpl,
-                        _ => FlowKind::Fallthrough,
-                    };
-                } else if let Some(val) = part.strip_prefix("pure_jump=") {
-                    pure_jump = val == "1";
-                } else if let Some(val) = part.strip_prefix("no_op=") {
-                    no_op = val == "1";
-                } else if let Some(val) = part.strip_prefix("terminal=") {
-                    terminal = val == "1";
-                    metadata |= 1;
-                } else if let Some(val) = part.strip_prefix("conditional=") {
-                    conditional = val == "1";
-                    metadata |= 2;
-                } else if let Some(val) = part.strip_prefix("mode=") {
-                    mode = val.parse::<u64>().ok();
-                } else if let Some(val) = part.strip_prefix("flow_modes=") {
-                    for item in val.split(',').filter(|item| !item.is_empty()) {
-                        let (target, value) = item
-                            .split_once(':')
-                            .ok_or_else(|| NativeRuntimeError("invalid flow_modes entry".into()))?;
-                        let target = parse_address_token(target).ok_or_else(|| {
-                            NativeRuntimeError("invalid flow_modes target".into())
-                        })?;
-                        let value = value
-                            .parse::<u64>()
-                            .map_err(|_| NativeRuntimeError("invalid flow_modes value".into()))?;
-                        target_modes.push((target, value));
-                    }
-                } else if let Some(val) = part.strip_prefix("return_op=") {
-                    return_op = val == "1";
-                    metadata |= 4;
-                } else if let Some(val) = part.strip_prefix("delays=") {
-                    metadata |= 8;
-                    if !val.is_empty() {
-                        for item in val.split(',') {
-                            let length: u8 = item.parse().map_err(|_| {
-                                NativeRuntimeError("invalid delay-slot length".into())
-                            })?;
-                            if length == 0 {
-                                return err("zero delay-slot length");
-                            }
-                            delay_slots.push(length);
-                        }
-                    }
-                } else if let Some(val) = part.strip_prefix("targets=") {
-                    for t in val.split(',') {
-                        if let Some(target_addr) = parse_address_token(t) {
-                            targets.push(target_addr);
-                        }
-                    }
-                } else if let Some(a) = parse_address_token(part) {
-                    addr = a;
-                }
-            }
-            if metadata != 15 {
-                return err("console lacks instruction flow metadata; rebuild the native console");
-            }
-            if delay_slots.iter().map(|&size| size as usize).sum::<usize>() >= length as usize {
-                return err("delay slots exceed the instruction extent");
-            }
-            return Ok(FlowResult {
-                terminal,
-                conditional,
-                return_op,
-                delay_slots,
-                mode,
-                target_modes,
-                no_op,
-                pure_jump,
-                address: addr,
-                length,
-                fallthrough,
-                targets,
-                kind,
-            });
-        }
-    }
-    err(format!("console produced no FLOW line: {stdout}"))
-}
-/// Persistent SLEIGH console session (m1-003-b).
-///
-/// Spawns `decomp_native` once and reuses the process for many `flow`
-/// requests, avoiding the per-instruction spawn cost that makes the
-/// one-shot `console_flow` unsuitable for whole-binary discovery.
-pub struct ConsoleSession {
-    child: std::sync::Arc<std::sync::Mutex<std::process::Child>>,
-    watchdog: Option<ConsoleWatchdog>,
-    reaped: bool,
-    stdin: std::process::ChildStdin,
-    reader: std::io::BufReader<std::process::ChildStdout>,
-    config: RuntimeConfig,
-    reference_labels: Option<Vec<(u64, String)>>,
-    reference_registers: Vec<crate::native::NativeRegisterContext>,
-    active_reference_registers: usize,
-    reference_call_register: Option<&'static str>,
-    /// Import slots the loaded image names, sorted: a read of one answers
-    /// the external, as `VarnodeContext.getValue` does (:540-544).
-    external_slots: Vec<u64>,
-    /// The register an interworking branch writes the target's instruction
-    /// set into, under the name Ghidra's analyzers use for it: the spec
-    /// bundle's `<register name="TB" alias="ISAModeSwitch"/>` names ARM's;
-    /// MIPS declares a register of that name outright.
-    reference_mode_register: Option<String>,
-    new_reference_targets: Vec<u64>,
-    /// Commands written to this console. Batching is a claim about this
-    /// number against the instructions decoded, not about wall time.
-    requests: u64,
-}
-
-struct ConsoleWatchdog {
-    stop: std::sync::mpsc::Sender<()>,
-    thread: Option<std::thread::JoinHandle<()>>,
-}
-
-impl ConsoleWatchdog {
-    fn new(
-        child: std::sync::Arc<std::sync::Mutex<std::process::Child>>,
-        cancel: crate::exec::CancelToken,
-        deadline: std::time::Instant,
-    ) -> Self {
-        let (stop, receiver) = std::sync::mpsc::channel();
-        let thread = std::thread::spawn(move || {
-            loop {
-                if cancel.is_cancelled() || std::time::Instant::now() >= deadline {
-                    crate::exec::kill_child(
-                        &mut child.lock().unwrap_or_else(|error| error.into_inner()),
-                    );
-                    break;
-                }
-                let interval = deadline
-                    .saturating_duration_since(std::time::Instant::now())
-                    .min(std::time::Duration::from_millis(10));
-                if receiver.recv_timeout(interval)
-                    != Err(std::sync::mpsc::RecvTimeoutError::Timeout)
-                {
-                    break;
-                }
-            }
-        });
-        Self {
-            stop,
-            thread: Some(thread),
-        }
-    }
-}
-
-impl Drop for ConsoleWatchdog {
-    fn drop(&mut self) {
-        let _ = self.stop.send(());
-        if let Some(thread) = self.thread.take() {
-            let _ = thread.join();
-        }
-    }
-}
-
-/// One session's reference context as plain data (see
-/// `ConsoleSession::reference_shard_spec`).
-pub(crate) struct ReferenceShardSpec {
-    labels: Option<Vec<(u64, String)>>,
-    registers: Vec<crate::native::NativeRegisterContext>,
-    active: usize,
-    call_register: Option<&'static str>,
-    mode_register: Option<String>,
-    external_slots: Vec<u64>,
-}
-
-impl ConsoleSession {
-    /// Spawn the console and wait for the first interactive prompt.
-    pub fn new(cfg: &RuntimeConfig) -> Result<Self> {
-        Self::launch(cfg, None)
-    }
-
-    pub fn new_controlled(
-        cfg: &RuntimeConfig,
-        request: &crate::exec::ExecutionRequest,
-    ) -> Result<Self> {
-        Self::launch(cfg, Some((request.cancel.clone(), request.deadline)))
-    }
-
-    pub(crate) fn launch(
-        cfg: &RuntimeConfig,
-        control: Option<(crate::exec::CancelToken, std::time::Instant)>,
-    ) -> Result<Self> {
-        let console = find_console(cfg)?;
-        let ghroot = cfg.ghidra_install.to_string_lossy().into_owned();
-        let langs = cfg.language_dir.to_string_lossy().into_owned();
-
-        let mut command = Command::new(&console);
-        #[cfg(unix)]
-        {
-            use std::os::unix::process::CommandExt;
-            command.process_group(0);
-        }
-        let mut child = command
-            .arg("-s")
-            .arg(&langs)
-            .env("SLEIGHHOME", &ghroot)
-            .env("ROMWRIGHT_PARENT_PID", std::process::id().to_string())
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .spawn()
-            .map_err(|e| NativeRuntimeError(format!("console spawn: {e}")))?;
-
-        let stdin = child.stdin.take().expect("console stdin");
-        let stdout = child.stdout.take().expect("console stdout");
-        let mut reader = std::io::BufReader::with_capacity(128 * 1024, stdout);
-        let child = std::sync::Arc::new(std::sync::Mutex::new(child));
-        let watchdog =
-            control.map(|(cancel, deadline)| ConsoleWatchdog::new(child.clone(), cancel, deadline));
-
-        // The console prints an initial "[decomp]> " prompt.
-        if let Err(error) = read_until_prompt(&mut reader) {
-            drop(watchdog);
-            let mut child = child.lock().unwrap_or_else(|error| error.into_inner());
-            crate::exec::kill_child(&mut child);
-            let _ = child.wait();
-            return Err(error);
-        }
-
-        Ok(Self {
-            child,
-            watchdog,
-            reaped: false,
-            stdin,
-            reader,
-            config: cfg.clone(),
-            reference_labels: None,
-            reference_registers: Vec::new(),
-            active_reference_registers: 0,
-            reference_call_register: None,
-            external_slots: Vec::new(),
-            reference_mode_register: None,
-            new_reference_targets: Vec::new(),
-            requests: 0,
-        })
-    }
-
-    pub(crate) fn set_control(
-        &mut self,
-        control: Option<(crate::exec::CancelToken, std::time::Instant)>,
-    ) {
-        self.watchdog.take();
-        self.watchdog = control
-            .map(|(cancel, deadline)| ConsoleWatchdog::new(self.child.clone(), cancel, deadline));
-    }
-
-    /// Load ELF/DOL through the native mapped image. Other formats retain
-    /// their BFD/raw address-base handling.
-    pub fn load(&mut self, binary: &Path, base: u64) -> Result<()> {
-        self.reference_labels = None;
-        self.reference_registers.clear();
-        self.active_reference_registers = 0;
-        self.reference_call_register = None;
-        self.new_reference_targets.clear();
-        if let Some(import) = MappedImage::parse_binary(&self.config, binary)? {
-            return self.load_mapped(&import);
-        }
-        let target = bfd_target_for(&self.config.language_id, binary)?;
-        let script = if self.config.language_id.starts_with("x86:") {
-            format!("load file {} {}\n", target, binary.display())
-        } else {
-            format!(
-                "load file {} {}\nadjust vma 0x{:x}\n",
-                target,
-                binary.display(),
-                base
-            )
-        };
-        self.send(&script)?;
-
-        // One prompt per command written (load + optional adjust).
-        let prompts = if self.config.language_id.starts_with("x86:") {
-            1
-        } else {
-            2
-        };
-        for _ in 0..prompts {
-            let _ = read_until_prompt(&mut self.reader)?;
-        }
-        Ok(())
-    }
-
-    /// Load existing native mappings without flattening sparse virtual addresses.
-    pub fn load_mapped(&mut self, import: &NativeImport) -> Result<()> {
-        let image = MappedImage::new(import)?;
-        self.load_xml(&image)?;
-        // The image's own mode declarations, before anything decodes.
-        // Context variables only: register values travel in
-        // `register_contexts`, never here (the console rejects real
-        // registers, and the spec resolves these rows as variables).
-        self.set_contexts(&import.contexts)
-    }
-
-    fn load_xml(&mut self, image: &MappedImage) -> Result<()> {
-        self.reference_labels = None;
-        self.reference_registers.clear();
-        self.active_reference_registers = 0;
-        self.reference_call_register = None;
-        self.new_reference_targets.clear();
-        self.send(&image.command())?;
-        let response = read_until_prompt(&mut self.reader)?;
-        if !response.contains("successfully loaded:") {
-            return err(format!("mapped image load failed: {response}"));
-        }
-        Ok(())
-    }
-
-    /// Propagate a function over `[start, end)` without changing the loaded image.
-    ///
-    /// Facts contain only pointer-sized constants targeting a supplied mapping.
-    /// Writable initial memory is untrusted unless explicitly enabled; unknown
-    /// calls still invalidate it. Unsupported or failed requests return errors,
-    /// not an empty successful analysis.
-    pub fn constants(
-        &mut self,
-        start: u64,
-        end: u64,
-        mappings: &[crate::native::Mapping],
-        trust_writable: bool,
-    ) -> Result<Vec<ConstantFact>> {
-        self.propagation_query(
-            "constants",
-            "CONSTANTS ",
-            start,
-            end,
-            mappings,
-            trust_writable,
-        )?
+    lane.constants(&query)?
         .ok_or_else(|| NativeRuntimeError(format!("constants at {start:#x} are undecodable")))
-    }
-
-    /// Infer read/write/data references without mutating the loaded image.
-    /// `None` means the console refused this range as undecodable.
-    pub fn optional_references(
-        &mut self,
-        start: u64,
-        end: u64,
-        mappings: &[crate::native::Mapping],
-        trust_writable: bool,
-    ) -> Result<Option<Vec<ReferenceFact>>> {
-        self.propagation_query(
-            "references",
-            "REFERENCES ",
-            start,
-            end,
-            mappings,
-            trust_writable,
-        )
-    }
-
-    /// Facts for a range the caller already knows decodes.
-    pub fn references(
-        &mut self,
-        start: u64,
-        end: u64,
-        mappings: &[crate::native::Mapping],
-        trust_writable: bool,
-    ) -> Result<Vec<ReferenceFact>> {
-        self.optional_references(start, end, mappings, trust_writable)?
-            .ok_or_else(|| NativeRuntimeError(format!("references at {start:#x} are undecodable")))
-    }
-
-    /// Names the pinned patterns attached to the starts they proved. The
-    /// console already consumes these to install call fixups; the store wants
-    /// the same names on its functions.
-    pub(crate) fn pattern_labels(&self) -> &[(u64, String)] {
-        self.reference_labels.as_deref().unwrap_or(&[])
-    }
-
-    pub(crate) fn prepare_reference_context(&mut self, import: &NativeImport) -> Result<()> {
-        self.reference_registers
-            .clone_from(&import.register_contexts);
-        self.active_reference_registers = self.reference_registers.len();
-        self.reference_call_register = import.reference_call_register;
-        self.external_slots = import
-            .externals
-            .iter()
-            .map(|(slot, _)| *slot)
-            .filter(|slot| *slot != 0)
-            .collect();
-        self.external_slots.sort_unstable();
-        self.external_slots.dedup();
-        self.reference_mode_register = mode_register_alias(&import.cfg.spec_root, &import.language);
-        self.new_reference_targets.clear();
-        if self.reference_labels.is_none() {
-            // Only byte-backed ranges are searchable: a section's virtual
-            // extent can outrun its contents, and the load image raises
-            // DataUnavailError for the rest.
-            let ranges = crate::native::code_ranges(import);
-            self.function_patterns(&ranges)?;
-        }
-        self.send_reference_fixups(import)
-    }
-
-    /// Applies context register values before anything decodes. A context is
-    /// only honoured for an address the console has not parsed yet: the
-    /// disassembly cache keys parsed instructions by address
-    /// (`DisassemblyCache`, sleigh.hh:107-122), so the caller sends these
-    /// immediately after the image loads.
-    pub(crate) fn set_contexts(&mut self, contexts: &[crate::native::NativeContext]) -> Result<()> {
-        use std::fmt::Write as _;
-        if contexts.is_empty() {
-            return Ok(());
-        }
-        // Written in batches: one write of every command would fill the
-        // console's stdout pipe while it waits for the rest of its input, and
-        // both sides would block. An image can declare thousands of these.
-        for batch in contexts.chunks(128) {
-            let mut script = String::new();
-            for context in batch {
-                if context.name.is_empty()
-                    || context
-                        .name
-                        .chars()
-                        .any(|c| !c.is_ascii_alphanumeric() && c != '_')
-                {
-                    return err(format!("invalid context register name: {}", context.name));
-                }
-                let _ = writeln!(
-                    script,
-                    "context {} 0x{:x} {}",
-                    context.name, context.address, context.value
-                );
-            }
-            self.send(&script)?;
-            for _ in 0..batch.len() {
-                let response = read_until_prompt(&mut self.reader)?;
-                if !response.contains("CONTEXT ") {
-                    return err(format!("context command failed: {}", response.trim()));
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// Names the pattern-proven function starts inside this console, so a
-    /// propagated call lands on a real function instead of raw bytes.
-    fn send_reference_fixups(&mut self, import: &NativeImport) -> Result<()> {
-        use std::fmt::Write as _;
-        let mut script = String::new();
-        let mut count = 0;
-        let Some(labels) = self.reference_labels.as_ref() else {
-            return err("reference fixups need function patterns");
-        };
-        for (address, label) in labels {
-            if !import
-                .functions
-                .iter()
-                .any(|function| function.entry == *address && function.size > 1)
-            {
-                continue;
-            }
-            if label.is_empty() || label.chars().any(|c| c.is_whitespace() || c.is_control()) {
-                return err("invalid function-pattern label");
-            }
-            let _ = writeln!(script, "referencefixup 0x{address:x} {label}");
-            count += 1;
-        }
-        if count != 0 {
-            // Batched for the same reason as `set_contexts`: one write of
-            // every command would deadlock against the console's own output.
-            let mut pending = 0usize;
-            let mut chunk = String::new();
-            for line in script.lines() {
-                chunk.push_str(line);
-                chunk.push('\n');
-                pending += 1;
-                if pending == 128 {
-                    self.flush_fixups(&chunk, pending)?;
-                    chunk.clear();
-                    pending = 0;
-                }
-            }
-            if pending != 0 {
-                self.flush_fixups(&chunk, pending)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Writes one batch of `referencefixup` commands and reads its answers.
-    fn flush_fixups(&mut self, script: &str, count: usize) -> Result<()> {
-        self.send(script)?;
-        for _ in 0..count {
-            let response = read_until_prompt(&mut self.reader)?;
-            if !response
-                .lines()
-                .any(|line| matches!(line, "FIXUP 0" | "FIXUP 1"))
-            {
-                return err(format!("reference context failed: {response}"));
-            }
-        }
-        Ok(())
-    }
-
-    /// Commands written to this console so far.
-    pub(crate) fn requests(&self) -> u64 {
-        self.requests
-    }
-
-    /// Everything a shard needs to reach this session's exact reference
-    /// context. Plain data, so shards can be opened concurrently: console
-    /// startup is serial work otherwise, and it dominates a short round.
-    pub(crate) fn reference_shard_spec(&self) -> ReferenceShardSpec {
-        ReferenceShardSpec {
-            labels: self.reference_labels.clone(),
-            registers: self.reference_registers.clone(),
-            active: self.active_reference_registers,
-            call_register: self.reference_call_register,
-            mode_register: self.reference_mode_register.clone(),
-            external_slots: self.external_slots.clone(),
-        }
-    }
-
-    /// Opens `count` more consoles on the same image, concurrently: console
-    /// startup is serial work that would otherwise dominate a short round.
-    /// A shard is an optimization, so one that fails to open is dropped.
-    pub(crate) fn open_image_shards(import: &NativeImport, count: usize) -> Vec<Self> {
-        if count == 0 {
-            return Vec::new();
-        }
-        std::thread::scope(|scope| {
-            let handles: Vec<_> = (0..count)
-                .map(|_| {
-                    scope.spawn(|| {
-                        let mut shard = Self::new(&import.cfg)?;
-                        shard.load_mapped(import)?;
-                        Ok::<Self, NativeRuntimeError>(shard)
-                    })
-                })
-                .collect();
-            handles
-                .into_iter()
-                .filter_map(|handle| handle.join().ok().and_then(|shard| shard.ok()))
-                .collect()
-        })
-    }
-
-    /// Gives this console `spec`'s reference context. One round of the
-    /// reference pass never reads a context discovered inside that round, so
-    /// shards observe identical inputs and produce the same facts as a
-    /// single session would.
-    pub(crate) fn prepare_as_reference_shard(
-        &mut self,
-        spec: &ReferenceShardSpec,
-        import: &NativeImport,
-    ) -> Result<()> {
-        self.reference_labels.clone_from(&spec.labels);
-        self.reference_registers.clone_from(&spec.registers);
-        self.active_reference_registers = spec.active;
-        self.reference_call_register = spec.call_register;
-        self.reference_mode_register = spec.mode_register.clone();
-        self.external_slots.clone_from(&spec.external_slots);
-        self.new_reference_targets.clear();
-        self.send_reference_fixups(import)
-    }
-
-    /// Replaces this session's register context before a round; the whole
-    /// context is active, matching `take_reference_context_targets`.
-    pub(crate) fn sync_reference_context(
-        &mut self,
-        contexts: &[crate::native::NativeRegisterContext],
-    ) {
-        self.reference_registers = contexts.to_vec();
-        self.active_reference_registers = contexts.len();
-        self.new_reference_targets.clear();
-    }
-
-    /// The register context this session queries with.
-    pub(crate) fn reference_contexts(&self) -> &[crate::native::NativeRegisterContext] {
-        &self.reference_registers
-    }
-
-    /// Removes and returns the contexts this session discovered past `keep`.
-    pub(crate) fn drain_discovered_contexts(
-        &mut self,
-        keep: usize,
-    ) -> Vec<crate::native::NativeRegisterContext> {
-        self.new_reference_targets.clear();
-        if self.reference_registers.len() <= keep {
-            return Vec::new();
-        }
-        self.reference_registers.split_off(keep)
-    }
-
-    /// Adds `contexts` that are not already covered, returning their targets.
-    pub(crate) fn adopt_reference_contexts(
-        &mut self,
-        contexts: Vec<crate::native::NativeRegisterContext>,
-    ) -> Vec<u64> {
-        let mut targets = Vec::new();
-        for context in contexts {
-            if self.reference_registers.iter().any(|existing| {
-                existing.register == context.register
-                    && existing.start <= context.start
-                    && context.start < existing.end
-            }) {
-                continue;
-            }
-            targets.push(context.start);
-            self.reference_registers.push(context);
-        }
-        self.active_reference_registers = self.reference_registers.len();
-        targets
-    }
-
-    fn propagation_query<T: serde::de::DeserializeOwned>(
-        &mut self,
-        command: &str,
-        prefix: &str,
-        start: u64,
-        end: u64,
-        mappings: &[crate::native::Mapping],
-        trust_writable: bool,
-    ) -> Result<Option<Vec<T>>> {
-        use std::fmt::Write as _;
-        let mut script = String::with_capacity(64 + mappings.len() * 48);
-        let _ = write!(
-            script,
-            "{command} 0x{start:x} 0x{end:x} {}",
-            u8::from(trust_writable)
-        );
-        for mapping in mappings.iter().filter(|mapping| mapping.size != 0) {
-            let mapping_end = mapping.vaddr.checked_add(mapping.size).ok_or_else(|| {
-                NativeRuntimeError("constant-propagation mapping range overflows".into())
-            })?;
-            let _ = write!(
-                script,
-                " 0x{:x} 0x{mapping_end:x} {}",
-                mapping.vaddr,
-                mapping.flags & 7
-            );
-        }
-        for slot in &self.external_slots {
-            let _ = write!(script, " --external 0x{slot:x}");
-        }
-        if command == "references" {
-            if let Some(register) = self.reference_call_register {
-                if register.is_empty()
-                    || register
-                        .chars()
-                        .any(|c| c.is_whitespace() || c.is_control())
-                {
-                    return err("invalid call-context register");
-                }
-                let _ = write!(script, " --track-register {register}");
-            }
-            if let Some(register) = self.reference_mode_register.as_deref() {
-                if register.is_empty()
-                    || register
-                        .chars()
-                        .any(|c| c.is_whitespace() || c.is_control())
-                {
-                    return err("invalid mode register");
-                }
-                let _ = write!(script, " --mode-register {register}");
-            }
-            for context in self
-                .reference_registers
-                .iter()
-                .take(self.active_reference_registers)
-            {
-                if context.start <= start && start < context.end {
-                    if context.register.is_empty()
-                        || context
-                            .register
-                            .chars()
-                            .any(|c| c.is_whitespace() || c.is_control())
-                    {
-                        return err("invalid reference context register");
-                    }
-                    let _ = write!(
-                        script,
-                        " --register {} 0x{:x}",
-                        context.register, context.value
-                    );
-                }
-            }
-        }
-        script.push('\n');
-        self.send(&script)?;
-        let response = read_until_prompt(&mut self.reader)?;
-        let payload = match response
-            .lines()
-            .find_map(|line| line.trim().strip_prefix(prefix))
-        {
-            Some(payload) => payload,
-            // The console refuses one undecodable range without ending the
-            // session; unknown flow yields no facts and aborts nothing. Any
-            // other failure still stops the caller.
-            None if response.contains(UNDECODABLE) => return Ok(None),
-            None => {
-                return Err(NativeRuntimeError(format!(
-                    "{command} query failed: {response}"
-                )));
-            }
-        };
-        let facts = serde_json::from_str(payload)
-            .map_err(|error| NativeRuntimeError(format!("invalid {command} facts: {error}")))?;
-        if command == "references" {
-            if let Some(register) = self.reference_call_register {
-                #[derive(serde::Deserialize)]
-                struct CallRegister {
-                    target: u64,
-                    value: u64,
-                }
-                let payload = response
-                    .lines()
-                    .find_map(|line| line.strip_prefix("CALL_REGISTERS "))
-                    .ok_or_else(|| {
-                        NativeRuntimeError(format!("missing call-context facts: {response}"))
-                    })?;
-                let contexts: Vec<CallRegister> =
-                    serde_json::from_str(payload).map_err(|error| {
-                        NativeRuntimeError(format!("invalid call-context facts: {error}"))
-                    })?;
-                for context in contexts {
-                    if self.reference_registers.iter().any(|existing| {
-                        existing.register == register
-                            && existing.start <= context.target
-                            && context.target < existing.end
-                    }) {
-                        continue;
-                    }
-                    let end = context.target.checked_add(1).ok_or_else(|| {
-                        NativeRuntimeError("call-context address overflow".into())
-                    })?;
-                    self.reference_registers
-                        .push(crate::native::NativeRegisterContext {
-                            start: context.target,
-                            end,
-                            register: register.into(),
-                            value: context.value,
-                        });
-                    self.new_reference_targets.push(context.target);
-                }
-            }
-        }
-        Ok(Some(facts))
-    }
-
-    /// Ask the console for the control-flow of one instruction.
-    pub fn flow(&mut self, address: u64) -> Result<FlowResult> {
-        let script = format!("flow 0x{:x}\n", address);
-        self.send(&script)?;
-
-        use std::io::{BufRead as _, Read as _};
-        // The console echoes the command; read and discard it.
-        let mut echo = String::new();
-        if self
-            .reader
-            .read_line(&mut echo)
-            .map_err(|e| NativeRuntimeError(format!("console read: {e}")))?
-            == 0
-        {
-            return err("console closed before flow output");
-        }
-
-        let mut line = String::new();
-        let n = self
-            .reader
-            .read_line(&mut line)
-            .map_err(|e| NativeRuntimeError(format!("console read: {e}")))?;
-        if n == 0 {
-            return err("console closed before flow output");
-        }
-
-        // Every command is followed by the prompt "[decomp]> " (no newline).
-        let mut prompt = [0u8; 10];
-        self.reader
-            .read_exact(&mut prompt)
-            .map_err(|e| NativeRuntimeError(format!("console prompt: {e}")))?;
-
-        // Bad addresses produce a "Low-level ERROR" line and no FLOW.
-        if line.contains("Low-level ERROR") {
-            return Ok(FlowResult {
-                terminal: false,
-                conditional: false,
-                return_op: false,
-                delay_slots: Vec::new(),
-                mode: None,
-                target_modes: Vec::new(),
-                no_op: false,
-                pure_jump: false,
-                address,
-                length: 1,
-                fallthrough: Some(address + 1),
-                targets: Vec::new(),
-                kind: FlowKind::Bad,
-            });
-        }
-
-        parse_flow_output(&line, address)
-    }
-
-    /// Same as `flow` but never fails: unparseable/missing output becomes a
-    /// length-1 `Bad` result so a walk can continue.
-    pub fn try_flow(&mut self, address: u64) -> FlowResult {
-        self.flow(address).unwrap_or(FlowResult {
-            terminal: false,
-            conditional: false,
-            return_op: false,
-            delay_slots: Vec::new(),
-            mode: None,
-            target_modes: Vec::new(),
-            no_op: false,
-            pure_jump: false,
-            address,
-            length: 1,
-            fallthrough: Some(address + 1),
-            targets: Vec::new(),
-            kind: FlowKind::Bad,
-        })
-    }
-    /// Queries control-flow for multiple addresses, one bounded request
-    /// per chunk. A single write of the whole list would fill the
-    /// console's stdin pipe while it fills our stdout pipe answering,
-    /// and both sides would block (seen on a relocation round with
-    /// hundreds of thousands of candidates); every chunk's replies are
-    /// read before the next chunk is sent.
-    pub fn flow_batch(&mut self, addresses: &[u64]) -> Result<Vec<FlowResult>> {
-        if addresses.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut results = Vec::with_capacity(addresses.len());
-        for chunk in addresses.chunks(1024) {
-            results.extend(self.flow_chunk(chunk)?);
-        }
-        Ok(results)
-    }
-
-    fn flow_chunk(&mut self, addresses: &[u64]) -> Result<Vec<FlowResult>> {
-        use std::fmt::Write as _;
-        let mut script = String::with_capacity(addresses.len() * 12 + 8);
-        script.push_str("flow");
-        for addr in addresses {
-            let _ = write!(script, " 0x{:x}", addr);
-        }
-        script.push('\n');
-        self.send(&script)?;
-
-        // The echo of the command itself.
-        let echo = match read_line_or_prompt(&mut self.reader)? {
-            ConsoleOutput::Line(line) => line,
-            ConsoleOutput::Prompt(text) => {
-                return err(format!("console answered no flow output: {}", text.trim()));
-            }
-        };
-        let _ = echo;
-
-        let mut results = Vec::with_capacity(addresses.len());
-        for (index, &addr) in addresses.iter().enumerate() {
-            let line = match read_line_or_prompt(&mut self.reader)? {
-                ConsoleOutput::Line(line) => line,
-                // The prompt before the last result: the console refused the
-                // request (an unloaded image, a parse error) and said so once
-                // instead of once per address.
-                ConsoleOutput::Prompt(text) => {
-                    return err(format!(
-                        "console answered {index} of {} flow results (first unanswered 0x{:x}): {}",
-                        addresses.len(),
-                        addr,
-                        text.trim()
-                    ));
-                }
-            };
-            if line.contains("Execution error") || line.contains("Command parsing error") {
-                return err(format!("console refused the flow request: {}", line.trim()));
-            }
-            if line.contains("Low-level ERROR") {
-                results.push(FlowResult {
-                    terminal: false,
-                    conditional: false,
-                    return_op: false,
-                    delay_slots: Vec::new(),
-                    mode: None,
-                    target_modes: Vec::new(),
-                    no_op: false,
-                    pure_jump: false,
-                    address: addr,
-                    length: 1,
-                    fallthrough: Some(addr + 1),
-                    targets: Vec::new(),
-                    kind: FlowKind::Bad,
-                });
-            } else {
-                results.push(parse_flow_output(&line, addr).unwrap_or(FlowResult {
-                    terminal: false,
-                    conditional: false,
-                    return_op: false,
-                    delay_slots: Vec::new(),
-                    mode: None,
-                    target_modes: Vec::new(),
-                    no_op: false,
-                    pure_jump: false,
-                    address: addr,
-                    length: 1,
-                    fallthrough: Some(addr + 1),
-                    targets: Vec::new(),
-                    kind: FlowKind::Bad,
-                }));
-            }
-        }
-
-        // The trailing prompt, which every answered request ends with.
-        match read_line_or_prompt(&mut self.reader)? {
-            ConsoleOutput::Prompt(_) => Ok(results),
-            ConsoleOutput::Line(line) => err(format!(
-                "console said more than it was asked for: {}",
-                line.trim()
-            )),
-        }
-    }
-
-    /// Reads the p-code of each address in one batch request.
-    ///
-    /// This is the console's `pcode` command: SLEIGH's own operations for the
-    /// instruction, in emission order, with no analysis applied. The reasoning
-    /// over them happens in Rust (`native::vsa`).
-    pub fn pcode_batch(&mut self, addresses: &[u64]) -> Result<Vec<PcodeInstruction>> {
-        if addresses.is_empty() {
-            return Ok(Vec::new());
-        }
-        // Bounded requests like flow_batch: one write of a huge list
-        // would deadlock against the console's answers in the pipes.
-        let mut out = Vec::with_capacity(addresses.len());
-        for chunk in addresses.chunks(1024) {
-            out.extend(self.pcode_chunk(chunk)?);
-        }
-        Ok(out)
-    }
-
-    fn pcode_chunk(&mut self, addresses: &[u64]) -> Result<Vec<PcodeInstruction>> {
-        use std::fmt::Write as _;
-        let mut script = String::with_capacity(addresses.len() * 12 + 8);
-        script.push_str("pcode");
-        for addr in addresses {
-            let _ = write!(script, " 0x{addr:x}");
-        }
-        script.push('\n');
-        self.send(&script)?;
-        // The echo of the command itself.
-        match read_line_or_prompt(&mut self.reader)? {
-            ConsoleOutput::Line(_) => {}
-            ConsoleOutput::Prompt(text) => {
-                return err(format!("console answered no p-code: {}", text.trim()));
-            }
-        }
-        let mut out: Vec<PcodeInstruction> = Vec::with_capacity(addresses.len());
-        loop {
-            let line = match read_line_or_prompt(&mut self.reader)? {
-                ConsoleOutput::Line(line) => line,
-                ConsoleOutput::Prompt(text) => {
-                    return err(format!(
-                        "console stopped after {} of {} p-code answers: {}",
-                        out.len(),
-                        addresses.len(),
-                        text.trim()
-                    ));
-                }
-            };
-            let line = line.trim();
-            if line == "PCODE end" {
-                break;
-            }
-            if line.contains("Execution error") || line.contains("Command parsing error") {
-                return err(format!("console refused the p-code request: {line}"));
-            }
-            if let Some(rest) = line.strip_prefix("PCODE ") {
-                let mut fields = rest.split_whitespace();
-                let address = fields
-                    .next()
-                    .and_then(|text| {
-                        u64::from_str_radix(
-                            text.trim_start_matches(|c: char| !c.is_ascii_hexdigit())
-                                .trim_start_matches("0x"),
-                            16,
-                        )
-                        .ok()
-                    })
-                    .unwrap_or(0);
-                let mut length = 1u8;
-                let mut error = None;
-                for field in fields {
-                    if let Some(value) = field.strip_prefix("len=") {
-                        length = value.parse().unwrap_or(1);
-                    } else if let Some(value) = field.strip_prefix("error=") {
-                        error = Some(value.to_string());
-                    }
-                }
-                out.push(PcodeInstruction {
-                    address,
-                    length,
-                    ops: Vec::new(),
-                    error,
-                });
-                continue;
-            }
-            if let Some(rest) = line.strip_prefix("OP ") {
-                let Some(instruction) = out.last_mut() else {
-                    continue;
-                };
-                let mut fields = rest.split_whitespace();
-                let _index = fields.next();
-                let Some(opcode) = fields.next() else {
-                    continue;
-                };
-                let mut op = PcodeOp {
-                    opcode: opcode.to_string(),
-                    output: None,
-                    inputs: Vec::new(),
-                };
-                for field in fields {
-                    let Some((label, value)) = field.split_once('=') else {
-                        continue;
-                    };
-                    let Some(varnode) = PcodeVarnode::parse(value) else {
-                        continue;
-                    };
-                    if label == "out" {
-                        op.output = Some(varnode);
-                    } else {
-                        op.inputs.push(varnode);
-                    }
-                }
-                instruction.ops.push(op);
-            }
-        }
-        // The trailing prompt every answered request ends with.
-        match read_line_or_prompt(&mut self.reader)? {
-            ConsoleOutput::Prompt(_) => Ok(out),
-            ConsoleOutput::Line(line) => err(format!(
-                "console said more than it was asked for: {}",
-                line.trim()
-            )),
-        }
-    }
-
-    /// Same as `flow_batch` but never errors, returning fallback results on failure.
-    pub fn try_flow_batch(&mut self, addresses: &[u64]) -> Vec<FlowResult> {
-        self.flow_batch(addresses).unwrap_or_else(|_| {
-            addresses
-                .iter()
-                .map(|&addr| FlowResult {
-                    terminal: false,
-                    conditional: false,
-                    return_op: false,
-                    delay_slots: Vec::new(),
-                    mode: None,
-                    target_modes: Vec::new(),
-                    no_op: false,
-                    pure_jump: false,
-                    address: addr,
-                    length: 1,
-                    fallthrough: Some(addr + 1),
-                    targets: Vec::new(),
-                    kind: FlowKind::Bad,
-                })
-                .collect()
-        })
-    }
-
-    /// Identify linkage stubs without reading or fabricating imported pointer values.
-    pub fn linkage_batch(&mut self, addresses: &[u64]) -> Result<Vec<LinkageResult>> {
-        self.query_linkages(addresses, "linkage")
-    }
-
-    /// PLT metadata establishes entry boundaries; register setup need not be pure.
-    pub(crate) fn plt_linkage_batch(&mut self, addresses: &[u64]) -> Result<Vec<LinkageResult>> {
-        self.query_linkages(addresses, "linkage --table")
-    }
-
-    pub(crate) fn context_linkage_batch(
-        &mut self,
-        contexts: &[LinkageContext],
-    ) -> Result<Vec<LinkageResult>> {
-        use std::fmt::Write as _;
-        if contexts.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut command = String::with_capacity(contexts.len() * 57 + 15);
-        command.push_str("linkage --from");
-        for context in contexts {
-            let _ = write!(
-                command,
-                " 0x{:x} 0x{:x} 0x{:x}",
-                context.origin, context.branch, context.target
-            );
-        }
-        command.push('\n');
-        self.send(&command)?;
-        self.read_linkages(contexts.iter().map(|context| context.target))
-    }
-
-    fn query_linkages(&mut self, addresses: &[u64], prefix: &str) -> Result<Vec<LinkageResult>> {
-        use std::fmt::Write as _;
-        if addresses.is_empty() {
-            return Ok(Vec::new());
-        }
-        let mut command = String::with_capacity(addresses.len() * 19 + prefix.len() + 1);
-        command.push_str(prefix);
-        for address in addresses {
-            let _ = write!(command, " 0x{address:x}");
-        }
-        command.push('\n');
-        self.send(&command)?;
-        self.read_linkages(addresses.iter().copied())
-    }
-
-    fn read_linkages(
-        &mut self,
-        expected: impl ExactSizeIterator<Item = u64>,
-    ) -> Result<Vec<LinkageResult>> {
-        let response = read_until_prompt(&mut self.reader)?;
-        let results: Vec<LinkageResult> = response
-            .lines()
-            .filter_map(|line| line.strip_prefix("LINKAGE "))
-            .map(|line| {
-                serde_json::from_str(line).map_err(|error| {
-                    NativeRuntimeError(format!("invalid linkage response: {error}"))
-                })
-            })
-            .collect::<Result<_>>()?;
-        if results.len() != expected.len()
-            || results.iter().zip(expected).any(|(result, address)| {
-                result.address != address
-                    || (result.length != 0) != (result.slot.is_some() || result.needs_context)
-                    || (result.needs_context && result.slot.is_some())
-            })
-        {
-            return err("incomplete or mismatched linkage response");
-        }
-        Ok(results)
-    }
-
-    pub(crate) fn function_patterns(&mut self, ranges: &[(u64, u64)]) -> Result<FunctionPatterns> {
-        use std::fmt::Write as _;
-        let mut command = String::from("functionstarts");
-        for &(start, end) in ranges {
-            if start >= end {
-                return err("invalid function-pattern search range");
-            }
-            let _ = write!(command, " 0x{start:x} 0x{end:x}");
-        }
-        command.push('\n');
-        self.send(&command)?;
-        let response = read_until_prompt(&mut self.reader)?;
-        let mut lines = response
-            .lines()
-            .filter_map(|line| line.strip_prefix("PATTERNS "));
-        let patterns: FunctionPatterns = serde_json::from_str(
-            lines
-                .next()
-                .ok_or_else(|| NativeRuntimeError("missing function-pattern response".into()))?,
-        )
-        .map_err(|error| {
-            NativeRuntimeError(format!("invalid function-pattern response: {error}"))
-        })?;
-        if lines.next().is_some()
-            || patterns.alignment == 0
-            || patterns.matches.iter().any(|hit| {
-                hit.rule >= patterns.rules.len()
-                    || !ranges
-                        .iter()
-                        .any(|&(start, end)| start <= hit.address && hit.address < end)
-            })
-        {
-            return err("mismatched function-pattern response");
-        }
-        // Retain only annotation evidence needed after discovery; avoid rescanning
-        // the image when the reference pass reuses this loaded console.
-        let labels = self.reference_labels.get_or_insert_with(Vec::new);
-        for hit in &patterns.matches {
-            for action in &patterns.rules[hit.rule].actions {
-                if action.kind != "funcstart"
-                    || !action
-                        .attributes
-                        .get("validcode")
-                        .is_some_and(|value| value.eq_ignore_ascii_case("function"))
-                {
-                    continue;
-                }
-                if let Some(label) = action.attributes.get("label") {
-                    if !labels
-                        .iter()
-                        .any(|(address, name)| *address == hit.address && name == label)
-                    {
-                        labels.push((hit.address, label.clone()));
-                    }
-                }
-            }
-        }
-        Ok(patterns)
-    }
-
-    /// Whether the console process is still running. A console that died
-    /// answers nothing again: every later request fails at once.
-    pub(crate) fn is_alive(&mut self) -> bool {
-        if self.reaped {
-            return false;
-        }
-        let mut child = self.child.lock().unwrap_or_else(|error| error.into_inner());
-        matches!(child.try_wait(), Ok(None))
-    }
-
-    /// Close stdin and wait for the child to exit.
-    pub fn quit(mut self) -> Result<()> {
-        let _ = self.send("quit\n");
-        Ok(())
-    }
-
-    fn send(&mut self, s: &str) -> Result<()> {
-        use std::io::Write as _;
-        self.requests += 1;
-        self.stdin
-            .write_all(s.as_bytes())
-            .and_then(|_| self.stdin.flush())
-            .map_err(|e| {
-                // A broken pipe poisons the session. Stop supervision before
-                // reaping, preserving the exit status without a PID-reuse race.
-                self.watchdog.take();
-                let mut child = self.child.lock().unwrap_or_else(|error| error.into_inner());
-                if !self.reaped {
-                    crate::exec::kill_child(&mut child);
-                }
-                let fate = match child.wait() {
-                    Ok(status) => {
-                        self.reaped = true;
-                        format!(" (console exited: {status})")
-                    }
-                    Err(error) => format!(" (console status unknown: {error})"),
-                };
-                NativeRuntimeError(format!("console write: {e}{fate}"))
-            })
-    }
 }
-impl Drop for ConsoleSession {
-    fn drop(&mut self) {
-        // Stop the watchdog before any path can release the process-group ID.
-        self.watchdog.take();
-        if !self.reaped {
-            let mut child = self.child.lock().unwrap_or_else(|error| error.into_inner());
-            crate::exec::kill_child(&mut child);
-            let _ = child.wait();
-        }
-    }
+
+/// The reference facts of one range as the reference pass asks for them
+/// (writable initial values trusted); `None` is a range with no decodable
+/// flow.
+#[cfg(test)]
+pub(crate) fn range_references(
+    cfg: &RuntimeConfig,
+    import: &NativeImport,
+    start: u64,
+    end: u64,
+) -> Result<Option<Vec<ReferenceFact>>> {
+    let mut lane = propagation::Propagator::mapped(cfg, import)?;
+    let (functions, tables) = Default::default();
+    let query = propagation::Query {
+        start,
+        end,
+        trust_writable: true,
+        seeds: &[],
+        tracked: None,
+        mode_register: None,
+        externals: &[],
+        functions: &functions,
+        tables: &tables,
+        recover: true,
+    };
+    Ok(lane.references(&query)?.map(|answer| answer.references))
 }
 
 #[cfg(test)]
@@ -2226,8 +769,368 @@ mod tests {
 
     use super::*;
 
+    /// The in-process propagation over one mapped image, asked the way the
+    /// reference pass asks it but with no call context: what the tests about
+    /// *which* facts exist assert on.
+    struct Lane {
+        config: RuntimeConfig,
+        lane: Option<propagation::Propagator>,
+    }
+
+    impl Lane {
+        fn new(cfg: &RuntimeConfig) -> Result<Self> {
+            Ok(Self { config: cfg.clone(), lane: None })
+        }
+
+        fn load_mapped(&mut self, import: &NativeImport) -> Result<()> {
+            self.lane = Some(propagation::Propagator::mapped(&self.config, import)?);
+            Ok(())
+        }
+
+        fn query<'a>(
+            start: u64,
+            end: u64,
+            trust_writable: bool,
+            functions: &'a std::collections::HashMap<u64, usize>,
+            tables: &'a std::collections::HashMap<u64, Vec<u64>>,
+        ) -> propagation::Query<'a> {
+            propagation::Query {
+                start,
+                end,
+                trust_writable,
+                seeds: &[],
+                tracked: None,
+                mode_register: None,
+                externals: &[],
+                functions,
+                tables,
+                recover: true,
+            }
+        }
+
+        fn references(
+            &mut self,
+            start: u64,
+            end: u64,
+            _mappings: &[crate::native::Mapping],
+            trust_writable: bool,
+        ) -> Result<Vec<ReferenceFact>> {
+            let (functions, tables) = Default::default();
+            let query = Self::query(start, end, trust_writable, &functions, &tables);
+            self.lane
+                .as_mut()
+                .expect("an image is loaded")
+                .references(&query)?
+                .map(|answer| answer.references)
+                .ok_or_else(|| NativeRuntimeError(format!("references at {start:#x} are undecodable")))
+        }
+
+        fn constants(
+            &mut self,
+            start: u64,
+            end: u64,
+            _mappings: &[crate::native::Mapping],
+            trust_writable: bool,
+        ) -> Result<Vec<ConstantFact>> {
+            let (functions, tables) = Default::default();
+            let query = Self::query(start, end, trust_writable, &functions, &tables);
+            self.lane
+                .as_mut()
+                .expect("an image is loaded")
+                .constants(&query)?
+                .ok_or_else(|| NativeRuntimeError(format!("constants at {start:#x} are undecodable")))
+        }
+    }
+
+    /// An ARM or Thumb image at 0x1000 from `(address, value)` pairs; `None`
+    /// without a Ghidra install. `thumb` words are halfwords and the whole
+    /// image decodes as Thumb.
+    fn jump_image(thumb: bool, words: &[(u64, u32)], size: u64) -> Option<(RuntimeConfig, NativeImport)> {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.adopt_language("ARM:LE:32:v5t");
+        if !cfg.ghidra_install.join("Ghidra").is_dir() {
+            eprintln!("SKIP: no Ghidra install");
+            return None;
+        }
+        let mut bytes = vec![0u8; size as usize];
+        for &(address, value) in words {
+            let at = (address - 0x1000) as usize;
+            if thumb && value <= 0xffff {
+                bytes[at..at + 2].copy_from_slice(&(value as u16).to_le_bytes());
+            } else {
+                bytes[at..at + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        let contexts = if thumb {
+            vec![crate::native::NativeContext { name: "LowBitCodeMode".into(), address: 0x1000, value: 1 }]
+        } else {
+            Vec::new()
+        };
+        let import = NativeImport {
+            language: "ARM:LE:32:v5t".into(),
+            contexts,
+            mappings: vec![crate::native::Mapping { vaddr: 0x1000, size, file_off: 0, flags: 5, bytes }],
+            ..Default::default()
+        };
+        Some((cfg, import))
+    }
+
+    /// Four cases that each read one literal and leave for 0x1040, after the
+    /// dispatch the caller supplies below 0x1020: the case bodies sit at
+    /// 0x1020, 0x1028, 0x1030 and 0x1038 and read 0x1060, 0x1064, 0x1068 and
+    /// 0x106c, so a read of one is evidence the flow reached that case.
+    const ARM_CASES: [(u64, u32); 17] = [
+        (0x101c, 0xe12f_ff1e), // bx lr
+        (0x1020, 0xe59f_2038), // case 0: ldr r2,[pc,#0x38] (0x1060)
+        (0x1024, 0xea00_0005), // b 0x1040
+        (0x1028, 0xe59f_2034), // case 1: ldr r2,[0x1064]
+        (0x102c, 0xea00_0003),
+        (0x1030, 0xe59f_2030), // case 2: ldr r2,[0x1068]
+        (0x1034, 0xea00_0001),
+        (0x1038, 0xe59f_202c), // case 3: ldr r2,[0x106c]
+        (0x103c, 0xeaff_ffff), // b 0x1040
+        (0x1040, 0xe12f_ff1e), // bx lr
+        (0x1060, 0x1111_1111),
+        (0x1064, 0x2222_2222),
+        (0x1068, 0x3333_3333),
+        (0x106c, 0x4444_4444),
+        (0x1044, 0),
+        (0x1048, 0),
+        (0x104c, 0),
+    ];
+
+    /// The reads the four cases of `ARM_CASES` make, as (instruction, literal).
+    const CASE_READS: [(u64, u64); 4] = [(0x1020, 0x1060), (0x1028, 0x1064), (0x1030, 0x1068), (0x1038, 0x106c)];
+
+    impl Lane {
+        /// The whole answer for one range, with the recovery of indirect
+        /// jumps that have no stored table on or off.
+        fn answer(&mut self, start: u64, end: u64, recover: bool) -> propagation::Answer {
+            let (functions, tables) = Default::default();
+            let mut query = Self::query(start, end, true, &functions, &tables);
+            query.recover = recover;
+            self.lane
+                .as_mut()
+                .expect("an image is loaded")
+                .references(&query)
+                .unwrap()
+                .expect("the range decodes")
+        }
+    }
+
+    fn read_from(answer: &propagation::Answer, from: u64, to: u64) -> bool {
+        answer.references.iter().any(|fact| fact.from == from && fact.to == to && fact.kind == ReferenceKind::Read)
+    }
+
+    /// `cmp r0,#3; addls pc,pc,r0,lsl #2` over four `b case`: the targets of
+    /// the jump are the slots after the default branch (the add reads pc as
+    /// the instruction plus 8), and the flow reaches every case through them.
     #[test]
-    #[ignore = "requires the native console and arm-none-eabi GNU binutils"]
+    fn an_arm_branch_island_is_followed_into_its_cases() {
+        let mut words = vec![
+            (0x1000, 0xe350_0003), // cmp r0,#3
+            (0x1004, 0x908f_f100), // addls pc,pc,r0,lsl #2
+            (0x1008, 0xea00_000c), // b 0x1040 (default)
+            (0x100c, 0xea00_0003), // b 0x1020
+            (0x1010, 0xea00_0004), // b 0x1028
+            (0x1014, 0xea00_0005), // b 0x1030
+            (0x1018, 0xea00_0006), // b 0x1038
+        ];
+        words.extend(ARM_CASES);
+        let Some((cfg, import)) = jump_image(false, &words, 0x70) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1044, true);
+        assert_eq!(
+            answer.recovered_jumps,
+            vec![(0x1004, propagation::JumpShape::Island, vec![0x100c, 0x1010, 0x1014, 0x1018])]
+        );
+        for (from, to) in CASE_READS {
+            assert!(read_from(&answer, from, to), "the flow did not reach the case at {from:#x}: {:?}", answer.references);
+        }
+        // Before the recovery the jump was a call and its cases were lost.
+        let before = lane.answer(0x1000, 0x1044, false);
+        assert!(before.recovered_jumps.is_empty());
+        assert_eq!(before.truncated_jumps, vec![(0x1004, propagation::JumpShape::Island)]);
+        assert!(CASE_READS.iter().all(|&(from, to)| !read_from(&before, from, to)), "{:?}", before.references);
+    }
+
+    /// `cmp r0,#3; ldrls pc,[pc,r0,lsl #2]` over four words: a guarded read of
+    /// a table, whose entries are the cases.
+    #[test]
+    fn a_guarded_arm_table_read_is_followed_into_its_cases() {
+        let mut words = vec![
+            (0x1000, 0xe350_0003), // cmp r0,#3
+            (0x1004, 0x979f_f100), // ldrls pc,[pc,r0,lsl #2]
+            (0x1008, 0xea00_000c), // b 0x1040 (default)
+            (0x100c, 0x1020),
+            (0x1010, 0x1028),
+            (0x1014, 0x1030),
+            (0x1018, 0x1038),
+        ];
+        words.extend(ARM_CASES);
+        let Some((cfg, import)) = jump_image(false, &words, 0x70) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1044, true);
+        assert_eq!(
+            answer.recovered_jumps,
+            vec![(0x1004, propagation::JumpShape::TableLoad, vec![0x1020, 0x1028, 0x1030, 0x1038])]
+        );
+        for (from, to) in CASE_READS {
+            assert!(read_from(&answer, from, to), "the flow did not reach the case at {from:#x}: {:?}", answer.references);
+        }
+        // A case outside the range being traced is not followed: the flow of
+        // this range cannot place it, so the jump stays a call.
+        let narrow = lane.answer(0x1000, 0x1030, true);
+        assert!(narrow.recovered_jumps.is_empty());
+        assert_eq!(narrow.refused_jumps, vec![(0x1004, propagation::JumpShape::TableLoad, propagation::Refusal::Outside)]);
+    }
+
+    /// The same table read with nothing that bounds the index: the table's
+    /// end is not known, so no case is claimed.
+    #[test]
+    fn an_unguarded_arm_table_read_is_not_a_table() {
+        let mut words = vec![
+            (0x1000, 0xe1a0_0000), // mov r0,r0
+            (0x1004, 0xe79f_f100), // ldr pc,[pc,r0,lsl #2]
+            (0x1008, 0xea00_000c),
+            (0x100c, 0x1020),
+            (0x1010, 0x1028),
+            (0x1014, 0x1030),
+            (0x1018, 0x1038),
+        ];
+        words.extend(ARM_CASES);
+        let Some((cfg, import)) = jump_image(false, &words, 0x70) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1044, true);
+        assert!(answer.recovered_jumps.is_empty(), "{:?}", answer.recovered_jumps);
+        assert_eq!(answer.refused_jumps, vec![(0x1004, propagation::JumpShape::TableLoad, propagation::Refusal::NoGuard)]);
+        assert!(CASE_READS.iter().all(|&(from, to)| !read_from(&answer, from, to)), "{:?}", answer.references);
+    }
+
+    /// `bx r3` is handed a pointer: a call, not a dispatch. The recovery is
+    /// not asked, so it cannot answer.
+    #[test]
+    fn a_branch_through_a_register_is_a_call_not_a_dispatch() {
+        let Some((cfg, import)) = jump_image(false, &[(0x1000, 0xe3a0_0001), (0x1004, 0xe12f_ff13)], 0x10) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1008, true);
+        assert!(answer.recovered_jumps.is_empty() && answer.refused_jumps.is_empty());
+        assert_eq!(answer.truncated_jumps, vec![(0x1004, propagation::JumpShape::Pointer)]);
+    }
+
+    /// `pop {r0}; bx r0` is the Thumb return of agbcc code: the target is a
+    /// stack slot, not an entry of a table, so the recovery is not asked even
+    /// with a conditional branch ahead of it (it was 2,400 asks on pokeemerald).
+    #[test]
+    fn a_thumb_pop_return_is_a_pointer_not_a_dispatch() {
+        let words: [(u64, u32); 5] = [
+            (0x1000, 0x2900), // cmp r1,#0
+            (0x1002, 0xd000), // beq 0x1006
+            (0x1004, 0x46c0), // nop
+            (0x1006, 0xbc01), // pop {r0}
+            (0x1008, 0x4700), // bx r0
+        ];
+        let Some((cfg, import)) = jump_image(true, &words, 0x10) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x100a, true);
+        assert!(answer.recovered_jumps.is_empty() && answer.refused_jumps.is_empty(), "{:?}", answer.refused_jumps);
+        assert_eq!(answer.truncated_jumps, vec![(0x1008, propagation::JumpShape::Pointer)]);
+    }
+
+    /// Two ways into the dispatch set the index to 1 and 0, so the first
+    /// answer is the two slots they reach; the first case sets it to 2 and
+    /// loops back, a way in nothing had traced yet. Asked again over the
+    /// whole flow the table is a different one, so the first answer is struck
+    /// and the jump stays a call rather than keep a table that missed a case.
+    #[test]
+    fn a_table_a_looping_case_invalidates_is_struck_not_kept() {
+        let words: [(u64, u32); 18] = [
+            (0x1000, 0xe351_0000), // cmp r1,#0
+            (0x1004, 0x0a00_0001), // beq 0x1010
+            (0x1008, 0xe3a0_0001), // mov r0,#1
+            (0x100c, 0xea00_0000), // b 0x1014
+            (0x1010, 0xe3a0_0000), // mov r0,#0
+            (0x1014, 0xe350_0003), // cmp r0,#3 (the dispatch's head)
+            (0x1018, 0x908f_f100), // addls pc,pc,r0,lsl #2
+            (0x101c, 0xe12f_ff1e), // bx lr (default)
+            (0x1020, 0xea00_0002), // b 0x1030
+            (0x1024, 0xea00_0003), // b 0x1038
+            (0x1028, 0xea00_0003), // b 0x103c
+            (0x102c, 0xea00_0003), // b 0x1040
+            (0x1030, 0xe3a0_0002), // case 0: mov r0,#2
+            (0x1034, 0xeaff_fff6), // b 0x1014
+            (0x1038, 0xe12f_ff1e), // case 1: bx lr
+            (0x103c, 0xe12f_ff1e),
+            (0x1040, 0xe12f_ff1e),
+            (0x1044, 0),
+        ];
+        let Some((cfg, import)) = jump_image(false, &words, 0x48) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1044, true);
+        assert!(answer.recovered_jumps.is_empty(), "{:?}", answer.recovered_jumps);
+        assert_eq!(answer.refused_jumps, vec![(0x1018, propagation::JumpShape::Island, propagation::Refusal::Unstable)]);
+    }
+
+    /// Thumb `lsls r0,r0,#1; add pc,r0` reads the pc as the instruction plus
+    /// 4, so slot 0 is two halfwords past the add, not one.
+    #[test]
+    fn a_thumb_branch_island_is_followed_into_its_cases() {
+        let words: [(u64, u32); 33] = [
+            (0x1000, 0x2803), // cmp r0,#3
+            (0x1002, 0xd80f), // bhi 0x1024 (default)
+            (0x1004, 0x0040), // lsls r0,r0,#1
+            (0x1006, 0x4487), // add pc,r0
+            (0x1008, 0x46c0), // nop
+            (0x100a, 0xe003), // b 0x1014
+            (0x100c, 0xe004), // b 0x1018
+            (0x100e, 0xe005), // b 0x101c
+            (0x1010, 0xe006), // b 0x1020
+            (0x1012, 0x46c0),
+            (0x1014, 0x4a04), // case 0: ldr r2,[pc,#16] (0x1028)
+            (0x1016, 0xe005), // b 0x1024
+            (0x1018, 0x4a04), // case 1: (0x102c)
+            (0x101a, 0xe003),
+            (0x101c, 0x4a04), // case 2: (0x1030)
+            (0x101e, 0xe001),
+            (0x1020, 0x4a04), // case 3: (0x1034)
+            (0x1022, 0xe7ff),
+            (0x1024, 0x4770), // bx lr
+            (0x1026, 0x46c0),
+            (0x1028, 0x1111_1111),
+            (0x102c, 0x2222_2222),
+            (0x1030, 0x3333_3333),
+            (0x1034, 0x4444_4444),
+            (0x1038, 0),
+            (0x103a, 0),
+            (0x103c, 0),
+            (0x103e, 0),
+            (0x1040, 0),
+            (0x1042, 0),
+            (0x1044, 0),
+            (0x1046, 0),
+            (0x1048, 0),
+        ];
+        let Some((cfg, import)) = jump_image(true, &words, 0x50) else { return };
+        let mut lane = Lane::new(&cfg).unwrap();
+        lane.load_mapped(&import).unwrap();
+        let answer = lane.answer(0x1000, 0x1026, true);
+        assert_eq!(
+            answer.recovered_jumps,
+            vec![(0x1006, propagation::JumpShape::Island, vec![0x100a, 0x100c, 0x100e, 0x1010])]
+        );
+        for (from, to) in [(0x1014, 0x1028), (0x1018, 0x102c), (0x101c, 0x1030), (0x1020, 0x1034)] {
+            assert!(read_from(&answer, from, to), "the flow did not reach the case at {from:#x}: {:?}", answer.references);
+        }
+    }
+
+    #[test]
+    #[ignore = "requires arm-none-eabi GNU binutils"]
     fn file_queries_preserve_thumb_and_arm_symbol_contexts() {
         struct Fixture(PathBuf);
         impl Drop for Fixture {
@@ -2282,7 +1185,7 @@ mod tests {
                 listing_native(&cfg, &binary, &address, 2).unwrap(),
             ] {
                 let addresses: Vec<_> = listing.lines()
-                    .filter(|line| instruction_line(line))
+                    .filter(|line| line.starts_with("0x") && !line.starts_with("Bytes"))
                     .map(|line| {
                         let (address, _) = line.trim().split_once(':').unwrap();
                         u64::from_str_radix(address.trim_start_matches("0x"), 16).unwrap()
@@ -2299,37 +1202,43 @@ mod tests {
                 .map(|row| row.bytes.as_str())
                 .collect();
             assert_eq!(bytes, expected_bytes);
-            let returned = console_flow(&cfg, &binary, entry + instruction_length).unwrap();
+            let import = image::parse_binary(&cfg, &binary).unwrap().expect("an ELF image");
+            let returned = SleighFlow::mapped(&cfg, &import).unwrap()
+                .flow(&[entry + instruction_length]).remove(0);
             assert_eq!(returned.kind, FlowKind::Return);
             assert_eq!(u64::from(returned.length), instruction_length);
         }
         let mut arm_cfg = cfg.clone();
         arm_cfg.language_id = "ARM:LE:32:v8".into();
         arm_cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/ARM/data/languages");
-        let mut session = ConsoleSession::new(&arm_cfg).unwrap();
-        session.load(&binary, 0).unwrap();
-        assert_eq!(session.flow(0x08000002).unwrap().kind, FlowKind::Return);
+        let import = image::parse_binary(&arm_cfg, &binary).unwrap().expect("an ELF image");
+        let mut flow = SleighFlow::mapped(&arm_cfg, &import).unwrap();
+        assert_eq!(flow.flow(&[0x08000002])[0].kind, FlowKind::Return);
     }
 
     #[test]
     fn test_pcode_flow_x86_and_ppc() {
         let cfg = RuntimeConfig::from_env();
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
+        let flow_of = |cfg: &RuntimeConfig, binary: &Path, address: u64| {
+            let import = image::parse_binary(cfg, binary).unwrap().expect("an ELF image");
+            SleighFlow::mapped(cfg, &import).unwrap().flow(&[address]).remove(0)
+        };
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let x86_bin = manifest_dir.join("../../tests/fixtures-src/tiny_bin");
         if !x86_bin.is_file() {
             eprintln!("SKIP: tiny_bin not present");
             return;
         }
-        let flow_ret = console_flow(&cfg, &x86_bin, 0x400479).expect("x86 ret flow");
+        let flow_ret = flow_of(&cfg, &x86_bin, 0x400479);
         assert_eq!(flow_ret.kind, FlowKind::Return);
         assert_eq!(flow_ret.fallthrough, None);
         assert_eq!(flow_ret.length, 1);
 
-        let flow_fall = console_flow(&cfg, &x86_bin, 0x400466).expect("x86 add flow");
+        let flow_fall = flow_of(&cfg, &x86_bin, 0x400466);
         assert_eq!(flow_fall.kind, FlowKind::Fallthrough);
         assert_eq!(flow_fall.fallthrough, Some(0x400467));
 
@@ -2341,14 +1250,12 @@ mod tests {
             ppc_cfg.language_dir = ppc_cfg
                 .ghidra_install
                 .join("Ghidra/Processors/PowerPC/data/languages");
-            let flow_fall =
-                console_flow(&ppc_cfg, ppc_bin, 0x80680000).expect("ppc fallthrough flow");
+            let flow_fall = flow_of(&ppc_cfg, ppc_bin, 0x80680000);
             assert_eq!(flow_fall.length, 4);
             assert_eq!(flow_fall.kind, FlowKind::Fallthrough);
             assert_eq!(flow_fall.fallthrough, Some(0x80680004));
 
-            let flow_cbranch =
-                console_flow(&ppc_cfg, ppc_bin, 0x8068001c).expect("ppc cbranch flow");
+            let flow_cbranch = flow_of(&ppc_cfg, ppc_bin, 0x8068001c);
             assert_eq!(flow_cbranch.length, 4);
             assert_eq!(flow_cbranch.kind, FlowKind::CBranch);
             assert_eq!(flow_cbranch.fallthrough, Some(0x80680020));
@@ -2359,8 +1266,8 @@ mod tests {
     #[test]
     fn powerpc_conditional_lr_returns_preserve_calls_and_branch_hints() {
         let cfg = RuntimeConfig::from_env();
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         // bdzlr, bdnzlr, bdnzflr lt, bdzlrl, bdzlr with BH=1, bctr.
@@ -2379,65 +1286,32 @@ mod tests {
                 }],
                 ..Default::default()
             };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
-            session.load_mapped(&import).unwrap();
+            let mut session = SleighFlow::mapped(&cfg, &import).unwrap();
+            let mut flow_at = |address| session.flow(&[address]).remove(0);
             for address in [0x1000, 0x1004, 0x1008] {
-                let flow = session.flow(address).unwrap();
+                let flow = flow_at(address);
                 assert_eq!(flow.kind, FlowKind::Return, "{endian} at {address:#x}");
                 assert!(flow.conditional && flow.terminal && flow.return_op);
                 assert_eq!(flow.fallthrough, Some(address + 4));
             }
-            let call = session.flow(0x100c).unwrap();
+            let call = flow_at(0x100c);
             assert!(!call.return_op && !call.terminal);
             assert!(call.conditional);
             assert_eq!(call.fallthrough, Some(0x1010));
-            let hinted = session.flow(0x1010).unwrap();
+            let hinted = flow_at(0x1010);
             assert!(!hinted.return_op && !hinted.terminal);
             assert!(hinted.conditional);
-            let ctr = session.flow(0x1014).unwrap();
+            let ctr = flow_at(0x1014);
             assert!(!ctr.return_op && !ctr.terminal && !ctr.conditional);
             assert_eq!(ctr.fallthrough, None);
         }
     }
 
     #[test]
-    fn console_session_persists_multiple_flows() {
-        let cfg = RuntimeConfig::from_env();
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        }
-        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-        let x86_bin = manifest_dir.join("../../tests/fixtures-src/tiny_bin");
-        if !x86_bin.is_file() {
-            eprintln!("SKIP: tiny_bin not present");
-            return;
-        }
-        let mut session = ConsoleSession::new(&cfg).expect("console session");
-        let mappings = crate::native::load_native_mappings(&x86_bin).unwrap_or_default();
-        let base = mappings
-            .first()
-            .map(|m| m.vaddr.wrapping_sub(m.file_off))
-            .unwrap_or(0);
-        session.load(&x86_bin, base).expect("load tiny_bin");
-
-        let flow_ret = session.flow(0x400479).expect("x86 ret flow");
-        assert_eq!(flow_ret.kind, FlowKind::Return);
-        assert_eq!(flow_ret.length, 1);
-
-        let flow_fall = session.flow(0x400466).expect("x86 fall flow");
-        assert_eq!(flow_fall.kind, FlowKind::Fallthrough);
-        assert_eq!(flow_fall.length, 1);
-        assert_eq!(flow_fall.fallthrough, Some(0x400467));
-
-        session.quit().unwrap();
-    }
-
-    #[test]
     fn constant_propagation_reports_mapped_globals() {
         let cfg = RuntimeConfig::from_env();
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         // llvm-mc: materialize 0x3000, load its pointer, advance one pointer,
@@ -2510,7 +1384,7 @@ mod tests {
                 ],
                 ..Default::default()
             };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
+            let mut session = Lane::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let facts = session
                 .constants(0x1000, code_end, &import.mappings, false)
@@ -2544,8 +1418,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         // GNU as: retain rsp-8 in r12, call a separate RET, store a pointer
@@ -2597,7 +1471,7 @@ mod tests {
                 ],
                 ..Default::default()
             };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
+            let mut session = Lane::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let facts = session
                 .constants(0x1000, end, &import.mappings, false)
@@ -2623,8 +1497,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         // Direct accesses and pointers; indirect jump slots are DATA, calls READ.
@@ -2675,7 +1549,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x102f, &import.mappings, false)
@@ -2738,8 +1612,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         // The first addition transiently equals a mapped address. Only the
@@ -2770,7 +1644,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1010, &import.mappings, false)
@@ -2787,7 +1661,7 @@ mod tests {
             0x48, 0x83, 0xc0, 2, 0xeb, 4, 0x48, 0x83, 0xc0, 2, 0xc3,
         ];
         import.mappings[0].size = import.mappings[0].bytes.len() as u64;
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1016, &import.mappings, false)
@@ -2815,7 +1689,7 @@ mod tests {
             0xc0, 0x03, 0x5f, 0xd6, // ret
         ];
         import.mappings[0].size = import.mappings[0].bytes.len() as u64;
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1014, &import.mappings, false)
@@ -2839,7 +1713,7 @@ mod tests {
             0x4e, 0x80, 0x00, 0x20, // blr
         ];
         import.mappings[0].size = import.mappings[0].bytes.len() as u64;
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1010, &import.mappings, false)
@@ -2858,8 +1732,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         let code = vec![
@@ -2892,7 +1766,7 @@ mod tests {
         };
         for compiler in ["gcc", "default"] {
             import.compiler = Some(compiler.to_string());
-            let mut session = ConsoleSession::new(&cfg).unwrap();
+            let mut session = Lane::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let refs = session
                 .references(0x1000, 0x101e, &import.mappings, false)
@@ -2916,8 +1790,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         let mut import = NativeImport {
@@ -2932,7 +1806,7 @@ mod tests {
             }],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1005, &import.mappings, false)
@@ -2942,7 +1816,7 @@ mod tests {
             "saving a return PC is not a data reference: {refs:?}"
         );
         import.mappings[0].bytes[..6].copy_from_slice(&[0x8b, 0x05, 0, 0, 0, 0]);
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1006, &import.mappings, false)
@@ -2979,7 +1853,7 @@ mod tests {
                 }],
                 ..Default::default()
             };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
+            let mut session = Lane::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let refs = session
                 .references(0x1000, end, &import.mappings, false)
@@ -3005,7 +1879,7 @@ mod tests {
             }],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1008, &import.mappings, false)
@@ -3024,8 +1898,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/AARCH64/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         let mut import = NativeImport {
@@ -3048,7 +1922,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1008, &import.mappings, false)
@@ -3058,7 +1932,7 @@ mod tests {
             "unused ADR is not a scalar reference: {refs:?}"
         );
         import.mappings[0].bytes[0] = 0; // adr x0,0x4000; ret
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x1008, &import.mappings, false)
@@ -3077,8 +1951,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         let mut import = NativeImport {
@@ -3106,7 +1980,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x100b, &import.mappings, false)
@@ -3117,7 +1991,7 @@ mod tests {
             "computed address operands are references even when not returned"
         );
         import.mappings[0].bytes[5..8].copy_from_slice(&[0x83, 0xc3, 1]); // add ebx,1
-        let mut session = ConsoleSession::new(&cfg).unwrap();
+        let mut session = Lane::new(&cfg).unwrap();
         session.load_mapped(&import).unwrap();
         let refs = session
             .references(0x1000, 0x100b, &import.mappings, false)
@@ -3129,130 +2003,19 @@ mod tests {
     }
 
     #[test]
-    fn linkage_queries_require_bounded_side_effect_free_slot_flow() {
-        let mut cfg = RuntimeConfig::from_env();
-        cfg.language_id = "x86:LE:64:default".into();
-        cfg.language_dir = cfg
-            .ghidra_install
-            .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        }
-        // LLVM llvm-mc encodings; every positive computes the slot at 0x3008.
-        let cases: &[(&str, &str, &[u8], &[u8], &[u8])] = &[
-            (
-                "x86",
-                "x86:LE:64:default",
-                &[0xff, 0x25, 0x02, 0x20, 0, 0],
-                &[0xff, 0xe0],
-                &[0xb8, 1, 0, 0, 0],
-            ),
-            (
-                "x86",
-                "x86:LE:32:default",
-                &[0xff, 0x25, 0x08, 0x30, 0, 0],
-                &[0xff, 0xe0],
-                &[0xb8, 1, 0, 0, 0],
-            ),
-            (
-                "AARCH64",
-                "AARCH64:LE:64:v8A",
-                &[0x10, 0, 0, 0xd0, 0x11, 6, 0x40, 0xf9, 0x20, 2, 0x1f, 0xd6],
-                &[0x20, 2, 0x1f, 0xd6],
-                &[0x20, 0, 0x80, 0xd2],
-            ),
-            (
-                "PowerPC",
-                "PowerPC:BE:32:default",
-                &[
-                    0x3d, 0x60, 0, 0, 0x81, 0x6b, 0x30, 8, 0x7d, 0x69, 3, 0xa6, 0x4e, 0x80, 4, 0x20,
-                ],
-                &[0x4e, 0x80, 4, 0x20],
-                &[0x38, 0x60, 0, 1],
-            ),
-        ];
-        for &(processor, language, code, unknown, extra_write) in cases {
-            let mut cfg = cfg.clone();
-            cfg.language_id = language.into();
-            cfg.language_dir = cfg
-                .ghidra_install
-                .join(format!("Ghidra/Processors/{processor}/data/languages"));
-            let mut bytes = vec![0; 0x300];
-            bytes[..code.len()].copy_from_slice(code);
-            bytes[0x100..0x100 + unknown.len()].copy_from_slice(unknown);
-            bytes[0x200..0x200 + extra_write.len()].copy_from_slice(extra_write);
-            bytes[0x200 + extra_write.len()..0x200 + extra_write.len() + code.len()]
-                .copy_from_slice(code);
-            let import = NativeImport {
-                language: language.into(),
-                mappings: vec![crate::native::Mapping {
-                    vaddr: 0x1000,
-                    size: bytes.len() as u64,
-                    file_off: 0,
-                    flags: 6,
-                    bytes,
-                }],
-                ..Default::default()
-            };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
-            session.load_mapped(&import).unwrap();
-            let rows = session.linkage_batch(&[0x1000, 0x1100, 0x1200]).unwrap();
-            assert_eq!(rows[0].slot, Some(0x3008), "{language}");
-            assert_eq!(rows[0].length as usize, code.len(), "{language}");
-            assert!(
-                rows[1].slot.is_none(),
-                "{language}: unknown incoming register"
-            );
-            assert!(rows[2].slot.is_none(), "{language}: unused register write");
-            // A rejected query must not poison the following console request.
-            assert_eq!(session.flow(0x1000).unwrap().address, 0x1000);
-        }
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        let mut bytes = vec![0; 0x300];
-        // A store to a constant address, followed by a valid indirect transfer.
-        bytes[..13].copy_from_slice(&[0xc6, 5, 0, 0, 0, 0, 1, 0xff, 0x25, 0xfb, 0x1f, 0, 0]);
-        // One load, seven self-copies, one jump: exceeds the eight-instruction bound.
-        bytes[0x100..0x107].copy_from_slice(&[0x48, 0x8b, 5, 1, 0x1f, 0, 0]);
-        for i in 0..7 {
-            bytes[0x107 + i * 3..0x10a + i * 3].copy_from_slice(&[0x48, 0x89, 0xc0]);
-        }
-        bytes[0x11c..0x11e].copy_from_slice(&[0xff, 0xe0]);
-        session
-            .load_mapped(&NativeImport {
-                language: cfg.language_id.clone(),
-                mappings: vec![crate::native::Mapping {
-                    vaddr: 0x1000,
-                    size: bytes.len() as u64,
-                    file_off: 0,
-                    flags: 6,
-                    bytes,
-                }],
-                ..Default::default()
-            })
-            .unwrap();
-        let rows = session.linkage_batch(&[0x1000, 0x1100]).unwrap();
-        assert!(
-            rows.iter().all(|row| row.slot.is_none()),
-            "stores and unbounded chains are not thunks"
-        );
-    }
-
-    #[test]
     fn repeated_instruction_flow_does_not_escape_into_pcode_labels() {
         let mut cfg = crate::session::RuntimeConfig::from_env();
-        let Ok(console) = find_console(&cfg) else {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        };
-        cfg.console_path = Some(console);
         cfg.language_id = "x86:LE:64:default".into();
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        session
-            .load_mapped(&NativeImport {
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
+            return;
+        }
+        let mut session = SleighFlow::mapped(
+            &cfg,
+            &NativeImport {
                 language: cfg.language_id.clone(),
                 mappings: vec![crate::native::Mapping {
                     vaddr: 0x1000,
@@ -3262,198 +2025,15 @@ mod tests {
                     bytes: vec![0xf3, 0xa4, 0xc3], // REP MOVSB; RET
                 }],
                 ..Default::default()
-            })
-            .unwrap();
-        let flows = session.flow_batch(&[0x1000]).unwrap();
+            },
+        )
+        .unwrap();
+        let flows = session.flow(&[0x1000]);
         assert_eq!(flows[0].kind, FlowKind::Fallthrough);
         assert_eq!(flows[0].fallthrough, Some(0x1002));
         assert!(
             flows[0].targets.is_empty(),
             "instruction-local repeat branches are not machine flow references"
-        );
-    }
-
-    #[test]
-    fn elf_pattern_selection_uses_loader_compiler() {
-        let mut cfg = crate::session::RuntimeConfig::from_env();
-        let Ok(console) = find_console(&cfg) else {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        };
-        cfg.console_path = Some(console);
-        cfg.language_id = "x86:LE:64:default".into();
-        cfg.language_dir = cfg
-            .ghidra_install
-            .join("Ghidra/Processors/x86/data/languages");
-        // ELF64 with one allocated code section: ret; push rbp; mov rbp,rsp; ret.
-        // The pinned GCC patterns recognize the entry after ret; Windows does not.
-        let mut elf = vec![0u8; 0x200];
-        elf[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
-        for (offset, value) in [(16, 2u16), (18, 62), (58, 64), (60, 2)] {
-            elf[offset..offset + 2].copy_from_slice(&value.to_le_bytes());
-        }
-        elf[40..48].copy_from_slice(&0x80u64.to_le_bytes());
-        elf[0xc4..0xc8].copy_from_slice(&1u32.to_le_bytes());
-        for (offset, value) in [(0xc8, 6u64), (0xd0, 0x1000), (0xd8, 0x180), (0xe0, 6)] {
-            elf[offset..offset + 8].copy_from_slice(&value.to_le_bytes());
-        }
-        elf[0x180..0x186].copy_from_slice(&[0xc3, 0x55, 0x48, 0x89, 0xe5, 0xc3]);
-        let mut import = crate::native::import_elf(&elf).unwrap();
-        crate::native::select_language(&mut import, &cfg).unwrap();
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        session.load_mapped(&import).unwrap();
-        session.send("functionstarts 0x1000 0x1006\n").unwrap();
-        let response = read_until_prompt(&mut session.reader).unwrap();
-        let payload = response
-            .lines()
-            .find_map(|line| line.strip_prefix("PATTERNS "))
-            .unwrap_or_else(|| panic!("missing pattern response: {response}"));
-        let parsed: serde_json::Value = serde_json::from_str(payload).unwrap();
-        assert!(
-            parsed["matches"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|row| row["address"] == 0x1001),
-            "ELF compiler selection must recognize the GCC entry: {response}"
-        );
-    }
-
-    #[test]
-    fn function_pattern_queries_preserve_prefix_marks_and_range_bounds() {
-        let mut cfg = crate::session::RuntimeConfig::from_env();
-        let Ok(console) = find_console(&cfg) else {
-            eprintln!("SKIP: SLEIGH console not available");
-            return;
-        };
-        cfg.console_path = Some(console);
-        cfg.language_id = "AARCH64:LE:64:v8A".into();
-        cfg.language_dir = cfg
-            .ghidra_install
-            .join("Ghidra/Processors/AARCH64/data/languages");
-        let query = |session: &mut ConsoleSession, end: u64| {
-            session
-                .send(&format!("functionstarts 0x1000 0x{end:x}\n"))
-                .unwrap();
-            let response = read_until_prompt(&mut session.reader).unwrap();
-            let payload = response
-                .lines()
-                .find_map(|line| line.strip_prefix("PATTERNS "))
-                .unwrap_or_else(|| panic!("missing pattern response: {response}"));
-            let parsed: serde_json::Value = serde_json::from_str(payload).unwrap();
-            let mut addresses: Vec<_> = parsed["matches"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .map(|row| row["address"].as_u64().unwrap())
-                .collect();
-            addresses.sort_unstable();
-            addresses.dedup();
-            addresses
-        };
-        let cases: &[(&[u32], &[u64])] = &[
-            // ret; nop; stp x29,x30,[sp,#-32]!; mov x29,sp; ret.
-            // Both the wildcard prefix and the pair's post-pattern mark match.
-            (
-                &[0xd65f03c0, 0xd503201f, 0xa9be7bfd, 0x910003fd, 0xd65f03c0],
-                &[0x1004, 0x1008],
-            ),
-            // ret; sub sp,sp,#16; add sp,sp,#16; ret: pair-only match.
-            (&[0xd65f03c0, 0xd10043ff, 0x910043ff, 0xd65f03c0], &[0x1004]),
-        ];
-        for &(words, expected) in cases {
-            let bytes: Vec<_> = words.iter().flat_map(|word| word.to_le_bytes()).collect();
-            let end = 0x1000 + bytes.len() as u64;
-            let mut session = ConsoleSession::new(&cfg).unwrap();
-            session
-                .load_mapped(&NativeImport {
-                    language: cfg.language_id.clone(),
-                    mappings: vec![crate::native::Mapping {
-                        vaddr: 0x1000,
-                        size: bytes.len() as u64,
-                        file_off: 0,
-                        flags: 6,
-                        bytes,
-                    }],
-                    ..Default::default()
-                })
-                .unwrap();
-            assert_eq!(query(&mut session, end).as_slice(), expected);
-            assert!(
-                query(&mut session, 0x1007).is_empty(),
-                "a pattern must not read past the requested mapped range"
-            );
-        }
-
-        // A private pattern root exercises DSL boundaries without modifying the SDK.
-        struct PatternRoot(PathBuf);
-        impl Drop for PatternRoot {
-            fn drop(&mut self) {
-                let _ = std::fs::remove_dir_all(&self.0);
-            }
-        }
-        let root =
-            std::env::temp_dir().join(format!("romwright-pattern-grammar-{}", std::process::id()));
-        std::fs::create_dir(&root).unwrap();
-        let root = PatternRoot(root);
-        let patterns = root.0.join("Ghidra/Processors/Fixture/data/patterns");
-        std::fs::create_dir_all(&patterns).unwrap();
-        std::fs::write(
-            patterns.join("patternconstraints.xml"),
-            r#"
-<patternconstraints><language id="AARCH64:*:64:*">
-  <patternfile>grammar.xml</patternfile>
-  <compiler id="not-the-selected-compiler"><patternfile>missing.xml</patternfile></compiler>
-</language></patternconstraints>"#,
-        )
-        .unwrap();
-        std::fs::write(
-            patterns.join("grammar.xml"),
-            r#"
-<patternlist>
-  <pattern mark="0"><data>0xa. * 1011....</data>
-    <align mark="0x100000001" bits="2"/><possiblefuncstart/>
-  </pattern>
-  <patternpairs totalbits="9" postbits="4">
-    <prepatterns><data>0xc.</data></prepatterns>
-    <postpatterns><data>0xd.</data><funcstart/></postpatterns>
-  </patternpairs>
-  <patternpairs totalbits="8" postbits="5">
-    <prepatterns><data>0xe.</data></prepatterns>
-    <postpatterns><data>0xf.</data><funcstart/></postpatterns>
-  </patternpairs>
-</patternlist>"#,
-        )
-        .unwrap();
-        cfg.ghidra_install = root.0.clone();
-        let mut bytes = vec![0; 0x10002];
-        bytes[3..5].copy_from_slice(&[0xa1, 0xb2]);
-        bytes[0xffff..0x10001].copy_from_slice(&[0xa3, 0xb4]);
-        bytes[0x13..0x15].copy_from_slice(&[0xc1, 0xd2]);
-        bytes[0x17..0x19].copy_from_slice(&[0xe3, 0xf4]);
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        session
-            .load_mapped(&NativeImport {
-                language: cfg.language_id.clone(),
-                mappings: vec![crate::native::Mapping {
-                    vaddr: 0x1000,
-                    size: bytes.len() as u64,
-                    file_off: 0,
-                    flags: 6,
-                    bytes,
-                }],
-                ..Default::default()
-            })
-            .unwrap();
-        assert_eq!(
-            query(&mut session, 0x11002),
-            vec![0x1004, 0x11000],
-            "marks override attributes; alignment uses the raw start; fixed-bit thresholds apply"
-        );
-        assert_eq!(
-            query(&mut session, 0x11000),
-            vec![0x1004],
-            "a match across a scan-buffer boundary still needs its complete byte sequence"
         );
     }
 
@@ -3464,8 +2044,8 @@ mod tests {
         cfg.language_dir = cfg
             .ghidra_install
             .join("Ghidra/Processors/x86/data/languages");
-        if find_console(&cfg).is_err() {
-            eprintln!("SKIP: SLEIGH console not available");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
             return;
         }
         for (setup, transfer, expected) in [
@@ -3507,7 +2087,7 @@ mod tests {
                 ],
                 ..Default::default()
             };
-            let mut session = ConsoleSession::new(&cfg).unwrap();
+            let mut session = Lane::new(&cfg).unwrap();
             session.load_mapped(&import).unwrap();
             let facts = session
                 .references(0x1000, end, &import.mappings, false)
@@ -3525,5 +2105,151 @@ mod tests {
                 "a symbolic offset is not a proven constant pointer"
             );
         }
+    }
+
+    /// A MIPS call whose pointer argument is finished in the delay slot: the
+    /// delay slot's p-code carries the call's address, so the reference is
+    /// the call's (paired with the in-process propagation in test builds).
+    #[test]
+    fn mips_delay_slot_arguments_are_referenced_at_the_call() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "MIPS:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
+            return;
+        }
+        let words: [u32; 6] = [
+            0x3c04_8017,                                  // lui a0,0x8017
+            0x0c00_0000 | ((0x8010_0020u32 >> 2) & 0x03ff_ffff), // jal 0x80100020
+            0x2484_0200,                                  // addiu a0,a0,0x200 (delay slot)
+            0x03e0_0008,                                  // jr ra
+            0,                                            // nop
+            0,
+        ];
+        let code: Vec<u8> = words.iter().flat_map(|word| word.to_le_bytes()).collect();
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x8010_0000,
+                    size: code.len() as u64,
+                    file_off: 0,
+                    flags: 6,
+                    bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x8017_0000,
+                    size: 0x1000,
+                    file_off: 0,
+                    flags: 3,
+                    bytes: vec![0; 0x1000],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = Lane::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        let refs = session.references(0x8010_0000, 0x8010_0018, &import.mappings, false).unwrap();
+        assert_eq!(
+            triples(&refs),
+            vec![(0x8010_0004, 0x8017_0200, ReferenceKind::Data)],
+            "the delay slot finishes the argument: {refs:?}"
+        );
+    }
+
+    /// A pointer left in the return register and returned: the reference is
+    /// attributed where the setter search ends, as the decompiler's
+    /// propagation does.
+    #[test]
+    fn mips_returned_pointers_are_referenced_at_the_return() {
+        let mut cfg = RuntimeConfig::from_env();
+        cfg.language_id = "MIPS:LE:32:default".into();
+        cfg.language_dir = cfg.ghidra_install.join("Ghidra/Processors/MIPS/data/languages");
+        if !cfg.language_dir.is_dir() {
+            eprintln!("SKIP: SLEIGH language not available");
+            return;
+        }
+        const LUI_V0: u32 = 0x3c02_8017; // lui v0,0x8017
+        const ADDIU_V0: u32 = 0x2442_0200; // addiu v0,v0,0x200
+        const ADDIU_SP_DOWN: u32 = 0x27bd_ffe8; // addiu sp,sp,-0x18
+        const ADDIU_SP_UP: u32 = 0x27bd_0018; // addiu sp,sp,0x18
+        const LW_RA: u32 = 0x8fbf_0014; // lw ra,0x14(sp)
+        const SW_RA: u32 = 0xafbf_0014; // sw ra,0x14(sp)
+        const JR_RA: u32 = 0x03e0_0008;
+        let jal = 0x0c00_0000 | ((0x8010_1000u32 >> 2) & 0x03ff_ffff);
+        let variants: [&[u32]; 7] = [
+            &[LUI_V0, ADDIU_V0, JR_RA, 0],
+            &[LUI_V0, ADDIU_V0, LW_RA, JR_RA, 0],
+            &[ADDIU_SP_DOWN, LUI_V0, ADDIU_V0, ADDIU_SP_UP, JR_RA, 0],
+            &[ADDIU_SP_DOWN, SW_RA, jal, 0, LUI_V0, ADDIU_V0, LW_RA, ADDIU_SP_UP, JR_RA, 0],
+            &[ADDIU_SP_DOWN, SW_RA, LW_RA, LUI_V0, ADDIU_V0, LW_RA, ADDIU_SP_UP, JR_RA, 0],
+            &[LUI_V0, ADDIU_V0, 0xac82_0000, JR_RA, 0], // sw v0,0(a0)
+            &[SW_RA, LUI_V0, ADDIU_V0, JR_RA, 0],
+        ];
+        let mut code = vec![0u8; 0x2000];
+        let mut ends = Vec::new();
+        for (index, words) in variants.iter().enumerate() {
+            let base = index * 0x100;
+            for (slot, word) in words.iter().enumerate() {
+                code[base + slot * 4..base + slot * 4 + 4].copy_from_slice(&word.to_le_bytes());
+            }
+            ends.push((0x8010_0000 + base as u64, 0x8010_0000 + (base + words.len() * 4) as u64));
+        }
+        let import = NativeImport {
+            language: cfg.language_id.clone(),
+            mappings: vec![
+                crate::native::Mapping {
+                    vaddr: 0x8010_0000,
+                    size: code.len() as u64,
+                    file_off: 0,
+                    flags: 6,
+                    bytes: code,
+                },
+                crate::native::Mapping {
+                    vaddr: 0x8017_0000,
+                    size: 0x1000,
+                    file_off: 0,
+                    flags: 3,
+                    bytes: vec![0; 0x1000],
+                },
+            ],
+            ..Default::default()
+        };
+        let mut session = Lane::new(&cfg).unwrap();
+        session.load_mapped(&import).unwrap();
+        // A pointer left in v0 is referenced where the injected `v0 = v0` of
+        // `setISAMode` writes it, which is the return's own address.
+        for (start, end) in ends {
+            let refs = session.references(start, end, &import.mappings, false).unwrap();
+            assert!(
+                refs.iter().any(|fact| fact.kind == ReferenceKind::Data && fact.to == 0x8017_0200),
+                "{start:#x}: {refs:?}"
+            );
+        }
+    }
+
+    /// The worker's answer for one function is filed by what decided it: the
+    /// wall-clock guard (the host's load did), the work budget (the function
+    /// did, on every host), or the decompiler's own error.
+    #[test]
+    fn a_switch_answer_is_filed_by_what_decided_it() {
+        let lines = [
+            r#"{"address":4096,"result":{"Err":"decompiler timed out after 59s"},"wall_clock":true}"#,
+            r#"{"address":4112,"result":{"Err":"decompiler exception: WorkBudgetExceeded: decompiler work budget of 5 units exceeded"},"wall_clock":false}"#,
+            r#"{"address":4128,"result":{"Err":"decompiler exception: Low-level Error: Flow exceeded maximum allowable instructions"}}"#,
+            r#"{"address":4144,"result":{"Ok":[]},"wall_clock":false}"#,
+        ];
+        let mut recovery = SwitchRecovery::default();
+        for line in lines {
+            recovery.record(serde_json::from_str(line).expect("a worker answer parses"));
+        }
+        assert_eq!(recovery.wall_clock.len(), 1, "{:?}", recovery.wall_clock);
+        assert!(recovery.wall_clock[0].starts_with("0x1000: "));
+        assert_eq!(recovery.over_budget.len(), 1, "{:?}", recovery.over_budget);
+        assert!(recovery.over_budget[0].starts_with("0x1010: "));
+        assert_eq!(recovery.failures.len(), 1, "{:?}", recovery.failures);
+        assert!(recovery.failures[0].contains("Flow exceeded"));
+        assert_eq!(recovery.completed, 1);
     }
 }

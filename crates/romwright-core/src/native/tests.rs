@@ -316,6 +316,50 @@ fn an_elf_records_the_machine_it_names_and_selects_no_language_alone() {
     assert!(select_language(&mut unknown, &cfg).is_err());
 }
 
+/// A PSP image (`e_type` 0xffa0) left unlinked at base 0 carries section-relative
+/// symbol values: `.text` sits at 0x40 behind `.init`, and a function whose
+/// code is at 0x50 has `st_value` 0x10. Puzzle Bobble Pocket: 304 of its 621
+/// functions were scored 64 bytes away from their symbols.
+#[test]
+fn psp_symbol_values_are_offsets_into_their_section() {
+    let build = |e_type: u16, shndx: u16, value: u32| {
+        let mut bytes = vec![0u8; 0x200];
+        bytes[..7].copy_from_slice(b"\x7fELF\x01\x01\x01");
+        for (offset, v) in [(16, e_type), (18, 8), (40, 52), (46, 40), (48, 4)] {
+            bytes[offset..offset + 2].copy_from_slice(&v.to_le_bytes());
+        }
+        bytes[32..36].copy_from_slice(&0x80u32.to_le_bytes());
+        for (index, fields) in [
+            (1, [0u32, 1, 6, 0x40, 0x140, 16, 0, 0, 4, 0]), // .text at 0x40
+            (2, [0, 2, 0, 0, 0x160, 32, 3, 1, 4, 16]),      // .symtab
+            (3, [0, 3, 0, 0, 0x190, 6, 0, 0, 1, 0]),        // .strtab
+        ] {
+            for (field, v) in fields.into_iter().enumerate() {
+                let offset = 0x80 + index * 40 + field * 4;
+                bytes[offset..offset + 4].copy_from_slice(&v.to_le_bytes());
+            }
+        }
+        bytes[0x140..0x144].copy_from_slice(&0x27bd_fff0u32.to_le_bytes()); // addiu sp,sp,-16
+        bytes[0x190..0x196].copy_from_slice(b"\0func\0");
+        bytes[0x170..0x174].copy_from_slice(&1u32.to_le_bytes()); // st_name
+        bytes[0x174..0x178].copy_from_slice(&value.to_le_bytes());
+        bytes[0x178..0x17c].copy_from_slice(&16u32.to_le_bytes());
+        bytes[0x17c] = 0x12; // global FUNC
+        bytes[0x17e..0x180].copy_from_slice(&shndx.to_le_bytes());
+        import_elf(&bytes).unwrap()
+    };
+    let entry = |import: &NativeImport| import.functions.iter().find(|f| f.name == "func").map(|f| f.entry);
+    assert_eq!(entry(&build(0xffa0, 1, 0x10)), Some(0x50), "sh_addr + st_value");
+    assert_eq!(entry(&build(0xffa0, 1, 0)), Some(0x40));
+    // A linked PRX carries absolute values: the symbol sits inside its own
+    // section by address (0x48 is in 0x40..0x50, past the section size 16).
+    assert_eq!(entry(&build(0xffa0, 1, 0x48)), Some(0x48));
+    // Other ELFs: the value is the address.
+    assert_eq!(entry(&build(2, 1, 0x10)), Some(0x10));
+    // An absolute symbol is not relative to any section.
+    assert_eq!(entry(&build(0xffa0, 0xfff1, 0x10)), Some(0x10));
+}
+
 #[test]
 fn elf32_startup_section_seeds() {
     for be in [false, true] {
@@ -721,6 +765,9 @@ fn thumb1_table_entries_follow_an_end_and_open_like_code() {
     half(&mut bytes, 0x08, 0x2001); // movs r0, #1: a function after a return
     bytes[0x0c..0x10].copy_from_slice(&0x0800_0101u32.to_le_bytes()); // literal pool
     half(&mut bytes, 0x10, 0x6802); // ldr r2, [r0]: a function after the pool
+    // A pointer word nothing loads, then the same opener: script bytecode.
+    bytes[0x14..0x18].copy_from_slice(&0x0800_0101u32.to_le_bytes());
+    half(&mut bytes, 0x18, 0x6802);
     // Script bytecode: an unaligned ROM pointer, then bytes that read as
     // `ldr r2, [r0, #0x20]`.
     bytes[0x22..0x26].copy_from_slice(&0x0800_0101u32.to_le_bytes());
@@ -732,10 +779,34 @@ fn thumb1_table_entries_follow_an_end_and_open_like_code() {
         mappings: vec![Mapping { vaddr: 0x0800_0000, size: 0x40, file_off: 0, flags: 6, bytes }],
         ..Default::default()
     };
-    assert!(thumb1_table_entry(&imp, 0x0800_0008));
-    assert!(thumb1_table_entry(&imp, 0x0800_0010));
-    assert!(!thumb1_table_entry(&imp, 0x0800_0026), "an unaligned pointer is no literal pool");
-    assert!(!thumb1_table_entry(&imp, 0x0800_0030), "a zero halfword does not open a function");
+    // The words code loads: the pool at 0x0c, and (in the second case) 0x14.
+    let pool: std::collections::HashSet<u64> = [0x0800_000c].into_iter().collect();
+    let none = std::collections::HashSet::new();
+    assert!(thumb1_table_entry(&imp, 0x0800_0008, &pool, &none));
+    assert!(thumb1_table_entry(&imp, 0x0800_0010, &pool, &none));
+    assert!(!thumb1_table_entry(&imp, 0x0800_0018, &pool, &none), "a pointer nothing loads is no literal pool");
+    let loaded: std::collections::HashSet<u64> = [0x0800_000c, 0x0800_0014].into_iter().collect();
+    assert!(thumb1_table_entry(&imp, 0x0800_0018, &loaded, &none));
+    assert!(!thumb1_table_entry(&imp, 0x0800_0026, &loaded, &none), "an unaligned pointer is no literal pool");
+    assert!(!thumb1_table_entry(&imp, 0x0800_0030, &loaded, &none), "a zero halfword does not open a function");
+    // The word a decoded `ldr` loads is data even where it follows a return.
+    let read: std::collections::HashSet<u64> = [0x0800_0008].into_iter().collect();
+    assert!(!thumb1_table_entry(&imp, 0x0800_0008, &pool, &read));
+}
+
+#[test]
+fn literal_pools_are_read_off_the_bytes() {
+    let mut bytes = vec![0u8; 0x20];
+    // 0x08: `ldr r0, [pc, #4]` loads the word at (0x08 + 4) & !3 + 4 = 0x10.
+    bytes[0x08..0x0a].copy_from_slice(&0x4801u16.to_le_bytes());
+    // 0x0e: `ldr r1, [pc, #0]` at an unaligned halfword loads (0x0e + 4) & !3 = 0x10.
+    bytes[0x0e..0x10].copy_from_slice(&0x4900u16.to_le_bytes());
+    let imp = NativeImport {
+        language: "ARM:LE:32:v4t".into(),
+        mappings: vec![Mapping { vaddr: 0x0800_0000, size: 0x20, file_off: 0, flags: 5, bytes }],
+        ..Default::default()
+    };
+    assert_eq!(thumb_literal_words(&imp).into_iter().collect::<Vec<_>>(), vec![0x0800_0010]);
 }
 
 #[test]
@@ -953,7 +1024,7 @@ fn regression_candidates_inside_known_bodies_are_rejected() {
 }
 
 #[test]
-fn regression_console_absence_does_not_promote_unconfirmed_candidates() {
+fn regression_decoder_failure_does_not_promote_unconfirmed_candidates() {
     let mut imp = NativeImport {
         mappings: vec![Mapping {
             vaddr: 0x1000,
@@ -968,16 +1039,13 @@ fn regression_console_absence_does_not_promote_unconfirmed_candidates() {
             size: 0x10,
         }],
         reloc_candidates: vec![0x1100],
-        cfg: crate::session::RuntimeConfig {
-            console_path: Some(std::path::PathBuf::from("/nonexistent/decomp_native")),
-            ..Default::default()
-        },
+        // A language the install does not define: the decoders cannot load.
         format: "ELF".into(),
-        language: "x86:LE:64:default".into(),
+        language: "nonexistent:LE:64:default".into(),
         ..Default::default()
     };
     discovery::discover_seeded(&mut imp);
-    // Unconfirmed candidate 0x1100 must NOT be promoted when console is absent/failing
+    // Unconfirmed candidate 0x1100 must NOT be promoted when the decoders fail
     assert_eq!(imp.functions.len(), 1);
     assert_eq!(imp.functions[0].entry, 0x1000);
 }
@@ -1218,10 +1286,10 @@ fn test_pe32_fixture_import_and_discovery() {
             .iter()
             .any(|x| x.provenance == "native-import:pe-reloc")
     );
-    if crate::native_runtime::find_console(&imp.cfg).is_ok() {
+    if imp.cfg.ghidra_install.join("Ghidra").is_dir() {
         assert!(
             imp.functions.len() >= 10,
-            "console discovery should find >= 10 functions, got {}",
+            "flow discovery should find >= 10 functions, got {}",
             imp.functions.len()
         );
     } else {
@@ -1700,20 +1768,20 @@ fn negative_test_reloc_section_ignored_when_directory_5_absent() {
 }
 
 #[test]
-fn a_mode_declaration_never_takes_the_console_down() {
+fn a_mode_declaration_never_takes_the_decoder_down() {
     // These are ARM instructions. Read in Thumb mode -- which a `$t`
     // symbol or a pattern's `setcontext` can ask for at any address --
     // they drove the constructor walk past the parser's fixed 75 states
     // (sleigh.cc:457), and indexing past the end killed the console
     // mid-import. Out of states is a decode failure, not a crash.
-    use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
+    use crate::native_runtime::{FlowKind, SleighFlow};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "ARM:LE:32:v8".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/ARM/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let import = NativeImport {
@@ -1738,11 +1806,7 @@ fn a_mode_declaration_never_takes_the_console_down() {
         }],
         ..Default::default()
     };
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    let flows = session
-        .flow_batch(&[0x1002, 0x1004])
-        .expect("the console must answer, not die");
+    let flows = SleighFlow::mapped(&cfg, &import).unwrap().flow(&[0x1002, 0x1004]);
     assert_eq!(flows.len(), 2, "one answer per address");
     assert_eq!(flows[0].kind, FlowKind::Bad, "no Thumb instruction there");
 }
@@ -1754,14 +1818,14 @@ fn pattern_search_reads_only_the_bytes_the_image_carries() {
     // addresses the load image never received, `loadFill` raised
     // DataUnavailError, the whole pattern search failed, and the import
     // kept one function out of 8794.
-    use crate::native_runtime::{ConsoleSession, find_console};
+    // (An unreadable byte now fails the in-process search the same way.)
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "MIPS:LE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/MIPS/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.ghidra_install.join("Ghidra").is_dir() {
+        eprintln!("SKIP: no Ghidra install");
         return;
     }
     let import = NativeImport {
@@ -1781,9 +1845,8 @@ fn pattern_search_reads_only_the_bytes_the_image_carries() {
     };
     let ranges = code_ranges(&import);
     assert_eq!(ranges, vec![(0x1000, 0x1008)], "ranges stop at the bytes");
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    session
+    let mut lifter = crate::native_runtime::SleighLifter::mapped(&cfg, &import).unwrap();
+    lifter
         .function_patterns(&ranges)
         .expect("a byte-backed range is searchable");
 }
@@ -1795,14 +1858,14 @@ fn flow_batch_answers_every_address_it_is_asked() {
     // seeds: MIPS lost half its functions to a delay slot at a mapping's
     // end (sleigh.cc:385) and to addresses the image does not cover
     // (loadimage_xml.cc:236).
-    use crate::native_runtime::{ConsoleSession, FlowKind, find_console};
+    use crate::native_runtime::{FlowKind, SleighFlow};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "MIPS:LE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/MIPS/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let import = NativeImport {
@@ -1826,10 +1889,8 @@ fn flow_batch_answers_every_address_it_is_asked() {
         }],
         ..Default::default()
     };
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
     let asked = [0x1002u64, 0x1004, 0x9000];
-    let flows = session.flow_batch(&asked).expect("batch must not fail");
+    let flows = SleighFlow::mapped(&cfg, &import).unwrap().flow(&asked);
     assert_eq!(
         flows.iter().map(|flow| flow.address).collect::<Vec<_>>(),
         asked,
@@ -1854,14 +1915,13 @@ fn flow_batch_answers_every_address_it_is_asked() {
 
 #[test]
 fn references_apply_pc_helper_fixups() {
-    use crate::native_runtime::{ConsoleSession, find_console};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "x86:LE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/x86/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let mut import = NativeImport {
@@ -1910,9 +1970,13 @@ fn references_apply_pc_helper_fixups() {
         ],
         ..Default::default()
     };
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    // The names the pattern search gives the helper starts, as discovery stores them.
+    let label = |import: &mut NativeImport| {
+        let mut lifter = crate::native_runtime::SleighLifter::mapped(&cfg, import).unwrap();
+        import.pattern_labels = lifter.function_patterns(&code_ranges(import)).unwrap().labels();
+    };
+    label(&mut import);
+    infer_data_references(&mut import).unwrap();
     let refs: Vec<_> = import
         .xrefs
         .iter()
@@ -1933,9 +1997,8 @@ fn references_apply_pc_helper_fixups() {
     ];
     import.mappings[0].size = 17;
     import.functions[0].size = 17;
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    label(&mut import);
+    infer_data_references(&mut import).unwrap();
     let refs: Vec<_> = import
         .xrefs
         .iter()
@@ -1949,9 +2012,8 @@ fn references_apply_pc_helper_fixups() {
 
     import.xrefs.clear();
     import.functions.truncate(1);
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    label(&mut import);
+    infer_data_references(&mut import).unwrap();
     assert!(
         import.xrefs.is_empty(),
         "a pattern alone cannot establish a function"
@@ -1964,9 +2026,8 @@ fn references_apply_pc_helper_fixups() {
     });
     import.mappings[1].bytes = vec![0x8b, 0x5c, 0x24, 4, 0xc3]; // reads argument, not PC
     import.mappings[1].size = 5;
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    label(&mut import);
+    infer_data_references(&mut import).unwrap();
     assert!(
         import.xrefs.is_empty(),
         "ordinary calls retain unknown register context"
@@ -1982,16 +2043,8 @@ fn references_apply_pc_helper_fixups() {
         0xc3,
     ];
     import.mappings[0].size = import.mappings[0].bytes.len() as u64;
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    let facts = session
-        .constants(
-            0x1000,
-            0x1000 + import.mappings[0].size,
-            &import.mappings,
-            false,
-        )
-        .unwrap();
+    let facts =
+        crate::native_runtime::strict_constants(&cfg, &import, 0x1000, 0x1000 + import.mappings[0].size).unwrap();
     assert!(
         facts.iter().all(|fact| fact.pc < 0x1009),
         "realignment must not produce constants from stale frame aliases: {facts:?}"
@@ -2000,14 +2053,13 @@ fn references_apply_pc_helper_fixups() {
 
 #[test]
 fn inferred_references_use_writable_image_values() {
-    use crate::native_runtime::{ConsoleSession, find_console};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "x86:LE:64:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/x86/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let mut import = NativeImport {
@@ -2049,9 +2101,7 @@ fn inferred_references_use_writable_image_values() {
         ],
         ..Default::default()
     };
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    infer_data_references(&mut import).unwrap();
     let refs: Vec<_> = import
         .xrefs
         .iter()
@@ -2062,9 +2112,7 @@ fn inferred_references_use_writable_image_values() {
         vec![(0x1000, 0x3000, "READ"), (0x1008, 0x4000, "READ")],
         "reference inference follows the selected analyzer's writable-image policy"
     );
-    let strict = session
-        .constants(0x1000, 0x100e, &import.mappings, false)
-        .unwrap();
+    let strict = crate::native_runtime::strict_constants(&cfg, &import, 0x1000, 0x100e).unwrap();
     assert!(
         strict.iter().all(|fact| fact.value != 0x4000),
         "strict constant queries must not inherit reference-inference heuristics: {strict:?}"
@@ -2499,14 +2547,13 @@ fn reserved_words_stop_at_the_object_that_holds_them() {
 
 #[test]
 fn elf_plt_register_context_is_scoped() {
-    use crate::native_runtime::find_console;
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "x86:LE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/x86/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let mut bytes = elf32_with_pltgot(16);
@@ -2515,13 +2562,9 @@ fn elf_plt_register_context_is_scoped() {
         import.cfg = cfg.clone();
         select_language(&mut import, &cfg).unwrap();
         assert!(discovery::discover_seeded(&mut import));
-        let mut session = crate::native_runtime::ConsoleSession::new(&import.cfg).unwrap();
-        session.load_mapped(&import).unwrap();
         import.xrefs.clear();
-        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
-        let strict = session
-            .constants(0x1000, 0x1006, &import.mappings, false)
-            .unwrap();
+        infer_data_references(&mut import).unwrap();
+        let strict = crate::native_runtime::strict_constants(&import.cfg, &import, 0x1000, 0x1006).unwrap();
         assert!(
             strict.is_empty(),
             "reference-only context must not seed strict queries: {strict:?}"
@@ -2555,14 +2598,13 @@ fn elf_plt_register_context_is_scoped() {
 
 #[test]
 fn powerpc_pic_context_follows_calls_not_unrelated_functions() {
-    use crate::native_runtime::{ConsoleSession, find_console};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "PowerPC:BE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/PowerPC/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let mut bytes = vec![0u8; 0x500];
@@ -2640,12 +2682,9 @@ fn powerpc_pic_context_follows_calls_not_unrelated_functions() {
         if caller_first {
             import.functions.swap(0, 1);
         }
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+        infer_data_references(&mut import).unwrap();
         assert!(
-            session
-                .constants(0x1000, 0x1008, &import.mappings, false)
+            crate::native_runtime::strict_constants(&cfg, &import, 0x1000, 0x1008)
                 .unwrap()
                 .is_empty(),
             "call-derived reference context must not enter strict constant queries"
@@ -2707,14 +2746,13 @@ fn powerpc_pic_context_follows_calls_not_unrelated_functions() {
 
 #[test]
 fn elf_linkage_references_do_not_require_functions() {
-    use crate::native_runtime::{ConsoleSession, find_console};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "PowerPC:BE:32:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/PowerPC/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let code = [
@@ -2784,9 +2822,7 @@ fn elf_linkage_references_do_not_require_functions() {
         select_language(&mut import, &cfg).unwrap();
         import.functions.clear();
         import.xrefs.clear();
-        let mut session = ConsoleSession::new(&cfg).unwrap();
-        session.load_mapped(&import).unwrap();
-        infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+        infer_data_references(&mut import).unwrap();
         assert!(
             import.functions.is_empty(),
             "reference coverage must not manufacture functions"
@@ -2819,14 +2855,13 @@ fn elf_linkage_references_do_not_require_functions() {
 
 #[test]
 fn an_undecodable_code_root_does_not_abort_reference_inference() {
-    use crate::native_runtime::{ConsoleSession, find_console};
     let mut cfg = crate::session::RuntimeConfig::from_env();
     cfg.language_id = "x86:LE:64:default".into();
     cfg.language_dir = cfg
         .ghidra_install
         .join("Ghidra/Processors/x86/data/languages");
-    if find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.language_dir.is_dir() {
+        eprintln!("SKIP: SLEIGH language not available");
         return;
     }
     let mut bytes = vec![
@@ -2860,16 +2895,13 @@ fn an_undecodable_code_root_does_not_abort_reference_inference() {
         reference_roots: vec![(0x1000, 0x1008), (0x1008, 0x1010)],
         ..Default::default()
     };
-    let mut session = ConsoleSession::new(&cfg).unwrap();
-    session.load_mapped(&import).unwrap();
     assert!(
-        session
-            .optional_references(0x1000, 0x1008, &import.mappings, true)
+        crate::native_runtime::range_references(&cfg, &import, 0x1000, 0x1008)
             .unwrap()
             .is_none(),
-        "the console must refuse the undecodable root instead of answering"
+        "the propagation must refuse the undecodable root instead of answering"
     );
-    infer_data_references(&mut import, &mut session, Vec::new()).unwrap();
+    infer_data_references(&mut import).unwrap();
     assert_eq!(
         import
             .xrefs
@@ -3110,5 +3142,83 @@ mod ppc_sda_tests {
                 (0x1003c, "r13".to_string(), 0x11000),
             ]
         );
+    }
+}
+
+mod mips_gp_tests {
+    use super::super::{
+        ElfSection, NativeFunction, NativeRegisterContext, sda_decode_points, seed_mips_gp_register,
+    };
+
+    const GP: u32 = 0x003c0cf0;
+
+    fn section(name: &str, flags: u64, addr: u64, off: u64, size: u64) -> ElfSection {
+        ElfSection { name: name.into(), typ: 1, flags, addr, off, size, link: 0, entry_size: 0 }
+    }
+
+    /// ELF32 LE image: `e_flags` at 36 and a 24-byte `.reginfo` at 0x100
+    /// whose `ri_gp_value` (offset 20) is `GP`.
+    fn image(e_flags: u32) -> (Vec<u8>, Vec<ElfSection>) {
+        let mut data = vec![0u8; 0x200];
+        data[..4].copy_from_slice(b"\x7fELF");
+        data[4] = 1;
+        data[36..40].copy_from_slice(&e_flags.to_le_bytes());
+        data[0x114..0x118].copy_from_slice(&GP.to_le_bytes());
+        let sections = vec![
+            section(".text", 6, 0x100000, 0x1000, 0x200),
+            section(".vutext", 6, 0x100200, 0x1200, 0x40),
+            section(".reginfo", 2, 0x100300, 0x100, 24),
+            section(".sdata", 3, 0x3bac80, 0x2000, 0x100),
+        ];
+        (data, sections)
+    }
+
+    fn seed(e_flags: u32, abs: &[(String, u64)]) -> Vec<NativeRegisterContext> {
+        let (data, sections) = image(e_flags);
+        let mut out = Vec::new();
+        seed_mips_gp_register(&data, false, 8, abs, &sections, &mut out);
+        out
+    }
+
+    #[test]
+    fn stripped_non_pic_image_takes_gp_from_reginfo_over_code_sections() {
+        // SLUS_209.74 shape: no symbols, `.reginfo` carries the value.
+        let seeds = seed(0x2092_4001, &[]);
+        let ranges: Vec<_> = seeds.iter().map(|s| (s.register.as_str(), s.start, s.end, s.value)).collect();
+        assert_eq!(
+            ranges,
+            vec![("gp", 0x100000, 0x100200, GP as u64), ("gp", 0x100200, 0x100240, GP as u64)],
+            "only executable sections are covered"
+        );
+        let functions: Vec<_> = [0x100000, 0x100080, 0x100300]
+            .into_iter()
+            .map(|entry| NativeFunction { entry, name: String::new(), size: 0x10 })
+            .collect();
+        assert_eq!(
+            sda_decode_points(&seeds, &functions),
+            vec![(0x100000, "gp".to_string(), GP as u64), (0x100080, "gp".to_string(), GP as u64)],
+            "every entry inside the code gets a decode point, none outside"
+        );
+    }
+
+    #[test]
+    fn gp_abs_symbol_beats_reginfo() {
+        let seeds = seed(0x2092_4001, &[("_gp".to_string(), 0x500000)]);
+        assert!(!seeds.is_empty() && seeds.iter().all(|s| s.value == 0x500000));
+    }
+
+    #[test]
+    fn pic_images_are_not_seeded() {
+        // EF_MIPS_PIC and EF_MIPS_CPIC: gp is recomputed from t9 per function.
+        assert!(seed(0x2092_4001 | 0x2, &[]).is_empty());
+        assert!(seed(0x2092_4001 | 0x4, &[]).is_empty());
+    }
+
+    #[test]
+    fn other_machines_are_not_seeded() {
+        let (data, sections) = image(0);
+        let mut out = Vec::new();
+        seed_mips_gp_register(&data, false, 20, &[], &sections, &mut out);
+        assert!(out.is_empty());
     }
 }

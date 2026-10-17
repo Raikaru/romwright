@@ -22,7 +22,8 @@
 //! ciphertext block.
 //!
 //! Compression: 0/3 raw, 1 basic (dataSize/zeroSize runs), 2 normal (the
-//! custom block framing over an LZX stream, window_bits 15).
+//! custom block chain whose length-prefixed chunks are the LZX frames of one
+//! stream, windowed per the header's `window_size`).
 
 use aes::cipher::{BlockCipherDecrypt, KeyInit};
 use aes::Aes128;
@@ -106,12 +107,72 @@ fn read_opt_headers(data: &[u8], count: usize) -> Result<Vec<OptHeader>> {
     Ok(out)
 }
 
+/// The LZX window for a `window_size` byte count from the base file format
+/// header (a power of two from 32 KiB to 32 MiB).
+fn lzx_window(window_size: u32) -> Result<lzxd::WindowSize> {
+    use lzxd::WindowSize::*;
+    Ok(match window_size {
+        0x0000_8000 => KB32,
+        0x0001_0000 => KB64,
+        0x0002_0000 => KB128,
+        0x0004_0000 => KB256,
+        0x0008_0000 => KB512,
+        0x0010_0000 => MB1,
+        0x0020_0000 => MB2,
+        0x0040_0000 => MB4,
+        0x0080_0000 => MB8,
+        0x0100_0000 => MB16,
+        0x0200_0000 => MB32,
+        other => return super::err(format!("xex: lzx window {other:#x} not supported")),
+    })
+}
+
+/// Splits the normal-compression payload into LZX frames.
+///
+/// The payload is a chain of blocks. A block is `nextSize: u32`, a 20-byte
+/// hash of the following block, then big-endian `u16` length-prefixed chunks,
+/// ended by a zero length or by the block's end. `first_size` (from the base
+/// file format header) is the size of the first block; each block's own header
+/// gives the size of the block after it, and zero ends the chain. A block
+/// therefore starts one *current* block size after the previous block, not one
+/// `nextSize` after it. Every chunk is one LZX frame.
+fn lzx_frames(compressed: &[u8], first_size: usize) -> Result<Vec<&[u8]>> {
+    const BLOCK_HEADER: usize = 4 + 20;
+    let mut frames = Vec::new();
+    let mut pos = 0usize;
+    let mut size = first_size;
+    while size != 0 {
+        let block_end = pos
+            .checked_add(size)
+            .filter(|&end| end <= compressed.len() && size >= BLOCK_HEADER)
+            .ok_or_else(|| super::ImportError::Bad("xex: lzx block outside payload".into()))?;
+        let next = be32(compressed, pos)? as usize;
+        let mut i = pos + BLOCK_HEADER;
+        while i + 2 <= block_end {
+            let len = be16(compressed, i)? as usize;
+            if len == 0 {
+                break;
+            }
+            let chunk = compressed
+                .get(i + 2..i + 2 + len)
+                .filter(|_| i + 2 + len <= block_end)
+                .ok_or_else(|| super::ImportError::Bad("xex: lzx chunk overruns its block".into()))?;
+            frames.push(chunk);
+            i += 2 + len;
+        }
+        pos = block_end;
+        size = next;
+    }
+    Ok(frames)
+}
+
 /// The decompressed PE image, recovered from the (decrypted) payload per the
 /// base file format's compression mode.
 fn decompress(
     compression: u16,
     basic: &[(u32, u32)],
     block_size: u32,
+    window_size: u32,
     image_size: usize,
     compressed: &[u8],
 ) -> Result<Vec<u8>> {
@@ -134,53 +195,30 @@ fn decompress(
             Ok(out)
         }
         2 => {
-            // Normal: a custom block framing over an LZX stream. Each block
-            // leads with a nextSize u32, then 20 bytes of header, then
-            // length-prefixed chunks whose payloads concatenate into the LZX
-            // input (XEXHeader.ReadPEImage case 2).
-            let mut lzx_input = Vec::new();
-            let mut pos = 0usize;
-            let bs = block_size as usize;
-            loop {
-                let next = be32(compressed, pos)? as usize;
-                let block_end = (pos + bs).min(compressed.len());
-                let mut i = pos + 24;
-                while i + 2 <= block_end {
-                    let len = be16(compressed, i)? as usize;
-                    if len == 0 {
-                        break;
-                    }
-                    lzx_input.extend_from_slice(
-                        compressed
-                            .get(i + 2..i + 2 + len)
-                            .ok_or_else(|| super::ImportError::Bad("xex: lzx chunk truncated".into()))?,
-                    );
-                    i += 2 + len;
-                }
-                if next == 0 {
+            let frames = lzx_frames(compressed, block_size as usize)?;
+            let window = lzx_window(window_size)?;
+            let mut lzxd = lzxd::Lzxd::new(window);
+            let mut out = Vec::with_capacity(image_size);
+            // Each chunk is one LZX frame: it decodes to exactly
+            // `MAX_CHUNK_SIZE` bytes (fewer only for the image's last frame)
+            // and ends 16-bit aligned, so it is decoded on its own bitstream
+            // while the window, trees and repeat offsets carry over.
+            for frame in frames {
+                let want = lzxd::MAX_CHUNK_SIZE.min(image_size - out.len());
+                if want == 0 {
                     break;
                 }
-                pos += next;
-                if pos >= compressed.len() {
-                    break;
-                }
-            }
-            // window_bits 15 -> 32 KB window (LzxDecompression.init(15, ...)).
-            let mut lzxd = lzxd::Lzxd::new(lzxd::WindowSize::KB32);
-            let mut out = Vec::new();
-            let mut chunk = lzx_input.as_slice();
-            while !chunk.is_empty() {
                 let decoded = lzxd
-                    .decompress_next(chunk, image_size - out.len())
+                    .decompress_next(frame, want)
                     .map_err(|e| super::ImportError::Bad(format!("xex: lzx: {e}")))?;
-                if decoded.is_empty() {
-                    break;
-                }
                 out.extend_from_slice(decoded);
-                // decompress_next consumes the whole slice each call.
-                break;
             }
-            let _ = &mut chunk;
+            if out.len() != image_size {
+                return super::err(format!(
+                    "xex: lzx stream decodes to {:#x} of {image_size:#x} image bytes",
+                    out.len()
+                ));
+            }
             Ok(out)
         }
         other => super::err(&format!("xex: compression {other} not supported")),
@@ -207,6 +245,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
     let mut compression = 0u16;
     let mut basic: Vec<(u32, u32)> = Vec::new();
     let mut block_size = 0u32;
+    let mut window_size = 0u32;
     let mut entry = 0u32;
     let mut image_base = 0u32;
     for h in &headers {
@@ -225,6 +264,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
                         }
                     }
                     2 | 3 => {
+                        window_size = be32(&h.data, 8)?;
                         block_size = be32(&h.data, 0xC)?;
                     }
                     _ => {}
@@ -271,7 +311,7 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         } else {
             payload.to_vec()
         };
-        match decompress(compression, &basic, block_size, image_size, &plain) {
+        match decompress(compression, &basic, block_size, window_size, image_size, &plain) {
             Ok(image) if image.starts_with(b"MZ") => {
                 pe_image = image;
                 break 'keys;
@@ -363,6 +403,9 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         unrelocated_data_pointers: true,
         ..Default::default()
     };
+    // The optional header's linker version (`MajorLinkerVersion`,
+    // `MinorLinkerVersion`) is the compiler evidence a stripped XEX keeps.
+    import.image_facts.pe_linker = pe_image.get(pe_off + 26..pe_off + 28).map(|version| (version[0], version[1]));
     import.functions.push(NativeFunction {
         entry: entry_addr,
         name: "entry".into(),
@@ -439,5 +482,123 @@ mod tests {
         let entries: Vec<u64> = import.functions.iter().map(|f| f.entry).collect();
         assert_eq!(entries, [0x8214_0010]);
         assert_eq!((import.xrefs.len(), import.xrefs[0].from), (1, 0x8211_3400));
+    }
+
+    /// MSB-first bit writer packing 16-bit little-endian words, the LZX
+    /// bitstream layout (MS-PATCH 2.2).
+    #[derive(Default)]
+    struct Bits(Vec<bool>);
+
+    impl Bits {
+        fn put(&mut self, value: u32, count: u32) {
+            self.0.extend((0..count).rev().map(|bit| value >> bit & 1 == 1));
+        }
+
+        /// Pads to a 16-bit boundary and packs the words.
+        fn finish(mut self) -> Vec<u8> {
+            while !self.0.len().is_multiple_of(16) {
+                self.0.push(false);
+            }
+            self.0
+                .chunks(16)
+                .flat_map(|word| {
+                    let value = word.iter().fold(0u16, |acc, &bit| acc << 1 | bit as u16);
+                    value.to_le_bytes()
+                })
+                .collect()
+        }
+    }
+
+    /// A verbatim block header whose main tree gives every literal an 8-bit
+    /// code (so a literal is its own byte, MSB first) and has no matches.
+    /// `delta` is the pretree symbol turning the previous literal path length
+    /// into 8: 9 from the initial all-zero tree, 0 when it is already 8.
+    fn literal_block_header(bits: &mut Bits, size: u32, delta: u32) {
+        bits.put(1, 3);
+        bits.put(size, 24);
+        // Pretree for the literals: `delta` and the zero-run code 18 get one
+        // bit each (codes 0 and 1).
+        let pretree = |bits: &mut Bits, first: u32| {
+            for symbol in 0..20 {
+                bits.put(u32::from(symbol == first || symbol == 18), 4);
+            }
+        };
+        pretree(bits, delta);
+        for _ in 0..256 {
+            bits.put(0, 1);
+        }
+        // Zero runs cover the 240 match elements (30 position slots x 8) and
+        // the empty 249-element length tree: 51 is the longest run.
+        for total in [240u32, 249] {
+            pretree(bits, delta);
+            let mut left = total;
+            while left > 0 {
+                let run = left.min(51);
+                bits.put(1, 1);
+                bits.put(run - 20, 5);
+                left -= run;
+            }
+        }
+    }
+
+    /// Chunk-framed XEX payload built from the public structures: the LZX
+    /// stream is three frames (the first ends on an odd byte, so it carries
+    /// alignment padding that a single concatenated decode would misread as
+    /// data), and two blocks of different sizes, the first zero-padded.
+    #[test]
+    fn lzx_frames_decode_across_blocks_and_alignment() {
+        let image: Vec<u8> = (0..2 * 0x8000 + 100u32)
+            .map(|i| (i.wrapping_mul(2_654_435_761) >> 13) as u8)
+            .collect();
+        // Block A spans frames 1 and 2, block B spans frames 2 and 3.
+        let first = 0x8000 + 0x80;
+        let mut frames = Vec::new();
+        let mut frame = Bits::default();
+        frame.put(0, 1); // no E8 translation
+        literal_block_header(&mut frame, first as u32, 9);
+        for &byte in &image[..0x8000] {
+            frame.put(byte.into(), 8);
+        }
+        // The first frame's bit count is 8 modulo 16, so its end carries a
+        // padding byte that is not part of any element.
+        assert_eq!(frame.0.len() % 16, 8);
+        frames.push(frame.finish());
+        let mut frame = Bits::default();
+        for &byte in &image[0x8000..first] {
+            frame.put(byte.into(), 8);
+        }
+        literal_block_header(&mut frame, (image.len() - first) as u32, 0);
+        for &byte in &image[first..0x10000] {
+            frame.put(byte.into(), 8);
+        }
+        frames.push(frame.finish());
+        let mut frame = Bits::default();
+        for &byte in &image[0x10000..] {
+            frame.put(byte.into(), 8);
+        }
+        frames.push(frame.finish());
+
+        let block = |next: u32, chunks: &[&Vec<u8>], pad: usize| {
+            let mut bytes = next.to_be_bytes().to_vec();
+            bytes.extend([0xA5; 20]); // hash of the next block, unchecked
+            for chunk in chunks {
+                bytes.extend((chunk.len() as u16).to_be_bytes());
+                bytes.extend(chunk.iter());
+            }
+            bytes.extend((0..pad).map(|_| 0));
+            bytes
+        };
+        let rest = block(0, &[&frames[1], &frames[2]], 0);
+        let head = block(rest.len() as u32, &[&frames[0]], 6);
+        let payload = [head.as_slice(), rest.as_slice()].concat();
+
+        let decoded = decompress(2, &[], head.len() as u32, 0x8000, image.len(), &payload).unwrap();
+        assert_eq!(decoded, image);
+
+        // Anything but the right first-block size, or a frame-count mismatch,
+        // is an error rather than a short or garbled image.
+        assert!(decompress(2, &[], head.len() as u32 + 1, 0x8000, image.len(), &payload).is_err());
+        assert!(decompress(2, &[], head.len() as u32, 0x8000, image.len() + 1, &payload).is_err());
+        assert!(decompress(2, &[], head.len() as u32, 0x1234, image.len(), &payload).is_err());
     }
 }

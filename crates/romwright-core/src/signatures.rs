@@ -143,7 +143,9 @@ impl crate::Core {
         Ok(report)
     }
 
-    /// Native import, then the signature pass when databases are supplied.
+    /// Native import, then the signature pass when databases are supplied,
+    /// then the universal fact pack when one is found (see
+    /// [`crate::fact_pack::resolve_pack`]).
     /// `map` is a CodeWarrior linker MAP applied beside the image's own
     /// symbols; its digest joins the reuse key for the same reason the
     /// databases' do.
@@ -160,11 +162,39 @@ impl crate::Core {
         Vec<romwright_model::ProgramSummary>,
         Option<SignatureReport>,
     )> {
+        let (stored, signatures, _) =
+            self.import_native_with_facts(binary, name, databases, analyse, map, raw, keys, None)?;
+        Ok((stored, signatures))
+    }
+
+    /// [`Self::import_native_with_signatures`] with an explicit fact pack
+    /// (`--fact-pack`); `None` resolves one from the environment and the
+    /// user data directory. Returns one fact-pack report per program the
+    /// pack was applied to.
+    // The import's options are independent and every caller names them all.
+    #[allow(clippy::too_many_arguments)]
+    pub fn import_native_with_facts(
+        &self,
+        binary: &Path,
+        name: &str,
+        databases: &[std::path::PathBuf],
+        analyse: bool,
+        map: Option<&Path>,
+        raw: Option<(u64, &str)>,
+        keys: &crate::native::keys::KeyStore,
+        pack: Option<&Path>,
+    ) -> crate::Result<(
+        Vec<romwright_model::ProgramSummary>,
+        Option<SignatureReport>,
+        Vec<crate::fact_pack::FactPackReport>,
+    )> {
+        let pack = self.import_fact_pack(pack)?;
         // A matched signature renames functions in the store, so which
         // databases were applied is part of what the import produced and
         // belongs in the reuse key. Without it a later import with no
-        // databases would be served names it never asked for.
-        let flavour = databases
+        // databases would be served names it never asked for. The same goes
+        // for a fact pack; with none, the key is what it always was.
+        let mut flavour = databases
             .iter()
             .map(|path| {
                 let digest = std::fs::read(path)
@@ -174,20 +204,36 @@ impl crate::Core {
             })
             .collect::<Vec<_>>()
             .join(",");
-        let stored = self.import_container_with(binary, name, analyse, &flavour, map, raw, keys)?;
-        if databases.is_empty() {
-            return Ok((stored, None));
+        if let Some((_, identity, _)) = &pack {
+            flavour.push_str(&format!("fact-pack:{identity}"));
         }
+        let stored = self.import_container_with(binary, name, analyse, &flavour, map, raw, keys)?;
         // Signature matching is per program; a container's images each get
         // their own pass so no processor is left unnamed.
         let mut merged: Option<SignatureReport> = None;
-        for summary in &stored {
-            let report = self.apply_signatures(binary, &summary.program, databases)?;
-            merged = Some(match merged.take() {
-                None => report,
-                Some(previous) => previous.merged(report),
-            });
+        if !databases.is_empty() {
+            for summary in &stored {
+                let report = self.apply_signatures(binary, &summary.program, databases)?;
+                merged = Some(match merged.take() {
+                    None => report,
+                    Some(previous) => previous.merged(report),
+                });
+            }
         }
-        Ok((stored, merged))
+        let mut facts = Vec::new();
+        if let Some((path, _, named)) = &pack {
+            let options = crate::fact_pack::FactPackOptions::default();
+            for summary in &stored {
+                match self.apply_fact_pack(&summary.program, path, &options) {
+                    Ok(report) => facts.push(report),
+                    Err(error) if !*named => {
+                        eprintln!("warning: fact pack {}: {error}", path.display());
+                        break;
+                    }
+                    Err(error) => return Err(error),
+                }
+            }
+        }
+        Ok((stored, merged, facts))
     }
 }
