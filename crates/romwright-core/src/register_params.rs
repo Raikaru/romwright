@@ -546,8 +546,7 @@ mod tests {
     }
 
     /// Type recovery reads pointer width and the stack pointer from the
-    /// shipped bundles: four-byte pointers on every console target (the
-    /// PowerPC spec states none, so the language id's 32 decides), eight
+    /// shipped bundles: four-byte pointers on every console target, eight
     /// on x86-64.
     #[test]
     fn shipped_bundles_name_their_pointer_width_and_stack_pointer() {
@@ -557,7 +556,6 @@ mod tests {
             ("ARM-LE-32-v4t", "ARM:LE:32:v4t", 4, 0x54),
             ("MIPS-LE-32-default", "MIPS:LE:32:default", 4, 0x74),
             ("MIPS-BE-64-64-32addr", "MIPS:BE:64:64-32addr", 4, 0xe8),
-            ("PowerPC-BE-32-default", "PowerPC:BE:32:default", 4, 0x4),
         ] {
             let dir = specs.join(bundle);
             let cspec = std::fs::read_to_string(dir.join("cspec.xml"))
@@ -574,5 +572,18 @@ mod tests {
                 "{language}"
             );
         }
+    }
+
+    /// The PowerPC bundle (a generated cache, `scripts/gen_native_specs.py`)
+    /// names `r1` as the stack pointer and states no pointer size, so the
+    /// language id's 32 decides the width.
+    #[test]
+    fn a_spec_without_a_pointer_size_takes_the_language_width() {
+        let cspec = r#"<compiler_spec><stackpointer register="r1" space="ram"/></compiler_spec>"#;
+        let table = "r0\t0\t4\nr1\t4\t4\n";
+        assert_eq!(
+            Conventions::parse(cspec, table).machine("PowerPC:BE:32:default"),
+            crate::types_infer::Machine { pointer_size: 4, stack_pointer: Some(4) }
+        );
     }
 }
