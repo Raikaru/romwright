@@ -1,0 +1,2999 @@
+{
+ "functions": {
+  "__absvdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.3"
+  },
+  "__absvsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.3"
+  },
+  "__adddf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.1"
+  },
+  "__addsf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.1"
+  },
+  "__addtf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.1"
+  },
+  "__addvdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.3"
+  },
+  "__addvsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.3"
+  },
+  "__addxf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    },
+    {
+     "name": "b",
+     "type": "xf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.1"
+  },
+  "__aeabi_cdcmpeq": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_cdcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_cdrcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_cfcmpeq": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_cfcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_cfrcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2h": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "hi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2h_alt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "hi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2iz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2lz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2uiz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "usi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_d2ulz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "udi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dadd": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmpeq": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmpge": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmpgt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmplt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dcmpun": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_ddiv": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dmul": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_drsub": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_dsub": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2d": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2h": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "hi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2h_alt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "hi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2iz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2lz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2uiz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "usi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_f2ulz": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "udi",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fadd": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmpeq": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmpge": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmpgt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmple": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmplt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fcmpun": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fdiv": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fmul": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_frsub": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_fsub": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_h2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "hi"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_h2f_alt": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "hi"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_i2d": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_i2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_idiv": {
+   "parameters": [
+    {
+     "name": "numerator",
+     "type": "si"
+    },
+    {
+     "name": "denominator",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi integer division"
+  },
+  "__aeabi_idiv0": {
+   "parameters": [
+    {
+     "name": "return_value",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi integer division"
+  },
+  "__aeabi_l2d": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_l2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_lasr": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi long long"
+  },
+  "__aeabi_lcmp": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi long long"
+  },
+  "__aeabi_ldiv0": {
+   "parameters": [
+    {
+     "name": "return_value",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi integer division"
+  },
+  "__aeabi_llsl": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi long long"
+  },
+  "__aeabi_llsr": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi long long"
+  },
+  "__aeabi_lmul": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi long long"
+  },
+  "__aeabi_memclr": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memclr4": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memclr8": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memcpy": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memcpy4": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memcpy8": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memmove": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memmove4": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memmove8": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "src",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memset": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    },
+    {
+     "name": "c",
+     "type": "si"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memset4": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    },
+    {
+     "name": "c",
+     "type": "si"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_memset8": {
+   "parameters": [
+    {
+     "name": "dest",
+     "type": "void*"
+    },
+    {
+     "name": "n",
+     "type": "usize"
+    },
+    {
+     "name": "c",
+     "type": "si"
+    }
+   ],
+   "return": "void",
+   "source": "rtabi memory"
+  },
+  "__aeabi_read_tp": {
+   "parameters": [],
+   "return": "void*",
+   "source": "rtabi thread-local storage"
+  },
+  "__aeabi_ui2d": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_ui2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_uidiv": {
+   "parameters": [
+    {
+     "name": "numerator",
+     "type": "usi"
+    },
+    {
+     "name": "denominator",
+     "type": "usi"
+    }
+   ],
+   "return": "usi",
+   "source": "rtabi integer division"
+  },
+  "__aeabi_ul2d": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "df",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_ul2f": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "sf",
+   "source": "rtabi floating-point helpers"
+  },
+  "__aeabi_ulcmp": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    },
+    {
+     "name": "b",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi long long"
+  },
+  "__aeabi_uread4": {
+   "parameters": [
+    {
+     "name": "address",
+     "type": "void*"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi unaligned access"
+  },
+  "__aeabi_uread8": {
+   "parameters": [
+    {
+     "name": "address",
+     "type": "void*"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi unaligned access"
+  },
+  "__aeabi_uwrite4": {
+   "parameters": [
+    {
+     "name": "value",
+     "type": "si"
+    },
+    {
+     "name": "address",
+     "type": "void*"
+    }
+   ],
+   "return": "si",
+   "source": "rtabi unaligned access"
+  },
+  "__aeabi_uwrite8": {
+   "parameters": [
+    {
+     "name": "value",
+     "type": "di"
+    },
+    {
+     "name": "address",
+     "type": "void*"
+    }
+   ],
+   "return": "di",
+   "source": "rtabi unaligned access"
+  },
+  "__ashldi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__ashlsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__ashlti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__ashrdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__ashrsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__ashrti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__bswapdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.4"
+  },
+  "__bswapsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__clzdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__clzsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__clzti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__cmpdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__cmpdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.2"
+  },
+  "__cmpsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__cmptf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__cmpti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "ti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.2"
+  },
+  "__ctzdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__ctzsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__ctzti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__divdf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.1"
+  },
+  "__divdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__divsf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.1"
+  },
+  "__divsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__divtf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.1"
+  },
+  "__divti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "ti"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__divxf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    },
+    {
+     "name": "b",
+     "type": "xf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.1"
+  },
+  "__eqdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__eqsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__eqtf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__extenddftf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__extenddfxf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__extendsfdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__extendsftf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__extendsfxf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__ffsdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__ffsti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__fixdfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.2.2"
+  },
+  "__fixdfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.2.2"
+  },
+  "__fixdfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixsfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.2.2"
+  },
+  "__fixsfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.2.2"
+  },
+  "__fixsfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixtfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.2.2"
+  },
+  "__fixtfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.2.2"
+  },
+  "__fixtfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsdfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsdfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsdfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunssfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunssfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunssfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunstfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunstfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunstfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsxfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsxfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.2.2"
+  },
+  "__fixunsxfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.2.2"
+  },
+  "__fixxfdi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.2.2"
+  },
+  "__fixxfsi": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.2.2"
+  },
+  "__fixxfti": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.2.2"
+  },
+  "__floatdidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floatdisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatditf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatdixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatsidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floatsisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatsitf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatsixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__floattidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floattisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floattitf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floattixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatundidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floatundisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatunditf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatundixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatunsidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floatunsisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatunsitf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatunsixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatuntidf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__floatuntisf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatuntitf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.2"
+  },
+  "__floatuntixf": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.2"
+  },
+  "__gedf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__gesf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__getf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__gtdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__gtsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__gttf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__ledf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__lesf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__letf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__lshrdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__lshrsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__lshrti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__ltdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__ltsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__lttf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__moddi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__modsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__modti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "ti"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__muldf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.1"
+  },
+  "__muldi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__mulsf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.1"
+  },
+  "__mulsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.1"
+  },
+  "__multf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.1"
+  },
+  "__multi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    },
+    {
+     "name": "b",
+     "type": "ti"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__mulvdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.3"
+  },
+  "__mulvsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.3"
+  },
+  "__mulxf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    },
+    {
+     "name": "b",
+     "type": "xf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.1"
+  },
+  "__nedf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__negdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.1"
+  },
+  "__negdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.1"
+  },
+  "__negsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.1"
+  },
+  "__negtf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.1"
+  },
+  "__negti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "ti"
+    }
+   ],
+   "return": "ti",
+   "source": "gccint 3.1.1"
+  },
+  "__negvdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.3"
+  },
+  "__negvsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.3"
+  },
+  "__negxf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.1"
+  },
+  "__nesf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__netf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__paritydi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__paritysi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__parityti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__popcountdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__popcountsi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__popcountti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.4"
+  },
+  "__powidf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.4"
+  },
+  "__powisf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.4"
+  },
+  "__powitf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.4"
+  },
+  "__powixf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.4"
+  },
+  "__subdf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.1"
+  },
+  "__subsf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.1"
+  },
+  "__subtf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "tf",
+   "source": "gccint 3.2.1"
+  },
+  "__subvdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "di"
+    },
+    {
+     "name": "b",
+     "type": "di"
+    }
+   ],
+   "return": "di",
+   "source": "gccint 3.1.3"
+  },
+  "__subvsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "si"
+    },
+    {
+     "name": "b",
+     "type": "si"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.3"
+  },
+  "__subxf3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    },
+    {
+     "name": "b",
+     "type": "xf"
+    }
+   ],
+   "return": "xf",
+   "source": "gccint 3.2.1"
+  },
+  "__truncdfsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__trunctfdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__trunctfsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__truncxfdf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "df",
+   "source": "gccint 3.2.2"
+  },
+  "__truncxfsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "xf"
+    }
+   ],
+   "return": "sf",
+   "source": "gccint 3.2.2"
+  },
+  "__ucmpdi2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    },
+    {
+     "name": "b",
+     "type": "udi"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.2"
+  },
+  "__ucmpti2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    },
+    {
+     "name": "b",
+     "type": "uti"
+    }
+   ],
+   "return": "si",
+   "source": "gccint 3.1.2"
+  },
+  "__udivdi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    },
+    {
+     "name": "b",
+     "type": "udi"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.1.1"
+  },
+  "__udivmoddi4": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    },
+    {
+     "name": "b",
+     "type": "udi"
+    },
+    {
+     "name": "c",
+     "type": "udi*"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.1.1"
+  },
+  "__udivmodti4": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    },
+    {
+     "name": "b",
+     "type": "uti"
+    },
+    {
+     "name": "c",
+     "type": "uti*"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.1.1"
+  },
+  "__udivsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    },
+    {
+     "name": "b",
+     "type": "usi"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.1.1"
+  },
+  "__udivti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    },
+    {
+     "name": "b",
+     "type": "uti"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.1.1"
+  },
+  "__umoddi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "udi"
+    },
+    {
+     "name": "b",
+     "type": "udi"
+    }
+   ],
+   "return": "udi",
+   "source": "gccint 3.1.1"
+  },
+  "__umodsi3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "usi"
+    },
+    {
+     "name": "b",
+     "type": "usi"
+    }
+   ],
+   "return": "usi",
+   "source": "gccint 3.1.1"
+  },
+  "__umodti3": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "uti"
+    },
+    {
+     "name": "b",
+     "type": "uti"
+    }
+   ],
+   "return": "uti",
+   "source": "gccint 3.1.1"
+  },
+  "__unorddf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "df"
+    },
+    {
+     "name": "b",
+     "type": "df"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__unordsf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "sf"
+    },
+    {
+     "name": "b",
+     "type": "sf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  },
+  "__unordtf2": {
+   "parameters": [
+    {
+     "name": "a",
+     "type": "tf"
+    },
+    {
+     "name": "b",
+     "type": "tf"
+    }
+   ],
+   "return": "cmp",
+   "source": "gccint 3.2.3"
+  }
+ },
+ "generator": "scripts/gen_runtime_helpers.py",
+ "modes": "si/di/ti: 4/8/16-byte integer, u-prefixed unsigned; sf/df/xf/tf: floating point; hi: 2-byte integer; cmp: word-sized comparison result; usize: size_t; trailing '*': pointer; void, void*",
+ "sources": [
+  "GCC Internals, 'The GCC low-level runtime library', sections 3.1 and 3.2 (https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html)",
+  "Run-time ABI for the Arm Architecture, 2025Q4, Arm Limited, CC-BY-SA-4.0 (https://github.com/ARM-software/abi-aa/blob/main/rtabi32/rtabi32.rst)"
+ ]
+}

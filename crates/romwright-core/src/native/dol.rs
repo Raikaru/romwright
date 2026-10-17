@@ -75,13 +75,16 @@ pub(crate) fn import(data: &[u8]) -> Result<NativeImport> {
         format: "dol".into(),
         language: "PowerPC:BE:32:Gekko_Broadway".into(),
         register_contexts,
+        // A DOL carries no relocations: its vtables and callback tables hold
+        // absolute code addresses, the only reference a virtual function has.
+        unrelocated_data_pointers: true,
         ..Default::default()
     })
 }
 
 /// Recognize a side-effect-free EABI register initializer reached by the first
 /// startup call. Values come from instructions, not guessed section offsets.
-fn startup_registers(mappings: &[Mapping], entry: u64) -> Option<(u64, u64, [u32; 2])> {
+fn startup_registers(mappings: &[Mapping], entry: u64) -> Option<(u64, u64, [u32; 2], u32)> {
     let instruction = |address: u64| {
         let mapping = mappings.iter().find(|mapping| {
             mapping.flags & 4 != 0 && address >= mapping.vaddr
@@ -107,7 +110,7 @@ fn startup_registers(mappings: &[Mapping], entry: u64) -> Option<(u64, u64, [u32
         if word == 0x4e80_0020 {
             // A complete stack + SDA setup distinguishes this ABI initializer
             // from an arbitrary helper that happens to write one register.
-            registers[1]?;
+            let stack = registers[1]?;
             let bases = [registers[2]?, registers[13]?];
             if bases.iter().any(|base| *base == 0 || !mappings.iter().any(|mapping| {
                 mapping.flags & 4 == 0 && mapping.size != 0
@@ -116,7 +119,7 @@ fn startup_registers(mappings: &[Mapping], entry: u64) -> Option<(u64, u64, [u32
             })) {
                 return None;
             }
-            return Some((initializer, address + 4, bases));
+            return Some((initializer, address + 4, bases, stack));
         }
         let destination;
         let value;
@@ -144,8 +147,34 @@ fn startup_registers(mappings: &[Mapping], entry: u64) -> Option<(u64, u64, [u32
     None
 }
 
+/// Where a REL set is placed: the first 32-byte boundary `0x2000` past the
+/// arena start, which the Dolphin SDK linker script defines as
+/// `__ArenaLo = align32(_stack_addr + 0x2000)` and the startup initializer's
+/// `r1` is `_stack_addr`. decomp-toolkit's `rel merge` places its REL
+/// sections at `align32(__ArenaLo + 0x2000)`, so this reproduces its layout
+/// on any image built with that script. When the initializer is not
+/// recognised the base falls back to the end of the DOL's own mappings.
+pub(crate) fn rel_base(imp: &NativeImport) -> u64 {
+    let end = imp.mappings.iter().map(|m| m.vaddr + m.size).max().unwrap_or(0);
+    let arena_lo = imp
+        .functions
+        .first()
+        .and_then(|entry| startup_registers(&imp.mappings, entry.entry))
+        .map(|(_, _, _, stack)| (u64::from(stack) + 0x2000 + 31) & !31)
+        .filter(|arena_lo| *arena_lo >= end)
+        .unwrap_or((end + 31) & !31);
+    (arena_lo + 0x2000 + 31) & !31
+}
+
+/// The `r2`/`r13` small-data bases the startup initializer establishes, as
+/// `[r2, r13]`: REL code addresses its data through the same two.
+pub(crate) fn sda_bases(imp: &NativeImport) -> Option<[u32; 2]> {
+    let entry = imp.functions.first()?.entry;
+    startup_registers(&imp.mappings, entry).map(|(_, _, bases, _)| bases)
+}
+
 fn startup_register_contexts(mappings: &[Mapping], entry: u64) -> Vec<NativeRegisterContext> {
-    let Some((initializer, end, bases)) = startup_registers(mappings, entry) else {
+    let Some((initializer, end, bases, _)) = startup_registers(mappings, entry) else {
         return Vec::new();
     };
     // Before this call returns the bases are not established. Do not assert
@@ -245,5 +274,41 @@ mod tests {
             assert!(import(&data).is_err(), "accepted malformed field {offset:#x}");
         }
         assert!(import(&[0; 0xe3]).is_err());
+    }
+
+    #[test]
+    fn data_words_naming_code_seed_entries_in_a_dol() {
+        // A DOL has no relocations: a vtable word is the only reference a
+        // virtual function has. An aligned word naming code outside every body
+        // counts; an unaligned one, a data address and the declared entry do not.
+        let mut data = fixture();
+        for (offset, word) in [(0x110, 0x8000_1008_u32), (0x114, 0x8000_1002),
+                               (0x118, 0x8000_2010), (0x11c, 0x8000_1000)] {
+            data[offset..offset + 4].copy_from_slice(&word.to_be_bytes());
+        }
+        let parsed = import(&data).unwrap();
+        assert!(parsed.unrelocated_data_pointers);
+        assert_eq!(super::super::data_code_pointers(&parsed), [0x8000_1008]);
+    }
+
+    #[test]
+    fn a_jump_table_run_is_not_seeded_but_a_vtable_run_is() {
+        // 0x80001000..0x80001008 is a function body. A run of data words with
+        // one inside it and no entry is a switch's table, whose case labels
+        // are never entries; a run naming an entry is a vtable; a lone word
+        // names its target either way.
+        for (words, expected) in [
+            ([0x8000_1004_u32, 0x8000_1008, 0, 0], &[][..]),
+            ([0x8000_1000, 0x8000_1008, 0, 0], &[0x8000_1008][..]),
+            ([0x8000_1008, 0, 0x8000_1004, 0], &[0x8000_1008][..]),
+        ] {
+            let mut data = fixture();
+            for (index, word) in words.into_iter().enumerate() {
+                data[0x110 + index * 4..0x114 + index * 4].copy_from_slice(&word.to_be_bytes());
+            }
+            let mut parsed = import(&data).unwrap();
+            parsed.functions[0].size = 8;
+            assert_eq!(super::super::data_code_pointers(&parsed), expected, "{words:x?}");
+        }
     }
 }

@@ -28,6 +28,21 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::native_runtime::{PcodeInstruction, PcodeVarnode};
 use romwright_model::type_evidence::Class;
 
+/// What the inference needs to know about the target machine, read from
+/// its compiler spec (`register_params::Conventions::machine`). Nothing
+/// here is x86-64's: a GBA's pointers are four bytes in four-byte
+/// registers, a PS2's are four bytes in registers SLEIGH sizes wider.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Machine {
+    /// Bytes in a data pointer. A register narrower than this cannot hold
+    /// one, so it never becomes a pointer by being part of an address.
+    pub pointer_size: u32,
+    /// The stack pointer's offset in the register space. An address built
+    /// from it is a frame slot: a spill, a local, or an incoming stack
+    /// argument — never a field of a struct the function was handed.
+    pub stack_pointer: Option<u64>,
+}
+
 /// A field recovered at one offset of a struct: the access width and the
 /// scalar class the value's first use proved.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -192,10 +207,12 @@ impl Facts {
         if varnode.space != "register" {
             return;
         }
-        let slot = self
-            .registers
-            .entry(varnode.offset)
-            .or_insert(Class::Unknown);
+        self.constrain_register(varnode.offset, class);
+    }
+
+    /// Constrains the register at `offset`; the class carries any width.
+    fn constrain_register(&mut self, offset: u64, class: Class) {
+        let slot = self.registers.entry(offset).or_insert(Class::Unknown);
         *slot = slot.join(class);
     }
 
@@ -297,7 +314,23 @@ fn branch_relevant(instructions: &[PcodeInstruction]) -> std::collections::BTree
     wanted
 }
 
-pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
+/// A varnode by space and offset: what the maps of this pass are keyed by.
+type VarKey = (String, u64);
+
+/// The varnodes a `POPCOUNT` reads: x86 computes its parity flag as
+/// `popcount(value & 0xff) & 1`, and the mask there is the flag's, not the
+/// program's.
+fn parity_inputs(instructions: &[PcodeInstruction]) -> std::collections::BTreeSet<(String, u64)> {
+    instructions
+        .iter()
+        .flat_map(|instruction| &instruction.ops)
+        .filter(|op| op.opcode == "POPCOUNT")
+        .flat_map(|op| &op.inputs)
+        .map(|input| (input.space.clone(), input.offset))
+        .collect()
+}
+
+pub fn infer(instructions: &[PcodeInstruction], machine: &Machine) -> Facts {
     let mut facts = Facts::default();
     let relevant = branch_relevant(instructions);
     let signed_evidence = |op: &crate::native_runtime::PcodeOp| {
@@ -305,6 +338,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
             .as_ref()
             .is_some_and(|output| relevant.contains(&(output.space.clone(), output.offset)))
     };
+    let parity = parity_inputs(instructions);
     let mut defined: std::collections::BTreeSet<u64> = std::collections::BTreeSet::new();
     // A unique or register holding a value copied from a parameter carries
     // that parameter's constraints; one level of copy covers the prologue
@@ -339,7 +373,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     let mut scaled: BTreeMap<(String, u64), u64> = BTreeMap::new();
     // `t = a + b` where b is not a constant: a base-plus-index sum, temp ->
     // (base, index) so a LOAD through it is an array access on the base.
-    let mut sum_of: BTreeMap<(String, u64), ((String, u64), (String, u64))> = BTreeMap::new();
+    let mut sum_of: BTreeMap<VarKey, (VarKey, VarKey)> = BTreeMap::new();
     let mut address_of: BTreeMap<(String, u64), (u64, i64)> = BTreeMap::new();
     let mut spilled: BTreeMap<(u64, i64), u64> = BTreeMap::new();
     // Registers that went into computing a temporary. When the temporary
@@ -347,9 +381,31 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     // from is the pointer -- `values[index]` is `LOAD(values + index * 4)`,
     // and without this the pointer parameter is only ever an addend.
     let mut built_from: BTreeMap<(String, u64), Vec<u64>> = BTreeMap::new();
+    // Registers currently holding a stack address: the stack pointer and
+    // anything copied or offset from it (`mov rbp, rsp`, `move s8, sp`,
+    // `add r7, sp, #0`). An access through one is a frame slot.
+    let mut frame: BTreeSet<u64> = machine.stack_pointer.into_iter().collect();
+    // Registers whose current value is a zero an idiom wrote (`xor eax, eax`,
+    // `sub eax, eax`, and the zero-extension of one): a constant, which
+    // proves a width at most and takes nothing from the register's entry
+    // value or from the sign of whatever the register held before.
+    let mut zeroed: BTreeSet<u64> = BTreeSet::new();
     for instruction in instructions {
         for op in &instruction.ops {
             let opcode = op.opcode.as_str();
+            // `op a, a`: `xor`/`sub` of a register with itself is the zeroing
+            // idiom, and `and`/`or` of one with itself is `test r, r`, which
+            // reads the value to compare it with zero and says nothing about
+            // its signedness.
+            let same_operands = op.inputs.len() == 2
+                && op.inputs[0] == op.inputs[1]
+                && op.inputs[0].space == "register";
+            let zero_write = op.output.as_ref().is_some_and(|output| output.space == "register")
+                && ((matches!(opcode, "INT_XOR" | "INT_SUB") && same_operands)
+                    || (opcode == "INT_ZEXT"
+                        && op.inputs.first().is_some_and(|input| {
+                            input.space == "register" && zeroed.contains(&input.offset)
+                        })));
             let mut spill_alias: Option<(u64, u32)> = None;
             let live = |facts: &mut Facts, input: &PcodeVarnode, class: Class| {
                 if input.space == "register" && !defined.contains(&input.offset) {
@@ -365,21 +421,15 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     // size guard keeps a narrower read from claiming the
                     // whole register.
                     facts.read_before_write.insert(origin);
-                    facts.constrain(
-                        &PcodeVarnode {
-                            space: "register".into(),
-                            offset: origin,
-                            size: input.size,
-                        },
-                        class,
-                    );
+                    facts.constrain_register(origin, class);
                 }
             };
-            // What each temporary was computed from, one level at a time.
+            // What each temporary was computed from, one level at a time. A
+            // product is not: `index * 4` is never the pointer it indexes.
             if let Some(output) = &op.output
                 && matches!(
                     opcode,
-                    "INT_ADD" | "INT_SUB" | "INT_MULT" | "COPY" | "INT_ZEXT" | "INT_SEXT"
+                    "INT_ADD" | "INT_SUB" | "COPY" | "INT_ZEXT" | "INT_SEXT"
                 )
             {
                 let mut sources: Vec<u64> = Vec::new();
@@ -391,7 +441,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         // that parameter: without this an unoptimised build
                         // hides every pointer behind its own spill.
                         sources.push(origin);
-                    } else if input.space == "register" && input.size == 8 {
+                    } else if input.space == "register" && input.size >= machine.pointer_size {
                         sources.push(input.offset);
                     } else if let Some(more) = built_from.get(&(input.space.clone(), input.offset))
                     {
@@ -404,6 +454,10 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     built_from.insert((output.space.clone(), output.offset), sources);
                 }
             }
+            // Whether this op leaves its output holding a resolved address.
+            // A register written by anything else no longer holds the one it
+            // did: `lea rax,[rsi-1]` then `mov rax,rdi` is not `rsi-1`.
+            let mut addressed = false;
             // Frame arithmetic: `base ± displacement` into a temporary. The
             // base may itself be a temporary already resolved to
             // `(register, disp)`, so `lea 0x10(%rax)` after `lea -0x8(%rax)`
@@ -424,6 +478,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 };
                 if let Some(pair) = resolved {
                     address_of.insert((output.space.clone(), output.offset), pair);
+                    addressed = true;
                 }
             }
             // A copy of a resolved address is the same address: MIPS SLEIGH
@@ -437,6 +492,13 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     .copied()
             {
                 address_of.insert((output.space.clone(), output.offset), pair);
+                addressed = true;
+            }
+            if !addressed
+                && let Some(output) = &op.output
+                && output.space == "register"
+            {
+                address_of.remove(&(output.space.clone(), output.offset));
             }
             // `t = index * stride` or `t = index << shift`: the scaled index
             // of an array access.
@@ -537,21 +599,9 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                             }
                             None if slot.is_none() => {
                                 live(&mut facts, address, Class::Ptr);
-                                for origin in built_from
-                                    .get(&(address.space.clone(), address.offset))
-                                    .cloned()
-                                    .unwrap_or_default()
+                                if let Some(origin) = sole_origin(&built_from, &defined, address)
                                 {
-                                    if !defined.contains(&origin) {
-                                        facts.constrain(
-                                            &PcodeVarnode {
-                                                space: "register".into(),
-                                                offset: origin,
-                                                size: 8,
-                                            },
-                                            Class::Ptr,
-                                        );
-                                    }
+                                    facts.constrain_register(origin, Class::Ptr);
                                 }
                                 // `base[index]` with a constant stride is an
                                 // array access on the base register.
@@ -595,6 +645,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                 // is recorded pending and resolved when the
                                 // output temporary is consumed.
                                 if let Some(&(base, disp)) = slot
+                                    && !frame.contains(&base)
                                     && let Some(output) = &op.output
                                 {
                                     struct_bases.insert(base);
@@ -603,14 +654,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                         (base, disp, output.size),
                                     );
                                     if !defined.contains(&base) {
-                                        facts.constrain(
-                                            &PcodeVarnode {
-                                                space: "register".into(),
-                                                offset: base,
-                                                size: 8,
-                                            },
-                                            Class::Ptr,
-                                        );
+                                        facts.constrain_register(base, Class::Ptr);
                                     }
                                 }
                             }
@@ -627,8 +671,10 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                 // A store into `*(base+disp)` where `base`
                                 // is an established struct base is a field
                                 // write, never a spill — even when the value
-                                // is a parameter register.
-                                let is_struct_base = struct_bases.contains(&key.0);
+                                // is a parameter register. A frame slot is
+                                // never a field.
+                                let in_frame = frame.contains(&key.0);
+                                let is_struct_base = !in_frame && struct_bases.contains(&key.0);
                                 // Remember which parameter landed in this
                                 // slot, if any — but only for a real frame
                                 // slot, not a struct field.
@@ -656,7 +702,7 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                     // is not a spill slot is a field write:
                                     // `*(base + disp) = value`. The field's
                                     // class is the stored value's own.
-                                    if is_struct_base || !spilled.contains_key(&key) {
+                                    if !in_frame && (is_struct_base || !spilled.contains_key(&key)) {
                                         let (base, disp) = key;
                                         struct_bases.insert(base);
                                         let class = if value.space == "const" {
@@ -679,35 +725,16 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                                         entry.class = entry.class.join(class);
                                         entry.size = entry.size.max(value.size);
                                         if !defined.contains(&base) {
-                                            facts.constrain(
-                                                &PcodeVarnode {
-                                                    space: "register".into(),
-                                                    offset: base,
-                                                    size: 8,
-                                                },
-                                                Class::Ptr,
-                                            );
+                                            facts.constrain_register(base, Class::Ptr);
                                         }
                                     }
                                 }
                             }
                             None => {
                                 live(&mut facts, address, Class::Ptr);
-                                for origin in built_from
-                                    .get(&(address.space.clone(), address.offset))
-                                    .cloned()
-                                    .unwrap_or_default()
+                                if let Some(origin) = sole_origin(&built_from, &defined, address)
                                 {
-                                    if !defined.contains(&origin) {
-                                        facts.constrain(
-                                            &PcodeVarnode {
-                                                space: "register".into(),
-                                                offset: origin,
-                                                size: 8,
-                                            },
-                                            Class::Ptr,
-                                        );
-                                    }
+                                    facts.constrain_register(origin, Class::Ptr);
                                 }
                             }
                         }
@@ -778,6 +805,23 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                         }
                     }
                 }
+                // The parity flag's `value & 0xff` feeds only `popcount`: the
+                // machine computing a flag, not the program masking a value.
+                "INT_AND"
+                    if op.output.as_ref().is_some_and(|output| {
+                        parity.contains(&(output.space.clone(), output.offset))
+                    }) => {}
+                // `xor r, r` / `sub r, r` zero the register without reading it,
+                // and `test r, r` (`and`/`or` of a register with itself) only
+                // compares it with zero: none of them is evidence of a sign,
+                // and a zeroing is not a read of the entry value.
+                "INT_XOR" | "INT_SUB" if same_operands => {}
+                "INT_AND" | "INT_OR" if same_operands => {
+                    for input in &op.inputs {
+                        let class = Class::Num(input.size * 8);
+                        live(&mut facts, input, class);
+                    }
+                }
                 // Plain arithmetic says the operand is a number of that
                 // width and nothing more. A bitwise op is stronger: a value
                 // you mask or XOR is conventionally unsigned, and a 64-bit
@@ -802,6 +846,21 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 && output.space == "register"
             {
                 let produced = match opcode {
+                    // A zeroing idiom writes a constant: it leaves a class the
+                    // body already proved for the register alone, and where
+                    // there is none it is a number as wide as the zero it
+                    // wrote (the width of the source for a zero-extension).
+                    _ if zero_write => facts
+                        .writes
+                        .get(&output.offset)
+                        .copied()
+                        .filter(|class| *class != Class::Unknown)
+                        .unwrap_or_else(|| {
+                            let width = op.inputs.first().map_or(output.size, |input| {
+                                if opcode == "INT_ZEXT" { input.size } else { output.size }
+                            });
+                            Class::Num(width * 8)
+                        }),
                     // A loaded value's kind is unproven until a use commits
                     // to it, but its width is the load's — `opaque32`, not
                     // `unknown`, so a returned load reports its size.
@@ -905,7 +964,8 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                 // clears it: `add rax,rdx` reads rax's alias to record rdx
                 // as a source, and `INT_ZEXT RCX←ECX` reads ECX's alias to
                 // carry the parameter's identity.
-                let carried = if opcode == "COPY"
+                let carried = if (opcode == "COPY"
+                    || (matches!(opcode, "INT_AND" | "INT_OR") && same_operands))
                     && let Some(input) = op.inputs.first()
                 {
                     if input.space == "register" && !defined.contains(&input.offset) {
@@ -931,7 +991,32 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
                     alias.insert(key, a);
                 }
                 if output.space == "register" {
+                    // A copy or constant offset of a stack address is one;
+                    // any other write ends the register's frame role. The
+                    // stack pointer itself stays the frame throughout.
+                    let from_frame = matches!(opcode, "COPY" | "INT_ADD" | "INT_SUB")
+                        && (opcode == "COPY"
+                            || op.inputs.get(1).is_some_and(|disp| disp.space == "const"))
+                        && op.inputs.first().is_some_and(|input| {
+                            if input.space == "register" {
+                                frame.contains(&input.offset)
+                            } else {
+                                address_of
+                                    .get(&(input.space.clone(), input.offset))
+                                    .is_some_and(|(base, _)| frame.contains(base))
+                            }
+                        });
+                    if from_frame {
+                        frame.insert(output.offset);
+                    } else if machine.stack_pointer != Some(output.offset) {
+                        frame.remove(&output.offset);
+                    }
                     defined.insert(output.offset);
+                    if zero_write {
+                        zeroed.insert(output.offset);
+                    } else {
+                        zeroed.remove(&output.offset);
+                    }
                     facts.aliases.remove(&output.offset);
                     if let Some(a) = held {
                         facts.aliases.insert(output.offset, a);
@@ -977,15 +1062,76 @@ pub fn infer(instructions: &[PcodeInstruction]) -> Facts {
     facts
 }
 
+/// The one entry-value register an address was computed from, if exactly
+/// one. `p[i]` with a byte index is `p + i`, and when both addends are
+/// pointer-width parameters either could be the base, so a sum of two
+/// names no pointer on its own. A register the body already redefined is
+/// a computed value, not a candidate.
+fn sole_origin(
+    built_from: &BTreeMap<(String, u64), Vec<u64>>,
+    defined: &BTreeSet<u64>,
+    address: &PcodeVarnode,
+) -> Option<u64> {
+    let mut candidates = built_from
+        .get(&(address.space.clone(), address.offset))?
+        .iter()
+        .filter(|origin| !defined.contains(origin));
+    match (candidates.next(), candidates.next()) {
+        (Some(origin), None) => Some(*origin),
+        _ => None,
+    }
+}
+
 /// The class already written to a register, without borrowing `facts`
 /// mutably at the call site.
 fn self_written(facts: &Facts, offset: u64) -> Class {
     facts.written(offset).join(facts.get(offset))
 }
 
+/// Merging these results into recovered prototypes (on unless `ROMWRIGHT_INFERRED_TYPES=0`).
+pub mod prototypes;
+
+/// What the direct callers of a function do with it: arguments set, result read.
+pub mod call_support;
+
+/// Float parameter registers the body also reads at another width.
+pub mod register_overlap;
+
+/// Variadic register-save areas: which argument registers are not parameters.
+pub mod variadic;
+
+/// Eight-byte parameters passed in an aligned pair of 4-byte registers.
+pub mod pair_params;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// x86-64: eight-byte pointers, RSP at register offset 0x20.
+    const X86_64: Machine = Machine {
+        pointer_size: 8,
+        stack_pointer: Some(0x20),
+    };
+    /// The ARM-LE-32-v4t register file: r0 0x20, r1 0x24, r2 0x28, sp 0x54.
+    const ARM: Machine = Machine {
+        pointer_size: 4,
+        stack_pointer: Some(0x54),
+    };
+    /// MIPS-LE-32: v0 0x8, v1 0xc, a0 0x10, sp 0x74, s8 0x78.
+    const MIPS: Machine = Machine {
+        pointer_size: 4,
+        stack_pointer: Some(0x74),
+    };
+    /// PowerPC-BE-32: r1 (sp) 0x4, r3 0xc, r4 0x10, r5 0x14.
+    const PPC: Machine = Machine {
+        pointer_size: 4,
+        stack_pointer: Some(0x4),
+    };
+
+    /// The x86-64 inference every pre-existing test was written against.
+    fn infer(instructions: &[PcodeInstruction]) -> Facts {
+        super::infer(instructions, &X86_64)
+    }
 
     fn varnode(space: &str, offset: u64, size: u32) -> PcodeVarnode {
         PcodeVarnode {
@@ -1151,6 +1297,122 @@ mod tests {
             ),
         ])]);
         assert_eq!(facts.get(0x38), Class::Uint(32));
+    }
+
+    #[test]
+    fn xor_of_a_register_with_itself_is_a_zero_not_a_read() {
+        // `xor eax, eax; ret`: the function returns a constant, and the
+        // zeroing neither reads rax's entry value (so rax is no parameter)
+        // nor makes the zero unsigned.
+        let facts = infer(&[instruction(vec![
+            op(
+                "INT_XOR",
+                Some(varnode("register", 0, 4)),
+                vec![varnode("register", 0, 4), varnode("register", 0, 4)],
+            ),
+            op(
+                "INT_ZEXT",
+                Some(varnode("register", 0, 8)),
+                vec![varnode("register", 0, 4)],
+            ),
+        ])]);
+        assert!(!facts.read_before_write(0));
+        assert_eq!(facts.get(0), Class::Unknown);
+        assert_eq!(facts.written(0), Class::Num(32));
+    }
+
+    #[test]
+    fn a_zeroing_write_keeps_the_class_the_return_register_already_proved() {
+        // `sar rax, 3` ... `xor eax, eax` on a path laid out last: the
+        // zero is every numeric class at once, so the signed result the
+        // body proved is still what the register carries.
+        let facts = infer(&[
+            instruction(vec![op(
+                "INT_SRIGHT",
+                Some(varnode("register", 0, 8)),
+                vec![varnode("register", 0x38, 8), varnode("const", 3, 8)],
+            )]),
+            instruction(vec![
+                op(
+                    "INT_XOR",
+                    Some(varnode("register", 0, 4)),
+                    vec![varnode("register", 0, 4), varnode("register", 0, 4)],
+                ),
+                op(
+                    "INT_ZEXT",
+                    Some(varnode("register", 0, 8)),
+                    vec![varnode("register", 0, 4)],
+                ),
+            ]),
+        ]);
+        assert_eq!(facts.written(0), Class::Int(64));
+    }
+
+    #[test]
+    fn test_of_a_register_with_itself_keeps_the_sign_a_branch_reads() {
+        // `test edi, edi; js`: the sign flag of `edi & edi` is edi's sign,
+        // and the `and` is no evidence that edi is unsigned. The parity
+        // flag's `& 0xff` is the machine's, not the program's.
+        let facts = infer(&[instruction(vec![
+            op(
+                "INT_AND",
+                Some(varnode("unique", 0x100, 4)),
+                vec![varnode("register", 0x38, 4), varnode("register", 0x38, 4)],
+            ),
+            op(
+                "INT_SLESS",
+                Some(varnode("unique", 0x200, 1)),
+                vec![varnode("unique", 0x100, 4), varnode("const", 0, 4)],
+            ),
+            op(
+                "INT_AND",
+                Some(varnode("unique", 0x300, 4)),
+                vec![varnode("unique", 0x100, 4), varnode("const", 0xff, 4)],
+            ),
+            op(
+                "POPCOUNT",
+                Some(varnode("unique", 0x400, 1)),
+                vec![varnode("unique", 0x300, 4)],
+            ),
+            op(
+                "CBRANCH",
+                None,
+                vec![varnode("ram", 0x1100, 8), varnode("unique", 0x200, 1)],
+            ),
+        ])]);
+        assert_eq!(facts.get(0x38), Class::Int(32));
+    }
+
+    #[test]
+    fn a_register_rewritten_after_an_address_computation_holds_no_address() {
+        // `lea rax, [rsi-1]` then `mov rax, rdi` then `movdqu xmm0, [rax]`:
+        // the load goes through rdi; rsi was only ever an addend.
+        let facts = infer(&[
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x100, 8)),
+                    vec![varnode("register", 0x30, 8), varnode("const", u64::MAX, 8)],
+                ),
+                op(
+                    "COPY",
+                    Some(varnode("register", 0, 8)),
+                    vec![varnode("unique", 0x100, 8)],
+                ),
+            ]),
+            instruction(vec![op(
+                "COPY",
+                Some(varnode("register", 0, 8)),
+                vec![varnode("register", 0x38, 8)],
+            )]),
+            instruction(vec![op(
+                "LOAD",
+                Some(varnode("unique", 0x500, 16)),
+                vec![varnode("const", 3, 8), varnode("register", 0, 8)],
+            )]),
+        ]);
+        assert_eq!(facts.get(0x38), Class::Ptr);
+        assert_ne!(facts.get(0x30), Class::Ptr);
     }
 
     #[test]
@@ -1363,5 +1625,405 @@ mod tests {
             Int(32).join(Uint(32)).join(Float(32)),
             Int(32).join(Uint(32).join(Float(32))),
         );
+    }
+
+    #[test]
+    fn mips_fields_off_a_four_byte_base_make_a_struct_pointer() {
+        // `lw v0, 4(a0)` / `sw v0, 8(a0)`: a0 is a pointer to a struct with
+        // four-byte fields at +4 and +8, and the loaded field is signed.
+        let facts = super::infer(
+            &[
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 4, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", 0x8, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_SLESS",
+                        Some(varnode("unique", 0x200, 1)),
+                        vec![varnode("register", 0x8, 4), varnode("const", 10, 4)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1100, 4), varnode("unique", 0x200, 1)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x108, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 8, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![
+                            varnode("const", 0x1b1, 4),
+                            varnode("unique", 0x108, 4),
+                            varnode("register", 0xc, 4),
+                        ],
+                    ),
+                ]),
+            ],
+            &MIPS,
+        );
+        assert_eq!(facts.get(0x10), Class::Ptr);
+        let Some(Ty::Ptr(inner)) = facts.structural(0x10) else {
+            panic!("a0 should be a pointer: {:?}", facts.structural(0x10))
+        };
+        let Ty::Struct(fields) = inner.as_ref() else {
+            panic!("a0 should point at a struct: {inner:?}")
+        };
+        assert_eq!(fields[&4].size, 4);
+        assert_eq!(fields[&4].class, Class::Int(32));
+        assert_eq!(fields[&8].size, 4);
+    }
+
+    #[test]
+    fn a_mips_parameter_spilled_after_a_frame_local_read_is_still_a_spill() {
+        // gcc -O0 MIPS: the frame pointer is a copy of sp, and the body
+        // reads a local before it spills a0. The local read must not make
+        // the frame a struct base, or the spill reads as a field write and
+        // the reload loses the parameter.
+        let facts = super::infer(
+            &[
+                // addiu sp, sp, -24
+                instruction(vec![op(
+                    "INT_ADD",
+                    Some(varnode("register", 0x74, 4)),
+                    vec![varnode("register", 0x74, 4), varnode("const", 0xffff_ffe8, 4)],
+                )]),
+                // move s8, sp
+                instruction(vec![op(
+                    "COPY",
+                    Some(varnode("register", 0x78, 4)),
+                    vec![varnode("register", 0x74, 4)],
+                )]),
+                // lw v0, 8(s8): a local
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", 0x78, 4), varnode("const", 8, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", 0x8, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                // sw a0, 24(s8): the spill
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x108, 4)),
+                        vec![varnode("register", 0x78, 4), varnode("const", 24, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![
+                            varnode("const", 0x1b1, 4),
+                            varnode("unique", 0x108, 4),
+                            varnode("register", 0x10, 4),
+                        ],
+                    ),
+                ]),
+                // lw v1, 24(s8): the reload
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x110, 4)),
+                        vec![varnode("register", 0x78, 4), varnode("const", 24, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", 0xc, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x110, 4)],
+                    ),
+                ]),
+                // slt + bnez on the reloaded value
+                instruction(vec![
+                    op(
+                        "INT_SLESS",
+                        Some(varnode("unique", 0x200, 1)),
+                        vec![varnode("register", 0xc, 4), varnode("const", 10, 4)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1100, 4), varnode("unique", 0x200, 1)],
+                    ),
+                ]),
+            ],
+            &MIPS,
+        );
+        assert_eq!(facts.get(0x10), Class::Int(32));
+        assert!(facts.structural(0x78).is_none(), "the frame is not a struct");
+    }
+
+    #[test]
+    fn arm_ldr_with_offset_types_the_field_and_the_base() {
+        // `ldr r0, [r0, #4]` then `cmp r0, #10; bge`: r0 on entry points
+        // at a struct whose word at +4 is a signed int.
+        let facts = super::infer(
+            &[
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", 0x20, 4), varnode("const", 4, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", 0x20, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_SLESS",
+                        Some(varnode("unique", 0x200, 1)),
+                        vec![varnode("register", 0x20, 4), varnode("const", 10, 4)],
+                    ),
+                    op(
+                        "CBRANCH",
+                        None,
+                        vec![varnode("ram", 0x1100, 4), varnode("unique", 0x200, 1)],
+                    ),
+                ]),
+            ],
+            &ARM,
+        );
+        assert_eq!(facts.get(0x20), Class::Ptr);
+        let Some(Ty::Ptr(inner)) = facts.structural(0x20) else {
+            panic!("r0 should be a pointer: {:?}", facts.structural(0x20))
+        };
+        let Ty::Struct(fields) = inner.as_ref() else {
+            panic!("r0 should point at a struct: {inner:?}")
+        };
+        assert_eq!(
+            fields[&4],
+            Field {
+                offset: 4,
+                size: 4,
+                class: Class::Int(32)
+            }
+        );
+    }
+
+    #[test]
+    fn arm_scaled_index_makes_the_four_byte_base_an_array_pointer() {
+        // `ldr r2, [r0, r1, lsl #2]`: r0 is a word array, r1 its index.
+        // The base is a four-byte register, which an eight-byte pointer
+        // assumption never counted as an address source.
+        let facts = super::infer(
+            &[instruction(vec![
+                op(
+                    "INT_LEFT",
+                    Some(varnode("unique", 0x100, 4)),
+                    vec![varnode("register", 0x24, 4), varnode("const", 2, 4)],
+                ),
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x108, 4)),
+                    vec![varnode("register", 0x20, 4), varnode("unique", 0x100, 4)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("register", 0x28, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x108, 4)],
+                ),
+            ])],
+            &ARM,
+        );
+        assert_eq!(facts.get(0x20), Class::Ptr);
+        assert_ne!(facts.get(0x24), Class::Ptr, "the index is not a pointer");
+        assert_eq!(
+            facts.structural(0x20),
+            Some(&Ty::Array {
+                elem: Box::new(Ty::Scalar(Class::Num(32))),
+                stride: 4
+            })
+        );
+    }
+
+    #[test]
+    fn arm_byte_index_sum_names_no_pointer() {
+        // `ldrb r2, [r0, r1]`: either addend could be the base, and with
+        // four-byte pointers both are pointer-width, so neither is claimed.
+        let facts = super::infer(
+            &[instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x108, 4)),
+                    vec![varnode("register", 0x20, 4), varnode("register", 0x24, 4)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x108, 4)],
+                ),
+            ])],
+            &ARM,
+        );
+        assert_ne!(facts.get(0x20), Class::Ptr);
+        assert_ne!(facts.get(0x24), Class::Ptr);
+    }
+
+    #[test]
+    fn ppc_lwz_off_a_base_register_recovers_struct_fields() {
+        // `lwz r3, 8(r4); addi r3, r3, 1; stw r3, 0xc(r4)`: r4 points at a
+        // struct with word fields at +8 and +0xc.
+        let facts = super::infer(
+            &[
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 8, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", 0xc, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![op(
+                    "INT_ADD",
+                    Some(varnode("register", 0xc, 4)),
+                    vec![varnode("register", 0xc, 4), varnode("const", 1, 4)],
+                )]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x108, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 0xc, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![
+                            varnode("const", 0x1b1, 4),
+                            varnode("unique", 0x108, 4),
+                            varnode("register", 0xc, 4),
+                        ],
+                    ),
+                ]),
+            ],
+            &PPC,
+        );
+        assert_eq!(facts.get(0x10), Class::Ptr);
+        let Some(Ty::Ptr(inner)) = facts.structural(0x10) else {
+            panic!("r4 should be a pointer: {:?}", facts.structural(0x10))
+        };
+        let Ty::Struct(fields) = inner.as_ref() else {
+            panic!("r4 should point at a struct: {inner:?}")
+        };
+        assert_eq!(fields.keys().copied().collect::<Vec<_>>(), vec![8, 0xc]);
+        assert!(fields.values().all(|field| field.size == 4));
+    }
+
+    #[test]
+    fn ppc_multiplied_index_is_not_the_pointer_it_indexes() {
+        // `mulli r5, r5, 12; lwzx r3, r4, r5`: r4 is an array of 12-byte
+        // records, r5 the index — a product is never a pointer.
+        let facts = super::infer(
+            &[instruction(vec![
+                op(
+                    "INT_MULT",
+                    Some(varnode("register", 0x14, 4)),
+                    vec![varnode("register", 0x14, 4), varnode("const", 12, 4)],
+                ),
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x108, 4)),
+                    vec![varnode("register", 0x10, 4), varnode("register", 0x14, 4)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("register", 0xc, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x108, 4)],
+                ),
+            ])],
+            &PPC,
+        );
+        assert_eq!(facts.get(0x10), Class::Ptr);
+        assert_ne!(facts.get(0x14), Class::Ptr);
+    }
+
+    #[test]
+    fn the_frame_is_never_a_struct_base_on_x86_64_either() {
+        // `mov rbp, rsp; mov eax, [rbp-0x14]; mov [rbp-0x18], rdi;
+        // mov rax, [rbp-0x18]; cmp rax, 10; jl`: the local read must not
+        // turn the parameter's spill into a field write.
+        let facts = infer(&[
+            instruction(vec![op(
+                "COPY",
+                Some(varnode("register", 0x28, 8)),
+                vec![varnode("register", 0x20, 8)],
+            )]),
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x100, 8)),
+                    vec![varnode("register", 0x28, 8), varnode("const", (-0x14i64) as u64, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("register", 0x0, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 8)],
+                ),
+            ]),
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x108, 8)),
+                    vec![varnode("register", 0x28, 8), varnode("const", (-0x18i64) as u64, 8)],
+                ),
+                op(
+                    "STORE",
+                    None,
+                    vec![
+                        varnode("const", 0x1b1, 4),
+                        varnode("unique", 0x108, 8),
+                        varnode("register", 0x38, 8),
+                    ],
+                ),
+            ]),
+            instruction(vec![
+                op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x110, 8)),
+                    vec![varnode("register", 0x28, 8), varnode("const", (-0x18i64) as u64, 8)],
+                ),
+                op(
+                    "LOAD",
+                    Some(varnode("register", 0x0, 8)),
+                    vec![varnode("const", 0x1b1, 4), varnode("unique", 0x110, 8)],
+                ),
+                op(
+                    "INT_SLESS",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("register", 0x0, 8), varnode("const", 10, 8)],
+                ),
+                op(
+                    "CBRANCH",
+                    None,
+                    vec![varnode("ram", 0x1100, 8), varnode("unique", 0x200, 1)],
+                ),
+            ]),
+        ]);
+        assert_eq!(facts.get(0x38), Class::Int(64));
+        assert!(facts.structural(0x28).is_none(), "rbp is the frame, not a struct");
     }
 }

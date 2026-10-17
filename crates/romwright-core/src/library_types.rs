@@ -9,6 +9,8 @@ use std::collections::BTreeMap;
 use std::collections::HashMap;
 use std::path::Path;
 
+pub mod helpers;
+
 /// The provenance every fact this pass writes carries.
 pub const SOURCE: &str = "native-import:type-archive";
 
@@ -205,8 +207,23 @@ pub(crate) fn representable(declaration: &Declaration, known_types: &std::collec
 
 /// The C declaration to hand the decompiler, e.g. `int printf(char * p1, ...)`.
 pub fn signature(name: &str, declaration: &Declaration) -> String {
+    signature_with_receiver(name, declaration, None)
+}
+
+/// [`signature`] with a leading `this` parameter of type `receiver`
+/// (`UberBond *`): a member's receiver is its first argument, and a
+/// prototype without it types every other argument one slot early.
+pub fn signature_with_receiver(
+    name: &str,
+    declaration: &Declaration,
+    receiver: Option<&str>,
+) -> String {
     let mut text = format!("{} {name}(", declaration.return_type);
-    let mut parts: Vec<String> = declaration
+    let mut parts: Vec<String> = receiver
+        .map(|receiver| format!("{receiver} this"))
+        .into_iter()
+        .collect();
+    parts.extend(declaration
         .parameters
         .iter()
         .enumerate()
@@ -219,8 +236,7 @@ pub fn signature(name: &str, declaration: &Declaration) -> String {
                 parameter.name.replace(|c: char| !c.is_alphanumeric() && c != '_', "_")
             };
             format!("{} {identifier}", parameter.data_type)
-        })
-        .collect();
+        }));
     if declaration.varargs {
         parts.push("...".into());
     }
@@ -233,32 +249,10 @@ pub fn signature(name: &str, declaration: &Declaration) -> String {
     text
 }
 
-/// The declarations that apply to the names an image imports.
-///
-/// A name is typed only when the archive declares it and every type in that
-/// declaration is one the decompiler has. Nothing else is invented: a name the
-/// archive omits stays untyped.
-pub fn declared_for<'a>(
-    table: &'a Table,
-    names: impl IntoIterator<Item = (u64, &'a str)>,
-    known_types: &std::collections::HashSet<String>,
-) -> Vec<(u64, String, &'a Declaration)> {
-    let mut applied = Vec::new();
-    for (address, name) in names {
-        let Some(declaration) = table.functions.get(name) else {
-            continue;
-        };
-        if !representable(declaration, known_types) {
-            continue;
-        }
-        applied.push((address, signature(name, declaration), declaration));
-    }
-    applied
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::qualified_prototypes::declared_qualified_for;
 
     fn printf() -> Declaration {
         Declaration {
@@ -362,13 +356,13 @@ mod tests {
         let wide = types(&["long", "char", "int"]);
         let narrow = types(&["longlong", "char", "int"]);
         assert_eq!(
-            declared_for(&table, [(0x30u64, "strtol")], &wide)
+            declared_qualified_for(&table, [(0x30u64, "strtol")], &wide)
                 .iter()
-                .map(|(address, signature, _)| (*address, signature.clone()))
+                .map(|applied| (applied.address, applied.signature.clone()))
                 .collect::<Vec<_>>(),
             vec![(0x30, "long strtol(char * * endptr)".to_string())]
         );
-        assert!(declared_for(&table, [(0x30u64, "strtol")], &narrow).is_empty());
+        assert!(declared_qualified_for(&table, [(0x30u64, "strtol")], &narrow).is_empty());
     }
 
     #[test]
@@ -422,12 +416,15 @@ mod tests {
             ]),
         };
 
-        let applied = declared_for(&table, [(0x10u64, "fclose"), (0x20u64, "printf")],
-                                   &types(&["int", "char"]));
+        let applied = declared_qualified_for(
+            &table,
+            [(0x10u64, "fclose"), (0x20u64, "printf")],
+            &types(&["int", "char"]),
+        );
         assert_eq!(
             applied
                 .iter()
-                .map(|(address, signature, _)| (*address, signature.clone()))
+                .map(|applied| (applied.address, applied.signature.clone()))
                 .collect::<Vec<_>>(),
             vec![(0x20, "int printf(char * __format, ...)".to_string())]
         );

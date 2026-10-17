@@ -233,6 +233,59 @@ pub(super) fn uncompress_backward(module: &[u8], ram: u64, bottom: u64) -> Optio
     (outp >= inp_top).then_some(out)
 }
 
+/// One block of the ARM9's autoload list: crt0 copies `size` bytes from
+/// `source` (an offset into the decompressed module) to RAM address `address`
+/// before the game's code runs.
+#[derive(Debug, PartialEq, Eq)]
+struct Autoload {
+    address: u64,
+    size: usize,
+    source: usize,
+}
+
+/// The autoload blocks `_start_ModuleParams` lists (NitroSDK `crt0.c`):
+/// words 0 and 1 are the list's start and end, word 2 the RAM address where
+/// the blocks' data begins, one after another in list order. Each list entry
+/// is `{address, size, bss size}`. Anything that does not add up (a list
+/// that leaves the module, a block past its end) gives no blocks: the module
+/// is then one mapping, as before.
+fn autoload_blocks(module: &[u8], ram: u64) -> Vec<Autoload> {
+    let word = |at: usize| -> Option<u64> {
+        Some(u64::from(u32::from_le_bytes(module.get(at..at.checked_add(4)?)?.try_into().ok()?)))
+    };
+    let parse = || -> Option<Vec<Autoload>> {
+        let checker = (0..module.len().checked_sub(8)?)
+            .step_by(4)
+            .find(|&at| word(at) == Some(u64::from(NITROCODE_BE)) && word(at + 4) == Some(u64::from(NITROCODE_LE)))?;
+        let base = checker.checked_sub(7 * 4)?;
+        let offset = |value: u64| usize::try_from(value.checked_sub(ram)?).ok();
+        let (list, list_end, data) = (offset(word(base)?)?, offset(word(base + 4)?)?, offset(word(base + 8)?)?);
+        if list_end < list || (list_end - list) % 12 != 0 || (list_end - list) / 12 > 16 || list_end > module.len() {
+            return None;
+        }
+        let mut blocks = Vec::new();
+        let mut source = data;
+        for at in (list..list_end).step_by(12) {
+            let (address, size) = (word(at)?, usize::try_from(word(at + 4)?).ok()?);
+            if size == 0 {
+                continue;
+            }
+            let end = source.checked_add(size)?;
+            if address % 4 != 0 || end > module.len() {
+                return None;
+            }
+            blocks.push(Autoload { address, size, source });
+            source = end;
+        }
+        Some(blocks)
+    };
+    parse().unwrap_or_default()
+}
+
+/// Where the ARM9's data tightly coupled memory sits unless the program moves
+/// it: its autoload block is data, never code.
+const DTCM: (u64, u64) = (0x027c_0000, 0x0280_0000);
+
 fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> NativeImport {
     let start = descriptor.rom_offset as usize;
     let end = start + descriptor.size as usize;
@@ -242,17 +295,65 @@ fn image(data: &[u8], cpu: &str, language: &str, descriptor: &Descriptor) -> Nat
     let bytes = compressed_static_end(stored)
         .and_then(|bottom| uncompress_backward(stored, descriptor.ram, bottom))
         .unwrap_or_else(|| stored.to_vec());
+    // The tail of the module is the data crt0 copies elsewhere (ITCM, DTCM,
+    // library code): it is not code where it is stored, and where it runs is
+    // another address (Kingdom Hearts 358/2 Days: the first ITCM function,
+    // 168 bytes at 0x01ff8000, was found as a function at 0x020442a0 and
+    // none of the 154 ITCM truth functions at their own address).
+    let blocks = if cpu == "arm9" { autoload_blocks(&bytes, descriptor.ram) } else { Vec::new() };
+    let mut mappings = Vec::new();
+    let mut names: Vec<String> = Vec::new();
+    match blocks.first() {
+        Some(first) => {
+            mappings.push(Mapping {
+                vaddr: descriptor.ram,
+                size: first.source as u64,
+                file_off: descriptor.rom_offset,
+                flags: 0x7,
+                bytes: bytes[..first.source].to_vec(),
+            });
+            names.push(cpu.into());
+            let stored_end = blocks.last().map_or(first.source, |last| last.source + last.size);
+            for (index, block) in blocks.iter().enumerate() {
+                let executable = !(DTCM.0..DTCM.1).contains(&block.address);
+                mappings.push(Mapping {
+                    vaddr: block.address,
+                    size: block.size as u64,
+                    file_off: descriptor.rom_offset + block.source as u64,
+                    flags: if executable { 0x7 } else { 0x3 },
+                    bytes: bytes[block.source..block.source + block.size].to_vec(),
+                });
+                names.push(format!("{cpu}-autoload{index}"));
+            }
+            // What the module holds past the blocks (the compressed static
+            // end's own padding, the footer) stays where it was, as data.
+            if stored_end < bytes.len() {
+                mappings.push(Mapping {
+                    vaddr: descriptor.ram + stored_end as u64,
+                    size: (bytes.len() - stored_end) as u64,
+                    file_off: descriptor.rom_offset + stored_end as u64,
+                    flags: 0x3,
+                    bytes: bytes[stored_end..].to_vec(),
+                });
+                names.push(format!("{cpu}-tail"));
+            }
+        }
+        None => {
+            mappings.push(Mapping {
+                vaddr: descriptor.ram,
+                size: bytes.len() as u64,
+                file_off: descriptor.rom_offset,
+                // Code loaded into RAM: readable, writable and executable, as
+                // the console leaves it.
+                flags: 0x7,
+                bytes,
+            });
+            names.push(cpu.into());
+        }
+    }
     let mut import = NativeImport {
-        mappings: vec![Mapping {
-            vaddr: descriptor.ram,
-            size: bytes.len() as u64,
-            file_off: descriptor.rom_offset,
-            // Code loaded into RAM: readable, writable and executable, as
-            // the console leaves it.
-            flags: 0x7,
-            bytes,
-        }],
-        mapping_names: vec![cpu.into()],
+        mappings,
+        mapping_names: names,
         declared_regions: regions(cpu),
         format: "nds".into(),
         language: language.into(),
@@ -323,6 +424,57 @@ mod tests {
         for (index, value) in fields.iter().enumerate() {
             data[at + index * 4..at + index * 4 + 4].copy_from_slice(&value.to_le_bytes());
         }
+    }
+
+    /// An ARM9 module of 0xd0 bytes at 0x02000000 whose `_start_ModuleParams` lists two autoload
+    /// blocks: 0x20 bytes for ITCM (0x01ff8000) at 0x80 and 0x10 for DTCM (0x027e0000) at 0xa0.
+    fn module_with_autoloads() -> Vec<u8> {
+        let mut module = vec![0u8; 0xd0];
+        let put = |module: &mut Vec<u8>, at: usize, value: u32| module[at..at + 4].copy_from_slice(&value.to_le_bytes());
+        // The nine words at 0x10: list start, list end, data start, bss start, bss end, compressed end, sdk, checkers.
+        for (index, value) in [0x0200_0040, 0x0200_0058, 0x0200_0080, 0, 0, 0, 0, NITROCODE_BE, NITROCODE_LE].iter().enumerate() {
+            put(&mut module, 0x10 + 4 * index, *value);
+        }
+        for (index, value) in [0x01ff_8000, 0x20, 0, 0x027e_0000, 0x10, 0].iter().enumerate() {
+            put(&mut module, 0x40 + 4 * index, *value);
+        }
+        module[0x80] = 0xaa;
+        module[0xa0] = 0xdd;
+        module
+    }
+
+    #[test]
+    fn the_autoload_list_names_where_each_block_is_stored() {
+        let blocks = autoload_blocks(&module_with_autoloads(), 0x0200_0000);
+        assert_eq!(
+            blocks,
+            vec![
+                Autoload { address: 0x01ff_8000, size: 0x20, source: 0x80 },
+                Autoload { address: 0x027e_0000, size: 0x10, source: 0xa0 },
+            ]
+        );
+        // A block past the end of the module is no list at all.
+        let mut short = module_with_autoloads();
+        short.truncate(0xa8);
+        assert!(autoload_blocks(&short, 0x0200_0000).is_empty());
+    }
+
+    #[test]
+    fn autoload_blocks_map_where_they_run_and_the_stored_copy_is_not_code() {
+        let mut data = vec![0u8; 0x4000];
+        let module = module_with_autoloads();
+        data.extend_from_slice(&module);
+        data.resize(0x4400, 0);
+        write(&mut data, ARM9_DESCRIPTOR, [0x4000, 0x0200_0000, 0x0200_0000, module.len() as u32]);
+        write(&mut data, ARM7_DESCRIPTOR, [0x4100, 0x037F_8010, 0x037F_8000, 0x100]);
+        let arm9 = &import(&data).expect("cartridge")[0].1;
+        let view: Vec<(u64, u64, u64)> = arm9.mappings.iter().map(|m| (m.vaddr, m.size, m.flags)).collect();
+        assert_eq!(
+            view,
+            vec![(0x0200_0000, 0x80, 0x7), (0x01ff_8000, 0x20, 0x7), (0x027e_0000, 0x10, 0x3), (0x0200_00b0, 0x20, 0x3)]
+        );
+        assert_eq!(arm9.mappings[1].bytes[0], 0xaa);
+        assert_eq!(arm9.mappings[2].bytes[0], 0xdd);
     }
 
     #[test]

@@ -20,15 +20,22 @@
 //! the game swaps them -- so overlapping load addresses are legal and
 //! no overlap check runs.
 //!
-//! Model: each overlay is its own program `ov<N>` (`N` = overlay id)
-//! beside `arm9` and `arm7`, mapping only its own bytes at `ram_addr`,
-//! so `store_import` mints one `modules` row for it. An
+//! Model (P3.12): overlays that share an address window cannot be one
+//! program, because a program's facts (functions, symbols, xrefs, comments,
+//! renames) are keyed by address. Each overlay is therefore its own program
+//! `ov<N>` (`N` = overlay id) beside `arm9` and `arm7`, mapping only its
+//! own bytes at `ram_addr`, and carrying exactly one `modules` row
+//! ([`module_of`]: name, FAT index as `file_id`, FAT offset as `file_off`).
+//! A program is the namespace of one module, so a rename in `ov5` cannot
+//! reach `ov9` at the same address; resident memory is the `arm9` program,
+//! modelled once, and an overlay's call into it leaves the overlay's
+//! program like a call into a library. `locate` is the cross-program
+//! question: it names every (program, module) that maps an address. An
 //! `(overlay-id, addr)` pair binds through [`bind`] / [`bind_offset`] to
 //! its module, RAM address and file offset -- the hook a symbol reader
 //! (e.g. an mwldarm MAP with overlay-relative symbols) resolves through.
 
-use super::{Mapping, NativeImport};
-use romwright_model::{Address, ModuleRow};
+use super::{Mapping, NativeImport, NativeModule};
 
 /// ROM header offsets (gbatek "DS Cartridge Header", LE u32 each).
 pub const FAT_OFFSET_OFF: usize = 0x48;
@@ -196,25 +203,19 @@ pub fn parse(data: &[u8]) -> Vec<DsOverlay> {
     out
 }
 
-/// One `modules`-row per overlay: `module_id` 0 (the store assigns
-/// one), `name` `ov<N>`, `kind` `"overlay"`, `file_id` the FAT index,
-/// `load_vaddr` the RAM address, `size` the resident size
-/// (`ram_size + bss_size`), `file_off` the FAT offset, resident.
-pub fn modules(overlays: &[DsOverlay]) -> Vec<ModuleRow> {
-    overlays
-        .iter()
-        .map(|ov| ModuleRow {
-            module_id: 0,
-            program: String::new(),
-            name: ov.name(),
-            kind: "overlay".into(),
-            file_id: ov.file_id.to_string(),
-            load_vaddr: Address::ram(ov.ram_addr),
-            size: ov.total_size(),
-            file_off: ov.file_off,
-            resident: true,
-        })
-        .collect()
+/// The `modules` row of one overlay: `name` `ov<N>`, `kind` `"overlay"`,
+/// `file_id` the FAT index, `load_vaddr` the RAM address, `size` the
+/// resident size (`ram_size + bss_size`), `file_off` where the FAT places
+/// the stored file in the cartridge.
+pub fn module_of(ov: &DsOverlay) -> NativeModule {
+    NativeModule {
+        name: ov.name(),
+        kind: "overlay".into(),
+        file_id: ov.file_id.to_string(),
+        load_vaddr: ov.ram_addr,
+        size: ov.total_size(),
+        file_off: ov.file_off,
+    }
 }
 
 /// The RAM image each overlay contributes to an import: its FAT bytes
@@ -286,11 +287,18 @@ pub fn programs_for(
     let programs = mappings
         .into_iter()
         .map(|(mapping, name)| {
+            let modules = overlays
+                .iter()
+                .filter(|ov| ov.name() == name)
+                .map(module_of)
+                .collect();
             let import = NativeImport {
                 mappings: vec![mapping],
+                modules,
                 mapping_names: vec![name.clone()],
                 format: "nds".into(),
                 language: language.into(),
+                overlay_id: name.strip_prefix("ov").and_then(|id| id.parse().ok()),
                 ..Default::default()
             };
             (name, import)
@@ -416,17 +424,17 @@ mod tests {
 
     #[test]
     fn module_rows_carry_name_vaddr_size_and_file_off() {
-        let rows = modules(&parse(&cartridge()));
+        let rows: Vec<_> = parse(&cartridge()).iter().map(module_of).collect();
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[0].name, "ov0");
-        assert_eq!(rows[0].load_vaddr, Address::ram(0x0210_0000));
+        assert_eq!(rows[0].load_vaddr, 0x0210_0000);
         // 0x40 file bytes + 0x10 zero-filled BSS.
         assert_eq!(rows[0].size, 0x50);
         assert_eq!(rows[0].file_off, 0x4300);
         assert_eq!(rows[0].kind, "overlay");
-        assert!(rows[0].resident);
+        assert_eq!(rows[0].file_id, "0");
         assert_eq!(rows[1].name, "ov1");
-        assert_eq!(rows[1].load_vaddr, Address::ram(0x0211_0000));
+        assert_eq!(rows[1].load_vaddr, 0x0211_0000);
         assert_eq!(rows[1].size, 0x80);
         assert_eq!(rows[1].file_off, 0x4340);
     }

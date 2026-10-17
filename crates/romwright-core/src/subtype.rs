@@ -16,7 +16,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::native_runtime::{PcodeInstruction, PcodeOp, PcodeVarnode};
-use crate::types_infer::{Field, Ty};
+use crate::types_infer::{Field, Machine, Ty};
 use romwright_model::type_evidence::Class;
 
 /// A type variable: one storage location (register offset, or a unique
@@ -54,6 +54,10 @@ pub struct Solution {
     /// observed argument type). This is the caller→callee direction — the
     /// caller's solved argument type refines the callee's parameter.
     pub calls: BTreeMap<u64, Vec<(u64, Ty)>>,
+    /// Per parameter register: the field offsets whose loaded value the body
+    /// dereferenced, each with the type the dereferences prove for what it
+    /// points at (`*struct{..}` or `*T`).
+    pub pointees: BTreeMap<u64, BTreeMap<i64, Ty>>,
 }
 
 /// A callee's recovered signature, asserted into a caller's solve so the
@@ -70,17 +74,19 @@ pub struct Signature {
 
 /// A decompiler type as a structural `Ty` — the Ghidra/`Strong` direction,
 /// where a recovered `FuncProto` overrides the solver's inference.
-fn decomp_to_ty(ty: &romwright_model::DecompType) -> Ty {
+fn decomp_to_ty(ty: &romwright_model::DecompType, pointer_size: u32) -> Ty {
     let name = ty.name.as_deref().unwrap_or("");
     // Ghidra often omits `size`; fall back to the C type's canonical width
-    // (LP64) so `int` is 32, not the 64 a missing size would default to.
+    // on this target, so `int` is 32 everywhere and `long` or a pointer is
+    // as wide as the target's pointer (ILP32 on consoles, LP64 on x86-64).
+    let pointer_bits = pointer_size * 8;
     let name_bits = |n: &str| -> u32 {
         match n {
             "char" | "byte" | "bool" | "schar" | "uchar" => 8,
             "short" | "ushort" | "wchar_t" => 16,
             "int" | "uint" | "float" | "long32" => 32,
-            "long" | "ulong" | "double" | "long64" | "pointer" => 64,
-            _ => 64,
+            "double" | "long64" => 64,
+            _ => pointer_bits,
         }
     };
     let bits = ty
@@ -91,14 +97,14 @@ fn decomp_to_ty(ty: &romwright_model::DecompType) -> Ty {
         Some("ptr") => Ty::Ptr(Box::new(
             ty.target
                 .as_deref()
-                .map(decomp_to_ty)
+                .map(|target| decomp_to_ty(target, pointer_size))
                 .unwrap_or(Ty::Unknown),
         )),
         Some("array") => Ty::Array {
             elem: Box::new(
                 ty.target
                     .as_deref()
-                    .map(decomp_to_ty)
+                    .map(|target| decomp_to_ty(target, pointer_size))
                     .unwrap_or(Ty::Unknown),
             ),
             stride: ty.target.as_ref().and_then(|t| t.size).unwrap_or(1),
@@ -126,12 +132,13 @@ impl Signature {
         float_slots: &[u64],
         int_ret: &[u64],
         float_ret: &[u64],
+        machine: &Machine,
     ) -> Signature {
         let mut params = Vec::new();
         let mut int_i = 0;
         let mut float_i = 0;
         for param in &proto.parameters {
-            let ty = decomp_to_ty(&param.data_type);
+            let ty = decomp_to_ty(&param.data_type, machine.pointer_size);
             let is_float = matches!(ty, Ty::Scalar(Class::Float(_)));
             let slot = if is_float {
                 float_slots.get(float_i).copied().inspect(|_| float_i += 1)
@@ -142,7 +149,7 @@ impl Signature {
                 params.push((reg, ty));
             }
         }
-        let ret_ty = decomp_to_ty(&proto.return_type);
+        let ret_ty = decomp_to_ty(&proto.return_type, machine.pointer_size);
         let returns = if matches!(ret_ty, Ty::Scalar(Class::Float(_))) {
             float_ret
                 .first()
@@ -155,9 +162,10 @@ impl Signature {
         Signature { params, returns }
     }
 }
+
 /// Solve a function in isolation — no callee facts.
-pub fn solve(instructions: &[PcodeInstruction]) -> Solution {
-    solve_with(instructions, &BTreeMap::new(), &BTreeSet::new())
+pub fn solve(instructions: &[PcodeInstruction], machine: &Machine) -> Solution {
+    solve_with(instructions, &BTreeMap::new(), &BTreeSet::new(), machine)
 }
 
 /// `solve` with callee signatures for interprocedural constraint injection
@@ -168,8 +176,9 @@ pub fn solve_with(
     instructions: &[PcodeInstruction],
     callees: &BTreeMap<u64, Signature>,
     killed: &BTreeSet<u64>,
+    machine: &Machine,
 ) -> Solution {
-    let mut c = Collector::new(callees, killed);
+    let mut c = Collector::new(callees, killed, machine);
     c.collect(instructions);
     c.solve()
 }
@@ -192,9 +201,19 @@ struct Collector<'a> {
     /// A value var that is `index * stride` / `index << shift` -> stride.
     scaled: BTreeMap<Var, u64>,
     struct_bases: BTreeSet<u64>,
-    /// A loaded value var -> (base register offset, disp, size), resolved
-    /// to a field class at the value's first use.
-    pending: BTreeMap<Var, (u64, i64, u32)>,
+    /// A loaded value var -> (base var, disp, size), resolved to a field
+    /// class at the value's first use.
+    pending: BTreeMap<Var, (Var, i64, u32)>,
+    /// Every field read -> (base var, disp, size), kept after the first use
+    /// has classified it: a later dereference of the value makes the field a
+    /// pointer.
+    loaded: BTreeMap<Var, (Var, i64, u32)>,
+    /// A value var that is a loaded value plus a constant -> (the loaded
+    /// var, the constant).
+    derived: BTreeMap<Var, (Var, i64)>,
+    /// (parent base var, field offset, loaded var): the fields whose loaded
+    /// value was dereferenced.
+    pointees: Vec<(Var, i64, Var)>,
     /// Callee signatures by call target address, for interprocedural
     /// constraint injection.
     callees: &'a BTreeMap<u64, Signature>,
@@ -221,10 +240,17 @@ struct Collector<'a> {
     /// `killedbycall` set. A call gives each a fresh value so a post-call
     /// read cannot resolve to the caller's pre-call value.
     killed: &'a BTreeSet<u64>,
+    /// Pointer width and stack pointer: an address based on the stack
+    /// pointer is a frame slot, never a struct field.
+    machine: &'a Machine,
 }
 
 impl<'a> Collector<'a> {
-    fn new(callees: &'a BTreeMap<u64, Signature>, killed: &'a BTreeSet<u64>) -> Self {
+    fn new(
+        callees: &'a BTreeMap<u64, Signature>,
+        killed: &'a BTreeSet<u64>,
+        machine: &'a Machine,
+    ) -> Self {
         Self {
             vars: BTreeMap::new(),
             names: Vec::new(),
@@ -238,6 +264,9 @@ impl<'a> Collector<'a> {
             scaled: BTreeMap::new(),
             struct_bases: BTreeSet::new(),
             pending: BTreeMap::new(),
+            loaded: BTreeMap::new(),
+            derived: BTreeMap::new(),
+            pointees: Vec::new(),
             callees,
             holding: BTreeMap::new(),
             unique_vars: BTreeMap::new(),
@@ -245,7 +274,47 @@ impl<'a> Collector<'a> {
             output_versioned: false,
             call_args: Vec::new(),
             killed,
+            machine,
         }
+    }
+
+    /// The var a register's entry value is keyed by.
+    fn register_var(&mut self, offset: u64) -> Var {
+        self.var(&PcodeVarnode {
+            space: "register".into(),
+            offset,
+            size: self.machine.pointer_size,
+        })
+    }
+
+    /// Whether `(base, disp)` addresses the stack frame.
+    fn is_frame(&self, base: u64) -> bool {
+        self.machine.stack_pointer == Some(base)
+    }
+
+    /// The loaded value an address is, or is a constant offset from: the
+    /// loaded var and the offset.
+    fn through_loaded(&self, var: Var) -> Option<(Var, i64)> {
+        if self.loaded.contains_key(&var) {
+            Some((var, 0))
+        } else {
+            self.derived.get(&var).copied()
+        }
+    }
+
+    /// The body dereferences the value `loaded` read from a field: the field
+    /// is a pointer, and `loaded` is a base of its own.
+    fn note_dereference(&mut self, loaded: Var) {
+        let Some(&(parent, disp, size)) = self.loaded.get(&loaded) else {
+            return;
+        };
+        self.constraints.push(Constraint::Field(
+            parent,
+            disp,
+            Field { offset: disp, size, class: Class::Ptr },
+        ));
+        self.constraints.push(Constraint::Cap(loaded, Class::Ptr));
+        self.pointees.push((parent, disp, loaded));
     }
 
     fn var(&mut self, v: &PcodeVarnode) -> Var {
@@ -409,26 +478,28 @@ impl<'a> Collector<'a> {
         }
     }
 
-    /// The register offset a varnode's value originates from — through a
-    /// spill reload or a copy — or its own offset when it is a computed
-    /// register value. Used so an array/field base recorded on a reload
-    /// temporary resolves to the parameter it holds.
-    fn origin_of(&self, v: &PcodeVarnode) -> u64 {
+    /// The register whose *entry* value a varnode holds — through a spill
+    /// reload or a copy — or `None` when it holds a value the body computed.
+    /// Used so an array/field base recorded on a reload temporary resolves
+    /// to the parameter it holds, and so a register reloaded with something
+    /// else (`ldr r0, =gGlobal; ldrh r0, [r0, #4]`, the literal-pool idiom
+    /// of every 32-bit RISC target) does not hand its fields to the
+    /// parameter that arrived in it.
+    fn entry_origin(&self, v: &PcodeVarnode) -> Option<u64> {
         if v.space == "register" {
-            if let Some(&held) = self.holding.get(&v.offset)
-                && let Some(origin) = self.resolve_var(held)
-            {
-                return origin;
-            }
-            return v.offset;
+            return match self.holding.get(&v.offset) {
+                Some(&held) => self.resolve_var(held),
+                None if !self.defined.contains(&v.offset) => Some(v.offset),
+                None => None,
+            };
         }
-        if v.space == "unique"
-            && let Some(&version) = self.unique_vars.get(&v.offset)
-            && let Some(origin) = self.resolve_var(version)
-        {
-            return origin;
+        if v.space == "unique" {
+            return self
+                .unique_vars
+                .get(&v.offset)
+                .and_then(|&version| self.resolve_var(version));
         }
-        v.offset
+        None
     }
 
     /// The var an op's output binds, recording the definition. A `unique`
@@ -473,6 +544,14 @@ impl<'a> Collector<'a> {
                 if let (Some(output), Some(a), Some(b)) =
                     (&op.output, op.inputs.first(), op.inputs.get(1))
                 {
+                    // A constant offset from a loaded value is a pointer the body
+                    // is walking through (`p->f + k`); remember where it came from.
+                    let through = if b.space == "const" && a.space != "const" {
+                        let held = self.use_var(a);
+                        self.through_loaded(held)
+                    } else {
+                        None
+                    };
                     if a.space == "register" && b.space == "const" {
                         let disp: i64 = if opcode == "INT_SUB" {
                             (b.offset as i64).wrapping_neg()
@@ -481,11 +560,26 @@ impl<'a> Collector<'a> {
                         };
                         // Record the *origin* register, not the reload
                         // temporary, so a `*(base+disp)` access through a
-                        // reloaded pointer resolves to the parameter.
-                        let base = self.origin_of(a);
+                        // reloaded pointer resolves to the parameter. A
+                        // register already holding `base + offset` composes:
+                        // the stack pointer after `sp = sp - 0x20` or
+                        // `add r7, sp, #0`, and a parameter after agbcc's
+                        // Thumb move `adds r2, r1, #0; subs r2, #0x10`, so
+                        // every frame slot is keyed off the stack pointer
+                        // and every field off the parameter. A computed
+                        // base is neither, and keys nothing.
+                        let held = self.use_var(a);
+                        let resolved = match self.address_of.get(&held).copied() {
+                            Some((inner, offset)) => Some((inner, offset.wrapping_add(disp))),
+                            None => self.entry_origin(a).map(|origin| (origin, disp)),
+                        };
                         let out = self.out_value(output);
-                        self.address_of.insert(out, (base, disp));
-                        self.built_from.entry(out).or_default().insert(base);
+                        if let Some((base, disp)) = resolved {
+                            self.address_of.insert(out, (base, disp));
+                            self.built_from.entry(out).or_default().insert(base);
+                        } else if let Some((child, from)) = through {
+                            self.derived.insert(out, (child, from.wrapping_add(disp)));
+                        }
                     } else {
                         // `t = a + b` where neither is a constant: a
                         // possible `base + index` array address. Record the
@@ -495,6 +589,14 @@ impl<'a> Collector<'a> {
                         let rb = self.use_var(b);
                         let out = self.out_value(output);
                         self.sum_of.insert(out, (ra, rb));
+                        if let Some((child, from)) = through {
+                            let disp = if opcode == "INT_SUB" {
+                                (b.offset as i64).wrapping_neg()
+                            } else {
+                                b.offset as i64
+                            };
+                            self.derived.insert(out, (child, from.wrapping_add(disp)));
+                        }
                     }
                 }
             }
@@ -542,11 +644,7 @@ impl<'a> Collector<'a> {
                     for (reg, ty) in &sig.params {
                         let var = match self.holding.get(reg) {
                             Some(&v) => v,
-                            None => self.var(&PcodeVarnode {
-                                space: "register".into(),
-                                offset: *reg,
-                                size: 8,
-                            }),
+                            None => self.register_var(*reg),
                         };
                         self.assert_ty(var, ty);
                         // The caller→callee observation: the type this var
@@ -576,13 +674,10 @@ impl<'a> Collector<'a> {
                 // as a direct one does; a computed branch does not.
                 if let Some(target) = op.inputs.first() {
                     self.cap(target, Class::Code);
-                    let origin = self.origin_of(target);
-                    if !self.defined.contains(&origin) {
-                        let var = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: origin,
-                            size: 8,
-                        });
+                    if let Some(origin) = self.entry_origin(target)
+                        && !self.defined.contains(&origin)
+                    {
+                        let var = self.register_var(origin);
                         self.constraints.push(Constraint::Cap(var, Class::Code));
                     }
                 }
@@ -644,20 +739,17 @@ impl<'a> Collector<'a> {
                 continue;
             }
             let ivar = self.use_var(input);
-            if let Some((base, disp, size)) = self.pending.remove(&ivar) {
+            if let Some((base_var, disp, size)) = self.pending.remove(&ivar) {
                 let class = match opcode {
                     "FLOAT_ADD" | "FLOAT_SUB" | "FLOAT_MULT" | "FLOAT_DIV" => {
                         Class::Float(size * 8)
                     }
                     "INT_SLESS" | "INT_SLESSEQUAL" | "INT_SDIV" | "INT_SREM" | "INT_SRIGHT"
                     | "INT_SEXT" => Class::Int(size * 8),
+                    // `lbu`/`lhu`: the load is zero-extended, so the field is read unsigned.
+                    "INT_ZEXT" => Class::Uint(size * 8),
                     _ => Class::Num(size * 8),
                 };
-                let base_var = self.var(&PcodeVarnode {
-                    space: "register".into(),
-                    offset: base,
-                    size: 8,
-                });
                 self.constraints.push(Constraint::Field(
                     base_var,
                     disp,
@@ -717,13 +809,19 @@ impl<'a> Collector<'a> {
                 self.cap(address, Class::Ptr);
                 for origin in self.built_from.get(&addr_var).cloned().unwrap_or_default() {
                     if !self.defined.contains(&origin) {
-                        let var = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: origin,
-                            size: 8,
-                        });
+                        let var = self.register_var(origin);
                         self.constraints.push(Constraint::Cap(var, Class::Ptr));
                     }
+                }
+                // `*(p->f + k)`: the pointer the field `f` held is dereferenced.
+                // The field is a pointer, and what is read through it is a
+                // field of the pointee, which the first use classifies.
+                if let Some((child, delta)) = self.through_loaded(addr_var)
+                    && let Some(output) = &op.output
+                {
+                    self.note_dereference(child);
+                    let out = self.out_value(output);
+                    self.pending.insert(out, (child, delta, output.size));
                 }
                 // `base[index]` with a constant stride is an array access.
                 if let Some((a, b)) = self.sum_of.get(&addr_var).copied() {
@@ -754,11 +852,7 @@ impl<'a> Collector<'a> {
                             .unwrap_or(Class::Unknown);
                         for base in bases {
                             if !self.defined.contains(&base) {
-                                let var = self.var(&PcodeVarnode {
-                                    space: "register".into(),
-                                    offset: base,
-                                    size: 8,
-                                });
+                                let var = self.register_var(base);
                                 self.constraints.push(Constraint::Array(var, stride, elem));
                             }
                         }
@@ -769,17 +863,16 @@ impl<'a> Collector<'a> {
                 // `*(base + disp)` through a resolved non-spill address: a
                 // field read, pending until the loaded value's first use.
                 if let Some((base, disp)) = slot
+                    && !self.is_frame(base)
                     && let Some(output) = &op.output
                 {
                     self.struct_bases.insert(base);
                     let out = self.out_value(output);
-                    self.pending.insert(out, (base, disp, output.size));
+                    let base_var = self.register_var(base);
+                    self.pending.insert(out, (base_var, disp, output.size));
+                    self.loaded.insert(out, (base_var, disp, output.size));
                     if !self.defined.contains(&base) {
-                        let var = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: base,
-                            size: 8,
-                        });
+                        let var = self.register_var(base);
                         self.constraints.push(Constraint::Cap(var, Class::Ptr));
                     }
                 }
@@ -795,7 +888,9 @@ impl<'a> Collector<'a> {
         let key = self.address_of.get(&addr_var).copied();
         match key {
             Some(key) => {
-                let is_struct_base = self.struct_bases.contains(&key.0);
+                // A frame slot is never a field, however its base was used.
+                let in_frame = self.is_frame(key.0);
+                let is_struct_base = !in_frame && self.struct_bases.contains(&key.0);
                 if let Some(value) = op.inputs.get(2) {
                     let origin =
                         if value.space == "register" && !self.defined.contains(&value.offset) {
@@ -816,15 +911,11 @@ impl<'a> Collector<'a> {
                     }
                     // A store into a resolved non-spill address is a field
                     // write; the field's class is the stored value's own.
-                    if is_struct_base || !self.spilled.contains_key(&key) {
+                    if !in_frame && (is_struct_base || !self.spilled.contains_key(&key)) {
                         let (base, disp) = key;
                         self.struct_bases.insert(base);
                         let class = Class::Num(value.size * 8);
-                        let base_var = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: base,
-                            size: 8,
-                        });
+                        let base_var = self.register_var(base);
                         self.constraints.push(Constraint::Field(
                             base_var,
                             disp,
@@ -844,13 +935,20 @@ impl<'a> Collector<'a> {
                 self.cap(address, Class::Ptr);
                 for origin in self.built_from.get(&addr_var).cloned().unwrap_or_default() {
                     if !self.defined.contains(&origin) {
-                        let var = self.var(&PcodeVarnode {
-                            space: "register".into(),
-                            offset: origin,
-                            size: 8,
-                        });
+                        let var = self.register_var(origin);
                         self.constraints.push(Constraint::Cap(var, Class::Ptr));
                     }
+                }
+                // `*(p->f + k) = v`: a field of what `p->f` points at.
+                if let Some((child, delta)) = self.through_loaded(addr_var)
+                    && let Some(value) = op.inputs.get(2)
+                {
+                    self.note_dereference(child);
+                    self.constraints.push(Constraint::Field(
+                        child,
+                        delta,
+                        Field { offset: delta, size: value.size, class: Class::Num(value.size * 8) },
+                    ));
                 }
             }
         }
@@ -983,13 +1081,34 @@ impl<'a> Collector<'a> {
                 calls.entry(*callee).or_default().push((*reg, ty.clone()));
             }
         }
-        Solution { types, calls }
+        // A field whose loaded value was dereferenced points at the layout
+        // those accesses prove: keyed by the parameter register and offset.
+        let mut pointees: BTreeMap<u64, BTreeMap<i64, Ty>> = BTreeMap::new();
+        for (parent, disp, child) in &self.pointees {
+            let (space, offset) = &self.names[*parent as usize];
+            if space != "register" {
+                continue;
+            }
+            if let Some(ty @ Ty::Ptr(inner)) = var_types.get(child)
+                && matches!(inner.as_ref(), Ty::Struct(_) | Ty::Scalar(_))
+                && **inner != Ty::Scalar(Class::Unknown)
+            {
+                pointees.entry(*offset).or_default().insert(*disp, ty.clone());
+            }
+        }
+        Solution { types, calls, pointees }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// x86-64: eight-byte pointers, RSP at register offset 0x20.
+    const X86_64: Machine = Machine {
+        pointer_size: 8,
+        stack_pointer: Some(0x20),
+    };
 
     fn varnode(space: &str, offset: u64, size: u32) -> PcodeVarnode {
         PcodeVarnode {
@@ -1036,7 +1155,7 @@ mod tests {
                     varnode("const", 1, 4),
                 ],
             )]),
-        ]);
+        ], &X86_64);
         assert_eq!(
             solution.types.get(&0x38),
             Some(&Ty::Ptr(Box::new(Ty::Scalar(Class::Unknown)))),
@@ -1114,7 +1233,7 @@ mod tests {
                     vec![varnode("unique", 0x23d00, 4)],
                 ),
             ]),
-        ]);
+        ], &X86_64);
         assert!(
             matches!(solution.types.get(&0x38), Some(Ty::Ptr(_))),
             "rdi should be a pointer to a struct, got {:?}",
@@ -1159,7 +1278,7 @@ mod tests {
                     ],
                 ),
             ]),
-        ]);
+        ], &X86_64);
         match solution.types.get(&0x38) {
             Some(Ty::Ptr(inner)) => match inner.as_ref() {
                 Ty::Struct(fields) => {
@@ -1205,6 +1324,7 @@ mod tests {
             ],
             &callees,
             &BTreeSet::new(),
+            &X86_64,
         );
         match solution.types.get(&0x38) {
             Some(Ty::Ptr(inner)) => match inner.as_ref() {
@@ -1257,6 +1377,7 @@ mod tests {
             ],
             &callees,
             &BTreeSet::from([0x38]),
+            &X86_64,
         );
         let observed = solution
             .calls
@@ -1338,12 +1459,340 @@ mod tests {
                 Some(varnode("unique", 0x301, 4)),
                 vec![varnode("unique", 0x23e00, 4), varnode("const", 0xff, 4)],
             )]),
-        ]);
+        ], &X86_64);
         assert_eq!(
             solution.types.get(&0x38),
             Some(&Ty::Scalar(Class::IntOrUint(32))),
             "the sign-conflicted reload must converge to int-or-uint32, got {:?}",
             solution.types.get(&0x38)
         );
+    }
+
+    #[test]
+    fn a_mips_pointer_spilled_after_a_frame_local_read_keeps_its_field() {
+        // gcc -O0 MIPS: `addiu sp,sp,-24; move s8,sp; lw v0,8(s8)` reads a
+        // local, then `sw a0,24(s8); lw v1,24(s8); lw v0,4(v1); slt ..`
+        // spills, reloads and dereferences the parameter. The local read
+        // must not make the frame a struct base, or the spill becomes a
+        // field write and a0 never receives its field.
+        let mips = Machine {
+            pointer_size: 4,
+            stack_pointer: Some(0x74),
+        };
+        let (sp, s8, v0, v1, a0) = (0x74, 0x78, 0x8, 0xc, 0x10);
+        let solution = solve(
+            &[
+                instruction(vec![op(
+                    "INT_ADD",
+                    Some(varnode("register", sp, 4)),
+                    vec![varnode("register", sp, 4), varnode("const", 0xffff_ffe8, 4)],
+                )]),
+                instruction(vec![op(
+                    "COPY",
+                    Some(varnode("register", s8, 4)),
+                    vec![varnode("register", sp, 4)],
+                )]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", s8, 4), varnode("const", 8, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", v0, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", s8, 4), varnode("const", 24, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![
+                            varnode("const", 0x1b1, 4),
+                            varnode("unique", 0x100, 4),
+                            varnode("register", a0, 4),
+                        ],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", s8, 4), varnode("const", 24, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", v1, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", v1, 4), varnode("const", 4, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", v0, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![op(
+                    "INT_SLESS",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("register", v0, 4), varnode("const", 10, 4)],
+                )]),
+            ],
+            &mips,
+        );
+        match solution.types.get(&a0) {
+            Some(Ty::Ptr(inner)) => match inner.as_ref() {
+                Ty::Struct(fields) => assert_eq!(
+                    fields.get(&4),
+                    Some(&Field {
+                        offset: 4,
+                        size: 4,
+                        class: Class::Int(32)
+                    }),
+                    "a0's field at +4: {fields:?}"
+                ),
+                other => panic!("expected a struct, got {other:?}"),
+            },
+            other => panic!("expected a0 to be a struct pointer, got {other:?}"),
+        }
+        assert!(
+            !matches!(solution.types.get(&s8), Some(Ty::Ptr(_))),
+            "the frame pointer is not a struct pointer"
+        );
+    }
+
+    #[test]
+    fn an_arm_literal_pool_base_is_not_the_parameter_it_overwrote() {
+        // Thumb: `ldr r1, [r0, #8]` reads a field of the parameter r0, then
+        // `ldr r0, =gGlobal; ldrh r0, [r0, #4]` reloads r0 from the literal
+        // pool and reads a global's field. Only +8 belongs to the parameter.
+        let arm = Machine {
+            pointer_size: 4,
+            stack_pointer: Some(0x54),
+        };
+        let (r0, r1) = (0x20, 0x24);
+        let solution = solve(
+            &[
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", r0, 4), varnode("const", 8, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", r1, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![op(
+                    "INT_ADD",
+                    Some(varnode("unique", 0x200, 4)),
+                    vec![varnode("register", r1, 4), varnode("const", 1, 4)],
+                )]),
+                instruction(vec![op(
+                    "LOAD",
+                    Some(varnode("register", r0, 4)),
+                    vec![varnode("const", 0x1b1, 4), varnode("ram", 0x0800_1000, 4)],
+                )]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", r0, 4), varnode("const", 4, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x300, 2)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                    op(
+                        "INT_ZEXT",
+                        Some(varnode("register", r0, 4)),
+                        vec![varnode("unique", 0x300, 2)],
+                    ),
+                ]),
+            ],
+            &arm,
+        );
+        match solution.types.get(&r0) {
+            Some(Ty::Ptr(inner)) => assert_eq!(
+                inner.as_ref(),
+                &Ty::Struct(BTreeMap::from([(
+                    8,
+                    Field {
+                        offset: 8,
+                        size: 4,
+                        class: Class::Num(32)
+                    }
+                )])),
+                "only the parameter's own field"
+            ),
+            other => panic!("expected r0 to be a pointer, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn an_agbcc_thumb_move_keeps_the_parameter_as_the_base() {
+        // agbcc's `FreeInternal`: `adds r2, r1, #0; subs r2, #0x10;
+        // ldr r3, [r2, #0xc]; cmp r3, #0`. r2 is the parameter r1 minus a
+        // header, so the field read at r2+0xc is r1's field at -4.
+        let arm = Machine {
+            pointer_size: 4,
+            stack_pointer: Some(0x54),
+        };
+        let (r1, r2, r3) = (0x24, 0x28, 0x2c);
+        let solution = solve(
+            &[
+                instruction(vec![op(
+                    "INT_ADD",
+                    Some(varnode("register", r2, 4)),
+                    vec![varnode("register", r1, 4), varnode("const", 0, 4)],
+                )]),
+                instruction(vec![op(
+                    "INT_SUB",
+                    Some(varnode("register", r2, 4)),
+                    vec![varnode("register", r2, 4), varnode("const", 0x10, 4)],
+                )]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", r2, 4), varnode("const", 0xc, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("register", r3, 4)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                ]),
+                instruction(vec![op(
+                    "INT_EQUAL",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("register", r3, 4), varnode("const", 0, 4)],
+                )]),
+            ],
+            &arm,
+        );
+        match solution.types.get(&r1) {
+            Some(Ty::Ptr(inner)) => match inner.as_ref() {
+                Ty::Struct(fields) => assert_eq!(
+                    fields.keys().copied().collect::<Vec<_>>(),
+                    vec![-4],
+                    "{fields:?}"
+                ),
+                other => panic!("expected a struct, got {other:?}"),
+            },
+            other => panic!("expected r1 to be a pointer, got {other:?}"),
+        }
+        assert!(
+            !matches!(solution.types.get(&r2), Some(Ty::Ptr(_))),
+            "r2 arrived as nothing the body read"
+        );
+    }
+
+    /// A 32-bit machine like the PS2's: four-byte pointers, `sp` at 0x20.
+    const MIPS32: Machine = Machine { pointer_size: 4, stack_pointer: Some(0x20) };
+
+    #[test]
+    fn a_field_whose_value_is_dereferenced_is_a_pointer_to_the_layout_behind_it() {
+        // a0 = p.  v0 = p->f (+8); v1 = *(v0 + 4) read signed; a2 = p->g (+0xc)
+        // read as a float; v0 is a pointer, and p->f points at a struct with a
+        // signed word at +4. g is only read, so it stays a scalar.
+        let load = |out: u64, address: u64| {
+            op(
+                "LOAD",
+                Some(varnode("register", out, 4)),
+                vec![varnode("const", 0x1b1, 4), varnode("unique", address, 4)],
+            )
+        };
+        let add = |out: u64, base: u64, disp: u64| {
+            op(
+                "INT_ADD",
+                Some(varnode("unique", out, 4)),
+                vec![varnode("register", base, 4), varnode("const", disp, 4)],
+            )
+        };
+        let solution = solve(
+            &[
+                instruction(vec![add(0x100, 0x10, 8), load(0x8, 0x100)]),
+                instruction(vec![add(0x104, 0x8, 4), load(0xc, 0x104)]),
+                instruction(vec![op(
+                    "INT_SLESS",
+                    Some(varnode("unique", 0x200, 1)),
+                    vec![varnode("register", 0xc, 4), varnode("const", 0, 4)],
+                )]),
+                instruction(vec![add(0x108, 0x10, 0xc), load(0x14, 0x108)]),
+                instruction(vec![op(
+                    "FLOAT_ADD",
+                    Some(varnode("register", 0x18, 4)),
+                    vec![varnode("register", 0x14, 4), varnode("register", 0x14, 4)],
+                )]),
+            ],
+            &MIPS32,
+        );
+        let Some(Ty::Ptr(inner)) = solution.types.get(&0x10) else { panic!("{:?}", solution.types) };
+        let Ty::Struct(fields) = inner.as_ref() else { panic!("{inner:?}") };
+        assert_eq!(fields[&8].class, Class::Ptr, "p->f is dereferenced");
+        assert_eq!(fields[&0xc].class, Class::Float(32), "p->g is not");
+        let pointee = &solution.pointees[&0x10][&8];
+        let Ty::Ptr(behind) = pointee else { panic!("{pointee:?}") };
+        let Ty::Struct(behind) = behind.as_ref() else { panic!("{behind:?}") };
+        assert_eq!(behind[&4].class, Class::Int(32));
+        assert!(!solution.pointees[&0x10].contains_key(&0xc));
+    }
+
+    #[test]
+    fn a_zero_extended_load_is_an_unsigned_field() {
+        // `lbu`: the byte is loaded and zero-extended.
+        let solution = solve(
+            &[
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x100, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 7, 4)],
+                    ),
+                    op(
+                        "LOAD",
+                        Some(varnode("unique", 0x104, 1)),
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x100, 4)],
+                    ),
+                    op(
+                        "INT_ZEXT",
+                        Some(varnode("register", 0x8, 4)),
+                        vec![varnode("unique", 0x104, 1)],
+                    ),
+                ]),
+                instruction(vec![
+                    op(
+                        "INT_ADD",
+                        Some(varnode("unique", 0x108, 4)),
+                        vec![varnode("register", 0x10, 4), varnode("const", 0x20, 4)],
+                    ),
+                    op(
+                        "STORE",
+                        None,
+                        vec![varnode("const", 0x1b1, 4), varnode("unique", 0x108, 4), varnode("const", 1, 4)],
+                    ),
+                ]),
+            ],
+            &MIPS32,
+        );
+        let Some(Ty::Ptr(inner)) = solution.types.get(&0x10) else { panic!() };
+        let Ty::Struct(fields) = inner.as_ref() else { panic!("{inner:?}") };
+        assert_eq!(fields[&7].class, Class::Uint(8));
     }
 }

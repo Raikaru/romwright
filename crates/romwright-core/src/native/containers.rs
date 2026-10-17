@@ -32,6 +32,9 @@ fn u32_be(data: &[u8], off: usize) -> Result<u32> {
 /// True when the image is a GameCube disc: the GCM header carries a
 /// valid DOL offset/size and the disc magic region is plausible.
 pub(crate) fn is_gcm(data: &[u8]) -> bool {
+    if data.len() >= 0x460 && u32_be(data, 0x1c).unwrap_or(0) == 0xc233_9f3d {
+        return true;
+    }
     if data.len() < 0x460 {
         return false;
     }
@@ -44,8 +47,15 @@ pub(crate) fn is_gcm(data: &[u8]) -> bool {
     dol_off >= 0x460 && dol_size > 0 && dol_off + dol_size <= data.len()
 }
 
-/// Extracts the boot DOL from a GCM image and imports it.
+/// Imports a GCM image. A GameCube disc with a readable FST imports as one
+/// program holding the boot DOL and every REL on the disc (`disc`); an
+/// image without that (a header-only fixture) reads the boot DOL from the
+/// header's offset alone. Wii discs never get here: `wii::import_nod` reads
+/// their decrypted partition.
 pub(crate) fn import_gcm(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
+    if let Some(result) = super::disc::import_gc_raw(data) {
+        return result;
+    }
     let dol_off = u32_be(data, 0x420)? as usize;
     let dol_size = u32_be(data, 0x424)? as usize;
     let dol = data
@@ -147,6 +157,14 @@ pub(crate) fn import_nro(data: &[u8]) -> Result<Vec<(String, NativeImport)>> {
 
 /// Tries each easy container in turn; None means none matched.
 pub(crate) fn import(data: &[u8]) -> Option<Result<Vec<(String, NativeImport)>>> {
+    // RVZ/WIA/WBFS/Wii discs first: `is_gcm`'s offset heuristics can match
+    // arbitrary compressed bytes.
+    if let Some(result) = super::wii::import_disc_formats(data) {
+        return Some(result);
+    }
+    if super::disc::is_ciso(data) {
+        return Some(super::disc::import_ciso(data));
+    }
     if is_gcm(data) {
         return Some(import_gcm(data));
     }

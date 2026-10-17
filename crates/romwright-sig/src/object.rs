@@ -125,6 +125,18 @@ pub fn relocation_width(machine: u16, kind: u64) -> Option<usize> {
             | 69..=72 | 74..=77 | 79..=94 | 249..=252 => Some(2),
             _ => None,
         },
+        // MIPS: elf.h R_MIPS_* numbering. Instruction fields (26-bit jump
+        // targets, 16-bit HI/LO/GPREL/GOT/PC immediates, shift amounts) sit at
+        // a byte offset that depends on endianness, which this table does not
+        // see, so the whole 4-byte instruction is masked.
+        0x08 => match kind {
+            0 => Some(0),                                       // NONE
+            1 => Some(2),                                       // 16
+            2 | 3 | 12 => Some(4),                              // 32, REL32, GPREL32
+            18 | 24 => Some(8),                                 // 64, SUB
+            4..=11 | 16 | 17 | 19..=23 | 28..=31 | 37 => Some(4), // instruction fields
+            _ => None,
+        },
         _ => None,
     }
 }

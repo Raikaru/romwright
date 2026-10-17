@@ -1,0 +1,55 @@
+[
+  {
+    "id": "perfect-dark-ntsc-final",
+    "title": "Perfect Dark (USA) NTSC 8.7 final",
+    "detect": { "crc1": "0x41f2b98f", "crc2": "0xb458b466", "game_code": "NPDE" },
+    "source": "n64decomp/perfect_dark (MIT) ld/pd.ld segment order and tools/extract, tools/extract-segment; facts re-measured against the ROM bytes",
+    "segments": [
+      {
+        "name": "preamble",
+        "flags": "rx",
+        "place": "boot",
+        "size": "0x50",
+        "parts": [{ "rom": ["0x1000", "0x1050"], "codec": "raw" }]
+      },
+      {
+        "name": "lib-boot",
+        "flags": "rx",
+        "place": { "at": "0x80001050" },
+        "size": "0x2000",
+        "parts": [{ "rom": ["0x1050", "0x3050"], "codec": "raw" }]
+      },
+      {
+        "name": "lib",
+        "flags": "rwx",
+        "place": { "at": "0x70001050" },
+        "size": "0x58f90",
+        "parts": [
+          { "rom": ["0x1050", "0x3050"], "codec": "raw" },
+          { "rom": ["0x3050", "0x39850"], "codec": "rare-1173" }
+        ]
+      },
+      {
+        "name": "data",
+        "flags": "rw",
+        "place": { "after": "lib", "plus": "0x10000000" },
+        "size": "0x30e40",
+        "parts": [{ "rom": ["0x39850", "0x4e850"], "codec": "rare-1173" }]
+      },
+      {
+        "name": "inflate",
+        "flags": "rwx",
+        "place": { "at": "0x70200000" },
+        "size": "0x13f0",
+        "parts": [{ "rom": ["0x4e850", "0x4fc40"], "codec": "raw" }]
+      },
+      {
+        "name": "game",
+        "flags": "rwx",
+        "place": { "at": "0x7f000000" },
+        "size": "0x1b99e0",
+        "parts": [{ "rom": ["0x4fc40", "0x194b20"], "codec": "rare-1173-pages:4096" }]
+      }
+    ]
+  }
+]

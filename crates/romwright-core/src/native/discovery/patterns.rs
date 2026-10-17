@@ -1,14 +1,28 @@
 //! Ghidra FunctionStartAnalyzer/PseudoDisassembler prerequisites (Apache-2.0).
 //! A byte-pattern match is evidence to check, never an instruction or function.
-use super::{FlowKind, FlowProvider, NativeImport};
+use super::{FlowKind, FlowProvider, HashSet, NativeImport};
 use crate::native::ExtentIndex;
-use std::collections::{BTreeMap, BTreeSet, HashSet};
+use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) struct CodeRequirement {
     pub minimum: usize,
     pub maximum: usize,
     pub must_terminate: bool,
     pub contiguous: bool,
+}
+
+/// The alignment an instruction of the language has, whatever its pattern
+/// file says: Ghidra's MIPS patterns carry 2 (MIPS16e), which lets a match
+/// start between two words of a 32-bit program, and its PowerPC patterns 1.
+/// (Here and not in the discovery core, which has no instruction-set names.)
+pub(super) fn instruction_alignment(language: &str, patterns: u64) -> u64 {
+    let fixed = match language.split(':').next().unwrap_or("") {
+        "PowerPC" | "AARCH64" => 4,
+        "ARM" => 2,
+        family if crate::native::mips_language(family) => 4,
+        _ => 1,
+    };
+    patterns.max(fixed).max(1)
 }
 
 fn loaded_byte(import: &NativeImport, address: u64) -> Option<u8> {
@@ -73,8 +87,8 @@ pub(super) struct PatternIndexes {
 
 impl PatternIndexes {
     pub fn build(import: &NativeImport, entries: &HashSet<u64>) -> Self {
-        let mut data_targets = HashSet::new();
-        let mut nondata_targets = HashSet::new();
+        let mut data_targets = HashSet::default();
+        let mut nondata_targets = HashSet::default();
         let mut all_targets = BTreeSet::new();
         for xref in &import.xrefs {
             // `to` names code the reference reaches (owned-by-reference,
@@ -156,7 +170,7 @@ pub(super) fn valid_code<P: FlowProvider>(
         return None;
     }
     let mut body = Vec::new();
-    let mut starts = HashSet::new();
+    let mut starts = HashSet::default();
     let mut pending = Vec::new();
     let mut targets = Vec::new();
     let mut target = Some(entry);
@@ -325,6 +339,31 @@ pub(super) fn valid_code<P: FlowProvider>(
     valid.then_some(body)
 }
 
+/// Code addresses named by an odd, word-aligned data word: each is a Thumb
+/// entry by the word's own low bit (data is at even addresses).
+pub(super) fn thumb_declared_targets(import: &NativeImport) -> HashSet<u64> {
+    let be = import.language.contains(":BE:");
+    let code: Vec<(u64, u64)> = import
+        .mappings
+        .iter()
+        .filter(|mapping| mapping.flags & 4 != 0)
+        .map(|mapping| (mapping.vaddr, mapping.vaddr + mapping.size))
+        .collect();
+    let mut declared = HashSet::default();
+    for mapping in &import.mappings {
+        let skip = ((4 - mapping.vaddr % 4) % 4) as usize;
+        for raw in mapping.bytes.get(skip..).unwrap_or(&[]).as_chunks::<4>().0 {
+            let raw: [u8; 4] = *raw;
+            let word = u64::from(if be { u32::from_be_bytes(raw) } else { u32::from_le_bytes(raw) });
+            let target = word & !1;
+            if word & 1 != 0 && code.iter().any(|&(lo, hi)| lo <= target && target < hi) {
+                declared.insert(target);
+            }
+        }
+    }
+    declared
+}
+
 #[derive(Clone, Copy)]
 pub(super) struct Candidate {
     pub address: u64,
@@ -352,6 +391,7 @@ pub(super) fn collect<P: FlowProvider>(
     // delayed creator then finds a function already containing the address
     // (PossibleDelayedFunctionCreator, 1001-1012).
     let mut round_bodies = ExtentIndex::build(&[]);
+    let mut thumb_declared: Option<HashSet<u64>> = None;
     for hit in &patterns.matches {
         let address = hit.address;
         if indexes.data_contains(address) {
@@ -362,7 +402,7 @@ pub(super) fn collect<P: FlowProvider>(
             refuse("offcut", refused);
             continue;
         }
-        if address % patterns.alignment != 0 {
+        if address % instruction_alignment(&import.language, patterns.alignment) != 0 {
             refuse("alignment", refused);
             continue;
         }
@@ -399,6 +439,30 @@ pub(super) fn collect<P: FlowProvider>(
             }
         }
         let rule = &patterns.rules[hit.rule];
+        // An ARM match on an address an odd data word names: the word is a
+        // Thumb entry by its own low bit, and the bytes only happen to read
+        // as ARM too (`mov r12, sp; push.w ...` is `push {.., lr}` to the ARM
+        // pattern). Taking the match would walk the Thumb function as ARM
+        // and run it into whatever follows; refused, the word seeds it as
+        // Thumb (`code_pointer_tables`). Vita NFS: 10 of the 11 functions
+        // the interior rule used to lose (7 trampolines and 3 `DspPlugIn` methods).
+        if !decoded_here
+            && import.language.starts_with("ARM:")
+            && rule.actions.iter().any(|action| {
+                action.kind == "setcontext"
+                    && action.attributes.get("value").is_some_and(|value| value == "0")
+                    && action
+                        .attributes
+                        .get("name")
+                        .is_some_and(|name| name == "TMode" || name == "LowBitCodeMode")
+            })
+            && thumb_declared
+                .get_or_insert_with(|| thumb_declared_targets(import))
+                .contains(&address)
+        {
+            refuse("thumb-declared", refused);
+            continue;
+        }
         // A declared processor mode is applied first, and only where nothing
         // has been decoded yet: Ghidra queues the value in `ContextAction` and
         // lays it down from `setCurrentContext` before scheduling the
@@ -433,16 +497,10 @@ pub(super) fn collect<P: FlowProvider>(
                 .map_err(|error| {
                     super::ImportError::Bad(format!("invalid pattern context value: {error}"))
                 })?;
-            if let Some(held) = provider
-                .flow(&[address])
-                .pop()
-                .filter(|flow| flow.address == address)
-                .and_then(|flow| flow.mode)
-            {
-                if held != value {
+            if let Some(held) = held_mode(provider, address)
+                && held != value {
                     restore.push((name.clone(), held));
                 }
-            }
             provider.set_context(name, address, value);
             applied.push(crate::native::NativeContext {
                 name: name.clone(),
@@ -640,6 +698,22 @@ pub(super) fn collect<P: FlowProvider>(
     Ok(candidates)
 }
 
+/// The instruction set the console holds at `address`. A match at an address
+/// nothing decodes in the held mode (a Thumb pattern on a halfword inside an
+/// ARM function is no ARM instruction) has no flow answer, but the region it
+/// is in has a mode all the same, and a refused match must hand that back: a
+/// mode left painted over the rest of an ARM function made the next walk
+/// decode the function as Thumb.
+pub(super) fn held_mode<P: FlowProvider>(provider: &mut P, address: u64) -> Option<u64> {
+    provider.mode_at(address).or_else(|| {
+        provider
+            .flow(&[address])
+            .pop()
+            .filter(|flow| flow.address == address)
+            .and_then(|flow| flow.mode)
+    })
+}
+
 /// Validates a candidate whose `after` prerequisite failed by following its
 /// body, trying the held instruction set first and then the opposite one.
 ///
@@ -652,7 +726,7 @@ pub(super) fn collect<P: FlowProvider>(
 /// body retried. The winning mode is returned so the caller can record it.
 /// On failure the held mode is restored so a refused match hands the region
 /// back the value it held, matching the `setcontext` restore above.
-fn aggressive_body<P: FlowProvider>(
+pub(super) fn aggressive_body<P: FlowProvider>(
     import: &NativeImport,
     address: u64,
     requirement: &CodeRequirement,
@@ -662,14 +736,30 @@ fn aggressive_body<P: FlowProvider>(
 ) -> Option<(Vec<(u64, u64)>, u64)> {
     // The mode the console currently holds at this address, if it has decoded
     // anything there before.
-    let held = provider
-        .flow(&[address])
-        .pop()
-        .filter(|flow| flow.address == address)
-        .and_then(|flow| flow.mode);
+    let held = held_mode(provider, address);
     // Held mode first.
     if let Some(body) = valid_code(import, address, requirement, indexes, instructions, provider) {
         return Some((body, held.unwrap_or(0)));
+    }
+    // The opposite mode is tried only when the held one is not a subroutine
+    // at all. `doValidStart` flips on `checkValidSubroutine`'s verdict (a run
+    // of instructions that decode, no minimum length, no terminator needed)
+    // and only afterwards asks whether the run is worth a function
+    // (`numInstr <= 2` is refused, with no second try): a held-mode run that
+    // decodes but is too small is the answer, not a reason to read the same
+    // bytes as the other instruction set. An ARM `bx lr` that ends the
+    // function above it is such a run; read as Thumb it is `bl`'s suffix and a
+    // `b` into the middle of the next ARM function, which decodes as Thumb for
+    // long enough to pass, and the mode it paints there (and in every ARM
+    // function that walk reaches) is junk for every later round.
+    let decodes = CodeRequirement {
+        minimum: 1,
+        maximum: requirement.maximum,
+        must_terminate: false,
+        contiguous: false,
+    };
+    if valid_code(import, address, &decodes, indexes, instructions, provider).is_some() {
+        return None;
     }
     // Opposite mode.
     let flipped = held.map(|mode| mode ^ 1).unwrap_or(1);

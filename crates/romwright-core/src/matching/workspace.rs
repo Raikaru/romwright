@@ -524,7 +524,7 @@ impl Core {
                 serde_json::to_value(self.export_matching_workspace(program, workspace)?)
             }
             WorkspaceOperation::Import { request } => {
-                serde_json::to_value(self.import_matching_workspace(program, request)?)
+                serde_json::to_value(self.import_matching_workspace(program, *request)?)
             }
         };
         result.map_err(|error| invalid(error.to_string()))

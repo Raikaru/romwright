@@ -2,10 +2,9 @@
 //! overscan and stable row IDs, so a virtualized view never creates a widget
 //! or Rust object per row.
 //!
-//! The row text source is pluggable: the SLEIGH console when configured
-//! (`RuntimeConfig::console_path`), a fake in tests, and later the worker's
-//! structured listing. The API shape — bounded windows, stable ids, explicit
-//! row kinds, and overscan — is the contract the Qt listing view consumes.
+//! The row text source is pluggable: the in-process SLEIGH listing, a fake in
+//! tests, and later the worker's structured listing. The API shape — bounded windows, stable ids, explicit
+//! row kinds, and overscan — is the contract the desktop listing panel consumes.
 
 use crate::session::RuntimeConfig;
 use romwright_model::{Address, ListingRow, ListingRowKind, ListingWindow};
@@ -28,8 +27,8 @@ fn parse_marker(rest: &str) -> Option<(u64, String)> {
 }
 
 /// Parses the machine-readable structural lines emitted by the SLEIGH
-/// console alongside ordinary address-prefixed instructions.
-pub(crate) fn parse_console_listing(text: &str) -> Vec<ListingRow> {
+/// listing alongside ordinary address-prefixed instructions.
+pub(crate) fn parse_listing(text: &str) -> Vec<ListingRow> {
     let mut rows: Vec<ListingRow> = Vec::new();
     for line in text.lines().map(str::trim).filter(|line| !line.is_empty()) {
         if let Some(rest) = line.strip_prefix("Bytes ") {
@@ -95,15 +94,13 @@ pub trait ListingSource: Send {
     }
 }
 
-/// SLEIGH-console-backed source: one console invocation per window (the
-/// console is process-based; a persistent console session is the worker
-/// supervision phase's job, WORKER-001).
-pub struct ConsoleListingSource {
+/// In-process SLEIGH source: one lifter per window.
+pub struct SleighListingSource {
     config: RuntimeConfig,
     binary: std::path::PathBuf,
 }
 
-impl ConsoleListingSource {
+impl SleighListingSource {
     pub fn new(config: RuntimeConfig, binary: &std::path::Path) -> Self {
         Self {
             config,
@@ -112,7 +109,7 @@ impl ConsoleListingSource {
     }
 }
 
-impl ListingSource for ConsoleListingSource {
+impl ListingSource for SleighListingSource {
     fn rows(&self, start: u64, count: u32) -> crate::Result<Vec<ListingRow>> {
         let text = crate::native_runtime::listing_native(
             &self.config,
@@ -120,7 +117,7 @@ impl ListingSource for ConsoleListingSource {
             &format!("{start:x}"),
             count,
         )?;
-        Ok(parse_console_listing(&text))
+        Ok(parse_listing(&text))
     }
 
     fn supports_pre_overscan(&self) -> bool {
@@ -219,7 +216,7 @@ mod tests {
             "Block 0x00400005\n",
             "0x00400005: RET\n",
         );
-        let rows = parse_console_listing(fixture);
+        let rows = parse_listing(fixture);
         let kinds = rows.iter().map(|row| row.kind).collect::<Vec<_>>();
         assert_eq!(
             kinds,

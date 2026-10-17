@@ -18,6 +18,10 @@
 
 use romwright_core::{Core, bridge::Bridge};
 use std::path::{Path, PathBuf};
+mod compiler_rules;
+mod facts;
+mod match_cmd;
+mod new_project;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -34,6 +38,11 @@ fn main() {
 
 const USAGE: &str = "usage:
   romwright-cli import <binary> [--name NAME] [--signatures DB[,DB]] [--timings] [--project DIR]
+  romwright-cli import ... [--compiler ID]   (record this compiler id, e.g. mwcc-ps2, ee-gcc-2.9x, ido, agbcc, instead of detecting one; ROMWRIGHT_COMPILER likewise)
+  romwright-cli import ... [--fact-pack PACK]   (else ROMWRIGHT_FACT_PACK, else $XDG_DATA_HOME/romwright/fact-pack.sqlite; ROMWRIGHT_NO_FACT_PACK=1 disables)
+  romwright-cli facts add-donor --pack PACK --project DIR --program NAME --truth TSV --donor JSON [--prototypes TSV]
+  romwright-cli facts set-meta --pack PACK KEY VALUE   (KEY: gate_short_body | gate_min_donors)
+  romwright-cli facts apply --project DIR --program NAME [--pack PACK] [--exclude GAME]... [--scan] [--json]
   romwright-cli decompile <binary> <address> [--name NAME] [--project DIR] [--base HEX]
   romwright-cli decompile-batch <binary> <addr,addr,...> [--name NAME] [--project DIR] [--base HEX]
   romwright-cli decompile-doc <binary> <address> [--name NAME] [--project DIR] [--base HEX]
@@ -51,6 +60,7 @@ const USAGE: &str = "usage:
   romwright-cli index-semantics <binary> <program> [--project DIR]
   romwright-cli symbols <program> [--project DIR]
   romwright-cli xrefs <program> [--to HEX | --from HEX] [--project DIR] [--evidence KIND]
+  romwright-cli evidence <program> <address> [--json] [--project DIR]   (why one function exists: the rule that claimed it, its symbol, what reaches it)
   romwright-cli comments <program> [--project DIR]
   romwright-cli comment <program> <address> <text> [--function HEX] [--project DIR]
   romwright-cli types <program> [--project DIR]
@@ -74,18 +84,22 @@ const USAGE: &str = "usage:
   romwright-cli provenance [<program>] [--project DIR] [--json]
   romwright-cli matching-workspace <program> <request.json|-> [--project DIR]
   romwright-cli matching-run <binary> <program> <request.json|-> [--budget-ms N] [--base HEX] [--project DIR]
-  romwright-cli export-c <binary> <program> <outdir> [--address HEX] [--splits FILE] [--transforms LIST] [--project DIR]
+  romwright-cli export-c <binary> <program> <outdir> [--address HEX] [--splits FILE] [--transforms LIST] [--budget-ms N] [--context HEADER] [--project DIR]
   romwright-cli export-scratch <program> <address> <binary> --compiler ID --c-flags FLAGS [--target-object FILE] [--context FILE] [--out DIR] [--project DIR]
   romwright-cli export-dtk <program> <outdir> [--splits FILE] [--project DIR]
-  romwright-cli export-objdiff <program> <outdir> --splits <splits.txt> --target-root DIR [--project DIR]
-  romwright-cli export-splat <program> <outdir> [--project DIR]
+  romwright-cli export-objdiff <program> <outdir> --splits <splits.txt> --target-root DIR [--base-root DIR] [--source-root DIR] [--complete all|UNIT,UNIT] [--dtk-config config.json] [--project DIR]
+  romwright-cli export-splat <program> <outdir> [--binary FILE] [--project DIR]
+  romwright-cli new-project <image> <outdir> [--name NAME] [--platform ID] [--toolchain PROFILE.json] [--manifest FILE] [--compiler ID] [--cflags FLAGS] [--decompile all|first:N|ADDR,ADDR|none] [--fact-pack PACK] [--keys FILE...] [--map FILE] [--json]   (--list-platforms: what each platform needs; docs/new-project.md)
+  romwright-cli detect-compiler <image> [--json]
+  romwright-cli match <name|0xADDR> [--project REPO] [--budget N] [--time SECS] [--write] [--json]   (inside a new-project repository: near-miss search over printing variants, scored with the repo's compiler; docs/match.md)
+  romwright-cli compiler-rules [--json]   (the embedded compiler rules and their switch state; ROMWRIGHT_NO_COMPILER_RULES=1, ROMWRIGHT_COMPILER_RULES_DISABLE=id,id, ROMWRIGHT_COMPILER_RULES_ENABLE=id,id)
   romwright-cli export-symbols <program> [--project DIR]
   romwright-cli byte-scan <binary> <vaddr-hex> [--project DIR]
   romwright-cli import-score <program> <vaddr> <score.json> [--project DIR]
   romwright-cli import-trace <program> <trace-file> [--project DIR]
   romwright-cli match-source <program> <target-object> <source-C> --recipe <recipe.json> [--project DIR]
   romwright-cli matching-runs <program> [--after ID] [--limit N] [--project DIR]
-  romwright-cli objdiff-report <report.json> [--project DIR]
+  romwright-cli objdiff-report <report.json> [--previous PREV.json] [--frogress OUT] [--project DIR]
   romwright-cli oracle-signatures <program> [--project DIR]
   romwright-cli prune-indirect-calls <binary> <program> [--project DIR]
 
@@ -371,8 +385,28 @@ fn run_inner(args: &[String]) -> Result<(), String> {
     if args[1] == "signatures" {
         return signatures(args);
     }
-    let core = Core::open(&project_dir(args)).map_err(|e| e.to_string())?;
+    if args[1] == "facts" && args.get(2).map(String::as_str) == Some("set-meta") {
+        return facts::set_meta(args);
+    }
+    if args[1] == "compiler-rules" {
+        return compiler_rules::run(args);
+    }
+    if matches!(args[1].as_str(), "new-project" | "detect-compiler") {
+        return new_project::run(args);
+    }
+    if args[1] == "match" {
+        return match_cmd::run(args);
+    }
     let cmd = args[1].as_str();
+    // `import --compiler ID` records that compiler id instead of detecting
+    // one (the oracle import's `--compiler` names a Ghidra compiler spec).
+    let mut config = romwright_core::session::RuntimeConfig::from_env();
+    if cmd == "import" && !has_flag(args, "--oracle") {
+        if let Some(id) = flag(args, "--compiler") {
+            config.compiler = Some(id);
+        }
+    }
+    let core = Core::open_with_config(&project_dir(args), config).map_err(|e| e.to_string())?;
     match cmd {
         // The user path is native. `--oracle` is the only way to the Stage-1
         // Java bridge, which exists to produce oracles, not to serve users.
@@ -421,8 +455,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let keys = romwright_core::native::keys::KeyStore::load_all(&key_paths)
                 .map_err(|e| e.to_string())?;
             let started = std::time::Instant::now();
-            let (stored, signatures) = core
-                .import_native_with_signatures(
+            let fact_pack = flag(args, "--fact-pack").map(PathBuf::from);
+            let (stored, signatures, facts) = core
+                .import_native_with_facts(
                     Path::new(&binary),
                     &program,
                     &databases,
@@ -431,6 +466,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     raw.as_ref()
                         .map(|(base, language)| (*base, language.as_str())),
                     &keys,
+                    fact_pack.as_deref(),
                 )
                 .map_err(|e| e.to_string())?;
             let total = started.elapsed().as_secs_f64();
@@ -450,6 +486,12 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!(
                     "signatures: {} records, {} matched, {} renamed, {} conflicts",
                     report.records, report.matched, report.renamed, report.conflicts
+                );
+            }
+            for report in &facts {
+                println!(
+                    "fact pack: {}: {} matched, {} renamed, {} kept, {} abstained, {} gated, {} prototypes",
+                    report.program, report.matched, report.renamed, report.kept_name, report.abstained, report.gated, report.prototypes
                 );
             }
             // Measured phases, for budget gates. Reporting a budget without
@@ -520,6 +562,33 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     summary.functions,
                     core.runtime_config().console_shards
                 );
+                // Every program's own phases, in import order: a container of
+                // many programs spends its time per program, and the line
+                // above shows only the first.
+                for each in &stored {
+                    let mut sums: std::collections::BTreeMap<&str, f64> =
+                        std::collections::BTreeMap::new();
+                    for phase in &each.phases {
+                        *sums.entry(phase.phase.as_str()).or_default() += phase.seconds;
+                    }
+                    let phases = sums
+                        .iter()
+                        .map(|(name, seconds)| format!("\"{name}\":{seconds:.6}"))
+                        .collect::<Vec<_>>()
+                        .join(",");
+                    println!(
+                        "PROGRAM {{\"program\":\"{}\",\"functions\":{},\"phases\":{{{phases}}}}}",
+                        each.program, each.functions
+                    );
+                }
+                // Process-wide sums over every thread (decoder construction,
+                // the switch stage's setup and workers): they exceed wall time.
+                let tally = romwright_core::native::tally::drain()
+                    .iter()
+                    .map(|(name, seconds)| format!("\"{name}\":{seconds:.6}"))
+                    .collect::<Vec<_>>()
+                    .join(",");
+                println!("TALLY {{{tally}}}");
             }
         }
         // `export-symbols <program> [--format dtk|splat] [--splits FILE]`:
@@ -540,258 +609,96 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 })
                 .transpose()?
                 .unwrap_or_default();
-            let functions = core.functions(program).map_err(|e| e.to_string())?;
-            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            let data_definitions = core.data_definitions(program).map_err(|e| e.to_string())?;
-            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
-            // Symbols outside every splits extent (unsplit TUs, gaps) still
-            // need their real section name: name each memory region after the
-            // splits extent covering most of it, so `.rodata` symbols don't
-            // fall back to `.data` and corrupt dtk's section extents.
-            let mut region_names: Vec<(u64, u64, String)> = Vec::new();
-            for region in &regions {
-                let start = region.start.offset;
-                let end = start.saturating_add(region.size);
-                let name = splits
-                    .iter()
-                    .filter(|extent| extent.start < end && extent.end > start)
-                    .max_by_key(|extent| {
-                        extent.end.min(end).saturating_sub(extent.start.max(start))
-                    })
-                    .map(|extent| extent.name.clone());
-                if let Some(name) = name {
-                    region_names.push((start, end, name));
+            let facts = core.export_facts(program).map_err(|e| e.to_string())?;
+            match format.as_str() {
+                "splat" => print!("{}", romwright_core::export::splat_symbol_addrs(&facts).0),
+                _ => {
+                    for row in &romwright_core::export::dtk_symbols(&facts, &splits, true).rows {
+                        println!("{row}");
+                    }
                 }
-            }
-            let section_of = |address: u64| -> &str {
-                if let Some(name) = romwright_core::native::linkmap::section_at(&splits, address) {
-                    return name;
-                }
-                region_names
-                    .iter()
-                    .find(|(start, end, _)| address >= *start && address < *end)
-                    .map(|(_, _, name)| name.as_str())
-                    .unwrap_or(".data")
-            };
-            let mut rows: Vec<String> = Vec::new();
-            for function in &functions {
-                let address = function.entry.offset;
-                let section = section_of(address);
-                match format.as_str() {
-                    "splat" => rows.push(format!("{address:#x} {};", function.name)),
-                    _ => rows.push(format!(
-                        "{} = {section}:{address:#x}; // type:function size:{:#x} scope:global",
-                        function.name, function.size
-                    )),
-                }
-            }
-            for symbol in &symbols {
-                if symbol.external {
-                    continue;
-                }
-                let address = symbol.address.offset;
-                let section = section_of(address);
-                // dtk types an unsized object `Unknown` and `dol diff`
-                // rejects it; the data-definition table holds the size
-                // the import recorded.
-                let size = data_definitions
-                    .iter()
-                    .find(|row| row.address.offset == address)
-                    .map(|row| row.size)
-                    .unwrap_or(0);
-                match format.as_str() {
-                    "splat" => rows.push(format!("{address:#x} {};", symbol.name)),
-                    _ => rows.push(format!(
-                        "{} = {section}:{address:#x}; // type:object size:{size:#x} scope:global",
-                        symbol.name
-                    )),
-                }
-            }
-            for row in &rows {
-                println!("{row}");
             }
         }
         // `export-dtk <program> <outdir> [--splits FILE]`: write a dtk
         // project skeleton — config.yml, symbols.txt, splits.txt — from
-        // the store. With --splits the section names are the project's
-        // real ones; without it each memory region becomes a section
-        // named after the region.
+        // the store. With --splits the project's own file passes through
+        // and names its sections; without it `Sections:` lists the
+        // image's sections under dtk's names (`.init`, `.text`, ...) in
+        // order. Functions dtk cannot represent (unaligned PowerPC
+        // entries) are left out and counted.
         "export-dtk" => {
             let program = args.get(2).ok_or("export-dtk needs a program")?;
             let outdir = Path::new(args.get(3).ok_or("export-dtk needs an outdir")?);
             std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
-            let splits_path = flag(args, "--splits");
-            let splits = splits_path
-                .as_ref()
-                .map(|path| {
-                    std::fs::read_to_string(path)
-                        .map(|text| romwright_core::native::linkmap::parse_splits(&text))
-                        .map_err(|e| format!("{path}: {e}"))
-                })
-                .transpose()?
-                .unwrap_or_default();
-            let functions = core.functions(program).map_err(|e| e.to_string())?;
-            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            let data_definitions = core.data_definitions(program).map_err(|e| e.to_string())?;
-            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
-
-            // splits.txt: when the project's own file was given, copy it
-            // through; otherwise emit one extent per memory region.
-            let splits_text = if let Some(path) = &splits_path {
-                std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?
-            } else {
-                let mut text = String::from("Sections:\n");
-                for region in &regions {
-                    let kind = if region.permissions.contains('x') {
-                        "code"
-                    } else if region.permissions.contains('w') {
-                        "data"
-                    } else {
-                        "rodata"
-                    };
-                    text.push_str(&format!("\t{} type:{kind} align:4\n", region.name));
-                }
-                text.push_str(&format!("{program}:\n"));
-                for region in &regions {
-                    text.push_str(&format!(
-                        "\t{} start:{:#x} end:{:#x}\n",
-                        region.name,
-                        region.start.offset,
-                        region.start.offset + region.size
-                    ));
-                }
-                text
-            };
-            std::fs::write(outdir.join("splits.txt"), &splits_text).map_err(|e| e.to_string())?;
-
-            // Section names for symbols: splits extents first, then the
-            // containing region's dominant extent name, then the region
-            // name itself.
-            let mut region_names: Vec<(u64, u64, String)> = Vec::new();
-            for region in &regions {
-                let start = region.start.offset;
-                let end = start.saturating_add(region.size);
-                let name = splits
-                    .iter()
-                    .filter(|extent| extent.start < end && extent.end > start)
-                    .max_by_key(|extent| {
-                        extent.end.min(end).saturating_sub(extent.start.max(start))
-                    })
-                    .map(|extent| extent.name.clone())
-                    .unwrap_or_else(|| region.name.clone());
-                region_names.push((start, end, name));
+            let splits_text = flag(args, "--splits")
+                .map(|path| std::fs::read_to_string(&path).map_err(|e| format!("{path}: {e}")))
+                .transpose()?;
+            let facts = core.export_facts(program).map_err(|e| e.to_string())?;
+            let export = romwright_core::export::export_dtk(&facts, splits_text.as_deref());
+            for (name, text) in [
+                ("splits.txt", &export.splits_txt),
+                ("symbols.txt", &export.symbols_txt),
+                ("config.yml", &export.config_yml),
+            ] {
+                std::fs::write(outdir.join(name), text).map_err(|e| format!("{name}: {e}"))?;
             }
-            let section_of = |address: u64| -> &str {
-                if let Some(name) = romwright_core::native::linkmap::section_at(&splits, address) {
-                    return name;
-                }
-                region_names
-                    .iter()
-                    .find(|(start, end, _)| address >= *start && address < *end)
-                    .map(|(_, _, name)| name.as_str())
-                    .unwrap_or(".data")
-            };
-            let mut symbols_text = String::new();
-            for function in &functions {
-                let address = function.entry.offset;
-                symbols_text.push_str(&format!(
-                    "{} = {}:{address:#x}; // type:function size:{:#x} scope:global\n",
-                    function.name,
-                    section_of(address),
-                    function.size
-                ));
-            }
-            for symbol in &symbols {
-                if symbol.external {
-                    continue;
-                }
-                let address = symbol.address.offset;
-                let size = data_definitions
-                    .iter()
-                    .find(|row| row.address.offset == address)
-                    .map(|row| row.size)
-                    .unwrap_or(0);
-                symbols_text.push_str(&format!(
-                    "{} = {}:{address:#x}; // type:object size:{size:#x} scope:global\n",
-                    symbol.name,
-                    section_of(address)
-                ));
-            }
-            std::fs::write(outdir.join("symbols.txt"), &symbols_text).map_err(|e| e.to_string())?;
-            std::fs::write(
-                outdir.join("config.yml"),
-                format!(
-                    "name: {program}\nobject: {program}\n\
-                     symbols: symbols.txt\nsplits: splits.txt\n"
-                ),
-            )
-            .map_err(|e| e.to_string())?;
             println!(
-                "wrote {} ({} functions, {} symbols)",
+                "wrote {} ({} functions, {} data symbols, {} functions dtk cannot represent skipped)",
                 outdir.display(),
-                functions.len(),
-                symbols.len()
+                export.symbols.functions,
+                export.symbols.objects,
+                export.symbols.rejected.len()
             );
         }
-        // `export-splat <program> <outdir>`: write a splat skeleton —
-        // <program>.yaml + symbol_addrs.txt — from the store. Segments
-        // come from memory regions; symbols from functions+symbols.
+        // `export-splat <program> <outdir> [--binary FILE]`: write a splat
+        // config — <program>.yaml + symbol_addrs.txt — from the store.
+        // splat's segment `start` is a file offset, so the binary the
+        // program was imported from (`--binary`, else the recorded source
+        // path) is read for where each region sits in it. Platforms splat
+        // cannot disassemble are declared `is_unsupported_platform` with
+        // `bin` segments.
         "export-splat" => {
             let program = args.get(2).ok_or("export-splat needs a program")?;
             let outdir = Path::new(args.get(3).ok_or("export-splat needs an outdir")?);
             std::fs::create_dir_all(outdir).map_err(|e| e.to_string())?;
-            let functions = core.functions(program).map_err(|e| e.to_string())?;
-            let symbols = core.symbols(program).map_err(|e| e.to_string())?;
-            let regions = core.memory_regions(program).map_err(|e| e.to_string())?;
-            let mut yaml = format!(
-                "options:\n  platform: gc_wii\n  basename: {program}\n  \
-                 base_path: .\n  target_path: {program}\n  asm_path: asm\n  \
-                 src_path: src\n  build_path: build\n  compiler: GC/1.2.5\n  \
-                 symbol_addrs_path: symbol_addrs.txt\n  \
-                 undefined_syms_auto_path: undefined_syms_auto.txt\n\
-                 segments:\n"
-            );
-            for region in &regions {
-                let kind = if region.permissions.contains('x') {
-                    "code"
-                } else if region.permissions.contains('w') {
-                    "data"
-                } else {
-                    "rodata"
-                };
-                yaml.push_str(&format!(
-                    "  - name: {}\n    type: {kind}\n    vram: {:#x}\n    \
-                     start: {:#x}\n    files: []\n",
-                    region.name, region.start.offset, region.start.offset
-                ));
-            }
-            std::fs::write(outdir.join(format!("{program}.yaml")), &yaml)
+            let facts = core.export_facts(program).map_err(|e| e.to_string())?;
+            let binary = flag(args, "--binary")
+                .or_else(|| facts.source_path.clone())
+                .ok_or("export-splat needs --binary FILE: the store does not record where the program was imported from")?;
+            let binary = std::fs::canonicalize(&binary).map_err(|e| format!("{binary}: {e}"))?;
+            let file = std::fs::read(&binary).map_err(|e| format!("{}: {e}", binary.display()))?;
+            let mappings = romwright_core::native::load_native_mappings(&binary)
+                .map_err(|e| format!("{}: {e} (pass --binary <the imported image>)", binary.display()))?;
+            let backing = romwright_core::export::file_backing(&mappings, &file);
+            let export = romwright_core::export::export_splat(
+                &facts,
+                &backing,
+                &binary.to_string_lossy(),
+                Some(&romwright_core::export::sha1_hex(&file)),
+            )?;
+            std::fs::write(outdir.join(format!("{program}.yaml")), &export.yaml)
                 .map_err(|e| e.to_string())?;
-            let mut addrs = String::new();
-            for function in &functions {
-                addrs.push_str(&format!(
-                    "{:#x} {};\n",
-                    function.entry.offset, function.name
-                ));
-            }
-            for symbol in &symbols {
-                if !symbol.external {
-                    addrs.push_str(&format!("{:#x} {};\n", symbol.address.offset, symbol.name));
-                }
-            }
-            std::fs::write(outdir.join("symbol_addrs.txt"), &addrs).map_err(|e| e.to_string())?;
+            std::fs::write(outdir.join("symbol_addrs.txt"), &export.symbol_addrs)
+                .map_err(|e| e.to_string())?;
             println!(
-                "wrote {} ({} segments, {} symbols)",
+                "wrote {} (platform {}{}, {} segments, {} symbols)",
                 outdir.display(),
-                regions.len(),
-                functions.len() + symbols.len()
+                export.platform,
+                if export.supported { "" } else { ", unsupported by splat 0.39.1" },
+                export.segments,
+                export.symbols
             );
         }
-        // `export-objdiff <program> <outdir> --splits FILE`: write an
-        // objdiff.json whose units are the splits.txt TUs, each carrying
-        // the store's functions that fall inside its extents. objdiff
-        // matches functions by symbol name within a unit, so the unit
-        // list is the interop surface.
+        // `export-objdiff <program> <outdir> --splits FILE --target-root DIR
+        // [--base-root DIR] [--source-root DIR] [--complete all|UNIT,UNIT]
+        // [--dtk-config build/<ver>/config.json]`: write an objdiff.json
+        // whose units are the splits.txt TUs, each carrying the store's
+        // functions that fall inside its extents. objdiff matches functions
+        // by symbol name within a unit, so the unit list is the interop
+        // surface. `--source-root` prefixes each unit's source_path;
+        // `--complete` names the units linked into the verified build
+        // (objdiff's `complete`; default none); `--dtk-config` adds the
+        // target-only units dtk generated for the gaps between TUs.
         "export-objdiff" => {
             let program = args.get(2).ok_or("export-objdiff needs a program")?;
             let outdir = Path::new(args.get(3).ok_or("export-objdiff needs an outdir")?);
@@ -803,6 +710,23 @@ fn run_inner(args: &[String]) -> Result<(), String> {
             let splits = romwright_core::native::linkmap::parse_splits(
                 &std::fs::read_to_string(&splits_path).map_err(|e| e.to_string())?,
             );
+            let options = romwright_core::export::ObjdiffOptions {
+                source_root: flag(args, "--source-root").unwrap_or_default(),
+                complete: match flag(args, "--complete").as_deref() {
+                    None | Some("none") => romwright_core::export::Complete::None,
+                    Some("all") => romwright_core::export::Complete::All,
+                    Some(list) => romwright_core::export::Complete::Units(
+                        list.split(',').map(str::to_string).collect(),
+                    ),
+                },
+                auto_units: match flag(args, "--dtk-config") {
+                    Some(path) => romwright_core::export::dtk_auto_units(
+                        &std::fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?,
+                    )
+                    .map_err(|e| format!("{path}: {e}"))?,
+                    None => Vec::new(),
+                },
+            };
             let report = core
                 .export_objdiff(
                     program,
@@ -810,6 +734,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     &splits,
                     Path::new(&target_root),
                     Path::new(&base_root),
+                    &options,
                 )
                 .map_err(|e| e.to_string())?;
             println!("{report}");
@@ -860,6 +785,19 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 } else {
                     list.split(',').map(|s| s.trim().to_string()).collect()
                 };
+            }
+            // `--budget-ms N`: a whole-program export outlives the 60 s
+            // interactive default.
+            opts.budget = flag(args, "--budget-ms")
+                .map(|value| value.parse::<u64>().map_err(|error| error.to_string()))
+                .transpose()?
+                .map(std::time::Duration::from_millis);
+            // `--context HEADER`: declarations the project already has are
+            // not repeated (with the types the decompiler recovered) in the export.
+            if let Some(path) = flag(args, "--context") {
+                let header = std::fs::read_to_string(&path).map_err(|e| format!("{path}: {e}"))?;
+                opts.declared = romwright_core::emit_m2c::declared_names(&header);
+                opts.context = header;
             }
             let entry = flag(args, "--address").map(|address| {
                 u64::from_str_radix(address.trim_start_matches("0x"), 16)
@@ -964,69 +902,24 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 serde_json::to_string_pretty(&runs).map_err(|error| error.to_string())?
             );
         }
-        // `objdiff-report <report.json> [--frogress URL]`: roll up an
-        // objdiff-cli `report generate` JSON into per-function match-% and
-        // project totals; optionally POST the frogress-shaped payload.
-        // The report's units carry func_units with fuzzy_match_percent;
-        // we flatten to one row per function and aggregate.
+        // `objdiff-report <report.json> [--previous PREV.json] [--frogress OUT]`:
+        // roll an `objdiff-cli report generate` JSON up into per-function
+        // rows and project totals (checked against objdiff's own
+        // `measures`); with --previous, also the `report changes` delta
+        // between the two reports. The report's units carry `functions`
+        // rows with fuzzy_match_percent; counters are JSON strings.
         "objdiff-report" => {
+            let read_report = |path: &str| -> Result<serde_json::Value, String> {
+                let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))
+            };
             let path = args.get(2).ok_or("objdiff-report needs a report.json")?;
-            let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-            let report: serde_json::Value =
-                serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
-            let units = report["units"]
-                .as_array()
-                .ok_or("report has no units array")?;
-            let mut rows: Vec<serde_json::Value> = Vec::new();
-            let mut total_code = 0u64;
-            let mut matched_code = 0u64;
-            let mut complete_code = 0u64;
-            for unit in units {
-                let unit_name = unit["name"].as_str().unwrap_or("");
-                let funcs = unit["func_units"].as_object();
-                if let Some(funcs) = funcs {
-                    for (key, f) in funcs {
-                        let name = f["name"].as_str().unwrap_or(key);
-                        let fuzzy = f["fuzzy_match_percent"].as_f64().unwrap_or(0.0);
-                        let matched = f["matched_code"].as_u64().unwrap_or(0);
-                        let total = f["total_code"].as_u64().unwrap_or(0);
-                        let complete = f["complete_code"].as_u64().unwrap_or(0);
-                        total_code += total;
-                        matched_code += matched;
-                        complete_code += complete;
-                        rows.push(serde_json::json!({
-                            "unit": unit_name,
-                            "function": name,
-                            "fuzzy_match_percent": fuzzy,
-                            "matched_code": matched,
-                            "total_code": total,
-                            "complete_code": complete,
-                        }));
-                    }
-                }
+            let report = read_report(path)?;
+            let mut out = romwright_core::export::objdiff_rollup(&report)?;
+            if let Some(previous) = flag(args, "--previous") {
+                out["changes"] =
+                    romwright_core::export::objdiff_changes(&read_report(&previous)?, &report)?;
             }
-            let matched_pct = if total_code > 0 {
-                (matched_code as f64 / total_code as f64) * 100.0
-            } else {
-                0.0
-            };
-            let complete_pct = if total_code > 0 {
-                (complete_code as f64 / total_code as f64) * 100.0
-            } else {
-                0.0
-            };
-            let out = serde_json::json!({
-                "functions": rows,
-                "measures": {
-                    "total_code": total_code,
-                    "matched_code": matched_code,
-                    "matched_code_percent": matched_pct,
-                    "complete_code": complete_code,
-                    "complete_code_percent": complete_pct,
-                    "total_units": units.len(),
-                    "total_functions": rows.len(),
-                }
-            });
             if let Some(out_path) = flag(args, "--frogress") {
                 // frogress payload: {project, version, measures:{...}} —
                 // written to a file for the caller to POST (matches the
@@ -1238,7 +1131,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .ir_native(Path::new(&binary), &addresses)
                 .map_err(|e| e.to_string())?;
             for ir in &irs {
-                println!("{:#x} (len {})", ir.address, ir.length);
+                let failed = ir.error.as_deref().map(|error| format!(" error={error}")).unwrap_or_default();
+                println!("{:#x} (len {}){failed}", ir.address, ir.length);
                 for op in &ir.ops {
                     let ins: Vec<String> = op
                         .inputs
@@ -1516,6 +1410,7 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 println!("-- {} functions", rows.len());
             }
         }
+        "facts" => facts::run(&core, args)?,
         "oracle-signatures" => {
             // Dump the oracle's recovered signatures as JSON — the head-to-head
             // type gate scores these against DWARF truth.
@@ -2077,9 +1972,16 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                 .ok_or_else(|| format!("bad address: {address_arg}"))?;
             let rows = core.locate(&address).map_err(|e| e.to_string())?;
             let follow = has_flag(args, "--follow");
+            let mut followed = std::collections::BTreeSet::new();
             for row in &rows {
+                // Overlays share address windows, so the module the address
+                // is in is part of the answer, not a detail of it.
+                let module = match (&row.module, row.module_id) {
+                    (Some(name), Some(id)) => format!("  module={name}#{id}"),
+                    _ => String::new(),
+                };
                 println!(
-                    "{}  {}  {} {:#x}+{:#x} {}  {}",
+                    "{}  {}  {} {:#x}+{:#x} {}  {}{module}",
                     row.program,
                     row.language,
                     row.region.name,
@@ -2088,7 +1990,9 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     row.region.permissions,
                     row.function.as_deref().unwrap_or("-")
                 );
-                if !follow {
+                // One follow block per program: its facts do not depend on
+                // which of its modules the address was in.
+                if !follow || !followed.insert(row.program.clone()) {
                     continue;
                 }
                 // What that image holds there: images overlap, so these facts
@@ -2114,7 +2018,8 @@ fn run_inner(args: &[String]) -> Result<(), String> {
                     row.function.as_deref().unwrap_or("-")
                 );
             }
-            println!("-- {} programs map {}", rows.len(), address);
+            let programs = rows.iter().map(|row| &row.program).collect::<std::collections::BTreeSet<_>>();
+            println!("-- {} programs map {}", programs.len(), address);
         }
         "memory-regions" => {
             let program = args

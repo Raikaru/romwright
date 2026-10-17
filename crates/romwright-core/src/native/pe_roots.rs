@@ -248,6 +248,35 @@ pub(super) fn collect_imports(
 /// they become named entries plus linkage-thunk rows -- the PE analog of
 /// ELF PLT slots. The slot match must be exact: a chance `ff 25` inside
 /// data pointing precisely at an IAT slot is not a shape to worry about.
+/// Whether an `ff 25` at `index` opens a stub of its own and not a tail call that ends a function: a linker's
+/// stubs sit behind alignment fill (`int3`, `nop`, the multi-byte nops ending in a zero displacement), behind the
+/// previous stub, behind a `ret`, or first in the section. A `jmp [slot]` right after other instructions is the
+/// function's own tail call (`jmp` to an import at the end of a wrapper).
+fn stub_position(bytes: &[u8], index: usize) -> bool {
+    const NOPS: [&[u8]; 9] = [
+        &[0x0f, 0x1f, 0x40, 0x00],
+        &[0x0f, 0x1f, 0x44, 0x00, 0x00],
+        &[0x66, 0x0f, 0x1f, 0x44, 0x00, 0x00],
+        &[0x0f, 0x1f, 0x80, 0x00, 0x00, 0x00, 0x00],
+        &[0x0f, 0x1f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x00],
+        &[0x8d, 0x74, 0x26, 0x00],
+        &[0x8d, 0xb4, 0x26, 0x00, 0x00, 0x00, 0x00],
+        &[0x8d, 0x76, 0x00],
+        &[0x8d, 0xbc, 0x27, 0x00, 0x00, 0x00, 0x00],
+    ];
+    let Some(&last) = index.checked_sub(1).and_then(|before| bytes.get(before)) else {
+        return true;
+    };
+    if matches!(last, 0xcc | 0x90 | 0xc3) {
+        return true;
+    }
+    let before = &bytes[..index];
+    NOPS.iter().any(|nop| before.ends_with(nop))
+        || before.ends_with(&[0, 0, 0]) // zero fill (a section's padding; no instruction ends in three zero bytes before a stub)
+        || before.len() >= 3 && before[before.len() - 3] == 0xc2 // ret imm16
+        || before.len() >= 6 && before[before.len() - 6..before.len() - 4] == [0xff, 0x25]
+}
+
 pub(super) fn collect_import_stubs(
     data: &[u8],
     spans: &[Span],
@@ -259,6 +288,8 @@ pub(super) fn collect_import_stubs(
     if import.externals.is_empty() {
         return;
     }
+    let position_rule =
+        crate::compiler::rules::applies("pe-import-stub-position", &crate::compiler::ctx_of(import));
     let slots: HashMap<u64, String> = import
         .externals
         .iter()
@@ -288,7 +319,7 @@ pub(super) fn collect_import_stubs(
             let prefixed = matches!(prefix, 0x66 | 0x67 | 0x26 | 0x2E | 0x36 | 0x3E
                 | 0x64 | 0x65 | 0xF0 | 0xF2 | 0xF3)
                 || (is_64 && (0x40..=0x4F).contains(&prefix));
-            if prefixed {
+            if prefixed || (position_rule && !stub_position(bytes, index)) {
                 index += 1;
                 continue;
             }
@@ -335,6 +366,68 @@ pub(super) fn collect_import_stubs(
             }
         }
     }
+}
+
+/// A library whose exports follow the C calling convention (the C runtime and its companions), not the Win32 `__stdcall`.
+fn is_c_runtime_library(name: &str) -> bool {
+    ["msvcr", "msvcp", "ucrtbase", "api-ms-win-crt", "vcruntime", "crtdll", "libgcc", "libstdc++", "mingwm10", "libwinpthread"]
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+}
+
+/// The IAT slots (virtual addresses) of a 32-bit PE that the loader fills from a library other than the C runtime: every
+/// export of such a library is a Win32 API function, and the Win32 API is `__stdcall`, so a call through one of these
+/// slots pops its own arguments. The importer's store does not keep which library an import came from
+/// ([`collect_imports`]), so the export reads the directory again. Empty for anything that is not an i386 PE.
+pub fn stdcall_import_slots(data: &[u8]) -> std::collections::BTreeSet<u64> {
+    let mut slots = std::collections::BTreeSet::new();
+    let _ = (|| -> Option<()> {
+        let pe = word(data, 0x3c, 4)? as usize;
+        if data.get(pe..pe + 4)? != b"PE\0\0" || word(data, pe + 4, 2)? != 0x14c {
+            return None;
+        }
+        let sections = word(data, pe + 6, 2)? as usize;
+        let opt_size = word(data, pe + 20, 2)? as usize;
+        let opt = pe + 24;
+        if word(data, opt, 2)? != 0x10b || opt_size < 112 || word(data, opt + 92, 4)? < 2 {
+            return None;
+        }
+        let image_base = word(data, opt + 28, 4)?;
+        let (dir_rva, dir_size) = (word(data, opt + 104, 4)?, word(data, opt + 108, 4)? as usize);
+        let mut spans = Vec::new();
+        for index in 0..sections {
+            let at = opt + opt_size + index * 40;
+            let vsize = word(data, at + 8, 4)? as usize;
+            if vsize == 0 {
+                continue;
+            }
+            spans.push(Span { vaddr: word(data, at + 12, 4)?, vsize, raw_off: word(data, at + 20, 4)? as usize });
+        }
+        for index in 0..dir_size / 20 {
+            let descriptor = file_offset(&spans, dir_rva + (index * 20) as u64)?;
+            let (original, name_rva, first) =
+                (word(data, descriptor, 4)?, word(data, descriptor + 12, 4)?, word(data, descriptor + 16, 4)?);
+            if original == 0 && first == 0 {
+                break;
+            }
+            let name_at = file_offset(&spans, name_rva)?;
+            let tail = data.get(name_at..)?;
+            let library = String::from_utf8_lossy(&tail[..tail.iter().position(|&byte| byte == 0)?.min(64)]).to_ascii_lowercase();
+            if is_c_runtime_library(&library) {
+                continue;
+            }
+            let names_rva = if original != 0 && file_offset(&spans, original).is_some() { original } else { first };
+            for slot in 0..0x2000usize {
+                let Some(entry) = file_offset(&spans, names_rva + (slot * 4) as u64) else { break };
+                if word(data, entry, 4)? == 0 {
+                    break;
+                }
+                slots.insert(image_base + first + (slot * 4) as u64);
+            }
+        }
+        Some(())
+    })();
+    slots
 }
 
 #[cfg(test)]
@@ -508,5 +601,52 @@ mod tests {
         put32(&mut data, 0x201c, &spans, 0x2100);
         collect_exports(&data, &spans, &mut import, 0x400000, 0x2000, 0x80);
         assert!(import.functions.is_empty());
+    }
+
+    /// A 32-bit PE with an import table of two libraries: `kernel32.dll` (slots at 0x1180, 0x1184) and `msvcrt.dll` (0x11c0).
+    fn pe_with_imports() -> Vec<u8> {
+        let mut image = vec![0u8; 0x600];
+        let put = |image: &mut Vec<u8>, at: usize, value: u32| image[at..at + 4].copy_from_slice(&value.to_le_bytes());
+        image[0..2].copy_from_slice(b"MZ");
+        put(&mut image, 0x3c, 0x40);
+        image[0x40..0x44].copy_from_slice(b"PE\0\0");
+        image[0x44..0x46].copy_from_slice(&0x14cu16.to_le_bytes());
+        image[0x46..0x48].copy_from_slice(&1u16.to_le_bytes()); // sections
+        image[0x54..0x56].copy_from_slice(&224u16.to_le_bytes()); // optional header size
+        let opt = 0x58;
+        image[opt..opt + 2].copy_from_slice(&0x10bu16.to_le_bytes());
+        put(&mut image, opt + 28, 0x400000);
+        put(&mut image, opt + 92, 16);
+        put(&mut image, opt + 104, 0x1000); // import directory rva
+        put(&mut image, opt + 108, 60);
+        let section = opt + 224;
+        put(&mut image, section + 8, 0x400); // virtual size
+        put(&mut image, section + 12, 0x1000); // rva
+        put(&mut image, section + 16, 0x400);
+        put(&mut image, section + 20, 0x200); // raw offset: rva 0x1000 is file offset 0x200
+        let raw = |rva: u32| 0x200 + (rva - 0x1000) as usize;
+        // descriptors: (original thunks, name, first thunks)
+        for (index, (original, name, first)) in [(0x1100u32, 0x1080u32, 0x1180u32), (0x1140, 0x1090, 0x11c0)].into_iter().enumerate() {
+            let at = raw(0x1000) + index * 20;
+            put(&mut image, at, original);
+            put(&mut image, at + 12, name);
+            put(&mut image, at + 16, first);
+        }
+        image[raw(0x1080)..raw(0x1080) + 13].copy_from_slice(b"KERNEL32.dll\0");
+        image[raw(0x1090)..raw(0x1090) + 11].copy_from_slice(b"msvcrt.dll\0");
+        for (at, count) in [(0x1100u32, 2usize), (0x1140, 1)] {
+            for slot in 0..count {
+                put(&mut image, raw(at) + slot * 4, 0x1300 + slot as u32); // import-by-name rvas, never zero
+            }
+        }
+        image
+    }
+
+    #[test]
+    fn only_the_slots_of_libraries_other_than_the_c_runtime_are_stdcall_imports() {
+        let slots = stdcall_import_slots(&pe_with_imports());
+        assert_eq!(slots.into_iter().collect::<Vec<_>>(), [0x401180, 0x401184]);
+        // not an i386 PE
+        assert!(stdcall_import_slots(b"\x7fELF").is_empty());
     }
 }

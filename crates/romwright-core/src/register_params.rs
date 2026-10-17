@@ -55,6 +55,12 @@ pub struct Conventions {
     /// ordinary functions. Choosing by "most registers" instead picks
     /// `syscall`, whose first slot is a call number and not a parameter.
     pub default_model: Option<String>,
+    /// The register `<stackpointer register=".."/>` names, as its offset in
+    /// the register space.
+    pub stack_pointer: Option<u64>,
+    /// `<data_organization><pointer_size value=".."/>`: bytes in a data
+    /// pointer. Absent in specs that leave the organization to defaults.
+    pub pointer_size: Option<u32>,
 }
 
 impl Conventions {
@@ -69,7 +75,39 @@ impl Conventions {
                     .next()
                     .and_then(|prototype| attribute(prototype.header, "name"))
             });
-        Self { models: models(cspec, &registers), registers, default_model }
+        let stack_pointer = elements(cspec, "stackpointer")
+            .into_iter()
+            .next()
+            .and_then(|element| attribute(element.header, "register"))
+            .and_then(|name| registers.get(&name).map(|(offset, _)| *offset));
+        let pointer_size = elements(cspec, "data_organization")
+            .into_iter()
+            .next()
+            .and_then(|organization| elements(organization.body, "pointer_size").into_iter().next())
+            .and_then(|element| attribute(element.header, "value"))
+            .and_then(|value| value.parse().ok());
+        Self {
+            models: models(cspec, &registers),
+            registers,
+            default_model,
+            stack_pointer,
+            pointer_size,
+        }
+    }
+
+    /// What type recovery needs to know about the target: pointer width
+    /// from the spec's data organization, else the language id's address
+    /// size (`ARM:LE:32:v4t` → 4), and the stack pointer register.
+    pub fn machine(&self, language: &str) -> crate::types_infer::Machine {
+        let from_language = language
+            .split(':')
+            .nth(2)
+            .and_then(|bits| bits.parse::<u32>().ok())
+            .map(|bits| bits / 8);
+        crate::types_infer::Machine {
+            pointer_size: self.pointer_size.or(from_language).unwrap_or(8),
+            stack_pointer: self.stack_pointer,
+        }
     }
 
     /// The model to read an ordinary function's parameters from.
@@ -503,6 +541,37 @@ mod tests {
             assert!(
                 floats.iter().all(|r| r.starts_with('f')),
                 "{bundle} float args must not alias integer registers: {floats:?}"
+            );
+        }
+    }
+
+    /// Type recovery reads pointer width and the stack pointer from the
+    /// shipped bundles: four-byte pointers on every console target (the
+    /// PowerPC spec states none, so the language id's 32 decides), eight
+    /// on x86-64.
+    #[test]
+    fn shipped_bundles_name_their_pointer_width_and_stack_pointer() {
+        let specs = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native/specs");
+        for (bundle, language, pointer_size, stack_pointer) in [
+            ("", "x86:LE:64:default", 8, 0x20),
+            ("ARM-LE-32-v4t", "ARM:LE:32:v4t", 4, 0x54),
+            ("MIPS-LE-32-default", "MIPS:LE:32:default", 4, 0x74),
+            ("MIPS-BE-64-64-32addr", "MIPS:BE:64:64-32addr", 4, 0xe8),
+            ("PowerPC-BE-32-default", "PowerPC:BE:32:default", 4, 0x4),
+        ] {
+            let dir = specs.join(bundle);
+            let cspec = std::fs::read_to_string(dir.join("cspec.xml"))
+                .unwrap_or_else(|e| panic!("{bundle} cspec.xml: {e}"));
+            let table = std::fs::read_to_string(dir.join("registers.txt"))
+                .unwrap_or_else(|e| panic!("{bundle} registers.txt: {e}"));
+            let machine = Conventions::parse(&cspec, &table).machine(language);
+            assert_eq!(
+                machine,
+                crate::types_infer::Machine {
+                    pointer_size,
+                    stack_pointer: Some(stack_pointer),
+                },
+                "{language}"
             );
         }
     }

@@ -356,8 +356,8 @@ fn external_relocation_slots_are_loaded_facts_without_code_promotion() {
 #[test]
 fn unreferenced_plt_entry_requires_executable_table_and_bound_slot() {
     let cfg = romwright_core::session::RuntimeConfig::from_env();
-    if romwright_core::native_runtime::find_console(&cfg).is_err() {
-        eprintln!("SKIP: SLEIGH console not available");
+    if !cfg.ghidra_install.join("Ghidra").is_dir() {
+        eprintln!("SKIP: no Ghidra install");
         return;
     }
     let stamp = std::time::SystemTime::now()

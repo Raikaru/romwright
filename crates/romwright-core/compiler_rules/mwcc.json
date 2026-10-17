@@ -1,0 +1,68 @@
+{
+ "family": "mwcc",
+ "rules": [
+  {
+   "id": "mwcc-register-sleds",
+   "kind": "register-sled",
+   "compilers": [
+    "mwcc"
+   ],
+   "unknown": true,
+   "languages": [
+    "PowerPC:BE:32"
+   ],
+   "status": "on",
+   "origin": "migrated",
+   "derived_from": [
+    "gc-animal-crossing"
+   ],
+   "note": "CodeWarrior prologues that keep many callee-saved registers call _savegpr_N/_restgpr_N/_savefpr_N/_restfpr_N, runtime sleds that store (or load) rN..r31 (fN..f31) at negative offsets from r11. The importer names a sled entry when the bytes prove it (the words from that entry to the closing blr are exactly the helper's instructions); the worker gives each helper a call fixup so the decompiler sees the stores and loads instead of an opaque call. Layout read off Animal Crossing main.dol 0x8009ae00..0x8009af2c.",
+   "params": {
+    "first": 14,
+    "last": 31,
+    "families": [
+     {
+      "prefix": "_savegpr_",
+      "class": "r",
+      "op": "stw",
+      "slot": 4
+     },
+     {
+      "prefix": "_restgpr_",
+      "class": "r",
+      "op": "lwz",
+      "slot": 4
+     },
+     {
+      "prefix": "_savefpr_",
+      "class": "f",
+      "op": "stfd",
+      "slot": 8
+     },
+     {
+      "prefix": "_restfpr_",
+      "class": "f",
+      "op": "lfd",
+      "slot": 8
+     }
+    ]
+   }
+  },
+  {
+   "id": "mwcc-void-pointer-arithmetic",
+   "kind": "flag",
+   "compilers": [
+    "mwcc"
+   ],
+   "unknown": false,
+   "status": "on",
+   "origin": "learned",
+   "derived_from": [
+    "ps2-dark-chronicle",
+    "ps2-dark-cloud"
+   ],
+   "note": "MWCC (compiling the unit as C++) rejects arithmetic on a `void *` and an implicit conversion from it. The export's conform pass (emit_m2c/conform.rs) puts a `(char *)` cast on a declared `void *` operand of an addition or subtraction, so `*(unsigned int *)(nowMonster + 0x1490)` prints as `*(unsigned int *)((char *)nowMonster + 0x1490)`. m22-003 failure class `compile: illegal or unknown type name`: dc 11 and dk 8 of 400 functions.",
+   "params": {}
+  }
+ ]
+}

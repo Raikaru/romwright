@@ -2,13 +2,13 @@
 //!
 //! Whole-image analysis answers everything and costs minutes. An analyst
 //! opening a function wants that function, now. This module walks a single
-//! body from its entry, asks the same console for the same references over
+//! body from its entry, asks the same decoder for the same references over
 //! the same range the batch pass would have asked for, and writes the
 //! resulting facts for that function alone -- marked with what was actually
 //! done to it, so nothing downstream mistakes a loader's declaration for a
 //! decoded body.
 //!
-//! The image and its console stay warm between requests: parsing a 53 MB
+//! The image and its decoders stay warm between requests: parsing a 53 MB
 //! game executable and loading it into SLEIGH costs seconds, and repeating
 //! that per function would defeat the point.
 
@@ -19,19 +19,24 @@ use std::sync::Mutex;
 use romwright_model::FunctionRow;
 
 use crate::native::{self, NativeImport, NativeXref};
-use crate::native_runtime::{ConsoleSession, FlowKind, NativeRuntimeError, ReferenceKind};
+use crate::native_runtime::{
+    FlowKind, NativeRuntimeError, ReferenceKind, SleighFlow, SleighLifter,
+};
 use crate::{CoreError, Result};
 
-/// A parsed image with its consoles, kept across requests.
+/// A parsed image with its decoders, kept across requests.
 pub struct LiveProgram {
     binary: PathBuf,
     import: NativeImport,
-    /// Walking and reference inference use separate consoles for the same
+    /// Walking and reference inference use separate decoders for the same
     /// reason the whole-image pass does: installing call fixups changes what
-    /// a console reports, and the walk must see the image as discovery sees
-    /// it. One process each, opened once and kept warm.
-    flow: ConsoleSession,
-    references: Option<ConsoleSession>,
+    /// a decoder reports, and the walk must see the image as discovery sees
+    /// it. Each is opened once and kept warm.
+    flow: SleighFlow,
+    references: Option<crate::native_runtime::DemandReferences>,
+    /// P-code is lifted in process, from the image and contexts the walk's
+    /// decoder loaded; built on first use.
+    lifter: Option<SleighLifter>,
     control: Option<(crate::exec::CancelToken, std::time::Instant)>,
 }
 
@@ -51,14 +56,14 @@ pub struct FunctionAnalysis {
     pub state: String,
     pub reused: bool,
     pub seconds: f64,
-    /// Where the time went: opening the image (parse plus console load,
+    /// Where the time went: opening the image (parse plus decoder load,
     /// paid once per image), the flow walk, and the reference query.
     #[serde(default)]
     pub phases: Vec<(String, f64)>,
 }
 
-/// Bounded warm consoles. Each program has at most one current artifact;
-/// replacing its input evicts the old parse and both native children.
+/// Bounded warm images. Each program has at most one current artifact;
+/// replacing its input evicts the old parse and its decoders.
 pub struct LiveImages {
     programs: Mutex<HashMap<String, WarmImage>>,
     project: PathBuf,
@@ -81,8 +86,8 @@ impl LiveImages {
     }
 
     /// Runs `work` against a warm image, opening one if this is the first
-    /// request for it. The console is a child process, so it is held under
-    /// the same lock as the import it was loaded from.
+    /// request for it. The decoders are held under the same lock as the import
+    /// they were loaded from.
     pub fn with<T>(
         &self,
         input: &romwright_model::ProgramInput,
@@ -119,7 +124,8 @@ impl LiveImages {
                     .expect("full cache");
                 live.remove(&oldest);
             }
-            let opened = LiveProgram::open(&self.project, input, &self.config, control.clone())?;
+            let opened =
+                LiveProgram::open(&self.project, program, input, &self.config, control.clone())?;
             live.insert(
                 program.to_string(),
                 WarmImage {
@@ -155,39 +161,76 @@ impl LiveImages {
             live.remove(program);
         }
     }
+
+    /// `count` further handles on the same image, each with decoders of its
+    /// own and none of them kept: a job that spreads independent walks over
+    /// several threads gives each thread one, and they end with the job. The
+    /// handles open concurrently.
+    pub fn open_extra(
+        &self,
+        input: &romwright_model::ProgramInput,
+        program: &str,
+        request: Option<&crate::exec::ExecutionRequest>,
+        count: usize,
+    ) -> Result<Vec<LiveProgram>> {
+        let control = request.map(|request| (request.cancel.clone(), request.deadline));
+        let opened: Vec<Result<LiveProgram>> = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..count)
+                .map(|_| {
+                    scope.spawn(|| {
+                        LiveProgram::open(&self.project, program, input, &self.config, control.clone())
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap_or_else(|panic| std::panic::resume_unwind(panic)))
+                .collect()
+        });
+        opened.into_iter().collect()
+    }
 }
 
 impl LiveProgram {
-    /// The selected image and all loader options come from the import record.
+    /// The selected image and all loader options come from the import record;
+    /// the instruction set at each address is the one the import settled.
     fn open(
         project: &Path,
+        program: &str,
         input: &romwright_model::ProgramInput,
         config: &crate::session::RuntimeConfig,
         control: Option<(crate::exec::CancelToken, std::time::Instant)>,
     ) -> Result<Self> {
-        let import = crate::inputs::load(project, input, config)?;
+        let mut import = crate::inputs::load(project, input, config)?;
+        import
+            .contexts
+            .extend(stored_decode_contexts(project, program)?);
         if let Some((cancel, deadline)) = &control {
             cancel.checkpoint(*deadline)?;
         }
-        let mut flow = ConsoleSession::launch(&import.cfg, control.clone())
-            .map_err(CoreError::NativeRuntime)?;
-        flow.load_mapped(&import)
-            .map_err(CoreError::NativeRuntime)?;
+        let flow =
+            SleighFlow::mapped(&import.cfg, &import).map_err(CoreError::NativeRuntime)?;
         Ok(Self {
             binary: import.binary.clone(),
             import,
             flow,
             references: None,
+            lifter: None,
             control,
         })
     }
 
     fn set_control(&mut self, control: Option<(crate::exec::CancelToken, std::time::Instant)>) {
-        self.flow.set_control(control.clone());
-        if let Some(references) = &mut self.references {
-            references.set_control(control.clone());
-        }
         self.control = control;
+    }
+
+    /// Stops a walk or sweep a request cancelled or ran out of time for; the
+    /// decoders run in this process, so nothing else can interrupt them.
+    fn checkpoint(&self) -> Result<()> {
+        if let Some((cancel, deadline)) = &self.control {
+            cancel.checkpoint(*deadline)?;
+        }
+        Ok(())
     }
 
     /// Every entry the image declares: the shared-return rule needs to know
@@ -258,10 +301,8 @@ impl LiveProgram {
             if batch.is_empty() {
                 break;
             }
-            let flows = self
-                .flow
-                .flow_batch(&batch)
-                .map_err(CoreError::NativeRuntime)?;
+            self.checkpoint()?;
+            let flows = self.flow.flow(&batch);
             for (address, flow) in batch.iter().copied().zip(flows) {
                 if matches!(flow.kind, FlowKind::Bad | FlowKind::Unimpl) {
                     walk.undecodable += 1;
@@ -354,7 +395,7 @@ impl LiveProgram {
     /// time, and reports what each one does.
     ///
     /// This is a sweep, not a walk: it does not follow flow, it asks the
-    /// console about every address in turn and steps by whatever decoded.
+    /// decoder about every address in turn and steps by whatever decoded.
     /// A byte run that decodes to nothing is skipped one unit at a time,
     /// because a stripped image's padding and data are inside the same
     /// mapping as its code.
@@ -369,8 +410,8 @@ impl LiveProgram {
         let mut address = start;
         let unit = unit.max(1);
         while address < end {
-            // One console request per batch of addresses, because a
-            // request per instruction is a syscall per instruction.
+            // One decoder call per batch of addresses, so a cancel or a
+            // deadline is checked once per batch.
             let batch: Vec<u64> = (0..512)
                 .map(|index| address + index * unit)
                 .take_while(|candidate| *candidate < end)
@@ -378,10 +419,8 @@ impl LiveProgram {
             if batch.is_empty() {
                 break;
             }
-            let flows = self
-                .flow
-                .flow_batch(&batch)
-                .map_err(CoreError::NativeRuntime)?;
+            self.checkpoint()?;
+            let flows = self.flow.flow(&batch);
             let mut next = address;
             for (candidate, flow) in batch.iter().copied().zip(flows) {
                 if candidate < next {
@@ -423,85 +462,51 @@ impl LiveProgram {
         Ok(steps)
     }
 
-    /// The p-code of the given instructions, from the same console the walk
-    /// used, so the operations are the ones it decoded.
+    /// The p-code of the given instructions, decoded from the image and
+    /// contexts the walk's decoder loaded.
     pub fn pcode(
         &mut self,
         addresses: &[u64],
     ) -> Result<Vec<crate::native_runtime::PcodeInstruction>> {
-        self.flow
-            .pcode_batch(addresses)
-            .map_err(CoreError::NativeRuntime)
+        let lifter = match self.lifter.take() {
+            Some(lifter) => lifter,
+            None => SleighLifter::mapped(&self.import.cfg, &self.import)
+                .map_err(CoreError::NativeRuntime)?,
+        };
+        Ok(self.lifter.insert(lifter).lift(addresses))
     }
 
-    /// The references the console sees in one address range, converted the
-    /// same way the whole-image pass converts them so a demand-driven fact
-    /// and a batch fact are the same row.
-    ///
-    /// Reference inference runs on its own console: installing the image's
-    /// call fixups changes what a console reports, and the walk must see the
-    /// image as discovery does. Within one body the pass iterates to its own
-    /// context fixpoint, which is what the whole-image loop does per round --
-    /// contexts discovered in *other* functions are what it cannot have.
-    pub fn references(&mut self, start: u64, end: u64) -> Result<Vec<NativeXref>> {
-        let mappings = self.import.mappings.clone();
-        if self.references.is_none() {
-            let mut session = ConsoleSession::launch(&self.import.cfg, self.control.clone())
-                .map_err(CoreError::NativeRuntime)?;
-            session
-                .load_mapped(&self.import)
-                .map_err(CoreError::NativeRuntime)?;
-            session
-                .prepare_reference_context(&self.import)
-                .map_err(CoreError::NativeRuntime)?;
-            self.references = Some(session);
+    /// The names of the language's user-defined p-code operations, indexed as
+    /// the first input of a `CALLOTHER`.
+    pub fn user_op_names(&mut self) -> Result<Vec<String>> {
+        if self.lifter.is_none() {
+            self.lifter = Some(
+                SleighLifter::mapped(&self.import.cfg, &self.import)
+                    .map_err(CoreError::NativeRuntime)?,
+            );
         }
-        let session = self
+        Ok(self.lifter.as_ref().expect("lifter was just built").user_op_names())
+    }
+
+    /// The references the propagation sees in one address range, converted
+    /// the same way the whole-image pass converts them so a demand-driven
+    /// fact and a batch fact are the same row.
+    ///
+    /// Reference inference runs on its own lane: installing the image's call
+    /// fixups changes what the propagation reports, and the walk must see
+    /// the image as discovery does.
+    pub fn references(&mut self, start: u64, end: u64) -> Result<Vec<NativeXref>> {
+        if self.references.is_none() {
+            self.references = Some(
+                crate::native_runtime::DemandReferences::open(&self.import).map_err(CoreError::NativeRuntime)?,
+            );
+        }
+        let facts = self
             .references
             .as_mut()
-            .expect("reference console was just opened");
-        let keep = session.reference_contexts().len();
-        let mut facts = session
-            .optional_references(start, end, &mappings, true)
-            .map_err(CoreError::NativeRuntime)?
-            .unwrap_or_default();
-        // Bounded because a body that keeps producing new contexts is
-        // pathological, not informative; the whole-image pass is bounded by
-        // its rounds for the same reason.
-        for _ in 0..4 {
-            let mut discovered = session.drain_discovered_contexts(keep);
-            if discovered.is_empty() {
-                break;
-            }
-            discovered.sort_by(|left, right| {
-                (left.start, left.end, &left.register, left.value).cmp(&(
-                    right.start,
-                    right.end,
-                    &right.register,
-                    right.value,
-                ))
-            });
-            discovered.dedup_by(|left, right| {
-                left.start == right.start
-                    && left.end == right.end
-                    && left.register == right.register
-                    && left.value == right.value
-            });
-            let targets = session.adopt_reference_contexts(discovered);
-            if !targets
-                .iter()
-                .any(|target| *target >= start && *target < end)
-            {
-                break;
-            }
-            let again = session
-                .optional_references(start, end, &mappings, true)
-                .map_err(CoreError::NativeRuntime)?
-                .unwrap_or_default();
-            facts.extend(again);
-            facts.sort_unstable_by_key(|fact| (fact.from, fact.to, fact.kind as u8));
-            facts.dedup();
-        }
+            .expect("reference lane was just opened")
+            .references(&self.import, start, end)
+            .map_err(CoreError::NativeRuntime)?;
         let mode = native::low_bit_code_mode(&self.import.language);
         Ok(facts
             .into_iter()
@@ -526,6 +531,29 @@ impl LiveProgram {
             })
             .collect())
     }
+}
+
+/// The instruction-set contexts the import stored for `program`
+/// (`native::store`): the loader's own plus every mode discovery settled,
+/// which a fresh container parse does not know. Base-register rows are
+/// register values, not context variables, and stay out.
+fn stored_decode_contexts(project: &Path, program: &str) -> Result<Vec<native::NativeContext>> {
+    let db = crate::ProjectDb::open(&project.join("project.sqlite"))?;
+    let mut contexts: Vec<native::NativeContext> = db
+        .decode_contexts(db.program_id(program)?)?
+        .into_iter()
+        .filter(|(address, name, _)| {
+            address.space == romwright_model::AddressSpace::Ram
+                && !native::STORED_BASE_REGISTERS.contains(&name.as_str())
+        })
+        .map(|(address, name, value)| native::NativeContext {
+            name,
+            address: address.offset,
+            value,
+        })
+        .collect();
+    contexts.sort_by_key(|context| context.address);
+    Ok(contexts)
 }
 
 /// One walked body.
@@ -670,5 +698,66 @@ impl BodyWalk {
             traced: false,
             calling_convention: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::native::{Mapping, NativeImport};
+    use crate::native_runtime::SleighLifter;
+
+    /// A container parse knows only the loader's modes; the demand path must
+    /// decode under the ones the import stored, as the decompile worker does.
+    /// Base-register rows are register values and stay out.
+    #[test]
+    fn live_images_decode_under_stored_modes() {
+        let project = std::env::temp_dir().join(format!(
+            "romwright-stored-modes-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&project).unwrap();
+        let db = crate::ProjectDb::open(&project.join("project.sqlite")).unwrap();
+        let provenance = romwright_model::Provenance {
+            producer: "test".into(),
+            upstream_version: "test".into(),
+        };
+        let program = db.upsert_program("gba", "ARM:LE:32:v4t", &provenance).unwrap();
+        db.replace_decode_contexts(
+            program,
+            &[
+                (romwright_model::Address::ram(0x1004), "LowBitCodeMode".into(), 1),
+                (romwright_model::Address::ram(0x1000), "r13".into(), 0x3000),
+            ],
+        )
+        .unwrap();
+        drop(db);
+        let contexts = super::stored_decode_contexts(&project, "gba").unwrap();
+        let _ = std::fs::remove_dir_all(&project);
+        assert_eq!(
+            contexts.iter().map(|c| (c.name.as_str(), c.address, c.value)).collect::<Vec<_>>(),
+            [("LowBitCodeMode", 0x1004, 1)]
+        );
+
+        let mut cfg = crate::session::RuntimeConfig::from_env();
+        if !cfg.ghidra_install.join("Ghidra").is_dir() {
+            eprintln!("SKIP: no Ghidra install");
+            return;
+        }
+        cfg.adopt_language("ARM:LE:32:v4t");
+        // mov r0,#1 (ARM) then movs r0,#1; bx lr (Thumb).
+        let mut bytes = 0xe3a0_0001u32.to_le_bytes().to_vec();
+        bytes.extend([0x01, 0x20, 0x70, 0x47]);
+        let mut import = NativeImport {
+            language: "ARM:LE:32:v4t".into(),
+            mappings: vec![Mapping { vaddr: 0x1000, size: 8, file_off: 0, flags: 6, bytes }],
+            ..Default::default()
+        };
+        import.contexts.extend(contexts);
+        let lifted = SleighLifter::mapped(&cfg, &import).unwrap().lift(&[0x1000, 0x1004]);
+        assert_eq!((lifted[0].length, lifted[1].length), (4, 2));
     }
 }

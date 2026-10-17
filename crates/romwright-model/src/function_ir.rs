@@ -213,6 +213,12 @@ pub struct FunctionIr {
     pub passes: Vec<PassReport>,
     #[serde(default)]
     pub diagnostics: Vec<IrDiagnostic>,
+    /// Types the worker's cast pass named in the printed C that no variable
+    /// or prototype of the function carries (the decompiler no longer casts,
+    /// so its document does not list them): what the C spelling pass needs
+    /// to rename them like any other.
+    #[serde(default)]
+    pub cast_types: Vec<crate::DecompType>,
 }
 
 impl FunctionIr {

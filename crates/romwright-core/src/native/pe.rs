@@ -1,5 +1,24 @@
 use super::*;
 
+pub(in crate::native) mod x86_conventions;
+pub(in crate::native) mod x86_operands;
+pub(in crate::native) mod local_calls;
+pub(in crate::native) mod x86_fill;
+
+/// What discovery calls, under names that say what it is for: the PE fill-start rule and the operand-based data rules.
+pub(in crate::native) mod fill {
+    pub(in crate::native) use super::x86_fill::{starts, PASSES};
+}
+pub(in crate::native) mod operand_hooks {
+    pub(in crate::native) use super::x86_operands::dense_table_targets;
+    pub(in crate::native) use super::x86_operands::memory_operand_only_targets as memory_only_targets;
+}
+
+/// The import-table slots whose calls are `__stdcall` (Win32 imports; see `pe_roots::stdcall_import_slots`).
+pub fn stdcall_import_slots(data: &[u8]) -> std::collections::BTreeSet<u64> {
+    pe_roots::stdcall_import_slots(data)
+}
+
 pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
     let mut notes: Vec<romwright_model::ImportDiagnostic> = Vec::new();
     if data.get(0..2) != Some(b"MZ") {
@@ -294,6 +313,12 @@ pub fn import_pe(data: &[u8]) -> Result<NativeImport> {
         language: language.into(),
         ..Default::default()
     };
+    // What the compiler detector reads (`compiler::detect::pe_x86_image`).
+    import.image_facts.pe_linker = data.get(opt + 2..opt + 4).map(|version| (version[0], version[1]));
+    import.image_facts.pe_rich = crate::compiler::detect::find(&data[..pe_off.min(data.len())], b"Rich").is_some();
+    import.image_facts.pe_gcc_stamp = crate::compiler::detect::gcc_stamp_text(data);
+    import.image_facts.pe_comp_ids = crate::compiler::detect::rich_comp_ids(&data[..pe_off.min(data.len())]);
+    import.image_facts.pe_crt_dll = crate::compiler::detect::crt_dll_name(data);
     let directory = |offset: Option<usize>| {
         offset.map_or((0, 0), |at| {
             (
@@ -367,5 +392,100 @@ pub fn pe_image_base(data: &[u8]) -> Option<u64> {
         u64_at(data, opt + 24).ok()
     } else {
         None
+    }
+}
+
+/// A PE's import address table is written by the loader: each slot holds the imported function's address, not the
+/// image's own bytes (the bytes on disk are the hint/name RVAs the loader consumes). A decompiler that read the slot as
+/// the constant it holds would fold `call [slot]` into a call to that RVA. The slots are therefore carved out of the
+/// read-only section regions into their own writable ones, the way the loader's write makes them behave.
+pub(in crate::native) fn carve_import_slots(
+    regions: Vec<romwright_model::MemoryRegion>,
+    slots: &[(u64, String)],
+    width: u64,
+) -> Vec<romwright_model::MemoryRegion> {
+    // `ROMWRIGHT_PE_IAT_REGIONS=off` leaves the table in its read-only section
+    if std::env::var("ROMWRIGHT_PE_IAT_REGIONS").is_ok_and(|v| v == "off") {
+        return regions;
+    }
+    let mut starts: Vec<u64> = slots.iter().map(|(address, _)| *address).filter(|a| *a != 0).collect();
+    starts.sort_unstable();
+    starts.dedup();
+    // a run is consecutive slots
+    let mut runs: Vec<(u64, u64)> = Vec::new();
+    for start in starts {
+        match runs.last_mut() {
+            Some((_, end)) if start <= *end => *end = start + width,
+            _ => runs.push((start, start + width)),
+        }
+    }
+    let mut out = Vec::with_capacity(regions.len() + runs.len());
+    for region in regions {
+        let (lo, hi) = (region.start.offset, region.start.offset + region.size);
+        let inside: Vec<(u64, u64)> = if region.permissions.contains('w') {
+            Vec::new()
+        } else {
+            runs.iter().copied().filter(|&(start, end)| start >= lo && end <= hi).collect()
+        };
+        if inside.is_empty() {
+            out.push(region);
+            continue;
+        }
+        let mut at = lo;
+        for (start, end) in inside {
+            if start > at {
+                out.push(romwright_model::MemoryRegion { start: romwright_model::Address::ram(at), size: start - at, ..region.clone() });
+            }
+            out.push(romwright_model::MemoryRegion {
+                name: format!("{}:iat", region.name),
+                start: romwright_model::Address::ram(start),
+                size: end - start,
+                permissions: region.permissions.chars().enumerate().map(|(i, c)| if i == 1 { 'w' } else { c }).collect(),
+                ..region.clone()
+            });
+            at = end;
+        }
+        if hi > at {
+            out.push(romwright_model::MemoryRegion { start: romwright_model::Address::ram(at), size: hi - at, ..region.clone() });
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod iat_tests {
+    use super::*;
+
+    fn region(name: &str, start: u64, size: u64, permissions: &str) -> romwright_model::MemoryRegion {
+        romwright_model::MemoryRegion {
+            name: name.into(),
+            start: romwright_model::Address::ram(start),
+            size,
+            permissions: permissions.into(),
+            source: "native-import".into(),
+        }
+    }
+
+    #[test]
+    fn the_import_address_table_becomes_its_own_writable_region() {
+        let regions = vec![region("pe:.text", 0x1000, 0x1000, "r-x"), region("pe:.rdata", 0x2000, 0x1000, "r--")];
+        // two DLLs' tables: slots at 0x2100 and 0x2104, and one at 0x2110
+        let slots = vec![(0x2100, "A".to_string()), (0x2104, "B".to_string()), (0x2110, "C".to_string())];
+        let out = carve_import_slots(regions, &slots, 4);
+        let shape: Vec<_> = out.iter().map(|r| (r.name.as_str(), r.start.offset, r.size, r.permissions.as_str())).collect();
+        assert_eq!(
+            shape,
+            vec![
+                ("pe:.text", 0x1000, 0x1000, "r-x"),
+                ("pe:.rdata", 0x2000, 0x100, "r--"),
+                ("pe:.rdata:iat", 0x2100, 0x8, "rw-"),
+                ("pe:.rdata", 0x2108, 0x8, "r--"),
+                ("pe:.rdata:iat", 0x2110, 0x4, "rw-"),
+                ("pe:.rdata", 0x2114, 0xeec, "r--"),
+            ]
+        );
+        // a writable section is left alone
+        let data = carve_import_slots(vec![region("pe:.data", 0x2000, 0x1000, "rw-")], &slots, 4);
+        assert_eq!(data.len(), 1);
     }
 }
