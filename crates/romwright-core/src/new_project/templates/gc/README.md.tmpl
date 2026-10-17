@@ -1,0 +1,82 @@
+# {{NAME}}
+
+A decompilation project for **{{TITLE}}** ({{CONSOLE}}, version `{{VERSION}}`; the boot
+DOL has sha1 `{{SHA1}}`), bootstrapped by `romwright new-project` (romwright {{ROMWRIGHT}}).
+It follows the layout of decomp-toolkit's dtk-template: `config/{{VERSION}}/{config.yml,splits.txt,symbols.txt,build.sha1}`,
+`configure.py` writing `build.ninja` and `objdiff.json`, tools fetched into `build/tools/`.
+
+The retail files are not part of this repository and neither is anything derived
+from their bytes (`orig/`, `build/` are ignored): the boot DOL is at
+`orig/{{VERSION}}/sys/main.dol`{{MODULES_NOTE}}.
+
+## Quick start
+
+```sh
+python3 -m pip install -r requirements.txt   # ninja
+python3 configure.py                         # fetch tools, `dtk dol split`, write build.ninja + objdiff.json
+ninja                                        # link every object, rebuild the DOL, check it against build.sha1
+```
+
+A fresh project builds the whole DOL from the assembly-only units dtk writes, and the
+last step prints `OK` for each file in `config/{{VERSION}}/build.sha1`.
+
+{{MODULES}} REL module(s) besides the DOL: `ninja rels` links them (`-r`, then `-r1 -lcf`),
+runs `dtk rel make` and checks the result against `config/{{VERSION}}/rels.sha1`. dtk's
+analysis alone does not reproduce every REL's relocation table (a `.dtors` entry it ties to
+the DOL's `__destroy_global_chain` where the retail file points at a function of the module
+itself), so that check reports how many RELs are byte-exact and does not gate the DOL.
+
+## What romwright wrote
+
+* `config/{{VERSION}}/symbols.txt`: names, addresses and sizes from romwright's
+  analysis, in dtk's grammar. dtk's own analysis runs on top of it and fills in what
+  romwright did not name (jump tables, small-data objects); `dtk dol split` writes the
+  merged result back, as it does in every dtk project.
+* `config/{{VERSION}}/splits.txt`: the `Sections:` block, named and aligned from the
+  DOL's own `_rom_copy_info` / `_bss_init_info` tables. Translation units are yours to add
+  (`python3 configure.py swap`).
+* `config/{{VERSION}}/objects.json`: the translation units that have C: source file,
+  whether it is `matching` (linked in place of dtk's object) and per-unit compiler overrides.
+
+## What was detected
+
+{{DETECTED}}
+
+{{EVIDENCE}}
+The compiler version is an *era class* chosen from SDK banner dates and the TRK
+revision, not a proof of the exact build: a DOL carries no compiler stamp. If a
+function will not match at any flag set, try the neighbouring directories of the
+compilers bundle (`GC/1.2.5n`, `GC/1.3.2`, `GC/2.6`, `GC/3.0a5`, `Wii/1.3`, `Wii/1.5`):
+set `compiler.mw_version` in `config/project.json` (or a unit's `mw_version` in `objects.json`).
+Flags are in `compiler.cflags`; they are dtk-template's base set, not calibrated for this game.
+
+## From assembly to C
+
+```sh
+python3 configure.py swap fn_80003154            # a function -> its own unit src/fn_80003154.c
+ninja                                            # still byte-identical (the unit links dtk's object until it matches)
+ninja progress                                   # objdiff report (build/{{VERSION}}/report.json)
+romwright-cli match 0x80003154                   # near-miss search over alternative C printings (docs/match.md)
+```
+
+A unit whose compiled object equals the retail one is switched on with `"matching": true`
+in `objects.json`; from then on the build links your object and the check still has to pass.
+
+## Tools
+
+`config/toolchain.json` pins every tool this project downloads: URL, sha256, version,
+license and where the bytes came from. `configure.py` fetches them into `build/tools/` with
+`tools/download_tool.py` (standard library only), checking the sha256 before anything is
+extracted or run. romwright itself downloads nothing.
+
+* decomp-toolkit {{DTK}} (MIT OR Apache-2.0), wibo (MIT), sjiswrap (MIT OR Apache-2.0)
+  and objdiff-cli (Apache-2.0 OR MIT) are open source.
+* The Metrowerks CodeWarrior compilers (`{{COMPILER}}` and the rest of the bundle) are
+  **proprietary**. They are fetched from the decomp.dev compilers bundle; use them only if
+  you are entitled to. Nothing in this repository grants that right.
+* To use tools you already have, write a toolchain profile (romwright's `docs/toolchains.md`)
+  and pass `python3 configure.py --toolchain profile.json`, or save it as
+  `config/toolchain.local.json` (ignored by git). The keys `dtk`, `wibo`, `compiler` (the
+  path of `mwcceppc.exe`), `linker` (`mwldeppc.exe`), `sjiswrap` and `objdiff-cli` replace the
+  downloaded tool of the same name.
+* `--manifest FILE` substitutes another manifest, e.g. one whose URLs are `file://`.
