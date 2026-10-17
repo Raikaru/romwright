@@ -1,0 +1,341 @@
+# PlayStation GTE (COP2): registers, register moves and commands.
+#
+# Written for this project from public hardware documentation: psx-spx
+# (nocash's Playstation Specifications), "Geometry Transformation Engine
+# (GTE)": the register map (cop2r0-63), the command word layout (opcode
+# 0x12 with bit 25 set, sf = bit 19, mx = 17:18, v = 15:16, cv = 13:14,
+# lm = bit 10, command number = bits 5:0) and the per-command field
+# usage. No third-party language source was consulted; the surrounding
+# MIPS definitions are Ghidra's own MIPS32 specification
+# (Apache-2.0, third_party/ghidra/languages/mips).
+#
+# Model. The 64 GTE registers live in the register space at 0x5000 (data,
+# cop2r0-31) and 0x5100 (control, cop2r32-63) as 32-bit slots, so
+# mtc2/ctc2/lwc2 become plain stores to named registers and
+# mfc2/cfc2/swc2 plain loads. The register file side effects psx-spx
+# documents are written out: the SXYP FIFO push, IRGB -> IR1-3, LZCS ->
+# LZCR, the 16-bit sign/zero extension of narrow registers, read-only
+# ORGB/LZCR, and the FLAG error summary bit. Each GTE command is one named
+# pcodeop with its decoded fields as arguments; the arithmetic of a command
+# is not modelled, only that it ran and with which flags.
+
+# -- registers ---------------------------------------------------------
+
+define register offset=0x5000 size=4 [
+    VXY0 VZ0 VXY1 VZ1 VXY2 VZ2 RGBC OTZ
+    IR0 IR1 IR2 IR3 SXY0 SXY1 SXY2 SXYP
+    SZ0 SZ1 SZ2 SZ3 RGB0 RGB1 RGB2 RES1
+    MAC0 MAC1 MAC2 MAC3 IRGB ORGB LZCS LZCR
+];
+
+# The 16-bit halves psx-spx names inside the packed vector registers.
+define register offset=0x5000 size=2 [ VX0 VY0 ];
+define register offset=0x5008 size=2 [ VX1 VY1 ];
+define register offset=0x5010 size=2 [ VX2 VY2 ];
+define register offset=0x5030 size=2 [ SX0 SY0 SX1 SY1 SX2 SY2 ];
+
+define register offset=0x5100 size=4 [
+    RT11RT12 RT13RT21 RT22RT23 RT31RT32 RT33
+    TRX TRY TRZ
+    L11L12 L13L21 L22L23 L31L32 L33
+    RBK GBK BBK
+    LR1LR2 LR3LG1 LG2LG3 LB1LB2 LB3
+    RFC GFC BFC
+    OFX OFY H DQA DQB ZSF3 ZSF4 FLAG
+];
+
+# -- instruction fields --------------------------------------------------
+
+# The fields (gte_cmd, gte_sf, gte_dr, ...) are added to the stock `instr`
+# token by stock-cop2.patch.
+
+attach variables [ gte_dr gte_rt ] [
+    VXY0 VZ0 VXY1 VZ1 VXY2 VZ2 RGBC OTZ
+    IR0 IR1 IR2 IR3 SXY0 SXY1 SXY2 SXYP
+    SZ0 SZ1 SZ2 SZ3 RGB0 RGB1 RGB2 RES1
+    MAC0 MAC1 MAC2 MAC3 IRGB ORGB LZCS LZCR
+];
+
+attach variables [ gte_cr ] [
+    RT11RT12 RT13RT21 RT22RT23 RT31RT32 RT33
+    TRX TRY TRZ
+    L11L12 L13L21 L22L23 L31L32 L33
+    RBK GBK BBK
+    LR1LR2 LR3LG1 LG2LG3 LB1LB2 LB3
+    RFC GFC BFC
+    OFX OFY H DQA DQB ZSF3 ZSF4 FLAG
+];
+
+# The one-bit flags print as plain digits.
+attach names [ gte_sf gte_lm ] [ "0" "1" ];
+
+# mvmva operand selectors, psx-spx "GTE Command Encoding".
+attach names [ gte_mx ] [ "RT" "LLM" "LCM" "garbage" ];
+attach names [ gte_v  ] [ "V0" "V1" "V2" "IR" ];
+attach names [ gte_cv ] [ "TR" "BK" "FC" "none" ];
+
+# -- userops -------------------------------------------------------------
+
+define pcodeop gte_orgb;
+
+define pcodeop gte_rtps;
+define pcodeop gte_nclip;
+define pcodeop gte_op;
+define pcodeop gte_dpcs;
+define pcodeop gte_intpl;
+define pcodeop gte_mvmva;
+define pcodeop gte_ncds;
+define pcodeop gte_cdp;
+define pcodeop gte_ncdt;
+define pcodeop gte_nccs;
+define pcodeop gte_cc;
+define pcodeop gte_ncs;
+define pcodeop gte_nct;
+define pcodeop gte_sqr;
+define pcodeop gte_dcpl;
+define pcodeop gte_dpct;
+define pcodeop gte_avsz3;
+define pcodeop gte_avsz4;
+define pcodeop gte_rtpt;
+define pcodeop gte_gpf;
+define pcodeop gte_gpl;
+define pcodeop gte_ncct;
+
+# -- register write side effects ------------------------------------------
+
+# SXYP: writing pushes the screen XY FIFO.
+macro gte_write_sxyp(value) {
+    SXY0 = SXY1;
+    SXY1 = SXY2;
+    SXY2 = value;
+}
+
+# IRGB: 5:5:5 colour; IR1-3 receive each component * 0x80.
+macro gte_write_irgb(value) {
+    IRGB = value & 0x7fff;
+    IR1 = (value & 0x1f) * 0x80;
+    IR2 = ((value >> 5) & 0x1f) * 0x80;
+    IR3 = ((value >> 10) & 0x1f) * 0x80;
+}
+
+# LZCS: LZCR counts the leading bits equal to the sign bit (1..32).
+macro gte_write_lzcs(value) {
+    LZCS = value;
+    LZCR = lzcount(value ^ (value s>> 31));
+}
+
+# FLAG: bits 0-11 are not writable; bit 31 summarises bits 30:23 and 18:13.
+macro gte_write_flag(value) {
+    local errors:4 = value & 0x7f87e000;
+    FLAG = (value & 0x7ffff000) | (zext(errors != 0) << 31);
+}
+
+# -- data register moves ---------------------------------------------------
+
+# cop2r0-31 as a mtc2/lwc2 destination and mfc2/swc2 source. Narrow
+# registers keep their 16-bit value extended to the 32-bit slot, which is
+# what a read returns (psx-spx: signed for IR0-3 and VZ0-2, unsigned for
+# OTZ and SZ0-3).
+
+:mfc2 RT, gte_dr is prime=0x12 & copop=0 & RT & gte_dr {
+    RT = gte_dr;
+}
+
+:mfc2 RT, gte_dr is prime=0x12 & copop=0 & RT & gte_dr & gte_dr=15 {
+    RT = SXY2;
+}
+
+:mfc2 RT, gte_dr is prime=0x12 & copop=0 & RT & gte_dr & (gte_dr=28 | gte_dr=29) {
+    RT = gte_orgb(IR1, IR2, IR3);
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr {
+    gte_dr = RTsrc;
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr &
+    (gte_dr=1 | gte_dr=3 | gte_dr=5 | gte_dr=8 | gte_dr=9 | gte_dr=10 | gte_dr=11) {
+    gte_dr = sext(RTsrc:2);
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr &
+    (gte_dr=7 | gte_dr=16 | gte_dr=17 | gte_dr=18 | gte_dr=19) {
+    gte_dr = zext(RTsrc:2);
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr & gte_dr=15 {
+    gte_write_sxyp(RTsrc);
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr & gte_dr=28 {
+    gte_write_irgb(RTsrc);
+}
+
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr & gte_dr=30 {
+    gte_write_lzcs(RTsrc);
+}
+
+# ORGB and LZCR are read-only: the write is ignored.
+:mtc2 RTsrc, gte_dr is prime=0x12 & copop=4 & RTsrc & gte_dr & (gte_dr=29 | gte_dr=31) {
+}
+
+:swc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x3A & OFF_BASE & gte_rt {
+    *[ram]:4 OFF_BASE = gte_rt;
+}
+
+:swc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x3A & OFF_BASE & gte_rt & gte_rt=15 {
+    *[ram]:4 OFF_BASE = SXY2;
+}
+
+:swc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x3A & OFF_BASE & gte_rt & (gte_rt=28 | gte_rt=29) {
+    *[ram]:4 OFF_BASE = gte_orgb(IR1, IR2, IR3);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt {
+    gte_rt = *[ram]:4 OFF_BASE;
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt &
+    (gte_rt=1 | gte_rt=3 | gte_rt=5 | gte_rt=8 | gte_rt=9 | gte_rt=10 | gte_rt=11) {
+    local value:4 = *[ram]:4 OFF_BASE;
+    gte_rt = sext(value:2);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt &
+    (gte_rt=7 | gte_rt=16 | gte_rt=17 | gte_rt=18 | gte_rt=19) {
+    local value:4 = *[ram]:4 OFF_BASE;
+    gte_rt = zext(value:2);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt & gte_rt=15 {
+    local value:4 = *[ram]:4 OFF_BASE;
+    gte_write_sxyp(value);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt & gte_rt=28 {
+    local value:4 = *[ram]:4 OFF_BASE;
+    gte_write_irgb(value);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt & gte_rt=30 {
+    local value:4 = *[ram]:4 OFF_BASE;
+    gte_write_lzcs(value);
+}
+
+:lwc2 gte_rt, OFF_BASE is $(AMODE) & prime=0x32 & OFF_BASE & gte_rt & (gte_rt=29 | gte_rt=31) {
+}
+
+# -- control register moves -------------------------------------------------
+
+:cfc2 RT, gte_cr is prime=0x12 & copop=2 & RT & gte_cr {
+    RT = gte_cr;
+}
+
+:ctc2 RTsrc, gte_cr is prime=0x12 & copop=6 & RTsrc & gte_cr {
+    gte_cr = RTsrc;
+}
+
+# RT33, L33, LB3, H, DQA, ZSF3, ZSF4 are one 16-bit value; a read returns
+# it sign-extended (H too, though psx-spx notes it is unsigned in use).
+:ctc2 RTsrc, gte_cr is prime=0x12 & copop=6 & RTsrc & gte_cr &
+    (gte_cr=4 | gte_cr=12 | gte_cr=20 | gte_cr=26 | gte_cr=27 | gte_cr=29 | gte_cr=30) {
+    gte_cr = sext(RTsrc:2);
+}
+
+:ctc2 RTsrc, gte_cr is prime=0x12 & copop=6 & RTsrc & gte_cr & gte_cr=31 {
+    gte_write_flag(RTsrc);
+}
+
+# -- commands ---------------------------------------------------------------
+# cop2 with bit 25 set: command number in bits 5:0. The bits psx-spx marks
+# unused are not matched, so any encoding of a known command decodes to it;
+# command numbers psx-spx does not define stay Ghidra's generic cop2.
+
+:rtps  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x01 & gte_sf & gte_lm {
+    gte_rtps(gte_sf:1, gte_lm:1);
+}
+
+:nclip is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x06 {
+    gte_nclip();
+}
+
+:op    "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x0c & gte_sf & gte_lm {
+    gte_op(gte_sf:1, gte_lm:1);
+}
+
+:dpcs  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x10 & gte_sf & gte_lm {
+    gte_dpcs(gte_sf:1, gte_lm:1);
+}
+
+:intpl "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x11 & gte_sf & gte_lm {
+    gte_intpl(gte_sf:1, gte_lm:1);
+}
+
+:mvmva "sf="^gte_sf^",mx="^gte_mx^",v="^gte_v^",cv="^gte_cv^",lm="^gte_lm
+    is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x12 & gte_sf & gte_mx & gte_v & gte_cv & gte_lm {
+    gte_mvmva(gte_sf:1, gte_mx:1, gte_v:1, gte_cv:1, gte_lm:1);
+}
+
+:ncds  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x13 & gte_sf & gte_lm {
+    gte_ncds(gte_sf:1, gte_lm:1);
+}
+
+:cdp   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x14 & gte_sf & gte_lm {
+    gte_cdp(gte_sf:1, gte_lm:1);
+}
+
+:ncdt  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x16 & gte_sf & gte_lm {
+    gte_ncdt(gte_sf:1, gte_lm:1);
+}
+
+:nccs  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x1b & gte_sf & gte_lm {
+    gte_nccs(gte_sf:1, gte_lm:1);
+}
+
+:cc    "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x1c & gte_sf & gte_lm {
+    gte_cc(gte_sf:1, gte_lm:1);
+}
+
+:ncs   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x1e & gte_sf & gte_lm {
+    gte_ncs(gte_sf:1, gte_lm:1);
+}
+
+:nct   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x20 & gte_sf & gte_lm {
+    gte_nct(gte_sf:1, gte_lm:1);
+}
+
+:sqr   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x28 & gte_sf & gte_lm {
+    gte_sqr(gte_sf:1, gte_lm:1);
+}
+
+:dcpl  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x29 & gte_sf & gte_lm {
+    gte_dcpl(gte_sf:1, gte_lm:1);
+}
+
+:dpct  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x2a & gte_sf & gte_lm {
+    gte_dpct(gte_sf:1, gte_lm:1);
+}
+
+:avsz3 is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x2d {
+    gte_avsz3();
+}
+
+:avsz4 is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x2e {
+    gte_avsz4();
+}
+
+:rtpt  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x30 & gte_sf & gte_lm {
+    gte_rtpt(gte_sf:1, gte_lm:1);
+}
+
+:gpf   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x3d & gte_sf & gte_lm {
+    gte_gpf(gte_sf:1, gte_lm:1);
+}
+
+:gpl   "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x3e & gte_sf & gte_lm {
+    gte_gpl(gte_sf:1, gte_lm:1);
+}
+
+:ncct  "sf="^gte_sf^",lm="^gte_lm is $(AMODE) & prime=0x12 & bit25=1 & gte_cmd=0x3f & gte_sf & gte_lm {
+    gte_ncct(gte_sf:1, gte_lm:1);
+}

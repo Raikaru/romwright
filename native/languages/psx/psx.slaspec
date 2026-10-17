@@ -1,0 +1,18 @@
+# SLA specification for the PlayStation R3000A (MIPS I) with the GTE.
+#
+# Ghidra's own MIPS32 little-endian specification (Apache-2.0, pinned in
+# third_party/ghidra/languages/mips; install.sh stages it and applies
+# stock-cop2.patch) plus gte.sinc, written from psx-spx. The MIPS16,
+# microMIPS, MT and DSP extension sets of the stock MIPS32 slaspec are left
+# out: the R3000A has none of them, so those encodings stay undefined here.
+
+@define ENDIAN "little"
+@define FREGSIZE "4"
+@define ISA_VARIANT ""
+# Disables the stock lwc2/swc2/ldc2/sdc2 constructors; gte.sinc defines the
+# GTE ones and the R3000A has no ldc2/sdc2.
+@define COPR_C ""
+
+@include "mips.sinc"
+@include "mips32Instructions.sinc"
+@include "gte.sinc"

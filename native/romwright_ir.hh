@@ -3,7 +3,9 @@
 #include "ghidra_process.hh"
 #include "blockaction.hh"
 #include "romwright_ir_state.hh"
+#include "romwright_structure.hh"
 #include "romwright_nonreturn.hh"
+#include "romwright_printir.hh"
 #include <set>
 namespace ghidra {
 
@@ -191,12 +193,24 @@ public:
     if (!cuts.empty()) {
       for (size_t i=0; i<cuts.size(); ++i)
         data->getBasicBlocks().getBlock(cuts[i].source)->setGotoBranch(cuts[i].slot);
-      data->getStructure().clear();
-      ActionBlockStructure structure("");
-      structure.apply(*data);
-      ActionFinalStructure finalize("");
-      finalize.apply(*data);
+      if (romwrightNativeStructure()) {
+        data->getStructure().clear();
+        data->installSwitchDefaults();
+        romwrightSnapshotStructure(*data);
+        ActionBlockStructure structure("");
+        structure.apply(*data);
+        ActionFinalStructure finalize("");
+        finalize.apply(*data);
+      }
+      else {
+        // The cuts are forced goto edges of the exported graph, which the worker
+        // structures anew: from the graph as it is now (the p-code already shows
+        // the earlier flips, so no `if`/`else` is complemented again).
+        romwrightSnapshotStructure(*data);
+        romwrightStates()[data].preferred.clear();
+      }
     }
+    romwrightFinishCasts(ghidra->print,*data);
     sout.write("\000\000\001\016",4);
     PackedEncode encoder(sout);
     encoder.openElement(ELEM_DOC);
@@ -225,7 +239,9 @@ public:
       }
       encoder.closeElement(ELEM_BLOCKEDGE);
     }
-    ghidra->print->docFunction(data);
+    if (romwrightNativeStructure())
+      ghidra->print->docFunction(data);
+    romwrightEncodePrintIr(ghidra->print,*data,encoder);
     encoder.closeElement(ELEM_DOC);
     sout.write("\000\000\001\017",4);
   }

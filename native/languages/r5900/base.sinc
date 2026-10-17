@@ -152,6 +152,30 @@ define token instr(32)
     vulop6       = (0,5)
     vul24        = (24,24)
     vul22_24     = (22,24)
+
+    # dest mask bits (x is the top bit) and one field alias per VF lane, so a constructor
+    # can attach each lane of fs/ft/fd to its own register (see vulanes.sinc)
+    vmx         = (24,24)
+    vmy         = (23,23)
+    vmz         = (22,22)
+    vmw         = (21,21)
+    vfs_x      = (11,15)
+    vfs_y      = (11,15)
+    vfs_z      = (11,15)
+    vfs_w      = (11,15)
+    vft_x      = (16,20)
+    vft_y      = (16,20)
+    vft_z      = (16,20)
+    vft_w      = (16,20)
+    vfd_x      = (6,10)
+    vfd_y      = (6,10)
+    vfd_z      = (6,10)
+    vfd_w      = (6,10)
+    vzs         = (11,15)     # unattached copies of the fs / ft / fd fields, for the vi0 and
+    vzt         = (16,20)     # control-register zero tests
+    vzd         = (6,10)
+    vzi         = (11,15)     # the same field read as a number
+    vucc        = (11,15)     # COP2 control register for CFC2/CTC2, attached to the architectural file
 ;
 
 # 64 bit

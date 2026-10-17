@@ -27,14 +27,7 @@ done
 BUILD=$(mktemp -d "${TMPDIR:-/tmp}/ghidra-opt-build.XXXXXX")
 trap 'rm -rf "$BUILD"' EXIT
 cp -r "$ROOT/third_party/ghidra/decompiler" "$BUILD/decompiler"
-cp "$ROOT/native/romwright_linkage.hh" "$ROOT/native/romwright_patterns.hh" \
-   "$ROOT/native/romwright_flow.hh" "$ROOT/native/romwright_constant_state.hh" \
-   "$ROOT/native/romwright_operand_refs.hh" \
-   "$ROOT/native/romwright_x86_references.hh" \
-   "$ROOT/native/romwright_callfixups.hh" \
-   "$ROOT/native/romwright_nonreturn.hh" \
-   "$ROOT/native/romwright_ir.hh" "$ROOT/native/romwright_ir_state.hh" \
-   "$ROOT/native/romwright_constants.hh" "$BUILD/decompiler/"
+cp "$ROOT"/native/romwright_*.hh "$BUILD/decompiler/"
 
 cp "$PATCH" "$BUILD/apply.patch"
 git -C "$BUILD" init -q
