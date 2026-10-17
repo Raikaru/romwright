@@ -119,7 +119,6 @@ def main():
                         help="multi-block functions scored")
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     install = Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
     shape_environment = dict(

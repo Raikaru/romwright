@@ -1,0 +1,74 @@
+{
+  "lane": "dds",
+  "game": "ps2-digital-devil-saga",
+  "title": "Shin Megami Tensei: Digital Devil Saga (USA, SLUS_209.74), ee-gcc 2.96",
+  "repo": {
+    "url": "https://github.com/Megami-Decomps/dds-decomp.git",
+    "commit": "92a331e880e026bf14d8aff6099f1e5e711ca443"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-digital-devil-saga/SLUS_209.74",
+    "sha1": "6d18898e2724bf1d145392766e8ba1e678487419"
+  },
+  "program": "ps2-dds",
+  "gp": "0x003c0cf0",
+  "compiler": "ee-gcc2.96",
+  "tools": [
+    "ee-gcc2.96",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "env": {
+    "DDS_I386_LIBDIR": "{glibc32}"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-digital-devil-saga/truth/functions.tsv"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/dds1/symbol_addrs.txt"
+    }
+  ],
+  "setup": [
+    "mkdir -p tools/compilers tools/bin orig/dds1 && ln -sfn {tool:ee-gcc2.96} tools/compilers/ee-gcc2.96 && for t in as ld objcopy; do ln -sf {tool:binutils-mips-ps2-decompals}/mips-ps2-decompals-$t tools/bin/mips-ps2-decompals-$t; done && ln -sf {tool:objdiff-cli}/objdiff-cli tools/bin/objdiff-cli && ln -sf {retail} orig/dds1/SLUS_209.74",
+    "{python} configure.py dds1"
+  ],
+  "build": {
+    "kind": "ninja",
+    "dir": ".",
+    "family": "gcc",
+    "compdb_rules": [
+      "cc"
+    ],
+    "output_regex": "^build/dds1/src/",
+    "exclude_regex": "/base/",
+    "drop_segments": [
+      "production_report\\.py",
+      "^cpp -MM"
+    ],
+    "preprocess": {
+      "mode": "host-cpp",
+      "defines": [
+        "-DM2CTX"
+      ]
+    }
+  },
+  "include_asm_regex": [
+    "\\bINCLUDE_ASM\\s*\\([^()]*?,[^()]*?,\\s*(\\w+)\\s*\\)"
+  ],
+  "limits": [
+    "Pinned compiler: toolchains.json `ee-gcc2.96` (decomp.me build), run unpatched under `setarch -R` with the repo's own `-O2` cc1 and EE assembler flags; the repo's download_tools.py ASLR/assembler patches are not applied, so the matched set can be smaller than the repo's own count.",
+    "Units are compiled with the repo's own command (ninja compdb), the `cpp -MM` dependency step and the production-report recorder dropped."
+  ],
+  "cross_check": {
+    "what": "the repo's own link (`ninja dds1`) with the pinned compiler",
+    "run": "ninja dds1",
+    "run_may_fail": true,
+    "kind": "linked_elf",
+    "file": "build/dds1/SLUS_209.74"
+  },
+  "family_depth": 2
+}

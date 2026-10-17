@@ -5,7 +5,7 @@ Five pages are gated one by one. What was missing is the milestone-level
 claim, and a claim needs a rule that cannot be satisfied by editing the test:
 
   * **every user-facing surface has a page.** The surfaces are enumerated from
-    the repository -- the workspace's `bin` targets, the desktop CMake target,
+    the repository -- the workspace's `bin` targets (the desktop included),
     the modules under `python/`, and the scripts under `packaging/` -- not from
     a list here. Each must be named by `README.md` or a page under `docs/`.
   * **every page that shows commands is executed.** A page carrying a
@@ -54,13 +54,9 @@ def surfaces() -> dict[str, list[str]]:
         cwd=ROOT, capture_output=True, text=True, check=True).stdout)
     binaries = sorted({target["name"] for package in metadata["packages"]
                        for target in package["targets"] if "bin" in target["kind"]})
-    desktop = re.findall(r"add_executable\((\S+)",
-                         (ROOT / "desktop/romwright-qt/CMakeLists.txt")
-                         .read_text(encoding="utf-8"))
     modules = sorted(path.name for path in (ROOT / "python").glob("*.py"))
     packaging = sorted(path.name for path in (ROOT / "packaging").glob("*.py"))
-    return {"binaries": binaries, "desktop": sorted(desktop),
-            "python": modules, "packaging": packaging}
+    return {"binaries": binaries, "python": modules, "packaging": packaging}
 
 
 def reported_metrics() -> tuple[set[str], set[str]]:

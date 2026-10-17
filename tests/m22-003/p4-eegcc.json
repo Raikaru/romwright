@@ -1,0 +1,100 @@
+{
+  "lane": "p4-eegcc",
+  "game": "ps2-persona-4",
+  "title": "Shin Megami Tensei: Persona 4 (USA, SLUS_217.82), ee-gcc 2.96 units",
+  "repo": {
+    "url": "https://github.com/Raikaru/Persona4-Decompilation.git",
+    "commit": "509519da5809d4958d55520e7d257b75cb69cd51"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-persona-4/SLUS_217.82",
+    "sha1": "4eeec0360cf2715535d9f7e52eb69d786fb0158c"
+  },
+  "program": "ps2-p4",
+  "seed": 20261010,
+  "gp": "0x007690F0",
+  "compiler": "ee-gcc2.96",
+  "unit_compilers": [],
+  "tools": [
+    "mwcps2-3.0.1b210-060308",
+    "mwcps2-3.0.1b119-040914",
+    "ee-gcc2.96",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "no_aslr": true,
+  "i386_loader": true,
+  "venv": {
+    "requirements": "{repo}/requirements-python.txt"
+  },
+  "env": {
+    "P4_MWCC": "{work}/bin/mwcc.sh",
+    "P4_MWCC_CW3_0_1B119": "{work}/bin/mwcc-b119.sh",
+    "P4_RETAIL_ELF": "{retail}",
+    "P4_AS": "{tool:binutils-mips-ps2-decompals}/mips-ps2-decompals-as",
+    "P4_OBJCOPY": "{tool:binutils-mips-ps2-decompals}/mips-ps2-decompals-objcopy",
+    "P4_LD": "{tool:binutils-mips-ps2-decompals}/mips-ps2-decompals-ld",
+    "P4_EEGCC_ROOT": "{tool:ee-gcc2.96}",
+    "P4_EEGCC_AS": "{work}/bin/ee-as.sh",
+    "P4_EEGCC_LD_LIBRARY_PATH": "{glibc32}",
+    "TMPDIR": "{work}/tmp",
+    "LD_LIBRARY_PATH": "{glibc32}"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-persona-4/truth/functions.tsv"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_addrs.txt"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbols_recovered.txt"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_names.txt"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_names.strings.txt"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_names.vendor.txt"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_names.p3.txt"
+    }
+  ],
+  "setup": [
+    "mkdir -p {work}/bin {work}/tmp && printf '#!/bin/sh\\nexec wibo \"{tool:mwcps2-3.0.1b210-060308}/mwccps2.exe\" \"$@\"\\n' > {work}/bin/mwcc.sh && printf '#!/bin/sh\\nexec wibo \"{tool:mwcps2-3.0.1b119-040914}/mwccps2.exe\" \"$@\"\\n' > {work}/bin/mwcc-b119.sh && chmod +x {work}/bin/*.sh && printf '#!/bin/sh\\nn=$#; i=0; while [ $i -lt $n ]; do a=$1; shift; case \"$a\" in -march=*|-mabi=*) ;; *) set -- \"$@\" \"$a\";; esac; i=$((i+1)); done\\nexec {tool:ee-gcc2.96}/ee/bin/as \"$@\"\\n' > {work}/bin/ee-as.sh && chmod +x {work}/bin/ee-as.sh"
+  ],
+  "build": {
+    "kind": "trace",
+    "trace_run": "units=$(sed 's/#.*//' config/gcc_units.txt | awk NF | tr '\\n' ' '); {python} tools/verify.py --json {work}/verify_report.json $units",
+    "command_regex": "eegcc_shim\\.py",
+    "family": "gcc",
+    "preprocess": {
+      "mode": "flags",
+      "tool": "{tool:ee-gcc2.96}/bin/ee-gcc",
+      "flags": [
+        "-O2",
+        "-G0",
+        "-DINCLUDE_ASM(a,b,c)=",
+        "-DINCLUDE_RODATA(a,b,c)="
+      ]
+    }
+  },
+  "include_asm_regex": [
+    "\\bINCLUDE_(?:ASM|RODATA)\\s*\\(\\s*\"[^\"]*\"\\s*,\\s*(\\w+)"
+  ],
+  "limits": [
+    "The ee-gcc 2.96 units of Persona 4 (config/gcc_units.txt), compiled with the repo's tools/eegcc_shim.py and the pinned ee-gcc 2.96 + EE assembler. The repo must already be prepared by the `p4` lane (same --repo): this lane's setup only rewrites the compiler wrappers.",
+    "The ee-gcc units' assembler is the pinned `ee-gcc2.96` package's `ee/bin/as` (GNU as for the EE) behind a wrapper that drops the `-march=r5900 -mabi=eabi` flags the repo's shim passes and that assembler does not know."
+  ]
+}

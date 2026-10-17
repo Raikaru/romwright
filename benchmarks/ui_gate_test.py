@@ -29,8 +29,15 @@ def main() -> int:
             "    'ui.list.load_ms': 12.5,\n"
             "    'ui.list.filter_ms': 4.0,\n"
             "    'ui.sync_ms': 2.0,\n"
+            "    'ui.graph.fetch_ms': 30.0,\n"
             "    'ui.graph.layout_ms': 10.0,\n"
             "    'ui.graph.paint_ms': 3.0,\n"
+            "    'ui.xrefs.rows': 19,\n"
+            "    'ui.xrefs.unexplained': 0,\n"
+            "    'ui.xrefs.declared_rows': 13,\n"
+            "    'ui.xrefs.address': 4194406,\n"
+            "    'ui.programs': 2,\n"
+            "    'ui.programs_switch_functions': 12,\n"
             "    'ui.install.ok': True,\n"
             "}}))\n",
             encoding="utf-8",
@@ -74,14 +81,22 @@ def main() -> int:
             "ui.list.load_ms",
             "ui.list.filter_ms",
             "ui.sync_ms",
+            "ui.graph.fetch_ms",
             "ui.graph.layout_ms",
             "ui.graph.paint_ms",
+            "ui.xrefs.rows",
+            "ui.xrefs.unexplained",
+            "ui.xrefs.declared_rows",
+            "ui.xrefs.address",
+            "ui.programs",
+            "ui.programs_switch_functions",
             "ui.install.ok",
         }
         assert set(entry["thresholds"]) == {
             "ui.list.load_ms",
             "ui.list.filter_ms",
             "ui.sync_ms",
+            "ui.graph.fetch_ms",
             "ui.graph.layout_ms",
             "ui.graph.paint_ms",
         }

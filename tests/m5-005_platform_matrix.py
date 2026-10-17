@@ -28,9 +28,12 @@ CATALOG = ROOT / "docs" / "platform-tiers.json"
 REPORTS = ROOT / "benchmarks" / "reports"
 README = ROOT / "README.md"
 
-# The blockers named in STATUS.md's console sequencing decision. Each one is
-# a hardware or container fact, not a scheduling preference.
-REQUIRED_BLOCKER_TERMS = ("VFPU", "R5900", "SPU", "VMX128", "encrypt")
+# The blocker that is left (STATUS.md's console sequencing decision named four
+# processor blockers too: VFPU, R5900, SPU, VMX128). Each processor is modelled
+# now, so those terms are recorded as tier-3 claims; the container fact is
+# still a tier-2 blocker.
+REQUIRED_BLOCKER_TERMS = ("encrypt",)
+REQUIRED_CLAIM_TERMS = ("VFPU", "R5900", "SPU", "VMX128")
 
 BEGIN = "<!-- support-matrix:begin -->"
 END = "<!-- support-matrix:end -->"
@@ -112,6 +115,20 @@ def check_catalog() -> list[dict]:
         assert term.lower() in text.lower(), (
             f"the {term} blocker is not recorded in the catalog"
         )
+    claimed = [p for p in platforms if p.get("tier") == 3]
+    for platform in claimed:
+        for key in ("claim", "evidence"):
+            assert isinstance(platform.get(key), str) and len(platform[key]) > 20, (
+                f"{platform.get('input')}: a tier-3 entry needs a `{key}`"
+            )
+        assert "gate" not in platform["claim"].lower().replace("no gate report", ""), (
+            f"{platform.get('input')}: a tier-3 claim may not read as gated"
+        )
+    claim_text = json.dumps(claimed)
+    for term in REQUIRED_CLAIM_TERMS:
+        assert term.lower() in claim_text.lower(), (
+            f"the {term} processor is not recorded in a tier-3 catalog claim"
+        )
     return platforms
 
 
@@ -176,6 +193,15 @@ def check_rows_follow_the_reports(reports: dict[str, dict]) -> dict[str, object]
                 f"{recall:.4f}: {baseline[label]!r}"
             )
         observed["rows"] = baseline
+
+        # The tier-3 inputs are printed as supported rows carrying their claim,
+        # and are not in the blocked table.
+        catalog_rows = json.loads((root / "docs" / CATALOG.name).read_text())["platforms"]
+        for platform in catalog_rows:
+            if platform.get("tier") == 3:
+                assert platform["claim"] in baseline.get(platform["input"], ""), (
+                    f"{platform['input']}: the tier-3 claim is not the generated row"
+                )
 
         # 1. A different measured number produces a different row.
         target = "m5-001"

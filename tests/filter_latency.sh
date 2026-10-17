@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="${ROMWRIGHT_QT_APP:-/tmp/romwright-qt-build/romwright-qt}"
+APP="${ROMWRIGHT_DESKTOP_APP:-${CARGO_TARGET_DIR:-$ROOT/target}/release/romwright-desktop}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 PROGRAM="${PROGRAM:-libc}"
 
@@ -14,7 +14,7 @@ if [ ! -f "$BINARY" ]; then
 fi
 
 if [ ! -x "$APP" ]; then
-    echo "Qt app not found or not executable: $APP" >&2
+    echo "desktop app not found or not executable: $APP" >&2
     exit 1
 fi
 
@@ -22,7 +22,7 @@ PROJECT="$(mktemp -d /tmp/romwright-filter-test.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 REPORT="$PROJECT/ui-gate.json"
-QT_QPA_PLATFORM=offscreen python3 "$ROOT/benchmarks/ui_gate.py" \
+python3 "$ROOT/benchmarks/ui_gate.py" \
     --app "$APP" \
     --binary "$BINARY" \
     --program "$PROGRAM" \

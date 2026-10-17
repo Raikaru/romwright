@@ -123,6 +123,10 @@ def rows() -> list[tuple[str, str, str, str, str, str]]:
         except json.JSONDecodeError as failure:
             problems.append(f"{path.name}: unreadable ({failure})")
             continue
+        if isinstance(report, list):
+            # A table of rows (a before/after record, `n64_layout_discovery.json`)
+            # has no verdict to index; m5-012 reads it the same way.
+            continue
         if not isinstance(report, dict):
             problems.append(f"{path.name}: not a report object")
             continue

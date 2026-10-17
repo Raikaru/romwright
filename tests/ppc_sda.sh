@@ -17,10 +17,6 @@ CLI="${CLI:-$ROOT/target/release/romwright-cli}"
     echo "missing native decompiler — build native/build_ghidra_opt.sh" >&2
     exit 1
 }
-[ -x "${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}" ] || {
-    echo "missing reference console — build native/build_console.sh" >&2
-    exit 1
-}
 [ -x "${ROMWRIGHT_WORKER:-$ROOT/target/release/romwright-worker}" ] || {
     echo "missing romwright-worker — cargo build --release -p romwright-worker" >&2
     exit 1

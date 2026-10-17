@@ -1,0 +1,109 @@
+{
+  "lane": "gh",
+  "game": "ps2-god-hand",
+  "title": "God Hand (USA, SLUS_215.03), ee-gcc 2.96 + SN ProDG ee-gcc 2.95.3-136",
+  "repo": {
+    "url": "https://github.com/LucasPicoli/god-hand-decomp.git",
+    "commit": "58bcee16a279f8ee2bc2a7e9d341a33b325d4151"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-god-hand/SLUS_215.03",
+    "sha1": "b3ab71dfca85cc5fd9336404da93f0c0c2e811e6"
+  },
+  "program": "ps2-gh",
+  "gp": "0x0",
+  "compiler": "ee-gcc2.96",
+  "unit_compilers": [
+    {
+      "command": "sn-2\\.95\\.3-136",
+      "id": "ee-gcc2.95.3-136"
+    },
+    {
+      "command": "2\\.9-991111",
+      "id": "ee-gcc2.9-991111-01"
+    },
+    {
+      "command": "2\\.9-990721",
+      "id": "ee-gcc2.9-990721"
+    }
+  ],
+  "tools": [
+    "ee-gcc2.96",
+    "ee-gcc2.9-991111-01",
+    "ee-gcc2.9-990721",
+    "ee-gcc2.95.3-136",
+    "ee-gcc2.95.2-273a",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "no_aslr": true,
+  "i386_loader": true,
+  "venv": {
+    "extra": [
+      "splat64[mips]>=0.40.0,<1.0.0",
+      "pytest",
+      "pyyaml",
+      "pyelftools",
+      "tqdm",
+      "rabbitizer",
+      "spimdisasm",
+      "ninja_syntax"
+    ]
+  },
+  "env": {
+    "LD_LIBRARY_PATH": "{glibc32}"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-god-hand/truth/functions.tsv"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/symbol_addrs.txt"
+    }
+  ],
+  "setup": [
+    "mkdir -p {work}/cc/linux/ee/gcc/lib/gcc-lib/ee {work}/cc/windows/ee/gcc/lib/gcc-lib/ee/2.95.3-sn-136 {work}/cc/windows/ee/gcc/lib/gcc-lib/ee/2.95.2-sn-273a tools disc_extract build && rm -rf compiler && mkdir -p compiler && ln -sfn {work}/cc/linux compiler/linux && ln -sfn {work}/cc/windows compiler/windows && G={work}/cc/linux/ee/gcc && ln -sfn {tool:ee-gcc2.96}/bin $G/bin && ln -sfn {tool:ee-gcc2.96}/ee $G/ee && ln -sfn {tool:ee-gcc2.96}/lib/gcc-lib/ee/2.96-ee-001003-1 $G/lib/gcc-lib/ee/2.96-ee-001003-1 && ln -sfn {tool:ee-gcc2.9-991111-01}/lib/gcc-lib/ee/2.9-ee-991111-01 $G/lib/gcc-lib/ee/2.9-ee-991111-01 && ln -sfn {tool:ee-gcc2.9-990721}/lib/gcc-lib/ee/2.9-ee-990721 $G/lib/gcc-lib/ee/2.9-ee-990721 && for f in {tool:ee-gcc2.95.3-136}/lib/gcc-lib/ee/2.95.3/*; do ln -sf $f {work}/cc/windows/ee/gcc/lib/gcc-lib/ee/2.95.3-sn-136/; done && ln -sf {tool:ee-gcc2.95.2-273a}/lib/gcc-lib/ee/2.95.2/ps2eeas.exe {work}/cc/windows/ee/gcc/lib/gcc-lib/ee/2.95.2-sn-273a/ps2eeas.exe && ln -sf {tool:wibo}/wibo tools/wibo && ln -sfn {work}/venv .venv",
+    "ln -sf {retail} disc_extract/SLUS_215.03 && mipsel-linux-gnu-objcopy -O binary disc_extract/SLUS_215.03 build/SLUS_215.03.rom",
+    "./scripts/resplat.sh",
+    "{python} scripts/extract_elf_metadata.py"
+  ],
+  "build": {
+    "kind": "trace",
+    "trace_run": "{python} compile.py --setup",
+    "command_regex": "(ee-cc-wrap|sn-cc-wrap)\\.py",
+    "family": "gcc",
+    "preprocess": {
+      "mode": "flags",
+      "tool": "{tool:ee-gcc2.96}/bin/ee-gcc",
+      "flags": [
+        "-O2",
+        "-G0"
+      ],
+      "strip": [
+        "__attribute__\\(\\(\\s*section\\s*\\([^)]*\\)\\s*\\)\\)\\s*"
+      ]
+    }
+  },
+  "limits": [
+    "God Hand: the repo's own build entry point (`compile.py`) is run once under tests/m22-003/tools/trace/sitecustomize.py, which records the compile commands it spawns (`scripts/ee-cc-wrap.py` / `scripts/sn-cc-wrap.py`); each unit is then compiled with its recorded command. Every compiler the repo's setup installs (Cygnus ee-gcc 2.96, SN ProDG ee-gcc 2.95.3-136, 2.9-991111-01, 2.9-990721, the 2.95.2-273a SN assembler) is the pinned `toolchains.json` package of the same name, laid out under `compiler/` as `scripts/setup_toolchain.sh` lays them out; wibo is the pinned 1.2.0 (the repo pins 0.6.13).",
+    "`--extern-jtbl SYMBOL` (a wrapper flag naming the jump table of the original function) is dropped from the command when a candidate is compiled: the wrapper aborts when the text it compiles has no such table.",
+    "SN ProDG's EE gcc 2.95.3 has a 128-bit `long long` (`sizeof(long long)` is not 8 and any arithmetic on it is \"unsupported wide integer operation\"): its 64-bit integer type is `long`. romwright and m2c both print the 64-bit type as `long long`, so for units compiled with that compiler the harness rewrites `long long` to `long` in the composed source (prelude, context and candidate). Without it a quarter of the candidates fail to compile whatever else they say."
+  ],
+  "candidate_drop_args": [
+    "--extern-jtbl\\s+\\S+"
+  ],
+  "candidate_type_aliases": [
+    {
+      "command": "ee-gcc2953|sn-2\\.95\\.3",
+      "patterns": [
+        [
+          "\\blong\\s+long\\b",
+          "long"
+        ]
+      ]
+    }
+  ]
+}

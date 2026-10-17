@@ -44,7 +44,7 @@ def main() -> int:
     app = args.app.resolve()
     binary = args.binary.resolve()
     if not app.is_file():
-        raise SystemExit(f"Qt app does not exist: {app}")
+        raise SystemExit(f"desktop app does not exist: {app}")
     if not binary.is_file():
         raise SystemExit(f"libc binary does not exist: {binary}")
 
@@ -66,7 +66,6 @@ def main() -> int:
                 str(report),
             ],
             cwd=ROOT,
-            env={**os.environ, "QT_QPA_PLATFORM": "offscreen"},
             check=False,
         )
         assert result.returncode in (0, 1), result.returncode

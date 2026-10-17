@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the offscreen Qt UI gate and write the frozen gate report schema."""
+"""Run the offscreen desktop UI gate and write the frozen gate report schema."""
 from __future__ import annotations
 
 import argparse
@@ -102,16 +102,18 @@ def default_binary() -> Path:
 
 
 def default_app(root: Path) -> Path:
-    configured = os.environ.get("ROMWRIGHT_QT_APP")
+    configured = os.environ.get("ROMWRIGHT_DESKTOP_APP")
+    executable = "romwright-desktop.exe" if os.name == "nt" else "romwright-desktop"
+    target = os.environ.get("CARGO_TARGET_DIR")
     candidates = [
         Path(configured) if configured else None,
-        root / "build" / "romwright-qt" / "romwright-qt",
-        root / "desktop" / "romwright-qt" / "build" / "romwright-qt",
+        Path(target) / "release" / executable if target else None,
+        root / "target" / "release" / executable,
     ]
     for candidate in candidates:
         if candidate is not None and candidate.is_file():
             return candidate
-    raise GateError("no Qt app found; pass --app or set ROMWRIGHT_QT_APP")
+    raise GateError("no desktop app found; pass --app or set ROMWRIGHT_DESKTOP_APP")
 
 
 def parse_metrics(stdout: str) -> dict[str, Any]:
@@ -128,22 +130,22 @@ def parse_metrics(stdout: str) -> dict[str, Any]:
         metrics = payload.get("metrics", payload)
         if isinstance(metrics, dict):
             return metrics
-    raise GateError("Qt gate output did not contain a JSON metrics object")
+    raise GateError("desktop gate output did not contain a JSON metrics object")
 
 
 def validate_metrics(metrics: dict[str, Any]) -> None:
     missing = [metric for metric in ALL_METRICS if metric not in metrics]
     if missing:
-        raise GateError(f"Qt gate output missing metrics: {', '.join(missing)}")
+        raise GateError(f"desktop gate output missing metrics: {', '.join(missing)}")
     invalid = [
         metric
         for metric in (*NUMERIC_METRICS, *COUNT_METRICS, *RECORDED_METRICS)
         if isinstance(metrics[metric], bool) or not isinstance(metrics[metric], (int, float))
     ]
     if invalid:
-        raise GateError(f"Qt gate numeric metrics are invalid: {', '.join(invalid)}")
+        raise GateError(f"desktop gate numeric metrics are invalid: {', '.join(invalid)}")
     if not isinstance(metrics["ui.install.ok"], bool):
-        raise GateError("Qt gate ui.install.ok must be boolean")
+        raise GateError("desktop gate ui.install.ok must be boolean")
 
 
 def run_app(
@@ -167,12 +169,10 @@ def run_app(
         address,
     ]
     env = os.environ.copy()
-    env["QT_QPA_PLATFORM"] = "offscreen"
     root = Path(__file__).resolve().parent.parent
     env.setdefault("ROMWRIGHT_SPECS", str(root / "native" / "specs"))
     env.setdefault("ROMWRIGHT_GHIDRA_OPT", str(root / "native" / "build" / "ghidra_opt"))
     env.setdefault("ROMWRIGHT_LANGUAGE", "x86:LE:64:default")
-    env.setdefault("ROMWRIGHT_CONSOLE", str(root / "native" / "build" / "decomp_native"))
     env.setdefault(
         "ROMWRIGHT_SLA",
         str(Path(os.environ.get("ROMWRIGHT_GHIDRA", str(Path.home() / "ghidra_12.1.3_PUBLIC")))
@@ -189,11 +189,11 @@ def run_app(
     )
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip()
-        raise GateError(f"Qt gate exited {result.returncode}: {detail[-1000:]}")
+        raise GateError(f"desktop gate exited {result.returncode}: {detail[-1000:]}")
     metrics = parse_metrics(result.stdout)
-    # Layout-only time, measured where it runs (the bridge's
-    # `native_graph`): parsed from stderr into `ui.graph.layout_ms`,
-    # which carries the mandatory 200ms ceiling.
+    # Layout-only time, measured where it runs (the graph panel's layout
+    # pass): parsed from stderr into `ui.graph.layout_ms`, which carries the
+    # mandatory 200ms ceiling.
     layout_ms = parse_bridge_graph_ms(result.stderr)
     if layout_ms is not None:
         metrics["ui.graph.layout_ms"] = layout_ms
@@ -202,7 +202,7 @@ def run_app(
 
 
 def parse_bridge_graph_ms(stderr: str) -> float | None:
-    """Latest `BRIDGE-GRAPH <float>ms` timing from bridge stderr."""
+    """Latest `BRIDGE-GRAPH <float>ms` layout timing from the app's stderr."""
     latest: float | None = None
     for line in stderr.splitlines():
         line = line.strip()
@@ -288,9 +288,11 @@ def write_report(path: Path, document: dict[str, Any]) -> None:
 def main() -> int:
     root = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--app", type=Path, help="Qt executable; defaults to ROMWRIGHT_QT_APP or build/romwright-qt")
+    parser.add_argument("--app", type=Path,
+                        help="romwright-desktop executable; defaults to ROMWRIGHT_DESKTOP_APP "
+                             "or target/release/romwright-desktop")
     parser.add_argument("--binary", type=Path, help="corpus binary; defaults to libc")
-    parser.add_argument("--project", type=Path, help="project directory passed to the Qt app")
+    parser.add_argument("--project", type=Path, help="project directory passed to the desktop app")
     parser.add_argument("--program", default=os.environ.get("ROMWRIGHT_UI_PROGRAM", "libc"))
     parser.add_argument("--address", default=os.environ.get("ROMWRIGHT_UI_ADDRESS", "00400466"))
     parser.add_argument("--runs", type=int, default=3)
@@ -310,7 +312,7 @@ def main() -> int:
         app = (args.app or default_app(root)).resolve()
         binary = (args.binary or default_binary()).resolve()
         if not app.is_file():
-            raise GateError(f"Qt app does not exist: {app}")
+            raise GateError(f"desktop app does not exist: {app}")
         if not binary.is_file():
             raise GateError(f"corpus binary does not exist: {binary}")
         if args.project is None:

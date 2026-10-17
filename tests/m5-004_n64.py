@@ -70,7 +70,9 @@ def build(work: Path) -> tuple[Path, Path, int]:
     header = bytearray(CODE_OFFSET)
     struct.pack_into(">I", header, 0x00, NATIVE_CONFIGURATION)
     struct.pack_into(">I", header, 0x08, BOOT_ADDRESS)
-    header[0x20:0x2C] = b"ROMWRIGHTGATE\x00"
+    # The title field is 20 bytes at 0x20; a slice assignment of a different
+    # length would resize the bytearray and shift the code off its offset.
+    header[0x20:0x20 + 14] = b"ROMWRIGHTGATE\x00"
     rom = work / "fixture.z64"
     rom.write_bytes(bytes(header) + raw.read_bytes())
     return elf, rom, entry

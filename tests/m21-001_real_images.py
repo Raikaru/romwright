@@ -20,6 +20,14 @@ is degraded fails, whatever it scores. Floors are the measured values with
 a small margin: this gate catches regressions and shows the gap, it does
 not certify a target.
 
+A Psy-Q map lists globals only, so a PSX tool that finds the file-local
+statics is charged for them in `precision`. For PSX the row therefore also
+carries `precision_corroborated` (`psx_corroborated`): the same ratio, where
+an invented entry counts when the image's own bytes show a function there
+(a `jal` callee, a function-pointer-table entry, an address-taken frame
+opener). It is reported beside `precision`, never in its place, and has its
+own floor (PSX_CORROBORATED_FLOORS).
+
 The images are private, so a runner skips each one that is absent.
 """
 from __future__ import annotations
@@ -41,9 +49,37 @@ CLI = ROOT / "target" / "release" / "romwright-cli"
 CORPUS = Path.home() / "ventris-corpus" / "extracted"
 
 
+ET_SCE_PSPRELEXEC = 0xFFA0
+
+
+def section_relative_bases(elf: Path) -> dict[int, tuple[str, int]] | None:
+    """Section index -> (name, `sh_addr`) for an ELF whose symbol values are section-relative.
+
+    A PSP image (`e_type` 0xffa0) linked at base 0 keeps the object-file
+    convention in `.symtab` and in unrelocated DWARF `DW_AT_low_pc`: a value is
+    an offset into its section, whose own `sh_addr` (0x40 for Puzzle Bobble
+    Pocket's `.text`, which follows the 0x24-byte `.init` at 64-byte
+    alignment) is not in it. The loaded address is `sh_addr + value`; code
+    bytes and `jal` targets are already final (verified on that image: every
+    `jal` target minus 0x40 is a `.symtab` value). None for any other ELF."""
+    data = elf.read_bytes()
+    if (len(data) < 52 or data[:4] != b"\x7fELF" or data[4] != 1 or data[5] != 1
+            or int.from_bytes(data[16:18], "little") != ET_SCE_PSPRELEXEC):
+        return None
+    shoff = int.from_bytes(data[32:36], "little")
+    count = int.from_bytes(data[48:50], "little")
+    def field(index: int, at: int) -> int:
+        return int.from_bytes(data[shoff + 40 * index + at:shoff + 40 * index + at + 4], "little")
+
+    strings = field(int.from_bytes(data[50:52], "little"), 16)
+    return {index: (data[strings + field(index, 0):].split(b"\0", 1)[0].decode("latin-1"), field(index, 12))
+            for index in range(count)}
+
+
 def elf_functions(elf: Path) -> dict[int, tuple[int, str]]:
     out = subprocess.run(["llvm-readelf", "-sW", str(elf)], capture_output=True,
                          text=True, check=True).stdout
+    bases = section_relative_bases(elf)
     truth: dict[int, tuple[int, str]] = {}
     for line in out.splitlines():
         parts = line.split()
@@ -52,6 +88,8 @@ def elf_functions(elf: Path) -> dict[int, tuple[int, str]]:
         if (len(parts) >= 8 and parts[3] == "FUNC" and parts[6] != "UND"
                 and not parts[7].startswith("$")):
             address = int(parts[1], 16) & ~1  # Thumb bit
+            if bases is not None and parts[6].isdigit():
+                address += bases[int(parts[6])][1]
             size = int(parts[2], 0)
             if address and (address not in truth or truth[address][0] < size):
                 truth[address] = (size, parts[7])
@@ -70,6 +108,98 @@ def psx_map_functions(path: Path) -> dict[int, tuple[int, str]]:
         if lo <= value <= hi:
             truth[value] = (0, name)
     return truth
+
+
+def psx_corroborated(exe: Path, ranges: list[tuple[int, int]]) -> dict[int, str]:
+    """Addresses in `ranges` the PS-X EXE's own bytes corroborate as function entries.
+
+    Supplementary to `score()`'s precision, which counts only what the map
+    names. A Psy-Q map lists globals; the `static` functions of the same
+    translation units (state handlers in function-pointer tables, file-local
+    helpers) are absent, so the map-only precision charges every tool for
+    finding them. This answers "is that entry a real function?" from the
+    image alone, whatever tool proposed it. An address qualifies when
+
+      * it is word-aligned and the code before it ends in a return (`jr $ra`
+        in one of the two preceding non-zero words): it starts after a
+        function, not mid-body; and
+      * no branch or `j` in the ranges targets it (the map's own entries
+        are never branch targets either); and
+      * one of
+          jal    a `jal` in the ranges calls it (a callee is a function);
+          table  a data word outside the ranges points at it, in a run of two
+                 or more consecutive words that all point at addresses
+                 meeting the first two rules: a function-pointer table (case
+                 labels of a jump table rarely follow a return);
+          frame+address-taken
+                 its first six instructions open a stack frame
+                 (`addiu $sp, $sp, -N`) and its address is formed by
+                 `lui` + `addiu`/`ori`, or sits in a lone data word.
+
+    It is a floor on real functions, not a proof: a leaf function that is
+    only reached through a lone pointer qualifies by none of the three.
+    Returns {address: evidence} over every qualifying address, so an
+    entry no tool proposed is listed too."""
+    data = exe.read_bytes()
+    base = int.from_bytes(data[0x18:0x1C], "little")
+    size = int.from_bytes(data[0x1C:0x20], "little")
+    count = min(size, len(data) - 0x800) // 4
+    words = [int.from_bytes(data[0x800 + 4 * i:0x804 + 4 * i], "little") for i in range(count)]
+    word = lambda address: (words[(address - base) >> 2]
+                            if base <= address < base + 4 * count and not address & 3 else None)
+    in_ranges = lambda address: any(lo <= address < hi for lo, hi in ranges)
+    signed = lambda value: value - 0x10000 if value & 0x8000 else value
+    jal, branched, formed, pointed = set(), set(), set(), {}
+    for index, w in enumerate(words):
+        address = base + 4 * index
+        op = w >> 26
+        if not in_ranges(address):
+            if in_ranges(w) and not w & 3:
+                pointed[address] = w
+            continue
+        if op == 3:
+            jal.add((address & 0xF0000000) | ((w & 0x3FFFFFF) << 2))
+        elif op == 2:
+            branched.add((address & 0xF0000000) | ((w & 0x3FFFFFF) << 2))
+        elif op in (1, 4, 5, 6, 7):
+            branched.add(address + 4 + 4 * signed(w & 0xFFFF))
+        elif op == 0xF:  # lui rt; a nearby addiu/ori on rt completes the address
+            for ahead in range(1, 5):
+                follower = word(address + 4 * ahead)
+                if follower is not None and follower >> 26 in (9, 13) \
+                        and (follower >> 21) & 31 == (w >> 16) & 31:
+                    low = signed(follower & 0xFFFF) if follower >> 26 == 9 else follower & 0xFFFF
+                    formed.add(((w & 0xFFFF) << 16) + low & 0xFFFFFFFF)
+                    break
+
+    def starts_function(address: int) -> bool:
+        if not in_ranges(address) or address & 3 or address in branched:
+            return False
+        previous = address - 4
+        while word(previous) == 0 and in_ranges(previous):
+            previous -= 4
+        return 0x03E00008 in (word(previous), word(previous - 4))
+
+    def opens_frame(address: int) -> bool:
+        opcodes = [word(address + 4 * i) or 0 for i in range(6)]
+        return any(w >> 16 == 0x27BD and w & 0xFFFF >= 0x8000 for w in opcodes)
+
+    tabled = {target for slot, target in pointed.items() if starts_function(target)
+              and any(neighbour in pointed and starts_function(pointed[neighbour])
+                      for neighbour in (slot - 4, slot + 4))}
+    taken = set(pointed.values()) | formed
+    out: dict[int, str] = {}
+    for lo, hi in ranges:
+        for address in range(lo, hi, 4):
+            if not starts_function(address):
+                continue
+            if address in jal:
+                out[address] = "jal"
+            elif address in tabled:
+                out[address] = "table"
+            elif address in taken and opens_frame(address):
+                out[address] = "frame+address-taken"
+    return out
 
 
 def msvc_map_functions(path: Path) -> dict[int, tuple[int, str]]:
@@ -103,6 +233,52 @@ def strip(source: Path, work: Path) -> Path:
     out = work / f"{source.name}.stripped"
     subprocess.run(["llvm-strip", "--strip-all", "-o", str(out), str(source)], check=True)
     return out
+
+
+TSV_HEADER = ["start", "size", "name", "module", "verified"]
+
+
+def tsv_rows(path: Path) -> list[dict]:
+    """Rows of a truth contract `functions.tsv` (benchmarks/console_research.py,
+    docs/console-research.md "Truth contract"): `start` hex in the executable's
+    load address space, `size` decimal (0 unknown), `name`, `module` (`main` or
+    an overlay/REL name) and `verified` (1: the function lies in a unit the
+    decomp matched/linked, so its boundary is compiler truth). The header line
+    must be exactly `start\tsize\tname\tmodule\tverified`."""
+    lines = path.read_text(errors="replace").splitlines()
+    if not lines or lines[0].split("\t") != TSV_HEADER:
+        raise ValueError(f"{path}: header is not {'<TAB>'.join(TSV_HEADER)}")
+    rows = []
+    for number, line in enumerate(lines[1:], 2):
+        if not line.strip():
+            continue
+        fields = line.split("\t")
+        if len(fields) != len(TSV_HEADER):
+            raise ValueError(f"{path}:{number}: {len(fields)} fields, expected {len(TSV_HEADER)}")
+        start, size, name, module, verified = fields
+        if verified not in ("0", "1"):
+            raise ValueError(f"{path}:{number}: verified must be 0 or 1, got {verified!r}")
+        rows.append({"start": int(start, 16), "size": int(size), "name": name, "module": module,
+                     "verified": int(verified)})
+    return rows
+
+
+def tsv_functions(path: Path) -> dict[int, tuple[int, str]]:
+    """Every row of a `functions.tsv` as `{address: (size, name)}`, the loader
+    shape of the other truth kinds. Modules that share an address (NDS/N64
+    overlays) collapse onto the larger size here; console_research scores a
+    TSV truth per module and does not use this flattening."""
+    truth: dict[int, tuple[int, str]] = {}
+    for row in tsv_rows(path):
+        address = row["start"]
+        if address not in truth or truth[address][0] < row["size"]:
+            truth[address] = (row["size"], row["name"])
+    return truth
+
+
+# Truth kinds an image spec can name: `spec["truth"] = (kind, path)`.
+LOADERS = {"elf": elf_functions, "psx-map": psx_map_functions, "msvc-map": msvc_map_functions,
+           "binmap": binmap_functions, "tsv": tsv_functions}
 
 
 # name, image (relative to the corpus), program, truth, ranges the truth is
@@ -145,22 +321,43 @@ EXPECTED_DEGRADED: dict[str, str] = {}
 # Measured 2026-09-24 (recall, precision), with a 0.01 margin. Raise them as
 # recovery improves; a drop below is a regression.
 FLOORS: dict[str, tuple[float, float]] = {
-    "gba-pokeemerald": (0.963, 0.958),          # 0.9736 / 0.9689, 558 s idle (smt-cloud), 1.6 GB
-    "nds-pokeheartgold-arm9": (0.962, 0.987),   # 0.9729 / 0.9973
-    "ps2-capcom-fighting-evolution": (0.931, 0.979),  # 0.9413 / 0.9890
-    "ps2-dungeon-game": (0.930, 0.920),         # 0.9400 / 0.9305
-    # 0.9866 / 0.3660. The map lists globals only: of the 1,399 "invented"
-    # entries, 545 are jal targets, 678 open a stack frame, and 157 of the
-    # other 176 are leaf handlers a data word points at. Precision here is a
-    # floor on accuracy, not a measure of it.
+    # 0.9737 / 0.9904 since 2026-10-07 (junk entries refused: repeated-byte
+    # runs, calls into fill, undecodable Thumb-1 entries, interior entries);
+    # 0.9736 / 0.9689 before, 558 s idle (smt-cloud), 1.6 GB.
+    # 0.9737 / 0.9971 since 2026-10-08 (odd-word table seeds need a loaded
+    # literal pool, frame-releasing `bl` labels refused); 0.9737 / 0.9910 on
+    # the same tree without those rules.
+    "gba-pokeemerald": (0.963, 0.987),
+    "nds-pokeheartgold-arm9": (0.962, 0.988),   # 0.9729 / 0.9984 (0.9981 before 2026-10-08)
+    # 0.9762 / 0.9924 since 2026-10-10 (stripped MIPS executables: alignment fill
+    # is no start, the boundary sweep and the data words that name code seed
+    # entries, a frame opener after a `nop` starts a function); 0.9418 / 0.9964 before.
+    "ps2-capcom-fighting-evolution": (0.966, 0.986),
+    # 0.9885 / 0.9785 since 2026-10-10 (same); 0.9438 / 0.9880 before.
+    "ps2-dungeon-game": (0.978, 0.978),
+    # 0.9878 / 0.3663. The map lists globals only (the file-local `static`
+    # functions are absent): of the 1,398 "invented" entries, 545 are jal
+    # targets, 803 sit in function-pointer tables and 43 open a stack frame
+    # at an address the code takes; 7 have no corroboration. Precision here
+    # is a floor on accuracy, not a measure of it; PSX_CORROBORATED_FLOORS
+    # gates the supplementary precision that counts the corroborated ones.
     "psx-darkstalkers-3": (0.976, 0.356),
-    "psv-need-for-speed-most-wanted": (0.962, 0.947),  # 0.9724 / 0.9570
-    "x360-black-ops-2": (0.973, 0.985),         # 0.9833 / 0.9956
+    # 0.9731 / 0.9713 since 2026-10-08 (an ARM pattern no longer walks a
+    # vtable-named Thumb function as ARM); 0.9720 / 0.9712 before.
+    "psv-need-for-speed-most-wanted": (0.963, 0.961),
+    "x360-black-ops-2": (0.973, 0.986),         # 0.9833 / 0.9964 (0.9956 before)
 }
+
+# Supplementary precision (`psx_corroborated`), measured 0.9968 on 2026-10-08
+# with a 0.01 margin. Stock Ghidra measures 1.0000 under the same rule.
+PSX_CORROBORATED_FLOORS: dict[str, float] = {"psx-darkstalkers-3": 0.986}
 
 
 def score(project: Path, program: str, truth: dict[int, tuple[int, str]],
-          ranges: list[tuple[int, int]] | None) -> dict:
+          ranges: list[tuple[int, int]] | None, corroborated: dict[int, str] | None = None) -> dict:
+    """Recall and precision against `truth`; with `corroborated` (PSX), also the supplementary
+    `precision_corroborated`: precision where an entry counts when the truth names it or the
+    image's bytes corroborate it (`psx_corroborated`). `precision` is unchanged."""
     db = sqlite3.connect(f"file:{project}/project.sqlite?mode=ro", uri=True)
     pid = db.execute("SELECT id FROM programs WHERE name = ?", (program,)).fetchone()[0]
     if ranges is None:
@@ -178,7 +375,7 @@ def score(project: Path, program: str, truth: dict[int, tuple[int, str]],
     hits = [address for address in scored if address in found]
     invented = [address for address in found if address not in scored and inside(address)]
     sized = [address for address in hits if scored[address][0]]
-    return {
+    row = {
         "truth": len(scored),
         "found": sum(1 for address in found if inside(address)),
         "recall": round(len(hits) / max(len(scored), 1), 4),
@@ -191,6 +388,20 @@ def score(project: Path, program: str, truth: dict[int, tuple[int, str]],
         "missed_sample": [f"{a:#x} {scored[a][1]}" for a in sorted(set(scored) - set(found))[:10]],
         "invented_sample": [f"{a:#x}" for a in sorted(invented)[:10]],
     }
+    if corroborated is not None:
+        evidence = [corroborated[a] for a in invented if a in corroborated]
+        unproven = sorted(a for a in invented if a not in corroborated)
+        row.update({
+            "precision_corroborated": round((len(hits) + len(evidence)) / max(len(hits) + len(invented), 1), 4),
+            "invented_corroborated": len(evidence),
+            "invented_corroborated_by": {kind: evidence.count(kind) for kind in sorted(set(evidence))},
+            "invented_uncorroborated": len(unproven),
+            "uncorroborated_sample": [f"{a:#x}" for a in unproven[:10]],
+            # Image-corroborated entries no tool proposed (truth entries excluded).
+            "corroborated_unfound": sum(1 for a in corroborated
+                                        if a not in found and a not in scored and inside(a)),
+        })
+    return row
 
 
 def run_image(spec: dict, corpus: Path, work: Path) -> dict:
@@ -212,7 +423,7 @@ def run_image(spec: dict, corpus: Path, work: Path) -> dict:
             [str(CLI), "import", str(image), "--name", spec["program"].split(".")[0],
              "--project", str(project), "--timings"],
             capture_output=True, text=True, timeout=limit,
-            env={**__import__("os").environ, "ROMWRIGHT_NO_IMPORT_CACHE": "1"})
+            env={**__import__("os").environ, "ROMWRIGHT_NO_IMPORT_CACHE": "1", "ROMWRIGHT_NO_FACT_PACK": "1"})
     except subprocess.TimeoutExpired:
         shutil.rmtree(project, ignore_errors=True)
         if spec["id"] in EXPECTED_TIMEOUT:
@@ -231,9 +442,9 @@ def run_image(spec: dict, corpus: Path, work: Path) -> dict:
     for line in result.stdout.splitlines():
         if line.startswith("TIMINGS "):
             diagnostics = json.loads(line[len("TIMINGS "):]).get("diagnostics", [])
-    truth = {"elf": elf_functions, "psx-map": psx_map_functions,
-             "msvc-map": msvc_map_functions, "binmap": binmap_functions}[kind](truth_file)
-    row = score(project, spec["program"], truth, spec["ranges"])
+    truth = LOADERS[kind](truth_file)
+    corroborated = psx_corroborated(image, spec["ranges"]) if kind == "psx-map" else None
+    row = score(project, spec["program"], truth, spec["ranges"], corroborated)
     row.update(seconds=round(seconds, 1),
                peak_rss_mb=round(max(peak_kb, before) / 1024) if peak_kb > before else None,
                diagnostics=diagnostics)
@@ -253,6 +464,9 @@ def run_image(spec: dict, corpus: Path, work: Path) -> dict:
             failures.append(f"recall {row['recall']} < {floor[0]}")
         if row["precision"] < floor[1]:
             failures.append(f"precision {row['precision']} < {floor[1]}")
+    corroborated_floor = PSX_CORROBORATED_FLOORS.get(spec["id"])
+    if corroborated_floor and row["precision_corroborated"] < corroborated_floor:
+        failures.append(f"precision_corroborated {row['precision_corroborated']} < {corroborated_floor}")
     row["status"] = "fail" if failures else "pass"
     row["failures"] = failures
     shutil.rmtree(project, ignore_errors=True)

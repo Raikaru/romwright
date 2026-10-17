@@ -32,7 +32,6 @@ PINS = {
     "dwarf_gate_sha256": ROOT / "benchmarks/dwarf_gate.py",
     "dwarf_reader_sha256": ROOT / "benchmarks/dwarf_arity.py",
     "native_patch_sha256": ROOT / "native/ghidra-opt-sleigh.patch",
-    "native_linkage_sha256": ROOT / "native/romwright_linkage.hh",
 }
 
 
@@ -118,7 +117,7 @@ def main() -> int:
             "native_entries": freshness("native_entries", entries, entries["sources"]),
             "native_arity": freshness("native_arity", arity, {
                 key: arity[key] for key in
-                ("dwarf_reader_sha256", "native_patch_sha256", "native_linkage_sha256")}),
+                ("dwarf_reader_sha256", "native_patch_sha256")}),
         }
 
         rows, deficits = [], []

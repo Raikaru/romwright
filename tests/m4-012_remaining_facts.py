@@ -171,15 +171,19 @@ def parameters(rendered: str) -> list[str]:
 def spec_bundle(root: Path, language: str) -> Path:
     """The directory holding a language's spec files.
 
-    The root specs are the x86-64 bundle; every other language needs its
-    own directory, and a missing one is a provisioning failure, not a
-    semantic fact.
+    The root specs are the x86-64 bundle, and the importer takes them for
+    `x86:LE:64:default` whether or not `x86-LE-64-default/` exists
+    (`native_runtime::language_decompile_config`): that directory is the
+    install's own default compiler (Visual Studio, `__fastcall`, no
+    `processEntry`), not the gcc one ELF images are decompiled with. Every
+    other language needs its own directory, and a missing one is a
+    provisioning failure, not a semantic fact.
     """
+    if language == "x86:LE:64:default":
+        return root
     bundle = root / language.replace(":", "-")
-    if bundle.is_dir():
-        return bundle
-    assert language == "x86:LE:64:default", f"spec bundle missing: {bundle}"
-    return root
+    assert bundle.is_dir(), f"spec bundle missing: {bundle}"
+    return bundle
 
 
 def declares_model(language: str) -> bool:
@@ -425,7 +429,11 @@ def main() -> int:
         assert PE.is_file(), f"{PE} is missing"
         pe_project = work / "pe"
         imported(PE, pe_project, arguments.timeout)
-        pe_held = conventions(pe_project, PE.name)
+        # The PE importer records conventions of its own (`x86-convention`:
+        # `__stdcall+N` where a `ret N` proves it, `__cdecl`); what the rule
+        # excludes is the ELF process-entry fact.
+        pe_held = {address: fact for address, fact in conventions(pe_project, PE.name).items()
+                   if fact["convention"] == MODEL or fact["provenance"] == SOURCE}
         assert not pe_held, f"a PE image records an ELF entry convention: {pe_held}"
         controls["pe"] = "no convention rows"
 

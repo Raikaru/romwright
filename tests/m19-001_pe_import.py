@@ -163,7 +163,6 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ)
-    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     tmp = arguments.work / "tmp"
     tmp.mkdir(exist_ok=True)
     environment["TMPDIR"] = str(tmp)

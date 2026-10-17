@@ -113,7 +113,6 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     env = os.environ.copy()
-    env.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     # Both imports run cold: this gate measures the analyser, and reuse of a
     # previous import is m14-001's claim, not this one's.
     env["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"

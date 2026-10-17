@@ -3,7 +3,7 @@
 
 Claim: an exhaustive length sweep over mapped bytes runs in linear
 time with a deterministic per-offset result, and agrees with the
-SLEIGH console where ground truth holds addresses to check.
+in-process SLEIGH decoder where ground truth holds addresses to check.
 
 What this is: Nguyen et al., "Analyzing Bytes: Pre-Disassembly Static
 Binary Analysis" (PACMPL 2026, doi 10.1145/3808292), show exhaustive
@@ -147,7 +147,6 @@ def main() -> int:
     arguments = parser.parse_args()
     arguments.work.mkdir(parents=True, exist_ok=True)
     environment = dict(os.environ)
-    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     environment["TMPDIR"] = str(arguments.work / "tmp")
     (arguments.work / "tmp").mkdir(exist_ok=True)

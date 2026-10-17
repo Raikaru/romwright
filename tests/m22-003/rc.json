@@ -1,0 +1,62 @@
+{
+  "lane": "rc",
+  "game": "ps2-ratchet-clank",
+  "title": "Ratchet & Clank (USA, SCUS_971.99), every C unit compiled with the pinned ee-gcc 2.9-991111-01",
+  "repo": {
+    "url": "https://github.com/lombyte-project/Lombyte.git",
+    "commit": "36a18ca4459480f7080e33f2ec413ef8485250e5"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-ratchet-clank/SCUS_971.99",
+    "sha1": "72fd1de379dafd8f243dceeb3be50980f3fd3cd5"
+  },
+  "program": "ps2-rc",
+  "gp": "0x0",
+  "compiler": "ee-gcc2.9-991111-01",
+  "tools": [
+    "ee-gcc2.9-991111-01",
+    "ee-gcc2.95.3-114",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "no_aslr": true,
+  "i386_loader": true,
+  "venv": {
+    "requirements": "{repo}/requirements.txt"
+  },
+  "env": {
+    "LD_LIBRARY_PATH": "{glibc32}",
+    "SN_TOOLCHAIN_ROOT": "{work}/sn",
+    "RNC_WINE": "wibo",
+    "GAME_COMPILER_ROOT": "{work}/game-compiler"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-ratchet-clank/truth/functions.tsv"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/us/symbol_addrs.txt"
+    }
+  ],
+  "setup": [
+    "mkdir -p tools/compilers && ln -sfn {tool:ee-gcc2.9-991111-01} tools/compilers/sdk-compiler && ln -sfn compilers tools/cc",
+    "rm -rf {work}/game-compiler {work}/sn && mkdir -p {work}/game-compiler/include {work}/sn/bin {work}/sn/ee/bin && printf '#!/bin/sh\\nexec {tool:ee-gcc2.9-991111-01}/bin/ee-gcc \"$@\"\\n' > {work}/game-compiler/ee-gcc && printf '#!/bin/sh\\nexec {tool:binutils-mips-ps2-decompals}/mips-ps2-decompals-as \"$@\"\\n' > {work}/game-compiler/as && chmod +x {work}/game-compiler/ee-gcc {work}/game-compiler/as && ln -sf {tool:ee-gcc2.9-991111-01}/lib/gcc-lib/ee/2.9-ee-991111-01/cc1 {work}/game-compiler/cc1 && ln -sf {tool:ee-gcc2.95.3-114}/bin/ee-gcc.exe {work}/sn/bin/ee-gcc.exe && ln -sf {tool:ee-gcc2.95.3-114}/lib/gcc-lib/ee/2.95.3/ps2eeas.exe {work}/sn/ee/bin/Ps2EeAs.exe",
+    "ln -sf {retail} config/us/SCUS_971.99",
+    "{python} configure.py config/us/rnc1.us.yaml -c"
+  ],
+  "build": {
+    "kind": "ninja",
+    "dir": "config/us",
+    "family": "gcc",
+    "output_regex": "^build/src/.*\\.c\\.o$",
+    "timeout": 1800
+  },
+  "limits": [
+    "Ratchet & Clank (Lombyte) builds its SDK block with the vendored ee-gcc 2.9-991111-01 (= the pinned `ee-gcc2.9-991111-01`) but its game code with a reconstructed Sony/Cygnus 2.9-ee-991111b built from a GPL source archive and a patch stack (`scripts/build-game-compiler.py`: needs a 32-bit host toolchain, `gcc -m32`) and assembled by Ps2EeAs 1.9.25.758 under wine. Neither is in toolchains.json and the lane host has no 32-bit development files and no root. The lane therefore takes the commands of the repo's own source-only objdiff base build (`build/src/**/*.c.o`: `ee-gcc -c -O2 -g2 -gstabs` with the SDK compiler for every unit, game units included) and compiles every unit with the pinned 2.9-991111-01. SDK units are compiled as the repo compiles them; a game unit matches only where the SDK compiler and the game compiler agree, so the matched count is far below the repo's own and is dominated by the SDK block. `configure.py` insists on a game compiler, so `tools/compilers/game-compiler` is a stub (the pinned driver) that no unit of this lane uses.",
+    "The oracle objects the repo's `link` build uses for units without a matching compile are copies of retail bytes; they are not compiled from C and are excluded (units whose compile source is not a `.c` file are skipped)."
+  ],
+  "family_depth": 2
+}

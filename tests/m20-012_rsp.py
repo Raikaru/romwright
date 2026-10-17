@@ -58,6 +58,10 @@ def main() -> int:
     vec_total = vec_match = 0
     for funct in range(64):
         w = 0b010010_1_0000_00010_00011_00100_000000 | funct
+        # `vnop` has no operands: rabbitizer 1.14 reads the same funct with operand bits set as
+        # data (`.word`), so its canonical encoding is the one compared.
+        if funct == 0x37:
+            w = 0x4A00_0037
         ref = rabbitizer.Instruction(
             w, 0x80000000,
             category=rabbitizer.InstrCategory.RSP).disassemble().split()[0]

@@ -1,0 +1,77 @@
+{
+  "lane": "dk",
+  "game": "ps2-dark-cloud",
+  "title": "Dark Cloud (USA, SCUS_971.11), MWCC PS2 2.3.3 (C++)",
+  "repo": {
+    "url": "https://github.com/TheMoonPeople/Chronicle.git",
+    "commit": "c63620eb6904e8e43c004e93cb85ae91d2ff5c73"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-dark-cloud/SCUS_971.11",
+    "sha1": "d9965d6908a334a5dfc982f3384428ad42048d54"
+  },
+  "program": "ps2-dk",
+  "gp": "0x0",
+  "compiler": "mwcps2-2.3.3-000906",
+  "tools": [
+    "mwcps2-2.3.3-000906",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "venv": {
+    "extra": [
+      "splat64[mips]==0.50.0",
+      "libclang",
+      "toml",
+      "levenshtein",
+      "pyyaml",
+      "pyelftools",
+      "pycdlib",
+      "tqdm",
+      "ninja"
+    ]
+  },
+  "env": {
+    "STATEFIX": "0",
+    "WIBO": "wibo",
+    "JOBS": "{jobs}"
+  },
+  "symbols": [
+    {
+      "kind": "elf_symtab",
+      "path": "{retail}"
+    }
+  ],
+  "setup": [
+    "rm -rf ps2/build/ntsc",
+    "git submodule update --init --recursive tools/mwccgap tools/m2c",
+    "mkdir -p tools/compilers/mw && mv tools/compilers/mw/2.3.3 tools/compilers/mw/2.3.3.repo 2>/dev/null || rm -rf tools/compilers/mw/2.3.3; mkdir -p tools/compilers/mw/2.3.3 && cp {tool:mwcps2-2.3.3-000906}/mwccps2.exe tools/compilers/mw/2.3.3/mwccmips.exe && cp {tool:mwcps2-2.3.3-000906}/LMGR326B.DLL {tool:mwcps2-2.3.3-000906}/asm_r5900_elf.exe {tool:mwcps2-2.3.3-000906}/mwldps2.exe tools/compilers/mw/2.3.3/",
+    "mkdir -p rom/ntsc/extracted/iso && ln -sf {retail} rom/ntsc/extracted/iso/SCUS_971.11 && for f in TITLE.BIN DUN.BIN; do ln -sf ~/ventris-corpus/extracted/ps2-dark-cloud/modules/$f rom/ntsc/extracted/iso/$f; done",
+    "scripts/build/cmake.sh setup",
+    "scripts/build/cmake.sh ctx"
+  ],
+  "build": {
+    "kind": "ninja",
+    "dir": "ps2/build/ntsc",
+    "family": "mwcc",
+    "command_regex": "mwccgap\\.sh",
+    "output_regex": "\\.o$"
+  },
+  "shared_context": {
+    "file": "ps2/build/ntsc/ctx.c",
+    "repair": true
+  },
+  "candidate_source": {
+    "from": ".cpp",
+    "to": ".c"
+  },
+  "m2c_cache": true,
+  "family_depth": 1,
+  "limits": [
+    "C++ lane (136 game units, mangled names, classes). Candidates are C, written as `.c` files at the unit's place so the unit's own command (`scripts/build/mwccgap.sh`, MWCC 2.3.3) compiles them as C; each function carries the retail mangled symbol name. The context is the repo's own C-compatible m2c context (`ctx.c` from `scripts/build/cmake.sh ctx`), the same text for every function; no per-function `#pragma` state and no `oracle` layer.",
+    "The repo compiles through `scripts/build/statefix-wibo.sh`, a python shim that applies per-unit compiler-state fixes the sources carry as pragmas. It is switched off here with the repo's own documented `STATEFIX=0` (plain wibo, the pinned unmodified compiler), so the matched set is what plain MWCC 2.3.3 reproduces, smaller than the repo's own. The repo's `mwccmips.exe` is byte-identical to the pinned `mwccps2.exe` (sha256 6375fd27...).",
+    "romwright prints a C++ symbol demangled (`ClsMes_SetHalfFontWPercent` for `SetHalfFontWPercent__6ClsMesFf`); the harness renames the function the text defines to the retail mangled symbol (as m22-002 does for stock Ghidra's names), nothing else in the text is changed."
+  ],
+  "rename_target": true
+}

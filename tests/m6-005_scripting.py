@@ -8,7 +8,7 @@ client itself: every helper the page names must exist on `Client`, and every
 `Client` helper must be named by the page. A client that grows a method the
 page never mentions, or a page that promises one the client lost, fails here.
 
-The script is run twice -- with the SLEIGH console and with every `ROMWRIGHT_*`
+The script is run twice -- with this environment and with every `ROMWRIGHT_*`
 variable stripped -- because the page claims it works either way.
 
 Usage:
@@ -123,7 +123,6 @@ def main() -> int:
         bare = {key: value for key, value in os.environ.items()
                 if not key.startswith("ROMWRIGHT_")}
         bare["ROMWRIGHT_GHIDRA"] = "/nonexistent"
-        bare["ROMWRIGHT_CONSOLE"] = "/nonexistent"
         checked += run_documented(commands, Path(temporary) / "bare", bare,
                                   arguments.timeout)
 

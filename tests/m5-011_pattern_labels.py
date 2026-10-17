@@ -8,7 +8,7 @@ The pinned install ships byte patterns with names attached, for example
 
 in `Ghidra/Processors/x86/data/patterns/x86gcc_patterns.xml`. Romwright already
 matches those patterns and already uses their labels to install call fixups in
-the decompiler console (`ConsoleSession::send_reference_fixups`) -- it just
+the reference pass (`ReferenceContext`'s call fixups) -- it just
 never wrote the name into the store, which left eleven `__i686.get_pc_thunk.*`
 rows pinned in `tests/m5-010_initializer_names.py`.
 

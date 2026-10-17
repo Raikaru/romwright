@@ -69,9 +69,6 @@ def main():
                         oracle.add(address)
             assert oracle, "Symbol oracle is empty"
             row["oracle_functions"] = len(oracle)
-            console = Path(os.environ.get("ROMWRIGHT_CONSOLE", ROOT / "native/build/decomp_native"))
-            if not console.is_file():
-                raise FileNotFoundError(f"Required SLEIGH console missing: {console}")
             # Import only the stripped DOL. Oracle addresses/names never reach the importer.
             imported = subprocess.run([str(CLI), "import", str(args.dol), "--name", "dol",
                                        "--project", str(work / "project")], capture_output=True, text=True, timeout=600)
