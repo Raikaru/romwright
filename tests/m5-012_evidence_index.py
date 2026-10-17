@@ -17,7 +17,7 @@ This gate makes the evidence surface auditable:
     carrying its id, so a measured result cannot exist only in a transcript
     (the few that need inputs a checkout lacks are listed with the reason, and
     an exemption that is no longer needed fails);
-  * the README index is generated from those reports and is in sync, with the
+  * the index (docs/evidence.md) is generated from those reports and is in sync, with the
     rows derived: change a measured number and the row moves, delete a report
     and the row disappears, commit a failing report and the generator refuses.
 
@@ -40,7 +40,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "gen_evidence_index.py"
 REPORTS = ROOT / "benchmarks" / "reports"
 DIAGNOSTICS = REPORTS / "diagnostics"
-README = ROOT / "README.md"
+PAGE = ROOT / "docs" / "evidence.md"
 BEGIN = "<!-- evidence-index:begin -->"
 END = "<!-- evidence-index:end -->"
 TASK = re.compile(r"^(m\d+-\d+[a-z]?)")
@@ -130,7 +130,8 @@ def fixture(root: Path) -> None:
     for path in Path(ROOT / "tests").glob("m*"):
         if path.is_file():
             shutil.copyfile(path, root / "tests" / path.name)
-    (root / "README.md").write_text(f"## Evidence\n\n{BEGIN}\n| stale |\n{END}\n")
+    (root / "docs").mkdir()
+    (root / "docs" / "evidence.md").write_text(f"# Evidence\n\n{BEGIN}\n| stale |\n{END}\n")
 
 
 def generated_rows(root: Path) -> dict[str, str]:
@@ -140,7 +141,7 @@ def generated_rows(root: Path) -> dict[str, str]:
         f"generator failed in the fixture tree: "
         f"{result.stderr.strip() or result.stdout.strip()}")
     rows = {}
-    for line in (root / "README.md").read_text().splitlines():
+    for line in (root / "docs" / "evidence.md").read_text().splitlines():
         if line.startswith("|") and "---" not in line and line.count("|") >= 3:
             cells = [cell.strip() for cell in line.strip("|").split("|")]
             rows[cells[0]] = " | ".join(cells[1:])
@@ -189,14 +190,14 @@ def check_rows_follow_the_reports() -> dict[str, object]:
     return observed
 
 
-def check_readme_in_sync() -> None:
-    body = README.read_text()
+def check_index_in_sync() -> None:
+    body = PAGE.read_text()
     assert BEGIN in body and END in body, (
-        "README has no evidence-index markers, so the index cannot be regenerated")
+        "docs/evidence.md has no evidence-index markers, so the index cannot be regenerated")
     result = subprocess.run([sys.executable, str(SCRIPT), "--check"],
                             cwd=ROOT, capture_output=True, text=True)
     assert result.returncode == 0, (
-        f"the README evidence index is stale: "
+        f"the evidence index in docs/evidence.md is stale: "
         f"{result.stderr.strip() or result.stdout.strip()}")
 
 
@@ -216,7 +217,7 @@ def main() -> int:
     diagnostics = sorted(path.name for path in DIAGNOSTICS.glob("*.json"))
     assert diagnostics, "no diagnostic runs were separated from current evidence"
     observed = check_rows_follow_the_reports()
-    check_readme_in_sync()
+    check_index_in_sync()
 
     summary = (f"{len(current)} current reports indexed, {len(published)} published "
                f"ids, {len(diagnostics)} diagnostic runs separated, "

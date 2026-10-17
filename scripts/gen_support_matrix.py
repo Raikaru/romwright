@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate or check the README support matrix from committed gate files.
+"""Generate or check the support matrix (docs/support-matrix.md) from committed gate files.
 
 Usage:
-    python scripts/gen_support_matrix.py          # Updates README.md in-place
-    python scripts/gen_support_matrix.py --check  # Fails if README matrix is stale
+    python scripts/gen_support_matrix.py          # Updates docs/support-matrix.md in-place
+    python scripts/gen_support_matrix.py --check  # Fails if the matrix is stale
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-README = ROOT / "README.md"
+PAGE = ROOT / "docs" / "support-matrix.md"
 REPORTS_DIR = ROOT / "benchmarks" / "reports"
 CATALOG = ROOT / "docs" / "platform-tiers.json"
 
@@ -303,11 +303,11 @@ def unproven_claims() -> list[str]:
     return unproven
 
 
-def update_readme(check: bool) -> bool:
-    if not README.is_file():
-        raise FileNotFoundError(f"README not found at {README}")
+def update_page(check: bool) -> bool:
+    if not PAGE.is_file():
+        raise FileNotFoundError(f"support matrix page not found at {PAGE}")
 
-    content = README.read_text(encoding="utf-8")
+    content = PAGE.read_text(encoding="utf-8")
     generated_table = generate_matrix()
 
     pattern = re.compile(
@@ -317,7 +317,7 @@ def update_readme(check: bool) -> bool:
     match = pattern.search(content)
     if not match:
         raise ValueError(
-            f"README.md has no generator markers ({BEGIN} ... {END}); the "
+            f"docs/support-matrix.md has no generator markers ({BEGIN} ... {END}); the "
             f"support matrix cannot be regenerated without hand editing"
         )
 
@@ -326,16 +326,16 @@ def update_readme(check: bool) -> bool:
 
     if current_section != expected_section:
         if check:
-            print("Support matrix in README.md is stale!", file=sys.stderr)
+            print("Support matrix in docs/support-matrix.md is stale!", file=sys.stderr)
             print("Run 'python scripts/gen_support_matrix.py' to regenerate it.", file=sys.stderr)
             return False
         new_content = content.replace(current_section, expected_section, 1)
-        README.write_text(new_content, encoding="utf-8")
-        print("Updated README.md support matrix successfully.")
+        PAGE.write_text(new_content, encoding="utf-8")
+        print("Updated docs/support-matrix.md support matrix successfully.")
         return True
 
     if check:
-        print("Support matrix in README.md is up to date.")
+        print("Support matrix in docs/support-matrix.md is up to date.")
     return True
 
 
@@ -344,7 +344,7 @@ def main() -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="Check if README matrix is up to date without modifying",
+        help="Check if the matrix is up to date without modifying",
     )
     args = parser.parse_args()
 
@@ -355,7 +355,7 @@ def main() -> int:
             print(f"error: {problem}", file=sys.stderr)
         return 1
 
-    ok = update_readme(check=args.check)
+    ok = update_page(check=args.check)
     return 0 if ok else 1
 
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """m5-005: the console platform matrix is measured, not written by hand.
 
-Every console row in the README support matrix must be derived from the
+Every console row in the support matrix (docs/support-matrix.md) must be derived from the
 platform's own committed gate report, and every platform that is *not*
 supported must be named together with the blocker that stops it. A support
 claim nobody measured is the failure mode this gate exists to prevent, so
@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "gen_support_matrix.py"
 CATALOG = ROOT / "docs" / "platform-tiers.json"
 REPORTS = ROOT / "benchmarks" / "reports"
-README = ROOT / "README.md"
+PAGE = ROOT / "docs" / "support-matrix.md"
 
 # The blocker that is left (STATUS.md's console sequencing decision named four
 # processor blockers too: VFPU, R5900, SPU, VMX128). Each processor is modelled
@@ -142,7 +142,7 @@ def generated_rows(root: Path) -> dict[str, str]:
         f"generator failed in fixture tree: {result.stderr.strip() or result.stdout.strip()}"
     )
     rows = {}
-    body = (root / "README.md").read_text(encoding="utf-8")
+    body = (root / "docs" / PAGE.name).read_text(encoding="utf-8")
     for line in body.splitlines():
         if line.startswith("| Platform |"):
             break  # the blocked table starts here; those are not claims
@@ -168,8 +168,8 @@ def fixture_tree(root: Path) -> None:
     (root / "tests").mkdir()
     for path in sorted(ROOT.glob("tests/m5-*.py")):
         shutil.copyfile(path, root / "tests" / path.name)
-    (root / "README.md").write_text(
-        f"## Support matrix\n\n{BEGIN}\n| stale |\n{END}\n", encoding="utf-8"
+    (root / "docs" / PAGE.name).write_text(
+        f"# Support matrix\n\n{BEGIN}\n| stale |\n{END}\n", encoding="utf-8"
     )
 
 
@@ -237,7 +237,7 @@ def check_rows_follow_the_reports(reports: dict[str, dict]) -> dict[str, object]
         # 4. Tier-2 platforms are named with their blockers, and never as
         #    supported inputs.
         catalog = json.loads((root / "docs" / CATALOG.name).read_text())
-        body = (root / "README.md").read_text(encoding="utf-8")
+        body = (root / "docs" / PAGE.name).read_text(encoding="utf-8")
         blocked_rows = 0
         for platform in catalog["platforms"]:
             if platform.get("tier") != 2:
@@ -274,10 +274,10 @@ def check_rows_follow_the_reports(reports: dict[str, dict]) -> dict[str, object]
     return observed
 
 
-def check_readme_in_sync() -> None:
-    body = README.read_text(encoding="utf-8")
+def check_page_in_sync() -> None:
+    body = PAGE.read_text(encoding="utf-8")
     assert BEGIN in body and END in body, (
-        "README support matrix is not delimited by generator markers, so it "
+        "the support matrix is not delimited by generator markers, so it "
         "cannot be regenerated without hand editing"
     )
     result = subprocess.run(
@@ -285,7 +285,7 @@ def check_readme_in_sync() -> None:
         cwd=ROOT, capture_output=True, text=True,
     )
     assert result.returncode == 0, (
-        f"README support matrix is stale: "
+        f"the support matrix in docs/support-matrix.md is stale: "
         f"{result.stderr.strip() or result.stdout.strip()}"
     )
 
@@ -299,7 +299,7 @@ def main() -> int:
     inputs = check_reports_carry_platform_identity(reports)
     catalog = check_catalog()
     observed = check_rows_follow_the_reports(reports)
-    check_readme_in_sync()
+    check_page_in_sync()
 
     summary = (
         f"{len(inputs)} console platforms generated from gate reports, "

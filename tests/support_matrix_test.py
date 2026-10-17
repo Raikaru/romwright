@@ -24,16 +24,16 @@ def verify_discovery_scope() -> None:
         (root / "docs").mkdir()
         shutil.copyfile(ROOT / "docs" / "platform-tiers.json",
                         root / "docs" / "platform-tiers.json")
-        readme = root / "README.md"
-        readme.write_text("## Support matrix\n\n"
-                          "<!-- support-matrix:begin -->\n| stale |\n"
-                          "<!-- support-matrix:end -->\n")
+        page = root / "docs" / "support-matrix.md"
+        page.write_text("# Support matrix\n\n"
+                        "<!-- support-matrix:begin -->\n| stale |\n"
+                        "<!-- support-matrix:end -->\n")
 
         def generate():
             subprocess.run([sys.executable, str(script)], cwd=root,
                            capture_output=True, text=True, check=True)
             rows = {}
-            for line in readme.read_text().splitlines():
+            for line in page.read_text().splitlines():
                 if line.startswith("| ELF "):
                     _, name, _, status, _ = line.split("|")
                     rows[name.strip()] = status.strip()
@@ -62,7 +62,7 @@ def main() -> int:
         sys.exit(f"FAIL: {SCRIPT} does not exist")
     verify_discovery_scope()
 
-    # Run generator check: fails if README matrix is stale or unparseable
+    # Run generator check: fails if the matrix page is stale or unparseable
     result = subprocess.run(
         [sys.executable, str(SCRIPT), "--check"],
         cwd=ROOT,
@@ -73,7 +73,7 @@ def main() -> int:
         detail = result.stderr.strip() or result.stdout.strip()
         sys.exit(f"FAIL: support matrix staleness check failed: {detail}")
 
-    print("m0-010 acceptance: pass (support matrix generator exists and README matrix is in sync)")
+    print("m0-010 acceptance: pass (support matrix generator exists and docs/support-matrix.md is in sync)")
     return 0
 
 

@@ -248,7 +248,7 @@ from the open image (`docs/desktop.md`).
 
 ## Where the numbers live
 
-Every gate writes a report under `benchmarks/reports/`, and the README
-evidence index is generated from those files. `STATUS.md` records the current
+Every gate writes a report under `benchmarks/reports/`, and the evidence index
+([evidence.md](evidence.md)) is generated from those files. `STATUS.md` records the current
 milestone and the next task. Nothing in either is written by hand except the
 prose around the generated tables.

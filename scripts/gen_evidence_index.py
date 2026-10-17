@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate or check the README evidence index from the committed reports.
+"""Generate or check the evidence index (docs/evidence.md) from the committed reports.
 
 Every gate writes a JSON report under `benchmarks/reports/`. This turns those
 files into one table: which gate, which milestone, what it measured, and the
@@ -12,7 +12,7 @@ record a pass, or a skip with a reason. Intermediate diagnostic runs live in
 next to current evidence is what made the directory unreadable.
 
 Usage:
-    python scripts/gen_evidence_index.py          # rewrite the README index
+    python scripts/gen_evidence_index.py          # rewrite the index in docs/evidence.md
     python scripts/gen_evidence_index.py --check  # fail if it is stale
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-README = ROOT / "README.md"
+PAGE = ROOT / "docs" / "evidence.md"
 REPORTS = ROOT / "benchmarks" / "reports"
 BEGIN = "<!-- evidence-index:begin -->"
 END = "<!-- evidence-index:end -->"
@@ -166,32 +166,32 @@ def table() -> str:
 
 
 def update(check: bool) -> bool:
-    content = README.read_text(encoding="utf-8")
+    content = PAGE.read_text(encoding="utf-8")
     pattern = re.compile(re.escape(BEGIN) + r"\n.*?\n" + re.escape(END), re.DOTALL)
     match = pattern.search(content)
     if not match:
         raise ValueError(
-            f"README.md has no evidence-index markers ({BEGIN} ... {END})")
+            f"docs/evidence.md has no evidence-index markers ({BEGIN} ... {END})")
     expected = f"{BEGIN}\n{table()}\n{END}"
     if match.group(0) != expected:
         if check:
-            print("Evidence index in README.md is stale!", file=sys.stderr)
+            print("Evidence index in docs/evidence.md is stale!", file=sys.stderr)
             print("Run 'python scripts/gen_evidence_index.py' to regenerate it.",
                   file=sys.stderr)
             return False
-        README.write_text(content.replace(match.group(0), expected, 1),
-                          encoding="utf-8")
-        print("Updated README.md evidence index successfully.")
+        PAGE.write_text(content.replace(match.group(0), expected, 1),
+                        encoding="utf-8")
+        print("Updated docs/evidence.md evidence index successfully.")
         return True
     if check:
-        print("Evidence index in README.md is up to date.")
+        print("Evidence index in docs/evidence.md is up to date.")
     return True
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true",
-                        help="fail if the README index is stale")
+                        help="fail if the index is stale")
     arguments = parser.parse_args()
     return 0 if update(check=arguments.check) else 1
 
