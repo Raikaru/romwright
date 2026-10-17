@@ -84,7 +84,7 @@ def generate_matrix() -> str:
     aarch64_status = "selected SLEIGH bundle required; not parity-gated"
     arm_status = "selected SLEIGH bundle required; not parity-gated"
     mips_status = "selected SLEIGH bundle required; not parity-gated"
-    riscv_status = "no spec bundle in native/specs and no corpus row; unmeasured"
+    riscv_status = "decodes on `RISCV:LE:64:default`; spec bundle present; not parity-gated"
     ppc_status = (
         "e500 BE32 parity verified on Agent Under Fire; broader targets not gated"
     )
@@ -136,7 +136,7 @@ def generate_matrix() -> str:
         ("ELF MIPS LE32", "supported", mips_status),
         ("ELF RISC-V LE64", "supported", riscv_status),
         ("ELF PowerPC", "supported", ppc_status),
-    ] + console_rows()
+    ] + console_rows() + catalog_rows()
 
     header = [
         "| Input | Structural native import | Native flow/decode/decompile |",
@@ -167,6 +167,19 @@ def console_rows() -> list[tuple[str, str, str]]:
     rows = []
     for report_id, report, platform in console_reports():
         rows.append((platform["input"], "supported", console_status(report_id, report, platform)))
+    return rows
+
+
+def catalog_rows() -> list[tuple[str, str, str]]:
+    """Tier-3 catalog entries: supported inputs no per-platform gate report measures.
+
+    The claim is committed data that says what was checked and that no gate
+    measures it (docs/platform-tiers.json), so the row cannot read as gated.
+    """
+    rows = []
+    for platform in catalog_platforms():
+        if platform.get("tier") == 3:
+            rows.append((platform["input"], "supported", platform["claim"]))
     return rows
 
 

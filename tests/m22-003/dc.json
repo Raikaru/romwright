@@ -1,0 +1,84 @@
+{
+  "lane": "dc",
+  "game": "ps2-dark-chronicle",
+  "title": "Dark Chronicle (PAL, SCES_511.90), MWCC PS2 3.0-011126 (C++)",
+  "repo": {
+    "url": "https://github.com/TheMoonPeople/ChronicleTwo.git",
+    "commit": "63f7a9e591f75146dc50b0f79df31be25d0cb0db"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-dark-chronicle/SCES_511.90",
+    "sha1": "32d26ba8e132a6b65f53212c89803903d0ad7f4d"
+  },
+  "program": "ps2-dc",
+  "compiler": "mwcps2-3.0-011126",
+  "tools": [
+    "mwcps2-3.0-011126",
+    "mwcps2-2.4-001213",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "venv": {
+    "extra": [
+      "splat64[mips]==0.50.0",
+      "libclang",
+      "toml",
+      "levenshtein",
+      "pyyaml",
+      "pyelftools",
+      "pycdlib",
+      "tqdm",
+      "ninja"
+    ]
+  },
+  "env": {
+    "SATANSFIDDLE": "{lane_tools}/satansfiddle-plain",
+    "JOBS": "{jobs}"
+  },
+  "gp": "0x0",
+  "symbols": [
+    {
+      "kind": "elf_symtab",
+      "path": "{retail}"
+    }
+  ],
+  "setup": [
+    "rm -rf build/pal",
+    "git submodule update --init --recursive tools/mwccgap tools/m2c",
+    "mkdir -p tools/compilers/mw && for v in 3.0-011126 2.4-001213; do [ -L tools/compilers/mw/$v ] || mv tools/compilers/mw/$v tools/compilers/mw/$v.repo; done; ln -sfn {tool:mwcps2-3.0-011126} tools/compilers/mw/3.0-011126; ln -sfn {tool:mwcps2-2.4-001213} tools/compilers/mw/2.4-001213",
+    "mkdir -p rom/pal/extracted/iso && ln -sf {retail} rom/pal/extracted/iso/SCES_511.90",
+    "scripts/build/cmake.sh setup",
+    "scripts/build/cmake.sh ctx"
+  ],
+  "build": {
+    "kind": "ninja",
+    "dir": "build/pal",
+    "family": "mwcc",
+    "command_regex": "mwccgap\\.sh",
+    "output_regex": "\\.o$"
+  },
+  "cross_check": {
+    "what": "the repo's own link (`scripts/build/cmake.sh elf`), compiled by plain MWCC without Satan's Fiddle",
+    "run": "scripts/build/cmake.sh elf",
+    "run_may_fail": true,
+    "kind": "linked_elf",
+    "file": "build/pal/SCES_511.90"
+  },
+  "shared_context": {
+    "file": "build/pal/ctx.c",
+    "repair": true
+  },
+  "candidate_source": {
+    "from": ".cpp",
+    "to": ".c"
+  },
+  "m2c_cache": true,
+  "family_depth": 1,
+  "limits": [
+    "C++ lane. The 149 game units are C++ (`-lang c++`, mangled symbol names, classes); candidates are C. Each candidate is written as a `.c` file at the unit's place so the unit's own command (`scripts/build/mwccgap.sh`, `-O3,p`, the repo's include roots) compiles it as C, and its function carries the retail mangled symbol name (a valid C identifier). The context is the repo's own C-compatible m2c context (`ctx.c` from `scripts/build/cmake.sh ctx`: classes flattened to structs, no member-function prototypes), the same text for every function. No per-function `#pragma` state is replayed and there is no `oracle` layer (a C++ method's text cannot be compiled as C).",
+    "Satan's Fiddle (the repo's LLDB-based MWCC state controller) is not built here: it needs LLDB development files (fetchable without root, `dnf download lldb-devel`, but the Fiddle revision the repo pins is built against LLVM 19, the host has 22) and an unstripped i386 `wibo` built from source (no 32-bit libc development files on the host and no root). The pinned compiler runs unmodified through `tests/m22-003/tools/satansfiddle-plain`, so the matched set is what plain MWCC 3.0-011126 reproduces: the 79 functions that differ out of the repo's 6747 C functions bound what Fiddle's per-unit overrides recover.",
+    "romwright prints a C++ symbol demangled (`ClsMes_SetHalfFontWPercent` for `SetHalfFontWPercent__6ClsMesFf`); the harness renames the function the text defines to the retail mangled symbol (as m22-002 does for stock Ghidra's names), nothing else in the text is changed."
+  ],
+  "rename_target": true
+}

@@ -109,9 +109,7 @@ def contains(documented, actual, path: str) -> str | None:
 def sleigh_available() -> bool:
     install = Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                   str(Path.home() / "ghidra_12.1.3_PUBLIC")))
-    console = Path(os.environ.get("ROMWRIGHT_CONSOLE",
-                                  str(ROOT / "native/build/decomp_native")))
-    return install.is_dir() and console.is_file()
+    return install.is_dir()
 
 
 def main() -> int:
@@ -140,7 +138,7 @@ def main() -> int:
 
         for requirement, pairs in parsed:
             if requirement == "sleigh" and not sleigh_available():
-                skipped.append("sleigh: no pinned Ghidra install or SLEIGH console")
+                skipped.append("sleigh: no pinned Ghidra install")
                 continue
             assert requirement in (None, "sleigh"), (
                 f"unknown block requirement {requirement!r}")

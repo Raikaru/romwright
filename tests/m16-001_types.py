@@ -44,17 +44,20 @@ from dwarf_types import extract  # noqa: E402
 CLI = ROOT / "target/release/romwright-cli"
 FIXTURE = ROOT / "tests/fixtures-src/types_fixture.c"
 LEVELS = ("O0", "O2")
-# Measured: exact 0.50, conservative 0.956, three contradictions out of 68.
-# The thresholds sit just outside those numbers so the gate catches a
+# Measured (gcc 16.2.1): exact 0.544, conservative 1.0, no contradiction out of
+# 68. The thresholds sit just outside the old numbers so the gate catches a
 # regression rather than pinning today's arithmetic.
 #
-# All three contradictions come from one limitation, named rather than
-# tuned away: the inference tracks registers, not SSA values, so a register
-# the body reuses as scratch stops carrying its entry identity, and evidence
-# from after the reuse lands on the parameter. Two of the three are that
-# (`mixed`'s pointer at O0, its return at O2); the third is a width read
-# narrower than the declared type. Fixing them is value numbering, which is
-# the next increment and not a threshold change.
+# The inference tracks registers, not SSA values, so a register the body
+# reuses as scratch stops carrying its entry identity and evidence from after
+# the reuse can land on a parameter; value numbering is the next increment
+# and not a threshold change. Four contradictions on this fixture's O2 build
+# were three smaller faults of the same kind, none of them the compiler's
+# (gcc 16 vectorises `mixed`'s loop and lays zeroing paths last): `xor eax,
+# eax` read as an unsigned use and as the register's last write, `test r, r`
+# read as an unsigned mask where the branch after it reads the sign, and a
+# register's old `lea` address surviving a `mov` into it, which typed
+# `length` as a pointer. Each is a unit test in `types_infer`.
 WRONG_CEILING = 0.05
 EXACT_FLOOR = 0.45
 CONSERVATIVE_FLOOR = 0.90
@@ -82,6 +85,15 @@ def generalises(answer: str, truth: str) -> int | None:
         if width is not None and answered >= width:
             return 1
         if truth in ("ptr", "code") and answered == 64:
+            return 1
+        return None
+    # `int-or-uintN` is an N-bit integer whose sign the evidence does not
+    # settle (signed and unsigned uses of one value): the join of `intN` and
+    # `uintN`, so a generalisation of either, as `numN` is of every N-bit
+    # scalar. It claims an integer, so a float or a pointer contradicts it.
+    if answer.startswith("int-or-uint") and answer[len("int-or-uint"):].isdigit():
+        answered = int(answer[len("int-or-uint"):])
+        if truth.startswith(("int", "uint")) and width is not None and answered >= width:
             return 1
         return None
     for prefix in ("int", "uint", "float"):
@@ -121,7 +133,6 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 

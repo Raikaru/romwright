@@ -56,7 +56,6 @@ def main():
     parser.add_argument("--report", type=Path, required=True)
     arguments = parser.parse_args()
     environment = os.environ.copy()
-    environment.setdefault("ROMWRIGHT_CONSOLE", str(ROOT / "native/build/decomp_native"))
     environment["ROMWRIGHT_NO_IMPORT_CACHE"] = "1"
     subprocess.run(["cargo", "build", "-q", "--release", "-p", "romwright-cli"], cwd=ROOT, check=True)
 

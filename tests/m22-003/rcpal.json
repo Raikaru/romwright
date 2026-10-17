@@ -1,0 +1,94 @@
+{
+  "lane": "rcpal",
+  "game": "ps2-ratchet-clank-pal",
+  "title": "Ratchet & Clank (PAL, SCES_509.16), SN ProDG ee-gcc 2.95.3 (v1.14) + SN ps2eeas",
+  "repo": {
+    "url": "https://github.com/OpenRAC/rac1-decomp.git",
+    "commit": "0fe9b5129b831024e5372b05e52c0279f4fe54ab"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-ratchet-clank-pal/SCES_509.16",
+    "sha1": "79956931bd62fafd8d20fa2eae796dbaf2e15e83"
+  },
+  "program": "ps2-rcpal",
+  "gp": "0x0",
+  "compiler": "ee-gcc2.95.3-114",
+  "unit_compilers": [
+    {
+      "command": "2\\.9-ee-991111",
+      "id": "ee-gcc2.9-991111"
+    }
+  ],
+  "tools": [
+    "ee-gcc2.95.3-114",
+    "ee-gcc2.9-991111",
+    "ee-gcc2.9-991111-01",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "no_aslr": true,
+  "i386_loader": true,
+  "venv": {
+    "requirements": "{repo}/requirements.txt"
+  },
+  "env": {
+    "WINE": "wibo",
+    "LD_LIBRARY_PATH": "{glibc32}"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-ratchet-clank-pal/truth/functions.tsv"
+    }
+  ],
+  "setup": [
+    "mkdir -p baserom && ln -sf {retail} baserom/SCES_509.16 && G={work}/sn24/local/sce/ee/gcc && rm -rf {work}/sn24 toolchain && mkdir -p $G/bin $G/lib/gcc-lib/ee toolchain && ln -sf {tool:ee-gcc2.95.3-114}/bin/ee-gcc.exe $G/bin/ee-gcc2953.exe && ln -sf {tool:ee-gcc2.9-991111}/bin/ee-gcc.exe $G/bin/ee-gcc.exe && ln -sfn {tool:ee-gcc2.95.3-114}/lib/gcc-lib/ee/2.95.3 $G/lib/gcc-lib/ee/2.95.3 && ln -sfn {tool:ee-gcc2.9-991111}/lib/gcc-lib/ee/2.9-ee-991111 $G/lib/gcc-lib/ee/2.9-ee-991111 && ln -sfn {work}/sn24 toolchain/sn-prodg-24 && ln -sfn {tool:ee-gcc2.9-991111-01} toolchain/ee-gcc-2.9-991111-01",
+    "bash tools/setup_asm.sh"
+  ],
+  "build": {
+    "kind": "make",
+    "makefile": "Makefile.sn",
+    "family": "gcc",
+    "objects_command": "grep -hv -e '^#' -e '^$' config/core_text.objects config/text.objects | cut -d' ' -f1",
+    "source": [
+      [
+        "^build-sn/core/(.*)\\.o$",
+        "src/core/\\1.c"
+      ],
+      [
+        "^build-sn/game/(.*)\\.o$",
+        "src/game/\\1.c"
+      ]
+    ],
+    "preprocess": {
+      "mode": "flags",
+      "tool": [
+        "wibo",
+        "{tool:ee-gcc2.95.3-114}/bin/ee-gcc.exe"
+      ],
+      "flags": [
+        "-O2",
+        "-G2"
+      ]
+    }
+  },
+  "include_asm_regex": [
+    "\\bINCLUDE_ASM\\s*\\([^()]*?,\\s*(\\w+)\\s*\\)"
+  ],
+  "limits": [
+    "Ratchet & Clank PAL (OpenRAC rac1-decomp): the repo's Makefile.sn is run with `make -n -B` for each object of `config/core_text.objects` / `text.objects` that has a `src/core|game/*.c` source; the recipe it prints (the SN compiler, the repo's python rewriting steps, the SN assembler) is the unit's command. The SN ProDG compilers are the pinned `ee-gcc2.95.3-114` (v1.14: the repo's `toolchain/sn-prodg-24` = AngheloAlf/sce_ps2_sdk_24, same cc1.exe sha1 6c232dd6...) and `ee-gcc2.9-991111`/`-01`, run under wibo (`WINE=wibo`) instead of wine; libgcc and data objects, which have no single C source, are not units of this lane.",
+    "SN ProDG's EE gcc 2.95.3 has a 128-bit `long long` (`sizeof(long long)` is not 8 and any arithmetic on it is \"unsupported wide integer operation\"): its 64-bit integer type is `long`. romwright and m2c both print the 64-bit type as `long long`, so for units compiled with that compiler the harness rewrites `long long` to `long` in the composed source (prelude, context and candidate). Without it a quarter of the candidates fail to compile whatever else they say."
+  ],
+  "candidate_type_aliases": [
+    {
+      "command": "ee-gcc2953|sn-2\\.95\\.3",
+      "patterns": [
+        [
+          "\\blong\\s+long\\b",
+          "long"
+        ]
+      ]
+    }
+  ]
+}

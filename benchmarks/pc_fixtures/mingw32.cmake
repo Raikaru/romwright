@@ -1,0 +1,7 @@
+set(CMAKE_SYSTEM_NAME Windows)
+set(CMAKE_SYSTEM_PROCESSOR x86)
+set(M $ENV{HOME}/runs/PcImport/mingw/usr)
+set(CMAKE_C_COMPILER ${M}/bin/i686-w64-mingw32-gcc)
+set(CMAKE_RC_COMPILER $ENV{HOME}/runs/PcImport/tc/windres-wrap.sh)
+set(CMAKE_FIND_ROOT_PATH ${M}/i686-w64-mingw32/sys-root/mingw)
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)

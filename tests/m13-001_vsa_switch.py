@@ -202,27 +202,26 @@ def decodes(binary: Path, base: int, addresses: set[int], ghidra: Path) -> set[i
     """Every address SLEIGH decodes to a real instruction."""
     if not addresses:
         return set()
-    console = Path(os.environ.get("ROMWRIGHT_CONSOLE", ROOT / "native/build/decomp_native"))
+    cli = CLI
     ordered = sorted(addresses)
     good: set[int] = set()
     for start in range(0, len(ordered), 400):
         chunk = ordered[start : start + 400]
-        script = (
-            f"load file {binary}\nadjust vma 0x{base:x}\n"
-            + "flow "
-            + " ".join(f"0x{address:x}" for address in chunk)
-            + "\nquit\n"
-        )
+        # `ir-dump` lifts in process under the image's own language, at the
+        # addresses the import stored (the bias an import adds to a shared
+        # object included); an instruction SLEIGH cannot decode is marked
+        # `error=BAD` or `error=UNIMPL`.
         result = subprocess.run(
-            [str(console), "-s", str(ghidra / "Ghidra/Processors")],
-            input=script,
+            [str(cli), "ir-dump", str(binary), ",".join(f"{address:x}" for address in chunk)],
             capture_output=True,
             text=True,
-            env={**os.environ, "SLEIGHHOME": str(ghidra)},
+            env={**os.environ, "ROMWRIGHT_GHIDRA": str(ghidra)},
         )
-        answers = [line for line in result.stdout.splitlines() if line.startswith("FLOW ")]
+        answers = [
+            line for line in result.stdout.splitlines() if line.startswith("0x") and " (len " in line
+        ]
         for line, address in zip(answers, chunk):
-            if "kind=BAD" not in line and "kind=UNIMPL" not in line:
+            if " error=" not in line:
                 good.add(address)
     return good
 

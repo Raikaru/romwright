@@ -14,7 +14,9 @@ This gate makes the evidence surface auditable:
     `passed: true`, or a skip with a recorded reason. Diagnostic runs live in
     `benchmarks/reports/diagnostics/`, where they are not claims;
   * every acceptance test that writes a `--report` has a committed report
-    carrying its id, so a measured result cannot exist only in a transcript;
+    carrying its id, so a measured result cannot exist only in a transcript
+    (the few that need inputs a checkout lacks are listed with the reason, and
+    an exemption that is no longer needed fails);
   * the README index is generated from those reports and is in sync, with the
     rows derived: change a measured number and the row moves, delete a report
     and the row disappears, commit a failing report and the generator refuses.
@@ -42,6 +44,16 @@ README = ROOT / "README.md"
 BEGIN = "<!-- evidence-index:begin -->"
 END = "<!-- evidence-index:end -->"
 TASK = re.compile(r"^(m\d+-\d+[a-z]?)")
+# Acceptance tests that write a `--report` but cannot publish one from a
+# checkout: each needs inputs this repository does not hold (retail images,
+# private decompilation projects, cross toolchains and hours of wall time).
+# The reason is the contract. An exemption that stops being needed fails, so
+# the table shrinks when a test gains a committed report.
+NEEDS_INPUTS_THE_CHECKOUT_LACKS = {
+    "m20-": "the tests without a committed report read retail images or decompilation projects of private games that a checkout lacks (they print `SKIP: ... absent`)",
+    "m22-": "C-output lanes: cross compilers, private decompilation repositories and hours of wall time (docs/c-output-lanes.md)",
+    "m23-001": "downloads the pinned PS2 toolchains and rebuilds the retail ELFs of private games (docs/new-project.md)",
+}
 
 
 def top_level_reports() -> dict[str, dict]:
@@ -97,6 +109,12 @@ def check_every_measured_test_published(reports: dict[str, dict],
             continue
         if match.group(1) not in published:
             missing.append(path.name)
+    exempt = {name for name in missing for prefix in NEEDS_INPUTS_THE_CHECKOUT_LACKS if name.startswith(prefix)}
+    unused = [prefix for prefix in NEEDS_INPUTS_THE_CHECKOUT_LACKS
+              if not any(name.startswith(prefix) for name in missing)]
+    assert not unused, (
+        f"these exemptions cover no test that lacks a report any more; remove them: {unused}")
+    missing = [name for name in missing if name not in exempt]
     assert not missing, (
         f"these acceptance tests write a report that is not committed: {missing}")
     return sorted(published)

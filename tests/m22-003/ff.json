@@ -1,0 +1,67 @@
+{
+  "lane": "ff",
+  "game": "ps2-fatal-frame",
+  "title": "Fatal Frame (USA, SLUS_203.88), ee-gcc 2.9-991111",
+  "repo": {
+    "url": "https://github.com/Mikompilation/Himuro.git",
+    "commit": "2efac00ccfe0529628f6cc74cdad220f2dd6fa20"
+  },
+  "retail": {
+    "path": "~/ventris-corpus/extracted/ps2-fatal-frame/SLUS_203.88",
+    "sha1": "5ac4626e0d76218e977b01f4fae5948de9a1755e"
+  },
+  "program": "ps2-ff",
+  "compiler": "ee-gcc2.9-991111-01",
+  "tools": [
+    "ee-gcc2.9-991111-01",
+    "binutils-mips-ps2-decompals",
+    "objdiff-cli",
+    "wibo"
+  ],
+  "no_aslr": true,
+  "i386_loader": true,
+  "venv": {
+    "requirements": "{repo}/requirements.txt"
+  },
+  "env": {
+    "LD_LIBRARY_PATH": "{glibc32}"
+  },
+  "symbols": [
+    {
+      "kind": "truth_tsv",
+      "path": "~/ventris-corpus/extracted/ps2-fatal-frame/truth/functions.tsv"
+    },
+    {
+      "kind": "splat",
+      "path": "{repo}/config/us/symbol_addrs.txt"
+    }
+  ],
+  "setup": [
+    "[ -L tools/cc/ee-gcc2.9-991111-01 ] || mv tools/cc/ee-gcc2.9-991111-01 tools/cc/ee-gcc2.9-991111-01.repo; ln -sfn {tool:ee-gcc2.9-991111-01} tools/cc/ee-gcc2.9-991111-01",
+    "ln -sf {retail} config/us/SLUS_203.88",
+    "{python} configure.py config/us/ff1.us.yaml -c",
+    "{python} tools/python/parse_data.py us",
+    "{python} configure.py config/us/ff1.us.yaml"
+  ],
+  "build": {
+    "kind": "ninja",
+    "dir": "config/us",
+    "family": "gcc",
+    "output_regex": "\\.c\\.o$",
+    "preprocess": {
+      "mode": "driver-E"
+    }
+  },
+  "include_asm_regex": [
+    "\\bINCLUDE_ASM\\s*\\([^()]*?,[^()]*?,\\s*(\\w+)\\s*\\)",
+    "\\bINCLUDE_ASM\\s*\\([^(),]*,\\s*(\\w+)\\s*\\)"
+  ],
+  "cross_check": {
+    "what": "the repo's committed progress report (config/us/report.json: matched_functions)",
+    "file": "config/us/report.json",
+    "path": "measures.matched_functions"
+  },
+  "limits": [
+    "Pinned compiler: toolchains.json `ee-gcc2.9-991111-01` (decomp.me build) in place of the compiler directory the repo ships under tools/cc; units are compiled with the repo's own ninja commands (`-O2 -g2 -gstabs`, the repo's include roots) under ASLR off."
+  ]
+}

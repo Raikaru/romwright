@@ -124,6 +124,10 @@ def read_recipes(entry: dict) -> dict[str, dict]:
         "signature_matches": {},
         "functions": {},
         "functions_page": {"offset": 0, "limit": 8},
+        "function_at": {"address": entry["offset"]},
+        "function_evidence": {"address": entry},
+        "matching_runs": {"after": 0, "limit": 16},
+        "matching_workspace": {"operation": {"operation": "list", "after": 0, "limit": 16}},
         "symbols": {},
         "symbols_page": {"offset": 0, "limit": 8},
         "xrefs": {"address": entry},
@@ -175,6 +179,13 @@ def write_recipes(binary: Path, entry: dict) -> list[dict]:
         {"method": "infer_prototypes",
          "params": {"binary": str(binary), "budget_ms": 30000},
          "observe": lambda reads: bool(reads["prototypes"])},
+        {"method": "analyse_function",
+         "params": {"binary": str(binary), "address": entry},
+         "inert": "the demand walk answers with its own report (state, "
+                  "instructions, calls); no read here lists what it stored, and "
+                  "the isolation check above covers that it moves nothing in "
+                  "the other image",
+         "empty": []},
         {"method": "decompile_doc",
          "params": {"binary": str(binary), "address": entry},
          "inert": "decompiling reads the image and returns a document; it "

@@ -219,7 +219,6 @@ def main():
         machine=dict(os=platform.platform(), cpu=platform.processor() or platform.machine(), ram_gb=physical_memory_gb()),
         budget_ms=args.budget_ms, dwarf_reader_sha256=digest(root / 'benchmarks/dwarf_arity.py'),
         native_patch_sha256=digest(root / 'native/ghidra-opt-sleigh.patch'),
-        native_linkage_sha256=digest(root / 'native/romwright_linkage.hh'),
         corpus=rows, summary=summary, passed=len(rows) == 20 and summary['pass'] == 20)
     write_native_report(args.report, report, recipes)
     print(json.dumps(dict(summary=summary, passed=report['passed'])))

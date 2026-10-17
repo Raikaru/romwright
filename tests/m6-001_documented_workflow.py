@@ -15,7 +15,9 @@ Contract for the document, so it stays runnable:
     here with a temporary one so the gate is hermetic;
   * a block preceded by `<!-- requires: sleigh -->` needs the pinned Ghidra
     install for SLEIGH language data, and is skipped -- with the skip
-    recorded -- when that install is absent.
+    recorded -- when that install is absent; `clang` (alone or after
+    `sleigh`) is the same for a clang on `$CLANG` or `PATH`, the compile
+    check of a `new-project` repository;
 
 Usage:
     python3 tests/m6-001_documented_workflow.py [--report OUT.json]
@@ -27,6 +29,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,7 +38,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DOC = ROOT / "docs" / "getting-started.md"
-REQUIRES = re.compile(r"<!--\s*requires:\s*(\w+)\s*-->")
+REQUIRES = re.compile(r"<!--\s*requires:\s*([\w ]+?)\s*-->")
 BLOCK = re.compile(r"```console\n(.*?)```", re.DOTALL)
 
 
@@ -81,19 +84,30 @@ def implemented_verbs() -> set[str]:
     this check to our own source on purpose: the invariant is that the tool
     lists everything it does, and `xrefs`, `undo`, `open`, `comment`,
     `comments` and `types` were all missing from the usage text when this gate
-    was written.
+    was written. A verb that is routed to its own module before the main
+    `match` (`if args[1] == "match"`, `matches!(args[1].as_str(), "a" | "b")`:
+    `signatures`, `facts`, `compiler-rules`, `new-project`, `detect-compiler`,
+    `match`) is as much a verb as an arm.
     """
     source = (ROOT / "crates/romwright-cli/src/main.rs").read_text(encoding="utf-8")
-    return set(re.findall(r'^\s{8}"([a-z][a-z-]*)"(?:\s+if [^=]*)?\s*=>',
-                          source, re.MULTILINE))
+    verbs = set(re.findall(r'^\s{8}"([a-z][a-z-]*)"(?:\s+if [^=]*)?\s*=>',
+                           source, re.MULTILINE))
+    verbs.update(re.findall(r'^\s{4}if args\[1\] == "([a-z][a-z-]*)"', source, re.MULTILINE))
+    for group in re.findall(r'^\s{4}if matches!\(args\[1\]\.as_str\(\), ((?:"[a-z][a-z-]*"\s*\|?\s*)+)\)',
+                            source, re.MULTILINE):
+        verbs.update(re.findall(r'"([a-z][a-z-]*)"', group))
+    return verbs
 
 
 def sleigh_available() -> bool:
     install = Path(os.environ.get("ROMWRIGHT_GHIDRA",
                                   str(Path.home() / "ghidra_12.1.3_PUBLIC")))
-    console = Path(os.environ.get("ROMWRIGHT_CONSOLE",
-                                  str(ROOT / "native/build/decomp_native")))
-    return install.is_dir() and console.is_file()
+    return install.is_dir()
+
+
+def clang_available() -> bool:
+    configured = os.environ.get("CLANG")
+    return bool(configured and Path(configured).is_file()) or shutil.which("clang") is not None
 
 
 def main() -> int:
@@ -130,11 +144,15 @@ def main() -> int:
     with tempfile.TemporaryDirectory(prefix="m6-001-") as temporary:
         project = Path(temporary) / "project"
         for requirement, commands in parsed:
-            if requirement == "sleigh" and not sleigh_available():
-                skipped.append("sleigh: no pinned Ghidra install or SLEIGH console")
+            needs = (requirement or "").split()
+            unknown_needs = [need for need in needs if need not in ("sleigh", "clang")]
+            assert not unknown_needs, f"unknown block requirement {requirement!r}"
+            if "sleigh" in needs and not sleigh_available():
+                skipped.append("sleigh: no pinned Ghidra install")
                 continue
-            assert requirement in (None, "sleigh"), (
-                f"unknown block requirement {requirement!r}")
+            if "clang" in needs and not clang_available():
+                skipped.append("clang: no clang on $CLANG or PATH")
+                continue
             for command, expected in commands:
                 argv = shlex.split(command.replace("$PROJECT", str(project)))
                 result = subprocess.run(argv, cwd=ROOT, capture_output=True,

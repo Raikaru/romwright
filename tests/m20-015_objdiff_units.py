@@ -84,10 +84,12 @@ def main() -> int:
             assert row['size'] > 0, (name, row)
         assert units['tu_a.c']['target_path'].endswith('target/tu_a.o'), units
         assert units['tu_a.c']['base_path'].endswith('build/tu_a.o'), units
+        # objdiff reads `complete` for its complete_* measures: always written.
+        assert units['tu_a.c']['metadata']['complete'] is False, units
         results['units'] = {'outcome': 'mapped', 'tus': 2}
     print(json.dumps(dict(results=results), indent=2))
     if args.report is not None:
-        args.report.write_text(json.dumps(dict(results=results), indent=2) + '\n')
+        args.report.write_text(json.dumps(dict(id='m20-015', passed=True, results=results), indent=2) + '\n')
     return 0
 
 

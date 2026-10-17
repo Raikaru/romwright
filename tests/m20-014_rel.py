@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""m20-014: REL sections land as modules.
+"""m20-014: REL sections land as modules, and their relocations apply.
 
-The GameCube REL loader exists but never had a fixture on disk. The
-fixture (built by tests/fixtures-src/rel_gen.py, ground truth by
-construction) is a two-section module: section 0 executes at the
-synthetic base, section 1 does not. The gate asserts exact regions,
-permissions and language, plus named refusal for a section that
-points past EOF and for truncation.
+The fixture (built by tests/fixtures-src/rel_gen.py, ground truth by
+construction, a real version-2 REL that `dtk rel info` parses) is a
+two-section module: section 0 executes at the synthetic base, section 1
+does not. Its import table names the DOL (module 0) and the module itself:
+a `bl` to an absolute DOL address (R_PPC_REL24), a `lis`/`addi` pair
+loading the address of data+4 (R_PPC_ADDR16_HA / _LO), and a data word
+holding the address of text+0xc (R_PPC_ADDR32). The gate asserts exact
+regions, permissions and language, the relocated bytes (computed here from
+the format's rules, not read back from the loader), plus named refusal for
+a section that points past EOF and for truncation.
 """
 
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import json
 import sqlite3
 import subprocess
@@ -21,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GEN = ROOT / 'tests' / 'fixtures-src' / 'rel_gen.py'
-CLI = ROOT / 'target' / 'release' / 'romwright-cli'
+CLI = Path(os.environ.get('ROMWRIGHT_CLI', ROOT / 'target' / 'release' / 'romwright-cli'))
 
 
 def run(command, **kwargs):
@@ -51,10 +57,37 @@ def main() -> int:
             regions = connection.execute(
                 'SELECT start, size, permissions FROM memory_regions ORDER BY start'
             ).fetchall()
-            assert regions == [('80000000', 12, 'r-x'), ('90000000', 4, 'rw-')], regions
+            assert regions == [('80000000', 16, 'r-x'), ('90000000', 8, 'rw-')], regions
         finally:
             connection.close()
         results['valid'] = {'outcome': 'exact'}
+        # Relocated bytes. Text at 0x80000000, data at 0x90000000.
+        text_base, data_base, dol = 0x8000_0000, 0x9000_0000, 0x8000_3100
+        target = data_base + 4
+        ha = (target + 0x8000) >> 16 & 0xFFFF
+        want_text = [
+            0x4800_0001 | (dol - text_base) & 0x03FF_FFFC,   # bl REL24
+            0x3C60_0000 | ha,                                # lis HA
+            0x3863_0000 | target & 0xFFFF,                   # addi LO
+            0x4E80_0020,
+        ]
+        want_data = [text_base + 0xC, 0xDEAD_BEEF]
+        for base, words in ((text_base, want_text), (data_base, want_data)):
+            proc = run([str(CLI), 'mem', str(image), f'{base:x}', str(4 * len(words))])
+            got = bytes.fromhex(proc.stdout.strip().replace(' ', ''))
+            assert got == b''.join(w.to_bytes(4, 'big') for w in words), (
+                f'{base:#x}: {got.hex()} != {[hex(w) for w in words]}')
+        results['relocations'] = {
+            'outcome': 'exact', 'words_compared': len(want_text) + len(want_data)}
+        # Where decomp-toolkit is installed (DTK=/path/to/dtk or `dtk` on PATH)
+        # its reader must agree about the fixture's relocation table.
+        dtk = os.environ.get('DTK') or shutil.which('dtk')
+        if dtk:
+            info = run([dtk, 'rel', 'info', '-r', str(image)]).stdout
+            for line in ('PpcRel24 -> 0:0:0x80003100', 'PpcAddr16Ha -> 1:0:0x4',
+                         'PpcAddr16Lo -> 1:0:0x4', 'Absolute -> 1:1:0xC'):
+                assert line in info, (line, info)
+            results['dtk_parity'] = {'outcome': 'exact', 'relocation_lines': 4}
         bad = work / 'mod-bad.rel'
         run([sys.executable, str(GEN), str(bad), '--bad-offset'])
         project = work / 'mod-bad.project'
@@ -74,7 +107,7 @@ def main() -> int:
         results['truncated'] = {'outcome': 'refused'}
     print(json.dumps(dict(results=results), indent=2))
     if args.report is not None:
-        args.report.write_text(json.dumps(dict(results=results), indent=2) + '\n')
+        args.report.write_text(json.dumps(dict(id='m20-014', passed=True, results=results), indent=2) + '\n')
     return 0
 
 

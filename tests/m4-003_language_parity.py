@@ -172,13 +172,19 @@ def tokens(text: str) -> list[str]:
 
 
 def environment() -> dict[str, str]:
-    """A plain install: per-language resolution, no spec or language overrides."""
+    """A plain install: per-language resolution, no spec or language overrides.
+
+    Parity is with Ghidra's decompilation, so the worker prints Ghidra's own
+    structure: the structuring models (ROMWRIGHT_RUST_STRUCTURING, all by
+    default) are a deliberate divergence measured by
+    benchmarks/structuring_models.py, not an oracle difference."""
     values = dict(os.environ)
     for name in ("ROMWRIGHT_SLA", "ROMWRIGHT_LANGUAGE", "ROMWRIGHT_LANGUAGE_DIR",
                  "ROMWRIGHT_SPECS", "ROMWRIGHT_REGISTER_PARAMS",
                  "ROMWRIGHT_PROMOTE_TAILCALLS"):
         values.pop(name, None)
     values["ROMWRIGHT_SERVICE_JAR"] = str(ROOT / "service/build/romwright-service.jar")
+    values["ROMWRIGHT_RUST_STRUCTURING"] = "none"
     return values
 
 

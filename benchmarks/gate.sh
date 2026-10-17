@@ -9,8 +9,7 @@
 # under GATE_WALL_S (default 120 s). Writes benchmarks/reports/stage4-gate.json.
 #
 # Env: ROMWRIGHT_SLA (required; compiled x86-64.sla), ROMWRIGHT_GHIDRA
-#      (install root), ROMWRIGHT_CONSOLE (optional; else native/build or
-#      /tmp/spike), RUNS (default 3).
+#      (install root), RUNS (default 3).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -29,14 +28,6 @@ CLI="$ROOT/target/release/romwright-cli"
     echo "set ROMWRIGHT_SLA to a compiled x86-64.sla" >&2
     exit 1
 }
-CONSOLE="${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}"
-[ -x "$CONSOLE" ] || CONSOLE=/tmp/spike/decomp_native
-CONSOLE_AVAILABLE=1
-[ -x "$CONSOLE" ] || {
-    CONSOLE_AVAILABLE=0
-    echo "NOTE: no SLEIGH console — disasm phases SKIPPED (install binutils-devel, run native/build_console.sh)"
-}
-export ROMWRIGHT_CONSOLE="$CONSOLE"
 export ROMWRIGHT_SLA
 
 rss() { grep 'Maximum resident set size' "$1" | grep -o '[0-9]*' || echo 0; }
@@ -67,17 +58,9 @@ PY
     "$CLI" undo gate --project "$PROJECT" > "$OUTDIR/undo_comment_$i.out"
     "$CLI" open gate --project "$PROJECT" > "$OUTDIR/open_$i.out"
     "$CLI" open gate --project "$PROJECT" > "$OUTDIR/reopen_$i.out"
-    if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-        /usr/bin/time -v "$CLI" disasm "$BIN" 00400466 -n 4 \
-            > "$OUTDIR/disasm_$i.out" 2> "$OUTDIR/disasm_$i.time" || { cat "$OUTDIR/disasm_$i.out" >&2; exit 1; }
-    else
-        echo 'skip' > "$OUTDIR/disasm_$i.time"
-        echo 'skipped' > "$OUTDIR/disasm_$i.out"
-    fi
-    disasm_kb=0
-    if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-        disasm_kb=$(rss "$OUTDIR/disasm_$i.time")
-    fi
+    /usr/bin/time -v "$CLI" disasm "$BIN" 00400466 -n 4 \
+        > "$OUTDIR/disasm_$i.out" 2> "$OUTDIR/disasm_$i.time" || { cat "$OUTDIR/disasm_$i.out" >&2; exit 1; }
+    disasm_kb=$(rss "$OUTDIR/disasm_$i.time")
     # decompile (patched ghidra_opt, no JVM)
     /usr/bin/time -v "$CLI" decompile "$BIN" 00400466 --name gate --project "$PROJECT" \
         > "$OUTDIR/decompile_$i.out" 2> "$OUTDIR/decompile_$i.time" || { cat "$OUTDIR/decompile_$i.out" >&2; exit 1; }
@@ -96,14 +79,13 @@ r.append({
 print(json.dumps(r))" "$results")
 done
 
-python3 - "$ROOT" "$results" "$OUTDIR" "$GATE_KB" "$GATE_WALL_S" "$CONSOLE_AVAILABLE" <<'EOF'
+python3 - "$ROOT" "$results" "$OUTDIR" "$GATE_KB" "$GATE_WALL_S" <<'EOF'
 import json, sys, pathlib
 root = pathlib.Path(sys.argv[1])
 runs = json.loads(sys.argv[2])
 outdir = pathlib.Path(sys.argv[3])
 gate_kb = int(sys.argv[4])
 gate_wall = float(sys.argv[5])
-console_available = sys.argv[6] == "1"
 def med(v):
     v = sorted(v)
     return v[len(v)//2] if v else 0
@@ -119,24 +101,16 @@ report = {
     "peak_decompile_kb": peak("decompile_kb"),
     "gates": {"peak_kb": gate_kb, "wall_s": gate_wall,
               "stock_ghidra_baseline_kb": 384000},
-    "complete": console_available,
-    "skipped": [] if console_available else ["disasm"],
-    "performance_pass": (peak("import_kb") <= gate_kb
-                         and peak("decompile_kb") <= gate_kb
-                         and (not peak("disasm_kb") or peak("disasm_kb") <= gate_kb)
-                         and med([r["wall_s"] for r in runs]) <= gate_wall),
-    "functional_pass": console_available and (peak("import_kb") <= gate_kb
-                         and peak("decompile_kb") <= gate_kb
-                         and peak("disasm_kb") <= gate_kb
-                         and med([r["wall_s"] for r in runs]) <= gate_wall),
+    "functional_pass": (peak("import_kb") <= gate_kb
+                        and peak("decompile_kb") <= gate_kb
+                        and peak("disasm_kb") <= gate_kb
+                        and med([r["wall_s"] for r in runs]) <= gate_wall),
 }
 # Re-verify the end-to-end artifacts really are the expected content.
 add = (outdir / "decompile_1.out").read_text()
 assert "return param_2 + param_1" in add, f"decompile output unexpected: {add!r}"
-console_available = sys.argv[6] == "1"
-if console_available:
-    dis = (outdir / "disasm_1.out").read_text()
-    assert "PUSH      RBP" in dis, f"disasm output unexpected: {dis!r}"
+dis = (outdir / "disasm_1.out").read_text()
+assert "PUSH      RBP" in dis, f"disasm output unexpected: {dis!r}"
 funcs = (outdir / "functions_1.out").read_text()
 assert "00400466" in funcs, "function list missing add"
 print(json.dumps(report, indent=2))
@@ -144,14 +118,10 @@ reports_dir = root / "benchmarks" / "reports"
 reports_dir.mkdir(parents=True, exist_ok=True)
 (reports_dir / "stage4-gate.json").write_text(json.dumps(report, indent=2) + "\n")
 if report["functional_pass"]:
-    print(f"GATE PASS (complete): peak {max(report['peak_import_kb'], report['peak_disasm_kb'], report['peak_decompile_kb'])} KB (limit {gate_kb}), "
+    print(f"GATE PASS: peak {max(report['peak_import_kb'], report['peak_disasm_kb'], report['peak_decompile_kb'])} KB (limit {gate_kb}), "
           f"median wall {report['median_wall_s']} s (limit {gate_wall})")
     print(f"  vs stock Ghidra baseline ~{report['gates']['stock_ghidra_baseline_kb']} KB peak")
     sys.exit(0)
-if report["performance_pass"] and not report["complete"]:
-    print(f"GATE PARTIAL (incomplete run — skipped: {report['skipped']}): performance within bounds, "
-          f"but a required phase did not run. See {reports_dir / 'stage4-gate.json'}")
-    sys.exit(2)
 print(f"GATE FAIL: see {reports_dir / 'stage4-gate.json'}")
 sys.exit(1)
 EOF

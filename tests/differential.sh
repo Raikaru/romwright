@@ -16,17 +16,6 @@ PROJECT="${DIFF_PROJECT:-$WORK/project}"
 # Stale Ghidra project lock after an aborted JVM (documented risk: the lock
 # file is only meaningful while its owner JVM lives).
 rm -f "$PROJECT/bridge-projects"/*.lock* 2>/dev/null || true
-# The console's own defaults (crate::session::RuntimeConfig::from_env), not the
-# pre-pinned-tree spike layout: /tmp/spike no longer exists on a clean host.
-CONSOLE="${ROMWRIGHT_CONSOLE:-$ROOT/native/build/decomp_native}"
-GHIDRA_DEFAULT="${ROMWRIGHT_GHIDRA:-$HOME/ghidra_12.1.3_PUBLIC}"
-DECOMP="$CONSOLE"
-LANGDIR="${ROMWRIGHT_LANGUAGE_DIR:-$GHIDRA_DEFAULT/Ghidra/Processors/x86/data/languages}"
-GHROOT="${ROMWRIGHT_GHROOT:-$GHIDRA_DEFAULT}"
-# The SLEIGH console is the one component needing binutils-devel to build
-# (native/build_console.sh); worker steps below do not need it.
-CONSOLE_AVAILABLE=1
-[ -x "$CONSOLE" ] || { CONSOLE_AVAILABLE=0; echo "NOTE: no SLEIGH console at $CONSOLE — console steps skipped (install binutils-devel, run native/build_console.sh)"; }
 BIN="$ROOT/tests/fixtures-src/tiny_bin"
 # Build what is being tested: a stale binary here once passed a gate for
 # a change that had already altered its output.
@@ -71,25 +60,15 @@ else
     step "reusing oracle artifacts"
 fi
 
-# ---- Native console decompile (no JVM) ------------------------------------
-if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-step "native console decompile"
-console() {
-    printf 'load file x86:LE:64:default %s\nadjust vma 0x400000\nmap function %s %s\nload function %s\ndecompile %s\nprint C\n' \
-        "$BIN" "$1" "$2" "$2" "$2" |
-        SLEIGHHOME="$GHROOT" timeout 120 "$DECOMP" -s "$LANGDIR" 2>&1 |
-        sed -n '/\[decomp\]> print C/,$p' | sed '1d' | head -60
-}
-for F in "0x400466 add" "0x40047a main"; do
+# ---- Native decompile (no JVM) --------------------------------------------
+step "native decompile"
+for F in "00400466 add" "0040047a main"; do
     set -- $F
     OUT="$WORK/native_$2.c"
     if [ ! -s "$OUT" ]; then
-        console "$1" "$2" > "$OUT"
+        "$CLI" decompile "$BIN" "$1" --name tiny_bin_native --project "$WORK/native-decompile-project" > "$OUT"
     fi
 done
-else
-    step "native console decompile: SKIPPED (no console)"
-fi
 
 # ---- Protocol worker (raw-SLEIGH, no JVM) --------------------------------
 # When native/build/ghidra_opt exists, the worker path is exercised too and
@@ -165,19 +144,7 @@ fi
 # ---- Stripped-binary discovery parity -----------------------------------
 SSTRIP="$ROOT/tests/fixtures-src/tiny_stripped"
 if [ -f "$SSTRIP" ]; then
-    step "stripped discovery parity (console closure vs oracle)"
-    # Fast path: the console closure directly (the CLI's rounds are slower).
-    discover_out=""
-    if [ "$CONSOLE_AVAILABLE" -eq 1 ]; then
-        discover_out=$(ROMWRIGHT_CONSOLE="$CONSOLE" \
-            ROMWRIGHT_GHROOT="${ROMWRIGHT_GHROOT:-$HOME/ghidra_12.1.3_PUBLIC}" \
-            ROMWRIGHT_LANGS="${ROMWRIGHT_LANGS:-$HOME/ghidra_12.1.3_PUBLIC/Ghidra/Processors/x86/data/languages}" \
-            timeout 60 "$ROOT/native/discover.sh" "$SSTRIP" 0x400380 0x400370 2>/dev/null || true)
-        printf '%s\n' "$discover_out" | grep '^F ' | awk '{printf "%08x\n", $2}' | sort > "$WORK/stripped_native.txt" || true
-    else
-        echo "  console closure: SKIPPED (no console); CLI pure-Rust check below still runs"
-        : > "$WORK/stripped_native.txt"
-    fi
+    step "stripped discovery vs oracle"
     # Pinned oracle set (verified against the bridge import of the same
     # binary: 15 functions incl. the analyzer's CRT/dtor heuristics).
     cat > "$WORK/stripped_oracle.txt" <<'EOF'
@@ -197,16 +164,9 @@ if [ -f "$SSTRIP" ]; then
 00404008
 00404010
 EOF
-    MISS=0
-    for e in $(cat "$WORK/stripped_native.txt"); do
-        grep -q "^$e$" "$WORK/stripped_oracle.txt" || { echo "  stripped: native-only $e"; MISS=1; }
-    done
-    if [ "$MISS" -eq 0 ]; then
-        echo "  stripped: all native-discovered entries are in the oracle (subset OK)"
-    fi
 fi
 if [ -f "$SSTRIP" ]; then
-    step "stripped CLI import discovery (no console, no JVM)"
+    step "stripped CLI import discovery (no JVM)"
     SCLI_PROJ="$WORK/stripped-cli-project"
     mkdir -p "$SCLI_PROJ"
     "$CLI" import "$SSTRIP" --name strip_cli --project "$SCLI_PROJ" > /dev/null 2>&1 || true
@@ -238,14 +198,7 @@ if [ -x "$WORKER" ] && [ -n "${ROMWRIGHT_SLA:-}" ] && [ -d "$PE_SPECS" ]; then
         fail "PE worker decompile failed"
 fi
 
-# ---- Normalize + compare (console output only; worker parity checked above) ---
-if [ "$CONSOLE_AVAILABLE" -ne 1 ]; then
-    step "semantic normalize: SKIPPED (no console — worker/CLI exact parity already verified)"
-    echo
-    echo "PASS: worker + CLI decompile parity verified; console-dependent steps skipped"
-    echo "  (install binutils-devel + run native/build_console.sh for the full run)"
-    exit 0
-fi
+# ---- Normalize + compare ---------------------------------------------------
 step "normalize and compare"
 python3 - "$WORK" <<'PYEOF'
 import re, sys, pathlib
