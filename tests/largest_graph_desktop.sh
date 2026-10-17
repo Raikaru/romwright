@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # M0-004 acceptance: locate the largest-BB function (>= 200 basic blocks)
-# and measure/verify Qt layout and paint execution within frozen thresholds.
+# and measure/verify desktop layout and paint execution within frozen thresholds.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLI="${LRE_CLI:-$ROOT/target/release/romwright-cli}"
-APP="${ROMWRIGHT_QT_APP:-/tmp/romwright-qt-build/romwright-qt}"
+APP="${ROMWRIGHT_DESKTOP_APP:-${CARGO_TARGET_DIR:-$ROOT/target}/release/romwright-desktop}"
 BINARY="${1:-/usr/lib64/libc.so.6}"
 PROGRAM="${PROGRAM:-largest-target}"
 
@@ -15,12 +15,12 @@ if [ ! -f "$BINARY" ]; then
 fi
 
 if [ ! -x "$APP" ]; then
-    echo "Qt app not found or not executable: $APP" >&2
+    echo "desktop app not found or not executable: $APP" >&2
     exit 1
 fi
 
 # Step 1: Locate largest-BB function and assert >= 200 basic blocks.
-PROJECT="$(mktemp -d /tmp/romwright-largest-bb-qt.XXXXXX)"
+PROJECT="$(mktemp -d /tmp/romwright-largest-bb.XXXXXX)"
 trap 'rm -rf "$PROJECT"' EXIT
 
 "$CLI" import "$BINARY" --name "$PROGRAM" --project "$PROJECT" >/dev/null
@@ -39,9 +39,9 @@ print(f"{name}|{addr}|{blocks}")
 
 IFS='|' read -r fn_name fn_addr fn_blocks <<< "$largest_info"
 
-# Step 2: Measure Qt layout and paint execution via offscreen gate.
+# Step 2: Measure desktop layout and paint execution via the offscreen gate.
 REPORT="$PROJECT/ui-gate.json"
-QT_QPA_PLATFORM=offscreen python3 "$ROOT/benchmarks/ui_gate.py" \
+python3 "$ROOT/benchmarks/ui_gate.py" \
     --app "$APP" \
     --binary "$BINARY" \
     --program "$PROGRAM" \
@@ -89,5 +89,5 @@ if layout_ms > layout_threshold:
 if paint_ms > paint_threshold:
     sys.exit(f"ui.graph.paint_ms {paint_ms:.2f} exceeds threshold {paint_threshold}")
 
-print(f"largest-BB Qt fetch/layout/paint acceptance: pass ({name} at {addr}, {blocks} blocks: fetch={fetch_ms:.2f}ms, layout={layout_ms:.2f}ms, paint={paint_ms:.2f}ms)")
+print(f"largest-BB desktop fetch/layout/paint acceptance: pass ({name} at {addr}, {blocks} blocks: fetch={fetch_ms:.2f}ms, layout={layout_ms:.2f}ms, paint={paint_ms:.2f}ms)")
 PY
