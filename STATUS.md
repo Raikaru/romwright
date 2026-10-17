@@ -2,6 +2,8 @@
 
 ## Open state (2026-09-24)
 
+**Update 2026-10-15:** the release-readiness checklist (what passes, what was fixed, what remains) is the last section of this file, "Release readiness: the integrated tree".
+
 Read this first; everything below it is the dated log.
 
 - Gates green on this workstation: m21-001 (7 real images), m12-001
@@ -21,7 +23,9 @@ Read this first; everything below it is the dated log.
   Vita NFS 0.972 / 0.957 [0.704 / 0.966], PS2 Capcom 0.941 / 0.989
   [0.756 / 0.998], PS2 dungeon 0.940 / 0.931 [0.736 / 0.986].
 - Import cost, idle 4-core: GBA 558 s / 1.6 GB, swkotor2 75 s, libc 50 s;
-  NDS (131 programs) 288 s.
+  NDS (131 programs) 288 s. GBA after the 2026-10-07 reference-pass fix,
+  12-thread host at load 8-13: 201-207 s (was 822-1219 s there), 27 MB
+  project.
 - Known weak spots:
   - Precision trails stock where stock finds a quarter fewer functions:
     Capcom's 83 invented entries include 16 `jal` targets inside their
@@ -38,8 +42,25 @@ Read this first; everything below it is the dated log.
     modules.
   - PE function-start ownership is settled by three special-case retraction
     rules rather than one pass after all producers.
-- Blocked: the desktop proof (needs an interactive Qt display) and the
-  import-cost gate thresholds (maintainer-reserved).
+- Universal fact pack (2026-10-11, `benchmarks/reports/fact_pack_loo.{json,md}`,
+  `fact_pack_gating.{json,md}`, docs/console-research.md "Universal fact pack"): a
+  read-only SQLite file of masked-body digests plus names, exact sizes and
+  prototype text from the 48 decomp games (license recorded per donor, none
+  filtered; 106.0 MB). Rename gate (pack meta): a `FUN_` is renamed only when the
+  body is >= 128 B or >= 2 independent donors (twin group once) agree. Leave-one-out
+  over the 48 donor games, twin groups excluded: 23,466 renames, 17,396 gated;
+  strict wrong-name rate 2.3% (457 of 20,144 scoreable; 4.5% ungated), function-wrong
+  26 = 0.13% (0.61% ungated); gc 0.4%, wii 0.3%, ps2 1.2%, psx 6.3%, n64 7.8%,
+  nds 15.9%, gba 15.9% (the last two are naming conventions donors share);
+  20,894 prototypes applied; `--scan` boundary precision 89.2% of 657 matches
+  start at a truth function and 84.9% of those have the exact truth length; the pack
+  length fixes 2,287 import sizes and breaks 241 (ARM/Thumb imports stop before
+  the literal pool). psp and x360 (no donor): 0 renames in 209,990 functions.
+- Desktop: the Qt app is gone (2026-10-06); its live-window listing-paint
+  defect (2026-09-22) went with it. `romwright-desktop`'s packaged headless
+  gate (m6-003) and screenshots pass on Mesa lavapipe with no GPU and no
+  display; no live interactive-window run of it is recorded here yet.
+- Blocked: the import-cost gate thresholds (maintainer-reserved).
 
 ## Current phase/generation
 Stage 9 optional surfaces are implemented. Stage 4 remains the gated native
@@ -48,15 +69,16 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 
 ## Current implementation surface
 
-- Phases 5–7 are implemented in `romwright-core`, `romwright-api`, the Qt workstation
-  source, and `python/`: symbols/strings/search, memory and graph views,
+- Phases 5–7 are implemented in `romwright-core`, `romwright-api`, the desktop
+  workstation (`romwright-desktop`),
+  and `python/`: symbols/strings/search, memory and graph views,
   bookmarks/patches, typed data manager and propagation, a versioned
   stdio/HTTP API, a dependency-free SDK and console, an isolated
   permissioned plugin host, and an AI tool adapter.
 - Phase 9 surfaces now include isolated GDB/LLDB read backends, a read-only
   Dolphin GDB-RSP memory client for the live overlay, durable trace timeline
   events, and a deterministic, idempotent collaboration operation log exposed
-  by Core/API/Qt/SDK.
+  by Core/API/desktop/SDK.
 - Native ELF structural import selects Ghidra language ids for x86-64,
   AARCH64, ARM, MIPS, RISC-V and PowerPC. ELF/PE discovery now uses the generic
   SLEIGH worklist; without the console, only structural facts remain. Worker
@@ -64,12 +86,13 @@ workflow baseline (39.6 MB peak vs 375 MiB stock; see gate numbers below and
 - `romwright-cli architectures --project DIR` scans the installed `.ldefs` catalog.
   Non-x86 native decompile parity is not claimed without a matching compiled
   SLEIGH language and normalized specification bundle.
-- `desktop/romwright-qt` has CPack TGZ packaging. `packaging/sbom.py` emits an
+- `packaging/package_desktop.py` builds `romwright-desktop` with cargo and
+  writes the relocatable desktop archive. `packaging/sbom.py` emits an
   SPDX 2.3 SBOM; `update_manifest.py` and `verify_update.py` produce and
   validate release artifact metadata.
 - `.github/workflows/ci.yml` is the cross-platform build/test definition.
-  The Qt 6 development files are available on this workstation; the Qt
-  configure, target build, and offscreen launch smoke path run locally.
+  Its `desktop` job packages and gates the desktop headless on Linux
+  (lavapipe, no GPU), macOS (Metal) and Windows (DX12/WARP) runners.
 
 ## Completed and verified
 - Scrap of the old partial-decompiler-port architecture; pinned Ghidra
@@ -9381,3 +9404,4058 @@ Unchanged: libc and swkotor2 fact digests (all six) on smt-cloud; m3-001
 (1,640/1,640), m8-003 (3,676 bodies), m12-002 (246/246), m14-001, m17-002;
 romwright-core 492 (3 new: gap starts, Thumb-1 table entries, jump-table
 runs).
+
+## Desktop cutover: Qt removed, `romwright-desktop` packaged and gated headless (2026-10-06)
+
+The Qt workstation (`desktop/`) and its CXX bridge crate are deleted;
+`crates/romwright-desktop` (egui shell, wgpu renderer) is the only desktop.
+The decompile post-processing the bridge owned lives in
+`WorkerPoolManager::decompile_function`; the bridge-only JSON shape
+(`DecompiledFunction::to_json`) went with the bridge.
+
+- **Packaging** is cargo-only: `packaging/package_desktop.py` builds
+  `romwright-desktop` + `romwright-worker` and writes
+  `romwright-<version>-<system>-<machine>.tar.gz` (`bin/` with both
+  executables, `share/doc/romwright/` with LICENSE, NOTICE,
+  THIRD_PARTY_NOTICES.md and the fonts' OFL texts). The worker ships beside
+  the app because the app looks there first. `stage_release.py` and both
+  scripts read `$CARGO_TARGET_DIR`. `docs/releasing.md` documents it; the
+  desktop block is no longer conditional.
+- **m6-003** packages with that script, extracts to a clean prefix and runs
+  the extracted binary's store-only gate with every `ROMWRIGHT_*` removed.
+  `ui.install.prefix_ok` now means "no cargo build tree beside the
+  executable"; both metrics and the report schema are otherwise unchanged
+  (`platform.qt` became `platform.adapter`, the wgpu adapter it rendered on).
+- **Software adapter**: forcing Mesa lavapipe
+  (`VK_DRIVER_FILES=.../lvp_icd.x86_64.json`, no `DISPLAY`/`WAYLAND_DISPLAY`)
+  renders the gate and `--screenshot` correctly (`llvmpipe (LLVM 22.1.8)`);
+  no desktop code change was needed (hardware first, then
+  `force_fallback_adapter`). m6-003 passes on lavapipe (committed report).
+- **CI**: the `qt` job is now `desktop` (cargo build, m6-003, a headless
+  screenshot artifact, on Linux/macOS/Windows runners; Linux installs
+  `mesa-vulkan-drivers` for lavapipe). corpus-oracle builds the desktop with
+  cargo for m14-004, drops the Qt and CMake apt packages, and runs
+  `benchmarks/ui_gate.py` on libc with `ROMWRIGHT_UI_INSTALL_OK=1`.
+- `ui_gate.py`: `--app` defaults to `$ROMWRIGHT_DESKTOP_APP`, then
+  `$CARGO_TARGET_DIR/release/romwright-desktop`, then
+  `target/release/romwright-desktop`; the old Qt app variable has no alias.
+  Metrics and thresholds unchanged. `tests/largest_graph_qt.sh` is
+  `tests/largest_graph_desktop.sh`; `benchmarks/qt-spike.sh` is deleted.
+
+Local evidence (Linux/x86_64, release build, AMD RADV unless stated):
+`cargo test -p romwright-desktop -p romwright-worker-client` 17 + 1 pass;
+m6-003, m6-004 (5 artifacts incl. the desktop archive), m6-006 pass;
+`ui_gate.py` on libc passes (load 50.8 ms, filter 17.3, sync 6.2, graph
+fetch 4,658 / layout 6.6 / paint 7.2, xrefs 13 declared of 19, 0
+unexplained); filter_latency.sh (load 35.4 / filter 24.6 ms),
+largest_graph_desktop.sh (`__vfscanf_internal`, 1,865 blocks: fetch 2,808 /
+layout 3.8 / paint 6.3 ms) and package_install_smoke.sh pass.
+
+Open: the full libc ui_gate on lavapipe misses only `ui.sync_ms` (16 ms
+frame budget): 19.8 ms single run, 32.6 ms median of three, measured at
+load averages 14–45 on 12 cores while other jobs ran; every other metric
+passed. Whether a quiet CI runner's lavapipe frame fits 16 ms is unmeasured.
+The first libc ui_gate run on hardware also hit the 120 s per-run timeout
+at load ~25; the rerun passed in 43 s.
+
+## P-code lifted in process; console `pcode` removed (2026-10-06)
+
+Every p-code consumer (switch VSA/SJA, const-data seed filter, demand
+`LiveProgram::pcode` → semantic index / infer-types / indirect-call pruning,
+`Core::ir_native`) now lifts with `native_runtime::SleighLifter`
+(`crates/romwright-core/src/native_runtime/lift.rs`) over kuna's Rust
+`kuna-sleigh` runtime (Apache-2.0, pinned rev `c4f735f9`; NOTICE,
+THIRD_PARTY_NOTICES.md, docs/third-party.md). The console's `IfcPcode`,
+`native/romwright_pcode.hh` and `ConsoleSession::pcode_batch`/`pcode_chunk`
+are gone; `native/build_console.sh` rebuilt the console (`pcode` now answers
+`Invalid command`). Workspace `rust-version` is 1.90 (kuna's MSRV).
+
+The lifter rebuilds what the console set up: language resolution exactly as
+`SleighArchitecture` does (scanned install + `-s` dir, `.ldefs` order,
+`<truncate_space>`), pspec-then-cspec `<context_data>`, the load image the
+console held (`LoadImageXml` + `pad()` over the mapped chunks; `RawLoadImage`
+with `adjust vma`; BFD's PE section view for `pei-*`), every `context`
+command, the PowerPC conditional-LR `RETURN` rewrite, the patch's 75-state
+parser limit (kuna grows its arena; checked via `instruction_mask` before
+decoding), and `UnimplError`→`UNIMPL`, everything else→`BAD`. Context state:
+each lifter takes the image's contexts and applies its own `globalset`
+commits; it never sees the console's flow decodes.
+
+Differential (throwaway harness, removed at cutover; console `pcode` vs
+lifter in the same session after every `pcode_batch` *and* every
+`flow_batch`), over the 7 m21-001 images and 14 fixture gates (m1-008,
+m1-010, m2-015, m5-001..004, m8-002, m8-006, m10-001, m16-002, m18-001,
+m20-014) plus PE/raw `load file` sweeps (tiny_pe, dispatch, tiny_pe32,
+exports32, raw GBA ARM, raw PSX MIPS): 246,386 caller lifts, **0 diffs**;
+12,511,036 flow-decoded starts, 1 diff. Languages: x86 32/64, ARM v4t/v5t/v8
+(LE, BE, LEBE), MIPS BE 64-32addr, PSX, r5900, PowerPC Xenon. Per 1M
+instructions: caller lifts console 38.2 s vs Rust 19.8 s; flow starts console
+58.9 s vs Rust 18.7 s (console time includes the pipe round trip).
+
+Two console behaviours found:
+- ARM `vpush` with imm8=0xf0 exhausts the console's 75 parser states (BAD
+  there, decoded by kuna; 18 PSV starts) — reproduced in the lifter, test
+  `walks_past_the_console_parser_states_are_bad`.
+- The one remaining diff (NDS `0x0225f038`) is the console's
+  `DisassemblyCache` returning an address's earlier ARM parse after a `blx`
+  `globalset` committed Thumb there: the cache is keyed by address and is
+  only rebuilt by the `context` command. A fresh console and the context
+  database both say Thumb; the lifter answers from the database. Not
+  reproduced deliberately; pinned by `globalset_commit_applies_to_a_later_lift`.
+  No caller-path lift hit it.
+
+Demand path (raised by the Types32 work): `LiveProgram::open` loaded only the
+container's contexts, so a raw GBA ROM's Thumb code decoded as ARM for both
+the walk console and the lifter. It now adds the stored `decode_contexts`
+(minus base-register rows), as the decompile worker does
+(`live_images_decode_under_stored_modes`).
+
+Gates, same binaries before/after except the cutover: m21-001 all 7 rows
+identical recall/precision (GBA 0.9736/0.9689, NDS 0.9729/0.9973, Capcom
+0.9413/0.989, dungeon 0.94/0.9305, PSX 0.9866/0.366, PSV 0.9724/0.957, X360
+0.9833/0.9956); Capcom's size counts vary between runs of the *old* binaries
+too (3 runs: 0.9413/0.9419 recall), the new ones land on one of those.
+m1-008, m1-010, m2-015, m5-002, m5-003, m8-002, m8-006, m10-001, m12-002,
+m16-002, m18-001, m18-002, m20-014, type_headtohead: output identical.
+m5-001, m5-004 and m16-001 fail identically before and after (pre-existing).
+`cargo test -p romwright-core -p romwright-diff`: 522 + 7 + 23 pass on the
+final tree (includes concurrent Types32 tests).
+
+## GBA import 4-6x faster: reference propagation was quadratic (2026-10-07)
+
+Measured on pokeemerald.gba (default import env, 6 console lanes, 12-thread
+host shared with a running benchmark, load 8-13; old and new binaries run
+back to back): **822 s and 1219 s before, 201 s and 207 s after**. Phases
+(s, summed over 4 rounds), before -> after: references-only 622-994 ->
+58-66, console startup 36-38 -> 13-15, flow 113-122 -> 75-77, discovery
+126-133 -> 86-88, switch 30-33 -> 32-33. Vita NFS: 417 -> 339 s (flow
+195 -> 109).
+
+Where the reference pass went (per-range timing, temporary instrumentation):
+each round's wall time was its one or two largest ranges -- the 0.15-0.9 MB
+"bodies" GBA's ROM data decodes into (0x8e48e7a-0x8fa7366): round 1 381 s
+for one 390 KB range while the other lanes idled after 174 s (utilisation
+0.68), round 2 347 s, round 4 244 s (0.29). `perf` on a reference console:
+98-99% in `Funcdata::getCallSpecs`, a linear scan of every call site, asked
+at every CALL the propagation transfers -- calls x calls x fixpoint visits
+in a body full of data-decoded `bl`s.
+1. `native/romwright_constants.hh`: `Propagation` indexes the call specs
+   by op once (same first match, same `IPTR_FSPEC` shortcut; the flow is
+   followed before the propagation exists). Round 1: 381 -> 26 s, lanes
+   evenly busy; protocol bytes per round unchanged (938 KB request / 5 MB
+   response in round 1, so the protocol was never the cost).
+2. Console startup (twice per round, 6 consoles): the import process wrote
+   each console its own 32 MB hex XML with one formatter call per byte (a
+   fifth of the process's CPU); now table-encoded, written once and loaded
+   by every console of the round, and the main console starts beside its
+   shards (`ConsoleSession::open_image_with_shards`) instead of before them.
+   In the console `LoadImageXml` read the hex through `istringstream`
+   (three stream calls per byte, ~40% of a load); the patch now scans the
+   string with the same pair/whitespace/stop rules.
+3. `infer_data_references`: the access-width merge searched the width list
+   per fact (99% of that function's own CPU; 47 k locations); indexed.
+4. The per-walk `FlowShape` dedupe hashes with a multiply-rotate hasher
+   instead of SipHash (about a tenth of the process's own CPU).
+
+Identical output: every project table (functions, xrefs, data definitions,
+decode contexts, stack variables, thunks, flow overrides, features,
+diagnostics; timestamps aside) row-for-row equal before/after on GBA (3 new
+runs) and Vita NFS; m21 scores unchanged (GBA 0.9736 / 0.9689, 496
+invented, size short 9711; Vita 0.9724 / 0.957). `cargo test --release -p
+romwright-core --lib native` with the rebuilt console: 337 pass.
+
+Left, not landed:
+- The flow walk is round-trip bound: GBA's round 1 made 448 k console
+  requests of ~5 addresses for its pattern/relocation candidates (29 s),
+  each depending on the last. Moving flow to the in-process `SleighLifter`
+  would remove the pipe, but is not output-identical: the lifter does not
+  see the console's own `globalset` commits from earlier decodes, and the
+  one known flow diff (NDS `0x0225f038`, console `DisassemblyCache`) stays.
+- Reference round 1 is still ~26 s of real propagation over the junk
+  bodies (one 896 KB range: 22 s); skipping them would change facts.
+- The walk spends ~10-14 s per round in Rust hashing/BTreeMap work
+  (`flow_discover_with_candidates`); not profiled to a single site.
+
+## Discovery flow decoded in process; console and Kuna agree on parse depth (2026-10-07)
+
+Discovery's flow walk (`discover_seeded`, `discover_mapped`) no longer asks
+the console `flow`: `native_runtime::SleighFlow`
+(`crates/romwright-core/src/native_runtime/flow.rs`) answers every flow
+question with the in-process kuna SLEIGH runtime. The console still runs
+the pattern search and the linkage questions; modes the walk sets reach it
+(batched) before its next linkage question. The console's
+`InstructionFlow` (`native/romwright_flow.hh`) needs template-level facts
+resolved p-code has lost (`goto inst_next` vs a branch to the next address,
+labels, delay slots), so a flow decoder's constructor templates carry
+marker ops before each flow op, label and delay slot, read back out of the
+emitted stream (never counted, never lifted as p-code). Each decode commits
+its own `globalset`s into its decoder's context database, and `mode` /
+`flow_modes` are read from it exactly as `IfcFlow` read them.
+
+Lanes: one decoder per former console lane (`ROMWRIGHT_CONSOLE_SHARDS`),
+each with its own context database, a batch split into the same contiguous
+slices as `flow_batch_sharded` did, the seed scan on the first lane alone:
+every decode sees exactly the commits it saw on a console. No console shards
+start for the walk any more.
+
+Fixed on the way, both found by the gate's random-word sweeps:
+- An unaligned address is `UNIMPL` before the 75-parser-state check (the
+  console's `oneInstruction` refuses alignment first); the p-code lifter had
+  the same order bug (`SleighLifter::exhausts_parser_states`). Test
+  `unaligned_is_unimplemented_before_the_parser_limit`.
+- Parse depth: the C++ `ParserWalker::breadcrumb[32]` was never bounds
+  checked, and a PowerPC `lmw`/`stmw` naming ~31 registers wrote past it
+  (memory corruption that happened to answer); Kuna refused it (BAD). Gc
+  data decoded as code reached it 8 times (tables differed). Both now use
+  Ghidra's own bound, read from 12.1.3 `SoftwareModeling.jar`
+  (`ParserWalker.MAX_PARSE_DEPTH` = 64, `breadcrumb = new int[65]`, refuse a
+  push at depth 64): `native/ghidra-opt-sleigh.patch` context.hh hunk
+  (`breadcrumb[65]`, checked in `pushOperand`/`allocateOperand`) and a
+  vendored `third_party/kuna-sleigh` (`MAX_DEPTH` 32 -> 65, the only change;
+  root `Cargo.toml` `[patch]`; THIRD_PARTY_NOTICES.md, docs/third-party.md).
+  Test `deep_register_lists_decode_within_ghidras_depth`.
+
+Permanent differential gate: `ROMWRIGHT_FLOW_DIFFERENTIAL=<file>` (+
+`ROMWRIGHT_FLOW_DIFFERENTIAL_DRIVER=console`) runs the old console lanes
+beside the decoders, compares every answer (length, kind, targets,
+fallthrough, delay slots, mode, flow_modes, pure_jump/no_op/terminal/
+conditional/return_op) and writes each disagreement classed `stale-cache`
+(a model of the console's `DisassemblyCache` says it reused an earlier
+parse) or `other`. CI-sized: `cargo test -p romwright-core --lib
+flow_decoders_answer` (32 KB of random words on ARM v5t/v8 with a Thumb
+half, MIPS BE/LE, PowerPC, x86-32/64, swept and walked; six fixture
+executables through the whole import; console-driven vs decoder-driven
+imports compared). Corpus: `benchmarks/flow_differential.py --target
+<dir> [--images ..] [--console ..]` (console-driven import with the
+differential, default import, every project table compared).
+
+Corpus gate (`target/flowlift`, console `/tmp/flowlift-console` = this
+patch): 0 differing answers of 10,511,755 (gba 3,298,259; nds 1,741,585;
+capcom 341,530; dungeon 44,846; psx 70,550; vita 2,870,834; x360
+1,797,362; gc 346,789), 0 `stale-cache`, every project table identical
+between the console-driven and decoder-driven imports on all eight. (With
+the old console gc had 8 differing answers, all the parse-depth case.)
+The NDS `0x0225f038` stale-cache answer of the earlier p-code differential
+did not recur in this walk.
+
+A/B, default import, `ROMWRIGHT_NO_IMPORT_CACHE=1`, run back to back per
+image on a shared host (load 5.6-17.9): A = binaries built from the tree
+before this change + native/build console, B = this change + its console
+(s; total wall / flow phase / discovery):
+
+| image | A | B |
+|---|---|---|
+| gba | 191.5 / 77.9 / 88.5 | 149.5 / 48.2 / 54.1 |
+| vita | 321.7 / 105.5 / 127.9 | 301.3 / 74.7 / 89.8 |
+| x360 | 106.3 / 30.6 / 41.2 | 105.9 / 29.8 / 36.5 |
+| nds | 279.2 / 9.8 / 14.3 | 214.9 / 5.9 / 8.1 |
+| capcom | 77.6 / 5.0 / 8.3 | 76.7 / 4.6 / 7.7 |
+| gc | 21.0 / 3.9 / 15.3 | 6.9 / 1.2 / 3.1 |
+| dungeon | 6.7 / 1.0 / 2.7 | 5.6 / 0.7 / 1.9 |
+| psx | 4.8 / 0.9 / 1.9 | 4.1 / 0.8 / 1.5 |
+
+A vs B tables are identical on gba, vita, x360, psx; nds, capcom, dungeon
+and gc differ, and in each the console-driven import of the B tree (old
+flow path) equals B exactly, so the difference is the rest of the tree
+(concurrent switch/VSA work since A was built; capcom also varies between
+runs of one binary) and, on gc, the console's depth fix. m21: B equals the
+console-driven import on all seven rows (gba 0.9736/0.9689, nds
+0.9733/0.9973, capcom 0.9412/0.989, dungeon 0.94/0.9305, psx 0.9866/0.366,
+vita 0.9724/0.957, x360 0.9833/0.9956); A differs only on nds (0.9729) and
+capcom (0.9413).
+
+Where the flow phase goes now (`perf` on a B GBA import): Kuna decoding is
+~1-2% of the import process's samples; the flow phase is the walk's own
+Rust work (`flow_discover_with_candidates`, SipHash `HashMap<u64,..>`
+inserts, the provider's per-request `missing` filter and `FlowResult`
+clones out of the cache). x360's flow phase barely moved for that reason.
+
+Tests: `cargo test --release -p romwright-core --lib -- native demand` with
+the patched console: 349 pass, 1 ignored.
+
+Not done:
+- native/build is not rebuilt (pass-2 benchmark pending; other agents'
+  patch edits in flight). Until it is, production decodes deep PowerPC
+  walks differently in the console (references, linkage) than in the
+  decoders; rebuild with `native/build_console.sh` and
+  `native/build_ghidra_opt.sh` once the patch settles.
+- Other console `flow_batch` users stay on the console: the ELF
+  initializer check (`elf_pointers::confirm_initializers`, a console started
+  for one batch), `nonreturn` analysis and `demand`'s live walks; the
+  console `flow` command stays for them and for the differential.
+  `Core::console_flow` stays (public facade). Removed: the dead
+  `ConsoleSession::try_flow`.
+
+## C printing in Rust, opt-in, byte-identical to PrintC (2026-10-07)
+
+- `ghidra_opt` exports a printer IR after PrintC's markup when
+  `ROMWRIGHT_RUST_PRINTER` is set (`native/romwright_printir.hh`, one
+  `DecompileAt` hunk in the patch): the structured block tree as PrintC's
+  block layer reads it, plus PrintC's own Emit calls for every expression,
+  declaration, label and comment. `crates/romwright-worker/src/printc` ports
+  the block layer and `EmitPrettyPrint`/`EmitMarkup` and prints the same
+  packed markup; `decode_document_with_ram_space` substitutes its tokens.
+  Design: docs/printer-ir.md.
+- Differential (`benchmarks/printer_diff.py`, packed bytes): 1800/1800
+  identical over the 8 console-research samples and 200 libc functions.
+  Stays opt-in; cutover is a separate decision. native/build is not rebuilt.
+- Structuring baseline (printed gotos per image, m22, m15, commands):
+  docs/structuring-baseline.md, `benchmarks/structuring_baseline.py`.
+
+## Structuring in Rust: 43% fewer printed gotos, opt-in (2026-10-07)
+
+- Printer IR version 2 (`native/romwright_printir.hh`, decoded by
+  `printc/ir.rs`): every leaf's label, every basic block's out-edges, the
+  CBRANCH condition as PrintC prints its negation, goto targets as block
+  indices, and a flag for blocks holding a `for` initializer/iterator. The
+  printer differential stays 1800/1800 identical.
+- `printc/structure.rs` (opt-in `ROMWRIGHT_RUST_STRUCTURING=all` or a model
+  list) rewrites Ghidra's structured tree before printing: `break_continue`,
+  `collapsed_edges`, `switch_tails`, `loop_exits`, `irreducible_entry`
+  (docs/printer-ir.md). Each rewrite is kept only if a control-flow check
+  of the printed tree against the block graph passes and the goto count
+  drops; Ghidra's tree is printed otherwise.
+- Gate set (8 console samples + 200 libc), default passes: 1511 -> 868
+  printed gotos, 934 -> 585 labels (consoles 312 -> 133); 176 functions
+  better, 0 worse. Per model, ir-none, compile check (0 new gcc
+  diagnostics), m22 standalone (64.142 -> 64.143) and m15 (0.8478,
+  unchanged): docs/structuring-baseline.md#structuring-models.
+- Recommended default together with the Rust printer; not flipped.
+  native/build is not rebuilt (version 2 IR is in /tmp builds only).
+
+## Switch VSA answers console dispatches, checked against the decompiler (2026-10-07)
+
+Before: value-set analysis (`native/vsa.rs`) resolved 0 tables on every
+console image but NDS (261). Refusal tallies (`ROMWRIGHT_TRACE_VSA`, default
+import, before) and causes found in `ROMWRIGHT_TRACE_VSA_AT` traces:
+
+- MIPS (dungeon, capcom, psx): the guard's `beqz` scales the index in its
+  delay slot (`sll v0,v1,2`), so the dispatch block reads it pre-scaled;
+  guard runs seeded the wrong register. capcom: 303 too_few_targets; the
+  index often lives in memory (`lb v1,0x1dd(s1)`) and unique temporaries
+  are reused per instruction, so the memory-key resolver dropped them.
+- PowerPC (gc, x360): `cmplwi; bgtlr` -- a conditional return ended the
+  predecessor block as a Return and the guard was never collected; CR
+  fields pack the compare beside XER[SO], unknown to the emulator, so the
+  branch bit was unknown. x360 (64-bit registers, 32-bit addresses):
+  `lis` sign-extends the table address past 32 bits, and `cmplwi` reads
+  `register:5c:4` inside `lbz`'s `register:58:8` (big-endian sub-register).
+- GBA (agbcc Thumb): `ldr r1,=table` lifts to a COPY from `ram`; the
+  literal pool was an unknown live-in. Guard `bls dispatch; b default`
+  branches *into* the dispatch, which the escape test never counted.
+- Vita (Thumb-2): `tbb/tbh` sets the Thumb bit through a CALLOTHER, which
+  the emulator treated as a call and cleared all state (670/670 unmodelled).
+- NDS/ARM: `cmp r0,#3; addls pc,pc,r0,lsl #2` reads no table at all.
+
+Changes (`native/vsa.rs`, `native/switch_tables.rs`; one line removed from
+`native.rs`'s switch stage, announced):
+
+- One mechanism, three lines walked in order: the dispatch block with its
+  single predecessor run separately (pinned seed installed after the
+  block's last definition of it), the predecessor -- or single-predecessor
+  chain of up to two guards, Ghidra's `analyzeGuards` limit -- composed
+  with the block, then suffixes of the block ending at its last test.
+  Guards count only through a single way in, as Ghidra's do.
+- Escapes: a taken branch away, or an untaken branch whose taken edge is
+  the dispatch (`bls`, `bgtlr`, `beql`); p-code-relative skips resolve to
+  the next instruction. Ranges below zero are walked down and kept only
+  when a guard ends them there too; leading rejected values (normalised
+  index) are skipped by a linear-then-doubling search.
+- Linear destinations (no load) are a table when guarded (`addls pc`).
+- Emulator: partially known bits through AND/OR/shifts (CR packing),
+  INT_CARRY/SCARRY/SBORROW, CALLOTHER only clears its output, literal pools
+  read from code memory, register sub-pieces by endianness, address wrap
+  to the space width (`-32addr`), reaching definitions kept in order.
+- The decompiler's table, entry for entry: Ghidra appends the guard's
+  target as a default (`JumpBasic::foldInOneGuard`) when it is not a case
+  and the dispatch block makes no call; through a lone `b default` it
+  records the jump's destination only when something else reaches it
+  (do-nothing block removed) and the jump otherwise (blocks joined); a MIPS
+  jump with a live delay slot is kept. When that cannot be told yet the
+  table goes to the decompiler (`ambiguous_default`). A guard falling into
+  a `bl` (agbcc long branch) bounds nothing, as in Ghidra.
+- `recover_switch_tables_native` demotes case-block functions itself when
+  it adds tables. Before, a round where VSA added tables and the decompiler
+  added none left pattern functions at case targets for the next walk,
+  which cut the dispatching function short (gc 0x80059ad0: 48 of 308 bytes,
+  its second switch lost).
+- Cost: only candidate functions' flow is indexed per round, jump answers
+  are cached, a seed is walked only if a far index escapes, tables are
+  capped at Ghidra's 1024 (`max_jumptable_size`), Fx-hashed emulator maps.
+
+Gate (`/tmp/vsa/gate.sh`: same binaries, A = `ROMWRIGHT_NO_SWITCH_VSA=1`,
+B = default, run back to back; load average 5-9 from other agents, so
+walls are +-10%). Tables compared as the persisted `COMPUTED_JUMP` sets
+per branch; m21 scored with `tests/m21-001_real_images.py`'s `score`:
+
+| image | wall s A / B | switch s A / B (dec + VSA) | VSA resolved / asked | tables A / B | identical | differ | A-only | B-only | recall A / B | precision A / B |
+|---|---|---|---|---|---|---|---|---|---|---|
+| psx | 3.7 / 4.2 | 0.7 / 0.9 | 19 / 51 | 0 / 19 | 0 | 0 | 0 | 19 | 0.9866 / 0.9878 | 0.366 / 0.3663 |
+| dungeon | 4.4 / 4.3 | 1.2 / 1.2 | 8 / 12 | 12 / 13 | 12 | 0 | 0 | 1 | 0.94 / 0.94 | 0.9305 / 0.9305 |
+| gc | 6.0 / 5.4 | 2.0 / 1.5 | 113 / 145 | 114 / 114 | 112 | 2 | 0 | 0 | - | - |
+| capcom | 65.3 / 67.8 | 51.9 / 54.4 | 154 / 495 | 466 / 463 | 456 | 5 | 5 | 2 | 0.9413 / 0.9412 | 0.989 / 0.989 |
+| nds | 185.8 / 171.7 | 9.4 / 8.7 | 985 / 4361 | 1458 / 1462 | 1420 | 38 | 0 | 4 | 0.9729 / 0.9729 | 0.9973 / 0.9973 |
+| gba | 127.3 / 126.2 | 24.1 / 24.9 | 349 / 708 | 617 / 616 | 613 | 3 | 1 | 0 | 0.9736 / 0.9736 | 0.9689 / 0.9689 |
+| vita | 207.7 / 178.1 | 109.2 / 79.9 | 468 / 773 | 603 / 606 | 557 | 46 | 0 | 3 | 0.9724 / 0.9724 | 0.957 / 0.957 |
+| x360 | 73.0 / 62.1 | 29.1 / 18.1 | 239 / 483 | 247 / 249 | 238 | 9 | 0 | 2 | 0.9833 / 0.9833 | 0.9956 / 0.9956 |
+
+("asked" counts a branch once per round it is asked.) Same-branch
+agreement in case order, measured with a since-removed shadow mode (VSA's
+answer recorded, the decompiler asked anyway, same import state; build
+before the final cost and single-predecessor changes): of 2261 branches both answered, 2150
+identical entry for entry, 2161 with the same target set; 93 differ only
+in the folded default, 17 in the cases.
+
+Disagreements, analysed:
+- Folded default only (most of nds 38, vita 46, x360 9, capcom 5, gba 3,
+  gc 2): which address Ghidra appends after its block clean-up. Examples:
+  capcom 0x1d7f04, 0x27e758 and gba 0x80c94ac -- Ghidra appends no default
+  where the guard targets an epilogue, VSA appends it; gc 0x800149ac --
+  `bgt 0x80014d00`, Ghidra lists 0x80014d04 (a block start after its own
+  rewrite; VSA has the branch's real target); capcom 0x10c224 (`b 0x10c744`
+  with a live delay slot), 0x270a50/0x270c1c (`beql`, Ghidra lists the
+  instruction, VSA the branch-likely target); gc 0x8000849c (`bgtlr` at a
+  function entry: Ghidra did not fold, on three other `bgtlr` dispatches in
+  the image it folded the instruction address, which VSA does). The
+  default is reachable from the guard either way; discovery and m21 do
+  not move. Not demonstrably right on either side: Ghidra's choice
+  depends on its block simplification order, which VSA does not model.
+- Cases differ (x360 0x823bff98 and a few on nds/vita/gc): Ghidra knows a
+  bound from a block VSA does not walk (gc 0x8002e930: `rlwinm.; beq`
+  two blocks up excludes index 0, VSA keeps entry 0, same target set) or
+  a step (gc 0x800331ec: index masked to multiples of 4, Ghidra lists 4
+  entries, VSA 13 with the same set).
+- B-only: psx 19 (the decompiler recovers no table on this image; VSA's
+  are `sltiu; beqz` guarded word tables), dungeon 0x129d10 (`sltiu
+  a2,0x3b; beqz`; 59 cases inside the function, the decompiler gives
+  none), nds 4, vita 3, x360 2, capcom 2.
+- A-only: capcom 0x186810/888/8f8 and two more in function 0x186500 --
+  VSA answered 0x1867bc in that function in round 1 and the decompiler,
+  asked about the others, returned no table for them; why was not traced
+  (probably the stored VSA table changes the decompiler's flow). capcom
+  recall 0.9413 -> 0.9412, one function. gba 0x801396e (A-only) not
+  analysed. Not fixed.
+
+Unit tests (`cargo test -p romwright-core --lib vsa`, 18 pass; `--lib
+switch`, 12 pass): one per idiom from corpus bytes, lifted by SLEIGH and
+checked against the decompiler's list -- MIPS delay-slot scaling
+(dungeon 0x11b2e0), MIPS signed-byte range from -1 (capcom 0x18521c),
+PowerPC `bgtlr` (gc 0x80059cb0), Thumb `bls; b; add pc` halfword table
+(nds 0x2028980), agbcc literal-pool word table (gba 0x80057cc) and its
+undecided-default refusal, ARM `addls pc` branch table (nds 0x20cded8),
+Thumb-2 `tbh` with two guard blocks (vita 0x8104f108), PowerPC64-32addr
+low-word compare (x360 0x821ab6ec).
+
+Not done: the switch phase on capcom, nds and gba barely moves -- most of
+their dispatches still need the decompiler (folds VSA cannot predict,
+multi-predecessor dispatches Ghidra itself bounds elsewhere), and the
+decompiler cost is per owner function. The capcom/gba A-only interaction
+is open (closed in the follow-up below). native/build untouched.
+
+## Switch VSA: no table lost to the decompiler fallback; m13 (2026-10-07)
+
+Follow-up to the entry above (Main's review: fold-only differences
+accepted as a documented divergence, A-only losses not).
+
+- Cause of the A-only losses: discovery asks about switches in rounds 0-2
+  only. The decompiler, asked about a function, returns every table its
+  flow reaches -- nested ones included -- in one decompile; VSA answers
+  one dispatch per round, so a dispatch inside a VSA table's undecoded
+  cases was found a round later and anything past round 2 never asked
+  (capcom 0x186500: 0x1867bc -> 0x1867e8 -> 0x186810 and four siblings).
+  The delay also moved later discovery: bisecting the 135 VSA-recorded
+  capcom tables found seven (0x1867bc, 0x19c184, 0x298910, 0x2a0788,
+  0x2a3b58, 0x2a4c54, 0x2a961c), each alone enough to lose `rate_escape0`
+  (0x1c0740): a pattern function that is also a case target survives
+  demotion only if the tail call to it was walked first.
+- Fix (`native/switch_tables.rs`, `recover_switch_tables_native`): a table
+  whose new cases lead -- by a bounded walk of decoded flow inside the
+  function, 512 instructions -- to an indirect jump with no table yet is
+  left to the decompiler, as is any table reaching new code in the last
+  switch round, and any table with a target outside the dispatching
+  function (next line). `native.rs` (announced): the call passes `round
+  == 2`, and case blocks are demoted once after both switch paths
+  (`decompiled == 0 && tables > 0`) instead of inside the VSA pass.
+- m13 (libc, `tests/m13-001_vsa_switch.py`, run with the native/build
+  consoles): before = HEAD 7e29f17c in a worktree, after = this tree.
+  | | before | after |
+  |---|---|---|
+  | vsa branches / soundness / agree with stock | 0 / 0.0 / 0 | 38 / 1.0 / 37 |
+  | vsa phase s | 0.09 | 1.32 |
+  | interpreted (SJA) branches / soundness | 0 / 0.0 | 73 / 1.0 |
+  | decompiler branches | 129 | 129 |
+  | combined branches / soundness | 129 / 0.9972 | 129 / 0.9972 |
+  Both runs FAIL: before on vsa soundness, interpreter reach and combined
+  <= stock (131); after only on interpreter reach (73 < 129, SJA is
+  opt-in) and combined <= stock -- the decompiler alone answers 129 at
+  HEAD too. A first after-run had vsa soundness 0.9872: 5 of 392 targets
+  were guard defaults outside the function, which stock folds in as well;
+  such tables now go to the decompiler (vsa soundness 1.0). The recorded
+  report (2026-09-12: vsa 94 at 1.0, combined 142) is from an earlier
+  pipeline.
+- Gate (same binaries, A = `ROMWRIGHT_NO_SWITCH_VSA=1`, B = default, back
+  to back, load average 7-11; walls and the decompiler's share of the
+  switch phase moved by up to 30% between identical runs):
+
+| image | wall s A / B | switch s A / B (dec + VSA) | VSA resolved / asked | tables A / B | identical | default only | cases | A-only | B-only | recall A / B | precision A / B |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| psx | 4.3 / 4.6 | 0.8 / 1.0 | 19 / 51 | 0 / 19 | 0 | 0 | 0 | 0 | 19 | 0.9866 / 0.9878 | 0.366 / 0.3663 |
+| dungeon | 4.9 / 4.9 | 1.3 / 1.3 | 8 / 11 | 12 / 13 | 12 | 0 | 0 | 0 | 1 | 0.94 / 0.94 | 0.9305 / 0.9305 |
+| gc | 6.6 / 6.4 | 2.3 / 2.2 | 107 / 139 | 114 / 114 | 113 | 1 | 0 | 0 | 0 | - | - |
+| capcom | 72.9 / 71.5 | 58.0 / 56.9 | 152 / 486 | 466 / 468 | 461 | 5 | 0 | 0 | 2 | 0.9413 / 0.9413 | 0.989 / 0.989 |
+| nds | 243.6 / 215.6 | 14.8 / 12.1 | 952 / 4329 | 1458 / 1462 | 1426 | 31 | 1 | 0 | 4 | 0.9729 / 0.9729 | 0.9973 / 0.9973 |
+| gba | 174.5 / 174.2 | 27.1 / 30.4 | 340 / 699 | 617 / 617 | 617 | 0 | 0 | 0 | 0 | 0.9736 / 0.9736 | 0.9689 / 0.9689 |
+| vita | 227.3 / 250.8 | 116.6 / 130.4 | 439 / 744 | 603 / 606 | 569 | 32 | 2 | 0 | 3 | 0.9724 / 0.9724 | 0.957 / 0.957 |
+| x360 | 81.6 / 108.8 | 31.9 / 41.8 | 236 / 480 | 247 / 248 | 241 | 5 | 1 | 0 | 1 | 0.9833 / 0.9833 | 0.9956 / 0.9956 |
+
+  (The previous gate on vita/x360 measured 207.7/178.1 s and 73.0/62.1 s,
+  switch 109.2/79.9 and 29.1/18.1 s; this run's B legs started at load
+  9.7 and 11.3.) No table is A-only on any image; m21 is equal or better
+  on all seven scored images.
+- Divergence record (accepted): the folded default entry differs on gc 1,
+  capcom 5, nds 31, vita 32, x360 5 tables (74 of 3,517 shared), where
+  Ghidra's choice of default follows its own block clean-up order
+  (examples and reasons in the entry above). Not accepted and open: 4
+  tables whose cases differ -- nds 0x20a7514 (`cmp r4,#3; addls`, VSA 4
+  cases, the decompiler 2: it bounds r4 to {0,1} from earlier
+  assignments VSA does not see), vita 0x8149f65c and 0x814a6668, x360
+  0x823bff98 (VSA 6 more targets), not analysed further.
+- Tests: `cargo test -p romwright-core --lib vsa` 18 pass, `--lib switch`
+  12 pass. native/build not rebuilt (no change needs it).
+
+## Structuring: SAILR-style passes and a copy budget, consoles 133 -> 91 gotos (2026-10-07)
+
+- Remaining gotos after `ROMWRIGHT_RUST_STRUCTURING=all` are classified
+  per render (`ROMWRIGHT_RUST_STRUCTURING_LOG` "remaining"; causes in
+  docs/structuring-baseline.md#sailr-style-passes-and-the-copy-budget):
+  consoles 133 = 29 into a loop (unrolling/rotation), 27 to the end of an
+  enclosing statement and 25 past statements after it (cross-jumping, jump
+  threading, lowered switches, Ghidra not forming else arms), 20 into the
+  other arm, 18 multi-exit loops, 7 into a later arm, 6 backward.
+- New in `printc/structure.rs`: `else_join` (`if (c) { A; goto L; } R; L:`
+  -> if/else, no copy), `sink_join` (moves the code between an if and its
+  goto target into the arms; kept only when the follow-up rewrites remove
+  a goto), a copy budget `budget=N` (printed lines per removed goto,
+  default 4) replacing the fixed 6-statement / 3-block tail bound,
+  condition-block statements hoisted in front of their `if`, and
+  `continue` to a labelled do-while test. Models now always run in one
+  fixed order.
+- Gate set, `all` before -> now: gotos 868 -> 854, lines 79365 -> 78833
+  (consoles 133 -> 91 gotos, 55746 -> 55745 lines; libc 735 -> 763 gotos
+  for 531 fewer lines). 0 functions worse than Ghidra, 0 new gcc
+  diagnostics in 12 configurations, m22 standalone 64.143 (unchanged),
+  m15 0.8478 (unchanged), checker refusals unchanged (1 libc function).
+  Budget sweep 0..16 in benchmarks/reports/structuring_sailr_budget.json.
+- Not built: switch-lowering reversal (the lowered switches now print 0-1
+  gotos), jump-threading reversal proper and loop re-rolling (need
+  expression equality the printer IR does not carry).
+- Recommendation unchanged in kind: `all` (budget 4) as default with the
+  Rust printer; opt-in until then. native/build not rebuilt.
+
+## Rust printer and structuring are the default C output (2026-10-07)
+
+- Every function's C is printed by the worker's Rust printer after all
+  structuring models (`ROMWRIGHT_RUST_STRUCTURING`, default `all`, budget
+  4; `none` prints Ghidra's structure for ablation). `ROMWRIGHT_RUST_PRINTER`
+  is removed: `ghidra_opt` always exports the printer IR
+  (`native/romwright_printir.hh`, patch `DecompileAt` hunk,
+  `renderFunctionIR`), `decode_document_with_ram_space` always prints from
+  it, and a response without it is an error. PrintC's markup is only the
+  differential's reference (`romwright-worker --printer-diff` prints the IR
+  without structuring via `printc::reference`): 1800/1800 identical.
+  `native/build/ghidra_opt` rebuilt; `decomp_native` untouched.
+- Gate set (1800 functions), before (PrintC) -> after: printed gotos
+  consoles 312 -> 91, total 1511 -> 854; labels 231 -> 78 / 934 -> 576;
+  lines 55403 -> 55745 / 77637 -> 78833; 187 functions better, 0 worse.
+  m22 standalone 64.142 -> 64.143; m15 0.8478 (unchanged).
+- The `structure` IR pass stays default: on top of `all` it removes 15
+  console / 65 total gotos (20 functions fewer, none more) for +34 lines,
+  m22 unchanged. Tables and commands:
+  docs/structuring-baseline.md#default-cutover.
+- Oracle parity (`tests/m4-003_language_parity.py`) pins
+  `ROMWRIGHT_RUST_STRUCTURING=none`: structuring is a deliberate
+  divergence (GOAL.md C1), measured by benchmarks/structuring_models.py.
+  `benchmarks/structuring_baseline.py --rust-printer` became
+  `--structuring MODELS` (default `none`); `structuring_models.py`'s
+  baseline is `none`; `structuring_m22.py` gained `--ir-passes`.
+- Pre-existing, unrelated failures seen on both the pre-cutover and the
+  cutover tree: m4-003 stops at language enumeration (bundled languages
+  neither measured nor blocked), m6-006 flags the untracked
+  docs/import-speed.md:14, m22-001's harness stops at reference reassembly
+  parity (ConvertIntToDecimalStringN 99.94%).
+
+## Import speed tracked against stock Ghidra, with quality beside it (2026-10-07)
+
+`benchmarks/import_speed.py` (method: docs/import-speed.md) times
+`romwright-cli import` against Ghidra 12.1.3 `analyzeHeadless` auto-analysis
+on the m21 images plus the GC DOL. Each tool runs alone, alternating run by
+run, on a shared 12-thread host (1-min load 5-17). Both tools' function
+entries are scored with m21-001's `score()` over the same ranges; Ghidra's
+come from `benchmarks/ghidra/ExportFunctionEntries.java`. The JVM runs only
+as the benchmark's reference: ADR-0001 rules it out of the product, keeps
+Ghidra as a dev oracle, and asks every stage to record its measurement
+against stock. Our timed import runs with ROMWRIGHT_* cleared, so it cannot
+start one. Ghidra uses our import's
+language, default analyzers and an 8G heap. The exception is X360: our
+Xenon-32addr language is not a Ghidra module, so Ghidra gets stock
+A2ALT-32addr. Report: benchmarks/reports/import-speed.{json,md}. Tools are
+`55b5a2a8be92e7e5`: target/speedgate release plus the 01:47 native/build
+binaries, kept in /var/tmp/romwright-import-speed/native-20261007 because
+ghidra_opt was rebuilt mid-run.
+
+| image | ours s | Ghidra s | wall ratio | recall ours/G | precision ours/G | gate |
+|---|---|---|---|---|---|---|
+| psx-darkstalkers-3 | 5.1 | 32.4 | 0.158 | 0.988/0.584 | 0.366/0.473 | fail (precision) |
+| ps2-dungeon-game | 6.0 | 33.3 | 0.179 | 0.940/0.736 | 0.931/0.986 | fail (precision) |
+| gc-animal-crossing | 8.2 | 52.6 | 0.155 | no truth | no truth | pass (speed only) |
+| ps2-capcom | 93.8 | 299.8 | 0.313 | 0.941/0.756 | 0.989/0.998 | pass |
+| x360-black-ops-2 | 85.0 | 291.4 | 0.291 | 0.983/0.763 | 0.996/0.997 | pass |
+| psv-nfs-most-wanted | 229.5 | 572.2 | 0.401 | 0.972/0.704 | 0.957/0.966 | pass |
+| nds-pokeheartgold-arm9 | 241.5 | 557.3 | 0.433 | 0.973/0.864 | 0.997/0.998 | pass |
+| gba-pokeemerald | 206.8 | >3600 / >10800 | <0.057 | 0.974/- | 0.969/- | incomplete |
+
+Gate: the median wall ratio must be below 1 - tol, where tol = max(5%, the
+worst run spread of either tool on that image). Recall and precision must
+each be at least Ghidra's minus 0.01. Overall: **FAIL**.
+
+- We are faster on every image, by 2.3-6.5x in wall time. We are also
+  lighter: peak RSS ratio 0.14-0.50, and CPU ratio 0.19-0.73 except NDS at
+  1.12, where our import also analyses ARM7 and every overlay.
+- PSX fails on precision. Against VS.MAP, which lists globals only (m21-001
+  documents most of our 1398 "invented" entries as real), Ghidra's lower
+  precision comes with recall 0.58 against our 0.99.
+- Dungeon fails on precision: 0.931 against 0.986, with recall 0.94
+  against 0.74. F1 (reported, not gated) is 0.935 against 0.843. The gate
+  judges each metric on its own, so this one counts.
+- GBA: Ghidra never finished. Two runs were killed at 3600 s, and a third
+  extended run was killed at 10800 s. Its log holds 17,257 "Decompiling ...
+  Unable to resolve constructor" warnings, from decompiler-driven analysis
+  of ROM data. There is no Ghidra function list, so quality is not
+  comparable and the image cannot pass.
+- Our precision is below Ghidra's on every scored image. On Capcom
+  (-0.0089), Vita (-0.0087), NDS (-0.0010) and X360 (-0.0009) it stays
+  within the 0.01 margin, while our recall is 0.11-0.27 higher. Capcom and
+  Vita are close enough to the margin that a small precision regression
+  would fail them.
+
+Re-run: `python3 benchmarks/import_speed.py --no-build --native DIR`.
+Results are cached per run under /var/tmp/romwright-import-speed. Without
+the cache, a full run takes about 3.6 h, plus the optional extended GBA run
+(`--only gba-pokeemerald --runs 1 --limit 10800`).
+
+## Discovery: junk entries refused, later walks cheaper (2026-10-07)
+
+Two changes in `native/discovery.rs` (plus `references.rs`
+`close_call_targets`, one guard): (A) three rules that keep data out of the
+function list, (B) a speed-only rework of the walk, output-identical.
+
+(A) Where pokeemerald's 496 invented functions came from (classified
+against the ELF's sections): bodies decoded out of `gfx_data`,
+`multiboot_data`, `.rodata` and the 0xff padding past the ROM's data
+(1.8 MB of bodies, the reference pass's slowest ranges), seeded by pattern
+starts and odd-word table seeds in data and grown by calls decoded from
+that junk. Rules:
+- Repeated-byte runs: the walk refuses the 17th consecutive instruction whose
+  bytes are one value, as Ghidra's `Disassembler` does with
+  `RepeatInstructionByteTracker` (limit 16; restarts at a block start and
+  after a call). Unlike Ghidra, a p-code-less instruction (MIPS `nop`) does
+  not count: dungeon_game's `padlib::init` and two `GamePad` methods wait on
+  20 nops, which Ghidra's limit cut out of their bodies.
+- Calls into fill: a call target whose first 16 bytes are all 0x00 or all
+  0xff is not walked or created (`opens_with_fill`; Thumb `0xffff` is a
+  falling-through `bl` half, so one junk call walked all the padding).
+- Thumb-1 entries that do not decode: on ARMv4T/v5T, an entry decoded in
+  Thumb whose straight-line code meets an unpaired `bl` half or an undefined
+  encoding before its first return/`b`/write to pc is refused and never
+  walked (`thumb1_fallthrough_decodes`, `refuses_entry`). On pokeemerald it
+  holds for every Thumb function the symbols name that the import found and
+  fails for 235 of the 471 invented ones (all producers).
+
+size_short checked: 9,653 of pokeemerald's 9,710 short sizes end where the
+ELF's `$d` mapping symbol says literal pool/data starts (our body is the
+instructions, the symbol size includes the pool), 9 are alignment fill, 48
+are real truncations (e.g. `Task_TryBecomeLinkLeader` 36 of 2020 bytes, cut
+at an invented entry or an unresolved dispatch).
+
+(B) Profile (frame-pointer build, GBA): a later round's walk spent ~2.4-4.8 s
+of main-thread CPU outside decoding, in SipHash sets/maps, BTreeMap flow-cache
+and extent-index lookups, `confirmed_thunks` scanning every decoded extent
+and the entry Vec per candidate, an `ExtentIndex` rebuilt over every decoded
+instruction per pattern round (read only by the relocation round), the
+per-round shape dedupe over all rounds' shapes, `imp.xrefs` cloned per walk,
+and O(F x E) merges. Changes: module-wide `WordHasher` (Fx multiply plus
+rustc-hash 2's final rotate) for every set/map (no iterated collection's
+order reaches output), one cache lookup per address, hashed extent index
+probed over `max_extent` starts, `confirmed_thunks` on sets/indexes, shapes
+deduplicated as recorded, the relocation-only index built only for that
+round, set lookups in the tail. Later rounds' non-decode walk CPU roughly
+halved (2.1-2.4 s against 3.2-4.8 s). Walking only from new seeds was not
+done: a round's ownership (`addr_origin`, hence sizes) is first-reach in a
+BFS from every entry, so a walk resumed from new seeds assigns contested
+code differently and is not output-identical.
+
+m21 (snapshot of the tree at 15:09 so concurrent edits do not move it;
+off = same binary with the (A) rules disabled; A = rules, B reverted; B =
+rules + B):
+
+| image | recall off / A / B | precision off / A / B | invented off / A / B |
+|---|---|---|---|
+| gba | 0.9736 / 0.9737 / 0.9737 | 0.9689 / 0.9882 / 0.9882 | 496 / 185 / 185 |
+| nds | 0.9729 / 0.9729 / 0.9729 | 0.9973 / 0.9974 / 0.9974 | 29 / 28 / 28 |
+| vita | 0.9724 (all) | 0.957 (all) | 1157 (all; one unscored junk call into fill gone) |
+| capcom | 0.9413 (all) | 0.9889 (all) | 93 (all) |
+| dungeon | 0.94 (all) | 0.9293 (all) | 56 (all) |
+| psx | 0.9878 (all) | 0.3663 (all) | 1398 (all) |
+| x360 | 0.9833 (all) | 0.9956 (all) | 121 (all) |
+
+(capcom 0.9889 and dungeon 0.9293 against the 2026-09-24 floors' 0.9890 and
+0.9305 come from switch-table changes in the snapshot, identical with the
+rules off.) The GBA precision floor is raised to 0.978.
+
+Identity: every project table (compare.py, multisets, wall-clock columns
+skipped) A vs B: IDENTICAL on all 8 images (gba, nds, vita, capcom,
+dungeon, psx, x360, gc). Vita and capcom differ run to run when a 59 s
+decompiler timeout fires under load; vita was re-run back to back and
+matched. Flow differential (`benchmarks/flow_differential.py`): 0 differing
+answers on all 8 (capcom's tables differed between its two imports by such a
+timeout).
+
+Timing, back to back, load 7-15 (seconds, off / A / B):
+
+| image | wall | discovery | flow | references | references-only |
+|---|---|---|---|---|---|
+| gba | 217 / 131 / 88 | 70.9 / 34.6 / 17.5 | 61.5 / 27.8 / 12.6 | 95.9 / 60.6 / 44.7 | 72.7 / 46.0 / 35.0 |
+| nds | 240 / 259 / 252 | 9.5 / 11.8 / 7.9 | 6.1 / 8.6 / 5.7 | 10.4 / 12.0 / 8.7 | 2.7 / 3.4 / 2.5 |
+| vita | 289 / 278 / 273 | 80.6 / 90.0 / 72.4 | 68.9 / 77.7 / 60.5 | 46.1 / 45.1 / 44.6 | 24.4 / 20.5 / 19.9 |
+
+An earlier set (load 12-26) agrees in direction: gba discovery 191 / 62 / 56,
+references 140 / 111 / 132.
+
+Invented functions left: gba 185 (74 odd-word table seeds into script
+bytecode that decode cleanly, 38 `bl` targets inside real code the ELF names
+no FUNC, 19 pattern starts in `multiboot_data`/`.rodata`). vita 1157: 1057
+are pattern starts inside a function the BINMAP sizes (732 with no xref),
+74 call targets inside bodies. capcom 93: 34 switch case targets left as
+functions, 16 call targets inside bodies, 8 const seeds at round constants
+(0x110000, 0x140000 ...), 18 flow-seeded starts between functions. dungeon
+56: 32 `.rodata` jump-table words (elf-pointer DATA) and gap starts inside
+bodies, 7 thunks inside bodies. Not addressed here.
+
+Tests: `cargo test -p romwright-core --lib -- discovery native` 363 pass
+(new: repeated-byte runs, fill, Thumb-1 decode, a refused entry).
+native.rs is unchanged (a seed trace added for the classification was
+removed).
+
+## Discovery: interior entries retracted; precision at or above Ghidra (2026-10-07)
+
+Follow-up to the entry above. The target: precision vs truth at least that
+of Ghidra headless (benchmarks/reports/import-speed.md: dungeon 0.9863,
+capcom 0.9979, vita 0.9657). `native/discovery.rs` `interior_entries`
+retracts, at the end of each walk, an entry nothing calls and nothing
+declares (no symbol, unwind row, loader name or process entry) that sits
+inside another function's code. There are three rules:
+- the entry is reached by a fallthrough or a conditional branch from an
+  instruction of another function. Both instructions must be decoded now
+  and in the same instruction set, and the owner must not be a literal word
+  that something loads (a READ target). The owner absorbs the entry's span.
+- it is a switch case target after its dispatch, with no other entry
+  between them except the same table's cases.
+- MIPS only: the entry has no `addiu sp, sp, -N`, and the word before it is
+  neither the delay slot of `jr ra`/`j`/`b` nor zero padding.
+
+How the rules were chosen: I dumped the final walk (shapes, tables,
+seeds) on each image, scored every candidate rule offline against truth,
+and kept only what measured clean (0-1 true entries lost per rule on
+dungeon and capcom). Two guards come from the gate: pokeemerald lost
+`HBlankIntr` and two others to literal-pool words seeded as entries, hence
+the READ-target owner guard; Black Ops 2 lost two `.pdata`-declared
+functions, hence keeping unwind rows.
+
+m21 (one snapshot binary, ROMWRIGHT_EXP_OFF=interior toggles the rule; back
+to back, load 4-8):
+
+| image | recall off / on | precision off / on | invented off / on | Ghidra precision |
+|---|---|---|---|---|
+| dungeon | 0.9400 / 0.9438 | 0.9305 / 0.9880 | 55 / 9 | 0.9863 |
+| capcom | 0.9413 / 0.9412 | 0.9890 / 0.9964 | 92 / 30 | 0.9979 |
+| vita | 0.9724 / 0.9720 | 0.9570 / 0.9712 | 1157 / 764 | 0.9657 |
+| gba | 0.9737 / 0.9737 | 0.9882 / 0.9904 | 185 / 150 | - |
+| nds | 0.9729 / 0.9729 | 0.9974 / 0.9981 | 28 / 21 | |
+| x360 | 0.9833 / 0.9833 | 0.9956 / 0.9964 | 121 / 98 | |
+| psx | 0.9878 / 0.9878 | 0.3663 / 0.3663 | 1398 / 1398 | |
+
+gc (unscored): 3019 -> 3007 functions.
+
+Recall: dungeon rose (+0.0038). The case labels it retracts had cut their
+owners short, and owners reached past the next entry now. Capcom loses
+`pl0b_sp23` (0x16d260), a real function placed right after a dispatch
+whose table names it (switch rule). Vita loses 11 functions: a run of
+20-byte trampolines at 0x815cc474-0x815cc4ec, `CgsSound::DspPlugIn` at
+0x8159331c-0x81593350, and 0x81063a60. In each, the walk's current decode
+of the function above falls into the next one in the same mode. I did not
+trace why that function's `bx lr` reads as a fallthrough. A filter on
+no-op padding sources changed nothing and was dropped.
+
+Capcom residual vs Ghidra (0.9964 vs 0.9979, 30 invented). 13 of the 30
+are real code that the truth (FUNC symbols only) cannot see: `_start` at
+0x100008 and the 12 `flPS2_Mem_*`/`flPS2_*_Mem*` assembler routines at
+0x220fe0-0x2211b8, which carry NOTYPE symbols. Counted as hits, precision
+is 0.9978. 16 more decode bytes in `.data` (0x2aee90-0x2affa8, `osdsrc`
+and the kernel TLB area). The stripped image has one WAX segment `main`,
+so code and data share it and nothing marks where `.data` starts.
+Dungeon left 9: crt0 starts and called helpers at 0x100000-0x1000c0 and
+0x133c7c-0x133db8, and the switch-default block 0x11b3a8 that VSA owns
+(per Main, left out of this work).
+
+Floors raised in tests/m21-001 to the measured values minus 0.01
+(precision): gba 0.980, nds 0.988, capcom 0.986, dungeon 0.933/0.978, vita
+0.961, x360 0.986. Tests: `cargo test -p romwright-core --lib -- discovery
+native` 371 pass. New tests cover a fallthrough-owned entry, a called
+entry kept, and the MIPS boundary rule. The rules are measured, not
+Ghidra's. Ghidra's nearest equivalent is `checkAlreadyInFunctionAbove` for
+pattern starts.
+
+Commands: snapshot of the tree with the env toggle in
+target/discovery-prof/snap3 (built into bins/E); `python3
+/tmp/disc/m21run.py bins/E/romwright-cli Eon2 <id>` and
+`ROMWRIGHT_EXP_OFF=interior ... Eoff <id>`; offline rule scoring:
+`/tmp/disc/predict.py <id> <project.sqlite> <dump.json> fall,cbranch,switch -v`,
+where the dump came from a scratch walk-state dump build (removed, as are
+the earlier entry's snap/snapA snapshots).
+
+## Switch tables: truth to the binary decides, not agreement with Ghidra (2026-10-08)
+
+Policy: Ghidra is the bar to beat, not the target. A switch target is an
+address the indirect branch can actually reach. Each table where VSA and the
+decompiler disagreed was ruled on from the bytes and the paths into it.
+
+**Folded default (the 74 "default-only" tables in the 2026-10-07 gate: gc 1,
+capcom 5, nds 31, vita 32, x360 5).** Ghidra appends the guard's
+out-of-range target with no case label (`foldInOneGuard` ->
+`addBlockToSwitch(.., NO_LABEL)`; `JumpTable::encode` writes `label` (131)
+only for labelled entries). That target is where the guard's own branch
+goes, not the indirect branch, so neither side's extra entry was a target.
+- `romwright-worker/src/doc.rs` now drops the trailing unlabelled entry of a
+  labelled table.
+- VSA no longer appends a default. All its fold machinery is gone (`Jump`,
+  `decide_jump`, `JumpCache`, `ambiguous_default`).
+- The default is still a block of the dispatching function. Demotion
+  (`demote_case_blocks_among` -> `guard_defaults`) treats the taken targets
+  of the guard blocks' conditional branches as case blocks. This fixes
+  dungeon `FUN_0011b3a8`, which a flow seed had turned into a function once
+  no xref folded it back.
+- Test updated: `loaded_reads::switch_batches_preserve_tables_across_a_failed_function`
+  now expects `[28,32,36,40]`. `default_case` (+44) is reached by `bhi`
+  only.
+
+**Case-list rulings and the fixes that make the importer pick the true answer:**
+
+| table | truth | answer now |
+|---|---|---|
+| nds 0x20a7514 | r4 is 0/1/3 (`mov`) or 2 (`movlo` at 0x20a758c): all 4 slots | VSA right; VSA kept |
+| x360 0x823bff98 | r10 is 4/0x84/0x10/8/0x108/0x20, so r9 is in {0..7, 12..15, 28, 29}: 8 distinct targets | VSA right; decompiler gave 1 |
+| vita 0x8149f65c | the ways in set r0 to 1, 1, 0, then `subs r0,#1`: only case 0 | decompiler right; VSA fixed (constant ways in) |
+| vita 0x814a6668 | `r8 = r2 & 0x3ffffff8`, so `((r8-4)>>2)-1` is even: 4 of 8 | decompiler right; VSA fixed (flow facts) |
+| gc 0x800331ec | `rlwinm r0,r28,0,0x1c,0x1d`: slots 0/4/8/12 of 13 | decompiler right; VSA fixed (known bits) |
+| gc 0x8002b7bc | `r3 = r31 & 0xf8` on all three ways in: every 8th of 41 slots | decompiler right; VSA fixed (flow facts, rechecked once cases decode) |
+| gc 0x80033588 | r26 is `x&0xc` or 16, across calls (callee-saved): 5 of 17 | decompiler right; VSA fixed (facts + cspec `unaffected`) |
+| gc 0x8008618c | the dispatch reloads the word `beq` tested for 0 | decompiler right; VSA fixed (composed line preferred when narrower) |
+| nds 0x2098bd0, 0x2098c94 | 2-bit field (`lsl #0x17; lsr #0x1e`) under `cmp #4`: slot 4 never taken | decompiler right; VSA fixed (known bits) |
+| nds 0x20dc0f4 (+8 overlay tables, e.g. 0x21ee8c8) | the only way in is `cmp r2,#0; bne dispatch` / `movs r6,r0; popeq`: slot 0 never taken | decompiler right; VSA fixed (composed line, conditional skips, no self-defined "constant" live-ins) |
+| vita 0x81007cd4 (and 3 siblings) | `cmp r2,#6; beq` is a hole: 7 and 8 still reach their slots | decompiler right; a VSA regression caught in the gate and fixed (equality escape = hole) |
+| nds 0x225dda0, 0x2235abc | the `beq` tests a neighbouring byte (`+0xb8`), not the index (`+0xbc`); likewise 0x2235abc's slot 0 is reachable | decompiler right; VSA regressions caught and fixed (ambiguous memory keys dropped; conditional-body meet) |
+| nds 0x20eaf48 (`__strtoul`) | r4 is one-hot {0,1,2,4,8}: 5 of 9 slots | neither is exact; the decompiler's 9 is a sound superset; VSA now gives the same |
+
+Per image, over every table that differed at some point:
+
+| image | VSA right | decompiler right | both (agree once the default is dropped) | neither exact (sound superset kept) |
+|---|---|---|---|---|
+| gc | 0 | 4 | 1 | 0 |
+| capcom | 0 | 0 | 5 | 0 |
+| nds | 1 | 13 | 31 | 1 |
+| vita | 0 | 6 | 32 | 0 |
+| x360 | 1 | 0 | 5 | 0 |
+
+No table was left undecidable.
+
+**VSA mechanisms added** (vsa.rs; switch_tables.rs):
+- Known bits.
+  - `known_bits` filters indices whose fixed bits a mask or a narrow field
+    rules out, and ends the table past the largest allowed index.
+  - `INT_ADD`/`INT_SUB` keep their low known bits.
+- Flow facts: `entry_facts`, a forward known-bits dataflow over the
+  function's blocks.
+  - Meets at joins.
+  - Calls keep the cspec default prototype's `<unaffected>` registers
+    (`SleighLifter::unaffected`, parsed from the cspec the lifter already
+    loads).
+  - A conditional instruction body (CBRANCH to the next instruction or
+    p-code-relative) meets before and after.
+  - These blocks start knowing nothing: the entry, jump-table cases, and
+    blocks with no predecessor.
+  - Facts are skipped for a function with an unanswered indirect jump or
+    with undecoded cases. Without that rule `__strtoul`'s state machine
+    lost 7 cases.
+  - `refine_with_facts` replaces a table only with a strict subset.
+  - `narrow_recorded_tables` rechecks once (`switch_asked` = 0) the tables
+    from earlier rounds whose cases are decoded now. It drops the removed
+    targets' xrefs, and checks against the table plus every xref from the
+    branch.
+- Emulation.
+  - A known-taken conditional skip skips the body. An unknown one meets
+    the registers.
+  - A composed line probes its stride from the first admitted index.
+  - Constant live-ins come only from guard blocks, not from the line itself.
+  - Memory keys whose base changes between loads are not seeds.
+  - An escape followed within 8 indices by a case is a hole, not the end.
+  - A narrower composed answer wins over the direct one.
+- GBA hand-off fix. `reaches_unanswered_dispatch` counted Thumb
+  `pop {rX}; bx rX` returns as unanswered dispatches, which handed 562 of
+  563 answered GBA tables to the decompiler. It now uses discovery's
+  `thumb_pop_return`, made `pub(super)` (a one-word change in
+  discovery.rs). GBA VSA-kept tables went from 0 to 528.
+- Tests: 17 corpus-byte unit tests in `vsa::tests::real`; 40 pass with
+  `cargo test -p romwright-core --lib -- vsa switch`. Worker test:
+  `jump_tables::a_folded_default_is_not_a_switch_target`.
+
+**Gate** (A = `ROMWRIGHT_NO_SWITCH_VSA=1`, B = default). Run on build host
+`nih-vps-u` with my tree snapshot, which includes other agents' concurrent
+discovery changes; A and B come from the same build, run back to back. Tag
+`h5`; scripts are copies of /tmp/vsa/{imp,gate,summary}.py under
+`~/runs/VsaConsoles/vsa`.
+
+| image | wall s A/B | switch s A/B | tables A/B | differ | A-only | recall A/B | precision A/B |
+|---|---|---|---|---|---|---|---|
+| psx | 1.8/2.1 | 0.3/0.5 | 0/19 | 0 | 0 | 0.9866/0.9878 | 0.366/0.3663 |
+| ps2 dungeon | 2.2/2.2 | 0.5/0.6 | 12/13 | 0 | 0 | 0.9438/0.9438 | 0.988/0.988 |
+| gc | 3.4/3.6 | 1.0/1.2 | 114/114 | 0 | 0 | - | - |
+| capcom | 38.6/38.4 | 31.4/31.2 | 466/468 | 0 | 0 | 0.9412/0.9412 | 0.9964/0.9964 |
+| nds | 98.9/98.8 | 4.8/6.3 | 1459/1464 | 1 (0x20a7514, VSA right) | 0 | 0.9729/0.9729 | 0.9981/0.9981 |
+| gba | 58.9/60.4 | 13.1/14.7 | 617/617 | 0 | 0 | 0.9737/0.9737 | 0.9904/0.9904 |
+| vita | 214.4/167.0 | 161.6/114.2 | 603/606 | 0 | 0 | 0.972/0.972 | 0.9712/0.9712 |
+| x360 | 38.8/39.4 | 13.5/13.9 | 247/248 | 1 (0x823bff98, VSA right) | 0 | 0.9833/0.9833 | 0.9964/0.9964 |
+
+- VSA-kept tables (`switch_stats.vsa_resolved`): gba 528, vita 435, nds 341,
+  x360 196, capcom 126, gc 94, psx 19, dungeon 4.
+- m21 before (2026-10-07 gate, B): dungeon 0.94/0.9305, capcom
+  0.9413/0.989, nds 0.9729/0.9973, gba 0.9736/0.9689, vita 0.9724/0.957,
+  x360 0.9833/0.9956.
+- The tree has moved since then, so A is the fair comparison: B equals A
+  on every image except psx, where B is higher, as before.
+- Dungeon's lost function `FUN_0011b3a8` is gone in both A and B.
+- m13 was not rerun.
+
+Commands, from `~/runs/VsaConsoles/vsa` on nih-vps-u:
+```
+./gate.sh h5 psx-darkstalkers-3 ps2-dungeon-game gc-animal-crossing ps2-capcom-fighting-evolution nds-pokeheartgold-arm9 x360-black-ops-2 gba-pokeemerald psv-need-for-speed-most-wanted
+python3 summary.py h5 <same images>
+```
+`gate.sh` puts the copied `llvm-readelf` and libLLVM on `PATH` and
+`LD_LIBRARY_PATH` (the host has no LLVM).
+
+## `infer_prototypes` survives a worker death; two native crashes fixed (2026-10-08)
+
+The job aborted the whole program with `worker: worker: worker process:
+decompiler died` on x360-black-ops-2 and gc-animal-crossing. Two native
+defects, each reproduced with a backtrace, and a Rust path that turned one
+function's crash into the program's failure.
+
+- **Printer IR label on an empty block (gc).** `SIGSEGV` in
+  `Scope::stackCodeLabel` <- `PrintC::emitLabel` <-
+  `RomwrightPrintCAccess::label` <- `RomwrightPrintIrExport::node`
+  (`romwright_printir.hh`), on `FUN_80079a68`. A basic block whose
+  operations were all removed and whose cover is two ranges (a wait loop the
+  decompiler proved infinite) has no entry address
+  (`BlockBasic::getEntryAddr` returns an invalid `Address`), and `emitLabel`
+  dereferences its null space twice (`queryCodeLabel`, `getShortcut`).
+  Ghidra reaches it only for a goto to such a block; the exporter prints
+  every leaf's label, so it reached it routinely, in every mode (plain
+  decompile too, not only recovery). `RomwrightPrintCAccess::label` now names
+  such a block by the start of its cover, else the function's entry.
+- **SLEIGH operand array overflow (x360).** `corrupted size vs. prev_size`
+  from `free` in `VarnodeBank::clear` during `flushNative`, at different
+  functions per run. Valgrind on the recorded session (stdin replay of the
+  crashed `ghidra_opt`): one invalid write, `ParserContext::allocateOperand`
+  `resolve[20]` after a 160-byte block. `ParserContext::initialize(75,20)`
+  sizes each state's operand array at 20; the Xenon `vsubuhm` constructor
+  (`xenon` language, `.slaspec` line 1078) has 27 operands, so decoding the
+  bytes `10 27 34 40` overwrote the next heap chunk's header. The corruption
+  is silent until a later free, hence the unrelated backtrace.
+  `allocateOperand` (`ghidra-opt-sleigh.patch`) now grows the array to
+  the constructor's operand index, as Ghidra's Java `ConstructState` is sized
+  per constructor.
+- **Rust.** `infer_prototypes` skips and counts a function whose request
+  lost its worker (`WorkerError::Process | Io | Protocol`) in the new
+  `InferenceReport.worker_deaths`, beside `decompiler_failures`; the dead
+  session is never returned to idle, the next request spawns a fresh worker
+  (verified below). Cancellation, deadline, stale revision, store/core errors,
+  memory-cap failure and setup failures still end the pass
+  (`triage_recovery`, unit-tested). `NativeWorker::deregister_program` is new
+  (frees the native architecture; the reply has no warnings frame, which
+  `run_command` does not read).
+
+Regression tests (ignored; need the built `ghidra_opt` and the SLEIGH
+specifications): `crates/romwright-worker/tests/empty_loop_label.rs`
+(plain and recovery decompile of a 9-instruction Gekko loop; died before)
+and `tests/sleigh_operand_arrays.rs` (decodes `vsubuhm`, then releases the
+architecture with the allocator's per-thread cache off; "double free or
+corruption" before). Unit tests in `romwright-worker-client`.
+
+| run (fixed `ghidra_opt`, new Rust) | analyzed | changed | decompiler_failures | worker_deaths | recycles | rounds |
+|---|---|---|---|---|---|---|
+| gc-animal-crossing | 5942 | 4384 | 6 | 0 | 6 | 3 (round limit) |
+| x360-black-ops-2 | 65466 | 49006 | 8 | 0 | 14 | 3 (round limit) |
+
+Resilience with the crashing `ghidra_opt` (before the C++ fix) and the new
+Rust, gc: job completes, analyzed 5940, `worker_deaths` 2. The x360 run with
+only the printer-label fix died four times (twice in a gdb run, at
+`0x82496090` and `0x8261ccd8`) and also completed. The 8 x360 refusals are
+`Bad decompile address` (5: four functions, `0x822a6e30` in two rounds) and
+`FunctionIR operation identity changed` (3: `0x825087a0`, every round); the latter is a separate decompiler exception,
+not investigated here.
+
+Commands (project copies under `/tmp`; `CARGO_TARGET_DIR=target/protofix`):
+```
+native/build_ghidra_opt.sh --jobs 10
+cargo build --release -p romwright-cli -p romwright-worker -p romwright-api
+target/protofix/release/romwright-cli import ~/ventris-corpus/extracted/gc-animal-crossing/main.dol --name gc --project /tmp/gcproj
+target/protofix/release/romwright-cli import ~/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe --name x360 --project /tmp/x360proj
+# per project: {"api":2,"id":0,"method":"infer_prototypes","params":{"binary":<image>,"program":"gc"|"x360.xex","budget_ms":N}}
+#   piped to: target/protofix/release/romwright-api --project <copy of the import>
+cargo test -p romwright-worker-client -p romwright-worker
+cargo test -p romwright-worker --test empty_loop_label --test sleigh_operand_arrays -- --ignored
+```
+
+## Inferred parameter types are on in `infer_prototypes` (2026-10-08)
+
+The `infer_prototypes` job merges the p-code type inference
+(`types_infer`/`subtype`) into the prototypes it persists
+(`types_infer::prototypes`). The default is now on;
+`ROMWRIGHT_INFERRED_TYPES=0` turns it off for ablation (console_research
+config `inferred-types-off`). The merge never changes arity, order, names,
+convention or storage. It never touches an asserted prototype or one an
+import, SDK or library table supplied. It replaces only `undefined<N>`
+(pointer on structural evidence, signed int on signed evidence) and
+register-width `int`/`uint` (pointer on structural evidence only). Each
+upgrade is named in the provenance source, e.g.
+`native-decompiler prototype recovery+native-prototype:inferred-types(param_1:int->ptr)`.
+
+ROM-import ablation (benchmarks/reports/console_research_final.{json,md},
+200 sampled functions per image, inferred-types vs infer-prototypes): DWARF
+type-slot exact gba 0.258 -> 0.372, nds 0.493 -> 0.605, ps2-dungeon
+0.344 -> 0.426, arity unchanged. On stripped-ELF imports (250 DWARF
+functions): gba 0.338 -> 0.462, nds arm9 0.300 -> 0.391. No printed
+pointer was wrong; no slot went from exact to wrong.
+
+The one regression in that run, x360 `0x8258d150` failing export with
+`unaligned or out-of-bounds partial access to s______829dc830 needs typed
+context`, was not an upgraded slot. With types on, the 1200 s job budget
+stopped after round 2 (the job without types finished round 3 in 1173 s).
+At that point callee `0x8250f158` still had its round-2 arity of 8
+(round 3 gives 3), so the decompiler printed a word read
+`s______829dc830._0_4_` of a 13-byte string. Swapping only that callee's
+prototype into the working project reproduces the failure, and a full
+3-round run with types on exports the function. The defect was in the
+emitter: a storage union for a 13-byte object has byte members only, and
+an in-bounds read aligned to its own width at its absolute address was
+refused. Such a read now prints as `(*(unsigned int *)&s.u1[0])`. Unaligned
+or out-of-bounds reads are still refused
+(`emit_m2c::storage::tests`). Both remote projects now export all 200
+sampled x360 functions locally.
+
+Cost: the merge solves every recovered function once, single-threaded
+(stripped ELF: +13-19% job time; x360 local 3123 s -> 3520 s). Under a
+fixed budget that can cost a round.
+
+Commands (`CARGO_TARGET_DIR=target/typesproto`):
+```
+cargo test -p romwright-core --lib -- types_infer::prototypes emit_m2c::storage
+romwright-cli export-c ~/ventris-corpus/extracted/x360-call-of-duty-black-ops-2/default_mp_script.exe x360.xex <out> --address 8258d150 --project <copy of the inferred-types prototype project>
+python3 benchmarks/console_research.py --configs inferred-types-off
+```
+
+## PSX precision vs Ghidra: the invented entries are real statics; gate uses a corroborated metric (2026-10-08)
+
+The last import-speed gate failure was PSX Darkstalkers 3 precision, 0.3663
+against Ghidra's 0.4728 (m21-001 `precision`). Classification of the 1,398
+entries `VS.MAP` does not name (`target/psx` import, `.text`
+0x801395F0-0x8018ED2C), judged from `VS.EXE`'s bytes, not from either tool:
+
+| class | entries |
+|---|---|
+| `jal` target after a `jr $ra` (146 called from a map-named function's body) | 545 |
+| entry of a function-pointer table in `.data` (803 are in runs of 2+ words; the longest, 158 words at 0x8018FDC4, holds only invented entries) | 803 |
+| opens `addiu $sp,$sp,-N`, address taken by `lui`+`addiu`/`ori` or a lone data word | 43 |
+| no corroboration (5 look real, 2 are fragments: 0x8014102C an unreachable epilogue after an infinite `j`, 0x801838CC 8 bytes in hand-written library code) | 7 |
+
+All but one start right after a `jr $ra`; none is the target of a `b*`/`j`
+(nor is any map-named entry); none lies inside another found function's
+extent or starts on padding; 79% open a stack frame (71% of the named
+ones). Ghidra's own 533 invented entries are the same kind (521 `jal`
+targets, 12 table entries) and 530 are ours. We recover 808 of the 818
+named functions (Ghidra 478) by also finding the file-local statics the map
+omits, so the map-only `precision` charges us for being more complete.
+Junk or split bodies are 2 of 1,398: discovery is unchanged, and no other
+m21 image was affected (the six other rows were not re-run).
+
+Added, not replacing: m21-001 `psx_corroborated(exe, ranges)` and a
+`precision_corroborated` field on the PSX score (`score(..., corroborated=)`),
+`PSX_CORROBORATED_FLOORS` (0.986 against 0.9968 measured). `precision`,
+`recall` and their floors are untouched. import_speed's PSX quality rule
+now gates recall and `precision_corroborated` (`PSX_PRECISION_METRIC`),
+with `precision` still reported beside it; justification and the rule are in
+docs/import-speed.md. Cached PSX runs are keyed by `SCORING_TAG`. A run with
+`--only` now keeps the other images' rows of the existing report instead of
+overwriting the report with one row.
+
+| | recall | `precision` | `precision_corroborated` |
+|---|---|---|---|
+| romwright | 0.9878 | 0.3663 | 0.9968 |
+| Ghidra 12.1.3 | 0.5844 | 0.4728 | 1.0000 |
+
+import_speed `--only psx-darkstalkers-3` (3 runs each, load ~10): wall
+3.7-5.5 s vs 25-31 s (ratio 0.156, tol 0.398), PSX row PASS. The overall
+verdict stays FAIL on the carried-over GBA row (Ghidra timed out at 3600 and
+10800 s; unrelated). Known gap: the rule corroborates 52 entries we do not
+find (49 table entries, 3 `jal` targets; Ghidra misses 910), mostly small
+leaf handlers in pointer tables; not gated.
+
+Commands (`CARGO_TARGET_DIR=/home/raikaru/ventris/target/psx`):
+```
+python3 benchmarks/import_speed.py --only psx-darkstalkers-3 --target /home/raikaru/ventris/target/psx
+```
+
+## Console research: what helps, measured on the final tree (2026-10-08)
+
+Answer to "how well does the research help console games":
+`docs/console-research.md`, built only from the reports below.
+Reports:
+- `benchmarks/reports/console_research_final.{json,md}`: 8 images, 200 functions each, every component toggled.
+- `benchmarks/reports/console_research_proto_{x360-black-ops-2,psv-need-for-speed-most-wanted}.{json,md}`: prototype jobs re-run to the round limit.
+- `benchmarks/reports/import-speed.{json,md}`: against Ghidra 12.1.3 headless.
+- The pass-1 report `benchmarks/reports/console_research.{json,md}` from the original tree, for comparison.
+
+Final-tree gates:
+- m21-001 passes on all 7 scored images (gba 0.9737/0.9904, nds 0.9729/0.9981, capcom 0.9412/0.9964, dungeon 0.9438/0.988, psx 0.9878/0.3663, vita 0.972/0.9712, x360 0.9833/0.9964).
+- `cargo test` passes for romwright-core, -worker, -worker-client, -model and -db.
+- The `--ignored` native worker tests pass.
+- import-speed passes on every image except GBA, where Ghidra did not finish (3600/10800 s; ours 87-97 s).
+
+## Plan-gate measurement on held fixtures: P0.1, P1.5-P1.7, P1.9, P2.1, P2.8 (2026-10-08)
+
+Measure-only run, no product code changed. Host `nih-vps-u`, copy at `~/runs/PlanGates/ventris` (tree rsynced 16:46 EDT; "tree A") and `~/runs/PlanGates/ventris2` (rsynced 17:05 EDT, after RelLoader's `native/disc.rs` landed; "tree B"). Tests ran with a fake `HOME=~/runs/PlanGates/home` holding copies of the user's `agent-under-fire/dtk-template` + `tools/dtk` (dtk 1.8.3, objdiff-cli 3.6.1 from `dtk-template/build/tools`) and the Nightfire ISO. Throwaway probes only: `crates/romwright-core/examples/pg_probe.rs` (host copy only) and scripts under `~/runs/PlanGates/*.py`. Scratch outputs: `~/runs/PlanGates/out/`. No timings are claimed.
+
+Verdicts:
+
+| Item | Verdict | Number vs plan threshold |
+|---|---|---|
+| P0.1 m5-013 | PASS | recall 0.9742 (floor 0.61 / script floor 0.964), precision 0.9941, NitroMain 420 B and decompiled |
+| P1.5 MAP reader | PASS | 34515/34538 = 0.9993 MAP FUNC rows hit an ELF FUNC at same (section, addr) (>=0.99); 0.9976 also same name; ROM named recall 0.9946 (>0.61) |
+| P1.6 overlay tables | PASS count/addrs; FAIL symbol binding; FAIL precision clause (marginal) | see below |
+| P1.7 MWCC demangle | FAIL (not implemented beyond class-scope extraction) | agreement with `dtk demangle` 3/15 on base.elf |
+| P1.9 splat/dtk emit | FAIL | splat rejects our yaml and symbol_addrs; dtk rejects our default config |
+| P2.1 objdiff export | `report generate` PASS; equals control FAIL; deltas FAIL | 41/707 units; `objdiff-report` reads wrong key |
+| P2.8 containers | PASS m20-009 and PS2 ISO; GC ciso FAIL strict; PSX/PSP/Switch NOT RUNNABLE | see below |
+
+### P0.1 / P1.5
+- `python3 tests/m5-013_nds.py --images-dir ~/ventris-corpus/extracted/nds-pokeheartgold` -> PASS: ARM9 1122040 B (stored 762644), 10799 functions, recall 0.9742, precision 0.9941 over 11019 symbols.
+- `python3 tests/m20-001_cw_map.py --images-dir ...` -> PASS: named recall 0.9946 (hits/11019), MAP/ELF agreement 0.9946.
+- Plan clause measured directly (the test's agreement check joins layout rows, not typed FUNC rows): `pg_probe map` dumps our `linkmap::parse_file` rows; 34538 are `MapKind::Func`; ELF `readelf -sW` FUNC symbols minus `$a/$t/$d`, keyed by (section, addr&~1). 23 misses: 22 are `SVC_*` asm syscalls (`libsyscall.a _secure_ipke.o`, e.g. `SVC_DivRem` 0x200008a, `SVC_CpuSet` 0x20001ba) typed NOTYPE in the ELF, 1 is `parse_format` 0x20e8104 (`MSL_Common_scanf.o`). Name disagreement on 60 rows is MAP spelling demangled C++ (`std::exception::~exception[base]()` 0x20f03dc) vs ELF Itanium `_ZNSt9exceptionD2Ev`.
+
+### P1.6
+- Count/addresses: the store has 129 `nds:ovN` module rows = 129 OVT entries (`ROM[0x50]` table); `load_vaddr` equals OVT `ram` and `size` equals `ram_size+bss` for 129/129, and ELF overlay section addr/size agree for 129/129. `modules.file_off` is 0 and `file_id` empty on every row (not populated).
+- Binding FAIL, with `--map` on the full ROM (no-analysis and full analysis give the same result): of 23407 `.OVY_n` MAP FUNC rows, 2772 (11.8%) are named from a *different* overlay's row at the same address (`ov0 0x21e5900`: map `ov00_021E5900`, store `VoltorbFlip_RenderCoinPayoutScreen`; `ov0 0x21e5ae8`: `ov00_021E5AE8` vs `ov55_UnkApp_Exit`; `ov0 0x21e5b6c` vs `ov68_021E5B6C`). Overlay programs hold 206253 functions, 182846 of them with no MAP row in that overlay: every overlay MAP row lands in every overlay program whose mapping covers the address (overlays share RAM). Without `--map` the overlay programs carry only `FUN_*` (19714 fns; 19686 of 23407 MAP addresses found, 3721 missing).
+- NTRGhidra comparison is runnable: `~/ghidra_12.1.3_PUBLIC/Ghidra/Extensions/NdsLoader` is installed. `analyzeHeadless ... -loader NTRGhidraLoader -loader-cpu ARM9 -loader-overlays true` plus `benchmarks/ghidra/ExportFunctionEntries.java`, scored with `import_speed.M21.score`, reproduces `import-speed.json` exactly: ours recall 0.9729 / precision 0.9981 / 21 invented; Ghidra recall 0.8643 / precision 0.9983 / 16 invented. Recall +0.1086; precision -0.0002 (FAIL on the frozen m21 scorer). With m5-013's scorer (all store functions vs sized FUNC in static module) ours is 0.9941 vs Ghidra 0.9938, so the clause is definition-dependent. Ours-only invented: 0x20ed8f8, 0x20f1cc0, 0x20f5710, and 0x2111860, 0x2111a14, 0x2111a48, 0x2111b14 (at/after the ELF `main` section end 0x2111860); Ghidra-only: 0x20aca0c, 0x20e3e08.
+- `tests/m20-008_overlay.py` is a DOL-modules test (bond.dol), not HeartGold: PASS (12 modules, 7 cross-module xrefs).
+
+### P1.7
+`dtk demangle -- NAME` as oracle (it takes one symbol); ours = `qualified_prototypes::demangle_mwcc_member` (class scope + method only; no signatures, vtables, RTTI, free functions, operators, templates).
+- HeartGold MAP (38869 unique names) and ELF symtab (39113): 0 names that dtk demangles, so there is nothing to compare (the ELF is C plus Itanium `_Z`; the MAP prints demangled C++).
+- GC `orig/GQFE78/files/base.elf` (1241 names): dtk demangles 15, ours returns a value for 3, all 3 agree (`DumpShared__8UberBondFv`, `RunNextModule__8UberBondFPCc`, `crc16__8UberBondFPCvi`); 12 free functions refused (`BASE_ResetCallback__Fv`, `DrawFontChar__Fiiii`, `SafeRead__FP11DVDFileInfoPvii`). Agreement 3/15 = 0.20.
+- Supplement, bond `symbols.txt` (14537 names, dtk demangles 6487): class::method prefix agrees on 4895 (0.7546), 0 names where ours succeeds and dtk fails. Disagreement classes: 755 free functions/operators refused (`AI_TargetPlayer__Fv`), 446 template args left mangled (`AddObject__12Container<i>FRCi` -> ours `Container<i>`, dtk `Container<int>`), 313 `__vt__` refused (`__vt__10BackWheels`), 71 operators spelled as tokens (`__as__3strFPCc` -> `__as`, dtk `operator=`), 7 `Q2`-qualified scopes refused (`Decode__Q23SND12CEAXABLKDecfFPPfi`).
+
+### P1.9 / P2.1
+- `tests/m20-006_dtk_roundtrip.py` PASS (8522 functions, recall 1.0000, round-trip 8522/8522; `dtk dol diff` 9 ERROR lines for ours and for the project's own files, so the rebuild is not empty even for the control). `tests/m20-015_objdiff_units.py` PASS.
+- dtk consumption of our default export FAILS: `romwright-cli import bond.dol` then `export-dtk` writes sections `dol:N` and `NAME = dol:0:0x80007100;`; `dtk dol split` -> `Unknown unit attribute '0'` on `dol:0 type:code align:4`, `dtk dol diff` -> `Failed to parse symbol line 'FUN_80007100 = dol:0:0x80007100; ...'`. Same on `base.dol` (`dtk elf2dol base.elf`, 666 functions; ELF has 644 FUNC). After hand-renaming sections the next failures are: split extents padded to alignment (`Section .init (0x80680000..0x8068240C) does not contain range 0x80680000..0x80682420`), section kinds all code/data, and one unaligned false function per image (`FUN_800073da`, `FUN_806802da`; size 0x2d, inside the TRK vector table). `export-dtk` also writes 0 data symbols (`8570 functions, 0 symbols`); `export-symbols --splits` labels `.init` addresses `.data` where the splits file has no whole-section extents.
+- splat 0.39.1 (local, supports platform n64/psx/ps2/psp only): `export-splat` hard-codes `platform: gc_wii` for every program -> `ValueError: Invalid value for platform: gc_wii`. Hand-patching to `psx` -> `Unsupported selected compiler ... GC/1.2.5`; patching the compiler -> `No subsegments provided in top-level code segment psx:main-ram` (`files: []`); with a minimal valid yaml, `symbol_addrs.txt` rows `0x20001ba FUN_020001ba;` fail in splat's parser (`IndexError`; splat wants `name = 0xADDR; // attrs`). Segment `start` is set to the vram, not a file offset. Symbol set equals analyzer entries: 10799/10799 (HeartGold), 8570/8570 (bond), 2206/2206 (Darkstalkers 3).
+- `objdiff-cli report generate` succeeds on our `export-objdiff` of bond (`--target-root build/GQFE78/obj --base-root build/GQFE78/src`, splits.txt, symbols from `--map`): 41 units vs the control project's 707 (the control has 666 auto-generated units). On the 41 common units: total_code 124096 = 124096, matched_code 120368 vs 122236, matched_functions 545 vs 547 (`ErrorCode2Num` 0x80... in `bond/dvderror`, `__pformatter_80209B28` in `bond/printf` lose their match), all 41 units differ in `complete_*` measures (our unit metadata lacks `complete`, and has `source_path: EXIBios.c` not `src/EXIBios.c`).
+- `romwright-cli objdiff-report ours_report.json` returns total_code 0 and no functions: it reads `unit["func_units"]` but objdiff 3.6.1 writes `unit["functions"]`, so its rollup cannot equal `objdiff-cli report changes control ours` (which reports 5.57% -> 98.48% fuzzy, 547 -> 545 matched). frogress POST not runnable (no server).
+
+### P2.8
+- `python3 tests/m20-009_iso.py --iso <Nightfire ISO>` PASS (4 programs, boot SLUS_205.79, ACTION 3038 functions).
+- PS2 ISO vs the four extracted files (tree B): lang, region addr/size/perms, seeds and symbols are equal for 4/4 (ACTION 3038 seeds, 1341 symbols). Region *names* differ (`elf32:N` from the ISO, `irx:N` from the bare file) so a name-inclusive comparison fails.
+- GC: tree A cannot import the `.ciso` at all (`DOL entry is not inside a text section`). Tree B imports it and the 12 DOL regions are byte-identical to `main.dol` (`mem` per region, 12/12), seeds/symbols of the DOL match, but the container import also links the REL: 18 vs 12 regions (`dol:rel1.sec1` 0x8021e720 2953132 B ...) and 4 vs 1 seeds (`_prolog` 0x8021e720, `_epilog` 0x8021e780, `_unresolved` 0x8021e7cc). Strict `import(container)==import(inner DOL)` is FAIL by design of the new REL attach; the DOL subset is equal.
+- NOT RUNNABLE: PSX BIN/CUE (only `VS.EXE`/`VS.MAP` held), PSP PBP (only extracted `BOOT.BIN`/`EBOOT.BIN`), Switch NRO/PFS0 (only an NSO `main`). `mem` on a multi-program container errors (`container requires an unambiguous imported program identity`).
+- Caveat: tree B's `ds3` import logged `switch recovery decompile failed: native runtime: io: No such file or directory` (17 degraded), a host-environment artefact of the `ventris2` copy not an analysis result.
+
+Reproduce (host, `~/runs/PlanGates`): `python3 ventris/tests/m5-013_nds.py --images-dir ~/ventris-corpus/extracted/nds-pokeheartgold`; `... tests/m20-001_cw_map.py --images-dir ...`; `source env.sh; python3 ventris/tests/{m20-006_dtk_roundtrip,m20-008_overlay,m20-009_iso,m20-015_objdiff_units}.py`; probes `p15.py` (MAP vs ELF), `p16*.py` (overlays), `p16d.py` (NTRGhidra score), `p17*.py` (demangle), `p28*.py` (containers).
+
+## P3.1 GC/Wii REL loader on Animal Crossing (2026-10-08)
+
+Animal Crossing's game code is `files/foresta.rel.szs` on the disc. `romwright-cli import "<disc>.ciso"` (or a raw GCM) now produces **one program** holding `main.dol` and every REL on the disc, linked: CISO -> GCM FST -> Yaz0 -> REL parse -> relocations applied -> placed after the DOL (decomp-toolkit `rel merge` layout) -> discovery over both.
+
+**What changed.** New `native/yaz0.rs` (decompressor), `native/disc.rs` (CISO block reader without expanding the 1.4 GB image, GCM boot header, FST walk, REL file selection by `.rel`/`.rel.szs`, Yaz0 unpack), `native/rel.rs` rewritten (it read the header at wrong offsets -- real REL has `prev` at 0x08, `num_sections` at 0x0c -- and had no relocations): v1-3 headers, import table, relocation streams (`R_PPC_*` 0-13, `R_DOLPHIN_NOP/SECTION/END/MRKREF`), all applied to the section bytes; sequential placement from `dol::rel_base` (= `align32(align32(r1_init + 0x2000) + 0x2000)`, i.e. dtk's `align32(__ArenaLo + 0x2000)`, from the startup initializer; fallback DOL end); REL sections get r2/r13 register contexts from the DOL; `_prolog/_epilog/_unresolved`, function-pointer and cross-module call targets seed discovery; standalone REL keeps the old per-section windows. `NativeImport.modules` (+ `NativeModule`) makes the store write `main.dol` and `foresta` as the two module rows (kind `dol`/`rel`, file_id the disc path) instead of one row per section, so `module_xrefs` counts only references that cross them. Also: `containers.rs` dispatch (CISO; GCM magic `0xc2339f3d`; legacy header-only DOL path kept for Wii/fixtures), `dol.rs` (`rel_base`, `sda_bases`, stack from the initializer), `store.rs`, `switch.rs` (`is_exefs` panicked on any file under 256 bytes -- surfaced by the 200-byte REL fixture). `native.rs`: two `mod` lines, `NativeModule`, `modules` field only. Raw GCM suffix: a GameCube disc with a readable FST now imports as program `<name>` (was `<name>.dol`); the DOL regions are byte-identical to `main.dol`'s, the REL regions are extra (P2.8's "import(container) == import(inner image)" holds for the DOL regions only).
+
+**Truth.** `ACreTeam/ac-decomp` @ `09ca8e8b` (CC0) `config/GAFE01_00/foresta/symbols.txt` (17387 `.text` `type:function`) and `config/GAFE01_00/symbols.txt` (2896 `.init`/`.text` functions), cloned on the host in `~/opt/ac-decomp`, not committed. Scoring = `tests/m21-001_real_images.py::score` (same policy), via `benchmarks/gc_rel_gate.py` (`ours` / `stock` / `bytes`, writes only its `--out`).
+
+| | ours (ciso, one program) | stock Ghidra 12.1.3 + GameCubeLoader (REL beside main.dol) |
+|---|---|---|
+| foresta.rel truth / found | 17387 / 17392 | 17387 / 16371 |
+| foresta.rel recall | **0.9993** | 0.9414 |
+| foresta.rel precision (invented) | 0.9990 (17) | 0.9998 (3) |
+| foresta.rel size exact / compared | 17363 / 17375 | 16324 / 16368 |
+| main.dol recall | 0.9986 | 0.9441 |
+| main.dol precision (invented) | 0.9598 (121) [DOL-only import: 0.9618 (115)] | 0.9824 (49) |
+| import wall | 56.6 s (load avg 8.1) and 98.2 s (load avg 17.6): same image, same binary, different host load | headless analysis 189 s (host load avg ~47) |
+
+Our 121 DOL "invented" are mostly `_savegpr_N/_restgpr_N` sled entries and mid-function labels (dtk types them `label`); the REL's 12195 `bl`s into them add 6 over the DOL-only import. Stock's REL placement is `align32(DOL end) + file offset` (text at 0x80219808); ours is dtk's (text at 0x8021e720); truth is rebased per tool.
+
+**Relocation correctness** (`gc_rel_gate.py bytes`, reference `dtk rel merge -o merged.elf main.dol foresta.rel`, which applies the table itself at the same addresses): 14,403,384 of 14,403,384 bytes equal (`.text` 2,953,132, `.rodata` x3 49,812, `.data` 11,400,440) = **1.00000000**; no first difference. Our placement equals dtk's for every section. Relocations: 154,535 applied, 0 unresolved/out-of-range/misplaced/unknown (by type: ADDR32 72,924, ADDR16_LO 34,708, ADDR16_HA 34,708, REL24 12,195), equal per type to `dtk rel info -r` (`dtk_parity.relocation_counts_equal` true; section table sizes equal for all 6 sections). Independent of dtk: the 12,195 REL24 relocations against the DOL, decoded back from our patched `bl` words, all equal the table's target and all 12,195 land on a symbol in ac-decomp's DOL `symbols.txt` (3,073 on `type:function`, the other 9,122 on `_savegpr_/_restgpr_` `label`s).
+
+**Cross-module references** (distinct (from,to) pairs between the two modules): ours 12,272 (12,195 calls from `native-import`, 41 REL->DOL and 36 DOL->REL operand/pointer references from constant propagation); stock 12,527 from `ExportModuleReferences.java`. Stock's total includes 259 references into GameCubeLoader's low-memory (`OSGlobals`, 0x80000000-0x80003100) and hardware-register blocks, which our DOL import does not map; counting only the two program modules stock has 12,268 (our 12,272 >= 12,268; the residual disagreements on both sides are constants that look like addresses and depend on the layout, 33 stock-only and 37 ours-only after rebasing). So the plan's gate "cross-module count >= stock" holds against the two modules, not against stock's total including system memory.
+
+**Tests.** Unit: `cargo test -p romwright-core --lib -- native::disc native::yaz0 native::rel native::dol native::wii native::switch::tests::a_short native::store` -> 60 passed (every relocation type vs hand-computed psABI values, stream opcodes, cross-REL resolution, unresolved/out-of-range/misplaced counted not applied, CISO sparse/short-last-block/truncation, FST nesting, Yaz0 overlapping runs and malformed streams). `tests/m20-014_rel.py` green with the extended fixture (`tests/fixtures-src/rel_gen.py` now a real v2 REL builder that `dtk rel info` parses; the old fixture used a header layout no real REL has): regions, relocated bytes (6 words from first principles), optional `dtk rel info -r` parity when `DTK`/`dtk` exists (passed here). New `tests/m20-016_gc_disc.py` + `tests/fixtures-src/gcm_gen.py` (private-disc-free): GCM, CISO 32 KiB and CISO 2 MiB agree on regions, 2 module rows, relocated bytes, 4 functions (2 reachable only through data relocations), `module_xrefs` REL->DOL call and data word; cut CISO refused; lying Yaz0 size -> DOL imported, REL named in a diagnostic. Both run with `ROMWRIGHT_CLI=<cli>`.
+
+**Reproduce** (local, `CARGO_TARGET_DIR=target/RelLoader cargo build --release -j 4 -p romwright-cli -p romwright-worker`, `export ROMWRIGHT_CLI=.../romwright-cli`): `python3 tests/m20-014_rel.py`; `python3 tests/m20-016_gc_disc.py`; ours: `python3 benchmarks/gc_rel_gate.py ours --image "$HOME/ventris-corpus/extracted/gc-animal-crossing/Animal Crossing (USA, Canada).ciso" --foresta-symbols <ac-decomp>/config/GAFE01_00/foresta/symbols.txt --dol-symbols <ac-decomp>/config/GAFE01_00/symbols.txt --work W --out ours.json --rel-info <dtk rel info foresta.rel> --relocs <dtk rel info -r foresta.rel>`; bytes: `dtk vfs cp "<ciso>:files/foresta.rel.szs" foresta.rel; dtk vfs cp "<ciso>:sys/main.dol" main.dol; dtk rel merge -o merged.elf main.dol foresta.rel; python3 benchmarks/gc_rel_gate.py bytes --image <ciso> --elf merged.elf --dol-symbols ... --relocs <dtk rel info -r> --out bytes.json`; stock (host, `~/runs/RelLoader/stock`): `GHIDRA_HEADLESS_MAXMEM=8G analyzeHeadless proj proj -import in/foresta.rel -scriptPath benchmarks/ghidra -postScript ExportFunctionEntries.java out/foresta.json -postScript ExportModuleReferences.java out/foresta-refs.json -deleteProject` with `main.dol` beside the REL in `in/` (the loader finds the DOL by directory), then `gc_rel_gate.py stock --functions out/foresta.json --references out/foresta-refs.json ...`. The time-box (1 h) was not needed: stock finished in 189 s.
+
+**Gaps.** `main.dol + foresta.rel` as two separate files is not importable (the CLI takes one path; the disc path covers the game); all RELs of a disc are linked co-resident in module-id order, so a disc whose RELs are never loaded together (stage RELs) gets cross-REL relocations resolved that the console would not; `MemoryRelocation` records are not pushed (patched bytes are in the mappings, and `features::masked_digest` scans every relocation per byte, which would be O(relocs) per instruction here), so function digests are not relocation-masked for RELs; system memory (OSGlobals, hardware registers) is not mapped for DOL imports (stock's extra 259 references); the REL name is its file stem (the header's name offset indexes a table not on disc); Wii discs are not handled (P3.4); Gekko/Broadway RAM bound (24 MiB) is not enforced on placement (AC ends at 0x8120e17c).
+
+## P1.6 overlay symbol binding by (overlay id, address) on HeartGold (2026-10-08)
+
+Fix for the plan-gate failure in "Plan-gate measurement on held fixtures". Cause: `linkmap::apply_to_import` ran every MAP row against every program whose executable mapping held the address, and overlays share RAM, so each of the 129 `ov<N>` programs took the rows of every other overlay covering the same window (the winner at an address was whichever row was applied last).
+
+**Change.** `MapSymbol.overlay: Option<u32>` (linkmap.rs): the mwldarm parser reads the overlay id from the linker's own `#> <id> SDK_OVERLAY.<group>.ID` row under each `# .<group>` header (`.OVY_n` and named groups such as `.field`, `.npc_trade`, `.trainer_card`; `<group>.bss` continues it; any other header, and `Linker generated symbols`, reset it to the static module). `NativeImport.overlay_id: Option<u32>` (native.rs), set by `nds_overlays::programs_for` from the `ov<N>` program. `apply_to_import` skips a row unless `symbol.overlay == imp.overlay_id`: a tagged row lands only in its own overlay program, an untagged row only in a non-overlay program. Every other grammar yields `overlay: None` and `overlay_id` is `None` everywhere else, so non-DS imports are unchanged. Unit test `overlay_rows_bind_by_overlay_id_and_address` (two overlays on one address, `.bss` continuation, static rows); `cargo test --release -p romwright-core --lib -- linkmap nds_overlays nds::` 25 passed.
+
+**Plan gate, before -> after** (HeartGold `--map`, full analysis; `romwright-cli import pokeheartgold.us.nds --map pokeheartgold.map --name nds --project P`, measured by `ob.py`, a PlanGates `p16_full.py` variant keyed on the ID rows):
+
+| Measure | before (PlanGates) | after |
+|---|---|---|
+| overlay MAP FUNC rows | 23407 | 23407 |
+| rows bound with the right name at (overlay, addr) | 20635 (2772 took another overlay's name) | 23407 (100%) |
+| store functions named from a different overlay's row | 2772+ | 0 |
+| functions in the 129 overlay programs | 206253 | 23426 |
+| without a MAP row in that overlay ("invented") | 182846 | 19 (10 overlays: ov12 6, ov49 3, ov74 3, one each ov2 ov8 ov53 ov83 ov96 ov102 ov115) |
+
+Without `--map` nothing changes (overlay programs carry only discovery's `FUN_*`; 10796 ARM9 functions).
+
+**Other gates** (host `nih-vps-u`, copy `~/runs/OverlayBind/ventris`): `tests/m5-013_nds.py` PASS (recall 0.9742, precision 0.9943, 10796 functions, NitroMain 420 B decompiled); `tests/m20-001_cw_map.py` PASS (named recall 0.9946, MAP/ELF agreement 0.9946, 11085 functions); `tests/m20-008_overlay.py` PASS (12 modules, 7 cross-module xrefs).
+
+**m21 NDS (frozen scorer, `import_speed.M21.score` on `nds.arm9`, ranges 0x1ff8000..0x21e5900, no `--map`, as `import-speed.json`):** ours recall 0.9729 / precision 0.9983 / 18 invented (recorded baseline 0.9729 / 0.9981 / 21), so not lower. P1.6 NTRGhidra clause: Ghidra (same `functions.json` as PlanGates, `NTRGhidraLoader` ARM9, overlays unscored) recall 0.8643 / precision 0.9983 / 16 invented. Exact precision ours 10778/10796 = 0.998333 vs Ghidra 9575/9591 = 0.998332: **PASS by 1e-6 (a tie at four digits)**; ours-only invented 0x20ed8f8, 0x20f1cc0, 0x2111860, 0x2111a14, 0x2111a48, 0x2111b14; Ghidra-only 0x201ba78, 0x2076c76, 0x20aca0c, 0x20e3e08. The 21 -> 18 invented drop is not from this change (no-map imports never touch overlay binding); it comes from other agents' discovery edits in the tree.
+
+**Environment notes.** (1) The tree's `printc/ir.rs` expects printer IR v3 (GotoPasses' `romwright_printir.hh`) while the checked-in `native/build/ghidra_opt` emits v2, so every m5-013 decompile step failed with `printer IR version 2 is not 3`; I rebuilt `ghidra_opt`/`decomp_native` locally (`native/build_ghidra_opt.sh`, `build_console.sh`, into `/tmp`, bfd.h is absent on the host) and copied them into my host copy only, nothing in `native/build` of the main tree changed. (2) A fake `HOME` (PlanGates' `env.sh`) makes the console fail to load its scratch XML (`console did not load the image`, 1 function per program): run m5-013/m20-001 with the real `HOME`.
+
+**Gaps.** `modules.file_off` is still 0 and `file_id` empty for overlay module rows (`store.rs` writes one row per mapping with `file_off: 0`; `nds_overlays::modules` fills them but `store_import` does not use it); MAP rows are bound by the linker's `.ID` row only, so a MAP with no `SDK_OVERLAY.*.ID` rows leaves its overlay rows untagged and they apply to no overlay program; the 19 remaining invented functions are discovery entries with no MAP row (not inspected for correctness).
+
+## P1.7 MWCC demangler: full grammar, differential vs `dtk demangle` (2026-10-08, MwccDemangle)
+
+**Before** (PlanGates, `## Plan-gate measurement ...` P1.7): `demangle_mwcc_member` handled `Class::method` only; agreement with `dtk demangle` 3/15 on `base.elf`, 4895/6487 (0.7546, class prefix only) on the bond `symbols.txt` supplement; refused free functions/operators/`__vt__`/`Q`-scopes, left templates and `__as` tokens mangled.
+
+**Change.** New `crates/romwright-core/src/qualified_prototypes/mwcc_demangle.rs` (`pub mod mwcc_demangle` in `qualified_prototypes.rs`; `lib.rs` untouched). `demangle(name) -> Option<Demangled>` decodes: free functions, members, const (`C`), `__ct__/__dt__` (incl. template ctors), operators (`__as`, `__nw`, `__vc`, ..., `__op<type>` conversions), `Q<n>` nested scopes, template arguments in class/function/parameter position (type and literal args), `__vt__`/`__RTTI__`, `@off@` thunk names, data members (no `F` list), `_<ret>` template return types, arrays, function and member-function pointers with nested declarators, `var$localstatic<N>$fn` / `init$...` guards and Wii `@LOCAL@`/`@GUARD@` statics. `Demangled.text` is `dtk`'s exact spelling; structured fields carry scope, name, rendered parameter types, const, return type, ctor/dtor. `T<i>`/`N<n><i>` back-references (which MWCC emits, 267 names in the corpus, and `dtk` refuses) are an extension, off in `Options::DTK`.
+`demangle_mwcc_member` now runs the full demangler first and returns `MemberName` with `parameters`, `has_parameter_list`, `is_const`, `return_type`, `demangled`; a name the full grammar refuses but whose class scope parses (e.g. `.NON_MATCHING` suffix) still resolves by scope, as before. `MemberName::c_parameters/c_signature(known_types)` turn the mangled parameter types into decompiler C declarations (refs -> pointers, by-value classes/function pointers/unknown types -> `None`). `declared_qualified_for` also tries the exact demangled spelling as a table key (overloads: `UberBond::Load(char*)`) and resolves free functions (`DrawFontChar__Fiiii` -> key `DrawFontChar`) only against unscoped declarations. Citations added to `docs/third-party.md` and `THIRD_PARTY_NOTICES.md` (cwdemangle CC0-1.0 read for format/edge cases; `dtk` oracle only).
+
+**Harness.** `benchmarks/mwcc_demangle_diff.py` (+ example `crates/romwright-core/examples/mwcc_demangle.rs`): every name containing `__` from base/Bond/Movie/boot/driving.elf symtabs (`~/Projects/agent-under-fire/orig/GQFE78/files`), the bond `symbols.txt` (dtk-template and analysis), Nightfire PS2 ACTION/BASE/DRIVING.ELF + `config/*/symbol_addrs.txt` + action/driving.map, ac-decomp `GAFE01_00`/`GAFU01_00` `symbols.txt` + `foresta/symbols.txt` (host clone `~/opt/ac-decomp/config`, `AC_DECOMP_CONFIG` overrides) -> 19,778 unique names; `dtk demangle` (1.8.3) demangles 16,032. Agreement = identical text over names either side demangles.
+
+**After.** `python3 benchmarks/mwcc_demangle_diff.py --ours <built mwcc_demangle example> --cache /tmp/x.json`: **16,032 / 16,032 = 1.0000** (ctor 752, dtor 852, free-fn 4647, member 7589, operator 150, qualified-scope 575, template 766, thunk 14, vtable 653, rtti 34), 0 names where we succeed and dtk fails in the dtk dialect, 0 where both succeed and differ. Per source: base.elf 15/15 (was 3/15), bond `symbols.txt` 6487/6487 (was 4895 prefix-only), Bond.elf 6489, driving.elf 5301, Movie.elf 205, ACTION.ELF 2239, GAFE01_00 1792, GAFU01_00 1985. Extension dialect (`--extensions`): decodes 267 more names dtk refuses (all `T`/`N` back-references, e.g. `AINetwork_FurthestPosition__FP7_VECTORN20` -> `AINetwork_FurthestPosition(_VECTOR*, _VECTOR*, _VECTOR*)`; indices count every parameter incl. builtins and earlier expansions, checked on `BOT_init__FsP7_VECTORT1...`), changes 0 names dtk demangles. The 2,784 corpus names dtk refuses and we refuse are `.NON_MATCHING`-suffixed names, `_GLOBAL_$I$...`/`__arraydtor$N` stubs and plain C names.
+Robustness (not part of the gate): about 47k generated well-formed names (5 seeds, types/`Q`/templates/ops/ctors/statics/member-pointers) vs dtk: 0 disagreements; 15,000 random byte-mutations of corpus names: 109 disagreements, all malformed input (a digit length that overruns the name makes dtk print the digits as a type, e.g. `FP9` -> `9*`; unbalanced `<`/`>` quirks; `P_`), not decoded on purpose.
+**Tests.** `cargo test -p romwright-core --lib qualified_prototypes` -> 24 passed (14 new in `mwcc_demangle` per class: free/params, arrays/function pointers, qualifier rule, members/const/data, `Q` scopes, templates, ctor/dtor/vtable/RTTI, operators, thunks, localstatics, member pointers, return-declarators, back-references, refusals; 5 new in `qualified_prototypes` for member parameters, decorated fallback, C signatures, free-function/overload keys, template/nested table keys); the 5 pre-existing qualified-prototype tests unchanged and green.
+
+**Gaps.** Names dtk prints from malformed digit-overrun input are refused (see above); a member-pointer `M` type is only the MWCC `PCvPv/PCvPCv` form dtk accepts; `c_signature` needs the caller's return type (MWCC mangles none except for template instances); nothing consumes `MemberName`/`declared_qualified_for` outside this module yet (no caller exists in the crate besides its tests).
+
+## P1.9 / P2.1 export fixes: dtk, splat, objdiff (2026-10-08, ExportFix)
+
+New `crates/romwright-core/src/export.rs` (pure emitters over store rows; `Core::export_facts` gathers them) replaces the inline exporters in `romwright-cli`. `export-symbols`, `export-dtk`, `export-splat`, `export-objdiff`, `objdiff-report` now call it. Surgical edits to WIP files: `romwright-cli/src/main.rs` (those five command arms and their usage lines) and `romwright-core/src/lib.rs` (`pub mod export;`). Also touched: `matching.rs` (`export_objdiff` takes `ObjdiffOptions`), `tests/m20-015_objdiff_units.py` (asserts `complete`), `docs/third-party.md`, `THIRD_PARTY_NOTICES.md`. Host `nih-vps-u`, copy `~/runs/ExportFix/ventris`, fixtures `pbond`/`pbase`/`pds3` imported with default `romwright-cli import`.
+
+**dtk.** Section names were `dol:N` (dtk reads `:` as an attribute: "Unknown unit attribute '0'"). `dtk_sections` now names a MWCC DOL's 12 regions `.init extab extabindex .text .ctors .dtors .rodata .data .bss .sdata .sbss .sdata2` (what `dtk dol info` prints; recognised from region order, else `.text<N>`/`.data<N>`). `splits.txt` is a `Sections:` block only: the per-region extents were padded past dtk's trimmed section ends (`Section .init (..0x8068240C) does not contain range ..0x80682420`) and are gone; `--splits` still passes the project's file through. `symbols.txt` rows use real section names and `data:string` objects for ASCII literals (plain ASCII, code-referenced via a DATA/READ xref; 3724 on bond, 108 on base). Repeated local names are kept (dtk allows them). `export-symbols` (round-trip channel) stays lossless; `export-dtk` leaves out function rows dtk cannot hold (unaligned entry or size not a multiple of 4; `dtk dol split` panics on `FUN_80682370 size 0x9`): bond 2, base 2 skipped.
+- FUN_800073da / FUN_806802da are discovery inventions (a 45-byte ASCII string "Metrowerks Target Resident Kernel for PowerPC" read as a `flow` function, entry +2): reported to DiscoveryResidual, who declined (gc unscored); the exporter only drops them as unrepresentable.
+- Measured (`romwright-cli export-dtk bond|base out/…`, then `dtk dol split config.yml out --no-update` and `dtk dol diff config.yml <elf>`, dtk 1.8.3): `dol split` clean for bond (262 objects) and base (29); `dol diff` parses and runs. **Not empty**: base 1 error shown (dtk stops at the first), bond 1. Against the ELF directly (`readelf` FUNC rows vs ours): base 634/664 rows exact, 5 size differences (e.g. 0x8068467c 152 vs 156, 0x8068fd18 80 vs 940), 25 absent from the ELF (23 are `flow` "functions" inside `gTRKInterruptVectorTable`, one per 0x100 exception vector); bond 8483/8568 exact, 32 size differences, 53 absent. Those are discovery boundaries, not format errors, so `dtk dol diff` cannot be empty from the exporter side. m20-006 PASS (8522 functions, recall 1.0000, round trip 8522/8522, dol diff no worse than baseline).
+
+**splat 0.39.1.** `platform:` maps from the language (`PSX`->psx, `r5900`->ps2, `Allegrex`->psp, MIPS BE 64->n64); anything else is `is_unsupported_platform: true` with `bin` segments (splat 0.39.1 has no ARM/PPC disassembler: it stops at `NotImplementedError: No disassembler for requested platform` right after loading the config, so no export can run it end to end there). Compiler is a splat name (store compiler if splat knows it, else GCC/EEGCC per platform; no `GC/1.2.5`). Segments start at file offsets (`--binary`, else the recorded source path, read through `native::load_native_mappings`), code segments carry a `subsegments: [off, asm, name]` entry, a `header` bin segment and the closing end offset are written (no `files: []`). `symbol_addrs.txt` is `name = 0xADDR; // type:func size:0x..` (names sanitised for splat's filename rules, duplicate names/addresses resolved, sizes that are not whole words left off: splat warns on them). Measured: DS3 (PSX) `splat split ds3.yaml`: rc 0, 2206 symbols loaded, 0 errors, 0 warnings except "no sha1 in config". HeartGold arm9 (platform nds): our yaml + symbol_addrs parse and split (10799 symbols, 2 bin segments) with splat's disassembler factory stubbed out (`create_disassembler_instance = lambda *a, **k: None`); unmodified splat stops at the missing disassembler.
+
+**objdiff 3.6.1.** Unit metadata now always carries `complete` (default false; `--complete all|UNIT,UNIT`), `--source-root src` gives `source_path: src/cvar.c`, `--dtk-config build/GQFE78/config.json` adds dtk's 666 target-only gap units (`auto_11_804E42A0_sdata2`; names lose a `.c/.cpp` extension like the control's). `complete` is not cosmetic: with it set objdiff pairs `ErrorCode2Num` and `__pformatter` (matched_code 122236), without it they are lost (120368); it is a statement about the linked build, so the caller supplies it. `objdiff-report` reads `functions` (counters are JSON strings), rolls units up to project measures (sums + code-weighted fuzzy; `agrees_with_objdiff_measures`), and `--previous PREV.json` emits the `report changes` document.
+- Measured (`export-objdiff bond … --splits config/GQFE78/splits.txt --target-root build/GQFE78/obj --base-root build/GQFE78/src --source-root src --complete all --dtk-config build/GQFE78/config.json`, then `objdiff-cli report generate`): 707 units (was 41); `measures` identical to the control's (total_code 2226664, matched 122236, 547 matched functions, 41 complete units, fuzzy 5.5726056). The 707 unit rows differ from the control only by `progress_categories` metadata and the report's top-level `categories` (project configuration the store does not know). `objdiff-report ours.json --previous control.json` has no changes, as `report changes` does; on a real change (control vs a no-`complete` export, 707 changed units incl. functions/sections) our `changes` is equal to `objdiff-cli report changes` (from, to, every unit, compared as name-keyed JSON; unit order differs).
+
+Checks: `cargo test -p romwright-core --lib export::` 18 passed (emitter-level: section names, no padded extents, no `:` in names, unaligned/odd-size rejection, lossless mode, repeated names, splat yaml/symbol_addrs grammar and platform mapping, objdiff complete/source_path/auto units, rollup, changes); `tests/m20-006_dtk_roundtrip.py` and `tests/m20-015_objdiff_units.py` PASS on the host.
+
+**MIPS splat end to end (follow-up, 2026-10-08).** `export-splat` then an unmodified `splat split` (0.39.1, local) on every MIPS platform, exports from default `romwright-cli import` stores on the host (`-j 2`):
+
+| Image | Platform | `splat split` | symbols loaded | segments | warnings |
+|---|---|---|---|---|---|
+| Darkstalkers 3 `VS.EXE` | psx | rc 0 (8 s) | 2206/2206 | header + 1 code | "no sha1 in config" only |
+| `dungeon_game.elf` | ps2 | rc 0 (3 s) | 1637/1637 | 12 (5 code, 7 bin) | same |
+| Capcom `SLUS_209.50` | ps2 | rc 0 (45 s) | 14034/14034 | header + 1 code | same |
+| Puzzle Bobble `BOOT.BIN` | psp | rc 0 (4 s) | 2071/2071 | 24 | same |
+| `perfect_dark_ntsc_final.z64` | n64 | rc 0 (3 min 27 s) | 145/145 | 3 (bin, code, bin) | same |
+
+Fixed here because the first SLUS and N64 exports were accepted by splat but wrong: (1) the closing `[end]` entry was the file length, so SLUS's 8 MB of symbol/debug sections were disassembled as the tail of the code segment (splat reported 10 MB asm); it is now the end of the last mapped region (SLUS: `[0x22a480]`, matching its single `LOAD` at 0x80 size 0x22a400). (2) A file range mapped twice was dropped: the N64 loader maps the ROM as the cartridge window and again as `code` at RDRAM, so only the cartridge segment survived; code now claims its bytes first and the cartridge keeps the remaining two pieces (`0x0..0x1000`, `0x800000..0x2000000`, vram offset by the piece start). (3) Gaps between regions are now their own `bin` segment instead of the tail of the previous one. Emitter tests: 22 pass (adds SLUS-style closing, N64 overlap, gap segment).
+
+N64 layout vs the ROM: the segments follow the loader's model (header 0x0, "code" = ROM 0x1000..0x800000 at 0x80001000 per the header boot address, cartridge remainder), **not** the ROM's real code. Measured on Perfect Dark's code region by opcode density per 4 KB block (share of words whose top 6 bits are a common MIPS opcode; random data scores about 0.3): 28 of 2047 blocks are >= 0.8 (0x1000, 0x2000, 0x2f000, 0x4b000-0x4d000, ... 0x7f1000), the rest is data or compressed. So splat disassembles ~8 MB as asm of which well under 1% is code, and 68 of the 145 discovered functions sit in blocks below 0.8 (77 in dense blocks). The yaml is valid and splat accepts it; matching the real segmentation needs the game's own segment/compression table, which the importer does not model (N64Segments is fixing the layout at the loader level).
+
+**sha1.** `export-splat` now writes `sha1:` (SHA-1 of the binary it reads, via the RustCrypto `sha1` 0.10 crate as `export::sha1_hex`; the store's SHA-256 cannot stand in; `sha1 = "0.10"` added to `romwright-core/Cargo.toml`, noted in THIRD_PARTY_NOTICES.md). Measured after the change: DS3 `VS.EXE` yaml carries `sha1: ce290928c19dfc3e2e8011c2bcd50aabfcf64c7c` (equals `sha1sum`), unmodified `splat split` on DS3 and `dungeon_game.elf`: rc 0 and no warnings at all (the "no sha1 in config" line is gone); the other three rows above had only that warning. 23 emitter tests pass (one checks the yaml's sha1 value); `tests/m20-006_dtk_roundtrip.py` and `tests/m20-015_objdiff_units.py` PASS.
+
+**Gaps.** `dtk dol diff` is not empty (discovery: TRK vector-table functions, 5 + 32 size differences, see above); the exported units lack project `progress_categories`; splat has no ARM/PPC disassembler in 0.39.1.
+
+## Goto passes: fake-match metric, expression trees, jump-threading reversal (2026-10-08, GotoPasses)
+
+**Metric** (`benchmarks/spurious_gotos.py`, a documented supplement; the printed-goto definitions are unchanged). Per function with real C source (pokeemerald GBA, pokeheartgold NDS; mapped by ELF symbol name, `STT_FILE` for pokeemerald locals), spurious = printed gotos the source function does not have. Sets: the 200-function gate samples + the 33 m22 functions (424 scored), and the final research export's samples (424 scored). Sources have 32 / 1 `goto` in `src/`, so every printed goto in a scored function is spurious.
+
+| set | `none` (Ghidra) | default before (`all`, budget 4) | default after (`all`, budget 5) |
+|---|---:|---:|---:|
+| gate set, spurious functions / gotos | 31 / 67 | 1 / 1 | **0 / 0** |
+| final export, spurious functions / gotos | 34 / 81 | 6 / 14 | **3 / 4** |
+
+Consoles gate set (1600 functions): 91 -> **84** gotos (labels 78 -> 72), per class into_loop 28 -> 28, loop_exit 19 -> 18, cross_arm 12 -> 11, exit_nested 11 -> 8, into_arm 8 -> 7, skip_after 6 -> 5, backward 6 -> 6, other 1 -> 1; per image gba 1 -> 0, gc 21, nds 0, capcom 4 -> 3, dungeon 40, psv 15, psx 2, x360 8 -> 3. With libc: 854 -> 811, 189 functions better, 0 worse. Lines consoles +35 (55745 -> 55780). All on the host with a `ghidra_opt` of the same patch as the "before" (before ProtoWork's Thumb hunks); repeated with the rebuilt pair (gate set 0 / 0, final export 2 / 2).
+
+**Printer IR v3** (`native/romwright_printir.hh`, `printc/ir.rs`, `printc/expr.rs`): per statement an `Effect` (opcode, calls/stores, written variable, CBRANCH polarity, inputs as `Expr` trees with SSA value + HighVariable identity and storage/aliasing); `Facts` (value sets of compared expressions, constant assignments, kills). Printer differential **1800/1800 identical**. `native/build/ghidra_opt` and `decomp_native` rebuilt 2026-10-08 18:11 from the then-current patch (ProtoWork's hunks included).
+
+**Passes** (`printc/structure.rs`, `structure/thread.rs`; all default, `ROMWRIGHT_RUST_STRUCTURING` selects): `sink_join` over a `switch` (cases that reach the end take the skipped statement; `case n: goto L` becomes empty) with follow-ups run until the rewrite pays for itself (16, was 8) -- Cmd_jumpifstat 7 -> 0; `cond_merge` (`if (a) { if (b) goto L; } R; L:` -> `&&`, then negated) ; `thread_test` (SAILR jump-threading reversal: re-insert the skipped test, or forward a goto past a test the path decides; checker accepts via `Basic::threaded`) -- gba 0x0816f9d4 now prints the source's `case 2: if (a || b) { x++; } break;`, nothing removed on the gate set. Budget 4 -> 5 (smallest that removes the gate set's last spurious function, +35 lines).
+
+**Checks.** Compile differential 0 new diagnostics (1800 functions, 190 rewritten); m22 standalone 64.14 (6/33) unchanged; `cargo test --release -p romwright-worker --lib printc` 30 pass.
+
+**Not built.** Loop re-rolling / loop-header de-duplication (28 `into_loop` gotos are unrolled copy loops with remainder entries, 25 in dungeon, none in a function with source) and switch-lowering reversal (it removes no goto by itself: the shared tail still needs copying). Next step: prove *statements* equal across paths (the trees carry them), which Task_Hof_InitTeamSaveData and psv 0x8106a2a4 need.
+
+**Reproduce.** docs/structuring-baseline.md, "Fake-match metric and the goto passes". Reports: `benchmarks/reports/spurious_gotos*.json`, `structuring_goto_passes*.json`.
+
+**Gaps.** Remaining spurious: TaskFunc_UpdateWavePerFrame (+HandleInput_InParty on the older pair) and Task_Hof_InitTeamSaveData. The `thread_test` forward rewrite and `cond_merge` are exercised by unit tests only where the gate set has no instance (forward) or one (cond_merge: x360, rfu).
+
+## Ownership metric and m13 rerun (2026-10-08, OwnershipMetric)
+
+Entry criterion for replacing the vendored decompiler (Reserved decisions):
+"we own more of the decompiled output than the vendored tree does". It is
+now measured: `docs/ownership.md` defines it, `benchmarks/ownership.py`
+computes it, `benchmarks/reports/ownership.{json,md}` hold the result. **The
+criterion is not met on any lens measured.**
+
+Run: 8 images, 200 sampled functions each (1,598 printed), a fresh default
+import per image, instrumented binaries (rustc `-C instrument-coverage` for
+cli/worker/api, clang source coverage for `ghidra_opt` and the console,
+continuous mode because the worker SIGKILLs both), tools `ab96daf837699f1a`,
+a moving working tree (digest `fa7e3e2494034a33`, not a commit). Host load
+was 8-14 for most of it; no timing is reported.
+
+| lens | Rust | C++ |
+|---|---|---|
+| printed text tokens (452,185) | 13.3% block layer | 86.7% PrintC fragments |
+| printed control-flow constructs (20,175) | 2.0% created by the Rust models (gotos 371 -> 126) | 98.0% |
+| final p-code operations (161,418) | 0.5% edited by a Rust transform (867) | 99.5% |
+| functions printing differently without Rust structuring and IR passes | 326 of 1,598 (20.4%) | |
+| executed code lines | first-party 22,300 (27.4%), + kuna-sleigh 5,105 (33.7%) | ours 2,657, vendored 51,195 |
+
+By stage: load 100% Rust; discovery facts 57.8% Rust, 42.2% the console's
+constant propagation (our C++); stored switch dispatches 70.9% Rust VSA (65.9%
+of case edges), but every printed switch (73 tables) is recovered again by
+vendored `jumptable.cc`; p-code lift on the printed path, flow into the
+function, simplification (99.5%), type propagation, prototype recovery
+(default: no stored prototype; persisted profile: Rust changed 264 of 1,597
+signatures) are vendored; the Rust block layer, export-c names (19.2% of
+identifiers) and structuring models are the Rust layer on top.
+
+Instrumentation added (no output change; `cargo test -p romwright-worker
+--lib printc` 23 pass): `ROMWRIGHT_OWNERSHIP_LOG` in the worker (one JSON
+line per decompiled function: tokens from fragments vs block layer, construct
+census against Ghidra's tree, Rust edits/cuts, stored prototypes, printed jump
+tables), `printc/ownership.rs`, `PrettyPrint` token counters,
+`DecodedDocument::print_stats`. Found while measuring: the console runs
+`romwright_flow.hh` inside its reference propagation, so "the console's flow
+is differential-only" holds for the walk, not for the console.
+
+**m13 re-run** (libc, current tree, `benchmarks/reports/m13-001-rerun-20261008.json`,
+host load 9-15): stock 132 dispatches at 0.981; VSA alone 41 at 1.0 (30 agree
+with stock, phase 2.6 s); interpreter 67 at 1.0; decompiler alone 126 at 0.9977;
+combined 130 at 0.9978 (1 beyond stock, 3 of stock missed, 114 agreeing).
+Both pre-existing failures stand: interpreter 67 < decompiler 126, combined
+130 not above stock 132. docs/console-research.md item 5 and the m13 line are
+updated.
+
+**Instrumentation is inert** (checked on the host against the main tree rsynced
+at 18:11 local, native pair `ghidra_opt` 27afbc9b / `decomp_native` a3c4a224,
+printer IR v3, release build of that tree). `benchmarks/printer_diff.py`
+without and with `ROMWRIGHT_OWNERSHIP_LOG` set: **1800/1800 identical** both
+times (8 console images x 200 + 200 libc). That script's `--printer-diff` mode
+does not go through `finalize_document`, so it never writes the log (the file
+was not created); to cover the logging path, `export-c` of the first 60 sampled
+functions of gba and gc (120) with and without the log: **120/120 identical
+text hashes, 120/120 runs wrote log lines**. The native pair was rebuilt later
+(19:09, AbiWork's float-parameter hunks); the check was not repeated on it, and
+the ownership report's numbers were measured on the earlier pair named in its
+tree entry, not on the 19:09 one.
+
+**Reproduce.** docs/ownership.md, "Reproduce"; m13:
+`python3 tests/m13-001_vsa_switch.py --work <dir> --report <file>`.
+
+**Gaps.** The persisted-prototype profile reads earlier research projects
+(`cdbbf0f7d1273898` for six images, `08df1a6eff7987ed` for x360 and Vita), not
+a fresh job. Rust-lifted p-code volume is not counted. Variable/stack recovery
+against DWARF (a named gate) is not scored by this metric. One seed, n = 200.
+
+**Harness fix (2026-10-09).** `persisted_prototype_input` now matches the image id exactly (`<id>-<sha12>-<env12>-<tools>-proto-<key>`); the old `<id>-*-proto-*` glob gave `psp-puzzle-bobble-pocket` the symtab twin's project (0 of 200 decompiled, KeyError in the markdown). `--carry-from` takes tree/tools/inventory/coverage from an earlier report for a `--report-only` re-render after the binaries were rebuilt. `benchmarks/reports/ownership_final.{json,md}` re-rendered for all 10 images from FinalGate's cache (the two psp persisted profiles recomputed on a copy of it, tools `ea27c70333bb669d`; FinalGate's run had no profiles, so no coverage block); `ownership_final_9images.*` deleted, so the FinalGate entries naming it now dangle.
+
+## P2.3 MWCC register-save helpers and P2.4 IDO o32 argument slots (2026-10-08, AbiWork)
+
+Two calling-convention fixes, each scored against source prototypes and against
+stock Ghidra 12.1.3 on the same functions (`benchmarks/abi_signature_gate.py`:
+printed signature arity, per-position float/integer class, `unaff_*`/`in_*`
+artefacts, switch case labels).
+
+**Truth.**
+- PD ntsc-final (`n64decomp/perfect_dark`, MIT; `benchmarks/pd_ido_truth.py`).
+  The decomp ships names and prototypes but no addresses, so addresses are
+  derived from the ROM: the game segment is inflated from the ROM (decoder
+  written from the Rare-zlib format facts, byte-identical to the decomp's
+  `game.bin`), function extents walked from its first byte (`jr ra` + delay slot
+  that no branch or `sltiu`-bounded jump-table entry reaches past, or the next
+  `jal` target), source functions listed in link order from the preprocessed
+  ntsc-final sources, and the 145 `func0fXXXXXX` names (their name is their
+  address) anchor the order. An interval between anchors is kept only when
+  both sides count the same functions. 4576 binary extents against 4578 source
+  functions; **4086 functions assigned**; every callee whose address is known
+  must be a `jal` target inside the caller: **0 violations in 1358 checked**.
+  Fixture: the segment imported raw (`--raw 0x7f000000 --language
+  MIPS:BE:64:64-32addr`): 4315 functions, 3866 of the 4086 assigned (the 220
+  missed are function-pointer-only callbacks; the image carries no `.data`).
+- AC (`ACreTeam/ac-decomp`, CC0; `benchmarks/ac_mwcc_truth.py`): 17387 `foresta.rel`
+  functions, 14228 with a unique source definition and a scalar/pointer
+  parameter list; helpers called per function read from the import's `bl` xrefs.
+- Samples (fixed seeds, `sample` subcommands): PD 200 random (seed 24), 300 with
+  a float parameter, 187 with a jump table and a source `switch`; AC 200 random
+  (seed 23), 200 that call `_savegpr_14..26` (long callee-saved runs), 9 that call
+  an fpr helper.
+
+**What changed.**
+1. `specs.rs::with_o32_argument_rules` (N64 `MIPS:BE:64:64-32addr` only): the stock
+   o64 spec lists `f12`,`f14` independent of `a0`..`a3`, so a leading float left
+   `a0` a phantom parameter (`(float,float,float)` printed as `f4,f4,i8,i8,f4,f4`)
+   and put the first stack word at `sp+32`. Now `f12`+`a0` and `f14`+`a1` share a
+   slot (`<group>`), a float uses the FP file only at position 0 or at position 1
+   behind a float, stack arguments start at `sp+16` with 4-byte slots, the
+   `a0`..`a3` home area is local. IDO and gcc o32/o64 share the hole rule; the
+   stack offset follows IDO (o32).
+2. `FuncProto::updateInputTypes` (`ghidra-opt-sleigh.patch`, new `fspec.cc`/`fspec.hh`
+   hunks, `ProtoModel::inFloatRegister`): an inferred parameter whose storage is a
+   float-class entry of the model is `float`/`double` when propagation left it
+   unknown/int/uint (`swc1 f12` store made `f32 speed` a `uint`). Applies to every
+   architecture whose cspec marks float entries.
+3. `native/mwcc_runtime.rs` (new): names the four MWCC sleds (`_savegpr_N`,
+   `_restgpr_N`, `_savefpr_N`, `_restfpr_N`, N = 14..31) when the bytes prove them
+   (run of `stw/lwz/stfd/lfd rN,-k*(32-N)(r11)` to the end of the sled then `blr`),
+   at functions discovery already made. Hooked from `native.rs` after
+   `apply_pattern_labels`. Stripped DOLs name none of them, and a call fixup fires
+   on the callee's name.
+4. `specs.rs::mwcc_callfixups` rewritten: addressed from `r11` (the caller's sp),
+   not `r1`; adds `_savefpr_N`/`_restfpr_N` (`*:8` doubles); replaces the pinned
+   Gekko spec's `r1`-based `_savegpr_N`/`_restgpr_N` (they stored below the new frame
+   and reloaded unwritten slots); 32-bit PowerPC only. The fixups carry no `<target>`,
+   and the provider read targets from the on-disk cspec, so
+   `load_program_specs` now registers each helper's own name in
+   `provider.call_fixups` (the one thing that made the injection actually fire).
+
+**P2.3, Animal Crossing `foresta.rel`** (ours: ciso import; stock: GameCubeLoader,
+REL beside `main.dol`, headless analysis then decompile at each address):
+
+| sample | measure | ours before | ours after | stock |
+|---|---|---|---|---|
+| 200 random | arity exact | 123/200 (0.615) | **152/200 (0.760)** | 125/200 (0.625) |
+| | signature exact | 119 (0.595) | **148 (0.740)** | 122 (0.610) |
+| | irregular `in_*` inputs | 61 | **5** | 61 |
+| 200 calling `_savegpr_14..26` | arity exact | 92/200 (0.460) | **191/200 (0.955)** | 92/200 (0.460) |
+| | signature exact | 82 (0.410) | **178 (0.890)** | 82 (0.410) |
+| | class counts exact (PPC: float/int counts) | 82 | **190 (0.950)** | 82 |
+| | irregular `in_*` inputs | 283 | **2** | 283 |
+| | `extraout_*` | 50 | **4** | 43 |
+| | `unaff_r*/f*` (callee-saved never restored) | 10 in 2 fns | 10 in 2 fns | 10 in 2 fns |
+
+Before the change, `bl _savegpr_26` printed as `uVar = FUN_8009aec8()` and the
+following `mr r31,r3` read the call's result, so the first argument vanished
+(`restore_fgdata_all(play)` had no parameter); 107 of 200 sled functions printed
+too few parameters. Now the call prints as the warning `Function: _savegpr_26
+replaced with injection` and the function keeps its parameters. The remaining 10
+`unaff_r28`/`r30` are two functions that really return a register the code never
+sets (stock identical). Positions in the AC rows are not the metric: PPC lists
+the float registers first, so which argument was the float is not in the binary
+(class counts are). Remaining `unaff_GQR0` (99 in the random sample, stock 101) is
+Gekko paired-singles control state, the P4.2 lane, left alone and counted apart.
+
+Discovery unchanged: `gc_rel_gate.py ours` on the same ciso gives foresta recall
+0.9993 / precision 0.9990 (17 invented), `main.dol` 0.9986 / 0.9598 (121), equal to
+the P3.1 record; PD raw import finds the same 4315 functions before and after.
+No m21 image (GBA, NDS, PS2, PSX, Vita, x360) uses `MIPS:BE:64:64-32addr` or 32-bit
+PowerPC; the C++ typing change moves no function boundary (recall/precision cannot
+move) and the m21 floors were not re-run.
+
+**P2.4, Perfect Dark game segment** (ours: raw import; stock: BinaryLoader at
+0x7f000000, `MIPS:BE:64:64-32addr` default cspec, stock analysis, a function created
+at any truth address it missed):
+
+| sample | measure | ours before | ours after | stock |
+|---|---|---|---|---|
+| 200 random | decompiled | 193 | 193 | 200 |
+| | arity exact | 160 (0.800) | **175 (0.875)** | 167 (0.835) |
+| | signature exact | 157 (0.785) | **171 (0.855)** | 164 (0.820) |
+| | float-param functions exact | 4/18 | **13/18** | 4/18 |
+| | stack-argument `in_stack_*` | 144 | **0** | 144 |
+| 300 with a float param | arity exact | 178 (0.593) | **282 (0.940)** | 181 (0.603) |
+| | signature exact | 129 (0.430) | **218 (0.727)** | 132 (0.440) |
+| 187 with a jump table | signature exact | 150 (0.802) | **167 (0.893)** | 158 (0.845) |
+| | printed `case` labels = table's non-default entries | 161 | 161 | 169 |
+
+On the 179 functions both tools hold, switch case counts are identical (161 exact,
+18 short); stock's 8 extra exact are functions our data-less fixture never
+discovered. `(float,float,float)`: ours `f4,f4,i8,i8,f4,f4` -> `f4,f4,f4`; 83 of 300
+float-subset failures were the fifth-and-later stack word read as a local, 25
+more were `f12`/`f14` parameters printed as `unsigned int`. What is left of the
+float subset is unobservable or beyond the registers: 61 floats passed in integer
+registers and only stored (no float use in the binary), unused parameters
+(`door_get_activation_angle(f32 x, f32 y)` reads neither; every tool prints no
+parameter), and 220 undiscovered callbacks. Jump tables, import level (212
+tables, truth = ROM table minus the guard's default): ours 192 exact (91%), 2
+subset, 18 absent; stock (`ExportSwitchTargets.java`) 168 exact, 13 superset,
+29 absent. The 18 are the functions where the decompiler prints no `switch`
+(`Could not recover jumptable ... Too many branches`, e.g. `ht_is_unlocked`: seven
+entries, one target) in both tools; the VSA saw the table but the dispatch's `sltiu`
+sits in a block before the guard it inspects. **gp small-data range**: PD builds
+with `-G 0` (Makefile), no `gp` use exists to measure; `gp` tracking for stored
+`gp` values is the user-owned WIP in `specs.rs`/`native.rs`. **`.late_rodata`
+trailing-empty default / reorder tolerance**: the default entries the guard folds
+(table entries beyond the cases) are already dropped by VSA and `doc.rs`
+(2026-10-08 switch ruling); on PD the table-order is not exercised (a table is
+reached by its own `lui/lw`, never by position).
+
+**Tests.** `cargo test -p romwright-core --lib -- native::mwcc_runtime` (6, sled
+words equal the retail ones, all four helpers, a missing `blr`, a wrong slot, a
+non-`r11` base); `cargo test -p romwright-worker --lib -- specs` (rule/fixup text:
+every helper N=14..31 in all four families, `r11` base, `*:8` doubles, r1-based
+fixups replaced once and idempotent, o32 groups/stack/localrange/N64-only), plus
+five decompiler-backed tests (`--include-ignored`, `ROMWRIGHT_GHIDRA_OPT=` the
+rebuilt `ghidra_opt`): `o32_slots_follow_the_abi_for_declared_prototypes`
+(`(float,int*)`->f12,a1; `(int*,float)`->a0,a1; `(float,float,int*)`->f12,f14,a2; fifth
+word at `sp+16`), `o32_inference_has_no_phantom_shadow_parameters` (+`float
+param_1`), `mwcc_register_save_helpers_keep_arguments_and_callee_saved_registers`
+(named helpers: two parameters, no `unaff_r30`; unnamed control loses them),
+`gekko_fused_multiply_add_prints_one_expression` (`fmadds` prints
+`param_1 * param_2 + param_3`, one `*`), `gekko_eight_byte_result_returns_in_r3_r4`.
+All 9 pass on the host. `fmadds`/`fnmsubs` were already correct (AC code has no
+fused op: 0 words with xo 28..31 in the REL, so the plan's `fmadds` item is a
+test, not a fix); the `r3:r4` 8-byte return join was already in the Gekko spec.
+
+**P2.5 already done by ProtoWork, so not redone here.** Nothing in the agbcc APCS
+lane: ProtoWork changed only C++ (`testForReturnAddress` accepts MULTIEQUAL;
+`flow.cc`/`heritage.cc` drop the `pop {rN}; bx rN` register from return recovery),
+and touched no cspec, no `specs.rs` and no APCS bundle. Still open for P2.5: the
+psyq soft-float cspec, the `ARM-LE-32-apcs` register set, and the `swi`/`__aeabi_*`
+folds. This work leaves a pattern P2.5 can reuse: a text transform in
+`specs.rs` selected by language id, with `<group>` slots for shared registers.
+
+**Files.** New: `benchmarks/{pd_ido_truth,ac_mwcc_truth,abi_signature_gate}.py`,
+`scripts/ExportDecompiledSignatures.java`,
+`crates/romwright-core/src/native/mwcc_runtime.rs`. Edited:
+`crates/romwright-worker/src/specs.rs` (user WIP file: `with_o32_argument_rules`,
+rewritten `mwcc_callfixups`/`with_mwcc_callfixups`, the `call_fixups` binding in
+`load_program_specs`, tests; the existing `STORED_BASE_REGISTERS`/`gp` edits
+untouched), `crates/romwright-core/src/native.rs` (user WIP file: one `mod
+mwcc_runtime;` line and one `mwcc_runtime::name_register_sleds(imp);` call),
+`native/ghidra-opt-sleigh.patch` (appended `fspec.cc`/`fspec.hh` hunks),
+`THIRD_PARTY_NOTICES.md`, `docs/third-party.md`, this file.
+
+**Reproduce** (host `nih-vps-u`, `~/runs/AbiWork`; load average 8-9 throughout, not a
+timing run): `python3 benchmarks/pd_ido_truth.py extract --rom <z64> --out game.bin`;
+`... truth --decomp ~/opt/pd-src --game game.bin --out truth.json`; `... sample
+--truth truth.json [--subset float|switch --size 300] --out s.json`;
+`romwright-cli import game.bin --raw 0x7f000000 --language MIPS:BE:64:64-32addr
+--name pdgame --project P`; `python3 benchmarks/abi_signature_gate.py ours --truth s.json
+--binary game.bin --project P --name pdgame --base 7f000000 --out o.json`, `stock
+--loader-arg "-loader BinaryLoader -loader-baseAddr 7f000000" --language
+MIPS:BE:64:64-32addr --out k.json`, `score --truth s.json --ours o.json --stock
+k.json`. AC: `ac_mwcc_truth.py truth --decomp ~/opt/ac-decomp --project P --out
+t.json`; gate `ours ... --module-base 8021e720`, `stock --binary
+<stock/in/foresta.rel> --block foresta_.text0`. Set `ROMWRIGHT_NO_IMPORT_CACHE=1`.
+
+**Gaps.** PD decompiles 193 of 200 sampled functions (data-less fixture: no
+function-pointer tables, so callbacks go undiscovered; N64Segments should fix
+this, then re-run the gate); `s64` parameters take one 8-byte slot in the o32 spec
+(no pair join in 8-byte registers); `double` arguments after an integer are not
+modelled (rare in IDO); floats passed in integer registers print as integers when
+the code only stores them; the 18 switches both tools lose; `unaff_GQR*` is P4.2.
+The PD truth covers 4086 of 4578 source functions (intervals whose counts
+disagree are dropped, biased toward functions nothing calls).
+
+## N64 segments, overlays and compression: Perfect Dark imports its real code (P3.3, 2026-10-08, N64Segments)
+
+**Before.** The N64 loader mapped ROM 0x1000..0x800000 as code at 0x80001000 (the header's boot address): Perfect Dark's code is Rare-zlib packed, so 145 "functions" were found in compressed bytes and data (28 of 2047 4 KB blocks looked like MIPS), none at a real address.
+
+**Now.** `native/n64_segments.rs` + `native/n64_layouts.json` (a data catalog, detected by the header's two CRCs and game code) + `native/n64_codec.rs`. A layout is a list of segments (ROM parts, each raw or packed; placed at a fixed address, the boot address, or after another segment); every decoded size and ROM range is checked, overlaps refused, and a layout that fails leaves the linear view with a `partial` diagnostic. The import is one program with one `modules` row per segment (the GC REL model) plus the cartridge window. Codecs, all written from format documentation (Hack64 wiki MIO0/Yay0, nintendo-formats.com Yaz0, the MIT PD decomp's `tools/rareunzip`/`extract-segment`; docs/third-party.md): `raw`, `deflate`, `rare-1172`, `rare-1173`, `rare-1173-pages`, `mio0`, `yay0`, `yaz0`. `n64_overlays::N64Overlay` gained a codec and `import_with_layout` takes a caller layout. docs/n64-segments.md has the schema, the per-game compression table and the limits.
+
+PD NTSC-final layout (every number re-measured on the ROM; independent zlib inflate): preamble ROM 0x1000 -> 0x80001000; lib-boot (the raw head, called by the preamble at its KSEG0 address) 0x1050..0x3050 -> 0x80001050; lib 0x1050..0x39850 -> 0x70001050 (0x2000 raw, then Rare 0x1173, 0x58f90 bytes); data 0x39850 -> 0x80059fe0 (0x30e40); inflate 0x4e850 -> 0x70200000 (0x13f0); game 0x4fc40 -> 0x7f000000 (paged Rare 0x1173, 0x1b99e0). `romwright-cli import perfect_dark_ntsc_final.z64`: **5485 functions** (was 145), 52 s (4 shards), `partial: 1` (2 function ranges the console could not decode for references), the switch round clean.
+
+**Scores** (`benchmarks/n64_segments_score.py`, report `benchmarks/reports/n64_segments.json`; m21 `score()` over the game text 0x7f000000..0x7f1a78c0; truth = AbiWork's `pd_ido_truth.py` 4086 named functions; corroborated precision also counts entries the segment's own bytes prove, `jal` targets and chain-walk starts):
+
+| | functions (game text) | recall | precision (m21) | precision (corroborated) | sizes exact |
+|---|---:|---:|---:|---:|---:|
+| **ours, retail ROM, layout** | 4330 (+1098 lib, 48 lib-boot, 8 inflate, 1 boot) | **0.9491** | 0.8956 | 0.9998 | 3877/3878 |
+| ours, decompressed game segment as `--raw` (AbiWork's setup) | 4315 | 0.9462 | 0.8959 | 0.9998 | 3865/3866 |
+| **stock Ghidra 12.1.3 + N64LoaderWV, retail ROM** (headless, 1 min) | 0 (130 elsewhere) | **0.0000** | 0 | 0 | 0 |
+| stock, same raw game segment (BinaryLoader at 0x7f000000, best case: someone unpacked it) | 3823 | 0.8436 | 0.9016 | 1.0000 | 2506/3447 |
+
+Stock on the ROM maps the linear view (its README says so) so it finds nothing at any truth address. Even handed the unpacked segment it misses `lang_init` and every boot-table callee (no seeds), so recall is 0.8436 vs 0.9491 here. The m21 precision is bounded by the truth (4086 named of ~4576 real functions); 451 of the 452 "invented" game-text entries are real functions the source-order mapping could not name. The 208 misses are not unpacking failures: the samples (getitle, chrs_set_debug_something, ai_yield, ...) are entries no `jal` names, i.e. reached through pointer tables.
+
+**Acceptance.** Spot check (the loader's own `romwright-cli mem` vs the segment inflated by Python zlib): 10 truth functions from 0x7f000000 to 0x7f1a78b0 byte-equal over 64 bytes each, and all six segments byte-equal in full (SHA-256 recorded in the report; the lib/data/game digests are also asserted by `native::n64::tests::perfect_dark_ntsc_final_loads_its_real_segments`, which skips when the ROM is absent). Modules rows: cartridge, lib, inflate, game, preamble, lib-boot, data. Tests (local): `cargo test -p romwright-core --lib -- n64 export::tests::unpacked` 26 passed: synthetic MIO0/Yay0/Yaz0 round trips against test encoders, hand-assembled MIO0 and overlapping-match Yaz0 streams, Rare 0x1172/0x1173 (declared-length and magic checks), paged segments, corrupt/truncated/over-limit streams are errors; layout placement/after/detection/size/overlap/range/bad-JSON; fallback with diagnostic; `export::file_backing`.
+
+**Side fixes.** `export-splat` claimed a mapping's `file_off` as its file bytes; for an unpacked mapping that told splat to disassemble compressed bytes. `export::file_backing` (used by the CLI, surgical edit in `main.rs`) keeps only mappings whose bytes equal the file's: PD now exports preamble, lib-boot and inflate as code and the packed ranges as `bin`. WIP files touched: `native.rs` (three `mod` lines), `main.rs` (the `export-splat` backing block).
+
+**m5-004 was red before this change, and is green again.** The fixture builder wrote `b"ROMWRIGHTGATE\x00"` (14 bytes) into the 12-byte slice `header[0x20:0x2C]`; a `bytearray` slice assignment of another length resizes it, so the ROM's code sat 2 bytes past file offset 0x1000 and the fixture's functions started mid-word. Discovery found 8 functions on every CLI (the old +2 `pattern` entries decoded the real code misaligned, `n64_main` lost) and recall was 0.80; after DiscoveryResidual's `instruction_alignment` the misaligned entries are refused and recall fell to 0.20, which exposed it. Fixed in `tests/m5-004_n64.py` (write 14 bytes at `[0x20:0x2E]`): `python3 tests/m5-004_n64.py` -> PASS, 5 functions, dwarf.fn.recall 1.0000, boot seeded, native decompile, swapped dump refused (host, `ROMWRIGHT_NO_IMPORT_CACHE=1`, tree of 23:4x). The import cache is not disabled by this test and can hand back a stale result across builds.
+
+**Reproduce.** Host `~/runs/N64Segments`: `romwright-cli import ~/ventris-corpus/perfect_dark_ntsc_final.z64 --name pd --project P --timings` (rebuild `romwright-worker` too: a stale worker sees the linear ROM and the switch round reports DataUnavailError); stock: `analyzeHeadless DIR pd -import ROM -loader N64LoaderWVLoader -processor MIPS:BE:64:64-32addr -postScript ExportFunctionEntries.java OUT`; raw: `-loader BinaryLoader -loader-baseAddr 0x7f000000` on `pd_ido_truth.py extract`'s game.bin; `python3 benchmarks/n64_segments_score.py --rom ROM --truth truth.json --cli CLI --project P --raw-project R --stock-rom a.json --stock-raw b.json --out o.json`. native/build hashes in use: ghidra_opt 1226d19ca770, decomp_native 813e2922fc15.
+
+**Gaps.** One shipped layout (NTSC final): the other five PD revisions differ in `data`/`game` offsets (known from the decomp's `tools/extract`) but no ROM/CRC was at hand to verify them. No layout for any other game: games whose overlay tables live in their own code (OoT actor table, MK64 course segments) need that table located per game; `import_set` + codecs are the placement half. The game segment is demand-paged through the TLB at run time and mapped flat; `bss` is unmapped (not in the ROM). Lib functions (1098, libultra and PD's lib) are unscored: the decomp ships no addresses for them and only the game segment was derivable. Rare codecs other than 0x1172/0x1173 and other publishers' LZ variants are not implemented; Rare games besides PD/GE were not exercised. The 208 missed truth functions are discovery's (pointer-table callbacks), not the loader's.
+
+## P1.7 follow-up: MWCC names and prototypes in the import (2026-10-08, MwccDemangle)
+
+The demangler (section above) now runs on import. `native/store.rs::store_import`, `qualified_prototypes/mangled.rs`, `worker/provider.rs` and `worker/worker.rs` are the path; `benchmarks/mwcc_names_gate.py` (+ `benchmarks/ghidra/ExportFunctionNames.java`, `ApplySymbolNames.java`) measures it.
+
+**Names.** Same shape as the Itanium path: the mangled name stays (the function's `functions.name`, or the symbol row the image gave), and a derived symbol row (`native-analysis:mwcc-demangle`, `dtk`'s spelling: `UberBond::Update(char*)`) is stored beside it for every function and symbol that demangles. The worker prints `UberBond_Update` (`::` -> `_`, operators as words, overloads that share `Class::name` spelled with their parameter types, a name still shared falls back to the mangled name plus the address); a function-table name is never rewritten, so `export-dtk`/`export-splat` still write linkage names (the exporters now skip derived symbol rows, Itanium ones included: before this a derived row could have replaced a data symbol's name). Provenance classes added to `romwright-model`.
+**Prototypes.** `native-analysis:mwcc-prototype` rows carry the parameter list the name spells (types through the C parser's names; a pointer to a class the language lacks becomes `void *`, a by-value class, member-function pointer or a type with no spelling gives no row). Measured on Bond.elf (1,500 mangled functions, decompiler recovery as baseline) the name does not prove arity for a plain member: 71% print `this` + spelled parameters, 21% the spelled parameters only (MWCC marks no static member). So rows exist only where the name proves the arity: free functions, constructors, const members (always `this`) and destructors (`this` + MWCC's delete flag, which the name omits: 82 of 82 printed two parameters). Other members are left to recovery. Order in `store_import`: mangled rows, then type-archive rows (`declared_qualified_for`, now the only library path; `declared_for` deleted), then debug-info rows; `merge_inferred_prototypes` lets a later inferred row replace an earlier one, an assertion is never replaced, and `types_infer::prototypes::protected` keeps the decompiler's recovery off them. The type-archive row now carries the member receiver (`UberBond * this`, `void *` when the class is no known type) in its signature, since `PrototypeRow` has no receiver field.
+**Return value.** The name carries none (template instances aside). Locking `undefined4` made 44% of the functions recovery printed `void` return a value (measured, 176 of 400 on Bond.elf). So the worker applies these rows in a new `ghidra_opt` mode, `params` (`SetFunctionSignature`: parameters and model locked, output unlocked; additive hunk in `native/ghidra-opt-sleigh.patch`, rebuilt: ghidra_opt 1226d19c, decomp_native 813e2922, broadcast). A worker built from this tree needs that binary: an older `ghidra_opt` refuses mode `params`.
+**Dialect.** Import uses the default dialect: `T<i>`/`N<n><i>` expanded. dtk refuses 267 corpus names, all back-references (1.6% of the names the corpora decode), which would stay mangled and un-prototyped; the 16,032 names dtk accepts decode identically in both dialects. Every one of the 267 names expands with its indices in range, and the expanded list is consistent with the gcc-2 convention (0-based over the expanded parameters, builtins included, e.g. `BOT_init__FsP7_VECTORT1...`). Nothing independent proves the index rule: dtk refuses these names and the ELFs carry no debug info, so the expansion is unverified against a second decoder or the source.
+
+**Measured** (`python3 benchmarks/mwcc_names_gate.py ours --cli <release CLI> --image ... [--map symbols.txt] --work DIR --out JSON --sample N`; stock: `ExportFunctionNames.java` after `ApplySymbolNames.java` via `analyzeHeadless` on `nih-vps-u`, GameCubeLoader for the DOL; native pair above, Rust at this tree). A name is mangled when dtk decodes it.
+
+| image | functions | mangled names | ours: display symbol | ours: left mangled as primary | stock: mangled after analysis | stock: renamed |
+|---|---|---|---|---|---|---|
+| GC `base.elf` (GQFE78) | 644 (stock 653) | 15 | 15 | 0 | 15 | 0 |
+| `Bond.elf` | 8,522 | 5,634 | 5,634 | 0 | not run | - |
+| Animal Crossing disc (`main.dol` + `foresta.rel`, DOL names from ac-decomp `GAFE01_00/symbols.txt` via `--map`) | 20,300 | 1,407 | 1,407 | 0 | 1,407 of 2,939 (DOL only, same names applied before analysis) | 0 |
+
+Stock's analysis log for the DOL shows `Demangle CodeWarrior` failing with a NullPointerException (`this.demangler` is null), so it leaves every name mangled; on the ELF it is not attempted. The REL's names are not applied (ac-decomp's `foresta/symbols.txt` is section-relative; one mangled name in it).
+Printed arity (decompile, before = recovery only, after = with the rows; scored over the functions that get a prototype row, expected = spelled + `this` for a scoped function + the destructor flag): base.elf 11/12 -> 12/12; Bond.elf sample of 2,000 (608 rows) 464/607 (76%) -> 607/607; AC sample of 1,000 (688 rows) 547/687 (80%) -> 687/687; scoped only: Bond 246/331 -> 331/331, AC 84/96 -> 96/96. Return values after the `params` mode: functions printed `void` before that print a value after: base 0, Bond 1, AC 10 (of 608/688 rows); 197 Bond rows changed `int` -> `void` (the example is a destructor: recovery had printed the delete flag's neighbour as a return). Printed with a demangled identifier: base 15/15, Bond 1,998/2,000, AC 997/1,000 (measured before the operator-word spelling; the few that printed as their mangled name were overloads of `operator new`/`delete` and a duplicated constructor name that the old spelling could not tell apart).
+Counts above 'ours' mangled/display are full-population (store); arity is a sample. The arity result is by construction for the rows we emit; the informative number is the baseline (recovery misses 20-24% of proven arities, trailing parameters the body does not use).
+**Tests.** `cargo test -p romwright-core --lib -- qualified_prototypes native::store::mwcc_names library_types export::` -> 65 passed (new: mangled display/prototype/identifier/operators/collisions, store round trip incl. assertion survival and later-source precedence, receiver in the table row, exporters skipping derived rows).
+**Gaps.** Plain scoped members get no prototype (recovery decides; a `.vtable`/RTTI-derived "instance method" proof would add them); the row's stored return type is a placeholder (`undefined4`) that the `params` mode ignores, so anything that reads `prototypes.return_type` directly sees it; function listings (`romwright-cli functions`, desktop) still show `functions.name`, the linkage name, because that column feeds the exporters and matching, the display name is in `symbols` (source `native-analysis:mwcc-demangle`); REL names are not applied; the stock comparison was not run on Bond.elf; static data members get a display symbol but no printed namespace.
+
+## DWARF 1 types and PSP as type-truth images (P3.3, 2026-10-08, Dwarf1Types)
+
+**Change.**
+- `crates/romwright-core/src/native/mdebug/dwarf1.rs` (new; `mdebug.rs` now `mod dwarf1`): the Metrowerks DWARF 1 stream is read whole, nested by `AT_sibling` offsets: per subprogram the return type, parameters (name, type, location), locals (through lexical blocks), variadic marker; the type graph (fundamental, modified/pointer, struct/union with member offsets and bit fields, enum, array, typedef, subroutine types); scoring classes in `benchmarks/dwarf_types.py`'s vocabulary; and `DebugPrototype`s for functions whose every type has a C spelling. `mdebug::collect` returns `DebugInfo { functions, prototypes }`.
+- Import path: `elf.rs` (2 call sites, 2 struct fields) and `native.rs` (`NativeImport::debug_prototypes`) carry them; `native/store.rs::apply_debug_prototypes` writes them as source `native-import:debug-info` after the type-archive pass (so it wins over it), `Inferred` kind, so `types_infer::prototypes::protected` keeps `infer_prototypes` off them and an asserted row still outranks them. `romwright-model/src/provenance.rs`: new class `native-import:debug-info` (`Declared`).
+- Benchmarks: `benchmarks/dwarf1_types.py` (independent Python reader, DWARF 2+-shaped DIE graph, `long` width measured from struct layout), `benchmarks/dwarf1_diff.py` (differential), `console_research.py`: `dwarf_truth` now reads DWARF 1, `truth_from_nodes` split out, Capcom added to `DWARF`, new images `psp-puzzle-bobble-pocket` (`strip --strip-all`) and `psp-puzzle-bobble-pocket-symtab` (`llvm-objcopy --strip-debug`; `strip: "debug"`). `docs/console-research.md` (new section), `docs/third-party.md` (DWARF 1 note).
+
+**Results** (host nih-vps-u, tools `6071cd339255a3d8`: native/build ghidra_opt ae45dc0e, decomp_native bcea6b5d).
+- `cargo test -p romwright-core --lib mdebug`: 11 passed (+1 ignored differential dump, passes with `--include-ignored`). `cargo test -p romwright-model --lib provenance` passes.
+- Differential, SLUS_209.50 (`benchmarks/reports/dwarf1_differential.json`): 5,221/5,221 functions agree on arity, return and parameter classes (10,808/10,808 slots); prototype C spelling maps back to the class for 5,221/5,221; names and entries equal the `.symtab`'s for 5,221/5,221. Both readers have one author.
+- Unstripped SLUS_209.50 import: 5,221 of 8,824 functions get `native-import:debug-info` prototypes; sampled typed functions (including `code *`) decompile. m21-001 `--only ps2-capcom-fighting-evolution` on the stripped twin: PASS, recall 0.9411, precision 0.9964 (was 0.9412 / 0.9964).
+- Harness (`benchmarks/reports/console_research_dwarf1.{json,md}`, n=200): Capcom arity 0.980/0.985/0.985 and type-exact 212/425 = 0.4988 / 369/425 = 0.8682 / 208/425 = 0.4894 for `default` / `infer-prototypes` / `inferred-types-off`. PSP rows (RETRACTED and rerun, see the 2026-10-08 locals section below and PspImport's correction: the first run's truth was 0x40 low): strip-all, 144 DWARF functions, arity 0.7153/0.7222/0.7222, type exact 180/438 = 0.4110, 265/432 = 0.6134, 232/432 = 0.5370; symtab twin (131 DWARF functions, importer not yet carrying PspImport's symtab fix) 0.7099/0.7176/0.7176 and 0.4123/0.5926/0.5086. Details and caveats in `docs/console-research.md`.
+- Timing (unpaired, shared host, load 6-12): 20-function rehearsal 66 min wall; 200-function run 32 min; Capcom prototype jobs 687 s / 700 s.
+
+**Commands.**
+```
+python3 benchmarks/console_research.py --images ps2-capcom-fighting-evolution,psp-puzzle-bobble-pocket,psp-puzzle-bobble-pocket-symtab --configs default,infer-prototypes,inferred-types-off -n 200 --jobs 2 --no-m22 --out benchmarks/reports/console_research_dwarf1.json
+ROMWRIGHT_DWARF1_ELF=<SLUS_209.50> ROMWRIGHT_DWARF1_OUT=rust.json cargo test -p romwright-core --lib dump_dwarf1 -- --ignored
+python3 benchmarks/dwarf1_diff.py <SLUS_209.50> rust.json --out benchmarks/reports/dwarf1_differential.json
+python3 tests/m21-001_real_images.py --work <dir> --only ps2-capcom-fighting-evolution
+```
+
+**Gaps.** ECOFF `.mdebug` types are not read: SLUS_209.50 has none, dungeon's has 695 `stProc` and no `stParam`/`stLocal` (return types at most), the PSP image's is empty; a general reader would need TIR bit-field decoding (endian-dependent), the `tq0..tq5` qualifier order, RFD/`rndx` resolution for struct/typedef targets and the `bt*` width table, none of which an available image can check. Locals and locations are recovered; scalar DWARF 1 stack locals now feed the stack-variable table (see the locals section below). (The PSP discovery gap this entry first reported was the truth's section-relative addresses, not the importer; withdrawn.) The tool pair used a `ghidra_opt` copied from GotoPasses' tree for the 20-function rehearsal (IR v3); the reported 200-function run used the main tree's rebuilt native/build.
+
+## Clean-room PSX language: halt_baddata fixed, PsxLoader files removed (P4.1, 2026-10-08, PsxLanguage)
+
+**What changed.** `PSX:LE:32:default` (id unchanged) is now Ghidra's pinned MIPS32 little-endian spec
+(`third_party/ghidra/languages/mips`, Apache-2.0) plus our own `gte.sinc`, written from psx-spx. The
+`lab313ru/ghidra_psx_ldr` copies are gone from the tree: `cop2_regs`, `gtemac`, `inline_c`, `inline_s`,
+`macro_addrs`, the modified `mips.sinc`/`mips32Instructions.sinc`/`gte_fallback.sinc` and the byte-identical
+`mips.ldefs`, `mips32.pspec`, `mips32le.cspec`/`slaspec`, and the bundle's `cspec.xml`/`pspec.xml`.
+`native/languages/psx` is now `gte.sinc`, `psx.slaspec`, `psx.cspec`, `psx.pspec`, `psx.ldefs`,
+`stock-cop2.patch` (removes stock `mfc2/mtc2/cfc2/ctc2`, adds the GTE fields to the `instr` token: a
+constructor cannot mix two tokens) and `install.sh`.
+
+- **Build.** `native/languages/psx/install.sh [GHIDRA]` stages the pinned stock files, `git apply`s the patch,
+  compiles `psx.sla` (76 KB; stock MIPS is larger because it includes MIPS16/microMIPS/MT/DSP, which the R3000A
+  has not) and installs Ghidra module `Extensions/RomwrightPsx` (`Module.manifest`, `extension.properties`,
+  `data/languages/{psx.ldefs,psx.pspec,psx.cspec,psx.sla}` plus the staged sources, because the JVM checks the sla
+  against its slaspec). The console/worker find it as before: `architecture::discover` scans every module's
+  `data/languages` `.ldefs`, `slafile_for_id` gives the sla, `native/specs/PSX-LE-32-default` is the bundle.
+  A leftover PsxLoader extension registers the same id and Ghidra scans every `.ldefs` below the install (the JVM
+  loaded the old language even from a renamed `languages.*` directory), so `install.sh` moves
+  `Extensions/PsxLoader/data/languages` to `$GHIDRA/.romwright-replaced/PsxLoader-languages`; the PsxLoader jar
+  stays and resolves our language by id. Done on `~/ghidra_12.1.3_PUBLIC` (shared). Bundle regenerated with
+  `scripts/gen_native_specs.py --language PSX:LE:32:default --input VS.EXE` (`cspec.xml`/`pspec.xml` equal
+  `psx.cspec`/`psx.pspec`; manifest moved to `native/specs/PSX-LE-32-default.manifest.json` like the other bundles;
+  `--check` passes; tspec `uniqbase` is the new sla's).
+- **GTE (`gte.sinc`).** Registers cop2r0-31 / 32-63 at register offsets 0x5000 / 0x5100 under the psx-spx names
+  (`VXY0..LZCR`, `RT11RT12..FLAG`, plus `VX0/VY0..SX2/SY2` halves); the cspec's global ranges include the block, so
+  `mtc2/ctc2/lwc2` writes are not dead code. `mfc2/mtc2/cfc2/ctc2/lwc2/swc2` write the documented side effects
+  (SXYP FIFO push, IRGB to IR1-3, LZCS to LZCR via `lzcount`, s16/u16 extension of IR/VZ/OTZ/SZ and
+  RT33/L33/LB3/H/DQA/ZSF3/ZSF4, read-only ORGB/LZCR, FLAG bit 31; ORGB/IRGB reads are `gte_orgb(IR1,IR2,IR3)`).
+  The 22 commands decode for any bits outside the command number: `rtps nclip op dpcs intpl mvmva ncds cdp ncdt
+  nccs cc ncs nct sqr dcpl dpct avsz3 avsz4 rtpt gpf gpl ncct`, listing as e.g. `mvmva sf=1,mx=RT,v=V0,cv=none,lm=0`
+  and lifting to `gte_mvmva(sf,mx,v,cv,lm)` pcodeops (`gte_<cmd>(sf,lm)`, none for nclip/avsz3/avsz4). The old
+  fallback's `gte_op0/gte_sqr0/gpf0/gpl0/dpcl` names are replaced (`dcpl` is 0x29 in psx-spx). Command arithmetic
+  is not modelled; a command's register reads/writes are not visible to the decompiler (it sees the global GTE
+  registers written before and read after, in order). psyq inline-macro lifting is a follow-up (the Rust `gte_lift.rs` that held its table was deleted, see Follow-ups).
+
+**Results** (`~/ghidra_12.1.3_PUBLIC` with the new language, `target/release` tools, load 20).
+- Repro `lh v0,0(a0); jr ra; nop` and the `lw` twin, `--raw 0x80010000 --language PSX:LE:32:default`: decompile to
+  `return (int)*in_a0;` / `return *in_a0;` (was `halt_baddata()`).
+- VS.EXE, the 200-function research sample (`~/.cache/romwright/research-eval/samples/psx-darkstalkers-3-*.json`,
+  `export-c --address` each): halt_baddata functions **103 -> 0**; decompile success 200/200 before and after; stock
+  Ghidra (MIPS:LE:32:default, raw VS.EXE text) 0 halt, 200/200. Printed C identical to stock on 198 of 200 (the
+  two others contain `ctc2`: `ZSF3 = 0x155;` instead of `setCopControlWord(2,0xe800,0x155)`).
+- Disassembly differential (Ghidra JVM `PseudoDisassembler` over every aligned word of VS.EXE's text,
+  0x80132000 + 0x64800, 102,912 words, ours vs MIPS:LE:32:default): **102 differ**: 80 `sdc2` (stock decodes
+  it, MIPS II; ours undefined) and 5 non-COP2 `mfhi rd,hiN` (stock decodes the DSP accumulator form of data words
+  such as 0x00201010; ours undefined, the R3000A has no DSP; this is the only non-COP2 difference); the other 17
+  are COP2 naming: `ctc2` 10, `cfc2` 4, `swc2` 1 (operand `0xe800` -> `ZSF3`), and two words stock calls `cop2`
+  (`dcpl`, `nclip`). COP2 mnemonic counts in VS.EXE (it is a 2D game, GTE is only in data words): `dcpl` 1,
+  `nclip` 1, `ctc2` 10, `cfc2` 4, `swc2` 1, other command numbers `cop2` 21. Exhaustive synthetic check: all 64
+  command numbers x sf x lm (508 words incl. every mvmva mx/v/cv combination) decode to the psx-spx mnemonic and fields,
+  0 wrong; all 32 data and 32 control registers for `mfc2/mtc2/cfc2/ctc2/lwc2/swc2` print the psx-spx names, 0 wrong.
+- m21-001 psx (`--only psx-darkstalkers-3`, no import cache): recall 0.9878, precision 0.3663,
+  precision_corroborated 0.9968, 2206 found, 52 corroborated unfound, byte-identical rows before/after.
+  `tests/m5-003_psx.py` and `tests/console_processors.py --only PSX` pass.
+- Clean-room check: the sha256 of every file under `~/opt/psxloader-src` (111 unique) against every file in the repo
+  (`find . -type f`, excluding target/.git/native/build): no match (the empty-file hash only). Same-name files left are
+  stock Ghidra's (`mips32le.cspec`/`slaspec`, different content).
+
+**Docs.** `docs/third-party.md` (new PSX language section), `THIRD_PARTY_NOTICES.md`, `docs/import-speed.md`,
+`benchmarks/import_speed.py` (baseline text: PsxLoader's loader, our language), and the `native/psx.rs` comment.
+
+**Gaps.** The 5 DSP-form `mfhi` words differ from stock by design. `with_psyq_global_pointer`'s doc comment
+(specs.rs, AbiWork) says the PSX spec declares a `gp` space base; ours does not, so it is a no-op. Unlicensed
+PsxLoader sources still sit outside the tree in `~/ghidra_12.1.3_PUBLIC/.romwright-replaced/` (local machine only).
+
+**Follow-ups (Main's review).**
+- `crates/romwright-core/src/gte_lift.rs` deleted (its `cofun` table and macro names came from the removed `inline_s.sinc`;
+  no caller outside `lib.rs`, tests were its own). `pub mod gte_lift;` removed from `lib.rs` (user WIP file, one line).
+  psyq inline-macro lifting (plan P4.1 second half) would have to be re-derived from psx-spx and `gte.sinc`.
+- Stock baseline: the PSX Ghidra row of `benchmarks/import_speed.py` now imports as `MIPS:LE:32:default` under PsxLoader's
+  PS-EXE loader instead of `PSX:LE:32:default`; no copy of the install, nothing depends on `.romwright-replaced`. Measured
+  on this workstation: `analyzeHeadless` + `ExportFunctionScoring` as MIPS finds 2012 functions, recall **0.9205**, precision
+  **0.3743** (the recorded stock numbers, exactly; harness row `import_speed.py --only psx-darkstalkers-3` reproduces them).
+  The same run as `PSX:LE:32:default` finds 1011 (0.5844 / 0.4728), with PsxLoader's language and with ours alike, so
+  the old harness row (and the committed `import-speed.{json,md}`, not regenerated) compared against a weaker baseline
+  than the STATUS numbers; the cause is not established (the extension keys its function-start patterns to MIPS).
+  Documented in `docs/import-speed.md`. m21 floors do not run Ghidra.
+- Import cache: `import_cache::key` (v3) now includes `languages_fingerprint(config.ghidra_install)`: relative path, size
+  and mtime of every `.sla`/`.ldefs`/`.pspec`/`.cspec` under `Ghidra/*/*/data/languages`; unit tests
+  `a_reinstalled_language_changes_the_fingerprint`, `a_reinstalled_language_is_a_new_import_key`,
+  `an_install_without_languages_still_has_a_fingerprint` pass (`cargo test -p romwright-core --lib import_cache`).
+  Old v2 entries are never queried.
+- `native/romwright_patterns.hh`: comment only; main-tree `native/build` rebuilt, binaries unchanged
+  (`ghidra_opt` eed4c513..., `decomp_native` 3f376a4e...); hashes broadcast.
+- Machines: all of this ran locally; `nih-vps-u` was not touched, so its Ghidra install keeps the old PsxLoader language
+  until `native/languages/psx/install.sh` is run there.
+
+**Commands.**
+```
+native/languages/psx/install.sh                      # ~/ghidra_12.1.3_PUBLIC
+python3 scripts/gen_native_specs.py --language PSX:LE:32:default --input ~/ventris-corpus/extracted/psx-darkstalkers-3/VS.EXE --out-dir /tmp/b
+ROMWRIGHT_NO_IMPORT_CACHE=1 python3 tests/m21-001_real_images.py --only psx-darkstalkers-3 --work /tmp/m21
+```
+<N>` module per overlay program through the new `module_of`, replacing the unused `modules()` ModuleRow builder: name, `file_id` = FAT index, `file_off` = FAT start, size `ram_size+bss`), `rel::attach` (DOL: boot-header offset; REL: FST entry, i.e. the Yaz0 stream when `.szs`), `n64_segments::load` (first ROM part), the N64 cartridge row (`rom:0x0-<len>`), `n64_overlays::import_set` (module per overlay). `store_import` writes `module.file_off`, and for programs that declare no modules the per-mapping row takes the mapping's `file_off` (arm9 `0x4000`-style cartridge offsets, ELF/PE section offsets) instead of 0.
+
+**Gate (CI-runnable, no ROM, no Ghidra).** `crates/romwright-core/tests/module_isolation.rs`, synthetic cartridge with overlays 3 and 9 both at `0x02100000`, stored as `game.arm9/.ov3/.ov9` through `programs_for` + `store_import`: (1) rename in ov3 at the shared function: ov3 changes, ov9's `function_at`, `functions`, symbol count and store revision are identical, arm9 untouched; rename in ov9 then `undo` restores ov9 only; (2) `locate` at the address returns exactly ov3 and ov9, each with its module name and a distinct `module_id` equal to the `modules` row, file offsets `0x4300`/`0x4400`, FAT index `file_id` 0/1; resident `0x02000040` is mapped only by arm9 (row `file_off` `0x4000`); (3) a call from a caller in each overlay resolves through that overlay's own `xrefs_from`/`function_at`/`xrefs_to` to its own (renamed or not) function, the other overlay holds none of its callers, and a call into resident memory leaves the overlay. `cargo test --release -p romwright-core --test module_isolation` -> 3 passed; `--lib -- nds_overlays native::disc native::rel native::n64 native::store` -> 85 passed (new asserts: REL `file_off`, disc DOL `0x2000` / szs `0x2200`, `module_of`).
+
+**HeartGold check** (`tests/m10-005_overlay_isolation.py [--project P]`, host `nih-vps-u`, import 4 m 52 s): 5 addresses held by >=2 overlays (`021e5900` held by 22 overlays, `021e6e00`, `021ec298`, `0221fb90`, `0223ac20`, different overlay pairs: ov1/ov122, ov53/ov87, ov96/ov102, ov7/ov65, ov12/ov13): API `rename` in A; `function_at`, incoming `xrefs`, store revision of every other holder, the full `functions`/`symbols` lists of 2-4 holders per address and arm9's list unchanged; `locate` names each holder with `module=ov<N>` and the id of its row (distinct, 2 of 5 pairs have no caller, 3 follow a real caller `021ede2a`/`0221fe00`/`022449da` into A's renamed function); `romwright-cli locate --follow` prints the renamed function for A and the old one for B with the module ids; `undo` restores. PASS.
+
+**`file_off` spot-checks** (same script, fresh `--no-analysis` imports, compared with the container's own tables read independently in Python): NDS: all 129 overlay rows (not 3) equal their FAT start with `file_id` = FAT index, `load` = OVT ram, size = ram_size+bss; recorded ov35 `0x1a1200`, ov64 `0x217e00` (packed), ov124 `0x2f6a00`; arm9 row `0x4000` = header word. GC (Animal Crossing CISO, logical offsets): `main.dol` `0x1e000` (= word at `0x420`, first word `0x100`), `foresta` `0x5641d6ec` = its FST entry, `Yaz0` magic there; this disc has only those two modules, so the third check is m20-016's synthetic disc (raw GCM + two CISOs: DOL `0x2800`, szs at the `Yaz0` position, equal across all three containers; assertion added to the gate). N64 (Perfect Dark NTSC final): preamble `0x1000`, lib-boot/lib `0x1050`, data `0x39850` (Rare `1173` there), inflate `0x4e850`, game `0x4fc40`, cartridge 0, equal to the layout's ROM ranges.
+
+**Other gates** (host copy `~/runs/ModuleIsolation`, `ROMWRIGHT_NO_IMPORT_CACHE=1`): m10-001, m10-002 (desktop run skipped, no app), m10-003, m20-008, m20-016, m5-013 (recall 0.9742, precision 0.9944, 10795 functions, NitroMain decompiled) PASS. **m10-004 was red before this change** (HEAD): the API dispatch gained `function_at`, `function_evidence`, `matching_runs`, `matching_workspace` and `analyse_function`, which the sweep neither drove nor excused; the first four are now read recipes, `analyse_function` a write recipe (excused as having no read that lists what it stores); PASS (43 program-taking methods).
+
+**Files.** New: `crates/romwright-core/tests/module_isolation.rs`, `tests/m10-005_overlay_isolation.py`. Edited: `romwright-model`, `romwright-db` (`locate`), `native/{nds_overlays,rel,disc,n64,n64_segments,n64_overlays,store}.rs`, `native.rs` (field), `romwright-cli/src/main.rs` (locate print), `tests/m10-004_*.py`, `tests/m20-016_gc_disc.py`, `docs/game-decomp-plan.md` (decision refinement).
+
+**Gaps.** A single shared program with overlapping modules (nullable `module_id` on functions/symbols/xrefs, per the original P1.2 text) was not built: it needs a `(program, module, address)` key in every table and would touch every reader. An overlay's call into resident code is still an external edge, not a `module_xrefs` row (the programs are separate; no cross-program edge table exists). `file_off` of a CISO-held module is the logical disc offset, not the `.ciso` file offset; for a packed module it is where the packed stream starts. N64 `import_set` overlays and Wii/ISO9660 discs are unexercised on real images. The desktop shows no module id (its program selector is the module selector).
+
+**Reproduce.** `ROMWRIGHT_NO_IMPORT_CACHE=1 python3 tests/m10-005_overlay_isolation.py [--project <full HeartGold import>] [--gc-disc F] [--n64-rom F] --report OUT.json`; `cargo test --release -p romwright-core --test module_isolation`.
+
+## P2.5 soft-float conventions: PSX `$gp` and soft-float, GBA/agbcc audit (2026-10-08, AbiWork)
+
+Measured with `benchmarks/abi_signature_gate.py` (`ours`, `stock`, `score`, new
+`softfloat`) on the research samples (200 functions per image, seed 20261006,
+the same lists `console_research.py` caches). Host `nih-vps-u`, binaries from the
+main tree at 19:09 (`ghidra_opt` sha ae45dc0e…, with the float-typing hunks);
+`ROMWRIGHT_NO_IMPORT_CACHE=1`; load average 9-10, not a timing run. PSX numbers
+are on the clean-room `PSX:LE:32:default` (PsxLanguage) only; the 103-of-200
+`halt_baddata` functions I found earlier were that language's, now 0.
+
+**Float-typing risk check (the `fspec` patch).** A soft-float image must print no
+float parameter and read no FP register. Counts over the printed signatures and
+bodies of each sample:
+
+| sample | functions | printed params | float/double params | `in_f*`/`extraout_f*`/`unaff_f*` |
+|---|---|---|---|---|
+| PSX VS.EXE ours | 200 | 232 | **0** | **0** |
+| PSX VS.EXE stock | 200 | 232 | 0 | 0 |
+| GBA pokeemerald ours | 200 | 189 | **0** | **0** |
+| GBA pokeemerald stock | 200 | 189 | 0 | 0 |
+| NDS HeartGold arm9 ours | 200 | 416 | **0** | **0** |
+
+The patch only retypes a parameter whose storage is a float-class entry of the
+model. `ARM-LE-32-v4t`/`v5t` have none (checked by a test), so it cannot fire on
+GBA/NDS; PSX's spec had float entries, and after the soft-float transform below
+it has none either.
+
+**PSX.**
+1. `native/psx.rs` seeds `$gp`: the PS-EXE header's GP (0x14) when non-zero, else
+   psyq crt0's `lui gp,hi; addiu|ori gp,gp,lo` within 256 words of the entry
+   (Darkstalkers 3: header GP is 0, crt0 builds 0x80196670). Independent check:
+   `VS.MAP` puts `.sdata` at 0x80196670, and 302 of the 313 `$gp`-based loads and
+   stores in the image land in `.sdata`/`.sbss` (the other 11 are data bytes
+   that decode as code). `specs.rs` tracks `gp` (not `t9`: psyq is not PIC) for
+   `PSX` languages.
+2. `specs.rs::with_psyq_soft_float` removes the float slots, the rules that route
+   a float to them and the FP registers from the PSX spec at registration (the
+   R3000A has no FPU), so a declared `float` is `a0`
+   (`psx_declared_float_arguments_use_integer_registers`).
+
+| whole image (2206 functions), clean language | `$gp` stored? | `gp` tokens in printed C | `.sdata`/`.sbss` global tokens |
+|---|---|---|---|
+| decode context `gp` removed | no | **436 in 99 functions** (`in_gp + off`) | 1836 |
+| as shipped | yes (0x80196670) | **0** | **2235** |
+
+On the 200-function sample stock names the `.sdata`/`.sbss` globals in 19
+functions (286 tokens), ours in the same 19 (339). Printed parameters: ours 232 =
+stock 232 (no arity truth exists for PSX: the map carries globals only).
+m21 `psx-darkstalkers-3`: recall 0.9878 / precision 0.3663, equal to the record.
+The two `with_psyq_global_pointer` pieces I first wrote (dropping the old spec's
+`gp` space base) went when PsxLanguage's cspec lost the space base.
+
+**GBA / agbcc (ARM:LE:32:v4t), truth = pokeemerald's DWARF (built from the C
+prototypes), the 200-function sample.**
+
+| | ours | stock (no analysis, function created at each address, Thumb) |
+|---|---|---|
+| decompiled | 200 | 200 |
+| arity exact | 194/200 (0.970) | 194/200 (0.970) |
+| class counts exact | 194 | 194 |
+| return kind (void/value) agrees | **198/200 (0.990)** | 155/200 (0.775) |
+| `in_*` inputs | 0 | 4 |
+
+The six arity misses are the same functions for both tools and are parameters the
+code never reads (`Task_Idle(u8 taskId)`, `SetTradeLinkStandbyCallback(u8)`,
+`EscalatorWarpOut_Down_End(ptr)`, `EscalatorWarpIn_End(ptr)`,
+`AcroBikeHandleInputTurning(ptr,u16,u16)` (both print the one it reads),
+`ScrollableMultichoice_MoveCursor`): the same six functions for both, and no
+decompiler can print a parameter the code never reads. Stock's analysis pass (full
+auto-analysis of the 16 MB ROM) had not finished after ~30 CPU minutes and was
+stopped, so its row is without analysis; the return
+kind gap is Thumb `pop {rX}; bx rX` (ProtoWork's C++ fix is what ours has). The
+warning `Treating indirect jump as return` (189 functions) is that fix working and
+no longer counted by the gate.
+
+What was audited and left alone, with the reason:
+- *soft-float, no VFP*: `ARM-LE-32-v4t` has no float slots (test
+  `the_arm_v4t_spec_is_soft_float_with_the_full_callee_saved_set`; a declared
+  `float` is `r0`: `arm_declared_float_arguments_use_integer_registers`).
+- *callee-saved set*: `r4`..`r11` and `sp`; `push {r4,lr}`..`pop {r4,pc}` leaves `r4`
+  a local, no `in_r4`/`unaff_r4` (`arm_callee_saved_r4_is_a_local_not_an_artefact`).
+- *Thumb interworking returns*: ProtoWork's (their numbers above).
+- *APCS vs AAPCS*: the one rule that differs for 32-bit values is none; a 64-bit
+  argument's register pairing (agbcc packs, AAPCS aligns to an even register) is
+  not visible in pokeemerald (no `float`, `double` or `s64` parameter anywhere in
+  `src/` or `include/`), and the importer records no compiler for GBA programs
+  (`programs.compiler` is empty), so a rule keyed on agbcc would also reach
+  devkitARM/AAPCS v4t programs (NDS arm7). Not changed.
+- *`swi`, `__aeabi_*`/libgcc helpers, `ldm`/`stm` copies*: none occurs in the GBA
+  sample's printed C (0 `software_interrupt`, 0 `__aeabi_*`/`__divsi3` names), so
+  no measured number can move; not built.
+
+Two bundles from the P2.5 commit of 2026-09-12 (`native/specs/ARM-LE-32-v4t-apcs`,
+byte-identical to `ARM-LE-32-v4t`; `native/specs/PSX-LE-32-psyq-soft`) named
+languages that do not exist and nothing selected them: removed (plain `rm`); the
+acceptance audit's P2.5 row stays `not_established` until the numbers above are
+re-recorded by its own gate.
+
+**Tests.** `cargo test -p romwright-core --lib -- native::psx` (12: header GP wins,
+crt0 `lui`+`addiu`/`ori`, negative low half borrows, a lone `lui` is no value, no GP
+seeds nothing); `cargo test -p romwright-worker --lib -- specs --include-ignored`
+(14 pass: PSX soft-float exact removal, the ARM spec facts, plus the PSX/ARM
+decompiler-backed probes above). The `probe()` helper now writes little-endian words
+for `:LE:` languages.
+
+**Files.** `crates/romwright-core/src/native/psx.rs` (not a user-WIP file),
+`crates/romwright-worker/src/specs.rs` (user WIP: `with_psyq_soft_float`,
+`without_elements`, PSX `gp` tracking, tests), `benchmarks/abi_signature_gate.py`
+(`softfloat`, `--thumb`, class counts), `scripts/ExportDecompiledSignatures.java`
+(`thumb` argument), `docs/third-party.md`, `docs/game-decomp-plan.md`, this file. No
+C++ or native header changed in this task (no rebuild, no new hashes).
+
+**Gaps.** Stock GBA with full analysis was not obtained. PSX has no arity truth, so
+its signature agreement is unmeasured (only equal to stock). I read two ~40-line
+excerpts of the old PsxLoader-derived `mips32Instructions.sinc` (the `lh`/`lw`
+constructors) while diagnosing `halt_baddata`, before the instruction not to;
+nothing from it was used. Items in (3) were not built because they move nothing.
+
+## PSP: the "64-byte offset" was the truth, not the loader (2026-10-08, PspImport)
+
+**Root cause.** `BOOT.BIN` is a PRX (`e_type` 0xffa0) left unlinked at base 0: `.text` is at `sh_addr` 0x40 behind `.init`, and `.symtab` and the unrelocated DWARF `DW_AT_low_pc` are section-relative (`malloc16` = 0x3b0; its `addiu sp,sp,-16` is at 0x3f0). Our mapped bytes equal the file's (`jal` targets and `.rodata` references are final: 440 of 535 `jal` targets minus 0x40 are symtab values); discovery found the real entries and the truth said 0x3b0. Stock Ghidra reads the symtab correctly.
+
+**Change.** `native/elf.rs`: `psp_symbols_are_section_relative` + `section_relative_symbol` (symtab values `+= sh_addr` for an 0xffa0 image whose symbols are section-relative; a linked PRX with absolute values, as psp.rs's fixture, is detected and untouched). `tests/m21-001_real_images.py`: `section_relative_bases`, used by `elf_functions`. `benchmarks/console_research.py` (`dwarf_truth`, comment), `benchmarks/locals_truth.py` (`Truth.collect`): DWARF entries `+ .text`. `worker/specs.rs`: `with_allegrex_argument_rules` (EABI32 rules: float -> `f12..f19`/stack, 8-byte values -> aligned `a0:a1`..`t2:t3` pair; the cspec had no rules, so a declared `double` fell to the stack) wired after the Gekko rules, `Probe.joined`. New `benchmarks/psp_stock_compare.py` + `benchmarks/ghidra/ExportDecompiledSignatures.java` (stock discovery and printed-signature scoring).
+
+**Numbers** (host nih-vps-u, tools `7dfece5e9bc3a674`, n=200; `benchmarks/reports/console_research_psp.{json,md}`, `psp_stock_compare.json`). Strip-all discovery vs 622 symtab functions: ours 0.9453 / 0.8559 (was 0.0209 / 0.0190), stock MIPS 0.7990 / 0.8452, stock Allegrex 0.6350 / 0.8440. Symtab twin: recall 1.0 / precision 0.8627 (stock 1.0 / 0.8639). Arity vs DWARF on the symtab twin: default 0.0966 -> 0.7172, infer-prototypes 0.1172 -> 0.7241; type exact 0.1724 -> 0.4032 and 0.2347 -> 0.6164; stock Allegrex 0.7931 / 0.4966 (MIPS 0.7517 / 0.4884). Strip-all twin arity 0.7153 / 0.7222, type exact 0.4110 / 0.6134 (stock 0.7103 / 0.3716 Allegrex). The ABI rules change none of these (nothing in the sample is a declared `double`); they matter for declared prototypes.
+
+**Tests** (nih-vps-u): `cargo test -p romwright-core --lib psp` 7 passed (new `native::tests::psp_symbol_values_are_offsets_into_their_section`, incl. a linked-PRX absolute case; `decrypted_prx_names_exports_and_imports` failed with the first, unconditional version of the fix and passes with the detection); `cargo test -p romwright-worker --lib allegrex -- --include-ignored` 2 passed (the probe test fails with the transform removed: `void probe(double a,int *b){undefined4 in_a1;...}`); `tests/console_processors.py --only PSP` ok.
+
+**Gaps.** Stock leads symtab-twin arity by 7 pp because it types symtab-named libc/libm functions from the C-library archive (12 of the 16 one-sided functions: `cos`, `sin`, `fabs`, `floor`, `scalbn`, `copysign`, `isnan`, `isinf`, `_read_r`, `_write_r`, `_lseek_r`, `matherr`); ours types imports and mangled names only, and the pinned table lacks the `_r` names. Undeclared 8-byte parameters are recovered as two words whatever the cspec (join entries in the input list change nothing); 30 of the 41 arity misses. `with_entry_register_tracking` has no Allegrex branch (no `t9`/`gp` tracking for PSP), untouched. Not re-run: the `*-dwarf1` report keeps its pre-fix PSP rows (superseded by the correction section in `docs/console-research.md`).
+
+**Follow-up (same day): symbol-name library typing, one Ghidra script.**
+- `native/store.rs::apply_symbol_library_prototypes` (+ `SYMBOL_LIBRARY_SOURCE` = `native-import:symbol-library-prototype`): a function the image's symbol table names after a declaration of the pinned library table (`oracle/library-prototypes-v1/generic_clib_64.json`) is typed from it. Weakest prototype source: merged before the import-name pass, below the debug stream and every assertion, protected from the `infer_prototypes` job, nothing on a stripped image. Tests `store::mwcc_names::symbol_named_library_functions_are_typed_with_their_own_provenance` and `symbol_library_prototypes_yield_to_stronger_sources` (nih-vps-u: `cargo test -p romwright-core --lib symbol_` 10 passed).
+- Measured (tools `7dfece5e9bc3a674` rebuilt for this change, n=200, `benchmarks/reports/console_research_psp.{json,md}` regenerated): symtab twin `default` arity 0.7172 -> **0.7862**, type exact 0.4032 -> **0.4842**; `infer-prototypes` 0.7241 -> **0.7793** and 0.6164 -> **0.6849**. Stock Allegrex 0.7931 / 0.4966, so the arity gap closed from 7 pp to 0.7 pp (`matherr`: `exception *` is not a type the language's documents hold, so the row is left out) and type exact (job) leads stock by 19 pp. Strip-all twin unchanged (no symbols). `cos` prints `double cos(double __x)` with its argument joined in `a1:a0` (the Allegrex join rule). The job lowers symtab arity by 0.7 pp against `default` (prunes `_start`'s and `_read_r`/`_write_r`/`_lseek_r`'s trailing parameters, repairs `_printf_r`, `_sprintf_r`, `__sbprintf`): existing behaviour, not changed here.
+- Other twins: gba/nds are ROMs and dungeon/Capcom are `llvm-strip --strip-all` twins, none has a symtab, so the pass applies to none (imports: 0 rows of the new provenance for gba, nds, stripped dungeon). The dungeon `--strip-debug` twin takes 33 rows but none has DWARF (libc built without `-g`), so nothing to move. No arity regression is possible from this change on those research samples.
+- One `ExportDecompiledSignatures.java`: my copy under `benchmarks/ghidra/` is deleted; `scripts/ExportDecompiledSignatures.java` (AbiWork's, used by `abi_signature_gate.py`, same dir as the other oracle scripts) stays and `benchmarks/psp_stock_compare.py` calls it (`-scriptPath benchmarks/ghidra;scripts`, JSON output, 120 s timeout). `abi_signature_gate.py` is untouched.
+- Item 3 (join aligned register pairs into one 8-byte parameter) not implemented. `types_infer` is slot-wise and states that it never changes arity; a join needs interprocedural evidence the p-code of the callee does not hold: a soft-float `double` is two integer registers that the body spills or forwards as two words (`__adddf3` stores `a0`,`a1`, `a2`,`a3` to adjacent slots and passes their address), so the only evidence is a callee slot declared 8 bytes. After the symbol typing, 22 of the 31 remaining arity misses are 8-byte parameters: 14 are libgcc helpers (`__adddf3 __subdf3 __muldf3 __divdf3 __negdf2 __eqdf2 __nedf2 __gtdf2 __gedf2 __ltdf2 __fixdfsi __truncdfsf2 __udivdi3 __umoddi3`) that no table here declares, 8 newlib/fdlibm internals (`__ieee754_rem_pio2`, `__kernel_cos/sin`, `__make_dp`, `cvt`, `_dtoa_r`, `_ulp`, `_d2b`). The measured route to them is a documented-signature table for the libgcc runtime routines applied by symbol name through the same new pass (the Allegrex join rules already place the pair), not inference; not built (needs a source decision on the table). ProtoWork not contacted: `types_infer` untouched.
+
+**Follow-up 2 (same day): documented run-time helper table.**
+- New `oracle/library-prototypes-v1/runtime_helpers.json` (243 routines) written by `scripts/gen_runtime_helpers.py` (`--check` verifies): GCC Internals' libgcc chapter (3.1 integer, 3.2 soft-float; routines stated by machine mode) and Arm's RTABI (`__aeabi_*` float, long long, division, unaligned, memory). Facts only; no libgcc source read; citations in `docs/third-party.md`. Left out with reasons: complex, `_BitInt`, decimal-float and fixed-point (types in no language document), `__value_in_regs` aggregates, obsolete `__aeabi_fneg/dneg`, C++ vector helpers; MIPS/PPC EABI document no C-level helper signatures.
+- `crates/romwright-core/src/library_types/helpers.rs` (+ `pub mod helpers;` in `library_types.rs`): mode -> the language's own type of that width (`DImode` = `longlong` on PSP/ARM, `long` on r5900/LP64, `XFmode` = `longdouble` only at 12/16 bytes, `TImode`/`TFmode`/off-word `CMPtype` dropped). `native/store.rs::apply_symbol_library_prototypes` merges the helper declarations behind the C library table (which wins a shared name) and runs the same pass, provenance and precedence. Sibling path `runtime_helpers.json` next to `ROMWRIGHT_LIBRARY_PROTOTYPES`.
+- Tests (nih-vps-u): `cargo test -p romwright-core --lib -- library_types symbol_` 22 passed: 4 new in `library_types::helpers` (32-bit and 64-bit widths, unknown type drops the routine, committed table uses only known modes) and `store::mwcc_names::symbol_named_runtime_helpers_are_typed_in_the_languages_widths`.
+- Measured (symtab twin, n=200, `console_research_psp.{json,md}` regenerated; stock Allegrex 0.7931 arity / 0.4966 type exact): `default` arity 0.7862 -> **0.8828**, type exact 0.4842 -> **0.5833**; `infer-prototypes` 0.7793 -> **0.8759**, 0.6849 -> **0.7740**. Ours now passes stock on both measures with and without the job. Arity misses 31 -> 17.
+- Rows applied on other symtab images (fresh import, new provenance): dungeon `--strip-debug` 33 -> 38 (5 with DWARF: `__muldi3 __udivdi3 __umoddi3 __udivmoddi4`x2, arity 5/5; they print `long`/`ulong`, 8 bytes in the r5900 language, which `console_research.C_SCALARS` scores as 32-bit, so its slot score reads 2 exact / 15 wrong: scorer assumption, frozen metric, untouched), Capcom unstripped 50 (0 with DWARF 1), pokeemerald `--strip-debug` 43 (0 with DWARF; libgcc names such as `__adddf3`, `__cmpdf2`, `__floatsidf` and `strcmp`). Stripped twins get no rows. Not re-run: gba/nds/dungeon harness arity (no row lands on a DWARF function that the harness samples differently from before beyond the five above).
+- Remaining PSP arity misses (17 `default`): nine with unused, variadic or struct parameters (`GetMapTableVS matherr __malloc_lock __malloc_unlock _printf_r _sprintf_r __sbprintf std _localeconv_r`) and eight newlib/fdlibm 8-byte parameters (`__ieee754_rem_pio2 __kernel_cos __kernel_sin __make_dp cvt _dtoa_r _ulp _d2b`), which no document declares.
+
+## Locals, stack slots and return classes against DWARF; debug-info locals as import facts (P3.3, 2026-10-08, Dwarf1Types)
+
+**Benchmark (supplement, definitions in `benchmarks/locals_truth.py`).** New `benchmarks/locals_truth.py` (ours vs stock on the same functions: automatic-local count against DWARF, stack slots by entry-relative offset on MIPS, per-function class multiset of locals, return class), `benchmarks/locals_stock.py` + `benchmarks/ghidra/ExportDecompiledC.java` (stock Ghidra 12.1.3 headless, default analyzers, the language/loader of `import_speed.py`, the harness's sampled addresses), `dwarf1_types.py` now carries DWARF 1 locations, `console_research.pyelftools_nodes` keeps `DW_AT_location`. Report `benchmarks/reports/locals_truth.{json,md}`; table and reading in `docs/console-research.md` (new supplement section). Inputs: harness results of tools `6071cd339255a3d8` (n=200, seed 20261006) and stock runs on the stripped twins (Capcom 147 of 200 sampled addresses are stock functions, dungeon 158, NDS 175).
+- Capcom, 146 common functions: locals DWARF 117 / ours 495 / ours+infer 424 / stock 498; stack-slot recall ours 11/11 = stock 11/11 (decompiler names; 7/11 from the printed names, see the correction); return exact ours 129 (0.88), ours+infer 121 (0.83), stock 89 (0.61). Dungeon libgcc (20): stack recall 28/28 = stock 28/28, returns 8-9/20 vs stock 5/20. NDS (175): locals 214 / 382 vs stock 386, returns 0.61 vs stock 0.51. GBA (200): locals 184 / 455, returns 0.835. PSP strip-all (144): stack 133-135/138.
+- CORRECTION (stack slots): the stack-slot recall gap this section first reported (ours 0.64 against stock 1.00) was a measurement artifact. `export-c` renames `local_<hex>`/`auStack_<hex>` to `temp_*` (`emit_m2c::is_generated_name`), so a slot the decompiler has can be missing from the printed names. Read from the decompiler's own names (`decompile-doc`, new `benchmarks/locals_doc.py`), ours has every DWARF stack local stock has: Capcom 11/11 (125 slots, = stock), dungeon 28/28 (44, = stock), PSP strip-all 133/138 (0.96; 135/138 with infer-prototypes). `benchmarks/reports/locals_truth.{json,md}` and the docs section are regenerated on that reading. Main asked for the propagation fix; I built it (SLEIGH `sp`/`sp_lo` aliasing, SUBPIECE/INT_SEXT rules for stack-relative values, stack base seeded when the register is wider than the spec's): R5900 stack rows went 0 -> 16,748 in 6,100 Capcom functions and recall stayed 11/11 while the frame comment's slots rose 125 -> 383, so it was reverted (`native/romwright_constants.hh`, `romwright_constant_state.hh` are byte-identical to before; nothing deployed, no native rebuild in the main tree, no hashes). The R5900 still stores no stack rows; stock does. Address-of references (`addiu a0,sp,off`) were not needed for recall either (the array at -0x30 is in the decompiler's names as `auStack_30`).
+- Return classes: infer-prototypes costs 12 of Capcom's 199 returns (0.89 to 0.83), all truth-`void` state handlers whose tail call is to a callee the job typed non-void; they have no direct callers, so `types_infer/call_support.rs` has no evidence to void them with. No change made (no invented rule).
+
+**Debug-info locals (3).** `native/mdebug/dwarf1.rs`: `TypeGraph::size_of`, `Dwarf1::stack_locals` (scalar 1-8 byte locals at `sp+c`, entry-relative `c - frame`, below the entry sp), `DebugLocal`; `native/mdebug.rs`: `mips_frame_size` (first `addiu/daddiu sp,sp,-N` of the function, read from the image through its executable section), `DebugInfo.locals`, `merge_debug_locals` (a debug local replaces every analyzer slot it overlaps, takes the source name made unique, its C type name, `storage` `Stack[-0x..]:N:debug-info`); `elf.rs` (2 destructure sites + 2 fields) and `native.rs` (`NativeImport::debug_locals`) carry them; `native/store.rs` stores the merged table; `romwright-worker/src/provider.rs`: `stack_frames` keeps the row's type name and `stack_locals` types a local with that core type when the language has it at the slot's width (else `undefined<N>` as before). Unstripped SLUS_209.50: 100 locals in 59 functions; all 59 decompile and print their source names (59/59; e.g. `int cmd_posx_tbl;`), the `*_stack` comment names them. Capcom's DWARF 1 has 5,598 locals: 2,844 in registers and 2,379 statics have no stack slot to go in. Provenance is in `storage` only (the table has no provenance column).
+- Tests: `cargo test -p romwright-core --lib mdebug` 15 passed (+1 ignored differential dump); new: `stack_locals_are_entry_relative_scalars_below_the_entry_stack_pointer`, `sizes_follow_the_target_layout`, `a_mips_prologue_states_the_frame_size`, `debug_locals_replace_the_slots_they_overlap_and_keep_the_rest`. Release build of cli/worker/api at `-j2` OK. Not run: worker lib tests (AbiWork's specs.rs test did not compile at the time).
+- PSP correction: the first run of the previous section scored PSP against truth 0x40 low (section-relative `.symtab`/`DW_AT_low_pc`); PspImport fixed `M21.elf_functions` and `console_research.dwarf_truth`; I reran the PSP rows with those and the same tools (`benchmarks/reports/console_research_dwarf1.{json,md}` now hold them; recall 0.9453 / precision 0.8571 on the strip-all image; the earlier "PSP discovery gap" is withdrawn).
+- Hosts/tools: nih-vps-u, `-j2`, harness `--jobs 2`; the n=200 harness run used ghidra_opt ae45dc0e / decomp_native bcea6b5d (main tree 19:09), the debug-locals check used a coherent pair built from the later patch (private build, not deployed). The 20-function rehearsal used a ghidra_opt from GotoPasses' tree while the shared pair was inconsistent. Timings are unpaired under load 6-17.
+
+**Commands.**
+```
+python3 benchmarks/locals_stock.py ps2-capcom-fighting-evolution --report console_research_dwarf1.json --binary <stripped twin> --out stock.json
+python3 benchmarks/locals_truth.py --spec spec.json --out benchmarks/reports/locals_truth.json
+cargo test -p romwright-core --lib mdebug
+```
+
+**Gaps.** The R5900 stores no stack variable rows (stock does; no measured effect on the decompiler's slots). Return voiding needs caller-use evidence for pointer-table callees. ARM stack offsets are not scored (no ARM prologue decode). PSP stock was run by PspImport's script, not here. Debug locals reach only DWARF 1 scalar stack locals; register-held locals and aggregates over 8 bytes have no import path (the worker forwards sizes 1-8 only). The ECOFF `.mdebug` conclusion of the previous section stands.
+
+## Discovery residuals: interior rule, Thumb labels, GameCube fill (2026-10-08, DiscoveryResidual)
+
+Open issue 6 of docs/console-research.md. All numbers are one binary with the new rules on against the same binary with them switched off by temporary environment toggles (removed afterwards; the shipped tree was rebuilt without them and re-checked on gba, vita and the GameCube images: identical rows), local host, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `m21run`-style import + `tests/m21-001_real_images.py::score`. "off" is the tree as it stood (siblings' work included), so gba's off is 140 invented, not the 150 of F.
+
+| image | recall off -> on | precision off -> on | invented off -> on |
+|---|---|---|---|
+| gba | 0.9737 -> 0.9737 | 0.9910 -> 0.9971 | 140 -> 45 |
+| nds | 0.9729 -> 0.9729 | 0.9981 -> 0.9984 | 21 -> 17 |
+| vita | 0.9720 -> 0.9731 | 0.9712 -> 0.9713 | 764 -> 762 |
+| capcom | 0.9412 -> 0.9412 | 0.9964 -> 0.9964 | 30 -> 30 |
+| dungeon | 0.9438 -> 0.9438 | 0.9880 -> 0.9880 | 9 -> 9 |
+| psx | 0.9878 -> 0.9878 | 0.3663 -> 0.3663 | 1398 -> 1398 |
+| x360 | 0.9833 -> 0.9833 | 0.9964 -> 0.9964 | 98 -> 98 |
+
+Precision does not rise on capcom, dungeon, psx and x360 because nothing the rules touch is invented there; the invented entries that remain are real code the truth cannot name (below). m21 floors raised by the existing mechanism (measured minus 0.01): gba precision 0.980 -> 0.987, vita recall 0.962 -> 0.963; nds precision stays 0.988.
+
+**Vita's 11 lost functions, traced.** They were `0x815cc474..0x815cc4ec` (7 trampolines `mov r12,sp; push.w..; bx lr; nop`), `CgsSound::DspPlugIn` 0x8159331c/81593334/81593350 and 0x81063a60. The interior rule was not wrong: the walk really did run each one into the next. Cause: each trampoline's first word reads as an ARM `push {.., lr}` (`46ec e92d` is `0xe92d46ec`), so Ghidra's ARM pattern matched at the first of each run, `setcontext TMode=0` painted ARM, and the whole run (208 bytes for the trampolines, 100 for DspPlugIn) was walked as ARM, where `4770 bf00` is `svclt` and falls through. Every one is named by an odd data word in a vtable (0x8176f96c etc.), i.e. a Thumb entry by its own low bit. Fix (`patterns::collect`): an ARM-context pattern match on an address an odd data word names is refused (`thumb-declared`); `code_pointer_tables` then seeds it as Thumb. 10 of the 11 are back (sizes 18-22 vs the map's 20-24: instruction extent without padding); 0x81063a60 is not (its function above reads ARM through another path, `aggressive_body`; a Thumb-first retry there changed nothing and was reverted). Net vita: +30 true entries, 1 lost (0x81510818, the same ARM-walk shape without a vtable word), invented 764 -> 762.
+
+**gba (pokeemerald), by ELF section** (classification of the 150 invented in the earlier gate tree: the 140 of this off-run are the same minus siblings' drift): 54 odd-word table seeds into `script_data`; 38 + 8 `bl` targets inside a truth function (`.text`; 12 of them open with `add sp,#imm`, one with `pop`: the tail of the function above, reached by a `bl` agbcc uses as a long jump); 11 + 6 flow starts inside truth functions (11 are literal-pool words some `ldr` loads, seeded as odd-word entries); 20 pattern starts in `.rodata`/`multiboot_data`/data sections, 4 calls inside that blob, 2 vector/crt0 entries. Rules (general, each justified by counts over every odd word / entry of the image against the 15,856 FUNC symbols):
+- *Table seeds* (`thumb1_table_entry`, ARMv4T/v5T): an entry that follows a word boundary needs the word before it to be a literal-pool word that a `ldr rN,[pc,#]` loads (read off the halfwords, `thumb_literal_words`), with a pointer-high half, or zero padding that follows a return or such a pool word; an entry a decoded instruction loads from (READ xref) is data. Offline over pokeemerald: entries after a pointer half: 4,354 functions + 24 others after a loaded pointer, 1 + 174 after an unloaded one; after a zero halfword: 1,906 + 7 after an end or loaded word, 0 + 36 otherwise.
+- *Frame teardown* (`tears_down_frame`): a Thumb-1 entry whose first instruction is `add sp,#imm` or `pop` is refused, called or not (13 entries, 0 symbols). Called entries are retired through `refused_entries` so `close_call_targets` does not re-add them.
+- *Long-jump labels* (`thumb_stack_released`): a Thumb-1 entry called only from the function directly above, not opening with a `push`, whose straight-line code returns with more stack released than taken, is a label of that function (offline over the final project: 28 such entries against 1 symbol; allowing `push` openers, 27 symbols would qualify, which is why they are excluded). Retracted without an owner: giving the owner the label's span merged a walk that ran into the next functions and lost 3 true ones.
+Recall is identical (0.9737, 15,439 hits both ways) after two tries that lost 2-4: an "own call only" relaxation of the fallthrough rule lost dungeon's `Exit` and `initGsBuffers` (a call that falls into the function after it), and a "sled" rule on ARM lost 4 whose literal pool decoded as plain instructions.
+
+**Rules tried and dropped because they lost true functions (so not shipped):** retracting a called entry that only its caller runs into (dungeon -2); a plain-instruction fallthrough rule on MIPS (delay slots, capcom -94) and on ARM (literal pools, gba -4); an unconditional-branch edge into an entry without a PowerPC `mflr`/`stwu` (bond -4, base -5, Animal Crossing -6, x360 -170: Xenon leaves have no frame). Only the PowerPC sled rule shipped (below).
+
+**GameCube, a documented supplement** (`benchmarks/gc_discovery.py`: m21's `score()` over the DOL's executable regions; truth = the ELF's FUNC symbols for bond/base, ac-decomp `config/GAFE01_00/symbols.txt` `type:function` for Animal Crossing's `main.dol`). Same binary, rules off -> on:
+
+| image | recall | precision | invented | sizes exact |
+|---|---|---|---|---|
+| bond (8,565) | 0.9942 -> 0.9942 | 0.9936 -> 0.9963 | 55 -> 32 | 8,483 -> 8,484 |
+| base (644) | 0.9922 -> 0.9922 | 0.9595 -> 0.9938 | 27 -> 4 | 634 -> 635 |
+| Animal Crossing main.dol (2,896) | 0.9986 -> 0.9986 | 0.9618 -> 0.9692 | 115 -> 92 | 2,869 -> 2,870 |
+
+- *Zero-fill gap* (`after_fill`, sweep candidates of `discover_mapped`): a sweep start after at least 64 zero bytes is no function start. The longest zero run before a symbol-named function is 20 bytes on bond, 63 on capcom, 0 on dungeon; the `gTRKInterruptVectorTable` handlers that followed a `rfi` sit after 120-1,228 (23 of base's 25 absent rows, 22 of bond's, 23 of Animal Crossing's).
+- *Instruction alignment* (`instruction_alignment`, used by the sweep candidates and by `patterns::collect`): PowerPC/AArch64/MIPS 4, ARM 2, whatever the pattern file says (Ghidra's MIPS patterns carry 2, its PowerPC patterns 1). The 45-byte "Metrowerks Target Resident Kernel" string at +2 (`FUN_800073da`, `FUN_806802da`) no longer becomes a function: no unaligned entry survives on any GC image. This also made `tests/m5-004_n64.py` expose its own 2-byte fixture misalignment (N64Segments fixed the test).
+- *Round const seeds*: a constant-propagation seed on a 64 KiB boundary on a non-ARM image (a lone `lui`/`lis`) is a base or limit (bond 0x80010000, base 0x80690000, Animal Crossing 0x80010000: 3 invented, 0 symbols); capcom's and dungeon's round-constant seeds were already gone.
+- *PowerPC register-save sleds*: a called entry that a plain (non-call, non-branch) instruction of another function runs into, and that a third function also calls, is a label of the sled (`_savegpr_N`/`_restgpr_N`); not applied to ARM or MIPS (literal pools, delay slots). The gaps in the 92 left are real code: 46 `ksNes*` entries dtk types as `label` (mangled C++ names), 11 inside a function whose walk stops at a mid-function `blr`, 3 more labels, `_rom_copy_info` (data) and the vector table's own start.
+Missed (50 bond, 5 base, 4 Animal Crossing) and the 5 + 32 size differences `dtk dol diff` reports are unchanged: they are boundaries of functions this work did not touch.
+
+**What is left, with the evidence.** x360: 98 of 98 invented are named by `.pdata` unwind rows (69, 19 of them also called) or called by a real function (29). vita (before): 278 called by real functions, 156 uncalled right after a return and opening with a `push`, 116 named by a vtable word, 66 + 46 `push` openers mid-code; the BINMAP sizes stretch over the unlisted statics, as the Darkstalkers map omits its statics. capcom 30: 13 are assembler routines with NOTYPE symbols (`_start`, `flPS2_*`), 16 are VU microcode and data in the one `main` segment (the symbol table marks them `.vu`/`.vif`; the stripped image does not; zero-padding before them is 0-63 bytes, like code). dungeon 9: crt0 and its helpers.
+
+**Import time** (gba, `taskset -c 0-3`, back to back off/on, same machine, load average 1/5/15 at the start of each run): off 125.4 s (11.9 13.1 12.7), on 90.6 s (8.8 11.8 12.3); off 108.9 s (8.1 10.6 11.8), on 108.2 s (6.6 9.1 11.1); off 122.8 s (11.0 9.8 11.1), on 92.1 s (8.6 9.5 10.9). Median 122.8 -> 92.1 s: not slower (less junk is walked); the literal-pool scan reads the code mappings once per round. `benchmarks/import_speed.py` was not run (it needs stock Ghidra and rewrites `benchmarks/reports/import-speed.*`).
+
+**Tests.** `cargo test -p romwright-core --lib -- discovery native`: 437 passed (new: `a_thumb_entry_that_gives_back_a_frame_is_no_function`, `an_odd_word_declares_a_thumb_entry`, `a_thumb_label_only_the_function_above_calls_and_that_releases_its_frame_is_that_functions_code`, `literal_pools_are_read_off_the_bytes`; `thumb1_table_entries_follow_an_end_and_open_like_code` extended and its signature changed). Surgical edits to WIP files: `native.rs` (`code_pointer_tables`, `thumb_literal_words`, `thumb1_table_entry`, the const-seed filter) and `native/tests.rs` (two tests). `m21-001`: FLOORS only.
+
+**Reproduce.** `CARGO_TARGET_DIR=target/DiscoveryResidual cargo build --release -j 4 -p romwright-cli -p romwright-worker`; m21 rows: `tests/m21-001_real_images.py` (all 7 images pass the new floors by the rows above); GC: `python3 benchmarks/gc_discovery.py --cli target/DiscoveryResidual/release/romwright-cli --work W --bond bond.dol bond.elf --base base.dol base.elf --ac main.dol ac-decomp/config/GAFE01_00/symbols.txt` (bond/base: `~/runs/PlanGates/home/Projects/agent-under-fire/dtk-template/{orig/GQFE78/bond.dol,build/GQFE78/bond.elf}` and `~/runs/PlanGates/out/base/base.{dol,elf}` on the host).
+
+**Gaps.** gba's 11 `bl` labels in functions that open with a `push`, its 20 pattern starts in `.rodata`/`multiboot_data`, capcom's VU words, 0x81063a60 on vita and the Animal Crossing mid-function `blr` starts remain; none has a rule that did not lose true functions. The m21 run is one pass of the final binary (gba, vita and GC re-checked on the shipped tree), not a repeat of all seven on it.
+
+
+## PS2 VU0 macro mode: per-lane float p-code (P4.3, 2026-10-08, Vu0Semantics)
+
+**Census (first).** Capcom `SLUS_209.50`: 567,552 executable words, 2,054 VU0-family instructions (COP2 ops, `lqc2`, `sqc2`, `qmfc2`/`qmtc2`, `cfc2`/`ctc2`, `bc2*`), 1,234 of them inside the discovered functions (61 of 8,307; 652 lift to a `CALLOTHER`). Dungeon: 993,633 words, 19,577 whole-image (mostly microcode words in the image), 1,320 in 31 of 748 functions (698 opaque). Enough to matter, so it was built. Printed C on every function holding one plus the n=200 sample (`benchmarks/vu0_census.py printed`, same imported project, old versus new language): unknown VU calls Capcom VU0 functions 883 (60 fns) -> **14** (6), dungeon 984 (31) -> **12** (4); the 26 left are all `_cfc2` of Status/MAC. Gotos 9 -> 9 and 10 -> 10, warnings 19 -> 15 and 28 -> 24, decompile success Capcom 60/61 -> **61/61** (0x212a10 failed with `out-of-bounds partial access to auVar6` before), dungeon 31/31. Lines: Capcom VU0 functions 6,027 -> 3,938, dungeon 10,154 -> 7,962.
+
+**Change.** `native/languages/r5900/`: the VU0 macro semantics were mostly written already but lifted through 128-bit masked read-modify-write with the x lane at the top word (which cannot agree with `lqc2`); `lqc2`/`sqc2`/`qmfc2`/`qmtc2`/`cfc2`/`ctc2`/`vdiv`/`vsqrt`/`vrsqrt`/`vftoi*`/`vitof*`/`vmax*`/`vmini*`/`vclip`/the VI ops/every `*ai`/`*aq` form were `CALLOTHER`s. Now: four 4-byte float lanes per VF register (`vf1x..vf1w`, x at the lowest address), `vuACCx..w`, `vuI`, `vuQ`, `vuCF`, 16-bit VI in 4-byte registers; the dest mask is resolved at decode time by lane tables (`vulanes.sinc`), so there is no mask arithmetic and no dead-lane code; vf0 reads as `(0,0,0,1.0)` and ignores writes. 82 constructors are generated from one table by `gen_vu.py` (`--check`), `install.sh` compiles and installs. Files: `base.sinc` (lane/mask/alias fields), `cop2.sinc` (register layout, attach lists, `lqc2`/`sqc2`/`qmfc2`/`qmtc2`/`cfc2`/`ctc2`, `vcallmsr` reads CMSAR0), `vulanes.sinc`, `vuupper.sinc` (generated), `gen_vu.py`, `install.sh`, `native/specs/r5900-LE-32-default/registers.txt` (lane names), `native/sleigh_diff.cc`, `benchmarks/{vu0_census,pcode_diff}.py`, `tests/p4-3_vu0_macro.py`, `docs/console-research.md` (new section), `README.md`, `THIRD_PARTY_NOTICES.md`. No WIP file, no C++ header and no patch hunk touched (no native rebuild).
+
+**Soundness correction made on the way.** The first cut modelled `cfc2`/`ctc2` as plain register moves for every control register. On the dungeon image `ctc2 zero, vc0; vsub...; cfc2 t0, vc0; andi t0, 0xc0; bnel` then folded to a constant (Status is changed by arithmetic that is not modelled), +3 warnings on the sample. `cfc2` of Status, MAC, R, TPC, FBRST, VPU-STAT and CMSAR now stays an opaque `_cfc2`; VI, CLIP, I and Q are exact. Also from the VU User's Manual: `vsqrt`/`vrsqrt` take `|ft|`, `vopmula`/`vopmsub` are x, y, z only, CFC2 sign-extends, VI are 16 bits.
+
+**Numbers** (host nih-vps-u, tools `bce16961a7784c25` both sides, `ghidra_opt` eed4c513 / `decomp_native` 3f376a4e of the host copy; only the language differs; n=200, seed 20261006, `--jobs 2`, configs `default` + `baseline-off`, m22 skipped). Capcom `default`: gotos 4 -> 4, labels 1 -> 1, irregular 164 -> 163, native warnings 539 -> 532, text warnings 59 -> 58, lines 9,252 -> 9,162, success/recall/precision/arity/type-exact unchanged (1.0, .9412, .9964, .9850, .4834). Dungeon: gotos 42 -> 42, labels 22 -> 22, irregular 124 -> 123, native warnings 403 -> 359, text 25 -> 23, lines 12,357 -> 11,440, success/recall/precision/arity/type-exact unchanged. 1 Capcom and 11 dungeon sampled functions changed (all VU0). m21-001 on both images identical before and after (Capcom .9412/.9964, dungeon .9438/.9880). A first harness pair run while two host jobs held the CPUs showed Capcom recall .9416 (3 more functions found); the quiet rerun did not, so that was a timeout-sensitive switch stage.
+
+**Tests.** (1) Disassembly: all 3 x 2^26 words of the `cop2`, `lqc2`, `sqc2` primary opcodes print identical mnemonic/operands/length under the old and new `.sla` (`sleigh_diff cop2hash`: equal hash per opcode, 35,858,431 undecodable `cop2` words in both); every aligned word of both images' executable segments: disassembly byte-identical, normalized p-code of every non-VU0 word identical except branches with a VU0 delay-slot instruction (31 + 1,907; 0 without one). (2) `tests/p4-3_vu0_macro.py` (`--cases 6..40`): 534-1,531 decode forms match their mnemonic and dest suffix; 708-4,720 lifted instructions (all families, all 16 masks, 4 broadcast fields, aliased and vf0 operands, ACC/I/Q/VI/VU0 memory/GPR state) run in a p-code interpreter equal bit for bit to an independent reference of the manual, 0 differences, 0 `CALLOTHER`; a mutated reference fails; decompile half: no unknown VU call. (3) `cargo test --release -p romwright-core --lib -- register_params` 8 passed; `romwright-cli lint-specs` 0 errors.
+
+**Commands.** `python3 native/languages/r5900/gen_vu.py --check`; `native/languages/r5900/install.sh` (NOT run against `~/ghidra_12.1.3_PUBLIC` on any machine: the host runs used a private farm `~/runs/Vu0Semantics/ghidra` whose emotionengine extension holds the new `.sla`); `ROMWRIGHT_GHIDRA=<install> python3 tests/p4-3_vu0_macro.py --cases 40`; `benchmarks/console_research.py --images ps2-capcom-fighting-evolution,ps2-dungeon-game --configs default -n 200 --jobs 2 --no-m22` once per install.
+
+**Gaps.** Not modelled: MAC/status flag effects of the arithmetic ops (a flag-driven VU0 branch stays unrecovered), the VU's round-toward-zero and +-MAX clamping (p-code is IEEE round-to-nearest), FTOI saturation, `vrget`/`vrnext`/`vrinit`/`vrxor` (R register, still opaque), `vcallms`/`vcallmsr` results (a micro subroutine may rewrite any VF/VI; modelling it as a call into `vu0.code` needs the micro memory mapped, P4.5), `bc2*`. `ILWR` with several dest lanes takes x, y, z, w in that priority (the manual says undefined); VU0 data memory is addressed `0x11004000 + (VI & 0xff) * 16` ([INFERENCE]: the manual gives 4 KB, not the wrap). The "libvux-style helper rendering" half of the plan item is not built. The new `.sla` must be installed (`install.sh`) before any harness number moves; imports re-key on the language files.
+
+## Stored switch tables fed to the decompiler (2026-10-09, SwitchFeed)
+
+The dispatch tables stored at import (VSA, or the import's own decompile) now reach the decompiler as the authority for their branch; `jumptable.cc` recovers only where there is none, and still derives the normalization, guards and case values. Mechanism, census, rulings and checks: `docs/ownership.md`, "Stored switch tables fed to the decompiler"; env `ROMWRIGHT_STORED_SWITCHES=off|observe|apply` (default `apply`, `docs/environment.md`).
+
+**Change.** `native/ghidra-opt-sleigh.patch` (appended/regenerated blocks): `architecture.{cc,hh}` (`StoredJump`, `Architecture::decodeStoredJump`, registry by BRANCHIND address), `ghidra_process.cc` (the `registerProgram` function-shell loop accepts `<storedjump>`), `funcdata_block.cc` (`stageJumpTable`: stored table first; `recoverJumpTable` does not run the early CALLOTHER refusal for an applied table), `jumptable.{cc,hh}` (`JumpTable::recoverStored`; `JumpBasicOverride::recoverFromGuards`: the override takes its normalized variable and range from `JumpBasic`'s guard analysis, emulates each value, keeps the stored addresses, folds guards like a recovered table; trivial override = no use, `jumptable.cc` stands; `<jumptable>` attributes `storedout/stocksize/storedsize/commonsize`). Rust: `romwright-worker` `provider.rs` (`StoredSwitches`, `stored_switches` read from the `COMPUTED_JUMP` edges of every branch with `native-import:switch` edges, any provenance), `wire.rs` (`encode_stored_jump`), `worker.rs` (shell doc; ownership log `switch_sources`), `doc.rs` (`SwitchSource`), `main.rs` (`--switches` never fed), `tests/jump_tables.rs` (+1). `benchmarks/switch_feed.py` (new, census), `benchmarks/ownership.py` (printed-switch rows), docs. WIP files touched surgically: `crates/romwright-worker/src/provider.rs` only. native/build rebuilt: ghidra_opt `70ce01d4…`, decomp_native `2c03f4b0…`.
+
+**Census** (fresh default imports, host `nih-vps-u`, 8 images + 2 Puzzle Bobble variants, 200-function samples seed 20261006, plus every function holding a stored table; `benchmarks/reports/switch_feed.json`): printed switches supplied by a stored table **55 of 55 on the 8-image sample (100%; 64 of 64 with PSP), 2666 of 2667 over all holder functions (99.96%)**; before: 0. 2661 `confirmed` (same address set as `jumptable.cc`), 5 `applied`, 1 `observed`. Before the cutover (`observe`): 2663 printed by `jumptable.cc`, 2 differ (nds 0x20a7514 4 vs 2, x360 0x823bff98 8 vs 1); 22 stored tables printed no switch (11 in functions that fail in every mode, 4 dispatches it proves dead, 7 it failed on or removed).
+
+**Rulings** (bytes): stored right, exact: capcom 0x1a2d6c (9-slot table, 5 targets), 0x20c9b4 (6/5), dungeon 0x129d10 (59/5), x360 0x827c8864 (byte table 11/8), x360 0x823bff98 (10-08), nds 0x20a7514 (10-08), nds 0x2001764 and 0x2001794 (1-bit index: 2 targets). Decompiler right: psv 0x8140c5d8 (stored 2, `cmp r0,#5/#6` pins r0 to 6: one slot; the import's decompiler pass runs with `unreachable` off). The first five are `applied` (proper `switch` with real labels, e.g. capcom 0x1a2c40 loses its "Treating indirect jump as call"); nds 20a7514 and the 1-bit pair and psv 8140c5d8 are not used because the override finds no normalized variable (printing `case <address>:` was tried and rejected as misleading). Two bugs found by the census and fixed: the per-function `<override>` missed a table whose branch lies in a shared tail (now a registry by branch address), and a slot another pass laid first (`native-analysis:constant-propagation`) was not in the stored set (psv 0x814ae330).
+
+**Gates** (host, tools of the census, `off` vs `apply`): printer differential 1800/1800; `structuring_models` gotos 1499/813 and labels 934/553 in both (one function, gc 0x800331a0 on a pre-10-08 store, +4 lines); `structuring_compile` 1800 functions, 185 rewritten, 0 new diagnostics both; m22 standalone 64.14 (6/33) both; m15 metrics identical; m13 (libc, import-time, never fed) stock 132 @0.981, VSA 41, interpreter 67, decompiler 130 @0.9978 (rerun 126), combined 130, the two standing failures stand. Console research gotos on the holders: unchanged (nds 211, capcom 443, x360 1001, dungeon 39, gba 150, gc 29).
+
+**ownership.py rerun** (no coverage; `benchmarks/reports/ownership_switch_feed.{json,md}`): stage "switch recovery, printed" **0% Rust before → 61.8% after (34 of 55 printed tables are Rust VSA's stored table, 8 images; 37 of 64 = 57.8% with PSP)**, the other 21 supplied by the import's own decompiler pass, 100% by a stored table.
+
+**Gaps.** The override is not used where it finds no normalized variable (nds 0x20a7514, 0x2001764/94 stay as `jumptable.cc` prints them; one psv superset stays too); a stored table wider than `jumptable.cc`'s by the guard default (pre-10-08 stores) prints under an explicit `if`. 11 stored tables sit in functions that fail to decompile in every mode (capcom 2, psx 1, psv 8). One psv function failed once in the `apply` pass under load and prints identically alone. The ownership rerun has no executed-line lens (needs the coverage builds). Imports in the census are single runs; PSX was imported after the clean-room language landed, its switch numbers (2 sampled) are small. `cargo test -p romwright-worker --lib` was not run (AbiWork's specs test import); `--test jump_tables` passes (4).
+
+**Reproduce.** `docs/ownership.md`, last section: `benchmarks/switch_feed.py --target-dir T --cache C --jobs 2 --extended` then `--observe-census`; gates as in `docs/structuring-baseline.md` with `ROMWRIGHT_STORED_SWITCHES=off|apply`.
+
+## P4.6 match-shaped emission: m22 context fixed, five rules, gate (2026-10-09, MatchEmit)
+
+**m22 context.** `tests/m22-001_c_output.py` redeclared `memset`/`memcpy` in `context.h` with a `u32` size; agbcc's built-in is `size_t` = `long unsigned int`, so `-Werror` rejected every candidate. Two surgical edits, nothing else of that file: `build_context` no longer writes the `LIBC` prototypes into the header (they still go to the asserted prototypes) and `PRELUDE` types `TaskFunc` as `void *` (the header's own rule erases function pointers; our asserted `void * func` contradicted the real function-pointer typedef). The file still stops in `main` at reference-reassembly parity on this host (ConvertIntToDecimalStringN 99.94%, CreateTask 99.87%: a literal-pool relocation spelled against another symbol; the earlier note covers the first), so the numbers below come from `benchmarks/match_emit.py` (new: the same extraction, context, producers and scoring of that file, parity recorded, not fatal) and from `benchmarks/structuring_m22.py`, which scores through the same functions.
+
+**Numbers** (33 functions, agbcc -O2 -Werror, objdiff target-side `match_percent`; context = `#include "context.h"` + candidate, standalone = candidate alone; ROM = stripped `pokeemerald.gba` with function names and prototypes asserted, ELF = `pokeemerald.elf`, which also names data):
+
+| layer | context mean / exact / compiled | standalone mean / exact / compiled |
+|---|---|---|
+| ROM, before (context fix only) | 63.470 / 6 / 25 | 64.143 / 6 / 26 |
+| **ROM, after** | **75.734 / 9 / 31** | **75.734 / 9 / 31** |
+| ELF, after | 79.580 / 12 / 32 | 79.201 / 12 / 32 |
+| ROM, every pass and rule of this work off (`stock-off`) | 71.577 / 6 / 30 | 71.577 / 6 / 30 |
+| m2c (out of process) | 46.126 / 7 / 20 | 0 / 0 / 0 (needs `m2c_macros.h`) |
+| stock Ghidra header export (5 functions) | 20.0 / 1 / 1 | 33.831 / 1 / 2 |
+
+`structuring_m22.py` (default research project, no `match_emit.py`): `all` 75.734 / 9 exact / 31 compiled (context and standalone), `baseline` (`none` structuring) 76.601 / 9 / 31. Exact functions after (ROM): Cos2, CalcByteArraySum, StringCopy, StringLength, StringAppend, StringFill, FlagSet, GetNatureFromPersonality, IsShinyOtIdPersonality (before: Cos2, StringCopy, StringAppend, FlagSet, GetNature..., IsShiny...); ELF adds Random, Random2, SeedRng. The data-name misses of the ROM layer (`iRam03005d80` for `gRngValue`: the ROM has no data symbols) are the 0.4-1.0% of Random, Random2, SeedRng, FlagGet.
+
+**What failed to compile, and the fix.** `true` from the printer's `while (true)` (C89) became `1`; `extern void * memset(void * s, int c, unsigned int n);` is no longer emitted for ISO C library built-ins (`dependencies.rs`); a parameter named `code` (Ghidra core type) aborted the decompile with "Multiple type specifiers" and is now escaped before the signature reaches native (`worker.rs`, `GetExtCtrlCodeLength` 0 -> 73.4); `*(char *)p == -2` ("comparison is always 0": agbcc's `char` is unsigned) is `*(unsigned char *)p == 0xfe` (`DestroyTask` 0 -> 66.3); a compiler runtime helper without a recovered call-site signature (`__divsi3`) is declared by its ABI, `int __divsi3(int, int)` (`ConvertIntToDecimalStringN` 0 -> 71.8); `export-c --context HEADER` leaves out what the header already declares (the ELF layer redeclared `gRngValue` as `int` against `u32`: ELF context 56.8 before the flag -> 79.6). Left: `MathUtil_Div16` (not a discovered function in the ROM, so `export-c --address` finds nothing) and `MathUtil_Mul32` (`__muldi3` called with four register words, no 64-bit prototype) score 0 on ROM.
+
+**Rules** (general, each a proven equivalence; `emit_m2c/canonical.rs` on the printed function, plus one printer pass). Context mean / exact with the rule off, against 75.734 / 9: `narrow_locals` + `narrow_uses` + `fuse_mask_statements` (a local whose every assignment masks to 0xff/0xffff, or is a constant that fits, is `unsigned char`/`unsigned short`; `x = f(); x = x & 0xffff;` is one masked assignment) 72.801 / 8, `CalcCRC16` -17, `CountTrailingZeroBits` -27, `StringLength` -26; `guarded_loops` (a guard that is the loop test at the counter's first value, `if (n != 0) do {} while (i < n)`, is written as the loop test, `if (i < n) do {} while (i < n)`; agbcc compiles the two guards differently and this one like the original loop) 75.697 / 7, `CalcByteArraySum` and `StringFill` stop being exact (`CalcCRC16WithTable` is 1.1 better without it); `char_negative_equality` 73.725 / 9 (`DestroyTask` compiles); all five off 70.717 / 6; `order_arms` (printer: an `if`/`else` whose `else` arm sits at the lower address prints that arm first under the negated test, not for two constant-store arms, `no_arm_order` turns it off) 75.288 / 9, `CalcCRC16` +2.2, `ConvertIntToDecimalStringN` +9.6, `GetMoveTarget` +2.9. `ROMWRIGHT_NO_CANONICAL=all|rule,...` switches the text rules off. Tried and dropped: arm order by Ghidra's block *index* (`DestroyTask` 66 -> 38; indices are flow order, not addresses), arms of constant stores (`FlagGet` 99.4 -> 74.2), a `for` form and a `while` form for the guarded loop (same code, 539 and 531 tokens against m2c on the five stock functions, 510 for the rewritten guard), `x = x op y` -> `x op= y` (+2 tokens).
+
+**Gates.** m22 context mean 63.470 -> 75.734 and exact 6 -> 9; standalone 64.143 -> 75.734 (not lower); `structuring_compile.py` 0 new diagnostics, 1800 functions, 423 rewritten (185 without arm order), `all` against `all,no_arm_order`; `printer_diff.py` 1800/1800 identical; `structuring_models.py` printed gotos 813 / 813 (`all` / without arm order), better 184, worse 0, lines +119; `spurious_gotos.py` 0 spurious (424 scored) both ways. The text rules sit after the printer and touch none of those scripts' output. Structuring itself costs m22 now that it compiles: `baseline` 76.601 against `all` 75.734, all of it `CreateTask` (a shared epilogue `goto` 56.4, the structured `return` copy 17.5), which the plan's goto-removal argument accepts.
+
+**P4.6 plan gate, pokeemerald (m2c out of process, `--context` preprocessed because m2c has no preprocessor).** Token distance to m2c (Levenshtein over normalized C tokens of the definition): on the five functions stock has output for, ours 510 against stock 516 (Random 13/13, Sin 22/24, CalcCRC16 37/42, CalcCRC16WithTable 25/30, GetMoveTarget 413/407); over the 32 functions m2c and ours both print, 1464 against 1517 with every pass off (closer on 8). objdiff: ours >= m2c on 26/33 in context and 33/33 standalone (m2c compiles 20/33 in context, 0 standalone; on those 20 ours >= m2c on 13, mean 81.6 against 76.1; ELF 29/33 overall). Gate: met on pokeemerald (the plan pins it there; the sm64 and `base.elf` rows have no fixture). The m2c compile failures are its own (mostly its prototypes redeclaring the context's with different qualifiers; `CreateTask` redeclares the `memset` built-in).
+
+**What is left (instruction rows of the 22 non-exact ROM functions: 237 extra or missing, 173 register allocation, 53 memory operands, 18 branch targets, 17 other opcodes, 12 constants, 12 control-flow shape).** Struct strides (`FindTaskIdByFunc` 22, `CreateTask` 17.5: `puVar + 10` against `i * 0x28`, no struct types in the ROM), `if (c) return x; rest` against the source's `if (!c) rest else return x` (`CountTrailingZeroBits`, `VarSet`), a loop that exits through `return` in its first test (`StringCompare` 47.8), `__udivsi3`/`__umodsi3` printed as calls (`Sin2`: `canonical_helpers` needs verified helpers and 4-byte operands), 64-bit helpers (`Mul32`), data names and literal-pool constants (ROM). Found but not fixed, because it changed nothing measured: agbcc's libgcc cannot become a signature database as is (hand-written asm entries have no type or size, Thumb symbols carry bit 0, ARM relocation widths are missing: 24 functions, 9 records) and a helper with a masked `bl` can never satisfy `row.confidence == 1.0` in the provider; a verified helper still would not fire on `GetNatureFromPersonality` (the result is `unsigned char`).
+
+**Tests.** `cargo test --release -p romwright-core --lib -- emit_m2c` 15 pass (new: 7 in `canonical`, `declared_names`), `-p romwright-worker --lib -- printc worker::` 38 + 1 (new: `an_if_else_prints_its_arms_in_code_order`, `arms_already_in_code_order_are_left_alone`, `arms_that_only_store_constants_keep_ghidras_order`, `parameters_named_like_core_types_are_escaped`); rustfmt is not installed on the host, `canonical.rs` was written to the repo's style by hand.
+
+**Reproduce.** On `nih-vps-u`: `cargo build --release -p romwright-cli -p romwright-worker`; `python3 benchmarks/match_emit.py --work W --report R.json --layers romwright,romwright-elf,stock-off,m2c,stock` (imports the ROM and the ELF once; `--env K=V` for a rule off); gates as in `docs/structuring-baseline.md` ("Arm order").
+
+**Files.** New: `crates/romwright-core/src/emit_m2c/canonical.rs`, `benchmarks/match_emit.py`. Edited: `crates/romwright-core/src/emit_m2c.rs` (`mod canonical`, `Syntax` `true`/`false`, `M2cOptions.declared`, `declared_names`, `without_declared`, `canonical::apply` after `definition()`), `emit_m2c/dependencies.rs` (built-in and runtime-helper declarations), `crates/romwright-cli/src/main.rs` (`export-c --context`), `crates/romwright-worker/src/worker.rs` (`escape_type_named_parameters`), `printc/structure.rs` + `structure/tests.rs` + `printc/mod.rs` (`order_arms`, `no_arm_order`, `Outcome.ordered`), `tests/m22-001_c_output.py` (two lines), docs (`core-api.md`, `structuring-baseline.md`).
+
+## Prototype persistence regressions and merge cost: causes found, fixed, parallelized (2026-10-09, ProtoWork)
+
+Open issues 1 and 8 of `docs/console-research.md`. F's `infer-prototypes` row regressed gba arity (−1.5 pp), dungeon warnings (+169) and type exact (−4.9 pp); the merge was single-threaded.
+
+**Method.** Per-round prototypes of the `infer_prototypes` job (dev trace: round, function, parameter count) against DWARF over all 15.3k pokeemerald functions, because round 0 recovers with no stored prototypes and is the default decompile. Arity over those functions: default (round 0) 96.25%, persisted before 93.81% (398 callers gained a parameter, 90 lost one, 121 gained a correct one), persisted after 96.73% (7 over, 32 under, 112 gained).
+
+**Causes and fixes.**
+1. *Thumb return through a join* (C++, `native/ghidra-opt-sleigh.patch`): `Funcdata::testForReturnAddress` only followed COPY/INDIRECT/AND, so `push {lr} … pop {r1}; bx r1` around an if/else with a `bl` on one arm (the saved lr reaches the pop as a MULTIEQUAL) was `Treating indirect jump as call`: 48 of 200 sampled gba functions printed `(*UNRECOVERED_JUMPTABLE)(r0)`, their callees persisted `void`, and callers lost return values (leaks of `r0`). It now accepts a MULTIEQUAL whose inputs all are the return address (`funcdata_varnode.cc`). `r1` still reached return recovery as a second result register (`return in_lr`, 64-bit piece): `flow.cc` records the register the jump took its target from in `Funcdata::romwrightReturnTargets` (`funcdata.hh`), `heritage.cc` `guardReturns` skips it. This is the P2.5 agbcc gap, not the cspec register set (r0-r3 are right). Test: `romwright-worker` `loaded_reads` (`--ignored`, new diamond-with-call case) passes.
+2. *Variadic register-save area* (`types_infer/variadic.rs`): a run of trailing argument registers that are only stored to consecutive frame slots before the first control transfer, never read back, reaching the last argument register, after at least one named parameter, is `...` (dungeon: 6 functions; callers had inherited 8 parameters round after round, +169 warnings). The repaired prototype is frozen across rounds in `infer_prototypes` (a recovery that starts from a stored `...` loses the fixed parameters).
+3. *Optional trailing argument* (`types_infer/call_support.rs`): per callee, at each direct call, a register written since the caller's previous call (or entry) is a passed argument; a trailing slot at most 60% of ≥8 call sites set is optional and the prototype ends in `...`. `GetMonData` (1,159 sites, 39% set the third) was 207 of the 234 remaining gba arity leaks. Calibration on the DWARF-covered functions: 578 of 596 real trailing parameters are set by ≥90% of callers; 1,479 of 1,633 slots past the real arity by ≤50%.
+4. *Trap bodies*: a body with a `CALLOTHER` that is a trap into the environment (`software_interrupt`, `syscall`, ...; names from the language through `SleighLifter::user_op_names`) gets no persisted prototype. `swi` wrappers (`CpuSet`) were `void(void)` and erased their callers' arguments (92 gba under-arity losses → 32). Rows of protected functions are not persisted either.
+5. *Forwarded return* (`worker-client` `forwards_call_result` over the recovery's `FunctionIr`, `call_support` `uses_result`): a function whose every `RETURN` value is a call result, and whose result no direct caller reads, is typed `void` (`return g();` and `g();` are the same code). Capcom return classes: default 174/200 exact, persisted 160 → 174. (An earlier p-code form of this rule fired on nothing: the walk of those functions includes the tail callee's body.)
+6. Tried and dropped: applying callee prototypes with unlocked inputs (a `hint` mode, C++ + worker): gba arity 90.7% over all functions, worse than locked.
+
+**Merge cost (issue 8).** `Core::parameter_types` walks and lifts every function (serial console round trips + in-process lifter), then solves. Walk and lift now run on extra handles on the image (`LiveImages::open_extra`, one per 2,000 functions up to `job_workers`, contiguous slices concatenated in order); the solve uses `map_parallel` (index-ordered). Identity: stored `prototypes` table sha256 equal serial vs parallel (dungeon ×4 `5d274198…`; gba `b188ae04…`); in-run `serial == parallel` on 15,583 gba functions. Paired timing (same binary, `taskset -c 0-3`, load average 16-20, so job wall times are not comparable): gba merge 24.5 s (walk 19.7 s, solve 4.8 s) → 8.3 s (7.2 s, 1.1 s); gba job 832.8 s → 595.9 s wall under different load, CPU (user) 641 s → 547 s; dungeon merge 1.4 s → 1.5 s (748 functions, below the handle threshold). The merge is 2.9% of the serial gba job. x360 and Vita were not re-run.
+
+**Harness** (host `nih-vps-u`, tools `f594ea74cd7b0de3`, `ghidra_opt` 70ce01d4… / `decomp_native` 2c03f4b0… of the main tree, `benchmarks/reports/console_research_protowork.{json,md}`; before = previous tree, configs default / infer-prototypes):
+
+| image | metric | before default | before persisted | after default | after persisted |
+|---|---|---|---|---|---|
+| gba | arity | 0.975 | 0.960 | 0.975 | 0.980 |
+| gba | native warnings | 808 | 432 | 566 | 199 |
+| gba | gotos | 20 | 18 | 4 | 4 |
+| gba | type exact | 0.2633 | 0.3723 | 0.5931 | 0.6809 |
+| dungeon | native warnings | 403 | 572 | 403 | 202 |
+| dungeon | lines | 12344 | 13122 | 12323 | 12365 |
+| dungeon | type exact | 0.3934 | 0.4262 | 0.4262 | 0.4426 |
+| nds | arity | 0.73 | 0.76 | 0.73 | 0.85 |
+| nds | native warnings | 342 | 83 | 342 | 42 |
+| capcom | type exact | – | – | 0.4834 | 0.8910 |
+
+m21 discovery (default import): gba 0.9737/0.9971 (precision 0.9904 before), nds 0.9729/0.9984 (0.9981 before), capcom 0.9412/0.9964, dungeon 0.9438/0.988 — recall unchanged, precision moved with other agents' discovery work, not with these hunks (`flow.cc` changes the decompile only). The default rows moved too (gba gotos 20 → 4, warnings 808 → 566): the return fix and other native work (AbiWork fspec, SwitchFeed) landed between the runs; the native hunks were not ablated alone. Verdict `helps` for `infer-prototypes` on all four images.
+
+**Commands.** `native/build_ghidra_opt.sh --jobs 4 && native/build_console.sh`; `cargo build --release -p romwright-cli -p romwright-worker -p romwright-api`; `cargo test --release -p romwright-core --lib -- types_infer` (47 pass: variadic, call_support, merge helpers); `cargo test --release -p romwright-worker --test loaded_reads -- --ignored saved`; `python3 benchmarks/console_research.py --images gba-pokeemerald,ps2-dungeon-game,nds-pokeheartgold-arm9,ps2-capcom-fighting-evolution --configs default,infer-prototypes,inferred-types-off --no-m22 --jobs 2 --out benchmarks/reports/console_research_protowork.json`.
+
+**Files.** New: `crates/romwright-core/src/types_infer/{variadic,call_support}.rs`. Edited: `types_infer/prototypes.rs` (parallel walk/lift/solve, `variadic_tail`, `optional_from`, `traps_to_environment`, `void_return`, `ParameterTypes.{variadic,opaque,result_read}`), `types_infer.rs` (modules), `crates/romwright-core/src/demand.rs` (`open_extra`, `user_op_names`), `native_runtime/lift.rs` (`user_op_names`), `crates/romwright-worker-client/src/lib.rs` (merge always runs, repairs applied each round, protected/opaque rows not persisted, frozen variadic prototypes, `forwards_call_result`), `native/ghidra-opt-sleigh.patch` (funcdata_varnode.cc, flow.cc, heritage.cc, funcdata.hh), `crates/romwright-worker/tests/loaded_reads.rs`, `docs/console-research.md` (issues 1 and 8).
+
+**Gaps.** x360/Vita not re-run (issue 8's +13-19% there is unmeasured after the change). Capcom still has one truth-void return typed (`0x1b1370`) and one gain. Rows an earlier job version stored for functions the job now skips (trap bodies, protected rows) are not deleted. The `hint` mode is gone from the patch; any GotoPasses/SwitchFeed rebuild of native/build must include the four hunks above (they are in the shared patch).
+
+## Final integration gate (2026-10-09, FinalGate)
+
+Measure-only run of the combined tree after the 2026-10-08/09 changes; nothing in product code or tests was changed (`git` untouched). Host `nih-vps-u` (8 vCPU), fresh copy `~/runs/FinalGate/ventris` (rsync 04:29 UTC), target `~/runs/FinalGate/target`, fake `HOME=~/runs/FinalGate/home` (copies of the dtk project/ISO, links to the corpus, `opt/`, the Ghidra install), `ROMWRIGHT_NO_IMPORT_CACHE=1`, fresh console-research cache `~/runs/FinalGate/cache` (tools fingerprint `ea27c70333bb669d`). Binaries: `romwright-cli` 3280122c, `-worker` 2ca8a9cc, `-api` ae61e8b5; `decomp_native` 2c03f4b0 (the tree's; `native/build_console.sh` could not run on the host then, no `bfd.h`); `ghidra_opt` rebuilt on the host from the current patch, 86cb94ce, against the tree's 70ce01d4 (`strings` differ only in the GCC version line, host 16.1 against local 16.2). Installed Ghidra languages checked equal to the tree (r5900 sources + RomwrightPsx). Generated reports: `benchmarks/reports/{console_research_final2,import-speed,ownership_final}.{json,md}` (`ownership_final` re-rendered for all 10 images by OwnershipMetric, see its harness fix), `benchmarks/reports/final_gate/*` (per-gate script output).
+
+| # | gate | result | now vs previous |
+|---|---|---|---|
+| 1 | release build cli/worker/api | PASS | 1 m 45 s; 3 dead-code warnings in `printc/expr.rs` (`Facts::is_empty`, `expr::STORE`, `expr::BOOL_XOR`) |
+| 2a | `cargo test -p core -worker -worker-client -model -db -sig -diff` | **FAIL (does not compile)** | `romwright-core` test target `elf_image` E0451, cause below. Everything else passes: core lib 702 (5 ignored), module_isolation 3, worker 65 + 4 jump_tables + 1 loaded_reads, worker-client 3, db 47, diff 23, model 4, sig 9 + 4 (total 160 outside core lib, run with `--lib --test module_isolation` for core because the failed target blocks `cargo test` as a whole) |
+| 2b | `-p romwright-worker -- --ignored` | PASS | 24 passed (lib 10, empty_loop_label 1, loaded_reads 3, prototype_recovery 4, rust_printer 1, sleigh_operand_arrays 1, source_export 3, structure_cuts 1) |
+| 2c | `--test module_isolation` | PASS | 3/3 |
+| 3 | m21-001, 7 images | PASS | all rows equal the DiscoveryResidual rows: gba 0.9737/0.9971, nds 0.9729/0.9984, capcom 0.9412/0.9964, dungeon 0.9438/0.988, psx 0.9878/0.3663 (corroborated 0.9968), vita 0.9731/0.9713, x360 0.9833/0.9964 |
+| 4 | m5-013 | PASS | recall 0.9742 (floor 0.964), precision 0.9944, 10795 functions (10-08: 0.9742/0.9941, 10799) |
+| 4 | m5-004 / m5-003 | PASS / PASS | psx entry 0x800100f4 fn recall 1.0 over 5, n64 boot 0x80000400 recall 1.0 over 5 |
+| 4 | m20-001 | PASS | named recall 0.9946 over 11019, MAP/ELF agreement 0.9946 (same as 10-08) |
+| 4 | m20-006 / -014 / -015 / -016 | PASS x4 | 8522 functions recall 1.0 round-trip 8522/8522 (same); rel exact, dtk parity 4 lines; objdiff units mapped; gc disc gcm/ciso-32k/ciso-2m identical (4 regions, 2 modules, 2 module xrefs) |
+| 4 | m20-008 | PASS | 12 modules; cross-module xrefs **11** (10-08 PlanGates: 7) — counted over a `gcc -O2` hello binary built on the host, an increase, the test asserts only `>0` |
+| 4 | m10-001 .. 005 | PASS x5 | m10-005 over HeartGold, Animal Crossing ciso, Perfect Dark |
+| 4 | p4-3 `--cases 20` | PASS | 1212 decode forms 0 mismatches; 2360 lifted instructions 0 differ from the reference, 0 CALLOTHER; 0 unknown VU calls |
+| 4 | m13-001 | FAIL = the two standing failures | stock 132 @0.981, VSA 41 @1.0, interpreter 67, decompiler 130 @0.9978, combined 130 @0.9978 missed 3; identical to `m13-001-rerun-20261008.json` except the decompiler row 126 -> 130 (SwitchFeed's number) |
+| 5 | printer_diff | PASS | 1800/1800 on the fresh stores and on the research-eval stores |
+| 5 | structuring_compile | PASS | 0 new diagnostics; research-eval stores: 1800 functions, 423 rewritten (185 without arm order) as MatchEmit; fresh stores 447 / 193 |
+| 5 | structuring_models (`baseline`,`all`) | PASS | research-eval stores: gotos 1499 -> 813, labels 934 -> 553, better 184, worse 0 (as SwitchFeed/MatchEmit); fresh stores 1507 -> 792, 937 -> 536, better 192, worse 0 |
+| 5 | spurious_gotos default | PASS on the frozen set, **2 on a fresh draw** | research-eval stores (the gate set): 0 spurious of 424 scored (baseline 27); fresh stores: 2 of 424 (gba `SetActionsAndBattlersTurnOrder` 0x0803d2e8, `Task_Hof_InitTeamSaveData` 0x081738bc, one goto each, baseline 48), see below |
+| 5 | match_emit | PASS | ROM context 75.734 / 9 / 31 (exactly MatchEmit), ELF 79.580 / 12 / 32, stock-off 71.577 / 6 / 30, m2c 46.126 / 7 / 20 |
+| 5 | flow_differential, 10 images | **FAIL x360** at first run; **PASS after the kuna operand bound (section 9)** | first run: 9 images 0 `other`, 0 `stale-cache`, tables identical; x360: 6249 `other` of 1,810,470, tables differ (xrefs 187683 vs 187680; function rows' content), cause below. After the fix: 10 images, 8,647,108 answers compared, 0 `other`, 0 `stale-cache`, every table identical |
+| 6 | console_research final2 | RAN, no errors | see below |
+| 7 | import_speed | 7 PASS + GBA incomplete (as before) | see below |
+| 8 | ownership.py (no coverage) | RAN; markdown crash on this run (harness glob, fixed afterwards by OwnershipMetric) | see below |
+
+### Failures, isolated
+
+**2a. `crates/romwright-core/tests/elf_image.rs:122` does not compile** (`error[E0451]: fields debug_prototypes and debug_locals of struct NativeImport are private`; the test builds `NativeImport { .., ..Default::default() }`). Cause: Dwarf1Types added `pub(crate) debug_prototypes` / `pub(crate) debug_locals` to the public struct `NativeImport` (`native.rs:475,479`); a struct-update from an integration test needs every field public. Minimal repro: `cargo test --release -p romwright-core --test elf_image`. Checked in the host copy only (reverted, copy byte-identical to the tree again): with both fields `pub` the test target builds and `elf_image` passes 7/7. Not patched here (measure-only).
+
+**5. flow_differential x360.** The console says `Fallthrough, length 4`, the in-process decoder (`SleighFlow`) says `Bad, length 1` for 6249 distinct VMX128 words (opcode 4, low 11 bits 0x040, e.g. `10e03840 11405040 11876040 114a4840`, addresses 0x825ea480..0x82610450, all in one region). Probe (throwaway test in the host copy, reverted): `Sleigh::one_instruction` and `instruction_mask` return `Lowlevel "SLEIGH parser out of state space"` for each; Kuna raises it in `allocate_operand` when an operand index reaches `MAX_OPERAND` = 20 (`third_party/kuna-sleigh/src/sleigh.rs:62,805`), and these constructors use 33 operand states (still below the 74 the console allows). With `MAX_OPERAND` = 64 in the host copy all nine probe words decode `Ok(4)`. `[INFERENCE]` the console accepts them through the working-tree `native/ghidra-opt-sleigh.patch` `allocateOperand` hunk that resizes `walker.point->resolve` ("sized at 20 but a constructor may name more", written for lmw/stmw); not tested without that hunk. `exhausts_parser_states` (lift.rs) counts only the 75-state limit. Consequence: the default (decoder-driven) x360 import treats these words as bad data where the console decodes them; m21 x360 is unchanged (0.9833/0.9964), the visible effect is 3 xrefs and the walk shape of the functions around them. Not specific to today's console: the console builds of 10-08 08:53, 21:51, 23:09 and 00:43 UTC all give the same 6249, and so does the 10-08 20:47 UTC `romwright-cli` (PlanGates). The 10-08 flowlift gate (0 of 1,797,362 on x360) walked fewer words than now (1,810,470), so this region was probably not in it: old and newly reached rather than newly introduced `[INFERENCE]`; no older binary was available to confirm. Repro: `python3 benchmarks/flow_differential.py --target T --images x360-black-ops-2`.
+
+**5. spurious_gotos on fresh stores.** The 200-function samples are drawn from the default import, so the new discovery changed the draw; the two printing functions are new members. They print one goto in every build available on the host back to the GotoPasses-era `ghidra_opt` (08:02 UTC 10-08: the ExportFix, ProtoWork, AbiWork, SwitchFeed, MatchEmit pairs, on the old and the fresh store alike, 108/50 lines), and the same set on the research-eval stores gives 0. Not a regression of today's changes; the gate set with 0 spurious is the frozen one.
+
+**3 (not a failure) m13-001** keeps its two standing failures (interpreter 67 < decompiler 130, combined 130 not > stock 132) with the numbers of the 10-08 rerun.
+
+### 6. Console research, final2
+
+`benchmarks/reports/console_research_final2.{json,md}`: 10 images (the 8 + the two PSP twins; capcom with its DWARF 1 truth), configs default, baseline-off, infer-prototypes, inferred-types-off, rust-structuring-none, n=200 seed 20261006, `--jobs 6`, prototype budget 10,800,000 ms (all jobs stopped at the 3-round limit, 0 worker deaths). Two harness lanes (psv alone, the rest) over one cache, then one merging run. A first merge attempt of the psv `inferred-types-off` job from a second process was killed (`reflink_copy` deletes a project another process is filling); the lane's own job produced the row. Per image, default / infer-prototypes (success, gotos, native warnings, arity, type exact): gba 1.0, 4, 566, .975, .5931 / 1.0, 4, 199, .98, .6809 (= ProtoWork exactly); nds 1.0, 0, 342, .73, .4154 / 1.0, 0, 42, .85, .5979 (= ProtoWork); capcom 1.0, 4, 532, .985, .4834 / 1.0, 4, 58, .99, .891 (ProtoWork + Vu0Semantics: 539 -> 532); dungeon 1.0, 42, 359, 1.0, .4262 / 1.0, 42, 158, 1.0, .4426 (403 -> 359 VU0); psx 1.0, 7, 225 / 1.0, 7, 36; x360 1.0, 6, 641 / 1.0, 6, 73 (X: gotos 14 -> 6, 12 -> 6); gc 1.0, 12, 594 / 1.0, 12, 203; psp 1.0, 160, 324, .7153, .411 / 1.0, 162, 161, .7222, .6019; psp-symtab 1.0, 137, 245, .8828, .5833 / 1.0, 138, 145, .8759, .7603; psv 1.0, 26, 505 / **0.995**, 24, 288. rust-structuring-none: gba m22 0.76601, default 0.75734/9/31. Verdicts unchanged. Against the earlier reports (compare samples first: the draw changed where discovery changed, so psv, psx, gc, x360-vs-F lines and warnings are not like for like):
+- **psv `infer-prototypes` and `inferred-types-off`: 2 of 200 functions fail** (0x812a3f46, 0x81419bf6; `decompiler exception: Low-level Error: Overlapping input varnodes`; the default and the baseline decompile them, 553 / 99 lines). Cause: the persisted prototypes `(float param_1, int param_2)` and `(float param_1, float .. , undefined1 (*param_5)[16])` (VFP arguments); the same store from V (10-08 16:29, `research-proto`) fails the same way under the current and under the 10-08 20:47 / 08:02 `worker`+`ghidra_opt` pair, so the failure is old; V's sample did not hold these two functions. Repro: `romwright-worker ghidra_opt auto vita 812a3f46 --project <psv ...-proto-4f53cda18c2b>`.
+- **PSP twins, `infer-prototypes` type exact -1.2 / -1.4 pp** (0.6134 -> 0.6019 stripped, 0.774 -> 0.7603 symtab, `inferred-types-off` -1.2 pp stripped; same sample, parameters differ in 0 functions, returns in 7 / 8). Cause: ProtoWork's forwarded-return rule (`forwards_call_result`: a function whose every return value is a call result and that no direct caller reads becomes `void`): `__make_dp` (`unsigned long long`), `cvt` (`char *`), `_ratio` (`double`), `__sread`, `__sseek`, `_write_r`, `_close_r` (`int`) are void now, DWARF says `float64`/`ptr`/`int32` — libc wrappers reached through function pointers, which the direct-caller test cannot see. The rule gains 14 returns on capcom (160 -> 174); not ablated alone (no env toggle).
+- psp default / baseline-off: precision .8571 -> .8559 and lines +9 vs the Dwarf1Types run, symtab: recall 0.9084 -> 1.0, precision 0.4397 -> 0.8627, arity .7099 -> .8828, type exact .4123 -> .5833 (PspImport's fix, expected).
+- Prototype job time: psv 8389 s / 7854 s (V: 5202 s), x360 1827 s / 1557 s (X: 1560 s), gba 428 / 315 s, capcom 533 / 472 s. The psv and x360 jobs ran beside the other lane and a 3-process ownership/import-speed load (load average 3-7 on 8 vCPU), so the +61% / +17% are not isolated; issue 8's psv/x360 re-measure remains a measurement under load.
+- Text size: gba +20 lines on default (5659 -> 5679), nds +10, capcom -90 and dungeon -915 (VU0, as Vu0Semantics), PSP lines +9; no other metric moved.
+
+### 7. Import speed (`import-speed.{json,md}`, host 8 vCPU, load average ~2-3 from the psv prototype job; previous report: 12 CPUs, load 4-18, so absolute times are not comparable)
+
+| image | ours now / prev (s) | Ghidra now / prev (s) | ratio now / prev | recall/precision ours now (prev) / Ghidra now (prev) |
+|---|---|---|---|---|
+| psx | 2.36 / 4.57 | 17.9 / 29.3 | 0.1315 / 0.1561 | .9878/.3663 (same) / **.9205/.3743** (.5844/.4728: stock row now MIPS:LE:32:default) |
+| dungeon | 2.56 / 6.73 | 13.5 / 33.3 | 0.190 / 0.202 | .9438/.988 (same) / .7356/.9863 (same) |
+| gc | 4.06 / 6.97 | 24.1 / 52.6 | 0.168 / 0.132 | speed only |
+| capcom | 43.1 / 74.3 | 176.0 / 299.8 | 0.245 / 0.248 | .9412/.9964 (same) / .7562/.9979 (same) |
+| x360 | 46.3 / 90.1 | 132.5 / 291.4 | 0.350 / 0.309 | .9833/.9964 (same) / .7628/.9965 (same) |
+| vita | 169.3 / 252.1 | 350.4 / 572.2 | 0.483 / 0.441 | .9731/.9713 (.972/.9712) / .7035/.9657 (same) |
+| nds | 107.3 / 183.0 | 348.5 / 557.3 | 0.308 / 0.328 | .9729/.9984 (.9981) / .8643/.9983 (same) |
+| gba | 56.9 / 91.7 | killed at 3600 s, twice | n/a | .9737/.9971 (.9904) |
+
+Status `fail` only through gba (Ghidra killed at 3600 s in both runs, as before; the previous second run had a 10,800 s limit). The ratio is worse than before on gc, x360 and vita (Ghidra got faster on the idle host by more than ours did); every row still passes the gate. GBA's Ghidra runs overlapped the ownership run and the psv job, ours ran beside one other process. Run in two invocations (gba first, then the full run reusing its cached runs).
+
+### 8. Ownership (`ownership_final.{json,md}`, no coverage lens; 10 images, 2000 functions)
+
+Printed tokens emitted by Rust 14.53% (ownership_switch_feed: 14.45%; 10-08 coverage run on 8 images: 13.27%), constructs created by Rust 3.20% (2.85%), p-code operations edited by Rust 0.50% (0.49%), functions whose text changes without the Rust components 33.55% (23.7%), functions changed by Rust structuring 23.05% (8.0%) and by the IR passes 19.25% (19.25%); stage rows: switch recovery printed 57.8% Rust (same), prototype (persisted) 16.7% (16.5%), structuring 3.2% (2.9%), printing 14.5% (14.4%), postprocess 21.4% (21.6%), discovery 58.3% (58.3%). `ownership.py` crashed while writing the markdown on this run (`KeyError: 'functions_with_stored_prototype'`): `persisted_prototype_input` globbed `psp-puzzle-bobble-pocket-*-proto-*`, which also matched the symtab twin's project, so the stripped PSP image profiled the twin's project against its own sample and printed 0 functions (harness bug, not a product result). OwnershipMetric then fixed the glob and re-rendered `benchmarks/reports/ownership_final.{json,md}` from this run's cache (headline unchanged: 14.53% of printed tokens from Rust over 10 images).
+
+**Unfinished by choice of the harness:** the gate list's `structuring_m22.py` was not run (match_emit covers m22: 75.734 / 9 / 31). The m21 timings of this run (nds 211 s, vita 270 s) were taken beside two console-research lanes. Throwaway scripts (`~/runs/FinalGate/*.sh`, `out/g5c/probe*.py`, a test and a `MAX_OPERAND` edit in the host copy, both reverted) are not in the repository.
+
+### 9. Follow-up: kuna operand bound 20 -> 74 (x360 flow differential fixed)
+
+**Change** (Main's request; `third_party/kuna-sleigh/src/sleigh.rs` `MAX_OPERAND` 20 -> 74 plus its doc comment, no other code line of the crate; notes in `third_party/kuna-sleigh/Cargo.toml`, `docs/third-party.md`, `THIRD_PARTY_NOTICES.md`, the root `Cargo.toml` `[patch]` comment, next to the `MAX_DEPTH` 65 note). The value is the console's own bound, not a rounded number: `ParserContext::initialize(75,20)` (`sleigh.cc:457`) sizes each state's operand array at 20, the working-tree `allocateOperand` hunk of `native/ghidra-opt-sleigh.patch` grows it to the index named (`walker.point->resolve.resize(i+1)`, no cap), and the remaining limit is the 75 states: `alloc` starts at 1 (`context.hh:188`) and `alloc >= state.size()` throws "Parser state exhausted", so a constructor can have at most 74 operand states, operand indices 0..73. Kuna refuses `i >= MAX_OPERAND`, so 74 refuses exactly where the console is out of states (the 74 of `exhausts_parser_states`, lift.rs, is the same number).
+
+**Checks** (host `nih-vps-u`, tree rsynced after the change; `romwright-cli` e9bdfbac, `-worker` 4dc38bda, `-api` 2fbcefd0, console and `ghidra_opt` the tree's):
+- `benchmarks/flow_differential.py`, all 10 images: **0 `other`, 0 `stale-cache`, every table identical on all 10** (compared: gba 1,328,069; nds 1,730,190; capcom 341,565; dungeon 44,968; psx 71,474; psv 2,896,912; x360 1,810,470; gc 346,460; psp 38,224; psp-symtab 38,776; 8,647,108 in all). x360, 4 walks: 6249 `other` -> 0; the console-driven and decoder-driven imports are now identical (before: xrefs 187683 vs 187680).
+- m21-001 x360: pass, recall 0.9833 precision 0.9964 (unchanged).
+- Lifter differential: the harness behind "246,386 caller lifts, 0 diffs" was throwaway and removed at cutover (STATUS 2026-10-07); the standing gates are the `flow_decoders_answer_*` tests (random ARM/MIPS/PowerPC/x86 words and the fixtures, console against decoders) and the `native_runtime` tests, all green: `cargo test --release -p romwright-core --lib -- flow_decoders_answer native_runtime deep_register unaligned walks_past` 28 passed, 1 ignored (a console-only `native_runtime` test); it includes `walks_past_the_console_parser_states_are_bad` and `deep_register_lists_decode_within_ghidras_depth`. Whole `-p romwright-core`: lib 702 (5 ignored), `elf_image` 7 (Main's `pub` fields, gate 2a now passes), `module_isolation` 3.
+- None of those sweeps reaches VMX128 (random words hit primary opcode 4 once in 64), so a throwaway Xenon test was run in a separate copy (`ventris-probe`, own target, not the gate tree): 3 images of 64K words whose primary opcode is forced to 4, 5 or 6 (the VMX128 families), swept and walked by `discover_mapped`, console-driven against decoder-driven (`flow_differential_gate`): about 93.5k answers compared per image, 0 differing, with the new bound; the same test with `MAX_OPERAND` = 20 fails (13 differing flow answers in the first image), so the probe is sensitive to this bug. Not added to the repository.
+- Console rebuilt on the host (`binutils-devel` now installed): `native/build_console.sh --jobs 8 OUTDIR` gives `decomp_native` e6ada5f9 against the tree's 2c03f4b0; `strings -a` identical except the GCC version lines (host 16.1.1, tree 16.2.1) and their order, size 11,956,216 against 11,956,280. Same source; the tree's binary was kept (the gates above ran with it).
+- Cost of the larger arrays (`ConstructState::reset` fills the operand array per used state): `romwright-cli import --timings`, 3 alternating runs per image on the idle host, old bound 20 against 74, same console and worker: gba 57.9 / 64.6 / 65.8 s against 57.4 / 63.0 / 58.3 s (no slowdown), x360 50.5 / 62.1 / 51.2 s against 56.1 / 57.2 / 59.5 s (median 51.2 -> 57.2 s, +11%; x360 now also decodes the 6249 VMX128 words it used to refuse, so part of that is more work, not a slower decode; not separated).
+
+**Gaps.** `third_party/kuna-sleigh` is the only code touched; the console, `exhausts_parser_states` and the fixed 75-state check are unchanged. No VMX128 differential lives in the repository, so a future change to either side's operand or state limits is again only covered by the m21/x360 numbers and the corpus gate.
+
+## Prototype persistence: forwarded returns need chain evidence; Vita float-lock overlap (2026-10-09, ProtoWork, second section)
+
+Follow-up to "Prototype persistence regressions and merge cost" (the section above FinalGate's), after FinalGate's findings.
+
+**1. The forwarded-return rule voided PSP value-returning functions.** It typed `void` a function whose every returned value is a call result and which no direct caller reads. Seven PSP functions DWARF types as values (`__make_dp`, `cvt`, `_ratio`, `__sread`, `__sseek`, `_write_r`, `_close_r`) are reached through function pointers or forward a syscall stub, so PSP type exact fell 0.6134 → 0.6019 (stripped), 0.774 → 0.7603 (symtab). "Address taken" was not usable as evidence: Capcom's pointer-table state handlers (the 12 returns the rule exists for) are address-taken too. What separates them is the end of the forwarded chain, so the job now voids a forwarder only if nothing along it evidences a value (`unevidenced_forwarders`, `worker-client/src/lib.rs`): a function or callee is evidenced when at least 10% of its direct call sites read its result (`read_often`; integer and float result registers watched, `call_support::uses_result`), when it holds a syscall-style trap, when it is not a function of the image (an import stub), when the callee is an unresolved indirect call, or when it forwards an evidenced callee in turn. Calibration: the PSP chains' callees are read by ≥28% of their call sites (7/2, 10/10, 1/1, 56/53, ...); Capcom's `0x1d0670` by 1 of 1,249 and `0x1d0b40` by 0 of 83. Two images, a wide gap: [INFERENCE] any threshold from 1% to 28% gives the same answer on them. With "any one reader" instead of the 10% the rule lost Capcom (163/200), which is why the threshold exists.
+
+| | before (forwarded rule v1) | after |
+|---|---|---|
+| Capcom return classes exact (default 174/200) | 174 | 174 |
+| Capcom type exact, persisted | 0.891 | 0.891 |
+| PSP stripped type exact, persisted (default 0.411) | 0.6019 | 0.6134 |
+| PSP symtab type exact, persisted (default 0.5833) | 0.7603 | 0.774 |
+
+(FinalGate's 0.6134 and 0.774 are the values without the forwarded rule; the chain rule reproduces them exactly.)
+
+**2. Vita `Overlapping input varnodes` under persisted VFP prototypes (0x812a3f46, 0x81419bf6).** Reproduced on a copy of the base Vita project. Instrumenting the decompiler's throw (`Funcdata::setInputVarnode`) shows `new register+768 size 16, old register+772 size 12` for every failing function: a locked `float param_1` pins `s0` (768, 4 bytes); the body also touches `q0`/`d0` whole (`vldmia {d0,d1}`, `vdup.32 q0`, vector ops), and heritage then asks for the 16-byte `q0` input beside the `s1..s3` remainder. Variants on 0x812a3f46: `float param_1` alone fails, `int param_1`, `undefined4 param_1, int param_2` and `void` decompile. It is a property of the locked float register, not of the stored callee prototypes. Of 1,009 Vita functions whose stored prototype has a float or double parameter (old job's rows), 72 fail (control, filter off, rows stored by the job on a copy of the base project); unrelated to the 2.5 h job's length.
+
+Fix, where the job decides what to persist (`types_infer/register_overlap.rs`, `ParameterTypes::locks_overlapping_input`, `infer_prototypes` in `worker-client`): a function whose float parameter register the body touches at another offset or width gets no persisted prototype, and the decompiler recovers it freshly. Two sources are consulted, because either alone missed some: the lifted p-code (`overlapped`: any register input or output overlapping a float parameter register without being it; the lifted walk can stop at a jump table, so 2 functions escaped it) and the decompiler's own recovery (`overlapped_ir`: any register value of the `FunctionIr`, the register space being the space that holds most of the model's known registers at their exact offset and size; 71 of 72 flagged alone, with 237 false positives, which is why the union is used with the per-parameter match). Result on all 1,009: control 72 fail; fixed **0 fail**, 143 of 1,008 rows not persisted (72 that failed, 71 that did not), the two named functions and 810cabea (the one IR scan misses) among them. 0x812a3f46 / 0x81419bf6 / 0x812beedc / 0x813615b4 / 0x810cabea: no stored row, all decompile. Unit tests (52 in `types_infer`): the detector (`register_overlap`: exact read, wide read, wide write, IR register space), `locks_overlapping_input` (float vs integer parameters, the p-code and the recovery sources). The full Vita job was **not** re-run with this build (≈2.5 h); the claim rests on the 1,009-function population above.
+
+**What was not done / limits.** A float parameter that the walk cannot see touched wide and the recovery IR also does not show would still be persisted; the 1,009 check shows none on Vita. MIPS/PS2/PSP also run the detector (their float registers are 4-byte `f12` etc.): the harness rows below are unchanged against the run without it (gba, nds, capcom, dungeon, both PSP twins identical to the digit), so it skipped nothing measurable there. Persisted rows of earlier job versions are not deleted.
+
+**Harness** (host `nih-vps-u`, tools `dd85b94735d35bf0`, `ghidra_opt` 70ce01d4… / `decomp_native` 2c03f4b0…, `benchmarks/reports/console_research_protowork.{json,md}`, six images, default / infer-prototypes / inferred-types-off): gba arity 0.975 → 0.98, warnings 566 → 199, type exact 0.5931 → 0.6915; nds arity 0.73 → 0.85, warnings 342 → 42; capcom type exact 0.4834 → 0.891; dungeon warnings 359 → 157, type exact 0.4262 → 0.4426; PSP stripped 0.411 → 0.6134; PSP symtab 0.5833 → 0.774. Verdict `helps` for `infer-prototypes` on all six. `inferred-types-off` is below `infer-prototypes` on type exact everywhere (that is the types ablation).
+
+**Commands.** `cargo test --release -p romwright-core --lib -- types_infer`, `-p romwright-worker-client --lib`; `python3 benchmarks/console_research.py --images ps2-capcom-fighting-evolution,psp-puzzle-bobble-pocket,psp-puzzle-bobble-pocket-symtab,gba-pokeemerald,ps2-dungeon-game,nds-pokeheartgold-arm9 --configs default,infer-prototypes,inferred-types-off --no-m22 --jobs 3 --out benchmarks/reports/console_research_protowork.json`. The Vita population check is a throwaway (job restricted to a function list through a debug hook on a copy of the base Vita project, then `export-c` per function, counting `Overlapping`); it is not in the tree.
+
+**Files.** New: `crates/romwright-core/src/types_infer/register_overlap.rs`. Edited: `types_infer/prototypes.rs` (`float_overlap`, `locks_overlapping_input`, `float_register_layout`, `read_often`, `result_registers`), `types_infer/call_support.rs` (result tracking over int and float result registers), `types_infer.rs`, `crates/romwright-worker-client/src/lib.rs` (`forwarded_callees`, `unevidenced_forwarders`, `ir_overlap`, tests), `docs/console-research.md` (issue 1).
+
+## Plan run 2026-10-08/09: orchestrator summary
+
+Scope and decisions: `docs/game-decomp-plan.md` section 7 (decisions, revised order, deferrals) and section 10 (per-item status). Each agent's section above has its numbers and commands; the combined tree was gated once by FinalGate (section above), with these fixes applied afterwards:
+- `NativeImport.debug_prototypes`/`debug_locals` and their types made `pub` (the `elf_image` test target compiles again; 7/7).
+- kuna-sleigh `MAX_OPERAND` 20 -> 74, the console's own bound; `flow_differential` 0 diffs on 10 images.
+- Forwarded-return rule needs chain evidence (PSP type-exact back to 0.6134 / 0.774, Capcom kept at 174/200 returns); Vita float-lock overlap filter (72 -> 0 failing decompiles over 1,009 float-parameter functions).
+- `ownership.py` exact project match; printc dead code removed (worker builds with 0 warnings).
+- Host: binutils-devel installed (decomp_native builds there); clean-room PSX and new r5900 languages installed in `~/ghidra_12.1.3_PUBLIC` on both machines.
+
+Licence finding: `native/languages/psx` carried byte-identical copies of PsxLoader files (no licence); replaced by a clean-room language (legal register note in the plan, section 5).
+
+Still open: m13-001's two standing failures; Ghidra does not finish GBA; Vita full prototype job not re-run on the final build; P2.8 PSX BIN/CUE, PBP and NRO containers (no fixtures); P4.1 psyq inline-macro lifting; N64 layouts for games other than Perfect Dark; x360 import +11% from decoding the 6,249 VMX128 words it used to refuse.
+
+## PSX GTE macro lifter (P4.1, 2026-10-09, GteMacros)
+
+**Change.** A Rust pass over the printer IR folds the GTE statements the PSX language produces into one call per psyq-style macro. Before: `lwc2`/`mtc2`/`ctc2` printed as `VXY0 = *param_1;`, `swc2` as `*param_2 = SXY2;`, a command as `gte_rtps(1,0);`. After: `gte_ldv0(param_1); gte_RTPS(); gte_stsxy(param_2);`.
+- **Where.** `crates/romwright-worker/src/printc/gte.rs` (new), called from `render_with_stats` on the decoded IR before the structuring models. `printc::reference` (what `benchmarks/printer_diff.py` compares) never reaches it. No C++, no language change, no `Statement`/`Expression` change. Hooks: `pub mod gte;` and the call in `printc/mod.rs`, `PrintStats.gte` in `printc/ownership.rs`. Switch: `ROMWRIGHT_GTE_MACROS=0` (on by default).
+- **How it matches.** Per basic block (not a for-loop header block), each statement is classified by its exported `Effect` (opcode, written variable, address `Expr` split into base + constant byte offset: `INT_ADD`/`PTRADD`/`PTRSUB`/`CAST`) and the register's name in its fragment. A run of consecutive register moves is matched against a pattern table (`ldv0/1/2` = `VXYn` from `p`, `VZn` from `p+4`; `ldv3`; `ldsxy3`, `ldsz3/4`, `ldrgb3`, `stsxy3`, `strgb3`, `stlvl`, `stlvnl`, `SetRotMatrix/LightMatrix/ColorMatrix(p)` = five control words at `p+0..16`, `SetTransMatrix(p)` = `TRX..TRZ` at `p+20..28`); any other data-register move becomes `gte_ld<reg>(p)` / `gte_st<reg>(p)` (`stsxy`, `stsz`, `stotz`, `stopz`, `stdp`, `strgb`, `ldrgb`, `lddp` have the short names). The argument is the address operand's own tokens from the fragment (`param_1`, `&param_1[2]`, `&uRam80123450`), casts, the `*` and a `& 0xffff` mask removed, so it prints as Ghidra named it; a run whose address has no name/deref/element/field form is left as written. Commands print `gte_<CMD>()` (psx-spx names); `sf`/`lm` print only when not `1,0`; `MVMVA` prints all five fields. The synthesized statement has `Source::Rust` and `Effect { CALLOTHER, calls, stores }`, so no later pass moves anything across it. A global named `DAT_<addr>` / `?Ram<addr>` carries its address in its name, which is how two globals pair into `ldv0`.
+- **Licence.** Command, register and register-to-memory facts are psx-spx's. The grouped macro names are the SDK's public API names, written from knowledge of that interface; no SDK header or source was read, PSn00bSDK was not used, the deleted `gte_lift.rs` (PsxLoader-derived table) was not consulted. Recorded in `docs/third-party.md` ("PSX language") and `THIRD_PARTY_NOTICES.md`; the names are unverified against an SDK install.
+
+**Synthetic gate** (`tests/p4-1_gte_macros.py`, PS-EXE built from encoded COP2 words, no compiler/SDK; each function decompiled with the pass off and on). Pair: worker built from the tree at 13:5x (ExprPrinter's v4 printer IR) with the matching `ghidra_opt` copy (`/tmp/ExprPrinter/ghidra_opt`, sha256 742046890e0b…); load average 9-28 on the shared host.
+
+| function | stock MIPS instruction lines | pass off (statements) | pass on |
+|---|---|---|---|
+| `project_triangle` (ldv3, RTPT, NCLIP, stsxy3, AVSZ3) | 14 | 13 | 6 |
+| `project_vertex` (ldv0, RTPS, stsxy, stsz, stdp, stotz) | 8 | 7 | 6 |
+| `average_depth4` (ldsz4, AVSZ4, stotz) | 7 | 6 | 3 |
+| `light_vertex` (ldv0, ldrgb, NCDS(1,1), strgb, MVMVA, stlvnl) | 10 | 9 | 6 |
+| `load_transform` (SetRotMatrix, SetTransMatrix) | 17 | 8 | 2 |
+| `global_vertex` (`&uRam…` arguments) | 7 | 4 | 3 |
+| `left_as_written` (`mtc2` from a GPR, `RTPT(0,1)`, a lone `VZ1`) | 5 | 4 | 4 |
+| `project_array` (macros inside a do-while) | 9 | 9 | 8 |
+
+Every function's lifted text equals the expected lines exactly; the non-GTE lines are identical with the pass on and off. RTPS, RTPT, NCLIP and AVSZ3 each print as one call (`gte_RTPS()`, `gte_RTPT()`, `gte_NCLIP()`, `gte_AVSZ3()`) in routines where stock MIPS shows 8 or more lines (8, 14, 14, 14).
+
+**Held PSX image** (`psx-darkstalkers-3/VS.EXE`, imported natively, 2206 functions). Scanning every word of the text for `lwc2`/`swc2`/`mfc2`/`mtc2`/`cfc2`/`ctc2`/command: GTE code is three functions, `0x801838d4` (InitGeom-shaped: `ZSF3 = 0x155; ZSF4 = 0x100; H = 1000; DQA = …; DQB = …; OFX = 0; OFY = 0;`), `0x8018395c` (`OFX = param_1 << 0x10; OFY = param_2 << 0x10;`) and `0x8018397c` (`H = (int)param_1;`), 10 `ctc2` words in all; every other COP2-looking word is data (ASCII text, tables). The game is 2D: no GTE command, no `lwc2`/`swc2`. **Sequences lifted: 0** (control-register moves from constants/arithmetic are not matched by any macro), so there is no before/after pair on this image; the fixture is the example. All 2206 functions, `decompile-batch` in chunks of 150, pass on and off: **2206/2206 identical** (tool output compared as JSON), so the pass changes nothing it should not.
+
+**Tests.** `cargo test --release -p romwright-worker --lib gte` 10 passed (statement shapes recorded from `ghidra_opt`: pair, `ldv3`, `stsxy3`, flag printing, unknown arguments, loop-header block, non-GTE variable, global addresses, balanced local ids), `-- printc` 58 passed; `tests/p4-1_gte_macros.py` PASS. Not run: `benchmarks/printer_diff.py` (its path, `printc::reference`, does not call the pass; the worker/`ghidra_opt` pair of the tree is mid-change under ExprPrinter), `tests/m21-001_real_images.py` (no discovery code touched; the image above imports to the same 2206 functions).
+
+**Gaps.**
+- Matching is by adjacency in one basic block's statement list: another statement between two halves of a macro, or a macro split across blocks by a branch, prints per register. Control-register setters that take values (`SetGeomOffset`, `SetGeomScreen`, `SetBackColor`, `SetFarColor`) are not lifted (`OFX = x << 16` is already one readable line); `lhu`/`mtc2` forms (`gte_ldlv0`, `gte_ldsv`, `gte_stsv`, `gte_stclmv`) and `mfc2` reads into a register keep the raw form.
+- The macro names are unverified against an SDK; if a project needs exact SDK spellings the table in `gte.rs` is the one place to change.
+- `crates/romwright-core/src/gte.rs` (the `gte_dump` decoder) still names command 0x29 `dpcl` (psx-spx: DCPL) and cites rabbitizer; untouched, out of scope.
+- `ROMWRIGHT_GTE_MACROS` is read on every function; no timing was taken (the pass is one linear scan of each block's statements, and a function without GTE register names returns after the first classification of each statement).
+
+**Files.** New: `crates/romwright-worker/src/printc/gte.rs`, `tests/p4-1_gte_macros.py`. Edited: `printc/mod.rs`, `printc/ownership.rs`, `docs/printer-ir.md` (new section), `docs/third-party.md`, `THIRD_PARTY_NOTICES.md`, `docs/ownership.md` (one bullet), `docs/game-decomp-plan.md` (section 10 row P4.1), this file. The main tree's `target/release` binaries were not rebuilt: the tool pair above is private (`target/GteMacros`, deleted). Main must rebuild the worker once ExprPrinter's v4 `ghidra_opt` is in `native/build` and run `tests/p4-1_gte_macros.py`.
+
+## 8-byte parameters in register pairs: joined from SSA evidence (2026-10-09, PspImport)
+
+**Change.** New `crates/romwright-core/src/types_infer/pair_params.rs` (`pub mod pair_params;` in `types_infer.rs`; `Target::shape` is `pub(super)` now). The `infer_prototypes` job (`worker-client/src/lib.rs`) collects per function, from the recovery's `FunctionIr` and `call_prototypes`, every call argument that is `CAST/COPY(PIECE(in_hi, in_lo))` of the function's own entry values of an aligned argument-register pair, in the ABI's word order, with the callee's declared parameter type (`sightings`); after `types.apply` it replaces the two single-register parameters at each pair with one parameter of that type (`join`, provenance `+native-prototype:joined-pairs(...)`). Rules: both halves 4-byte unknown/int/uint (a pointer or float in the pair blocks it), one declared type per pair, even start slot, register width = half the value, no variadic. An unread register below the pair (the alignment hole of `f(int, double)`) is dropped with it; `carry_forward` keeps what an earlier round proved (a later recovery reads the hole when a callee keeps its own). `ROMWRIGHT_JOIN_PAIRS=0` turns the pass off; `benchmarks/console_research.py` gets config `join-pairs-off` (a prototype-stage variable). The evidence travels up the call graph through the 3 rounds (a joined callee is a declared 8-byte callee next round).
+
+**Numbers** (nih-vps-u, n=200, same tools both columns; `benchmarks/reports/console_research_psp.{json,md}`). PSP symtab twin, `infer-prototypes` vs `join-pairs-off`: arity 0.8759 -> **0.9034**, type exact 339/438 = 0.7740 -> **349/438 = 0.7968** (stock Allegrex 0.7931 / 0.4966). Four joins (of 721 functions), all equal to DWARF: `__ieee754_rem_pio2`, `__kernel_cos`, `__kernel_sin`, `cvt` (hole dropped). Default config unchanged (0.8828 / 0.5833, the pass is a job pass); strip-all twin unchanged (0.7222 / 0.6134, no declared 8-byte callee, no sighting).
+
+**Non-regression** (`console_research_pairs_{ps2,gba}.{json,md}`, job on): `joined-pairs` rows = 0 of 8,159 (Capcom), 707 (dungeon), 15,460 (pokeemerald), so their prototypes are exactly those of the job with the pass off. Capcom `infer-prototypes` arity 1.0000 / type exact 371/408; dungeon 1.0000 / 27/61; GBA 0.975 / 261/375. The pass cannot fire there: r5900 registers are 8 bytes, and the stripped GBA ROM has no declared 8-byte callee.
+
+**Tests** (nih-vps-u): `cargo test -p romwright-core --lib -- types_infer` 61 passed (52 -> 61: 9 new in `pair_params`: sightings through `CAST`/`COPY`/`PIECE`, misaligned, swapped, non-entry and unjoined halves, hole drop and its refusals, a longer `cvt`-shaped prototype, a wide-register target, carry-forward); `cargo test -p romwright-worker-client --lib` 4 passed.
+
+**Gaps.**
+- Four functions have no sound evidence (examples with IR facts in `docs/console-research.md`): `_ulp` (no caller, body reads only `a1`), `__make_dp` (body only `COPY`s; its caller builds the pair with a shift idiom), `_d2b` (two adjacent spills whose address goes to `_lo0bits`), `_dtoa_r` (pair is `PIECE(MULTIEQUAL(a3, a3 & 0x7fffffff), a2)`, a derived pair: accepting it accepts any `(hi & mask, lo)`). The caller-side rule (halves of one declared 8-byte value passed to two 4-byte slots) would fix `_dtoa_r` and remove `cvt`'s `in_a1`, but needs every call site to agree and fires on any callee taking `(lo, hi)`; not built.
+- A joined `double` printed through `SUB84(param_1,0)` is an unsupported intrinsic in the printer of the measured tools (an older `printc`): `irregular` +2 (`__ieee754_rem_pio2`, `cvt`) against -1 (`__kernel_cos`). `cvt` also prints `in_a1` (it passes its unread `a1` to `_dtoa_r`, which keeps its hole as a parameter). `ParameterTypes::locks_overlapping_input` counts a joined `double` as a float-register parameter (it enumerates float-metatype parameters); not changed.
+- Measurement tools: the shared tree was not buildable as one consistent set while I worked (ExprPrinter's printer IR v4 against a v3 native; ProtoWork/PatternsLinkageRust edits in flight), so the harness ran a CLI/API built from the tree at sync time with the previous `romwright-worker` binary and native binaries (decomp_native 2c03f4b0, ghidra_opt 70ce01d4), and the API's in-process printer error was ignored on the host copy only (the job never reads printed tokens; the exported C comes from the old worker). The measured pass is unaffected; absolute counts like `irregular` are those tools'.
+- Items with the old `console_research_dwarf1` PSP rows and the earlier numbers in this file are superseded by the correction sections of 2026-10-08.
+
+## Rust expression printer: IR v4 print trees, PrintC's expression emission in Rust (2026-10-09, ExprPrinter)
+
+**What changed.** Statement expressions are no longer replayed PrintC fragments. `native/romwright_printir.hh` exports IR version 4: per statement a *print tree* (ops with the inputs PrintC prints, leaves as data or as the one token PrintC's handler produced), the options expression emission reads, and per-function type and symbol tables. `printc/render.rs` (new, ~2,000 lines + tests) is a Rust port of `PrintLanguage::pushOp/pushAtom/recurse/parentheses/emitOp`, the `OpToken` table and the op, constant, symbol, partial-symbol and type handlers of `printc.cc`, and the cast predicates of `cast.cc`; it emits the same `Emit` calls PrintC makes, so `printc/pretty.rs` and the block layer are untouched. It also ports the patch's own `parentheses` rule (mixed arithmetic/bitwise grouping) and the patched `opCall` (canonicalised division/remainder helper calls, exported as the op they print as). `ir::decode` renders every statement, branch, negation (same tree, CBRANCH polarity inverted) and `for` header it supports and keeps the PrintC fragment for the rest. Details: docs/printer-ir.md "Print trees (version 4)".
+
+**Switch.** `ROMWRIGHT_RUST_EXPRESSIONS=on` (default) | `off` (also `fragments`, `0`) | `verify` (render, compare with PrintC's fragment, count differences, keep the fragment; `ROMWRIGHT_RUST_EXPRESSIONS_LOG=1` writes each to stderr). Counts per `context.kind` and per refusal reason travel in `PrintStats.expressions` (ownership log) and in each `romwright-worker --printer-diff` line (`expressions`, with `render_micros`).
+
+**Files.** New: `crates/romwright-worker/src/printc/{render.rs,tree.rs}`. Edited: `native/romwright_printir.hh` (v4 exporter, accessors, capture event counter), `printc/{ir.rs,mod.rs,printer.rs,ownership.rs}` (decode v4, `Expression.source`, `Detail::WhileDo` headers carry a `Source`, token accounting `rust_expressions`), `printc/tests.rs` and `printc/structure/tests.rs` (v4 blobs, new fields), `src/main.rs` (printer-diff prints the stats), `benchmarks/ownership.py` (Rust share = block layer + expression printer, breakdown and coverage by kind), `docs/printer-ir.md`, `docs/ownership.md`, `docs/third-party.md`, `THIRD_PARTY_NOTICES.md`. New generated reports: `benchmarks/reports/{ownership_expressions.{json,md},printer_diff_expressions.json}` (the existing `printer_diff.json` is untouched). `native/ghidra-opt-sleigh.patch` is unchanged (the DecompileAt hunk already calls `romwrightEncodePrintIr`); the shared `native/build/ghidra_opt` carrying the v4 exporter was rebuilt under the lock by PatternsLinkageRust and then ConstPropRust (their broadcast hashes), so no rebuild of my own was needed there. The shared `target/release/romwright-{cli,worker}` are rebuilt from this tree (a worker older than this change rejects the v4 blob, a newer one rejects a v3 `ghidra_opt`: "printer IR version N is not 4").
+
+**Acceptance (host `nih-vps-u`, load average 12-30 from other agents; tools built from this tree).**
+- `benchmarks/printer_diff.py --target ... --ghidra-opt native/build/ghidra_opt --jobs 3`, Rust expressions on: **1800/1800 identical** (8 images x 200 + 200 libc), 0 decompile errors (`benchmarks/reports/printer_diff_expressions.json`).
+- Console corpus, `export-c --address` on the 8 images x 200 sampled functions (`console_research.py`'s samples and default projects), `ROMWRIGHT_RUST_EXPRESSIONS=off` then `on` back to back per function (throwaway `export_ab.py`): **1600/1600 byte-identical**, 0 failures.
+- Coverage: in `verify` mode on the 8 images 50,762 expressions and on the 200 libc functions 21,260, **0 differences**. In the default (`on`) ownership run, 10 images x 200 functions, **72,531 of 72,531 expressions (statements 20,098 assign, 9,555 store, 8,334 call, 2,977 return, 9,357 cbranch, 77 branchind; the same cbranches' 9,357 branch and 9,357 negated renderings; 3,106 plain branches; 236 loop headers) are printed by Rust, 0 kept as PrintC fragments**. Refused only in libc: 2 `callother:display` (user-op display kinds 1 and 4).
+- Printed-token lens (`benchmarks/ownership.py`, no coverage, 10 images, 599,899 tokens): **Rust 90.7%** (block layer 14.4%, expression printer 76.3%), C++ fragments 9.3%. Same 8 images as the 2026-10-08 table: 463,938 tokens, **90.9%** Rust (13.4% block layer + 77.4% expressions) against 13.3% before. What is still PrintC's: locals (22,591 tokens), prototype (13,733), header comments, comments, labels and case labels.
+- Time: `render_micros` over 1,000 functions (5 images) = 118.6 ms for 30,132 expressions (3.2-4.9 us per expression, ~0.12 ms per function). Paired back-to-back `--printer-diff` runs (200 functions per image, 5 alternating rounds of baseline v3 worker+ghidra_opt / v4 with `off` / v4 with `on`, load average 18-35, so noise is larger than the effect): medians gba 3.16 / 3.19 / 3.61 s, capcom 3.37 / 3.03 / 3.07 s, psv 6.71 / 6.87 / 6.69 s, x360 4.87 / 4.74 / 4.75 s; no consistent difference except gba `on` +0.4 s in this run, not reproduced in the other three images or in the in-process render counter.
+- Tests: `cargo test -p romwright-worker --lib` on the host: 87 passed, 0 failed, 10 ignored (printc: 12 new render tests: precedence, patch grouping, integers, casts, negated conditions, array notation, calls, partial symbols, spacebase ptrsub, id order). `cargo check/build -p romwright-worker` has 0 warnings of its own; the `romwright-worker` *test* build warns once about `Probe::return_size` never read in `specs.rs` (WIP file, not touched).
+
+**Gaps and next.** (1) Declarations (prototype, local variable declarations), comments, labels and case labels are still PrintC fragments: 9.3% of printed tokens; the same export approach (types and symbols are already in the v4 tables) ports them. (2) The exporter still computes, in C++, what depends on the symbol table and type system: cast decisions that need `isExtensionCastImplied`, `checkAddressOfCast`, `findTruncation` for PTRSUB structs, namespace depth, one-token constants (string literals, floats, enum/equate names, function constants, unnamed locations) - porting those needs the string manager, float formatting (`FloatFormat::printDecimal`) and enum tables in the IR. (3) Unsupported and counted: unions/`needsResolution`, `CPOOLREF`/`NEW`/bit-field ops, function-pointer type expressions with a prototype, user-op display kinds 1 and 4, non-ASCII character constants, hidden `this`, `NULL`/in-place options. (4) The A/B and verify harnesses were throwaway scripts (deleted); `printer_diff.py`'s `--printer-diff` line now carries the expression stats, which is the standing coverage gauge.
+
+## Constant propagation in Rust: the console's reference pass cut over (2026-10-09, ConstPropRust)
+
+**Change.** The facts `native-analysis:constant-propagation` and `native-analysis:data-width` are computed in process, over the in-process kuna-sleigh lift, not by the SLEIGH console. New: `native_runtime/propagation.rs` (policy of `ConstantPropagationContextEvaluator`/`SymbolicPropogator`, operand pass, call contexts), `propagation/state.rs` (known-bit `RegisterValue`/`VarnodeContext`), `propagation/lang.rs` (spec-derived stack pointer, default-prototype effects, `extrapop`, pointer-storage assignment, call and call-other fixups), `propagation/graph.rs` (a port of `FlowInfo`: relative branches, call specs, `checkContainedCall`, `truncateIndirectJump`/`earlyJumpTableFail`, fixup injection, blocks), `reference_pass.rs` (`ReferenceContext`, lanes, `DemandReferences`). Edited: `flow.rs` (`SleighFlow::decode`/`inject`, raw p-code capture), `lift.rs` (`pspec`/`cspec`), `native/references.rs` (`infer_data_references(import)` is the one driver: lanes, memo, adoption of call contexts, `finish_references`), `native.rs` (`discover`), `demand.rs` (`LiveProgram::references` uses a `DemandReferences` lane; `ConsoleSession` only keeps `flow`), `native_runtime.rs` (the console's `constants`/`references`/`optional_references`/`prepare_reference_context`/`referencefixup` driving, `ReferenceShardSpec`, shard preparation and `propagation_query` deleted; tests run on an in-process `Lane`), `session.rs` (no new variable). `third_party/kuna-sleigh/src/sleigh.rs`: `ParserWalker::get_offset`, `OperandObject`, `Sleigh::{operand_scalars, operand_objects, mnemonic, compile_snippet, inject_pcode}` (PcodeSnippet-based injection of the spec's `<callfixup>`/`<callotherfixup>` bodies).
+
+**Deleted C++.** `native/romwright_constants.hh` (1,240 lines), `romwright_constant_state.hh` (278), `romwright_operand_refs.hh` (177), `romwright_x86_references.hh` (51), `romwright_callfixups.hh` (47): **1,793 lines (1,543 code lines by `ownership.py`)**; the patch's `IfcConstants`/`IfcReferenceFixup` registrations and includes, the `slghsymbol.hh` `collectOperand*` hunk, `getInstructionContext` and `getTargetSymbolNames` accessors; the build scripts no longer copy them. The console has no `constants`, `references` or `referencefixup` command (the patch's other console commands, `flow`/`context`, and `romwright_flow.hh` stay: `ROMWRIGHT_FLOW_DIFFERENTIAL`, `native/tests.rs` `flow_decoders_answer_*`). New Rust: 3,651 lines in the propagation module (`propagation.rs` 1,490, `graph.rs` 1,062, `lang.rs` 575, `state.rs` 362, `reference_pass.rs` 162). `benchmarks/ownership.py` no longer lists the `romwright_constant*`/`operand_refs`/`x86_references`/`callfixups` rules, `references-only` is a Rust phase and `CPP_PROVENANCE` is empty. **Discovery-stage share (stored facts by provenance, the 10 flow-differential images):** console-owned 292,447 of 697,903 facts (41.9%, console-driven imports) -> 0 of 712,393; i.e. 100% Rust by provenance (the full `ownership.py` coverage run was not repeated; `docs/ownership.md` stage rows and results row updated, with the old 57.8%/42.2% kept in the cell). C++ ours total by `ownership.py --inventory-only`: 2,313 code lines (other agents' printer/patch edits are in that number).
+
+**Answers to the orchestrator.** (1) `romwright_callfixups.hh` was the console command `referencefixup <addr> <label>`: it found the compiler spec's `<callfixup>` whose `<target>` names the label and set `FuncProto::setInjectId` on a function it added to the *console's* symbol table, so the console's `FlowInfo` replaced calls to that function by the fixup's p-code (`_savegpr`/`_restgpr`, PIC thunks). (2) Its only consumer was the console's reference pass (`ConsoleSession::send_reference_fixups`, sent from `prepare_reference_context`). The decompiler's call handling does not use it: AbiWork's `_savegpr_N`/`_restgpr_N` are cspec `<callfixup>` bodies written by `specs.rs` `with_mwcc_callfixups` and bound through the worker's `call_fixups` document, which the patch's `fspec.cc` hunks apply. (3) Now: `Lang::callfixups` (parsed from the same spec XML), `Propagator::fixup_functions` (label to fixup by target name, name-sorted), `Decoder::inject` + kuna-sleigh `compile_snippet`/`inject_pcode`, `graph.rs` `doInjection`. `ghidra_opt` changed hash because the shared patch changed under several agents (PatternsLinkageRust built it first at `742046890e0b...`, my rebuild under the lock gave `7980d0f2d3df...`; `decomp_native` unchanged at `df7e66e00cc4...`). **AbiWork re-measured with the new binaries** (`~/runs/ConstPropRust/abi`, the recorded commands: import of the CISO, `abi_signature_gate.py ours/score --module-base 8021e720`, truth `ac/sled200.json`, `ac/sample200.json`, load average 9): the 200 calling `_savegpr_14..26`: arity exact **191/200 = 0.955**, signature exact 178, class counts 190, decompiled 199; 200 random: arity exact **152/200 = 0.760**, signature exact 148. Both equal AbiWork's recorded 0.955 and 0.760. Not regressed.
+
+**Acceptance 1: stored facts, console-driven vs Rust-driven import, same host (`nih-vps-u`, load 11-33), every project table compared with `flow_differential.compare_tables`** (the differential driver was a development scaffold, deleted with the console path):
+
+| image | tables identical | differing ranges (all classified below) | xrefs console / Rust |
+|---|---|---|---|
+| ps2-dungeon-game | yes | 3 (table-less `BRANCHIND`) | |
+| psx-darkstalkers-3 | yes | 5 (same) | |
+| gc-animal-crossing | yes | 51 (same) | |
+| psp-puzzle-bobble-pocket / -symtab | yes / yes | 8 / 15 (same) | |
+| ps2-capcom-fighting-evolution | no: 1 xref | 156 | 43,075 / 43,076 |
+| x360-black-ops-2 | no: 17 xrefs Rust-only, 1 console-only; 172 more stack variables | 105 (ranges holding stored tables) + 2 refused by Rust | 187,683 / 187,699 |
+| gba-pokeemerald | no: Rust +8,094 xrefs (7,043 READ, 1,119 DATA), +38 functions | 542 | 116,027 / 124,121 |
+| nds-pokeheartgold-arm9 | no: console +1,220 xrefs (727 READ, 234 calls, 148 switch), 9 functions | 900 | 229,916 / 228,709 |
+| psv-need-for-speed-most-wanted | no: console +173 xrefs (133 DATA, 28 switch) | 322 | 182,271 / 182,098 |
+
+Facts compared range by range (every function and root of every pass, same inputs): 16,086 ranges on GBA, 30,051 capcom, 29,253 psv, 32,881 nds, 27,374 x360. **Residual classes.** Every differing range holds either (a) a `BRANCHIND` without a stored table (jump-table recovery of the decompiler, `jumptable.cc`, ran inside the console's flow; Rust treats it as a return when it targets the return address and as a call otherwise; the NDS ones are `add pc,pc,rN,lsl #2` branch islands, 760 `add`, 61 `addls`, 3 `addge`, and neither import stores a table for any of those 924 branches), or (b) a stored switch table the console cannot use and Rust follows (all 105 x360 ranges, 75 of capcom's 156, 23 psv, 1 PSP). Class (b) gives Rust more facts (GBA +8,094 xrefs, x360 +2,368 stack facts), class (a) fewer. Two x360 ranges (`0x8288d6f8..0x8288f990`, `0x821b2060..0x821b5fa0`) are refused by Rust and answered by the console: [INFERENCE] Rust follows a stored table into bytes that do not decode; the console-only xrefs on x360 are 1 DATA fact in total, so little is lost. One NDS range is refused by the console and answered by Rust. A Rust-vs-Rust rerun of psv with the same binaries also differs (xrefs 182,130 vs 182,066, `functions` 27,577 both): the import's time-budgeted decompiler switch rounds are not deterministic, so psv's small differences are not attributable to the port. Post-cutover imports (the final binaries) equal the development Rust-driven imports on 9 of 10 images (psv aside, above).
+
+**Acceptance 2: `tests/m21-001_real_images.py` (recall/precision), final binaries, `nih-vps-u`, load 7-10:** gba **.9761**/.9971 (was .9737/.9971), nds .9729/.9984, capcom .9412/.9964, dungeon .9438/.988, psx .9878/.3663, vita .9731/.9713, x360 .9833/.9964: no image below its floor; GBA up. A first run with the development build gave the same (capcom .9418). `m21-001: PASS (7 images scored, 0 known timeouts)`.
+
+**Acceptance 3: import wall time, paired back-to-back** (`import --timings`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, release build; console-driven then Rust-driven in the same process loop, load average before each run in parentheses; the shared host was busy, so absolute times are not comparable to FinalGate's):
+
+| image | console-driven | Rust-driven |
+|---|---|---|
+| dungeon | 8.25 s (~20) | 5.11 s (~20) |
+| psx | 10.16 s (~20) | 6.17 s (~20) |
+| gc | 14.46 s (~20) | 10.44 s (~20) |
+| x360 | 151.80 s (14.8) | 95.85 s (16.3) |
+| gba | 151.49 s (18.9) | 58.07 s (19.5) |
+| nds | 310.17 s (15.1) | 264.09 s (17.1) |
+| capcom | 144.40 s (20.7) | 116.11 s (33.5) |
+| psv | 409.75 s (27.0) | 363.03 s (23.4) |
+| psp / psp-symtab | 6.07 / 6.72 s (23.8 / 21.5) | 7.12 / 6.55 s (23.5 / 21.0) |
+
+The final binaries, unpaired, at load 12-18: psx 3.67 s, gc 6.57 s, dungeon 4.57 s, x360 81.0 s, gba 30.2 s, nds 214.4 s, capcom 100.8 s, psv 248.0 s, psp 4.92 s, symtab 4.24 s. The saving is the console: no process start per lane, no stdin/stdout JSON, one lift per range in the lane that asks.
+
+**Tests** (local, `-j 2`): `cargo test -p romwright-core --lib native_runtime` 32 passed, 1 ignored (`file_queries_preserve_thumb_and_arm_symbol_contexts`, needs arm-none-eabi and a writable tmp); 15 of the 18 reference tests ran paired with the console during development and agreed; `native::tests` `references_apply_pc_helper_fixups inferred_references_use_writable_image_values elf_plt_register_context_is_scoped powerpc_pic_context_follows_calls_not_unrelated_functions elf_linkage_references_do_not_require_functions an_undecodable_code_root_does_not_abort_reference_inference` 6 passed; `demand::` and `native_runtime::propagation` 4 passed. `cargo check --workspace --all-targets` clean. New: `mips_delay_slot_arguments_are_referenced_at_the_call`, `mips_returned_pointers_are_referenced_at_the_return` (7 variants; the injected `v0 = v0` of `setISAMode` is the setter at the return, found by the paired run on psx).
+
+**Files.** New: `native_runtime/{propagation.rs, propagation/{state,lang,graph}.rs, reference_pass.rs}`. Edited: `native_runtime.rs`, `native_runtime/{flow,lift}.rs`, `native/references.rs`, `native.rs` (user WIP file: the `discover` reference-pass dispatch), `native/tests.rs` (user WIP file: five tests moved to `strict_constants`/`range_references` helpers and `infer_data_references(&mut import)`, `references_apply_pc_helper_fixups` sets `pattern_labels` itself), `demand.rs`, `session.rs`, `third_party/kuna-sleigh/src/sleigh.rs`, `native/ghidra-opt-sleigh.patch`, `native/build_ghidra_opt.sh`, `native/build_console.sh`, `benchmarks/ownership.py`, `docs/{ownership,third-party,environment,game-decomp-plan}.md`. Deleted: the five headers.
+
+**Reproduce** (`nih-vps-u`, `~/runs/ConstPropRust`, since deleted): the development driver ran `import --timings` with the console as the driver and with the Rust driver for each image and compared all project tables; the console path no longer exists, so this cannot be rerun on this tree. For the final state: `python3 tests/m21-001_real_images.py --work W`, `romwright-cli import <image> --name N --project P --timings`, and the AbiWork commands in the P2.3 section.
+
+**Gaps.** (1) The decompiler's jump-table recovery (`jumptable.cc`) is not ported; it is the whole residual in the table above. A Rust model that emulates the index-to-branch path (`JumpBasic`) for table-less `BRANCHIND`s, or a call into the VSA from the reference flow, would close class (a) (NDS `add pc` branch islands, psv); until then a table the import never stores costs that function's case bodies in this pass. (2) The development comparison needed the console path, so no differential gate remains; the paired `pair` tests are gone with it, and the 18 reference tests now assert Rust answers directly. (3) The two x360 refused ranges' cause is inferred, not traced. (4) The full `ownership.py` coverage run was not repeated, so the Results table's other cells and the C++ line counts of the coverage run are as of 2026-10-09 morning. (5) `ROMWRIGHT_CONSOLE` still starts a console for `flow` (differential, `LiveProgram`) and `ConsoleOpenError`/`open_image_with_shards` remain for discovery's differential.
+
+## Function-start patterns and linkage evidence in Rust: `patterns` and `linkage` console commands removed (2026-10-09, PatternsLinkageRust)
+
+**What changed.** The console's `functionstarts` (Ghidra BytePatterns matching, `native/romwright_patterns.hh`, 614 lines) and `linkage` (thunk/linkage evidence over SLEIGH p-code after `CreateThunkFunctionCmd`, `native/romwright_linkage.hh`, 423 lines) are Rust now, over the in-process kuna-sleigh lifter.
+- `crates/romwright-core/src/native_runtime/patterns.rs` (new): `SleighLifter::function_patterns(ranges) -> FunctionPatterns` (+ `labels()` = `import.pattern_labels`). Reads `patternconstraints.xml` of every `Ghidra/Processors/*/data/patterns` (decision tree: language/compiler conditions, most specific wins), loads the selected pattern files (ditted/hex sequences, `*` marks, `<patternpairs>` cross product with `totalbits`/`postbits`, `<align>`), buckets by anchor byte and scans 64 KiB windows through the lifter's load image. Pattern sets are cached per (install, language, compiler). A pure matcher over bytes; no second matcher was added to `romwright-sig` because its matcher is the signature-database one (record bytes + masks keyed by first byte, name conflicts), not Ghidra's pair/post-rule/alignment/mark model.
+- `native_runtime/linkage.rs` (new): `SleighLifter::linkages(addresses, table)` and `::context_linkages(contexts)` (`linkage`, `linkage --table`, `linkage --from`). Same evaluator as the C++ (pointer-slot / unresolved-slot / constant / ISA-mode values, 64 cells, 8 instructions, 128 ops, unused-register rule with the branch-instruction exemption, `INT_AND` alignment and ISA-mode demasking), driven off `one_instruction` with `kuna_num::opbehavior::register_instructions` as the constant evaluators (the decompiler's `OpBehavior` table). Default data space is read from the processor spec `<data_space>`.
+- `native_runtime/lift.rs`: `SleighLifter` carries the resolved language id, compiler id, Ghidra root and the linkage environment; `scan_directory_recursive` is `pub(super)`.
+- `native/discovery.rs`: `Lanes` builds one plain (uninstrumented) lifter beside the flow decoders; every walk context reaches it as it reaches the lanes; pattern search and linkage questions are answered by it. **A console is opened only under `ROMWRIGHT_FLOW_DIFFERENTIAL`** (`ConsoleProvider.session` is an `Option`); no import starts a console for discovery any more. The reference pass's propagated-linkage step builds a fresh lifter from the import (`references.rs` closure).
+- Deleted: the two headers (1,037 lines of our C++), 4 lines of `native/ghidra-opt-sleigh.patch` (2 includes, 2 `registerCom`) with the hunk counts corrected (`git apply --check` on the ifacedecomp hunk and a count validator over all hunks), their entries in `build_console.sh`/`build_ghidra_opt.sh`, `ConsoleSession::{linkage_batch,plt_linkage_batch,context_linkage_batch,function_patterns}` and their serde types, the three console-only tests (ported to `linkage.rs`/`patterns.rs` tests on the in-process API), the `native_linkage_sha256` pin of `benchmarks/regression_gate.py`/`prototype_gate.py` and the two header rows of `benchmarks/ownership.py` (phase `patterns` is now `rust`). Native rebuilt under the lock (TMPDIR under `$HOME`: /tmp quota): `ghidra_opt` 742046890e0bebe4adf30e9cdb1ad6fd3eb2d61af4ac9cc12adfd27721bd8881, `decomp_native` df7e66e00cc4f80d037301ab21305e3280d9b4f7da54d7f3085dee81f5579378 (ConstPropRust rebuilt `ghidra_opt` after, 7980d0f2…; `decomp_native` unchanged).
+
+**Differential (development gate, removed at the cutover).** `ROMWRIGHT_QUERY_DIFFERENTIAL=<file>` asked the console every pattern search and linkage question of every import and compared the answers; `ROMWRIGHT_QUERY_DIFFERENTIAL_DRIVER=console` made the console drive, so the import was the console-driven one; `ROMWRIGHT_QUERY_DIFFERENTIAL_SWEEP=1` also asked `linkage`, `linkage --table` and `linkage --from` at **every instruction the walk decoded** (and at every direct branch with 0 or 3 leading instructions). Host `nih-vps-u`, release build, the 10 flow_differential images, console-driven import against the Rust-driven one, every project table compared row for row:
+- **0 differing answers and 0 differing tables on all 10 images**: compared 25,255,195 `linkage` + 25,255,152 `linkage --table` + 1,179,119 `linkage --from` answers and 442,699 pattern matches (gba 3,496,446 / nds 3,844,294 / capcom 1,306,191 / dungeon 174,903 / psx 279,841 / psv 8,024,679 / x360 7,161,482 / gc 672,397 / psp 144,841 / psp-symtab 150,121 plain-linkage answers). Positive answers (a proven shape) among them: 12,508 `linkage`, 155,573 `linkage --table`, 9 `linkage --from` (gba 8,762 / 145,791, nds 1,184 / 7,191, gc 1,855, psp 351). The corpus has no x86 image, so three x86-64 ELFs (`libc.so.6`, `bash`, `ssh`) ran the same sweep: 2.2 M linkage + 2.2 M table + 175 k context answers and 72,672 pattern matches, 0 differences (positives: 5,380 / 5,671 / 2,100 over the walks). Residual classes: none.
+- Unit tests: the three console fixture tests (x86/x86-32/AArch64/PowerPC stubs, unknown register, unused write, store and 8-instruction bound; the AArch64 prefix/mark/range and pair-bit grammar fixture with a private pattern root; the ELF compiler selection) pass unchanged on the in-process API; plus `sequences_and_integers_read_as_ghidra_reads_them`.
+- The classification `stale-cache` the flow differential needed (the console's `DisassemblyCache` serving an older parse after a context commit) never occurred here.
+
+**Gates after the cutover** (host, release, trees identical but for this change: `ventris_A` = phase-A tree with `ROMWRIGHT_QUERY_DIFFERENTIAL_DRIVER=console-only`, i.e. the console answers patterns and linkage alone as before; `ventris_B` = this tree):
+- `tests/m21-001_real_images.py`, all 7 images, A and B identical, all pass: gba .9761/.9971, nds .9729/.9984, capcom .9412/.9964, dungeon .9438/.988, psx .9878/.3663, psv .9731/.9713, x360 .9833/.9964 (recall/precision).
+- Import wall time, paired and alternating (`romwright-cli import --timings`, ROMWRIGHT_NO_IMPORT_CACHE=1, 3 pairs per image; host load average in brackets): **gc** before 10.61 / 11.04 / 8.44 s, after 9.96 / 10.82 / 7.64 s (load 15-17); **gba** before 44.08 / 47.02 / 52.55 s, after 41.06 / 43.91 / 51.56 s (load 12-22); **x360** before 43.41 / 53.14 / 48.58 s, after 39.89 / 39.84 / 42.02 s (load 2.4-6.4). Medians: gc -6%, gba -7%, x360 -18%. The gain is the console no longer being started and loaded for the walk (the `discovery` phase: gba 26.7 / 26.3 / 29.1 -> 21.1 / 23.8 / 26.4 s, x360 18.4 / 21.7 / 20.0 -> 15.1 / 15.0 / 15.6 s); the `patterns` phase itself is equal (gba 0.43-0.45 s before, 0.48-0.56 s after; x360 0.13-0.16 / 0.12-0.14 s; gc 0.03 / 0.014-0.027 s), i.e. the Rust matcher is on par with the C++ one. The "before" binary also builds the (then unused) extra lifter beside the console. Loaded host: single pairs overlap (gba pair 3: 52.6 vs 51.6 s); only the direction is claimed beyond the medians.
+- Filtered tests: `cargo test -p romwright-core --lib -- native_runtime::linkage native_runtime::patterns pattern_search native::discovery native::tests native_runtime::lift`: 118 passed (includes `flow_decoders_answer_*` against the console).
+
+**Files.** New: `native_runtime/{linkage,patterns}.rs`. Edited: `native_runtime.rs` (modules, console driver and its serde types and three tests removed, `LinkageResult` no longer serde), `native_runtime/lift.rs`, `native/discovery.rs`, `native/references.rs` (one closure), `native/tests.rs` (user WIP file, one test: `pattern_search_reads_only_the_bytes_the_image_carries` now calls `SleighLifter::function_patterns`), `native/ghidra-opt-sleigh.patch`, `native/build_console.sh`, `native/build_ghidra_opt.sh`, `benchmarks/{regression_gate,prototype_gate,ownership}.py`, `docs/third-party.md`, `docs/import-speed.md`, `docs/ownership.md`. Deleted: `native/romwright_{patterns,linkage}.hh`.
+
+**Gaps.** (1) `benchmarks/reports/m2-006*.json` still carry the old `native_linkage_sha256` key and `ownership*.{json,md}` were not regenerated (their "console-owned phases" shares and C++ line counts predate this change; a rerun will show `patterns` as Rust and 1,037 fewer C++ lines). (2) `FlowStats.requests` no longer counts console commands for patterns/linkage (decoder batches only). (3) The differential's ELF x86 coverage is three binaries, not a corpus image; AArch64/32-bit x86/PowerPC linkage stay covered by the fixtures. (4) `ROMWRIGHT_FLOW_DIFFERENTIAL` still opens consoles; removing it is ConstPropRust's/Main's call (`ConsoleSession` for flow). (5) The timing "before" is the console-only mode of the phase-A tree, not a historical binary.
+
+## The SLEIGH console is gone: `decomp_native` retired, no first-party C++ outside `ghidra_opt` (2026-10-09, ConsoleRetire)
+
+**What changed.** Every remaining user of the `decomp_native` console moved to the in-process kuna-sleigh runtime (`SleighFlow`, `SleighLifter`) or to existing Rust; the console, its launch code, its build script and its patch hunks were deleted. The only first-party C++ that still runs is the patched `ghidra_opt`.
+
+**Who asked the console what (map taken first).**
+| User | Asked | Now |
+|---|---|---|
+| `nonreturn.rs` (`infer_nonreturning`) | `flow` batches over the mapped image | `SleighFlow::mapped(..).flow(addresses)`; the closure already checkpointed cancel/deadline. The Rust analysis (`native/nonreturn.rs`) needed no port: `native/romwright_nonreturn.hh` is **not** console-only (it is `ghidra_opt`'s `romwrightNoReturnHint`, included by `ghidra_process.cc`) and stays |
+| `native/elf_pointers.rs` `confirm_initializers` | one `flow` batch | `SleighFlow::mapped` |
+| `demand.rs` `LiveProgram` (`flow` lane of `walk`/`sweep`) | `flow` batches | `SleighFlow`; a `checkpoint()` per batch replaces the console watchdog (`set_control`) |
+| `exec.rs` | nothing: a test of `ConsoleSession::new_controlled` cancelling a hung console launch (`new_controlled` only adds the watchdog) | test deleted with the watchdog |
+| `native/discovery.rs` | the differential lanes (`Differential`, `flow_batch_sharded`, `ConsoleOpenError`, console shards) and a "no console configured" gate that returned `false` | all deleted; discovery needs only the pinned install's language data (a language the decoders cannot load is still a `Degraded` diagnostic, nothing promoted) |
+| `native_runtime.rs` `console_output`/`mapped_console`/`console_flow`/`disasm_native`/`listing_native` | `load file`, `map function`, `load function`, `disassemble` (the **CLI `disasm`, the `disasm_native` API method, the desktop listing window**) | new `native_runtime/disasm.rs` over `SleighLifter::file` + `Sleigh::print_assembly_into` (below) |
+| `session.rs`, `import_cache.rs`, `lift.rs` `spec_paths` | `console_path` discovery (`ROMWRIGHT_CONSOLE`, `native/build/decomp_native`), its hash in the import-cache key, its path to find the Ghidra root | `console_path`, `flow_differential*` removed from `RuntimeConfig`; the key is the executable + worker digests; `discover_ghidra_root` (a port of `FileManage::discoverGhidraRoot(argv[0])`) deleted, the root is `ghidra_install` (what `SLEIGHHOME` was) |
+| `tests/m13-001`, `m13-002` | `decodes()` shelled out to `decomp_native flow` | `romwright-cli ir-dump` (in-process); `ir-dump` now prints ` error=BAD|UNIMPL` on an undecodable address (agreed with MeasureGaps). On 400 random libc addresses the console's and `ir-dump`'s decodable sets are identical (362/362, 0 differing) |
+
+**`disasm`/`listing`: one deliberate contract change (the one console behaviour with no sound Rust replacement, so it was redefined, not imitated).** The console ran the decompiler's flow analysis on a function mapped at the address and listed that function's extent, with the decompiler's blocks (jump-table recovery included). Jump-table recovery is `jumptable.cc` logic that Rust does not have, so the extent and blocks cannot be reproduced per request. The new listing is the `count` instructions asked for (`-n`, the README's contract), from the address asked for, whatever function they belong to; function extents are the store's. `Block` lines mark the first instruction, each direct branch target inside the listing and the instruction after any branch, conditional branch, indirect branch or return; a jump-table target nothing in the listing branches to directly is not marked. Text, padding (`mnemonic` to 10), `0x%08x` address format and `Bytes` lines are the console's. One bug fell out: for a PE the console's `adjust vma 0x400000` double-shifted the address (a PE32 listed at 0x801000, not 0x401000); it lists at the real address now.
+Differential against the old console (the previous tree's release CLI vs this one, `disasm -n 1` and `-n 12`, 116 comparisons at symbol addresses of tiny_bin, pokeemerald (Thumb and ARM), dungeon_game (R5900), the Vita eboot, pokeheartgold (ARM9) and the GC DOL): 92 identical; in 16 the new listing is identical on the console's lines and continues past the function end the console stopped at; in 8 (4 addresses) both list nothing. The first pass of this differential found that a mapped image's own language directory had to be resolved (the vendored Gekko definition for the DOL), fixed in `SleighLifter::file`.
+
+**Deleted C++ (first-party).** `native/build_console.sh` (58 lines), `native/romwright_flow.hh` (167), `native/romwright_parent.hh` (29), `native/discover.sh` (106, a console-driven discovery spike), and from `native/ghidra-opt-sleigh.patch` the `consolemain.cc`, `ifacedecomp.cc/hh`, `ifaceterm.cc` and `loadimage_xml.cc` hunks plus the `InstructionFlow` hooks, `oneInstructionFlow`, `translateInstruction` and `invalidateContextCache` of `sleigh.cc/hh` (patch added lines 1,031 -> 774, patch file 2,017 -> 1,559 lines, 32 files instead of 37). `romwright_flow.hh`'s `PowerPcReturnEmit` is the only part `ghidra_opt` used (the conditional-`bclr` return rewrite in `Sleigh::oneInstruction`); it lives on as `native/romwright_ppc_return.hh` (31 lines). **Our C++: 2,748 -> 2,326 lines (-422 net; 453 deleted, 31 added)**. Rust: about 1,800 lines deleted (`ConsoleSession`, its watchdog, shards, prompt reader, `console_flow`, `parse_flow_output`, `MappedImage`'s XML writer, the differential) and 255 added (`disasm.rs`, with tests). `benchmarks/flow_differential.py` deleted (see below). The patch was regenerated by applying the old one to the pinned tree, reverting the console-only hunks and diffing (`git diff --no-index`, headers rewritten), so every hunk count is the tool's; `git apply` is what `build_ghidra_opt.sh` runs.
+
+**`benchmarks/flow_differential.py`: deleted, not frozen.** Its oracle was the console. Its last result (10 corpus images, 0 differing answers outside the `stale-cache` class the C++ `DisassemblyCache` causes; the Xbox 360 VMX128 finding) stays in this file's history above and in `docs/third-party.md`; the in-process flow is now held by the unit/fixture tests (`flow_decoders_sweep_random_words` replaces the console-compared random-word gate and still sweeps ARM/Thumb, MIPS, PowerPC and x86 words), `native_runtime::flow`/`lift` tests, m21-001 and the project-table gates. `ROMWRIGHT_FLOW_DIFFERENTIAL*`, `RuntimeConfig::flow_differential*`, the `ownership.py` `romwright_flow*`/`romwright_parent*` rules and the `decomp_native` coverage binary went with it. `ROMWRIGHT_CONSOLE` is no longer read anywhere; `ROMWRIGHT_CONSOLE_SHARDS` keeps its name (it sizes in-process lanes) so existing scripts work.
+
+**Scripts and docs.** `decomp_native` removed from the tool fingerprints and env of `import_speed.py` (`--native` now holds `ghidra_opt` only), `console_research.py`, `match_emit.py`, `locals_doc.py`, `ownership.py`/`ownership_build_coverage.sh` (no `decomp_opt` build), `gate.sh` (no partial/skip path: `disasm` always runs), `ui_gate.py`, the 14 gates that set `ROMWRIGHT_CONSOLE`, `m1-009`, `m6-001/002/005`, `m7-003` (decompile gate follows `ghidra_opt`, not the console), `m22-001`, `ppc_sda.sh`, `differential.sh` (the console decompile step is now the native CLI), and `.github/workflows/ci.yml` (the console build step, 57 `ROMWRIGHT_CONSOLE` env lines, `binutils-dev` and `libzstd-dev` dropped). Docs: README, `environment.md` (new Build prerequisites section), `getting-started.md`, `scripting.md`, `core-api.md`, `ownership.md`, `import-speed.md`, `console-research.md`, `third-party.md` (the flow port is now cited at `native_runtime/flow.rs` and Ghidra's `SleighInstructionPrototype`, Apache-2.0), `SECURITY.md`, `game-decomp-plan.md` section 10.
+
+**Does `binutils-devel` still matter? No.** `make -n ghidra_opt` in the patched tree names no `bfd`/`zstd` input and `ldd native/build/ghidra_opt` lists only `libz`; `loadimage_bfd.cc` was never part of `ghidra_opt`. The console linked BFD and zstd; with it gone a build needs a C++11 compiler, make, git and zlib. (The `arm-none-eabi` GNU binutils some tests assemble with are unrelated.)
+
+**`ghidra_opt`.** Rebuilt from the main tree under the lock (`native/build_ghidra_opt.sh --jobs 4`, TMPDIR under $HOME; the hash-codec self test passes): sha256 `b45caa8d24430087ed4aa8ce443f8f9efdccade5a0604e6ac47000c87c123b98` (was `7980d0f2d3dfec6c2ae051fbd656e9a07cea892c665a55537e0ed4eb0cd47dd5`). The removed hunks only fed the console and the dead `InstructionFlow` hooks; the bytes differ, the behaviour is held by the gates below.
+
+**Gates** (`nih-vps-u`, release, tree = snapshot of the main tree before the change vs the same plus this change; load average 2.9-4.2 from other users):
+- `tests/m21-001_real_images.py`, all 7 images, PASS and **identical to the current numbers**: gba .9761/.9971, nds .9729/.9984, capcom .9412/.9964, dungeon .9438/.988, psx .9878/.3663, vita .9731/.9713, x360 .9833/.9964.
+- Import wall time, paired and alternating (`import --timings`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, 3 pairs per image, order swapped each pair): **gba** before 18.18 / 18.12 / 18.08 s, after 18.14 / 18.01 / 17.99 s; **gc** before 3.53 / 3.55 / 3.56 s, after 3.53 / 3.55 / 3.51 s; **x360** before 36.09 / 36.54 / 37.55 s, after 36.48 / 36.39 / 37.17 s. No difference beyond noise, as expected: since the 2026-10-09 cutovers none of these three imports asked a console anything (the flow differential was off), so this change removes a code path they did not take. `FlowStats` is identical (gba 460 batches, 1,305 instructions).
+- `tests/m10-005_overlay_isolation.py` PASS (isolation, nds_offsets, gc_offsets, n64_offsets), `tests/m20-014_rel.py` exit 0 (exact relocations, bad offset and truncation refused), `tests/m2-008_nonreturn.py` `passed: true` (5 inferred, 3 call xrefs removed and restored, stale inference retracted: the nonreturn analysis now runs on `SleighFlow`); `m6-002` and `m6-005` PASS. `tests/m6-001` fails on both trees before it runs a command: the CLI dispatches a verb (`evidence`) its usage text does not list (user WIP in `main.rs`, same failure on the before-tree).
+- Local (`-j 2`): `cargo test -p romwright-core --lib native_runtime::` 34 passed, 1 ignored; `-- native::discovery native::tests nonreturn demand:: listing exec:: import_cache native::elf_pointers native::nonreturn types_infer::register_overlap` 127 passed; `--test elf_image` 7 passed; `cargo check --workspace --all-targets` clean except one `dead_code` warning in `crates/romwright-worker/src/specs.rs` (`Probe::return_size`, a user WIP file, present before this change).
+
+**Files.** New: `native_runtime/disasm.rs`, `native/romwright_ppc_return.hh`. Deleted: `native/{build_console.sh,romwright_flow.hh,romwright_parent.hh,discover.sh}`, `benchmarks/flow_differential.py`. Edited (user WIP files, minimal): `crates/romwright-cli/src/main.rs` (`ir-dump` error marker), `crates/romwright-core/src/lib.rs` (`console_flow` removed, `listing_window` doc), `native.rs` (the now-unused `scratch_root` re-export), `native/tests.rs` (two tests ported to `SleighFlow`, one regression test renamed to a decoder failure, the console precondition of a PE test replaced by the install check). Also: `native_runtime.rs`, `native_runtime/{lift,flow,image,reference_pass}.rs` (`MappedImage` reduced to `parse_binary`/`chunks`; `SleighFlow::parser_cache` removed; `SleighLifter::file` resolves a mapped image's own language directory as `mapped_console` did, which the vendored Gekko/Xenon/PSX definitions need), `native/discovery.rs` and its tests, `demand.rs`, `nonreturn.rs`, `exec.rs`, `listing.rs` (`SleighListingSource`), `session.rs`, `import_cache.rs`, `romwright-model` (`FlowStats` doc), `types_infer/register_overlap.rs` (an unused import), `tests/elf_image.rs`.
+
+**Gaps.** (1) The disasm/listing contract change above. (2) Not re-run here (heavy or needing tools this host lacks): `tests/m13-001`/`m13-002` end to end (their oracle was verified on 400 libc addresses, not the full gate), `m7-003`, `m22-001`, `tests/differential.sh` (needs the JVM bridge), the CI workflow (YAML parses; not run), and the ignored `file_queries_preserve_thumb_and_arm_symbol_contexts` (needs `arm-none-eabi`; the Thumb/ARM listing path was instead compared with the console on pokeemerald). (3) `benchmarks/reports/*.json` and `ownership*.{json,md}` were not regenerated: they keep the `decomp_native` fingerprint and the old C++ line counts. (4) The mapped-image listing builds a lifter per call (the console was a process per call); a persistent lifter for the desktop window is a follow-up. (5) The `RuntimeConfig` field `console_shards` and the env `ROMWRIGHT_CONSOLE_SHARDS` keep their historical names.
+
+## Measurement gaps: Vita prototype job, GBA stock Ghidra, m13 (2026-10-09, MeasureGaps)
+
+Three holes closed or explained. Heavy runs on `nih-vps-u` from a mirror at `~/runs/MeasureGaps/ventris` taken 17:07 (before the console/constants/patterns C++ cutovers that landed afterwards: tools `ghidra_opt` 70ce01d4 / `decomp_native` 2c03f4b0, `romwright-cli` 3427f0bf, tools fingerprint `50e639161adfeb6f`); the host was shared, load average 3-25 (mine: Vita job, two stock-Ghidra GBA runs, m21 and m13 runs, one build; other agents', the rest). No timing below is a paired timing unless it says so.
+
+### 1. Vita full prototype job (default / infer-prototypes / inferred-types-off, with baseline-off as reference)
+
+`python3 benchmarks/console_research.py --target-dir ~/runs/MeasureGaps/target --cache ~/runs/MeasureGaps/cache --images psv-need-for-speed-most-wanted --configs default,infer-prototypes,inferred-types-off --jobs 4 --prototype-budget-ms 18000000 --no-m22 --out ~/runs/MeasureGaps/console_research_vita.json`, exit 0, 17:11 to 22:27 (5 h 15 min). Report: `benchmarks/reports/console_research_vita_20261009.{json,md}` (copied from the host, not edited).
+
+**Overlapping failures: 0.** `Overlapping` occurs nowhere in the report, the four result files or the log; infer-prototypes and inferred-types-off decompile **200/200** (ProtoWork's section: 198/200, 0x812a3f46 and 0x81419bf6 failed). The only failures in the job are baseline-off's two `no function at 0x8100d050 / 0x812be104` (its import finds fewer functions; same two in the earlier reports). Prototype stage: 3 rounds, stop `round_limit`, 0 worker deaths, 19 decompiler failures in the job (49,169 analysed / 34,897 changed; types-off 48,619 / 33,606).
+
+| config | decompiled | gotos | labels | irregular | native warnings | lines | recall / precision | prototype job s |
+|---|---|---|---|---|---|---|---|---|
+| default | 200 | 26 | 19 | 124 | 505 | 14,057 | .9731 / .9713 | |
+| baseline-off | 198 | 46 | 32 | 125 | 505 | 14,020 | .9697 / .9712 | |
+| infer-prototypes | 200 | 24 | 18 | 73 | 306 | 13,665 | | 11,586 |
+| inferred-types-off | 200 | 24 | 18 | 73 | 306 | 13,633 | | 6,801 |
+
+Verdicts: all research (default vs baseline-off) **helps** (recall +0.3 pp, gotos 46 -> 26); persisted prototypes **helps** (vs default: irregular 124 -> 73, warnings 505 -> 306, gotos -2, labels -1); inferred types -> prototypes **neutral** (lines -32 only). Against FinalGate's run (`console_research_final2`, same default row): infer-prototypes decompiled 198 -> 200, irregular 72 -> 73, warnings 288 -> 306, lines 13,253 -> 13,665 (the two functions that failed now print, +412 net); inferred-types-off 198 -> 200, 288 -> 306, 13,224 -> 13,633. Prototype job time 8,389 / 7,854 s then, 11,586 / 6,801 s now: not comparable (the first job ran at load 3-25, the second mostly at 1-3).
+
+Limit: this is the tree of 17:07, not the tree as of writing (native C++ cutovers since); not re-run.
+
+### 2. GBA: stock Ghidra does finish, in 14,284 s, and the 3,600 s kill is the Non-Returning Functions analyzer
+
+`analyzeHeadless ... -import pokeemerald.gba -loader GBALoader -processor ARM:LE:32:v4t -postScript ExportFunctionEntries.java -deleteProject -log`, `GHIDRA_HEADLESS_MAXMEM=8G` (the harness's command), with no cap, plus `jstack` of the JVM every 180 s (79 samples) and jstat. Exit 0, **wall 14,284 s (3 h 58 min)**, analysis total 14,275 s, JVM CPU at least 12,991 s (one busy core; young GC 6% of the time, no full GC), RSS peak 8.6 GB, load 3-25, so not a paired timing (CPU/wall near 1 says the load barely mattered). 202,576 function entries exported (truth 15,856): `import_speed.py`'s own `score_entries`: recall 0.4652, precision 0.0364 (ours .9737 / .9971).
+
+Per-analyzer seconds (Ghidra's summary): **Non-Returning Functions - Discovered 9,201** (64%), ARM Constant Reference Analyzer 2,187, Decompiler Switch Analysis 1,602, Create Function 969, Create Address Tables - One Time 124, Call-Fixup Installer 84, Stack 40. Samples: 50 of 79 in `FindNoReturnFunctionsAnalyzer.added` (49 inside `targetOnlyCallsNoReturn`, lines 472/482/490 of the 12.1.3 source), 12 in ConstantPropagation/Arm, 11 in DecompilerSwitch. The loop: `detectNoReturn` walks, for every suspicious call target under the evidence threshold, all code reachable from it through a `SimpleBlockModel` (per-call `visited` set), and `added` re-runs for every batch of new functions. The input that makes this explode is 202,576 function entries on a ROM with 15,856 real ones.
+
+Control run (diagnostic only): same command with that analyzer disabled in a `-preScript` finished in **5,072 s** (load 11-25; analysis 5,056 s: ARM Constant Reference 1,413, Create Function 1,546, Decompiler Switch 1,659), 203,400 functions, recall 0.516 / precision 0.0402. So the analyzer is 64% of the time, and the other 36% would still miss the 3,600 s cap on this host.
+
+Metric untouched: `LIMIT_S` stays 3600, `import_speed.py` still ends `fail` on the GBA row. The measured completion time is recorded as a supplement in `docs/import-speed.md` ("Supplement: why stock Ghidra does not finish GBA in 3600 s"); a cap of at least 14,400 s would turn the row into 56.9 s / 14,284 s = 0.004 with quality passing. `benchmarks/reports/import-speed.*` not regenerated.
+
+### 3. m13-001: one real bug fixed, one failure explained and standing
+
+Re-run with the gate itself (`python3 tests/m13-001_vsa_switch.py --work ... --report ...`, host, host libc, `cargo` shimmed to the prebuilt binaries), before and after, two alternating pairs (load 14-25 / 14-16): reports `benchmarks/reports/m13-001-rerun-20261009-before-fix.json` (second pair) and `m13-001-rerun-20261009.json`.
+
+| tier | before: branches / agree / beyond / missed | after |
+|---|---|---|
+| stock | 132 @ .981 | 132 @ .981 |
+| VSA alone | 41 / 30 / 0 / 91, phase 2.63 s | **92** / 81 / 0 / 40, phase 2.37 s, soundness 1.0 |
+| interpreter (`ROMWRIGHT_SJA=1`) | 67 / 34 / 19 / 84, phase 4.13 s | **134** / 96 / 23 / 21, phase 4.93 s (gate 5.0), soundness 1.0 (0 outside, 0 undecodable) |
+| decompiler alone | 130 @ .9978 | 130 @ .9978 (unchanged code) |
+| combined (default) | 130 @ .9978, 114 agree, 1 beyond, 3 missed | identical |
+
+First pair: before the decompiler row was 122 (load 17-25: its per-function deadlines), after 122 and combined 130; the second pair reproduces the standing numbers of the 10-08 report and the 10-09 harness table (stock 132, VSA 41, interpreter 67, decompiler 130, combined 130, 3 missed).
+
+**Failure 1 (interpreter 67 < decompiler 130) was a real recovery bug, not a counting artefact.** `recover_switch_tables_native` leaves a table to the decompiler pass when its new cases lead to another dispatch with no table, when it is asked in the last switch round and reaches new code, or (kept) when a target lies outside the function. With `ROMWRIGHT_NO_SWITCH_DECOMPILER=1`, which is how m13 builds the VSA and interpreter tiers, no decompiler pass follows, so those tables were recorded by nobody: ROMWRIGHT_TRACE_VSA on libc showed 42 nested and 40 last-round tables dropped (a round later the same candidates re-asked, 282 -> 219 -> 218). Fix: `native/switch_tables.rs`, `let decompiler_follows = imp.cfg.switch_decompiler;` gates the nested and last-round deferrals (the outside-function deferral stays: m13 scores such targets unsound). The default path is unchanged by construction (decompiler on).
+
+- Tests: `native::discovery::tests::nested_dispatches_are_both_recovered_when_no_decompiler_follows` (two nested ARM `addls pc,pc,r,lsl #2` dispatches; **failing first**: with the gate forced to `true` it fails with `None`), and `a_table_leading_to_an_unanswered_dispatch_is_left_to_a_following_decompiler` (the default is kept). `cargo test --release -p romwright-core --lib -- native::` on the host: 414 passed, 0 failed, 1 ignored.
+- m21-001, all 7 images, paired before/after on the host: **default identical** (gba .9737/.9971, nds .9729/.9984, capcom .9418/.9964, dungeon .9438/.988, psx .9878/.3663, vita .9731/.9713, x360 .9833/.9964; capcom reads .9412 on a later same-binary run: decompiler deadlines at load 15, noise). Decompiler-off (`ROMWRIGHT_NO_SWITCH_DECOMPILER=1`) before -> after recall: gba .9699 -> .9721, nds .9682 -> .9724, vita .9716 -> .9731, x360 .982 -> .9827, capcom/dungeon/psx unchanged; precision equal on all (dungeon .9237 on both, still below its floor with the decompiler off, as before).
+
+**Failure 2 (combined 130 not above stock 132) stands; it is not a bug the VSA code can fix, and the gate was not changed.** Combined is the default pipeline (VSA, then the decompiler), which leaves SJA off: 114 agree, 1 beyond (`__spawni_child` 0x1de35d), 3 of stock's missed. The three, per case (all unguarded dispatches that stock itself recovers only through its fallback, warnings "Could not find normalized switch variable to match jumptable" and "Sanity check requires truncation of jumptable", stock tables of 112, 64 and 8 cases):
+
+| branch | function | stock targets | why we miss it |
+|---|---|---|---|
+| 0x1d7692 | `parse_expression` | 48 | `movzbl 8(%rax)` then `movslq (%rbx,%rax,4)`: a byte index with no guard anywhere (GCC dropped it, `default` unreachable). VSA refuses (`unguarded`), SJA has only the 8-bit width bound, which it does not accept as a guard; our decompiler prints `Treating indirect jump as call`. Stock fills 256 slots and truncates at a sanity check. |
+| 0x21cc03 | `nss_database_check_reload_and_get` | 6 | same shape (`movzbl (%r14)`, `movslq (%rsi,%rax,4)`, no guard); SJA `Unknown`. |
+| 0x140b09 | `__printf_buffer` | 32 | two-stage dispatch (a byte table `jump_table` picks the index into `step1_jumps`) with the range check on `r14d-0x20` while the index is `rsi-0x20`: no guard on the dispatched value, nested dereference (SJA has none). The other 18 dispatches of the function are found. |
+
+Because every claim the pass makes must be bounded by something, recovering these three would be a new heuristic (read until a sanity check fails, as stock does), not a bug fix; not done. The count that would clear the gate is already there behind an opt-in: **combined with `ROMWRIGHT_SJA=1` answers 150** (129 shared with stock, 21 beyond, 2 of stock missed, soundness .9983 > .981; measured with my driver on the local libc where stock reads 131: 150 > 131), because SJA recovers the glibc string routines' hand-written dispatches that stock does not. m21-001 with `ROMWRIGHT_SJA=1` on all 7 images (host): recall/precision identical to the default run on every image (capcom .9412 equals the same-binary default rerun). Flipping SJA on by default is a product decision, not taken here; the data above and `benchmarks/reports/m13-001-rerun-20261009.json` are what it would rest on. Not measured: SJA's import-time cost on the 7 images (the m21 times of that run were at a different load than its pair).
+
+Interpreter after the fix, 21 stock dispatches still missed (local libc, trace): 11 SJA `Unknown` target (nested dereference or unbounded index), 10 not asked at all (9 of `__printf_buffer`'s dispatches sit behind the unresolved 0x140b09, never become candidates; the rest not diagnosed). The interpreter's 23 beyond-stock tables are the string-routine dispatches (`__stpcpy_sse2_unaligned`, `__strncat_sse2_unaligned`, ...), all sound.
+
+Count noise to know about: the decompiler tier answers 121-130 depending on host load (60 s per-function deadlines), so the gate is not deterministic under load; and stock reads 131 here and 132 on the host (different libc builds).
+
+**Files.** `crates/romwright-core/src/native/switch_tables.rs` (`decompiler_follows`), `crates/romwright-core/src/native/discovery/tests.rs` (two tests), `docs/import-speed.md` (supplement), `docs/console-research.md` (m13 lines, item 5), new `benchmarks/reports/{console_research_vita_20261009.{json,md},m13-001-rerun-20261009.json,m13-001-rerun-20261009-before-fix.json}`. No user-WIP file touched.
+
+**Gaps.** The current tree (console retired) was not re-run for m13 (ConsoleRetire's note: the gate's decode oracle moves off `decomp_native`); the Vita job is of the 17:07 tree; the two unguarded-table and two-stage cases are open by choice; no decision on SJA by default.
+
+## Integration gates: one binary set, combined tree (2026-10-09, IntegrationGates)
+
+**Set.** One snapshot of the working tree (HEAD 7e29f17c plus the 407 uncommitted paths, rsynced to `nih-vps-u:~/runs/IntegrationGates/ventris` at 22:41 UTC), `cargo build --release -j 4 -p romwright-cli -p romwright-worker -p romwright-api` on the host (2m34s, 0 warnings) and `native/build/ghidra_opt` as it sits in the tree. Every gate below ran on those four files; no source was edited, nothing was patched.
+
+| binary | sha256 |
+|---|---|
+| `romwright-cli` | bc3529bc290be17c73f63d88f3e48d629936d8bad314f4ce5db879c28dd5a433 |
+| `romwright-worker` | 09110d32a0206610a0865b617ff04c957e55c470bf709ed2abb65014b7526d90 |
+| `romwright-api` | 17b05de68f0f85a5b2186ab96a550dd064dd059a1ad54e0855ccec81a9953b88 |
+| `native/build/ghidra_opt` (the tree's; used for every gate) | b45caa8d24430087ed4aa8ce443f8f9efdccade5a0604e6ac47000c87c123b98 |
+| `ghidra_opt` rebuilt on the host (`native/build_ghidra_opt.sh --jobs 6`, built twice: same hash both times; cross-check only) | 68d15b762520fe52c41732ab7bf7db9a311ec0235ab3b1ab71be94830db32c14 |
+
+**Why the host's native hash differs from the tree's.** The host build is deterministic and the same sources give b45caa8d when rebuilt locally from a clean copy (`native/build_ghidra_opt.sh --jobs 2`, reproduced exactly). The host binary is 64 bytes larger and carries a second `GCC: (GNU) 16.1.1 20260515` note (host crt/libgcc objects) next to `16.2.1 20260819`; the local one has only `16.2.1`. A toolchain-package difference, not a source difference. The two behave the same on the gates that read it (GTE gate PASS and printer_diff 1800/1800 with each). Gates use the tree's b45caa8d.
+
+| # | gate | command (host, `ROMWRIGHT_{CLI,WORKER,GHIDRA_OPT}` = the set above) | result |
+|---|---|---|---|
+| 1 | IR v4 accepted, no printer-version error | `native/romwright_printir.hh` writes version 4, `printc/ir.rs` requires 4; exercised by the gates below plus `romwright-api` stdio `decompile_doc` on `psx-darkstalkers-3/VS.EXE` `801838d4` | **pass**: 0 `render`/`document`/`missing-output` rows in 3,600 printer-diff functions (2 runs), 200/200 decompiles per PSP configuration (4 configurations), the API answered with a document, no `printer IR version` error anywhere; no patch to the API or worker |
+| 2 | GTE macros | `python3 tests/p4-1_gte_macros.py` | **PASS**, 8/8 fixtures: `project_triangle` 14 stock lines / 13 raw statements / 6 lifted, `project_vertex` 8/7/6, `average_depth4` 7/6/3, `light_vertex` 10/9/6, `load_transform` 17/8/2, `global_vertex` 7/4/3, `left_as_written` 5/4/4, `project_array` 9/9/8 (same as GteMacros' table) |
+| 2b | GTE sequences in the corpus | `export-c` is refused for the whole image (see below), so `romwright-cli decompile` of all 2,206 functions of `VS.EXE` with `ROMWRIGHT_GTE_MACROS=0` and `1` | **0** lifted sequences (0 `gte_*(` calls in both modes). 3 functions contain GTE code (`801838d4`, `8018395c`, `8018397c`: 10 `ctc2` words), 10 raw register lines; the 11th hit `8015b52c` is the character literal `'H'`. **Darkstalkers 3 is the only PSX image in `~/ventris-corpus`** (`PS-X EXE` magic found in no other extracted file; the other archives are GBA, GC, NDS, 3DS, Android, NX, PS2, PS3, PS4, PSP, PSV, X360), so there is no second image to count |
+| 3a | printer diff, default | `benchmarks/printer_diff.py --target target --ghidra-opt native/build/ghidra_opt --jobs 4` | **1800/1800 identical**, 0 decompile errors (8 console images x 200 + 200 libc) |
+| 3b | printer diff, verify | same with `ROMWRIGHT_RUST_EXPRESSIONS=verify` | **1800/1800 identical**; summed over every line's `expressions` (scratch aggregator on the script's own `run_chunk`): **72,049 expressions verified, 0 mismatched** |
+| 4 | PSP symtab, console_research | `benchmarks/console_research.py --cache ~/runs/IntegrationGates/cache --target-dir target --images psp-puzzle-bobble-pocket-symtab --configs default,infer-prototypes,join-pairs-off --jobs 4 --out benchmarks/reports/console_research_integration_20261009.json` (tools fingerprint c5abc7e47c3417ac; fresh imports and prototype jobs, n=200 seed 20261006) | `infer-prototypes`: arity **0.9034**, type exact **349/438 = 0.7968**; `join-pairs-off`: arity **0.8759**, type exact **339/438 = 0.7740**; `default` 0.8828 / 259 = 0.5833 (unchanged). **All three equal PspImport's claims** (0.8759 -> 0.9034, 0.7740 -> 0.7968). 200/200 decompiled everywhere; the prototype job analysed 1,301 functions, changed 874, 1 decompiler failure, both with the pass on and off. Irregular functions 59 / 59 (PspImport expected +2 with its older printer; with the current printer there is no difference) and native warnings 143 vs 142, lines 12,202 vs 12,231. Report: `benchmarks/reports/console_research_integration_20261009.{json,md}` |
+| 5a | worker lib | `cargo test -p romwright-worker --lib -- printc types_infer`; and the whole worker lib (`cargo test -p romwright-worker --lib`) | **58 passed** (printc, 39 filtered out; `types_infer` lives in romwright-core, 0 matches here); whole lib **87 passed, 0 failed, 10 ignored**; 1 warning, `Probe::return_size` never read (`specs.rs`, user WIP, not touched) |
+| 5b | core lib | `cargo test -p romwright-core --lib -- native_runtime:: native::discovery` | **72 passed**, 0 failed, 1 ignored (657 filtered out) |
+| 5c | core lib types_infer | `cargo test -p romwright-core --lib -- types_infer` | **61 passed** (PspImport's `pair_params` included) |
+
+**Integration bugs found: none.** The combined tree needed no source edit (no user-WIP file touched, no file but this one and the new report changed in the repo). The three switches (`ROMWRIGHT_RUST_EXPRESSIONS`, `ROMWRIGHT_GTE_MACROS`, `ROMWRIGHT_JOIN_PAIRS`) work together on one build; PspImport's host-only API patch is not needed with this set.
+
+**Observed, not integration bugs, not fixed.**
+- `romwright-cli export-c VS.EXE psx <outdir> --project ...` over the whole PSX image stops with `native: partial access to DAT_80196238 has no scalar C type` (`crates/romwright-core/src/emit_m2c/storage.rs:117`, user WIP `emit_m2c`). Identical with `ROMWRIGHT_GTE_MACROS=0` and with `ROMWRIGHT_RUST_EXPRESSIONS=off`, so it is not caused by the new printers; the per-function paths (`decompile`, `export-c --address`, the API) do not hit it.
+- printer_diff and the libc row reuse the existing `~/.cache/romwright/research-eval` default projects, which were imported by earlier CLI builds (their import is not part of the set above); only the decompile side is of this set. The PSP rows were imported fresh with this set.
+- The printer_diff reports were written to the host scratch directory, not to `benchmarks/reports/`.
+
+**Files.** This section; new `benchmarks/reports/console_research_integration_20261009.{json,md}`. Host run directory and local scratch (`~/.build/IntegrationGates`) removed.
+
+## XEX2 normal (LZX) compression decodes: AMPED 3 imports (2026-10-09, XexLzx)
+
+`romwright-cli import` of the AMPED 3 devkit `default.xex` failed with `error: native: xex: PE image has no sections`. The image is compression 2 (normal/LZX), encryption 1 with the zero devkit key, `window_size` 0x8000, first block 0x10000. No earlier X360 image in the corpus used mode 2 (MW2, Forza, Crash, AW and BO2 are all mode 1), so the mode-2 path had never decoded real data.
+
+**Root cause: the block chain was walked wrongly and the LZX stream was decoded in one call.** `native/xex.rs::decompress` (1) advanced `pos += nextSize`, but a block's header names the size of the *following* block, so every block after the first started at the wrong offset (the first block's size is the header's `0xC` field, each later one comes from the previous block's header); (2) bounded each block's chunk walk with the constant first-block size; (3) concatenated all chunks and handed the lot to `lzxd::Lzxd::decompress_next` as a single frame with `image_size` output, while each chunk is one LZX frame (0x8000 output bytes, ends 16-bit aligned, so its padding is not data) and `lzxd` needs one call per frame; (4) ignored the header's window size and returned a short image without error. The result was an image with no PE sections.
+
+**Fix** (`crates/romwright-core/src/native/xex.rs`): `lzx_frames` walks the chain with the correct block sizes and bounds-checks every block and chunk against the payload and its block; `decompress` decodes each chunk as one frame (`min(0x8000, remaining)` output) on a shared decoder, maps the header window size (`lzx_window`, 32 KiB to 32 MiB) instead of the hard-coded 32 KiB, and errors if the stream does not produce exactly `imageSize` bytes. A wrong AES key (the importer tries retail first, then devkit) fails in the chain walk, before `lzxd` runs. No special-casing of any image. The chain/chunk layout was checked against xenia's BSD-3-Clause loader and XEXLoaderWV; the LZX bitstream is MS-PATCH's, decoded by the existing `lzxd` crate (`docs/third-party.md`, new section "XEX2 normal (LZX) compression").
+
+**Regression test** `native::xex::tests::lzx_frames_decode_across_blocks_and_alignment` builds, from the public structures only (no game bytes), a 3-frame LZX stream (verbatim blocks with an 8-bit-literal main tree; block A spans frames 1-2, block B spans frames 2-3; frame 1 is 8 bits modulo 16 so it carries alignment padding) inside a two-block XEX chain of different sizes with the first block zero-padded, and asserts the exact decoded bytes plus errors for a wrong first-block size, a wrong image size and an unsupported window. It passes; `cargo test -p romwright-core --lib -- native::xex` 2 passed; `cargo check -p romwright-core --all-targets` clean (0 warnings).
+
+**AMPED 3** (`x360-amped-3/default.xex`, `--timings`, fresh project, `ROMWRIGHT_NO_IMPORT_CACHE=1`, 0 `degraded` lines, host load average 7.47/6.45/7.58 at start): **35,573 functions, 152.9 s wall** (151.0 s on a first run at load 3.7); sections `.text` 0x82150000 (7.24 MB) and `BINK` 0x82837800 (66 KB) executable.
+- Scoring A (the asked one): truth rows with size>0 whose start lies in an executable region = 18,942; hits 18,096 -> **recall 95.53%**; found starts in executable regions not in that set = 17,477 -> **precision 50.87%**. The precision is low by construction: the 17,210 MAP-only rows have size 0 and are real functions, so they count against precision here.
+- Scoring B (all 36,152 rows, size 0 included, in executable regions): hits 35,269 -> **recall 97.56%, precision 99.15%** (304 found starts outside the truth).
+- Size match is not scored here.
+
+**Decompressed PE vs staged `default.pe`** (decoded image dumped from a throwaway copy of the importer, not in the repo): image size 0x8f0000, 12 sections, headers (0x400 bytes) and the section table identical, `.tls` and `BINKBSS` identical. In `.rdata`, `.pdata`, `.text`, `BINK`, `.data`, `BINKDATA` every differing 32-bit word is the base-relocation delta 0x81C00000 (data/pointer words: 77,682 + 30,494 + 16,460 + 7,632 + 18 + 29; PowerPC `lis` immediates, high halves: 44,772 + 96); no unexplained difference. What is left is XEX-specific content, not decode error: the import table at `.rdata` 0x400..0x500 and 0x504..0x77c (222 words), 212 eight-byte import thunks in `.text` 0x836934.., and the XEX-only sections `.XEXID` (1 word), `.idata` (250), `.XBLD` (128), `.reloc` (140,160 words; XEX keeps different data there). The importer maps sections from the decoded image, so none of this needs special handling.
+
+**Other X360 XEX images, paired before/after runs** (same tree copy, differing only in `xex.rs`; each pair back to back, `cwd` = the ventris tree, 0 `degraded` lines; load average 1-min at start):
+
+| image | mode | before | after | load |
+|---|---|---|---|---|
+| MW2 `default.xex` | 1 | 14,978 (28.2 s) | 14,978 (27.4 s) | 6.3 / 5.7 |
+| Forza Horizon 2 proto `default.xex` | 1 | 77,946 (131.3 s) | 77,946 (159.3 s) | 5.2 / 4.7 |
+| Burnout Crash `CRASH_X360_RELEASE.DLL.XEX` | 1 | 10,928 (50.2 s) | 10,928 (53.2 s) | 7.2 / 6.7 |
+| BO2 `default_mp_script.exe` | 1 | 27,364 (111.5 s) | 27,364 (58.8 s) | 19.4 / 16.9 |
+| AW `1-s1_sp.exe` (run 1) | 1 | 36,525 (124.6 s) | **36,515** (177.4 s) | 6.2 / 10.4 (rose to 19.4 during the after run) |
+| AW (re-run, 2 more pairs) | 1 | 36,525 (103.4 s), 36,525 (97.8 s) | 36,525 (103.6 s), 36,525 (98.6 s) | 3.5 / 7.0 / 5.8 |
+
+Function counts are unchanged for all five. The one 10-function deviation (AW run 1, after) happened while the host load went from 10 to 19; AW is compression 1, which the change does not touch, and four further runs (two pairs, load 3.5 to 7) gave 36,525 both ways, so it is load-dependent analysis, not the fix. Wall times differ with host load and are not a performance comparison.
+
+**Observed, not fixed.** The block hashes (SHA-1 of each block, in the previous block's header) are not verified; the importer discriminates retail/devkit keys by chain validity and the `MZ` check. Compression 3 (delta) still copies the payload raw as before. Importing the 36,152-function image costs 152.9 s, 7.2 MB of `.text`.
+
+**Files.** `crates/romwright-core/src/native/xex.rs` (not a user-WIP file), `docs/third-party.md`, this section. The throwaway tree copy, local binaries, logs and both build directories were removed.
+
+## Hex-Rays (IDA Pro 9.4) as a comparator column on the console research images (2026-10-09, IdaBaseline): internal only
+
+**Licence.** `license.txt` in the IDA install, section 2.1(v), restricts benchmarking the Software and publishing performance data without first inviting Hex-Rays to review the results. That has not happened, so the results are internal and live only in `benchmarks/reports/console_research_hexrays.{json,md}`; no Hex-Rays number is in this file or in `docs/console-research.md`.
+
+**What was built.** `benchmarks/hexrays_research.py` runs IDA 9.4 through idalib on every image `console_research.py` scores and scores it with the harness's own functions (m21-001 `score()`, `console_research.dwarf_scores`, `locals_truth.score_function`, `spurious_gotos.score`); Romwright and stock Ghidra come from the existing reports. `benchmarks/ida_signatures.py` (the IDA driver) gained `analyze` and `decompile` modes (its original `BINARY` mode for `type_headtohead.py` is unchanged, and it now imports `ida_funcs`). `benchmarks/locals_stock.py` gained `--create` and `benchmarks/ghidra/ExportDecompiledC.java` an optional `create` argument; defaults are unchanged. Command: `python3 benchmarks/hexrays_research.py --run-stock --out benchmarks/reports/console_research_hexrays.json` (`--render-only` re-renders the markdown).
+
+**Method notes.** IDA runs auto-analysis only, on an `IDADIR` symlink tree without the host's three non-Hex-Rays plugins (a third-party EE COP2 disassembler and two plugins built from `~/ida-sdk`); MIPS images are also run with them. Containers IDA has no loader for are given as flat images at the importer's load address with its entry point seeded. A function created at a sampled address needs IDA's analysis run to completion on it, or Hex-Rays leaves ARM epilogues as `__asm`. Peak RSS is the worker's `VmHWM`, not `wait4`'s. The only Romwright binary on the host at the time could not serve as a Romwright column, so Romwright's locals and spurious-gotos rows in the internal report are older recorded reports, labelled as such.
+
+**Gaps.** Perfect Dark and Animal Crossing's REL are not in this harness; types need DWARF; stock Ghidra on `pokeemerald.gba` does not finish; m22 objdiff needs compilable C; timings are not paired with `import_speed.py`. The report's Gaps section has the list.
+
+## GBA: code the game runs from RAM is placed at its run address (2026-10-09, GbaOverlays)
+
+**What changed.** `crates/romwright-core/src/native/gba/overlays.rs` (new, std only) finds the RAM images a cartridge carries, from evidence in the ROM and no game table; `native/gba.rs` places them. An image that owns its run window is mapped beside the ROM in the `gba` program (flags RWX, one `modules` row each, kind `overlay`, `file_id` `rom:<start>-<end>`, so a ROM reference into it is a `module_xrefs` row, the REL/DOL shape) with its decoded entries seeded and their Thumb/ARM mode declared. Images that share a window become programs `gba.ov<N>` (the DS model: one `modules` row, `overlay_id`), and the `gba` program is discovered last, seeded by the overlays' calls into it (`sibling_call_host`). A ROM span that is only the *load image* of a placed image (multiboot, self-addressed) is split off as a read-only mapping (`rom.load-image.<n>`), so no code range covers it and nothing is found there under a wrong address. Loader diagnostics (severity info) say what was found and why. A cartridge with no RAM image imports exactly as before (one mapping `rom`, no modules, test below). One hunk in the user's `native.rs`: `parse_container_with` calls `gba::import_container` right after the NDS check. Single-image callers (`parse_native`) get the `gba` program with its resident images.
+
+**What the six ROMs actually do** (this is not what the ticket assumed).
+- **NASCAR Heat 2002.** `.island` (LMA 0x08363ee8) is a *second cartridge header*: logo, 0x96, complement check, `b +0xC0`; `.high_module` (LMA 0x08339780, code to ~0x344e68) is the code behind it, with absolute pointers valid at 0x02000d00. Nothing in the ROM `CpuSet`s them: a table of ROM chunk sources `0x08339780 + k*0x8000` sits at ROM 0x7c9bc and the island carries the matching RAM table `0x02000d00 + k*0x8000`; a multiboot client image sent over the link is the reading these bytes support (inference, not run). The detector finds both without a copy call: the island as an embedded multiboot header (gbatek "BIOS Multi Boot Function": loaded at 02000000h) and the module as *self-addressed code* (below).
+- **Golden Sun** does not use the BIOS LZ77 for its overlays. Its 96 code overlays are entries of one ROM index (974 ascending ROM addresses at 0x320004, resource *k* in `[table[k], table[k+1])`) packed by the game's own two codecs (type byte 0: a halfword-fed LSB-first bit stream; type 1: a flag-byte LZSS), all unpacked into the window at 0x02008000, with each `bl` operand stored as an absolute offset (see Codecs).
+- **Copy sites.** One BIOS `CpuSet` of 0x400 bytes (m4a `SoundMainRAM`, ARM) to IWRAM in each of NASCAR (0x03007000), Golden Sun (0x03007000), Klonoa (0x03000388), FE8 (0x03002c60), KH CoM (0x03000000); pokeemerald 0x800 bytes to 0x03001aa8. These stay ROM code too (the truth lists them at their ROM address), so their load image is *not* demoted. BIOS LZ77 call sites whose output is code: none in any of the six (the unit test covers the path).
+- **Multiboot headers**: NASCAR 1; FE8 2, byte-identical images (placed once, both ROM spans demoted); pokeemerald 2 (one accepted; the second `GBA` header, at 0x9aa144, has a wrong complement check and is refused). No stray header in Golden Sun, KH CoM, Klonoa. Golden Sun's decoders are copied by DMA3 to a *stack* buffer and run there: no fixed run address, so not placed (reported, not handled).
+
+**Five sources, each with the check that accepts it.** All share `Coverage`: recursive descent over Thumb-1 and ARM (ARMv4T: `Bad` for the unallocated groups, condition NV, `clz`/`ldrd`/`blx`, zero fill), counting returns reached.
+1. *BIOS `CpuSet`/`CpuFastSet` call* (gbatek "BIOS Memory Copy"): r0/r1/r2 are constants loaded in straight-line code before the call or before a `bl` to an `swi; bx lr` wrapper (a small constant propagator, any branch forgets); copy mode, source in ROM, destination wholly inside EWRAM/IWRAM, 32 B to 256 KiB. Accepted only if the copied bytes decode as code (>=30% and >=128 B decoded, a return reached, the first instruction decodes in the mode that decodes more from it).
+2. *BIOS LZ77 call* (gbatek "BIOS Decompression Functions"): the same arguments; the stream must be valid and fill exactly its declared size; the expansion must pass the same code check.
+3. *Embedded multiboot header*: the 156 logo bytes of the real header, byte 0xB2 = 0x96, a correct complement check at 0xBD (gbatek "GBA Cartridge Header"), an ARM `b` at +0 landing inside the image, and the entry decodes. Runs at 0x02000000; ends at the last decoded or literal halfword (gaps up to 512 B). Load image demoted.
+4. *Resource index* (run of >=16 strictly ascending ROM addresses in consecutive words): each entry unpacks with a codec the ROM carries and the result decodes as code (>=25%). The run address comes from `align` (5) per resource, with consensus: when >=3 resources agree on a base, a resource whose own best base is within 4x of a pointer landing on an entry under the shared one is accepted at the shared one; alone a resource needs 8 pointer hits and twice its runner-up.
+5. *Self-addressed code* (`align`): an extent of decoded code (gaps up to 512 B, >=1 KiB, a quarter decoded); each distinct 02xxxxxxh/03xxxxxxh word (odd: Thumb entry, word-aligned: ARM entry) votes for the run address that puts it on a function entry. Accepted when >=8 distinct pointers agree, more than twice the runner-up, and at least three times the number of ROM-address pointers naming its entries (code that runs in the ROM is addressed there). Then grown over code no call or prologue reached, using every RAM word in the ROM that lands in 4 KiB around it under that base. Measured separation: NASCAR's module has 28 hits against a runner-up of 7 and 1 ROM-address pointer; the final detector accepts no self-addressed extent in the other five ROMs, and a prototype with 2 KiB windows, scored the same way, had at most 5 hits on any ROM-resident extent there (32 to 1,553 ROM pointers).
+
+Seeds handed to discovery are the image start, call targets and pointer-named entries, never a bare prologue match (a mid-function `push {lr}` is not a function): 369 RAM entries in NASCAR, 353 truth hits, 16 not in truth. Without them the same import finds 328 of the 456 (full seeds 353), so they are kept.
+
+**Codecs (Golden Sun) and how they were checked.** Both were written from the loader routine in the ROM (`Resource_DecodeType01`'s copied body at 0x08002544 and the byte-LZ it dispatches to), not from any decompression source; GBATEK covers only the BIOS calls. Independent of the repo: every one of the 314 index entries that unpack ends its stream within 0..3 bytes of the index's own end for it (the alignment pad), and all 96 overlays unpack and pass the code check. The absolute `bl` operand (`stored = relative + offset + 2` for a pair at `offset`) was found by comparing the unpack with the decomp build's pre-compression overlay binaries on the local host (`out/tbs-en/overlays/resource_*.bin`, an oracle for bytes only, nothing copied): 96 of 96 identical byte for byte after the inverse. The importer undoes it only when that makes the buffer decode better.
+
+**gba-nascar-heat-2002** (the 456 truth rows with VMA != LMA are keyed by ROM address; mapped here through the section table in `truth/meta.json`: `.high_module` LMA 0x08339780..0x08363ee8 to VMA 0x02000d00, `.island` 0x08363ee8..0x08364ac8 to 0x02000000). Baseline binary (built from this tree before any change) vs this change; a throwaway scorer (not in the tree) read each project's `functions` table.
+
+| | before (baseline, rows at their ROM address) | after (rows at their run address) |
+|---|---|---|
+| overall recall / precision | 0.7629 (1004/1316) / 0.9824 | **0.8009** (1054/1316) / 0.9732 (0.9741 without one duplicate of a truth row, below) |
+| the 456 copied rows alone | 303/456 = 0.6645, all at the wrong address (308 entries in the load image); at their run address 0/456 | **353/456 = 0.7741** at 0x02000000/0x02000d00 |
+| the 860 other rows | 701 (0.8151) | 701 (0.8151), 714 entries, precision 0.9818 |
+| ROM entries inside the load image | 308 | 0 |
+
+The 103 copied rows still missed have a median size of 4 bytes (veneers, 2,390 bytes together). Not-in-truth RAM entries: 16 of 369. The module image is [0x339616, 0x344e68) (grown from the first run's 0x339faa; the first 0x16a bytes belong to the main image's data and are harmless), the island [0x363ee8, 0x364814), the m4a copy [0x54c, 0x94c) at 0x03007000.
+
+**gba-golden-sun.** 96 of the repo's 96 overlay-table addresses (`out/tbs-en` `Resource_Overlay36F..3CE`, addresses only) matched to a placed `gba.ov<N>` module (`file_off`), 0 placed outside the table; all at 0x02008000. **8,363 functions** found in the overlay programs; against the function addresses in the repo's per-overlay ELFs (addresses only; these are not in `truth/functions.tsv`) 8,164 of 9,137 = 0.8935 recall, 0.976 precision. The `gba` program is unchanged: 0.8667 / 0.9781 (base 0.8667 / 0.9781), verified 0.9435 / 0.8079 (same).
+
+**No regression, the other images** (recall / precision over `truth/functions.tsv`, base then change; every difference in `found` is a RAM entry the ROM-keyed truth cannot list):
+
+| image | base | change | RAM images placed | extra entries |
+|---|---|---|---|---|
+| klonoa-empire-of-dreams | 0.8612 / 0.9202 | 0.8612 / 0.9184 | m4a copy | 1: the copy of a truth row (0.9202 without it) |
+| fire-emblem-sacred-stones | 0.9536 / 0.9892 | 0.9536 / 0.9886 | m4a copy, 1 multiboot image | 5: 1 copy + 4 multiboot client (0.9887 without the copy) |
+| kh-chain-of-memories | 0.9582 / 0.9562 | 0.9582 / 0.9560 | m4a copy | 1: the copy (0.9562 without it) |
+| golden-sun | 0.8667 / 0.9781 | 0.8667 / 0.9781 | 96 overlays, iwram mixer copy | none in the ROM-keyed set |
+| pokeemerald (`tests/m21-001_real_images.py --only gba-pokeemerald`, host) | .9761 / .9971 (recorded) | **.9761 / .9972, PASS** | m4a copy, 1 multiboot image | none in range; ROM-range function sets identical (15,521 each) |
+
+**Timing** (paired, alternating order each round, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `import --timings`, 3 rounds, seconds with the 1-minute load average at start/end in brackets; host 8 vCPU shared with other agents, load 17-27 throughout, so these are noisy):
+
+| image | base | change |
+|---|---|---|
+| nascar | 4.0 (23.9/23.6), 5.1 (23.1/23.0), 4.0 (17.4/17.0) | 5.3 (23.6/22.5), 6.6 (23.4/23.1), 4.2 (17.0/17.0) |
+| klonoa | 5.4 (22.5/22.4), 8.1 (23.6/23.5), 5.1 (17.0/17.1) | 5.8 (22.4/22.2), 8.3 (23.0/23.6), 6.3 (17.1/16.6) |
+| fe8 | 20.6 (22.2/20.9), 24.7 (23.9/23.9), 27.6 (16.6/19.4) | 35.5 (20.9/27.0), 26.1 (23.5/23.9), 25.1 (19.4/19.1) |
+| kh-com | 27.8 (27.0/24.0), 29.0 (22.5/21.1), 37.1 (19.1/21.3) | 33.0 (24.0/22.5), 29.5 (23.9/22.5), 30.1 (21.3/21.2) |
+| pokeemerald | 71.7 (22.5/25.9), 45.4 (18.0/16.9), 55.4 (21.2/23.5) | 54.1 (25.9/26.9), 41.5 (21.1/18.0), 51.0 (23.5/23.1) |
+| golden-sun | 21.8 (26.9/24.9), 15.4 (19.0/17.4), 33.9 (23.1/24.1) | **195.8 (24.9/23.4), 178.9 (16.9/19.0), 268.9 (24.1/26.4)** |
+
+Detection itself (`overlays::find`, one process, release, local host) takes 30-50 ms on NASCAR and 0.07-0.5 s on the others (4 to 32 MiB). The five small images move inside the noise (NASCAR +1 s: 45 KiB more code to walk). **Golden Sun is about 9x slower** (median 22 s to 196 s): 96 more programs at ~1.8 s each, the same cost the DS overlay model has (pokeheartgold's 129 overlays); nothing here shortens it. The cost of the answer is that Golden Sun's 8.4 k overlay functions exist at all.
+
+**Tests** (`cargo test -p romwright-core --lib -- native::gba`: **26 passed**; all synthetic ROMs built in the tests from hand-assembled Thumb, no game bytes): `overlays::tests` (copy placed at its destination; data and zero fill refused; fill mode / ROM destination / window overrun refused; LZ77 call placed, malformed stream refused; codecs on hand-made streams; call-operand round trip; multiboot header placed, identical embedded images placed once with both load images demoted, wrong check byte refused; five code resources share a window and become overlays, two do not; self-addressed code placed and demoted, ROM-addressed code and code the ROM also points to by ROM address refused, fewer than 8 pointers refused) and `gba::tests` (RAM module mapped at its run address with module rows, seeds and modes; load image read-only and not a code range; resources become `ov0..ov4` with `overlay_id`, RWX mapping, module rows and `sibling_call_host`; a cartridge with no RAM code unchanged). `cargo check -p romwright-core --all-targets`: no warning from these files; its one warning is `artifact.rs:42` (`unused_mut`, another agent's file, not touched).
+
+**Limits.** DMA3 and register-computed copies are not seen (only straight-line constants into a BIOS call or its wrapper). A multiboot image maps only the part that decodes (pokeemerald's 0x528 bytes, FE8's 0x1b0). The type 2 resource codec (134 entries, not code) is not decoded. The Golden Sun codecs and the absolute-`bl` filter are the loader's own, applied to any ascending-pointer index whose entries start with type byte 0/1; a game with another codec gets nothing from source 4. NASCAR's module image ends where decoded code ends (0x344e68): its rodata beyond is not mapped in RAM. **Consumers keyed on ROM address will see the NASCAR copied rows drop to 0** (the load image is no longer code): `benchmarks/console_research.py`'s tsv truth, `tests/m21-001_real_images.py`'s `tsv` kind and TruthGbaDs' scorer need the LMA to VMA mapping above for `gba-nascar-heat-2002`; not edited (other agents own them).
+
+**Truth data (corpus, not the tree).** On request the module-keyed truth now exists for both images (old files kept as `truth/functions.rom-keyed.tsv`). `gba-nascar-heat-2002`: the 456 copied rows are at their run address in modules `gba:ram.02000000` (31) and `gba:ram.02000b96` (425), the names the importer gives its module rows in program `gba` (meta.json `modules` carries load address, ROM range, ranges and the section-table source; the notes describe the LMA to VMA mapping). `gba-golden-sun`: +9,137 rows as modules `ov0..ov95` (program `gba.ov<N>`, resource id 0x36f+N), taken from the repo's per-overlay ELFs (address, size, name only), 3,686 verified by the same unit rule as main, 0 overlaps; meta.json declares all 97 modules, each overlay with its own range. Rescored with the importer: NASCAR 1054/1316 overall (0.8009 / 0.9732), copied 353/456 (island 15/31, module 338/425); Golden Sun overlays 8164/9137 (0.8935 / 0.9762; verified rows 3252/3686), `main` unchanged at 0.8667 / 0.9781. Module naming convention sent to HarnessWave: `gba` program = ROM plus `gba:ram.<run base>` module rows, `gba.ov<N>` separate programs.
+
+**Files.** New `native/gba/overlays.rs`; `native/gba.rs`; one hunk in the user's `native.rs`; this section. Host run directory `~/runs/GbaOverlays` removed; no local build directories were created; no git writes; no `benchmarks/reports/*.json` touched.
+
+## Table-less `BRANCHIND` recovery in the Rust reference pass (2026-10-10, BranchindRust)
+
+**Change.** An indirect jump the import has no stored table for is no longer a return-or-call in the reference flow. `native_runtime/propagation/jump.rs` (new) gives `Graph::follow` (`graph.rs`) the table the import's value-set pass (`native/vsa.rs`, itself `JumpBasic::analyzeGuards`/`buildAddresses` of `jumptable.cc`, Apache-2.0, cited in `docs/third-party.md`) finds over the ops the flow holds: dispatch block, guard blocks and ways in come from the traced instructions (`switch_tables::switch_lines`), the p-code is the decoder's own (`Flow::pcode_at`), image reads go through the lane's loader. The order is `FlowInfo::recoverJumpTables`': table first, return-address test second, `truncateIndirectJump` last. Sound by construction, not by sampling: a table is kept only when (a) a guard bounds the index (`vsa` answers nothing unguarded; 1-case tables refused), (b) every case lies in the range being traced, (c) it **holds again over the flow it opened** (`unstable_recoveries`: a case that loops back into the dispatch can add a way in the first answer missed; such a table is struck and the range is traced again, up to 4 times, the last without recovery). `Flow::jump_shape` classifies what computes the target (index-scaled load = `TableLoad`, arithmetic with no load = `Island`, anything else = `Pointer`, a stack-popped target (`pop {r0}; bx r0`) included): only the first two are asked. ARM `add pc,pc,rN,lsl #2` needs no special case (SLEIGH's `pc` read is PC+8, Thumb's PC+4: tests below pin both).
+
+What the pass does with an answer (`native/references.rs` `settle_jumps`): the table is stored (`switch_tables`, `COMPUTED_JUMP` xrefs with `SWITCH_PROVENANCE`, `demote_case_blocks`), and `reference_tables_added` keeps another discovery round going when its cases reach bytes no walk decoded. A jump the recovery bounded but could not finish (`Outside` the range, `TooFewTargets`, `Unstable`, `NoStridedLoad`) is added to `indirect_jumps` so this round's switch stage (VSA with facts, then the decompiler) asks. One with no guard is not: on pokeemerald 2,400 function-pointer loads (`pop {r0}; bx r0`, `ldr r0,[r1,r0,lsl#2]; bx r0`) would otherwise crowd the owner budget. Switches: `ROMWRIGHT_NO_BRANCHIND_RECOVERY`, `ROMWRIGHT_NO_BRANCHIND_CANDIDATES` (both in the import-cache key; recovery is off with `ROMWRIGHT_NO_SWITCH_VSA` too). `ROMWRIGHT_TRACE_BRANCHIND=1` prints every `BRANCHIND` the pass meets with its verdict, shape and assembly (`REFPASS`/`REFSTAT`/`CANDIDATE` lines).
+
+**1. Inventory** (host `nih-vps-u`, release, `ROMWRIGHT_NO_IMPORT_CACHE=1`; "met" = distinct branches (program, address) the reference pass saw without a stored table at least once, with recovery and candidates **off**; the walk's own list holds far fewer: 649 on gba, of 15,005). Shapes: index-scaled table read / inline island / pointer (`bx r3` calls, `bctr`, stack pops, `ldr pc,[lit]`). "Recovered" = tables the in-flow recovery gave (some later narrowed by the switch stage, never widened: for every branch both the before and the after import stored, the stored tables are equal on all 10 images).
+
+| image | met | shapes (table read / island / pointer) | recovered in flow | refused by reason (never recovered by the flow, not Pointer) |
+|---|---|---|---|---|
+| gba | 15,005 | 633 / 2 / 14,370 | 596 | Unguarded 39, NoStridedLoad 17, NoGuard 11, Outside 3, NoLiveIn 1 |
+| nds (all programs) | 3,312 | 1,370 / 213 / 1,729 | 1,574 | TooFewTargets 28, Unguarded 27, NoStridedLoad 24, Outside 24, Unmodelled 1 |
+| capcom | 485 | 484 / 0 / 1 | 137 | NoGuard 300, Unguarded 27, NoStridedLoad 17, Outside 17 |
+| dungeon | 11 | 11 / 0 / 0 | 3 | Outside 5, Unguarded 3 |
+| psx | 51 | 23 / 28 / 0 | 19 | NoGuard 30, NoStridedLoad 2 |
+| psv | 621 | 492 / 45 / 84 | 435 | Outside 64, Unguarded 19, NoStridedLoad 30, Unmodelled 15, TooFewTargets 1 |
+| x360 | 479 | 284 / 5 / 190 | 0 | TooFewTargets 151, Unguarded 110, NoGuard 22, NoStridedLoad 6 |
+| gc | 138 | 109 / 0 / 29 | 105 | Outside 7, Unguarded 2 |
+| psp / psp-symtab | 18 / 19 | 18 / 0 / 0, 19 / 0 / 0 | 2 / 6 | Outside 13 / 9, Unguarded 2 / 3, NoStridedLoad 1 / 1 |
+
+"Refused" is the first pass's reason; most of capcom's 300 `NoGuard` (a dispatch reachable only through another unresolved dispatch has no guard block in the flow) and the psp/psv/x360 rows are stored by the switch stage afterwards (capcom 306, psv 161, x360 244, psp 16 / 13 in the same import; gba 20, nds 77). 1,726 NDS and 11,672 GBA table-less branches are pointers (`bx r3` calls, returns): calls, as before. libc (x86-64, m13) was not part of the reference-pass inventory: its table-less dispatches are the m13 question (below).
+
+**Before/after, each image (final tree vs the tree before; function entries, xrefs; loads 10-30 from other agents):** nds 31,389 -> 31,620 functions (+232 -1; 220 of the 232 are entries of the ELF's own symbol table, the 12 others are all in `arm7`, which has no truth), 228,709 -> 235,564 xrefs (+7,094 -239; switch branches 1,438 -> 1,687); gba 15,522 -> 15,521 (a case block `0x80c1520` now owned by flow), xrefs equal; dungeon xrefs +4 (DATA); psp +44 (23 DATA, 15 WRITE, 6 READ); capcom, psx, psv, x360, gc, psp-symtab equal when the decompiler pass is not timing out (see 3). The console had +1,220 xrefs and 9 functions over Rust before this: now Rust has +5,902 xrefs the console lacks (the console's reference flow only), and the console still has 799 xrefs Rust lacks (ov13 545, arm7 251, ov12 2, ov45 1; cause not traced; ov13's is one 624-byte function with an 8-case island), 72 functions Rust lacks.
+
+**2. Soundness oracle: the decompiler's own recovery** (`native_runtime/oracle.rs`, an ignored test harness: `recover_native_switches` = the worker's `--switches` pass, stored tables off, on the owners of the recovered branches of the *before* project of each image). Every table the flow recovered on gba, gc, psv, psx, psp x2, dungeon and capcom, and on three NDS programs (arm9, ov7, ov12), 1,867 in all (nds.arm7 separately: 31 of 32 equal, 1 no decompiler table): **1,857 equal (99.5 %)**, 4 ours-superset (gc 0x8002b7bc +1 case `0x8002ad24`, gc 0x80033588 +1, psv 0x814a6668 +4, nds.arm9 0x20a7514 +2: the facts-narrowing of `refine_with_facts` removes them in the stored table, so the **stored** tables equal the before-import's), 6 where the decompiler found no table (capcom 2, dungeon 1, nds 3; the switch stage had stored the same VSA table in the before-import), **0 disjoint or narrower**. x360 recovered no table in flow (see gaps). Stock Ghidra was not run on these images here.
+
+**3. psv nondeterminism: found, not in the table code; one mechanism for psv, capcom and AW.** psv twice, same binary, load 10: tables differ by 16 `COMPUTED_JUMP` xrefs of 0x813137bc and `FUN_8130ffc0` is 14,800 vs 14,584 bytes; the only other difference is the diagnostic `0x8130ffc0: decompiler timed out after 59s` (run B). The switch stage's decompiler pass has a 60 s wall-clock deadline per function (`exec::DEFAULT_BUDGET`, `WORKER_DECOMPILE_TIMEOUT_SECS`); this one function needs about that long, so whether its table exists depends on host load, and the missing table shortens the function. Pairs: psv with `ROMWRIGHT_NO_SWITCH_DECOMPILER=1`, two concurrent runs: **all tables identical** (only revision timestamps differ); AW (`x360-call-of-duty-advanced-warfare/1-s1_sp.exe`, PowerPC Xenon): with the pass off, two concurrent runs are identical (36,526 functions); with it on, at load 15-20 and again pinned to one core (`taskset -c 0`) both give 36,515 functions, identical tables, and the same single diagnostic `0x8273d480: decompiler timed out after 59s` (the on/off runs differ by 44 + 33 functions and 747 + 92 xrefs). Main's 36,525 at load 3.5-7 fits that function finishing in time; I did not get a quiet host to run it. Also seen as capcom/psv differences (up to 76 switch xrefs, 5 tables) between runs of the same binary at load > 20, **including with both new switches off**. So one cause covers all three. **Not fixed**: the remedy is a design change (a work budget instead of wall time: the decompiler's own op/instruction limit, or a larger deadline for a function the pass already knows is large); a longer deadline alone only moves the load at which it flips.
+
+**4. Tests (named for behaviour).** `native_runtime::tests`: `an_arm_branch_island_is_followed_into_its_cases` (PC+8 bias, cases reached and lost with recovery off), `a_guarded_arm_table_read_is_followed_into_its_cases` (also: `Outside` when the range ends before a case), `an_unguarded_arm_table_read_is_not_a_table`, `a_thumb_branch_island_is_followed_into_its_cases` (PC+4), `a_branch_through_a_register_is_a_call_not_a_dispatch`, `a_thumb_pop_return_is_a_pointer_not_a_dispatch`, `a_table_a_looping_case_invalidates_is_struck_not_kept`; `native::discovery::tests`: `the_reference_pass_stores_the_table_it_recovers_for_a_jump_the_walk_never_listed`, `the_switch_stage_is_asked_about_a_table_the_flow_bounded_but_could_not_finish`; `native::switch_tables::scratch_tests` (below). Host, release, `cargo test -p romwright-core --lib -- native_runtime:: native::discovery scratch_tests`: **83 passed, 0 failed, 2 ignored**. `cargo check --workspace --all-targets`: clean except `Probe::return_size` (`specs.rs`, user WIP, before this change) and an `unused_mut` in `artifact.rs` (not mine).
+
+**5. m21-001 on all 7 images** (final tree, load 15-25): gba **.9761/.9972** (was .9761/.9971), nds **.9735**/.9984 (was .9729), capcom .9418/.9964, dungeon .9438/.988, psx .9878/.3663, vita .9731/.9713, x360 .9833/.9964: none below baseline, `m21-001: PASS (7 images scored)`.
+
+**6. m13-001 on the current tree** (decode oracle `ir-dump`; host libc, stock reads 132 @ .981): VSA alone 92 @ 1.0 (81 agree, 40 of stock missed), interpreter 134 @ 1.0 (96 agree, 23 beyond, 21 missed; phase 4.3 s, 5.09 s in a second run at load 22: gate 5.0), decompiler 130 @ .9978 (122 in the second run: its per-function deadlines at load 22), combined 130 @ .9978 (114 agree, 1 beyond, 3 missed). Identical to MeasureGaps' numbers; the standing failure is unchanged, `combined answers 130 dispatches, not more than stock's 132` (the three unguarded/two-stage dispatches): no heuristic added, gate unchanged. The libc rows do not touch the reference pass (x86-64 `jmp *%rax` after a `movslq`, run through the switch stage).
+
+**7. Paired import wall times** (`import --timings`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, release; back to back, order swapped between pairs; the host was shared: load average before -> after each run in brackets; **noise exceeds the effect**, both trees ran at 9-28): gba before 68.3 (22->26) / 40.8 (26->21), after 52.6 (26->28) / 43.8 (28->26); nds before 243.6 (21->23) / 285.4 (21->24), after 226.8 (23->19) / 255.3 (19->21); psv before 284.7 (24->18) / 264.0 (15->15), after 233.9 (18->10) / 245.6 (10->15). The `references` phase on gba, same pairs: before 11.0 / 5.4 s, after 7.7 / 6.5 s. A first version (before the stack-pop rule) cost +7 s on gba's references phase (3.4 -> 10.7 s): 3,794 recovery attempts in round 0, 2,700 of them `pop {r0}; bx r0`; with the rule 1,099 attempts, 596 recoveries, no measurable difference.
+
+**8. Disk (Main's report): the switch scratch.** Observed on the host: dead-process `romwright-switch-<pid>-*` directories of **4.0 GB each** (an artifact copy of a Wii WBFS) accumulating; 36.9 GB of them sat in `~/.cache/romwright/scratch` when measured (removed by hand: 8 dirs, dead pids only). Cause: `recover_switch_tables` made a scratch project per switch round and per program and filled it with `Artifact::from_bytes` for the input, map and key artifacts: read whole, hashed, copied. Killed runs never reach `Drop`. My NDS import is not the source (peak 144 MB: the 128 MB image); I cannot say which of the three pids produced 269 GB: only Wii-class inputs (4 GB x concurrent imports and leaked dirs) can. Fix (`native/switch_tables.rs`): `link_artifact` hard-links (else symlinks, else copies) the input artifacts, and `ScratchDir::new` removes dirs of its prefix whose pid is gone (`/proc`). Peak scratch on the NDS image, unique bytes (`find -links 1`): **143.7 MB before, 12.6 MB after** (`du` still reads 143 MB: the hard link). Wii: the scratch of a 4.2 GB image is 25 MB of sqlite plus a link. One input copy per import remains (`romwright-input`, `inputs::capture`); not changed.
+
+**Gaps.** (1) **nds.arm7 gets worse**: its discovery used to stop after one round; the 31 tables recovered in flow now run three more, which exposes Thumb contexts the arm7 already carried (12 before, `LowBitCodeMode` 1 at 0x2386c90 and 0x2386cd6 inside ARM functions) and a stub rule (`stub_jump_seeds`) turns them into 305 junk `UNCONDITIONAL_JUMP` branch xrefs, 170 Thumb contexts, one junk function (0x23894da) and 238 lost READ xrefs of that program (a 4-second repro: the arm7 module wrapped as an ELF, `import` before/after); the console's arm7 has 12 contexts and 114 more READ xrefs. Not fixed: the junk contexts pre-date this change; no other program has branch junk. (2) x360: 479 table-less `bctr`, 0 recovered in flow (151 `TooFewTargets`, 110 `Unguarded`): its tables are stored by the switch stage, so nothing is lost, but the reference pass of the round that precedes it still treats them as calls. (3) The remaining console-only xrefs (ov13, arm7) above. (4) The oracle covers 1,867 flow answers; NDS overlays sharing a base address and size (ambiguous tags) were skipped. (5) gc's oracle ran on an earlier binary; recovery code unchanged since. (6) No stock-Ghidra export was run; the oracle is the decompiler inside the worker.
+
+**Files.** New: `native_runtime/propagation/jump.rs`, `native_runtime/oracle.rs`. Edited: `native_runtime/propagation/graph.rs` (recovery, shapes, `pcode_at`, retry loop, trace), `propagation.rs` (`Query.recover`, `Answer` fields, image reads, `JumpShape`), `reference_pass.rs`, `flow.rs` (`RawInsn.conditional`), `lift.rs` (`opcode_name` visibility), `native_runtime.rs` (exports, 7 tests, `oracle` module), `native/references.rs` (`JumpReport`, `settle_jumps`), `native/switch_tables.rs` (`switch_lines` visible, `link_artifact`, `remove_dead_scratch`, 2 tests), `native/discovery/tests.rs` (2 tests + fixture), `session.rs` + `import_cache.rs` (the two switches), `docs/third-party.md`, this file. **User WIP file touched: `crates/romwright-core/src/native.rs`, three minimal edits** (`mod switch_tables` is `pub(crate)`; field `reference_tables_added`; the round loop's break condition). `third_party/kuna-sleigh`: none. No `benchmarks/reports/*.json`. Host `~/runs/BranchindRust` and the local scratch removed.
+
+## N64 layout discovery: segments and overlays found from the ROM's bytes, no catalog entry (2026-10-10, N64Layouts)
+
+**Before.** Only Perfect Dark (catalog `n64_layouts.json`) had its real segments; every other ROM was the linear view: ROM from 0x1000 at the header's boot address. Measured on the nine staged images (host `nih-vps-u`, release CLI + worker of the tree before this change, `benchmarks/n64_layout_score.py`; truth `layout.json` / `functions.tsv` is scoring only): the linear view carries the right vram for the resident segments of SM64, Dr. Mario 64, SF64, OoT and MM that are raw and sit at the boot address (their `main` recall is the linear-visible share: SM64 0.997, SF64 0.980, Dr. Mario 0.174, OoT 0.045, MM 0.104), and **nothing** for Banjo-Kazooie, Super Smash Bros. and Paper Mario, whose header word is `-0x100000` off the real entry point (CIC 6103: n64brew "CIC-NUS"), so the linear view maps their boot code 1 MB too high (`wrong vram` 1 below). No overlay of any game is placed (0 of 14 + 67 + 469 + 617 + 726 + 9).
+
+**Now.** `native/n64_discovery.rs` finds the layout from the bytes and `native/n64.rs` imports it; nothing is per game and no catalog entry was added. The evidence: a blob linked for address `B` carries `B`: its `jal` targets that land inside it hit a function entry (`addiu sp, sp, -N`, or the first instruction after a `jr ra` and its delay slot) for the right `B` and are chance (about 1 in 25) for any other, and its `0x80xxxxxx` data words are pointers, many to its own functions. A base is accepted at >= 3 agreeing entries, most in-range calls agreeing (a pointer may point at data, a call cannot), and a runner-up with at most half as many. A `jal` carries no top nibble, so `0x8` is claimed only when a pointer, a `lui` constant, a call from resident code or the full address in a ROM table carries it; code with only `jal` evidence is refused. Candidates: (1) the boot code at ROM 0x1000, its entry point the header word, `-0x100000` or `-0x200000`, whichever the code's own calls agree with, ending where code stops and running on over its data to the next segment within 256 KB, cut where another starts inside it; (2) Yaz0 / MIO0 / Yay0 / Rare `0x1172`+4-byte-length streams that decode to their declared length and hold code, placed with resident code excluded from the vote (a new codec `rare-1172-sized`: Banjo-Kazooie's header is magic, length, DEFLATE; every stream placed inflates to its declared length); (3) a pair of ROM offsets beside a RDRAM address, as a table row or as the arguments of a DMA call loaded with `lui`/`addiu`, delimiting a raw range whose address hint the evidence must confirm; (4) an offset the boot code loads that is neither code nor a known stream, tried as raw DEFLATE. Overlays whose address ranges overlap cannot share an address space: they are packed into as few programs as hold them (`n64.<first overlay>`, a `modules` row per overlay), the main program is `n64.main`, a ROM without clashes stays the single program `n64`; overlay programs hold their own bytes and no cartridge copy. A ROM nothing is proven for keeps the linear view (with the corrected entry point).
+
+**Before / after, all nine** (`benchmarks/reports/n64_layout_discovery.json`; wall times are paired runs, baseline binary then new binary back to back, `ROMWRIGHT_NO_IMPORT_CACHE=1`, load average read before and after; none printed `degraded`; R / P = recall / precision of function entries per truth module class, `main` = truth module `main`, `overlay` = every other truth module, precision over the segments that place a truth segment):
+
+| game | segments found (resident+overlay) / truth, size exact | wrong vram | main R / P | overlay R / P | functions | import s (load before→after) |
+|---|---|---|---|---|---|---|
+| super-mario-64 | 1 (1+0) / 2, 0 → 2 (2+0) / 2, 2 | 0 → 0 | 0.997 / 0.701 → 0.997 / 0.836 | 0.000 / - → 0.975 / - | 5023 → 5008 | 6 (3.3→3.2) → 6 (3.2→3.1) |
+| dr-mario-64 | 2 (2+0) / 3, 0 → 3 (3+0) / 3, 1 | 0 → 0 | 0.174 / 0.965 → 0.937 / 0.989 | - | 254 → 1333 | 1 (3.1→3.1) → 3 (3.1→3.1) |
+| star-fox-64 | 2 (2+0) / 11, 0 → 2 (2+0) / 11, 0 | 0 → 8 (truth is the wrong revision, below) | 0.980 / 0.869 → 0.973 / 0.955 | 0.000 / - → 0.000 / - (rebased 0.988 / 0.998) | 1763 → 2821 | 15 (3.1→3.6) → 61 (3.6→7.8) |
+| banjo-kazooie | 0 / 18, 0 → 17 (4+13) / 18, 15 | 1 → 0 | 0.000 / - → 0.988 / 0.998 | 0.000 / - → 0.990 / 1.000 | 57 → 8414 | 2 (7.8→7.8) → 20 (7.8→7.9) |
+| super-smash-bros | 0 / 69, 0 → 67 (2+65) / 69, 65 | 1 → 0 | 0.000 / - → 0.955 / 0.990 | 0.000 / - → 0.979 / 0.993 | 9349 → 7080 | 17 (7.9→9.1) → 49 (9.1→12.1) |
+| ocarina-of-time | 2 (2+0) / 472, 0 → 421 (3+418) / 472, 419 | 0 → 0 | 0.045 / 0.965 → 0.984 / 0.997 | 0.000 / - → 0.948 / 0.998 | 143 → 12787 | 5 (12.1→12.1) → 73 (12.1→15.1) |
+| majoras-mask | 2 (2+0) / 620, 0 → 563 (2+561) / 620, 562 | 0 → 0 | 0.104 / 0.991 → 0.978 / 0.998 | 0.000 / - → 0.950 / 0.999 | 429 → 16419 | 8 (15.1→14.5) → 60 (14.5→14.2) |
+| paper-mario | 0 / 733, 0 → 435 (6+429) / 733, 435 | 1 → 0 | 0.000 / - → 0.970 / 0.996 | 0.000 / - → 0.837 / 0.998 | 5093 → 10983 | 35 (14.2→16.9) → 287 (16.9→15.1) |
+| perfect-dark (catalog) | 5 (5+0) / 6, 5 → 5 (5+0) / 6, 5 | 0 → 0 | 0.953 / 0.981 → 0.953 / 0.981 | - | 5491 → 5491 | 28 (15.1→15.3) → 24 (15.3→13.6) |
+
+"Found" means the import has a segment at the truth's ROM start with the truth's vram (a raw truth segment inside a linear mapping that covers >= 90% of it counts); resident segments include the boot segments the truth splits (`entry`/`boot`/`main`). Programs after: SM64 1, Dr. Mario 1, SF64 9, BK 14, SSB 41, OoT 1, MM 1, PM 313, PD 1 (OoT and MM overlays are linked at distinct addresses, so they are modules of the one program). Function counts: MM 16,419 of the truth's 17,147 (was 429), OoT 12,787 (143). Boot-segment ends: SM64 0xf5580, SSB 0x406d0 and PM 0x759b0 equal the truth's; Dr. Mario 0x11a70 (truth 0x11a60), BK 0x5c00 (0x5e70), MM 0x17c00 (0x1a500; data tail), SF64 0xc6c00 (0xd9a90; data tail: the truth's last function starts at ROM 0xbf914).
+
+**Zero wrong-vram placements, with one exception that is the truth's error.** For every game but Star Fox 64 no segment the import places at a truth segment's ROM start disagrees with `layout.json`. For SF64 all eight overlays it places (`ovl_ending`, `ovl_i1`..`ovl_i6`, `ovl_menu`) are at **0x8017d390**, the truth says 0x80187520 (offset -0xa190 for all eight). The staged ROM is the No-Intro rev 0; the truth was built from the repo's rev 1 (`meta.json`: "VERSION MISMATCH"). The ROM settles it: of the 152 distinct `jal` targets the **main** segment aims into the overlay window, 152 land on a function entry of an overlay file when the file is based at 0x8017d390 and 3 when it is based at 0x80187520, and each overlay's own evidence picks 0x8017d390 as well (27 to 271 agreeing entries each). Measured with a throwaway script, not committed. The scorer reports the rebased view (truth addresses plus the single measured offset): overlay recall 0.9879 (1226 of 1241), precision 0.9984. The unmodified score above (0 of 1242) is the truth's address space, not ours. `ovl_unused` (0xa0 bytes, no internal call) is unplaced. The truth directory should say which revision its addresses are for.
+
+**SF64 truth rebased (2026-10-10, at Main's request).** The staged truth (`~/ventris-corpus/extracted/n64-star-fox-64/truth/`) now carries the ROM's rev0 overlay address 0x8017d390 for `ovl_ending`, `ovl_i1`..`ovl_i6`, `ovl_menu`: 1241 function rows (every start -0xa190), `layout.json` places and `meta.json` module `load_address`s, notes updated; originals kept as `functions.rev1-vram.tsv`, `layout.rev1-vram.json`, `meta.rev1-vram.json`. Applied per overlay only where the bytes were unambiguous (27 to 285 agreeing entries, runner-up <= 10; every truth function offset lands on a function entry of the decoded overlay; main's calls 152/152 vs 3/152). `ovl_unused` (0xa0 bytes, one function, no internal evidence) stays at the rev1 address and is flagged unverified in the meta notes. Parse/overlap check clean (2806 rows, header ok, 0 duplicate starts, 0 overlaps within a module). Rescored with a fresh release import of the final tree (`n64_layout_score.py`): **wrong vram 0**, segments found 10 of 11 (8 of 9 overlays; size exact 8), **overlay recall 0.9871 (1226 of 1242), overlay precision 0.9984**, main 0.9725 / 0.9548, 2821 functions, 9 programs, no `degraded`. `benchmarks/reports/n64_layout_discovery.json` still holds the pre-rebase SF64 row (the report is regenerated from a full nine-game run, not edited); the SF64 entries in the table and the exception paragraph above describe that state.
+
+**What discovery does not find, and why.** *Perfect Dark*: not discoverable generically, the catalog entry is **not redundant**. `lib`/`data`/`inflate` run at TLB-mapped `0x70001050`/`0x70200000` and the game at `0x7f000000`: no `jal` carries a nibble, and the discovery claims only `0x8`; the game is a table of offsets to 4 KiB Rare-1173 pages, not one stream, and no scan for `0x1173` streams exists. Discovery on the ROM (`n64_discovery::tests::layout_report`) places nothing, so a PD revision the catalog does not list gets the linear view. *Overlays with no evidence*: OoT 51 of 469 and MM 56 of 617 are tiny (median 0x550 / 0x450 bytes; 266 and 254 functions of the truth's 10,252 and 13,062) with fewer than three internal calls or pointers; no table that names them is mined. *Paper Mario* 297 of 726 (1,600 of 9,823 overlay functions): some begin with data (`battle_area_*`) and are named by rows whose offsets the pair rule does not read (observed on `battle_area_omo2`: its start is the second of two ROM offsets in a row, and its end is the next row's), some are named by no word at all (`dead_*`), and the smallest `action_cmd_*` carry one or two calls. *SSB* `ovl*` 2 of 67 likewise. *Banjo-Kazooie* `emptyLvl` (0x10 bytes). *Extra, not in the truth*: SM64 `ovl_21f4c0` (ROM 0x21f4c0, 0x4a9e0 bytes, base 0x8016f000; 488 of 488 in-range calls land on entries, the truth lists no module there): its 799 functions are reported as `extra_functions` and kept out of precision.
+
+**Costs.** Discovery itself is 0.01-0.6 s per ROM (release; Dr. Mario 0.01 s, SM64 0.08 s, MM 0.26 s, PM 0.53 s). The imports are slower because they now find and analyse code that was invisible: OoT 5 → 73 s and MM 8 → 60 s (143 → 12,787 and 429 → 16,419 functions), SF64 15 → 61 s, SSB 17 → 49 s, BK 2 → 20 s; Paper Mario 35 → 287 s with 313 programs (each overlay program has a fixed cost). SM64 and Perfect Dark are unchanged within the load noise. A first set of paired runs (host load 12-22) agreed with these within the load; the first baseline Paper Mario run in it printed `degraded` (the store failed: "database or disk is full", a transient on the shared host), was discarded and re-run, and the table above is the later set (load 3-17), where nothing printed `degraded`. `romwright-cli decompile` works in an overlay program and in the main program of a discovered import (checked on Banjo-Kazooie `n64.ovl_fa3fd0` and `n64.main`).
+
+**Gates and tests.** m21-001 PASS (7 images, floors unchanged: pokeemerald 0.9761 / 0.9972, HeartGold arm9 0.9735 / 0.9984, Capcom 0.9412 / 0.9964, dungeon game 0.9438 / 0.988, Darkstalkers 0.9878 / 0.3663, NFS 0.9731 / 0.9713, BO2 0.9833 / 0.9964; none is an N64 image, the loader dispatch is the only shared code and an N64 ROM is recognised by its configuration word first). `tests/m5-004_n64.py` PASS (5 functions, recall 1.0000). Filtered tests (`cargo test -p romwright-core --lib n64`, 33 pass): `n64_discovery::tests` builds a synthetic ROM from hand-assembled MIPS, no game bytes (boot code, two Yaz0 overlays at one address, noise, a blob with no evidence, a raw range a table names with the right address and one with a wrong one: asserts what is placed, that the wrong-address range, the noise and the mute blob are not, that the overlays clash and the raw range does not, the boot extent, and the entry point corrected by `+0x100000`), `n64::tests::a_discovered_layout_...` and `overlays_that_do_not_overlap_each_other_share_a_program` (programs, modules, no cartridge copy in overlay programs, linear view when nothing is proven), `n64_codec::tests` for `rare-1172-sized` and for `decode_extent` of Yaz0/MIO0/Yay0/deflate; `perfect_dark_ntsc_final_loads_its_real_segments` still passes (the catalog path is first and unchanged). `cargo check -p romwright-core --all-targets` is clean for this change (one `unused_mut` in `artifact.rs:42`, not this change's).
+
+**Reproduce.** On the host: build `-p romwright-cli -p romwright-worker --release` (both into one target dir; the CLI spawns the worker from beside itself), `python3 benchmarks/n64_layout_run.py --cli-dir BASELINE_BIN --corpus ~/ventris-corpus/extracted --out BEFORE <slugs>` then the same with the new binaries into `AFTER` (per game, back to back, for paired timings; it records `<slug>.json` with the wall time and the load average read before and after, and `degraded`), then `python3 benchmarks/n64_layout_score.py --corpus ~/ventris-corpus/extracted --projects AFTER --before BEFORE --timings AFTER --timings-before BEFORE --table --out report.json <slugs>`. Layout only: `N64_ROM=rom.z64 cargo test --release -p romwright-core --lib layout_report -- --ignored --nocapture`.
+
+**Files.** New `native/n64_discovery.rs`, `benchmarks/n64_layout_score.py`, `benchmarks/n64_layout_run.py`, `benchmarks/reports/n64_layout_discovery.json` (generated by the scorer). Edited `native/n64.rs` (programs, entry point), `native/n64_codec.rs` (`rare-1172-sized`, `decode_extent`), `native/n64_segments.rs` (codec name, doc), `docs/n64-segments.md`, `docs/third-party.md` (n64brew "CIC-NUS"), this section. **User WIP file touched: `crates/romwright-core/src/native.rs`, two minimal edits** (`pub mod n64_discovery;`; in `parse_container_with`, an N64 ROM returns `n64::import_programs`). Host `~/runs/N64Layouts` and both local build directories removed; no git writes.
+
+## GameCube/Wii discs: RVZ, WIA, WBFS and Wii partitions through `nod`, read lazily (P3.4, 2026-10-10, RvzNkit)
+
+`romwright-cli import` now takes a GameCube or Wii disc as RVZ (Redump `NKit RVZ [zstd-19-128k]` included), WIA, WBFS, a Wii ISO with encrypted partitions, and a CISO, and produces the same project as the decompressed ISO. The old `wii.rs` RVZ decoder handled a chunk layout no real RVZ uses (it refused every Dolphin file) and its WBFS and Wii-ISO paths never decrypted anything, so a Wii disc never reached its DOL; all three are replaced.
+
+**Implementation.** The `nod` crate, pinned `=2.0.0-alpha.9` (Luke Street; MIT OR Apache-2.0 from the manifest; published 2026-05-26). Licences and the new transitive crates are in `docs/third-party.md` ("GameCube/Wii disc containers: `nod`") and `THIRD_PARTY_NOTICES.md`; `docs/environment.md` (a C compiler is now a build prerequisite for the vendored zstd/bzip2/LZMA/zlib decoders; no variable, no key) and `docs/ownership.md` (the load row: `nod` only supplies the decoded data-partition stream, `disc.rs` makes every DOL/REL decision) updated; `docs/game-decomp-plan.md` gets a P3.4 row. The `zstd` and `lz4_flex` dependencies existed only for the old decoder and are gone. `nod` carries the Wii common keys it needs to unwrap a title key from the disc's own ticket; Romwright adds none.
+- `native/wii.rs`: rewritten. `import_nod` opens the image as a `nod` stream over the caller's slice (no copy) and takes the data partition (GameCube disc, or the decrypted Wii data partition). `import_disc_formats` dispatches RVZ/WIA/Wii ISO/WBFS by magic, before the GCM offset heuristics (`is_gcm` can match compressed bytes). WAD is unchanged.
+- `native/disc.rs`: `Disc::Partition` reads boot header, FST, DOL and RELs from the partition on demand (only the groups those bytes live in are decompressed; no 8 GB ISO in memory or on disk); the Wii layout (magic at 0x18; DOL/FST offsets and every FST file offset stored shifted right by two) is handled in `boot`/`files`; a Wii-shaped CISO is routed to `nod`, a GameCube CISO still goes through the in-tree block reader. The boot DOL, the REL search (`.rel`, `.rel.szs`), `rel::attach` placement and module rows are the same code for ISO, CISO, RVZ, WIA and WBFS.
+- `native/containers.rs`: `import` tries `wii::import_disc_formats` first; `import_gcm` no longer carries a Wii path.
+- Tests (`native::disc`, `native::wii`, `artifact`): a synthetic GameCube disc and its Wii-partition twin (shifted offsets) import with identical mappings and module rows; the same disc written by `nod`'s own encoder as RVZ/zstd, RVZ/none, RVZ/LZMA, WIA/LZMA, WIA/LZMA2, WIA/none and WBFS imports identically to the raw GCM; truncated RVZ errors without panicking; Wii-magic CISO routing; magic dispatch and "refused by name" errors. 54 filtered tests pass on the host.
+
+**Equivalence on real discs** (host `nih-vps-u`, release CLI from this tree; for each: `nod`'s own conversion to ISO in scratch, then both imported into fresh projects and every table of `project.sqlite` compared as row multisets; the only difference in any pair is the input digest/`source_path` in `program_inputs` and the matching `program-input` revision event, normalised). No `degraded` lines anywhere (first runs without `romwright-worker` built did print them: environmental, discarded).
+
+| disc (id) | file | functions packed / ISO | image modules | project tables | import RVZ / ISO wall (cpu) s | peak RSS MiB RVZ / ISO |
+|---|---|---|---|---|---|---|
+| GC Super Mario Strikers, RVZ | 406 MiB | 8,630 / 8,630 | DOL | identical (171,361 rows) | 13.1 (26.2) / 24.3 (40.2) | 941 / 1,891 |
+| GC Pikmin 2, RVZ | 868 MiB | 20,672 / 20,672 | DOL | identical | 36.0 (53.5) / 31.0 (55.1) | 1,710 / 2,237 |
+| GC Twilight Princess, RVZ | 887 MiB | 42,992 / 42,992 | DOL + 623 RELs (624 modules) | identical (907,416 rows); 282,546 relocations | 251.0 (392.6) / 267.3 (409.9) | 2,727 / 3,219 |
+| GC Pikmin (Rev 1), CISO from the 7z | 638 MiB | 7,848 / 7,848 | DOL (12 section modules) | identical | 20.1 (31.2) / 29.6 (41.1) | 1,097 / 1,858 |
+| Wii Pikmin 2, RVZ (encrypted partition on the ISO side) | 1,996 MiB | 19,752 / 19,752 | DOL | identical | 32.2 (31.8) / 37.9 (37.4) | 2,790 / 5,283 |
+| Wii Mario Strikers Charged, RVZ | 1,690 MiB | 15,980 / 15,980 | DOL | identical | 30.5 (30.2) / 37.2 (36.6) | 2,474 / 5,250 |
+| Wii Skyward Sword (USA 1.0), WBFS, loader only (`--no-analysis`) | 4,026 MiB | 22 / 22 | DOL | identical | 8.8 (8.0) / 9.9 (9.1) | 4,060 / 4,514 |
+
+"ISO" is the 1.46 GB GameCube or 4.7 GB Wii ISO that `nod` writes from the RVZ (Wii: partitions re-encrypted), so on the Wii rows the ISO side exercises partition decryption too. The host was shared with a dozen other jobs (load 20-40 the whole time), so wall times are paired back to back but noisy; the CPU column is the steadier one. **The Wii rows were run with `ROMWRIGHT_CONSOLE_SHARDS=1 ROMWRIGHT_NO_SWITCH_DECOMPILER=1` on both sides** (see memory, below); lane count is documented as never changing an answer, but the switch-recovery stage did not run for them, so their function counts are not the default-configuration counts. GC rows and the CISO row are default configuration. The Skyward Sword WBFS compares loader output only: its full analysis was repeatedly OOM-killed on the host (below); its 636 RELs live in `rels.arc` and are not linked by `disc.rs` (not this task). The packed side is faster on wall time in 6 of 7 pairs (GC Pikmin 2 is the exception) because the ISO case also reads and hashes a 1.5-4.7 GB file.
+
+**Memory.** Before this work an import held a disc image 3x (`fs::read`, the `Vec`-to-`Arc` copy, and a second `fs::read` in `Artifact::open`), and 1.46 GB ISO imported at 4.69 GB RSS; the 4.7 GB Wii ISO at 14.1 GB, which the host OOM-killed. Three small shared changes bring a GC ISO to 1.96 GB (measured), a loader-only import to exactly 1x the file:
+- `artifact.rs`: `read_shared` reads a file straight into the shared buffer (`Arc::new_zeroed_slice`); `Artifact::capture`/`open` use it; a process-wide table of weak buffers by content digest makes a second `open` of an artifact that is still alive share the buffer instead of re-reading it (unit test `a_live_artifact_is_shared_not_read_again`).
+- `import_cache.rs`: `digest()` hashed a file by `fs::read`ing it whole, and `import_cache::key` calls it on the input before checking whether the cache is even enabled; it now streams (`sha256::digest_reader`). (BranchindRust's separate switch-env hunk in this file was left alone.)
+- **`lib.rs` (user WIP), two lines in `import_container_with`** (~2248/2250): `let bytes = artifact::read_shared(binary)?;` and `inputs::capture(&self.db_path, binary, bytes, map_bytes, raw, keys)?` (was `std::fs::read(binary)?` and `bytes.into()`).
+What is left, not fixed (outside this task; reported to Main): every switch-recovery `romwright-worker` opens the whole input again (`provider.rs` -> `inputs::parse` -> its own full read), so peak memory is (1 + workers) x the image; a 4.7 GB Wii image with 4 workers needs ~19 GB, which is why the Wii imports above were run with one lane and no switch decompiler, and why a default-configuration Wii import can still be OOM-killed on a shared host. The fix is a memory-mapped artifact in the worker, or reading only the mapped chunks. The leaked `~/.cache/romwright/scratch/romwright-switch-*` dirs that filled the host disk (269 GB of dead-pid scratch, a full copy of the image per killed import) were routed to BranchindRust by Main.
+
+**Files touched.** `crates/romwright-core/Cargo.toml` (+`nod`, -`zstd`, -`lz4_flex`), `Cargo.lock`, `src/native/wii.rs`, `src/native/disc.rs`, `src/native/containers.rs`, `src/artifact.rs`, `src/import_cache.rs` (digest only), `src/lib.rs` (the two lines above), the docs named above, this section. No other user-WIP file touched. A later disc-layer wave will touch `disc.rs` (RELs in `RELS.arc`/`rels.arc`, MP4 duplicate module ids) and `session.rs`/`provider.rs`/`image.rs` for the memory work. Host `~/runs/RvzNkit` and local build dirs are removed at the end of this task.
+
+## Console research harness runs any truth-contract image: `--corpus-wave`, supplements, rollup, sign tests (2026-10-10, HarnessWave)
+
+`benchmarks/console_research.py` runs every image a corpus builder staged under `~/ventris-corpus/extracted/<id>/truth/{meta.json,functions.tsv[,types/]}` with no per-image entry, and reports it beside the built-in images' definitions unchanged. The frozen metrics, m21's floors and the m21 gate are untouched (the only m21 change: `tsv_rows`/`tsv_functions` and a `LOADERS` table that `run_image` and the harness both use; `tests/m21-001_real_images.py` compiles, its behaviour is the same). The contract, flags, scoring and supplement definitions are in `docs/console-research.md` ("Truth-contract images: `--corpus-wave`"); the code is `console_research.py` (pipeline) and the new `console_research_wave.py` (contract, scoring, rollup, sign tests) with `console_research_wave_test.py` (10 tests: scoring equals `M21.score` field for field on random data, the verified supplement, nesting, rollup, sign test, discovery rules).
+
+**What was built.**
+1. **Truth kind `tsv`**: modules, `ranges`, `verified`. Headline recall/precision are `M21.score` unchanged, pooled over the placed modules; the supplement (`recall_verified`, `precision_verified`: verified rows only; precision counts found entries strictly inside a verified function's extent that no truth row names) is documented and never judged. Nested truth rows (X360 `__unwind$N` funclets, `__savegprlr_N`, straddling DWARF sizes) are kept as valid starts, extents use the outermost sized row, and the per-image counts are in the report.
+2. **Specs from meta.json**, with each module placed the way the importer placed it (`wave_units`): the `modules` table row (a REL merged by the disc import), a program (NDS `nds.ov<N>`, GBA `gba.ov<N>`, or the meta.json `modules[].program`), a separate import of the staged module file (a REL alone: section *i* at `0x80000000 + i * 0x10000000`; a headerless PS1/PS2 overlay as a flat `--raw` dump at its load address), or **unresolved** (an N64 overlay inside the ROM) with its function count, never guessed from the truth's addresses. The main module's ranges drop the REL/overlay spans of its program. A staged ELF with a `.symtab` is scored stripped (listed in the report; `--symtab-variants` adds the `<id>-symtab` supplement).
+3. **`-n` (500 with `--corpus-wave`) and `--seeds` (1,2)**: per-seed and combined (the union of the samples, deduplicated by module and address) results; the cached sample is keyed by the truth's hash and the unit placement.
+4. **Per-platform rollup** (default / baseline-off / stock Ghidra, a "main module only" row beside stock for multi-module images, "did not run" rows for images that fail, version-mismatch images and symtab variants in supplement tables only) and the **one-sided sign tests** over games per platform and pooled, for each headline metric (documented supplement; a win/loss needs the 0.5 pp materiality floor, ties are dropped). **Stock Ghidra** is the existing comparator (`import_speed.py`'s analyzeHeadless configuration per image; `ExportFunctionEntries.java` and `ExportDecompiledSignatures.java`, as `psp_stock_compare.py`), run on the main module (the DOL when `image` is a disc), scored by the same functions. Degraded import diagnostics are copied into the report and flagged.
+5. **Join contract** for a comparator that writes its own file: stable image ids, `images.<id>.samples.<seed>` / `.sample`, `.units[]`; no other tool's numbers are in these reports.
+
+**Acceptance.**
+- *Old spec = TSV spec* (`gba-pokeemerald`, scratch corpus under `~/runs/HarnessWave/scratch`, truth from the ELF symtab, `-n 200 --seeds 20261006`, tools `4fea0a3df98a1a18`): the same 200 sampled addresses (drawn again from the TSV), the same DWARF truth (15,678 functions), and **every key of both configurations' `summary` equal** (`default` 0.9761 recall / 0.9972 precision / 1.0000 success / 0.9750 arity / 0.5732 type exact; `baseline-off` 0.9504 / 0.9970 / 0.9650 / 0.9400 / 0.5608); the `vs_baseline_off` deltas equal on every built-in metric; the TSV report adds only the supplement keys. The decompile result files are shared between the two runs (same cache key), so the check is of the sample draw, DWARF load, placement and discovery scoring.
+- *End to end on newly staged images*: `benchmarks/reports/console_research_wave_20261009.{json,md}`, written by the script (host nih-vps-u, tools `4fea0a3df98a1a18`, `default` + `baseline-off` + stock, n = 500, seeds 1,2, `--symtab-variants`): 14 images, 13 scored: gc-melee, gc-wind-waker (416 modules: 180 RELs imported standalone, the rest by `modules` row), n64-ocarina-of-time, nds-pokemon-platinum (117 units), ps2-dark-cloud (main + 2 raw overlays), ps2-god-hand, psp-hot-pixel, psp-melodie, psp-tetris, psx-rage-racer, psx-silent-hill (main + 49 raw overlays), wii-super-mario-galaxy, x360-burnout-crash; x360-amped-3 is a "did not run" row (`native: xex: PE image has no sections`). Pooled over the 13: **recall vs stock 12 wins / 0 losses, p = 0.0002; precision vs baseline-off 5 / 0, p = 0.0312; recall vs baseline-off 1 / 0 with 12 ties (Platinum 0.8884 against 0.8478); precision vs stock 3 / 4, p = 0.77**; no per-platform p is below 0.125 (1-3 games). A second report from a newer tree (`console_research_wave_20261009_newtree.{json,md}`, tools `e2e3ae408552483e`, no stock) runs AMPED 3 (now imports: recall 0.9756, precision 0.9915), Golden Sun (97 units placed by `modules[].program`) and NASCAR Heat 2002 (`gba:ram.*` rows).
+
+**Observed, not fixed (importer or harness limits; read the report with them).**
+- `n64-ocarina-of-time`: recall 0.0446 for ours and 0.0384 for stock: the N64 import maps only the boot view (`n64_layouts.json` has Perfect Dark only), so the compressed code segment and 469 overlay modules (10,252 of 13,347 truth functions) are not in the import.
+- `x360-amped-3` did not import in the main report's build (fixed in the newer tree, above). Stock Ghidra's JVM was OOM-killed three times at 8 GB heap under host load (NDS, Galaxy, Burnout); all three succeeded with `GHIDRA_HEADLESS_MAXMEM=6G`.
+- `psp-tetris-symtab`: arity 0.03 / type exact 0.01 is a signature-extraction limit with mangled symbol names (865 of 927 rows unparsed), not a decompiler result; the frozen metric was not changed; the stripped `psp-tetris` row is fine.
+- The main report's images were not re-imported on the newest tree (GBA overlay naming, XEX LZX landed after its build); the GBA placement code was validated only on the newer-tree report. `gc-twilight-princess`, the GBA/NDS images other than those above and the remaining truth dirs were not run (not asked for; they run with `--corpus-wave` as they appear).
+
+**Files.** `tests/m21-001_real_images.py` (loaders only), `benchmarks/console_research.py`, new `benchmarks/console_research_wave.py`, `benchmarks/console_research_wave_test.py`, `docs/console-research.md`, new `benchmarks/reports/console_research_wave_20261009{,_newtree}.{json,md}`, this section. No user-WIP file touched. Host `~/runs/HarnessWave` (tree copies, builds, caches, staged corpus copies) and local scratch removed at the end.
+
+## Import memory: peak RSS no longer grows with the worker count or the input size (2026-10-10, ImageMemory)
+
+Item 4 of the disc-import work. Every switch-recovery `romwright-worker` used to open the whole input (`provider.rs` -> `ProgramImage::open_input` -> `inputs::parse` -> `Artifact::open`: read the file, hash the file, run the loader, keep both), so an import's peak was (1 + workers) x the input plus a private copy of every mapped byte per worker; the importing process itself held the input once more. Now the importing process holds no input bytes in anonymous memory and a worker holds no input at all.
+
+**What changed.**
+- `artifact.rs`: `Artifact.bytes` is a `SharedBytes` (heap buffer or read-only `mmap` of the stored artifact, via `libc`, no new crate). `Artifact::capture` of a source of 16 MiB or more is streamed into the artifact store (hashed as it is written, one 1 MiB buffer, atomic hard-link publication, `publish_with`) and the *stored* copy is mapped; the caller's file, which can change under us, is never mapped, and a source that changes while it is copied is refused. `Artifact::open` of a large artifact verifies the digest by streaming on the same descriptor it then maps (the bytes checked are the bytes used). Smaller files keep the heap path, so RvzNkit's `read_shared` and the live-artifact table (`a_live_artifact_is_shared_not_read_again`) behave as before. Two incidental fixes: `open` registered a buffer in the live table *before* verifying its digest, so a damaged artifact was served unverified to the next opener (verified first now); and `from_bytes` published through the same streaming path.
+- `session.rs` + new `session/snapshot.rs`: a `ProgramImage` can be written as, and read from, a *snapshot*: regions, relocated words and override bytes in one compact file (`RWIMGSN1`, little-endian tables then each mapping's bytes once; own format, no outside source). Reads through a snapshot are byte-identical to reads through the image it came from (`is_patch` is the one shared decision of which loader bytes override the file; owned patches became `Patch::{Owned, Backed}`).
+- new `inputs/snapshot.rs`: `binding(project, input)` parses the input once per process and project, publishes the snapshot as a content-addressed artifact and returns `<input identity>:<digest>`; `worker_command` (`native_runtime.rs`) puts it in `ROMWRIGHT_IMAGE_SNAPSHOT` for every worker it starts (switch recovery, decompile, structuring). `ProgramImage::open_input` (what `BinaryBacking::from_input` calls, so **`provider.rs` is untouched**) maps that snapshot when the variable names exactly this input and parses the input otherwise. All workers map the same file, so the pages are shared by the page cache, not copied. `docs/environment.md` lists the variable.
+- `inputs::capture_file` (streams, maps) beside the old `capture` (bytes; still what `native::load_container_with` uses). **`lib.rs` (user WIP): the `read_shared` line in `import_container_with` is gone and the call is `inputs::capture_file(&self.db_path, binary, map_bytes, raw, keys)`** (DiscLayer's `.cue` lines just above it are kept). `matching/scratch.rs`: `scratch_target` returns `SharedBytes`. Not touched: `native.rs`, `switch_tables.rs`, `provider.rs`.
+- Tests: `artifact` (streamed + mapped capture, replacement of the source after capture, second capture of published bytes, damaged artifact refused, small input stays on the heap), `session::snapshot` (a snapshot reads exactly what `from_import` reads over file-equal, overriding, past-the-file and empty mappings, relocation words and a runtime patch; damaged/truncated/oversized snapshots refused), `inputs` (NDS container: both selectors, snapshot read equals parse read, written once, selector is part of the identity). 117 filtered core tests (3 `#[ignore]`d) (`artifact:: session:: inputs:: native_runtime:: native::switch_tables native::disc native::wii matching::`), `romwright-worker-client`, and `romwright-worker` integration tests pass (those needing the built decompiler/clang are `#[ignore]`d as before). `cargo check --workspace --all-targets`: only the existing `return_size` warning in `romwright-worker/src/specs.rs`. m21 (`tests/m21-001_real_images.py`, built from the same tree on the host): PASS, 7 images scored.
+
+**Measurement** (host `nih-vps-u`, 8 cores, 31 GB, release CLI + worker, DEFAULT configuration: 4 shards, up to 8 switch lanes, `ROMWRIGHT_NO_IMPORT_CACHE=1`; `before` = the tree as of the start of this task, `after` = the same tree plus only the changes above, both built on the host). Peak RSS is the sum of RSS (anon + file) over the whole process tree sampled every 0.1 s (`/usr/bin/time -v` reports only the largest single process, which hides the multiplication), killed at a 22 GB cap to protect the shared host. Image sources were unzipped from `Minerva_Myrient` into scratch and deleted afterwards.
+
+| image | input | before: peak tree RSS / largest process / wall | after: peak tree RSS / largest process / wall | load at start (1/5/15 min) |
+|---|---|---|---|---|
+| `gba-pokeemerald` (m21 image) | 32 MiB | 1,569 / 856 MiB / 15.6 s (reruns: 1,339-1,441 MiB, 15.8-17.9 s) | 1,292 / 830 MiB / 27.0 s outlier (reruns: 1,270-1,439 MiB, 15.6-18.5 s) | 2.9 / 1.4 / 3.9 (before: 4.9 / 6.5 / 8.4) |
+| PS2 Dark Cloud (USA), completed before | 1.80 GB ISO | 16,007 / 1,942 MiB / 14.1 s | **597 / 231 MiB / 11.5 s** | 4.9 / 2.0 / 4.1 (before: 3.8 / 6.1 / 8.3) |
+| Wii Mario Strikers Charged, RVZ, completed before | 1.77 GB RVZ | 16,854 / 2,561 MiB / 32.2 s (reruns: 16,603-16,901 MiB, 31.9-35.4 s) | **1,818 / 888 MiB / 25.6 s** (reruns: 1,545-1,819 MiB, 25.7-31.4 s) | 4.9 / 2.1 / 4.1 (before: 3.4 / 5.9 / 8.2) |
+| PS2 Dark Chronicle (Europe), OOMs today | 4.69 GB ISO | **killed at the 22 GB cap after 12.8 s** (peak 23,213 MiB, 9 processes; largest 4,707 MiB; each of up to 8 lanes opened its own 4.7 GB copy) | **954 / 290 MiB / 19.0 s, completes** (7,859 functions, no `degraded`) | 4.1 / 2.2 / 4.0 (before: 2.5 / 5.4 / 8.0) |
+
+The pokeemerald and Wii reruns were three interleaved before/after pairs because the first after-run of pokeemerald landed on a busier moment (the 27.0 s run); the reruns show no wall regression on the small image and 5-10 s less wall on Wii ([INFERENCE] the per-worker read, hash and parse of the 1.7 GB input no longer repeat). The pokeemerald image has nothing to save (32 MiB, parent analysis state dominates); it is in the table because m21 must not regress. Each after-run has 17 processes at its peak, exactly as before: the footprint no longer scales with them.
+
+**Identity.** For the three images that completed before, every table of `project.sqlite` was compared as a row multiset between the before and after projects (42 tables each; the timestamp columns of `programs` and `revision_events` masked, which are the only values that differ): gba-pokeemerald 231,817 rows, ps2-dark-cloud 108,100 rows, wii-strikers 311,139 rows, 0 differing tables on each.
+
+**Not done / limits.** The in-process warm decompile pool (`romwright-worker-client`, interactive sessions) builds its `ProgramProvider` through `from_store` in the CLI/GUI process and still re-parses per session (`open_input` finds no inherited snapshot there); that is not part of an import and was not changed. The parent still maps the whole input file: untouched pages cost nothing, but the digest verification of a large artifact that is *not* alive in the process (a later `decompile` of an existing project) streams all of it once. A mapping is only sound while its file is immutable; artifacts are published read-only and named by their digest, and an input is copied into the store before it is mapped. Snapshots stay in `artifacts/` of the project they were written for (a switch round's scratch store is deleted with the round); they are small and keyed by content, never looked up by name.
+
+**Files touched.** `crates/romwright-core/src/{artifact.rs, session.rs, inputs.rs, native_runtime.rs, matching/scratch.rs}`, new `session/snapshot.rs`, `inputs/snapshot.rs`, `lib.rs` (user WIP, the two lines above), `docs/environment.md`, this section. Host `~/runs/ImageMemory` (trees, builds, ISOs, projects) and the local build dirs are removed at the end of this task.
+
+## Disc layers: RELs inside RARC/U8 archives, same-id RELs as overlay programs, PS1 BIN/CUE discs (P3.4b, 2026-10-10, DiscLayer)
+
+Three gaps of the disc importer, closed. Implementation is clean-room (formats: RARC and U8 community notes, ECMA-130/119, psx-spx; no GPL source; cited in `docs/third-party.md`, "GameCube/Wii archives and PlayStation CD images").
+
+**1. RELs inside archives link like file-system RELs.** `native/archive.rs` (new) lists the members of a U8 (`55 AA 38 2D`) or RARC archive; `yaz0.rs` gained `decompress_prefix`. `disc.rs` probes every FST file named `.arc/.szs/.u8/.rarc`: it reads the first 64 KiB (more when the directory is longer), Yaz0-decodes only as far as the directory reaches, and unpacks the archive (and a Yaz0-wrapped member) only when the directory lists a `.rel`/`.rel.szs`; model and sound archives cost one small read. A member's module row is `<archive>:<member path>`; its `file_off` is the member's place on the disc for a plain archive and the stored file's for a Yaz0 one. The merged program is the same code as before (`rel::attach`), so archive and loose RELs mix in one module-id order.
+
+| disc | RELs linked before -> after | REL truth-row recall (start) before -> after | REL precision before -> after | functions before -> after | wall (cpu-shared host) / peak RSS after |
+|---|---|---|---|---|---|
+| GC Wind Waker ISO (415 RELs: 235 loose + 180 in `RELS.arc`, a plain RARC) | 235 -> **415** | 16,855/25,561 = 65.9% -> 25,327/25,561 = **99.1%** | 99.80% -> 99.87% | 30,543 -> 39,015 | 118 s / 1.70 GiB (before 58 s / 1.11 GiB) |
+| GC Twilight Princess ISO (757: 623 loose + 134 in `RELS.arc`) | 623 -> **757** | 26,634/31,701 = 84.0% -> 31,466/31,701 = **99.3%** | 100% -> 99.98% | 42,992 -> 47,834 | 193 s / 2.26 GiB (before 148 s / 1.84 GiB) |
+| Wii Skyward Sword WBFS (636 in `rels.arc`, U8; 7z extracted to scratch, deleted afterwards) | 0 -> **636** | 0/49,438 -> 44,539/49,438 = **90.1%** (main DOL 17,119/27,532 = 62.2%) | n/a -> 98.74% | full analysis was OOM-killed before; now 62,338 (8 programs) | 147 s / 1.86 GiB (`ROMWRIGHT_CONSOLE_SHARDS=1 ROMWRIGHT_NO_SWITCH_DECOMPILER=1`, as RvzNkit's Wii rows) |
+
+"Before" is the tree without this change (the same tree with archive probing off and first-of-id wins; built beside it on the host, same worker): the disc import alone, a module the disc import did not link counting as 0 recall. Recall is the share of truth rows whose start is a function entry of the module's program; precision is the share of the program's functions inside the module's span that are truth starts (`~/runs/DiscLayer/score.py`, one script for all rows). The TWW/TP "before" function counts match RvzNkit's table (TP 42,992). All relocations resolve: TWW 219,912 applied / 0 unresolved, TP 336,398 / 0, SS 321,708 / 0.
+
+**Truth regenerated.** Linking the archive RELs changes where every later REL sits, so `gc-wind-waker`, `gc-twilight-princess` and `gc-mario-party-4` `truth/functions.tsv` and `meta.json` (`modules[].load_address`/`placement`, `notes`, `import`) are rewritten to the importer's layout; the old files are kept as `truth/functions.pre-disc-layer.tsv` and `truth/meta.pre-disc-layer.json`. The rewrite recovers each row's section-relative offset with the module's old convention (standalone windows, or sequential from its old `load_address`) and re-applies it to the base the importer's own `modules` table gives, so no layout is re-derived (`~/runs/DiscLayer/regen_rel_truth.py`; the repos need no reclone). Its output scoring ~99% on every module is the check that the offsets were recovered. `placement` is now `disc-sequential` (merged in the main program; every REL of TWW/TP) or `disc-overlay` (MP4); no truth REL is `standalone-windows` any more. **Skyward Sword is the exception:** its `meta.json` image is `main.dol` (no disc staged), where the standalone convention is what scoring a REL there needs, so `functions.tsv` is untouched and the regenerated rows are `truth/functions.disc-import.tsv`, for scoring against an import of the WBFS (the 7z holds one).
+
+**2. RELs sharing a module id are overlay programs.** A module id names one module in a running game, so same-id files are alternatives paged into one place; merging them stacked code that never coexists. `rel::attach` (now returns the container's programs) decides per id (`split_by_module_id`): (a) byte-identical files *of one name* are one module (the copy in the container with the most RELs wins; the note is Info "REL copy not linked again"); (b) the file whose container (archive or directory) holds more RELs than every other file's of that id, and which is alone of its id there, stays resident in the main program; (c) otherwise every file of the id is an alternative. Each alternative is a program of its own (suffix = file stem, `_<id>` when that is taken, `main` for the DOL's program only when overlays exist), format `dol` so it gets the DOL's discovery, its sections placed alone from `dol::rel_base` (shared by all alternatives and the resident merge, like DS/N64 overlays), module-0 relocations applied from their absolute addends, relocations into a resident module resolved to its main-program address, the DOL's r2/r13 contexts. The main program is `sibling_call_host`. Two differently named files with equal bytes stay two modules (MP4's empty `m302Dll`/`m303Dll`/`m330Dll`/`m333Dll`). Rule (b) is what keeps Skyward Sword's real modules resident when seven 292-1,696-byte stubs under `sys/mpls_movie/rels` and two loose copies carry the same ids as `rels.arc`'s `d_profileNP`, `d_s_bootNP`, ...: the stubs are 7 overlay programs (`d_profileNP_1`, `d_s_bootNP_3`, ...), the copies are dropped.
+
+| disc | before | after |
+|---|---|---|
+| GC Mario Party 4 ISO (99 DLLs, ids 1 or 2) | 2 of 99 linked, 97 skipped as `duplicate module id`; REL recall 53/7,515 = 0.7%; 3,551 functions | **99 of 99** in 99 overlay programs + the DOL's (100 programs), 0 skipped; REL recall 7,500/7,515 = **99.8%**, precision 99.99%; main DOL 3,465/3,469 and 3,498 functions as before; 10,999 functions; 55.6 s (before 6.9 s: 99 programs analysed one by one) / 431 MiB |
+
+**3. PS1 BIN/CUE.** `iso9660.rs` reads logical 2048-byte sectors through four layouts found by the `CD001` signature (cooked ISO; raw 2352 mode 1 at offset 16; raw 2352 mode 2 form 1, every PS1 data track, at 24; 2336 at 8) and `is_iso` is the dispatch test, so a raw track is never offered to the DOL loader (the old `truncated DOL header` / `DOL entry is not inside a text section` errors came from `parse_container` falling through to `dol::import`). `SYSTEM.CNF`'s `BOOT = cdrom:\X;1` (also `cdrom:X`, `BOOT2`, any case) names the boot file; a PS-EXE (`psx::is_executable`) is the one program, imported by `psx::import` exactly as the loose file; an ELF boot file keeps the PS2 path. `cue.rs` resolves a `.cue` to its data track's `.bin` (first MODE1/MODE2 track; any FILE spelling, case-insensitive lookup; a data track that does not start at its file's start is refused by name) in `import_container_with` and `resolve_program_input` (`lib.rs` and `inputs.rs`, below), so the captured input and `source_path` are the `.bin`.
+
+| disc | import from `.cue` | function set vs the staged PS-EXE imported alone |
+|---|---|---|
+| Silent Hill (USA), 616 MB | 236 functions, 1.5 s, 91 MiB | identical (0 only-cue, 0 only-exe; names, sizes, language equal); the raw `.bin` alone (no cue) also identical |
+| Digimon World (USA) | 1,694 | identical |
+| Vagrant Story (USA) | 859 | identical |
+| Legend of Mana (USA) | 730 | identical |
+| Parasite Eve (USA) Disc 1 | 2,196 | identical |
+| Rage Racer (USA), 12 tracks (data track in file 1) | 1,143 | identical |
+| Need for Speed: High Stakes (USA) | 136 (`SLUS_008.26`, the 30 KB boot loader) | identical |
+
+**Overlays declared in the psx truth metas are not found generically.** Scanning the file systems of the seven discs above for the `PS-X EXE` magic finds exactly one more executable: NFS's `NFS4.EXE` (the loader's real game, not imported; the truth image). Every overlay the metas declare (Digimon `*_REL.BIN`, Mana `ADDHERO...` (LZ-compressed on disc), Silent Hill `BODYPROG`/`MAP*`, Vagrant `*.PRG`/`PLG*.BIN`, Parasite Eve `PE.IMG` slices, PE2 `.CDF`/`.pe2pkg`) is a headerless blob whose load address exists only in the decomp configs, some compressed or packed in a container with its own format. Nothing in the disc says where they load, so they still import only as `--raw` images; a generic finder would be a guess. Headered extra PS-EXEs (1 of 7 discs) are not imported as siblings.
+
+**No regression elsewhere** (default configuration, new vs baseline tree, same host, function counts): Animal Crossing CISO 20,380 / 20,380; Pikmin Rev 1 CISO 7,848 / 7,848; Super Mario Strikers RVZ 8,630 / 8,630; Pikmin 2 RVZ 20,672 / 20,672; Melee CISO 19,835 / 19,835 (the first three match RvzNkit's table). Disc imports without duplicate ids or archive RELs run the same code as before (`attach` with no overlays returns the bare program, suffix empty). The PS2 ISO path (`import_elf`) is unchanged but for borrowing through the sector reader.
+
+**Tests** (filtered, synthetic, no game bytes): `native::archive` (U8 nested directories, RARC with sub-directories and `.`/`..`, prefix listing equals full listing, malformed/truncated tables), `native::yaz0`, `native::disc` (RELs in RARC, U8, Yaz0-wrapped archive and Yaz0 member linked like loose files and mappings equal to the unpacked-disc twin; a 3,000-member directory past the first-look size in plain and Yaz0 archives; same-id overlay programs, copies, same-bytes-different-names, suffix collisions; archive-over-stub residency; overlay relocations into a resident module), `native::rel`, `native::iso9660` (PS1 volume in cooked, mode 1, mode 2 and 2336 layouts through `parse_container`; boot-line spellings; truncation; a `.cue` + `.bin` pair loaded through `Core::load_program` and matched by `resolve_program_input`), `native::cue`. 37 pass. `cargo check --workspace --all-targets` clean but for the existing `specs.rs` dead-field warning.
+
+**Files touched.** New: `native/archive.rs`, `native/cue.rs`. Rewritten/extended: `native/disc.rs`, `native/rel.rs` (`attach`, `link`'s `outside` resolver), `native/iso9660.rs`, `native/yaz0.rs`. **User-WIP files, minimal edits:** `native.rs` (+2 `mod` lines), `lib.rs` (+3 lines in `import_container_with`: resolve a `.cue` before capture; ImageMemory was told), `inputs.rs` (+3 lines in `resolve_program_input`). Docs: `docs/third-party.md`, `docs/game-decomp-plan.md` (P2.8, P3.4b), this section. Corpus: the three truths above and `wii-skyward-sword/truth/functions.disc-import.tsv`. Scripts (not in the repo): `~/runs/DiscLayer/{score,regen_rel_truth,cmpfuncs}.py` locally; copy `regen_rel_truth.py` to `~/runs/TruthGcWii` for the next truth wave. Local build dirs, scratch (the extracted WBFS, PS1 bins, GC images) and host `~/runs/DiscLayer` are removed at the end of this task.
+
+## Hex-Rays column for the corpus wave (2026-10-10, IdaBaseline): internal only
+
+`benchmarks/hexrays_wave.py` writes `benchmarks/reports/console_research_wave_hexrays_<date>.{json,md}` (internal; EULA 2.1(v) note at the top of the markdown; no Hex-Rays number is in any other file). It joins `console_research.py --corpus-wave` report(s) given with `--wave-report` by image id and sample label, never draws a sample, and covers each image's main module only (overlays and RELs are listed as not covered). Phases: `--analyze-only` (IDA load and auto-analysis, sample-independent) and the Hex-Rays decompile on the sampled labels. The checked-in report is provisional until it is re-run with the final wave report: `python3 benchmarks/hexrays_wave.py --wave-report <final>.json`.
+
+## Switch stage determinism: a work budget in place of the wall clock, four lanes, no junk Thumb in ARM code (2026-10-10, SwitchDeterminism)
+
+**What was wrong.** Three things, found in this order. (1) The switch stage's decompile had a 60 s wall-clock limit per function (`exec::DEFAULT_BUDGET`, killed by the worker's watchdog), and the heaviest dispatchers of psv, AW and capcom take 20 to 40 s on an idle host, so whether their tables existed depended on the load (`0x8130ffc0` and `0x8273d480` timed out under load, psv, AW 36,525 against 36,515 functions, capcom). (2) The new in-flow table recovery made `nds.arm7` run three more discovery rounds, which let junk Thumb contexts, until then inert, seed more junk (below). (3) KH CoM reports `DataUnavailError` for two switch owners. A fourth thing surfaced only when the determinism proof was run under `taskset -c 0`: **the lane count changes what is found** (below), so psv differed by 62 rows between an idle run and a one-core run with identical switch tables.
+
+**1. The budget.** `native/romwright_budget.hh` (new; `build_ghidra_opt.sh` copies it beside the patched sources) counts the decompiler's own work: one unit per action run (`Action::perform`), per op a rule pool visits and per rule tried on it (`ActionPool::processOp`), and the amount the three loops that dominate the big functions iterate (`BlockBasic::insert`'s block renumbering, `Varnode::eraseDescend`'s descendant search, `HighVariable::getTiedVarnode`/`updateFlags` over their instances; a perf profile of the 108 KB psv function showed 15 %, 12 % and 9 % of its time there; with them units track time to within a factor of about five across the 36 functions measured, 1 to 9 million a second). `ROMWRIGHT_WORK_BUDGET` (units; unset is unlimited) is read by `ghidra_opt`; passing it throws `WorkBudgetExceeded`, deliberately **not** a `LowlevelError` (the decompiler has 34 `catch (LowlevelError&)` sites that go on without a table or a prototype, and a quiet different answer is the thing being removed); `GhidraCommand::doit` reports it as a client exception, the worker restarts after any error as before, and the budget disarms itself while the exception unwinds so cleanup cannot throw again. `ROMWRIGHT_WORK_TRACE` prints each decompile's address, outcome, units and milliseconds. The unit count of a function is the same in every run, in every worker and behind any earlier function (psv `0x8130ffc0`: 225,942,079 units alone, in the 36-function sample, in the 482-owner batch, and from both the work-tree binary and the `build_ghidra_opt.sh` one).
+
+Rust side: `native_runtime::SWITCH_WORK_BUDGET` (**75,000,000**; `RuntimeConfig::switch_work_budget`, `ROMWRIGHT_SWITCH_WORK_BUDGET`, 0 is unlimited, in the import-cache key) is put in the switch worker's environment; `SWITCH_WALL_GUARD` (900 s per function, `switch_wall_guard_secs`, `ROMWRIGHT_SWITCH_WALL_SECS`) is the old watchdog kept as a backstop for a decompile that stops charging work. The worker now says whether a failure was the wall clock (`"wall_clock": true`, `main.rs`); `SwitchRecovery` files an answer as tables, a refusal for the budget (`over_budget`: a Partial note naming the function and the limit, import stays cacheable), a wall-clock kill (`wall_clock`: **Degraded**, import not cached) or the decompiler's own error (`failures`, as before). Notes are sorted by address, so lane count and finishing order no longer change them. Demonstrated end to end: AW imported with `ROMWRIGHT_SWITCH_WALL_SECS=10` reports `degraded: 3 (aw.xex)`, `0x8240be08/0x8273d480/0x82b22008: decompiler timed out after 9s`, `aw.xex: analysis incomplete; this import is not cached and will run again`, and the cache directory stays empty.
+
+*Calibration* (`ROMWRIGHT_WORK_TRACE` over the owners of each image's stored tables, plus the functions that timed out; units in millions, ms on an idle host in brackets, VPS 5 to 10 million units a second): psv 482 owners, median 0.086, p90 1.66, p99 29; the heavy end 811cd8be 1513 (332 s under load), 811d113e 778, 811d10c4 740, 8130ffc0 226 (20 s), 811e99c0 193, 81428f64 158, 814e180a 117, then 56 (81324e38), 39, 29. AW 126 owners: 8273d480 237 (41 s), then 11.9, 11.0. capcom 408 owners: 1ab430 182 (27 s), 1aad20 114, 1aaae0 102, 1aabf0 102, then 12.4. The limit is in the empty stretch between 56 and 102 million. I first set it to 500 million (everything but the three psv outliers answers); the determinism proof passed with it, but m21 capcom read **0.9412** where the reference is 0.9418: the answered tables of the capcom dispatchers near 100 million turn five functions the truth names (`plxx_lost`, `plxx_lost0..3` at `0x1aac10-0x1aad00`) into case blocks and cut `0x1737f0` from 640 to 80 bytes. m21 capcom at limits of 110 and 60 million: 0.9412 and **0.9418**. The reference run therefore had them refused (under load, 59 s); the limit now makes that the answer on every host. **Cost:** the dispatchers above 102 million are refused on every run and every host, and say so in the import (`0x8130ffc0` is not among them: it is no longer a function, section 3): psv 6 notes (`0x811cd8be 0x811d10c4 0x811d113e 0x811e99c0 0x81428f64 0x814e180a`), AW 1 (`0x8273d480`: -233 `COMPUTED_JUMP` xrefs, 36,515 functions), capcom 5 (`0x1aaae0 0x1aabf0 0x1aad00 0x1aad20 0x1ab430`, plus the old `0x182fa0` Flow-exceeded). Raising `ROMWRIGHT_SWITCH_WORK_BUDGET` answers them (500 million: all but three psv functions, at 20 to 40 s each on an idle host).
+
+**2. Determinism proof.** `psv.elf`, `1-s1_sp.exe` (AW) and the stripped capcom image each imported twice with the final build (`ROMWRIGHT_NO_IMPORT_CACHE=1`): A unpinned beside the other runs of the host, B under `taskset -c 0` with a busy loop on the same core (two processes on one core). Every table of the two projects compared as row multisets: `functions`, `xrefs` (all kinds), `decode_contexts`, `thunks`, `flow_overrides`, `return_behaviors`, `symbols`, `import_diagnostics`, and the switch tables as the `COMPUTED_JUMP` xrefs on their own.
+
+| image | A wall (host load at start / end) | B wall (load) | functions | xrefs | contexts, thunks, overrides | switch xrefs | notes | differing rows |
+|---|---|---|---|---|---|---|---|---|
+| psv | 162 s (7.5 / 13.4) | 517 s (7.5 / 6.0) | 27,566 = 27,566 | 182,451 = 182,451 | 28,054 / 489 / 409 equal | 4,843 = 4,843 | 6 = 6 | **0** |
+| AW | 103 s (13.4 / 12.6) | 237 s (7.5 / 15.4) | 36,515 = 36,515 | 237,425 = 237,425 | 0 / 522 / 2,849 equal | 2,871 = 2,871 | 1 = 1 | **0** |
+| capcom | 70 s (12.6 / 14.5) | 344 s (7.5 / 13.9) | 8,312 = 8,312 | 43,076 = 43,076 | 0 / 143 / 1,359 equal | 2,923 = 2,923 | 7 = 7 | **0** |
+
+AW `0x8273d480` is refused every time (psv `0x8130ffc0` is no longer asked, section 3). The same pairs at the first limit of 500 million units (psv 27,565 functions / 5,049 switch xrefs, AW 36,525 / 3,104, capcom 8,307 / 3,278) also differ by 0 rows, once the lane count is fixed; before that the psv pair differed (next paragraph). Each proof was run on the build it names. **The lane count.** `RuntimeConfig::console_shards` defaulted to one lane per physical core, at most eight, and under `taskset -c 0` that is one. Each lane is a decoder with its own context database, into which its decodes commit mode switches (`globalset`), so which lane decodes an address changes what later decodes of the same bytes read as: psv with the switch decompiler off, `ROMWRIGHT_CONSOLE_SHARDS` 1 / 4 / 4 / 8 on one binary: the two four-lane projects are identical, 1 against 4 differs by 62 rows (functions 8 / 10, xrefs 17 / 2, contexts 4 / 17, thunks 3, one override: all in the import stubs `0x8167a3fc-0x8167c4d6`), 8 against 4 by 64. Before this fix the idle-against-starved psv pair differed by 62 rows with a work budget that was identical in both, and AW and capcom (one instruction set each) by none. So the default is now **four on every host** (`DEFAULT_CONSOLE_SHARDS`, the value the reference measurements and the VPS had); `ROMWRIGHT_CONSOLE_SHARDS` still sets another and then owns the differences. A host with fewer cores time-slices the lanes; one with more leaves them idle in the decode phases. README and `docs/environment.md` said shards change wall time only: that holds for images with one instruction set (`m2-016`), not for ARM/Thumb mixes, and now say so. (The old claim in `RuntimeConfig` that sharding "never" changes facts was the reason nobody looked.)
+
+**3. nds.arm7: the junk Thumb contexts, at the root.** The 4-second repro of BranchindRust (the arm7 module as an ELF, `import` before / after) reproduces on the host: before the in-flow recovery 927 functions, 46 Thumb contexts; after it 939, 75, 70 `UNCONDITIONAL_JUMP`; the full nds import, `nds.arm7`: 903 functions, 12 contexts, 0 jumps (before), 915, 170, 302 (after), the junk function `0x23894da` present. Tracing which seeds and contexts the walk records found **two defects in the pattern pass, both older than the recovery**, which the extra rounds only exposed:
+
+- `aggressive_body` (the port of `ArmAggressiveInstructionFinderAnalyzer.doValidStart`) flipped to the other instruction set whenever the held one did not satisfy the *pattern's* own requirement. Ghidra flips only when the held mode is not a valid subroutine (`checkValidSubroutine`: a run of instructions that decode, no minimum, no terminator needed) and only afterwards refuses a run of two instructions or fewer, with no second try. The `bx lr` that ends an ARM function (two dozen small entries in arm7, most of them the tail of the function above, which the pattern's `after` prerequisite does not meet) decodes, so it is a subroutine, and is too short; read as Thumb it is `bl`'s suffix and a `b +0x25e` into the middle of the next ARM function, which decodes as Thumb for long enough to pass. The accepted flip painted `LowBitCodeMode=1` on the entry and the walk's flowed modes painted it over every ARM function that walk reached. Now the flip is tried only when the held mode does not decode as a run at all.
+- A Thumb pattern matched on a halfword inside an ARM function (`0x2387a66` in `0x2387a64`) painted `TMode=1` and was refused, but the refusal hands back "the value the region held", looked up through `flow(&[address]).mode`, which is `None` for an address that does not decode in the held mode (an ARM instruction at a 2-aligned address), so nothing was handed back and the next walk read the rest of that ARM function as Thumb. `SleighFlow::mode_at` (the context database's value, decodable or not) now answers the question (`FlowProvider::mode_at`, `held_mode`).
+
+Result, arm7 repro / full nds, `nds.arm7`: **924 functions, 0 Thumb contexts, 0 junk `UNCONDITIONAL_JUMP`, `0x23894da` gone, 2,079 `READ` xrefs** (1,916 before the recovery, 1,803 after it: the 238 are back, and more; 426 `COMPUTED_JUMP`, 392 after); the 4-second repro: 924 functions, 0 contexts, 0 jumps, 3.9 s. Whole nds: 31,389 functions / 228,709 xrefs / 11,469 `COMPUTED_JUMP` before the recovery, 31,620 / 235,564 / 13,176 after it, **31,628 / 236,148 / 13,217** now. The 12 contexts the old arm7 already carried were the same flips. No address is named in the code. The side effects elsewhere, all in the same direction: KH 5,269 -> 5,226 functions (43 removed, none of them in the truth's 5,257: recall .9582 unchanged, precision .9560 -> .9638), pokeemerald m21 unchanged to four digits, Vita `0x81154928` is read as the Thumb it is (it was an ARM pattern match whose junk call made `0x8130ffc0` a function at all: that function is now part of `0x8130f9e4`, 16,316 bytes, and psv's m21 recall/precision rise from .9731/.9713 to .9734/.9719).
+
+**4. KH Chain of Memories: correct refusals.** The two owners (`0x8d08c86`, `0x9da73e4`) are not functions. The truth's last function is at `0x81213d4` (8 bytes); everything above `0x8121400` is asset data (the import has 129 "functions" there, 105 from the prologue patterns, which is KH's 0.956 precision). Both are accepted pattern matches on data (`0x8d08c86` an ARM match at a 2-aligned address, `0x9da73e4` a `ldm`-shaped word), each with an indirect jump in the junk body, so the switch stage asks the decompiler, which follows the junk flow to `bmi 0xb178100` / `0x7b4744e`, addresses outside the 0x08000000-0x09ffffff image: `Low-level Error: GHIDRA has no data in the loadimage` is Ghidra's own answer to code that branches out of the image. Two `partial` notes, kept: there is no switch to recover in data. (`0x0b178100` is a mirror of the cartridge, 0x0a000000-0x0bffffff and 0x0c000000-0x0dffffff mirror the ROM; the image maps only the first copy, not changed.) The failure text reads `DataUnavailError:` in the shipped worker and would read `Low-level Error:` with the fix below.
+
+**5. Found, not applied: the worker's answer to unreadable bytes.** `provider.rs::answer_getbytes` answers an unmapped read with an exception burst (`DataUnavailError`). `ArchitectureGhidra::readToResponse` rethrows that as a `JavaError`, which is a `LowlevelError` but not a `DataUnavailError`, so the places that *catch* `DataUnavailError` (`jumptable.cc`:246 and 1611, `memstate.cc`, `funcdata_varnode.cc`) never see it, and the first generic `catch (LowlevelError&)` ends the recovery quietly. Ghidra's client answers with an empty response (`DecompileProcess.getBytes`:874: `query_response_start`, the byte stream only when there are bytes, `query_response_end`), which `getBytes` raises as `DataUnavailError`. With that change (a few lines in `answer_getbytes`) the same decompiler binary recovers more: capcom switch round 1 86 -> 99 tables (+292 `COMPUTED_JUMP` xrefs), `0x29b310` 0 -> 1 table (2,065 -> 134,333 units), m13 libc **combined 133 dispatches at .9814 against stock's 132 at .981: PASS** (130 at .9978 without it). I did **not** keep it: measured with it (limit 500 million), m21 capcom read **.9405** against the required .9418, because the new tables at `0x1c6dcc` and `0x29b328` turn six more truth functions (`sign_mv`, `sign_type00/01/03`, `pl04_sp31/32`) into case blocks (a dispatcher whose cases are tail calls to other functions: the limit of `demote_case_blocks`), and `provider.rs` is user WIP. It is the one change that would make m13 pass. The edit, for whoever decides: in `answer_getbytes`'s `None` arm write `QRESPONSE_OPEN` then `QRESPONSE_CLOSE` (no `EXCEP_*`).
+
+**6. Gates (final build, VPS `nih-vps-u`, `ROMWRIGHT_NO_IMPORT_CACHE=1`).** m21-001: **PASS, 7 images**, every number at or above the reference: gba .9761 / .9972, nds .9735 / .9984, capcom .9418 / .9964, dungeon .9438 / .988, psx .9878 / .3663, Vita .9734 / .9719, x360 .9833 / .9964. m13-001 (host libc, stock reads **132** branches at .981): VSA alone 92 at 1.0 (81 agree, 40 of stock missed), interpreter 134 at 1.0 (96 agree, 23 beyond, 21 missed; 3.5 s), decompiler 130 at .9978 (113 agree, 1 beyond, 3 missed), **combined 130 at .9978** (114 agree, 1 beyond, 3 missed): identical to BranchindRust's numbers, and now the same on every run (122 at load 22 before); the standing failure `combined answers 130 dispatches, not more than stock's 132` is unchanged, no heuristic added, gate unchanged. `cargo check --workspace --all-targets`: clean apart from the known `Probe::return_size` warning in `specs.rs`.
+
+**7. Paired timings** (`import --timings`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, release, VPS 8 vCPU shared with other agents; old = the tree before this work, new = this one; order swapped in round 2; seconds, `functions` from the same line, host 1-minute load average before -> after each run):
+| image | old, round 1 | new, round 1 | old, round 2 | new, round 2 | functions old -> new |
+|---|---|---|---|---|---|
+| psv | 147 (5.88 -> 2.78) | 91 (2.78 -> 3.46) | 163 (8.29 -> 4.22) | 126 (5.71 -> 8.29) | 27,576 -> 27,566 |
+| nds | 119 (3.46 -> 5.99) | 68 (5.99 -> 5.94) | 127 (3.82 -> 7.50) | 68 (4.22 -> 3.82) | (all programs) 31,389 -> 31,628 |
+| AW | 73 (5.94 -> 4.53) | 44 (4.53 -> 3.59) | 74 (6.24 -> 4.21) | 53 (7.50 -> 6.24) | 36,525 -> 36,515 |
+| capcom | 44 (3.59 -> 5.62) | 37 (5.62 -> 5.71) | 38 (6.23 -> 5.91) | 37 (4.21 -> 6.23) | 8,307 -> 8,312 |
+
+Round 1 ran old then new, round 2 new then old. New is faster in all eight pairs (psv 147 -> 91 and 163 -> 126, nds 119 -> 68 and 127 -> 68, AW 73 -> 44 and 74 -> 53, capcom 44 -> 37 and 38 -> 37), by about the work it no longer does: nds's three extra discovery rounds over junk, AW's `0x8273d480` (41 s) and the psv and capcom dispatchers that are now refused at 75 million units instead of at 60 s; not attributed per cause. The host's load (1 minute) was 2.8 to 8.3 throughout, shared with other agents, so a difference of a few seconds is noise (capcom round 2). Images were imported with the stripped capcom, `eboot.elf`, `1-s1_sp.exe` and `pokeheartgold.us.nds`.
+
+**8. Tests (named for behaviour).** `native::discovery::tests`: `a_held_mode_run_that_decodes_but_is_too_short_is_not_read_as_the_other_instruction_set`, `an_undecodable_held_mode_is_flipped_to_the_other_instruction_set`, `the_mode_held_at_an_address_nothing_decodes_at_is_the_one_the_decoder_names`; `native_runtime::flow::tests::mode_at_names_the_mode_of_an_address_nothing_decodes_at` (real SLEIGH; skips without an install); `native_runtime::tests::a_switch_answer_is_filed_by_what_decided_it`; `native::switch_tables::scratch_tests`: `only_a_wall_clock_kill_makes_the_import_unreusable`, `refusal_notes_are_ordered_by_address_whichever_lane_answered_first`; worker `tests/loaded_reads.rs::switch_batches_preserve_tables_across_a_failed_function` (ignored: clang/lld and the built decompiler) extended: every answer carries `wall_clock: false`, and a budget of 1 unit refuses the dispatcher and the next function by name (`WorkBudgetExceeded`) without abandoning the batch. 173 passed in `native::discovery native::switch_tables native_runtime:: session:: native::tests` (the 2 ignored are harnesses); the ignored worker test passes on the host.
+
+**Gaps.** (1) The work budget applies to the switch stage only; an ordinary decompile still ends at its wall-clock deadline (`WORKER_DECOMPILE_TIMEOUT_SECS`). (2) The unit is a proxy of cost, 1.2 to 9 million units a second across the functions measured; a function between 56 and 102 million would be on the wrong side of a guess, and none exists in the three images. (3) The dispatchers above 102 million units lose their tables (12 notes over psv, AW and capcom); (4) `ROMWRIGHT_CONSOLE_SHARDS` other than 4 still gives a different import on ARM/Thumb images (the lanes' commit state is the cause, not the count); making a decode independent of its lane's earlier decodes would remove the dependence and would change every image's reference numbers. (5) `demote_case_blocks` turns functions that are the cases of a dispatcher's tail-call table into case blocks (capcom `sign_mv` -> `sign_type00/01/03`); the truth names them functions. (6) KH's 129 junk functions in the asset area are the pattern pass's false positives on data.
+
+**Native build.** `native/ghidra-opt-sleigh.patch` (+ `action.cc`, `block.cc`, `varnode.cc`, `variable.cc` hunks, and `ghidra_process.cc`'s), `native/romwright_budget.hh` (new), `native/build_ghidra_opt.sh` (copies it). Rebuilt under the lock with `native/build_ghidra_opt.sh --jobs 4`: `native/build/ghidra_opt` **sha256 `dbd7e74bdd7d04a52da4e5390d7d32a9ad8d1df4f1dc218be805a2868212e32e`** (was `b45caa8d24430087ed4aa8ce443f8f9efdccade5a0604e6ac47000c87c123b98`). Without `ROMWRIGHT_WORK_BUDGET` it behaves as before.
+
+**Files.** New: `native/romwright_budget.hh`. Edited: `native/ghidra-opt-sleigh.patch`, `native/build_ghidra_opt.sh`, `crates/romwright-core/src/{native_runtime.rs, native_runtime/flow.rs, session.rs, import_cache.rs (the key's settings string: one field), native/switch_tables.rs, native/discovery.rs, native/discovery/patterns.rs, native/discovery/tests.rs}`, `crates/romwright-worker/src/main.rs`, `crates/romwright-worker/tests/loaded_reads.rs`, `README.md`, `docs/environment.md`, this file. No user WIP file keeps an edit of mine: `provider.rs` (the experiment of section 5) and `native.rs` (a seed trace used to find the arm7 contexts) were edited temporarily and restored; `lib.rs`, `emit_m2c.rs`, `elf*.rs`, `tests.rs`, `specs.rs`, `sdk_types/` untouched. `import_cache.rs` (RvzNkit's file): one field added to the key's settings, announced beforehand. Local build directories and `~/runs/SwitchDeterminism` removed; no git writes; no `benchmarks/reports/*.json` touched (the gates wrote their reports to the run directory).
+
+## Wii/GameCube DOL discovery: sweep entries are no longer retracted by the case-label rule, and DOL data pointers seed entries (2026-10-10, WiiDiscovery)
+
+Skyward Sword's main DOL was at 59% function recall, NPC Pikmin 2 at 70%, GameCube Pikmin 2 at 83%, with the same importer that scores 99.9% on Melee. Two changes, both generic (no per-game table), take every Wii/GC image measured to 98.7-100% with precision 99.35-99.9%.
+
+**Diagnosis (measured on the importer with debug prints in a scratch copy, not inferred).** `discover_mapped` sweeps the code and proposes the first instruction after every `blr`: 26,986 candidates on Skyward Sword (27,532 truth functions), 12,315 of which pass validation. Then the "two functions cannot share code" rule in `flow_discover_with_candidates` retracted 11,130 of 11,210 uncalled spans (10,933 of them truth functions). That rule exists for PE32 switch case labels read out of a relocation table, but every accepted candidate of the sweep was recorded as `data_derived`, and the rule chains on the furthest span: one tail-call stub `b X` whose callee `X` is also a candidate gets `X` folded into its origin (`merge_reached_candidate`), its span stretches to the end of `X`, and every entry between the two goes with it. Skyward Sword `0x80008590` (a 4-byte `b`) spans `[0x80008590, 0x804c4250)`; GameCube Pikmin 2 loses 9,110 of 14,367 to ONE stub (`0x8012b894` -> `0x803af8c4`). Culprit stubs per image: SS 48, NPC Pikmin 2 80, Galaxy 72, Strikers 38. Why Melee is at 99.96% on the same code: it is C, and a `b` to a function entry is rare (12 of 28,637 unconditional branches; Skyward Sword 2,434 of 33,000, Rock Band 3 11,000 of 59,000, GC Pikmin 2 1,127), so no span stretches (rule removed 4 of 10,786; Tiger Woods 54 of 1,993). It is not Wii-specific: GC Pikmin 2 (MWCC C++, GameCube) had the identical loss. The second cause: a DOL has no relocations, so `elf_pointers` never ran and vtable/callback functions, which have no `bl`, had no reference at all (`data_code_pointers` existed, gated by `unrelocated_data_pointers`, which only XEX set). Zero fill after a `blr` (Skyward Sword aligns functions to 16 with zero words) was checked and is NOT a cause: the words decode as Bad and the boundary survives.
+
+| baseline class (missed main truth functions, Skyward Sword 11,180) | count | examples |
+|---|---|---|
+| sweep entry retracted by the span-sharing rule | 8,467 | `0x80008590`, `0x80008680`, `0x800086b0` |
+| previous terminator `bctr` (virtual-call thunks `lwzu;lwz;mtctr;bctr`), data-pointer only | 1,617 | `0x80016e70`, `0x80016eb0`, `0x80019d30` |
+| previous terminator `b` (tail call), data-pointer only | 601 | `0x800085a0`, `0x80008690`, `0x800086a0` |
+| called only from missed code / no reference at all | ~280 | `0x80007e60`, `0x8000a360`, `0x80022bc0` |
+
+NPC Pikmin 2 (8,407 missed): sweep entries retracted 6,652, prev=`b` data pointer 1,072 (`0x8000aae4`, `0x8000ec64`, `0x8000ecac`), prev=`bctr` 398. Galaxy (6,016): 2,894 retracted, 2,861 prev=`b` data pointer (8-byte `lwz;blr` getters, `0x80013fb4`, `0x80017d30`, `0x80017d80`). Strikers (1,765): 1,514 retracted. GC Pikmin 2 (4,306): 3,391 retracted, 861 prev=`b` data pointer. All misses are in `.text`; none in `.init`; the truth `verified` flag does not separate them (Skyward Sword 5,982 verified / 7,216 not; Rock Band 3 all 0).
+
+**Changes.**
+1. `native/discovery.rs`, `flow_discover_with_candidates`: an entry that only the boundary sweep proposed (`candidates` minus what relocation/pointer/initializer data also names: `sweep_only`) is not recorded in `data_derived`, so the overlap rule cannot retract it. The rule is unchanged for every other source. The only caller that passes sweep candidates is `discover_mapped`, whose only caller is `discover` for `format == "dol"` (a disc import's main DOL plus its linked RELs is such a program, and so is each overlay program). `discover_seeded` passes none, so no ELF/PE/Mach-O/PS/N64/GBA/NDS/XEX path sees this change.
+2. `native/dol.rs`: `unrelocated_data_pointers: true`. The existing `data_code_pointers` (native.rs) then seeds an aligned data word that names code outside every body and is not yet an entry, in the references rounds, as it already did for XEX.
+3. `native.rs`, `data_code_pointers` (user WIP file, one function, announced): a run of two or more adjacent words that names an address inside a decoded body and no entry is a jump table (the cases of a switch whose table is unresolved) and is not seeded; a vtable names entries and is. Same rule as `elf_pointers::jump_table_targets`. Effect: Skyward Sword invented 202 -> 177 for 0 recall change; XEX untouched in m21 (Black Ops 2 27,364 functions before and after).
+4. Test helper only: `TestProvider` hoisted out of `flow_discover_with_provider` so a test can pass sweep candidates (`flow_discover_with_sweep`).
+
+**Measurement** (host `nih-vps-u`, release CLI + worker built into one target dir from the same tree snapshot, `before` = that tree with the three hunks reverted, same ghidra_opt `dbd7e74b`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, two interleaved reps each, `benchmarks/dol_discovery.py`; main-module rows, executable regions; no run `degraded`). Load average is the 1-minute value just before each run; the host is shared.
+
+| image | recall before -> after | precision before -> after | invented before -> after | functions before -> after | wall s before / after (load) |
+|---|---|---|---|---|---|
+| wii-skyward-sword | 59.39% -> **98.94%** | 99.78% -> 99.35% | 36 -> 177 | 16,388 -> 27,416 | 21.7, 19.2 / 26.7, 24.0 (6.6, 3.2 / 5.3, 4.3) |
+| wii-npc-pikmin-2 | 70.10% -> **99.78%** | 99.81% -> 99.59% | 37 -> 117 | 19,745 -> 28,170 | 23.5, 23.6 / 25.5, 25.5 (2.9, 2.8 / 3.2, 3.1) |
+| wii-super-mario-galaxy | 85.67% -> **99.70%** | 99.85% -> 99.81% | 53 -> 80 | 36,030 -> 41,946 | 26.8, 26.8 / 28.5, 28.5 (2.5, 2.2 / 2.1, 1.7) |
+| wii-rock-band-3 | 86.57% -> **98.73%** | 99.85% -> 99.83% | 76 -> 100 | 51,244 -> 58,450 | 48.7, 47.9 / 64.2, 52.0 (2.8, 4.6 / 2.9, 4.5) |
+| wii-mario-strikers-charged | 90.02% -> **99.73%** | 99.74% -> 99.69% | 42 -> 55 | 15,965 -> 17,695 | 26.0, 26.3 / 26.8, 27.2 (3.4, 4.3 / 4.0, 3.8) |
+| gc-melee | 99.97% -> 99.98% | 99.92% -> 99.93% | 15 -> 14 | 19,835 -> 19,836 | 22.9, 19.5 / 22.8, 22.2 (4.1, 4.4 / 4.1, 4.9) |
+| gc-pikmin-2 | 82.75% -> **99.98%** | 99.89% -> 99.84% | 22 -> 40 | 20,672 -> 24,991 | 15.6, 15.7 / 16.1, 16.2 (4.2, 2.9 / 3.7, 3.1) |
+| gc-tiger-woods-2004 | 99.93% -> 99.93% | 99.82% -> 99.82% | 14 -> 14 | 7,656 -> 7,656 | 5.8, 6.2 / 5.8, 5.7 (2.3, 2.7 / 2.2, 2.1) |
+
+Wall time rises 0-5 s (about +25% on Skyward Sword) because 11,000 more functions go through the later rounds; the Rock Band 3 rep with 64 s ran at load 2.9. **What the new invented functions are** (Skyward Sword 36 -> 177): 138 are `flow` entries inside a truth function. Taken before the jump-table run filter, when there were 162, 118 were case labels of switches whose table discovery had not resolved (the function holds a `bctr`, the address sits in a data jump table, e.g. `0x8005f758`, `0x8005f778`, `0x8005f798`) and the other 44 out-of-line blocks after a `blr` or `b` the walk did not reach (`0x80015f6c`, `0x8002261c`, `0x800226cc`); 35 are `call` entries inside a function (local `bl` targets, 30 of them before). The other images' growth is the same kind (Rock Band 3: 43 `flow`, NPC Pikmin 2: 70). The jump-table run filter removes only the cases whose run contains a decoded-interior word; most unresolved case labels still get through.
+
+**REL rows.** The boundary sweep and `data_code_pointers` run over the whole linked program, so a disc import's resident RELs are covered. Wind Waker ISO (415 RELs in `RELS.arc`, truth in the importer's layout, 39,315 rows), `benchmarks/dol_discovery.py --module all`, same base: main rows 98.91% -> **99.97%**, REL rows (25,561) 99.09% -> **100.00%**, overall precision 99.76% -> 99.79% (invented 92 -> 83), 84.1 s -> 84.4 s (load 2.0 / 4.2), no degraded diagnostics. Overlay programs (Mario Party 4: 99 DLL programs, same module id) get the sweep change but not the data-pointer flag (their `NativeImport` is built in `rel.rs`, untouched): recall 99.83% before and after, 3 more functions (10,999 -> 11,002), 75 s -> 58 s.
+
+**m21.** Passes with and without the change on the same base (both runs from the final tree): pokeemerald 97.61%/99.72%, pokeheartgold 97.35%/99.84%, Capcom Fighting Evolution 94.18%/99.64%, dungeon_game 94.38%/98.80%, Darkstalkers 3 98.78%/36.63%, NFS Most Wanted 97.34%/97.19%, Black Ops 2 98.33%/99.64% (function counts identical before and after for all seven). m21 holds no DOL image, so it cannot move; it proves the non-DOL paths do not.
+
+**Tested ideas that are NOT in.** A sweep boundary after an unconditional `b` whose target is a known entry (call target, sweep start or data pointer): +0.05-0.4% recall, -0.8..-1.5% precision (Skyward Sword +111 hits for +311 invented). A boundary after a straight-line `bctr` stub (virtual thunks): +14 hits for +182 invented on top of that. Neither is worth it once data pointers seed the same functions. Without change 1, data pointers alone give Skyward Sword 96.9% / 98.5% (the retraction rule keeps firing). Making sweep candidates immune to the `reloc_set` merge (no fold of `b X` callees) gained 74 hits for 441 more invented functions on Skyward Sword.
+
+**Known residual.** Rock Band 3 (98.73%): 680 functions are the callee of a 4-byte `b .+4` stub, which the walk folds into the stub. `b .+4` is no boundary on GameCube (Melee 135, none is a function start), so there is no generic rule. Skyward Sword's 293 missed: called only from missed code or unreferenced, mostly after a `blr` + zero padding; 154 of them are `b`/`bl` targets from found code.
+
+**Tests** (synthetic, no game bytes): `native::discovery::tests::a_stretched_tail_call_stub_does_not_retract_the_boundary_sweep_entries_it_spans` (fails without the change: `[0x1000]` instead of `[0x1000, 0x1100, 0x1200, 0x1300]`), `candidates_read_from_data_are_still_retracted_when_a_span_overlaps_them` (the rule still fires for relocation data and for a sweep candidate data also names), `native::dol::tests::data_words_naming_code_seed_entries_in_a_dol`, `a_jump_table_run_is_not_seeded_but_a_vtable_run_is`. Filtered runs `native::discovery` (45) and `native::dol` pass; `cargo check --workspace --all-targets` is clean except the known `return_size` dead-field warning in `romwright-worker/src/specs.rs`.
+
+**Files touched.** `crates/romwright-core/src/native/discovery.rs` (the `sweep_only` set and condition, `TestProvider` hoist + `flow_discover_with_sweep` under `cfg(test)`), `native/discovery/tests.rs` (two tests appended), `native/dol.rs` (flag + two tests), `native.rs` (user WIP: `data_code_pointers` only), new `benchmarks/dol_discovery.py` (paired before/after runner, writes only to its `--work`/`--out`), this section. `~/runs/WiiDiscovery` (trees, builds, ISOs) and the local build directories removed; no git writes; no `benchmarks/reports/*.json` touched.
+
+## Per-program fixed cost: the container parsed once per program, the language decoded 16 to 21 times per program, programs one after another (2026-10-10, ProgramOverhead)
+
+**What the cost was.** An import of a container with many programs (Golden Sun's 96 `gba.ov<N>`, Paper Mario's 313 overlays, Mario Party 4's 99 RELs, KH 358/2 Days' 305 NDS programs) ran each program through the whole pipeline strictly one after another, and each one paid, on top of its own analysis, three costs that do not depend on its size. They were found with `import --timings`, which now also prints every program's phases (`PROGRAM {...}`, one line each, phases summed over rounds; it printed only the first program's) and a process-wide `TALLY {...}` of seconds summed over threads (`native/tally.rs`: decoder construction, the switch stage's worker and setup, snapshot writes; they exceed wall time). "Before" is the baseline binary's code with these timers added and nothing else (VPS `nih-vps-u`, 8 vCPU, load 2-5, one program at a time):
+
+| per program, mean over the programs after the first (seconds; "thread-s" = summed over the threads that did it) | Golden Sun (97 programs, ARM) | Mario Party 4 (100, PowerPC) | Paper Mario (313, MIPS) |
+|---|---|---|---|
+| whole analysis of the program (`discover-wall`) | 0.570 | 0.537 | 0.411 |
+| **container parsed again to give the switch workers their image** (`switch_tables` -> `worker_command` -> `inputs::snapshot::binding` -> `parse_image_input`: GBA overlay detection and unpacking of all 96 overlays, the disc's FST and 99 REL links, N64 layout discovery and Yaz0) | **0.365** (64% of the program) | 0.068 | 0.112 |
+| **SLEIGH decoders built from their `.sla`** (16.3 / 13.9 / 21.3 per program: four flow lanes and a lifter per discovery round, four propagation lanes and a lifter per reference round; `.sla` decode 7.9 / 12.7 / 22.3 ms each) | 0.151 thread-s | 0.215 thread-s | 0.510 thread-s |
+| switch stage: scratch store + `Core::open` per lane | 0.065 | 0.017 | 0.004 |
+| switch worker run (`romwright-worker` + `ghidra_opt`; measured per call: 87 launches on MP4, startup 0.04 s, the rest is the decompile) | 0.228 thread-s | 0.344 thread-s | 0.016 thread-s |
+| final `store_import` | 0.014 | 0.020 | 0.013 |
+| wall of the import | 64.5 | 62.0 | 149.4 |
+
+The 1.8 s the ticket quotes was this on a host at load 17-27; the same work is 0.55 s a program on an idle one. The container's own parse (`parse`, 0.34 / 0.19 / 0.94 s) is once per import, not per program (the phase is stamped on every image, do not add them). Worker startup is not a fixed cost: of a worker's life 0.04 s is setup and the rest decompiles the owners it was asked about.
+
+**What changed** (results byte-identical, below).
+1. *The workers' image comes from the image the importing process holds* (`inputs/snapshot.rs` `binding_of`, called by `recover_switch_tables`). Analysis never changes a program's mappings or relocations (checked: nothing in discovery, references, switch or `seed_from_siblings` writes them), so the snapshot is written from `imp` over the captured input bytes (`Artifact::open` finds the live artifact, no re-read or re-hash) and registered where `binding` looks; the parse path stays for every other caller (a later `decompile`). Test `inputs::tests::a_snapshot_of_the_held_image_is_the_snapshot_of_the_parse`: same identity and same digest for both selectors of a two-processor container. This alone took Golden Sun from 55 s to 26 s, and it also removes one whole parse per switch round from single-program images.
+2. *Decoders are pooled* (`native_runtime/lift.rs`: `SleighLifter::mapped_pooled`, used by `SleighFlow::mapped_pooled` for the discovery lanes (`Lanes::open`, two lines in `native/discovery.rs`), the propagation lanes, and the lifter of `discover`). A pooled lifter goes back to a process-wide idle pool (16 at most, keyed by specs, language and whether its templates carry the flow markers) when it drops; the next one for that language takes it, gets the context database as the spec left it (`Sleigh::reset_for_reuse`, a method added to the vendored kuna-sleigh, `third_party/kuna-sleigh`, documented in `docs/third-party.md`: a clone of the post-spec database taken at build, an empty context cache, no remembered matches or commits), a loader over the new image and the new contexts. `.sla` decodes for Golden Sun: 1,606 -> 57 (1,549 reuses), MP4 1,419 -> 25, Paper Mario 6,686 -> 101, KH 427 for 305 programs. `ROMWRIGHT_NO_DECODER_POOL` builds every decoder as before. Tests `native_runtime::lift::tests::a_pooled_lifter_starts_over_with_the_new_image` and `flow::tests::a_pooled_flow_decoder_starts_over_with_the_new_image` (a first image whose `blx` committed Thumb at 0x2000; the second image's 0x2000 is ARM, as a fresh decoder reads it). **Soundness.** A lifter's object graph is `Rc`-based and moves between threads under the existing `Send` argument (nothing outside it holds a count into it); a pool moves it at an arbitrary time, so every holder of a count that lives outside the lifter is declared to drop first: `SleighFlow::emit` (the `LR` varnode's space) is declared before the lifter, and the propagation lane's `behaviors`, `data_space` and compiled `templates` before its `flow`. Only these constructors are pooled; every other caller still builds its own.
+3. *Programs of a container are analysed side by side* (`native/programs.rs`, `discover_all`, replacing the loop in `lib.rs::import_container_with`). Each program's analysis is a function of its own image and the configuration; the one dependency, the image its siblings call into (`sibling_call_host`), still runs last, seeded from their finished results. Up to `ROMWRIGHT_PROGRAM_JOBS` programs run at once (default half the cores, 1 to 4; the largest start first); stores stay in container order, so program ids, `module_id`s and every other autoincrement value are the container's. The first error in container order is the one returned. The switch stage's decompiler workers are bounded **process-wide** (`SwitchSlots`: as many as one program's lanes used alone, so the workers' memory does not grow with the programs in flight), and `ScratchDir` gained a counter (two programs asked in the same nanosecond for the same directory name). Fixed at 4 `ConsoleShards`; nothing here reads a core count into a result. Tests `native::programs::tests` (every program analysed once for 1, 3 and 16 threads, the host after the others, nothing run without `analyse`), `native::switch_tables::tests::scratch_directories_made_at_once_are_distinct`.
+4. *Measurement*: `--timings` prints `PROGRAM` and `TALLY` lines; the decoder construction and snapshot/worker times above are `native/tally.rs`.
+
+**Paired wall times** (`import`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, release CLI + worker built from this tree with and without the change into one target dir each, one image at a time, base then new in round 1 and new then base in round 2, seconds, 1-minute load average at start / end in brackets; the host is shared, load 2-3.6 throughout, nothing else of mine ran):
+
+| image (programs) | base r1 | new r1 | new r2 | base r2 | speedup |
+|---|---|---|---|---|---|
+| gba-golden-sun (97) | 55.3 (3.2/2.2) | 12.0 (2.2/3.2) | 12.0 (2.4/3.4) | 55.4 (3.4/2.0) | 4.6x |
+| n64-paper-mario (313) | 131.4 (3.2/1.9) | 21.2 (1.9/1.9) | 21.0 (2.0/3.0) | 131.4 (3.0/1.7) | 6.2x |
+| gc-mario-party-4 (100) | 51.1 (2.3/2.2) | 21.4 (2.2/2.5) | 21.3 (2.6/3.6) | 51.2 (3.6/3.0) | 2.4x |
+| nds-kh-358-2-days (305) | 66.4 (2.5/2.1) | 16.7 (2.1/2.9) | 16.5 (3.0/3.3) | 66.2 (3.3/2.0) | 4.0x |
+| n64-ocarina-of-time (1) | 27.7 (1.9/2.7) | 26.8 (2.7/2.3) | 26.8 (1.7/2.3) | 27.9 (2.3/2.1) | 1.04x |
+| n64-majoras-mask (1) | 23.7 (2.3/2.7) | 22.6 (2.7/2.3) | 22.3 (2.1/3.2) | 23.5 (3.2/2.6) | 1.05x |
+| gc-melee `main.dol` (1) | 18.7 (2.9/3.1) | 18.5 (3.1/3.1) | 18.4 (2.0/2.4) | 18.6 (2.4/2.2) | 1.01x |
+| ps2-dark-cloud (1) | 6.55 (3.1/2.8) | 6.40 (2.8/2.7) | 6.38 (2.2/2.3) | 6.56 (2.3/2.2) | 1.03x |
+| x360-call-of-duty-modern-warfare-2 (1) | 14.9 (2.7/2.5) | 14.2 (2.5/2.4) | 14.3 (2.2/2.1) | 15.0 (2.1/1.9) | 1.05x |
+
+The first four are overlay images; OoT and MM are one program with modules since N64Layouts, and the last three are single-program images: none is slower in either round (the 1-5% gain on those is consistent in both rounds; [INFERENCE] the pooled decoders and the snapshot written without a parse). The ticket's "after" figures (196, 287, 73, 60, 55.6, ~260 s) were taken at load 17-27 and cannot be compared with these. Peak resident memory (sum over the process tree, sampled every 0.1 s; largest single process): Golden Sun 804 -> 927 MiB (321 -> 485), MP4 623 -> 894 (419 -> 656), Paper Mario 1,166 -> 1,727 (729 -> 1,275), KH 413 -> 755 (247 -> 652): four programs in flight and up to 16 idle pooled decoders (the MIPS ones are the largest); 17 processes at the peak as before.
+
+**After** (same per-program view, the new binary, one run each at load 2-3; program wall is now measured while three others run, so it is not comparable to the column above, the import wall is):
+
+| | Golden Sun | Mario Party 4 | Paper Mario | KH 358/2 Days |
+|---|---|---|---|---|
+| import wall | 11.9 | 21.4 | 21.1 | 16.6 |
+| `discover-wall`, summed over programs / mean per program / largest | 25.3 / 0.212 / 4.9 | 52.7 / 0.499 / 12.6 | 30.2 / 0.065 / 10.0 | 41.8 / 0.133 / 2.4 |
+| container parses for the switch workers | 0 (`snapshot-parse` gone; the write is 0.001 s) | 0 | 0 | 0 |
+| decoders built from `.sla` / reused | 57 / 1,549 | 25 / 1,394 | 101 / 6,585 | 427 / 5,471 |
+| switch worker run, thread-s | 27.7 | 49.3 | 22.7 | 6.7 |
+| `store` summed (sequential) | 1.4 | 1.9 | 4.7 | 3.9 |
+
+What is left is the programs' own work: the switch decompiles (Mario Party 4's 49 thread-s of worker time is real recovery of RELs' switches that the 6.9 s import before the RELs were programs never did), the largest program (Paper Mario's `main` 10 s, the `gba` program of Golden Sun 4.9 s, which runs last by design), and the final stores, which must run in container order. Job count barely matters once the two costs above are gone (`ROMWRIGHT_PROGRAM_JOBS` 2/4/6/8, seconds, GS / MP4 / PM: 13.3, 25.5, 22.0 / 12.0, 23.1, 21.2 / 11.8, 23.0, 21.5 / 11.8, 23.5, 22.2): the first two changes carry the result, the third the last 10%.
+
+**Identity.** For all nine images, in both rounds (18 pairs), every table of the base and the new `project.sqlite` compared as a row multiset (42 tables, `programs.imported_at`, `revision_events.at` and the other timestamp columns masked, which are the only values that differ; `module_id`, program ids and every autoincrement value included): Golden Sun 178,432 rows, Paper Mario 443,720, OoT 321,309, MM 387,766, Mario Party 4 402,516, KH 358/2 333,666, melee 386,922, dark-cloud 108,096, MW2 181,625; **0 differing tables in all 18**. The intermediate builds were compared the same way on the way here: snapshot change only (Golden Sun), plus parallel programs at 2 and 4 jobs (Golden Sun, MP4, Paper Mario), plus the pool (the same three).
+
+**Gates.** m21-001 **PASS**, 7 images, numbers unchanged from SwitchDeterminism's (gba .9761 / .9972, nds .9735 / .9984, capcom .9418 / .9964, dungeon .9438 / .988, psx .9878 / .3663, Vita .9734 / .9719, x360 .9833 / .9964). Filtered tests (`cargo test -p romwright-core --lib --release -- native_runtime:: native::discovery native::switch native::gba native::n64 native::disc native::rel native::programs inputs:: session:: artifact:: demand:: native::store native::tests scratch`): 284 pass, 3 ignored; `romwright-worker` 87 pass, `romwright-worker-client` 4. `cargo check --workspace --all-targets` is clean except the known `return_size` dead-field warning in `romwright-worker/src/specs.rs`.
+
+**Not done / limits.** The switch stage still writes a scratch store per program and round (`switch-setup`, 0.05 s a program on Golden Sun under load): the worker reads functions, prototypes and data definitions from it, and trimming what it stores could change a decompile, so it was not touched. `store_import` is sequential and in container order by necessity (ids), 4.7 s of Paper Mario's 21. The `gba` host and any program everything else calls into cannot start before its siblings finish. Pooled decoders are only the discovery/reference/`discover` ones; the demand-driven sessions, `elf_pointers`, `nonreturn` and the in-process worker client still build their own. Peak memory is higher by the figures above (pool and programs in flight); `ROMWRIGHT_PROGRAM_JOBS=1` and `ROMWRIGHT_NO_DECODER_POOL=1` give back the old footprint and the old speed.
+
+**Reproduce.** On the host: build `-p romwright-cli -p romwright-worker --release` for a baseline tree and for this one (each into its own target dir), `ROMWRIGHT_NO_IMPORT_CACHE=1 romwright-cli import IMAGE --name x --timings --project DIR` with each, alternating; compare `project.sqlite` files as per-table row multisets with the timestamp columns masked.
+
+**Files.** New: `crates/romwright-core/src/native/{programs.rs,tally.rs}`. Edited: `crates/romwright-core/src/{inputs.rs,inputs/snapshot.rs,native_runtime.rs,native_runtime/{lift.rs,flow.rs,propagation.rs},native/{switch_tables.rs,discovery.rs}}` (`discovery.rs`: the two decoder constructors in `Lanes::open`, agreed with WiiDiscovery), `third_party/kuna-sleigh/{src/sleigh.rs,Cargo.toml}`, `docs/{environment.md,third-party.md}`, this section. **User WIP files, minimal edits:** `crates/romwright-cli/src/main.rs` (the `PROGRAM` and `TALLY` lines under `--timings`), `crates/romwright-core/src/lib.rs` (`import_container_with`: the per-image discovery loop is one call, `native::discover_programs`), `crates/romwright-core/src/native.rs` (`pub mod tally;`, `mod programs;` and its `use`, the `lifter-open` tally and `mapped_pooled` at `discover`'s lifter). `romwright-worker/src/main.rs` was edited for a timing trace and restored. Host `~/runs/ProgramOverhead` (trees, builds, corpus copies, projects) and the local symlink/profile directories removed; no git writes; no `benchmarks/reports/*.json` touched.
+
+## Ownership report regenerated on the corpus-wave tree (2026-10-10, OwnershipMetric)
+
+`benchmarks/reports/ownership_corpuswave.{json,md}`, written by `benchmarks/ownership.py` at 2026-10-10T17:04:38+00:00 (local run, not the host: 12 threads at load 3.5-12.7, 2 export jobs a process, three processes on disjoint images, no timing reported). Tools `901c320a13fdf110`: instrumented release `romwright-cli`/`-worker`/`-api` (`-C instrument-coverage`, `-j 2`, `CARGO_INCREMENTAL=0`) and clang-coverage `ghidra_opt` of the same snapshot (322 files, digest `04ff03f0b32b7537`, taken about 11:30 local, after ConsoleRetire, ConstPropRust, PatternsLinkageRust, ExprPrinter, BranchindRust, SwitchDeterminism, ProgramOverhead, WiiDiscovery and the new loaders; `cpp_build_matches_tree: true`). 10 images x 200 functions, 2,000 printed, plus the persisted-prototype profile over FinalGate's `infer_prototypes` projects (tools `ea27c70333bb669d`, copied read-only). The 200-function samples are drawn from this tree's import: 1,275 of 2,000 addresses coincide with `ownership_expressions` (gba 11 and gc 9 moved with the GBA overlay and GameCube discovery changes), so differences of a point or two are sample noise.
+
+| lens | 10-08 (`ownership`, 8 images) | 10-09 (`ownership_expressions`) | **10-10** |
+|---|---|---|---|
+| printed tokens emitted by Rust | 13.3% | 90.7% | **90.9%** (block layer 14.2%, expression printer 76.7%; PrintC fragments 9.1% = locals, prototype, comments, labels) |
+| constructs created by Rust structuring | 2.0% | 3.1% | 2.9% (gotos 844 -> 370) |
+| p-code operations edited by Rust | 0.5% | 0.5% | 0.5% (1,318 of 250,591) |
+| functions printing differently without Rust structuring + IR passes | 20.4% | 32.1% | 33.2% (664 of 2,000) |
+| ... with the Rust expression printer off (new pass) | n/a | n/a | **0 of 2,000** |
+| executed lines: first-party Rust / + kuna-sleigh | 27.4% / 33.7% | n/a | **32.5% / 39.6%** (30,634 and 37,327 of 94,370 executed lines) |
+| executed lines: our C++ / vendored C++ | 2,657 / 51,195 | n/a | 1,423 / 55,620 |
+
+Stage rows moved: discovery facts Rust 100% (was 57.8% with 42.2% console constant propagation), stored switch dispatches Rust VSA 82.0% of 2,513 (70.9% of 2,470), printed switch tables supplied by a Rust-VSA stored table 70.8% (65 printed, 100% by a stored table, 0 replaced), persisted prototypes Rust-decided 16.0%, printing 90.9% Rust; p-code lift, flow into the function, simplification (99.5% vendored), default type and prototype recovery stay vendored. The criterion ("own more of the output than the vendored tree") is met by the printed-token lens and not by the decision lenses; the expression printer prints what PrintC printed (0 differing functions with it off).
+
+**Inventory** (code lines, tests excluded): first-party Rust 106,346 (10-09: 104,224, +2,122: core +2,096, cli +23, worker +2, worker-client +1; 90,137 at 10-08), pipeline crates 87,163, Rust test code 32,489; kuna-sleigh 17,854 (+8); **our C++ 2,047 (10-09: 4,816, -2,769; 3,848 at 10-08)** = 634 patch-added lines in 35 files + 1,413 in six headers (`printir` 1,061, `ir` 222, `budget` 50, `nonreturn` 44, `ppc_return` 19, `ir_state` 17; the constants, constant_state, operand_refs, x86_references, callfixups, patterns, linkage headers (2,489 lines) and `flow`/`parent` (175) are gone); vendored C++ 137,961 (unchanged; 89,681 executable lines in the `ghidra_opt` binary, 55,620 executed). Per-stage executed lines are not comparable with the 10-08 table (new files got stage rules); the totals are.
+
+**Script changes** (`benchmarks/ownership.py`): stage rules for the new files and `romwright_budget.hh`; a `rust-expressions-off` counterfactual pass and headline key (not in "either"); `--compare REPORT...` (before -> after tables from the reports' own numbers); **`--shards` now defaults to 0 = the build's default of 4 decoder lanes.** It used to default to 2 and always set `ROMWRIGHT_CONSOLE_SHARDS`, which since SwitchDeterminism/ProgramOverhead owns differences on mixed-ISA images; an invocation of the earlier reports without `--shards` imported with 2 lanes (check the invocation before comparing their discovery-dependent rows). Doc: `docs/ownership.md` "Results" (new 10-10 section; the 10-08 one kept as history), "Instrumentation", "Reproduce".
+
+**Reproduce.** `docs/ownership.md` "Reproduce" (snapshot the tree, `benchmarks/ownership_build_coverage.sh`, instrumented cargo build, `benchmarks/ownership.py --target-dir ... --cov-build ... --cache ... --prototype-cache ... --source-root ...`, `--report-only` to merge).
+
+**Gaps.** The persisted profile reads FinalGate's projects, not a fresh job; Rust-lifted p-code volume and DWARF variable recovery are not scored; one seed, n = 200; locals and the prototype declaration (49,120 tokens) are still PrintC fragments. A first process ran psv for about two minutes beside the process that completed it (the result file is the completing process's; profiles are sets of executed lines, so the overlap changes nothing).
+
+## Corpus wave, final run: 58 games on 9 platforms against baseline-off and stock Ghidra (2026-10-10, Main)
+
+`benchmarks/reports/console_research_wave_20261010.{json,md}`, written by `benchmarks/console_research.py --corpus-wave --stock --symtab-variants` (n = 500 per seed, seeds 1,2) on nih-vps-u.
+
+- **Tools:** fingerprint `5d47c57fe192c622`: release cli and worker of this tree after WiiDiscovery and ProgramOverhead, ghidra_opt `dbd7e74b`.
+- **Coverage:** 66 rows (58 games plus 8 `-symtab` supplements). All ran, none `degraded`. 55 headline games; Star Fox 64, Dragon Quest IV and NFS High Stakes are version-mismatch supplements.
+- **How it was run:** two shards, then 4 queue workers that each own one image at a time, warmed the cache; one serial pass then assembled the report. Host load was 9–18 on 8 vCPU, so the report's wall times are not timing claims.
+- **Before the run:** I re-checked ProgramOverhead's determinism. Golden Sun and MP4 have identical row multisets at `ROMWRIGHT_PROGRAM_JOBS` 1, 4 and 8 and with `ROMWRIGHT_NO_DECODER_POOL=1` (178,432 and 402,516 rows, 43 tables).
+
+Pooled sign tests (wins/losses/ties):
+
+| test | result |
+|---|---|
+| recall vs stock | 51/0/2, p < 1e-5 |
+| precision vs stock | 14/12/27, p = 0.42 |
+| precision_verified vs stock | 6/12, against us |
+| recall vs baseline-off | 8/0/47, p = 0.0039 |
+| precision vs baseline-off | 20/0/35, p < 1e-5 |
+| success rate vs baseline-off | 9/0 |
+
+Per-platform rows and the reading are in docs/console-research.md, "Final run (2026-10-10)".
+
+**Harness fixes made during the run** (`benchmarks/console_research.py`, `benchmarks/console_research_wave.py`, `scripts/ExportDecompiledSignatures.java`):
+
+1. **GBA stock signature export.** It aborted on the first sampled address where stock had already disassembled an instruction: `ContextChangeException` came from forcing TMode. The script now keeps the existing instruction's mode and marks the row `context_kept`. Golden Sun went from no stock result to 208/208 rows, 13 of them `context_kept`.
+2. **Stock timeout orphaned the JVM.** `subprocess.run` killed only the `analyzeHeadless` shell. FE's orphaned JVM ran 5 h 21 m into the next run's work directory until I killed it. Stock now runs in its own session, and a timeout kills the process group. I checked this with a 15 s limit: no JVM survived.
+3. **Stock DNF and crash are results.** Both are cached and labelled in the tables. Both are left out of the vs-stock tests, so they count neither way; this is documented in docs/console-research.md under "Stock that gives no result".
+   - The `--corpus-wave` stock limit is now 1 h; it was 4 h.
+   - `--stock-known-failure` recorded FE's earlier 4 h DNF with its log line (`~/runs/FinalWave/evidence/shardB.log`), so the 4 h run was not repeated.
+   - New test: `console_research_wave_test.py::test_stock_dnf_is_labelled_and_counts_neither_way` (11 tests OK).
+4. **Full headless log kept.** Each stock run's log is now saved as `headless.log`.
+
+**Stock failures:**
+- **FE Sacred Stones:** stock DNF, >4 h in auto-analysis. A second run was stopped after 2 h 20 m, also with no function export.
+- **KH Chain of Memories:** stock crash. In all three runs the analysis stopped after warnings about the same function, `09df5f18`. Twice it reported a `StackOverflowError` in `CreateFunctionCmd` / `CreateThunkFunctionCmd` (thunk resolution recursing); once it reported the locked-buffer assertion it leaves behind.
+
+**Not done.**
+- The precision loss to stock on PS2/PSP/DS is not classified.
+- The `n64_layout_discovery.json` Star Fox 64 row predates its truth rebase. That report is N64Layouts' before/after record and stays as written; this wave scores Star Fox 64 on the rebased truth.
+
+## PS2 truth audit: R&C padding rows removed, God Hand repo-named functions added (2026-10-10, Ps2Truth)
+
+Main's diagnosis said the PS2 precision loss to stock was partly the truth. I checked three truth tables against their repos at the pinned commits (shallow clones in `~/ventris-scratch/ps2-truth/repos/`) and revised them. No importer code changed, no report was regenerated, and `benchmarks/reports/*` is untouched.
+
+**What changed (per game, with the repo evidence).** Old tables are kept as `truth/functions.pre-ps2audit.tsv`; every changed row and its evidence is in `truth/ps2audit-changes.tsv`; meta.json `notes` records the change (marker "PS2 TRUTH AUDIT 2026-10-10"). The script is `~/ventris-scratch/ps2-truth/ps2audit.py` (idempotent: it reads the backup).
+
+| game | rows before | removed | added | shortened | rows after | evidence |
+|---|---|---|---|---|---|---|
+| R&C NTSC (Lombyte) | 2460 | 637 (0 verified) | 0 | 0 | 1823 | all 637 are 4-to-76-byte runs of `0x00000000`/`0xCDCDCDCD` inside a raw `textbin` `text_gap_*` subsegment of `config/us/rnc1.us.yaml`; none is in `config/ghidra/ghidra_functions.csv` (1,453 functions). The earlier extraction switched the gaps to `asm`. The 180 non-fill rows in those gaps are real code and stay. |
+| R&C PAL (rac1-decomp) | 1862 | 40 (2 verified) | 0 | 0 | 1822 | 38 are `0xCDCDCDCD` fill that `docs/DECOMP_PROGRESS.md` ("not a real function ... alignment padding") or `src/libgcc/nonmatching_*.c` ("Linker fill ... Not a function") names. The 2 verified ones (0x1206A8, 0x1E9080) are one-word dead-strip remnants of zeros (`src/libgcc/README.md`, `config/linker_remnants.txt`). |
+| God Hand | 10091 | 0 | 1142 (verified=0) | 203 | 11233 | `progress/unit_part_funcs.json` (built by `scripts/gen_part_funcs.py` from the `glabel`s of the splat-disassembled `asm/cod/000000.s`) names 1,142 function starts absent from `carved_funcs` and `symbol_addrs.txt`; 865 are in gaps, 277 inside an old unverified row, which is shortened to the new start (same trim rule as the old rows: next start, cut to the last `jr ra` + delay slot when only fill follows; that rule reproduces 2,138 of the 2,144 old unverified sizes). 7,946 verified rows unchanged. |
+
+The monolithic asm and the `nonmatching` asm files are not committed in the God Hand repo (gitignored, generated), so the manifest is the repo's own list of them. Of the 1,142 added starts, ours finds 957 and stock 406; 182 are found by neither. Ghidra's own symbol dump in the repo (`scripts/recon/ghidra/gh_symbols.csv`) was not used: it is analysis output, not repo-declared boundaries (31 of its text entries are in neither table).
+
+**Audit of the other five** (Dark Chronicle, Dark Cloud incl. title/dun, Digital Devil Saga, Fatal Frame, Persona 4): no fill-only rows except DDS 0x100000 (4 zero bytes). That one and God Hand 0x100000 stay: the repo declares both as functions (carved `func_00100000`; DDS stores `func_00100000` as a function pointer in `.sdata`). Every R5900 code subsegment of the repo splat configs has a truth row (Fatal Frame's only gap is `.vutext` VU microcode). DDS `config/dds1/not_functions.txt` (106 false starts) names no row in the truth. Their tables are unchanged.
+
+**Verification of the tables.** All eight PS2 `functions.tsv` parse with the m21 loader (`tsv_rows`), have 0 overlaps and 0 duplicate starts per module, declare every module that has rows (the three revised ones are `main` only; Dark Cloud main/title/dun), and the staged image sha1 equals meta.json `sha1_actual` (God Hand: sha256 `1742f95b...` equals the repo `elf_sha256` as before). New sha256: R&C NTSC `b2a6c8e7...`, PAL `62e6c8a7...`, God Hand `01cd732d...`.
+
+**Before -> after, wave scorer (`score_found`), cached projects on nih-vps-u.** The "before" column reproduces the wave report exactly (checked for every cell). Ours = `default`, off = `baseline-off`, frozen `recall`/`precision`, then `recall_verified`/`precision_verified`. Rows shown only where something changed; the five other games' cells equal the report.
+
+| game | tool | recall | precision | recall_verified | precision_verified |
+|---|---|---|---|---|---|
+| R&C NTSC | ours | 0.6463 -> 0.8607 | 0.9882 -> 0.9751 | 0.8850 -> 0.8850 | 0.9911 -> 0.9911 |
+| R&C NTSC | off | 0.6463 -> 0.8607 | 0.9117 -> 0.8997 | 0.8850 -> 0.8850 | 0.9139 -> 0.9139 |
+| R&C NTSC | stock | 0.5317 -> 0.7175 | 1.0000 -> 1.0000 | 0.7961 -> 0.7961 | 1.0000 -> 1.0000 |
+| R&C PAL | ours | 0.8539 -> 0.8595 | 0.9882 -> 0.9733 | 0.8463 -> 0.8474 | 0.9993 -> 0.9993 |
+| R&C PAL | off | 0.8539 -> 0.8595 | 0.9112 -> 0.8974 | 0.8463 -> 0.8474 | 0.9510 -> 0.9510 |
+| R&C PAL | stock | 0.7030 -> 0.7184 | 1.0000 -> 1.0000 | 0.6951 -> 0.6960 | 1.0000 -> 1.0000 |
+| God Hand | ours | 0.9709 -> 0.9574 | 0.8950 -> 0.9825 | 0.9664 -> 0.9664 | 0.9938 -> 0.9938 |
+| God Hand | off | 0.9706 -> 0.9568 | 0.6375 -> 0.6996 | 0.9660 -> 0.9660 | 0.7708 -> 0.7708 |
+| God Hand | stock | 0.9117 -> 0.8552 | 0.9565 -> 0.9988 | 0.8919 -> 0.8919 | 1.0000 -> 1.0000 |
+
+Unchanged (before = after), ours / off / stock, recall and precision: Dark Chronicle 0.9844/0.9972, 0.9843/0.9965, 0.9288/0.9982; Dark Cloud (main module) 0.9835/0.9905, 0.9825/0.9931, 0.9173/0.9850; DDS 0.9854/0.9917, 0.9851/0.9618, 0.8630/1.0000; Fatal Frame 0.9369/0.9893, 0.9362/0.8976, 0.8334/1.0000; Persona 4 0.9857/0.9973, 0.9847/0.9919, 0.9028/0.9997. Their verified columns equal the report as well.
+
+**Reading.**
+- **R&C.** Recall rises for both tools (NTSC ours 0.646 -> 0.861, stock 0.532 -> 0.718, matching Main's estimate). Our precision falls 1.3-1.5 points because the importer makes a function of 21 (NTSC) / 24 (PAL) fill words, which were hits before and are invented now. That is an importer bug the old truth hid. The verified metrics do not move on NTSC; on PAL they move in the 4th decimal (two verified rows dropped).
+- **God Hand.** Our invented entries drop from 1,149 to 192 and stock's from 418 to 12; 957 of ours were repo-named functions. Precision 0.8950 -> 0.9825 (stock 0.9565 -> 0.9988): we still trail stock. What is left: 48 splits of verified functions (the `flow` case blocks, unchanged), 104 entries inside unverified rows the repo does not split, 40 between rows. Recall falls 0.9709 -> 0.9574 because 185 of the added rows are not found by us (stock 0.9117 -> 0.8552).
+- **Verified columns.** They do not move on God Hand (verified rows unchanged), so the finding that the real precision errors are evenly spaced case blocks inside verified functions stands as measured.
+
+**m21.** No importer or m21 code changed, and m21 reads no corpus PS2 `functions.tsv` (its PS2 images are the Capcom and dungeon-game ELF symbols), so its numbers are unchanged by construction; I did not rerun it.
+
+**Not done.**
+- The repo classifies 144 PAL truth rows as dead-strip remnants (`config/linker_remnants.txt`) and names more "fallthrough fragments" (`docs/DECOMP_PROGRESS.md`). They hold code, are not fill, and are not removed.
+- The 182 added God Hand starts that neither tool finds, and the 104 + 40 remaining invented entries, are not classified.
+- Main reruns the wave report against the revised tables (the host corpus copies were rsynced; local and host `functions.tsv` are identical).
+
+## PS2 C output on matched Persona 4 functions: romwright, m2c, stock Ghidra (m22-002, 2026-10-10, Ps2Match)
+
+Measurement only. No Rust or native code changed, so the PS2 wave rows (recall, precision, `recall_verified`, `precision_verified` on the 8 games) and m21 are unchanged by construction; they were not re-run. `native/build/ghidra_opt` sha256 `dbd7e74b…` (unchanged, not rebuilt).
+
+**What was built.** `tests/m22-002_ps2_c_output.py` (one command, `--selftest`, `--sample-out`, `--stock-export-only`, `--stock-json`, `--redo-report`), `scripts/ExportDecompiledC.java` (stock Ghidra's C plus the globals it names), `benchmarks/reports/m22-ps2_p4.{json,md}` (written by the script), and a docs section in `docs/console-research.md` ("Supplement: C output on matched Persona 4 functions"; method, limits, reading).
+
+**What it does.** 200 matched functions of `Raikaru/Persona4-Decompilation` at `509519da` (seed 20261010, 32 to 1024 bytes, from 6445 eligible; `tools/verify.py` reports 8474 MATCH here), each compiled with its unit's MWCCPS2 (b210 `-O2` 188, b210 `-O2,p` 5, b119 `-O4,p` 7) from `/var/tmp/p4ci` under wibo, in a context of the unit's own declarations with the per-function pragmas replayed, scored against retail bytes (`exact` = verify.py's criterion, `percent` = objdiff 3.6.1).
+
+**Result** (context variant, the m22-001 contract; two full runs, identical rows):
+
+| layer | compiled | compile-failure share | exact | mean percent | mean percent of compiled |
+|---|---|---|---|---|---|
+| romwright (export-c, tools `84d12ab2…`) | 143 | 28.5% | 14 | 52.1 | 72.9 |
+| m2c 0.1.0 (`mipsee-mwcc-c`) | 101 | 49.5% | 32 | 40.4 | 80.0 |
+| stock Ghidra 12.1.3 | 109 | 45.5% | 7 | 37.1 | 68.1 |
+
+Standalone (no unit declarations): romwright 140 compile / 12 exact / 49.9%; m2c 45 / 12 / 16.4%; stock 125 / 8 / 42.8%. Paired on percent (context): romwright above m2c 87 to 60 (p = 0.03), above stock 100 to 41. m2c is ahead on exact matches and on the percent of what compiles; romwright on how much compiles and the mean percent. 102 of the 200 sit in `src/promoted`, which the repo built from verified m2c output: there m2c is exact on 19 and romwright on 12; elsewhere 13 and 2. So the exact count for m2c is an upper bound, and the result is not "romwright beats m2c" on exact C.
+
+**Findings for the C printer (not acted on).**
+1. 40 of romwright's 54 context compile failures are `illegal implicit conversion`; of six read, three assign a pointer-returning callee to an integer local (`temp_v1 = func_0029d050();` with the asserted return `void *`), one stores a function address through `code **`, two are call arguments. `[INFERENCE]` taking the asserted callee return type into the local's type removes some of them; not measured.
+2. 3 of the 200 matched functions have no `export-c` candidate: the default import found no function at 0x2e6b20, 0x3e3680, 0x501160.
+3. `struct Data_… D_…[] __attribute__(void *);` is printed in at least one export (0x4633f0); that is a syntax error.
+
+**Environment.** The 339 ee-gcc 2.96 units of the repo (`config/gcc_units.txt`) cannot be built here: the supplied ee-gcc and Sony assembler are i386 binaries with `/lib/ld-linux.so.2` as interpreter, which this host lacks (the user's own copies under `~/Projects/Persona 3 Decomp/.../build/toolchain` are loader-patched and differ in sha1; not used). No toolchain was substituted; those units are excluded and `verify.py --skip-gcc-units` is used. The retail ELF sha1 `4eeec036…` matches the repo's. `/tmp` (tmpfs) was at its quota: the script sets `TMPDIR` under its work dir (`splat` and `regenerate-asm` failed without it).
+
+**Where it ran.** Everything except the stock export on this host (`CARGO_TARGET_DIR=target/Ps2Match`, `-j 2`, built from the working tree at 7e29f17c plus WIP, deleted afterwards), under load 5 to 8, no timings claimed. Stock Ghidra ran on nih-vps-u in `~/runs/Ps2Match` (150 s, 8G heap) via `--stock-export-only`, its `signatures.json` copied back and passed as `--stock-json`.
+
+**Not done.** ee-gcc units (see above); a PSP/GBA counterpart; romwright's callee-type propagation; feeding the matched-function sample to the wave scorer. IDA/Hex-Rays is not part of this report.
+
+## PS2 switch case labels: the dispatch is seen again, its table is stored, the labels leave the function list (2026-10-10, Ps2Tables)
+
+**Target.** The 162 evenly spaced `flow` entries strictly inside verified truth functions (God Hand 48 in 10 functions, DDS 67 in 14, Fatal Frame 36 in 8, Persona 4 10 in 7, R&C PAL 1): the case blocks of switches whose table was never stored.
+
+**Diagnosis** (traced with debug prints in scratch copies on nih-vps-u, not inferred). Idiom, God Hand 0x1627d8 (EE GCC): `addiu v1,s2,-1; sltiu v0,v1,8; beqz v0,default; ...; sll; addu; lw a0,table(v1); jr a0`, the table read as code pointers by the ELF pointer scan, the eight case blocks each ending in `b tail`. Three independent causes, each seen on the listed hosts:
+1. *First-visit ownership (discovery.rs).* The host (pointer-seeded itself) and the labels are walked in one BFS. The last label (`bnez v0,loop_head`) reaches the host's loop head in a few instructions, the host in dozens, so the head, the dispatch and the first cases belong to a label that sits above them. The host ends at `0x162898` (192 B, truth 828), the `jr` is in no function extent, so neither the reference pass nor `switch_candidates` ever asks about it. Fatal Frame 0x1b8be8 has the same thing for its second dispatch in every round (labels are seeds of earlier rounds there, not `data_derived`).
+2. *The labels bound their own function (switch_tables.rs).* `next_function` was the smallest function entry above the owner, which is the first case label; so the first case was "outside" the dispatching function, the table went to the decompiler and the labels stayed. Cases outside, the dominant `Outside` refusal in `ROMWRIGHT_TRACE_BRANCHIND` (God Hand 256 of 782 refused jumps in round 0).
+3. *Guard stated on each way in (vsa.rs).* GCC schedules the `sltiu` into the delay slot of the branch before the join, so two ways in each state the guard and the dispatch block states none (`NoStridedLoad`/`Unguarded`).
+
+**Changes (all generic, Rust).**
+- `native/discovery.rs`, new block after the span-sharing rule in `flow_discover_with_candidates`: an entry only data names (this walk's `data_derived`, the candidate lists, `table_seeds`), nothing calls, not symbol-declared, whose reached code starts below it and which the entry above *falls into* (`flow_shapes`: a fall-through ends at the lowest reached address) lends that code to the entry above: the owner's `proven_bodies` span is extended over the contiguous run of the label's reach below it. Entries are not touched (a first version dropped the label; the next round's `data_code_pointers` seeding put it back). Needed in rounds after the first, where labels are seeds.
+- `native/switch_tables.rs`: `CaseLabels` (calls, data words, anonymous functions) and `unevidenced(cases)`: cases that are `FUN_` functions only because the table's own words name them (the evidence `demote_case_blocks` reads, taken before the table is stored). `next_function` skips them, so the table is stored by VSA and `demote_case_blocks` withdraws the labels.
+- `native/vsa.rs`: `recover_through_ways`: when `recover_table` answers nothing and `switch_lines` holds the ways in (2 or 3, complete), each way is run as the single guard line and the table is the union; any way that answers nothing answers nothing (`jump.rs` benefits too: same `recover`).
+
+**Measurement.** nih-vps-u, paired: `before` = a copy of the same tree snapshot with these three hunks reverted (`mkbefore.py`), release cli + worker of each in its own target dir, same ghidra_opt `dbd7e74b`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `benchmarks/console_research.py --corpus-wave --images <8 PS2 games> --configs default -n 3 --seeds 1` (discovery numbers do not depend on n; the 500-function decompile sample was not run). Both trees carry Ps2Recall's and Ps2Truth's work in progress at the time (sweep entries, the revised truth), which is why "before" is not the 10-10 report. Host load 5-11, no timings claimed. Scorer: the wave's frozen `recall`/`precision` and `recall_verified`/`precision_verified`.
+
+| game | recall before -> after | precision | recall_verified | precision_verified | entries inside verified truth functions, same tree before -> after (report tree) |
+|---|---|---|---|---|---|
+| god-hand | .9976 -> .9976 | .9866 -> **.9921** | .9980 -> .9980 | .9951 -> **.9976** | 39 -> 19 (48) |
+| digital-devil-saga | .9974 -> .9974 | .9925 -> **.9987** | .9976 -> .9976 | .9944 -> **.9993** | 55 -> 7 (67) |
+| fatal-frame | .9958 -> .9958 | .9930 -> **.9951** | .9959 -> .9959 | .9936 -> **.9951** | 22 -> 17 (36) |
+| persona-4 | .9992 -> .9992 | .9931 -> .9931 | .9993 -> .9993 | .9986 -> .9986 | 14 -> 14 (10) |
+| ratchet-clank | .9281 -> .9281 | .9912 -> .9912 | .9245 -> .9245 | .9941 -> .9941 | 9 -> 9 |
+| ratchet-clank-pal | .9276 -> .9276 | .9895 -> .9895 | .9184 -> .9184 | .9973 -> .9973 | 4 -> 4 (1) |
+| dark-chronicle | .9987 -> .9987 | .9955 -> .9955 | .9987 -> .9987 | .9996 -> .9996 | 3 -> 3 |
+| dark-cloud | .9988 -> .9988 | .9889 -> .9889 | .9988 -> .9988 | .9978 -> .9978 | 9 -> 9 |
+
+Functions: God Hand 11,358 -> 11,295, DDS 10,403 -> 10,338, Fatal Frame 4,262 -> 4,253; every removed entry is a `flow` case label, no truth function is lost (first versions lost God Hand `func_0034C990`, a called function that abuts a tail-calling label, and DDS four called 56-byte functions: the fall-through requirement and the contiguous-run bound fix both). God Hand `func_001627D8` is 828 B, exactly the truth size. Non-PS2, same pairing: gc-melee .9997/.9993 and x360-call-of-duty-modern-warfare-2 .8011/.9936 identical, 19,836 and 14,978 functions both ways. m21 (`tests/m21-001_real_images.py`, before and after): PASS both; pokeemerald .9761/.9972, pokeheartgold .9735/.9984, capcom .9762/.9924, darkstalkers-3 .9878/.3663, nfs-mw .9734/.9719, black-ops-2 .9833/.9964 identical; dungeon_game recall .9885 both, precision .9785 -> .9822.
+
+**Residual (not fixed).** Of the entries still inside verified hosts, dispatch-related: God Hand `cIDManager_getLocalFileName` 0x2acfa8 (7) and `func_0039A140` (4) still refused `NoStridedLoad` (the real way-in lines start at the function entry and include a call and an `sra` of a parameter; the unit-test idiom, trimmed to the two blocks, answers); Fatal Frame `FActExecOccur` (3), `SetRoomDirecPazzEne` (4; its host entry 0x147418 is not found at all); a handful of single entries inside DDS/Fatal Frame functions with a stored table are boundary-sweep entries (Ps2Recall's), not case labels. The rest of the 162 are not dispatches (Persona 4 libc, `jr ra`-after-return starts). Persona 4's count rose 10 -> 14 on both sides of the pairing because of the sweep entries, not this change.
+
+**Tests** (filtered, dev tree on the host): `native::discovery::tests::a_case_label_that_reaches_back_into_the_function_above_leaves_its_dispatch_in_that_function`, `a_called_label_that_reaches_back_does_not_extend_the_function_above`, `a_function_that_returns_where_a_tail_calling_label_begins_to_reach_is_not_extended` (synthetic flows of the God Hand idiom and of the 0x34c930 abutting case); `native::switch_tables::scratch_tests::only_functions_the_tables_own_words_made_are_case_labels`; `native::vsa::tests::real::mips_each_way_in_states_its_own_guard` (real God Hand r5900 bytes of 0x2acfe8..0x2ad018 and the table at 0x44b020, lifted by SLEIGH) and `mips_a_way_that_tests_nothing_leaves_the_dispatch_unanswered`. `native::vsa`, `native::switch`, `native::discovery`: 99 passed, 3 failed; the 3 are Ps2Recall's in-progress sweep tests (`a_range_nothing_calls_is_data_and_is_not_swept`, `the_gap_before_an_aligned_object_is_fill_and_a_leading_nop_is_not`, `the_boundary_sweep_finds_the_objects_after_alignment_fill_on_an_ee_sequence`), which assert entries and fail on their side (an extra 0x100074). `cargo check --workspace --all-targets`: clean except the known `return_size` warning.
+
+**Files.** `native/discovery.rs` (one block, agreed with Ps2Recall), `native/discovery/tests.rs` (3 tests appended), `native/switch_tables.rs`, `native/vsa.rs`. No user WIP file touched, no native C++, no `benchmarks/reports/*.json`. The scripts (`~/ventris-scratch/ps2-diag/{pair.sh,mkbefore.py,ps2_hosts.py,...}`) are throwaway; remote trees and targets under `~/runs/Ps2Tables` removed after the run.
+
+
+## PS2 discovery: alignment fill, boundary sweep and data pointers for stripped MIPS executables, frame openers after a `nop` (2026-10-10, Ps2Recall)
+
+Recall on the eight PS2 games goes from 0.646-0.986 to 0.688-0.999 (wave truth; 0.861 and 0.928 for Ratchet & Clank on the audited truth). Precision falls on four games (God Hand 0.895 -> 0.887, Persona 4 0.997 -> 0.993, Dark Chronicle, Dark Cloud, both -0.2 points) and rises on four. It is still below stock Ghidra's on every game: stock is near 1.000 because it does not invent, and what we add and the truth does not name is mostly switch case blocks (Ps2Tables) and code in stretches the truth does not cover. All generic (no per-game table), no native C++, `ghidra_opt` unchanged (`dbd7e74b`).
+
+**What the four findings turned out to be** (each traced on the importer with a debug build of a scratch copy, not inferred):
+
+| finding | cause |
+|---|---|
+| 1. functions on fill | `00000000` decodes as a MIPS `nop`, so a call, a data pointer or the gap rule took the zero word in front of an aligned function as an entry (R&C 24, PAL 24 on `cdcdcdcd`; God Hand 0x133940 on two zeros before a verified function). The 16-byte fill test also missed fill that runs from one mapping into the next (God Hand `.text` ends 0x3bbf20, its zeros go on to 0x3bbf80). |
+| 4a. uncovered functions at a `jr ra` boundary | PS2 had no boundary sweep. Fatal Frame 37, God Hand 31, Digital Devil Saga 32, Persona 4 26 of the 64+ byte misses sit right after `jr ra` and its delay slot. |
+| 4b. uncovered functions named by data | 8-byte `j X; li a0,N` stubs and function tables: the data-pointer candidates were retracted by the case-label overlap rule, whose span was stretched by a tail-call chain (Fatal Frame 0x103890: span end 0x1f93dc, one megabyte; every data-derived entry inside it went: 121 of the 167 misses). Seeding the data words as entries (`data_code_pointers`) is outside that rule. |
+| 4c. function ends over the next function | God Hand: 110 of the 156 truth starts inside one of ours (sweep on, this rule off) are an 8-aligned `addiu sp, sp, -N` right after a `nop` (0x107e18 is `addiu sp, sp, 16; nop`, falls into 0x107e20); Ratchet & Clank: 109 of 113 (PAL 109 of 117) are targets of `j` and of no `jal`, hand-written routines that fall into each other. |
+| (new) data flagged executable | God Hand `.data` is `WAX` and `.vutext` is VU microcode: the sweep and the pointer seeding read them as code (140 `jal` into `.data`, 99 entries). |
+
+**Changes** (`native/discovery.rs`, `native/discovery/tests.rs`, `native/elf.rs`, `native.rs`):
+
+1. **Alignment fill is no function start** (`opens_with_alignment_fill`, folded into `opens_with_fill`, which `close_call_targets`, the call-target rules and the reference pass already call). On 4-byte instruction sets, a word of one `cd`/`cc`/`dd`/`fd`/`ff` byte, or one to three zero words that end on an 8-byte boundary, is fill; a lone zero word followed by code at 4 mod 8 is a leading `nop` and is not. Applied to the walk's entries, to every candidate, and to the final function list (a symbol the image declares is kept). `opens_with_fill` now reads four words one by one, so fill across a mapping boundary, and the last words of the last mapping, are fill. Measured on the 8 games' current truth (54,361 rows): 10,777 starts follow 2-3 zero words; 9 rows open with a zero word and the rule reads 3 of them (2 verified) as fill. Functions of ours that open on a fill word: R&C 24 -> 1, PAL 24 -> 2.
+2. **The boundary sweep and the data-pointer seeding run for stripped non-relocatable MIPS ELF executables** (`elf::stripped_mips_executable`: `e_type` 2, machine MIPS, no symbol names; PS2 `SLUS_*`, PSP static ELFs). `elf32` sets `unrelocated_data_pointers`; `native::discover` routes the image to `discover_mapped` (the DOL path, plus `confirm_initializers`). The WiiDiscovery guards stay: sweep entries are not `data_derived`, the jump-table run filter of `data_code_pointers` stays. Two things the sweep needed for MIPS:
+   - Fill does not end the boundary: after a `jr ra` and its delay slot the next object starts after the padding, so the first instruction after fill is a candidate (a `nop` is a valid instruction, before, the first zero word took the boundary and no candidate came after it).
+   - A range no call reaches is data: `call_dense_ranges` keeps an executable mapping only with one distinct plausible call target per 4,096 bytes (a plausible target opens a frame or follows `jr ra`/`j`/`b` and its delay slot). Real code: R&C `core.text` 290 bytes per target, God Hand `.text` 483, Persona 4 929 (81-85% of the call targets plausible); God Hand `.data` 0 of 140, `.vutext` of three games 0. Candidates in a range that fails it are dropped, so are the call references the scan decoded there (they would make functions of their targets), and `data_code_pointers`/`code_pointer_tables` take their code ranges from it. Other instruction sets keep every executable range: the rule cost Mario Party 4 0.4 points of recall (GameCube overlays are called by relocation, which a scan of unrelocated bytes cannot see) and is MIPS only.
+3. **A frame opener after a `nop` starts a function** (`after_fill_starts`, seeded before the first walk; `NativeImport::fill_starts` exempts them from `interior_entries`' "reached by a fall-through of another function" rule): an 8-aligned `addiu sp, sp, -N` right after a zero word. Over the 8-aligned addresses after a `nop` that are no function of the import, 187 are truth starts and 8 lie inside a truth function (God Hand 126 and 2, Persona 4 41 and 0, Fatal Frame 13 and 0, R&C PAL 1 and 6); without a `nop` before, 4 are starts and 221 are not. This is the fix for "the body runs past the real end" where the next function opens a frame (God Hand, Persona 4, Fatal Frame, Digital Devil Saga).
+4. **A `j` target after a `nop` starts a function, when the image is full of them** (`jump_starts_after_fill`, in the discovery rounds, quorum `JUMP_START_QUORUM` = 16 such targets that no function is yet). R&C PAL: 31 targets, 31 truth starts; God Hand 22 and 2; Digital Devil Saga 3 and 1, Dark Chronicle 1 and 3, so the quorum keeps the rule off where it would be wrong: with it on for every image, Digital Devil Saga lost 15 functions (0.12 points of recall; one start's extent took the later functions' candidates away, `candidate_address_is_valid` refuses an address inside a known extent). Also in the data: R&C is the image whose functions `j` is the only reference of (22% of its `j` targets are functions already; 67-96% on the others).
+
+**Measurement.** `benchmarks/ps2_discovery.py` (new; scores with `console_research_wave.score_found` through `console_research.wave_units`/`score_units`, i.e. the wave scorer, nothing decompiled), `before` = this tree at the start of the work, `after` = the same tree with the four changes (the other agents' edits of the same files, Ps2Tables's block in `discovery.rs` and its debug print in `references.rs`, are in neither: the two builds differ by these changes only). ghidra_opt `dbd7e74b`, `ROMWRIGHT_NO_IMPORT_CACHE=1`, nih-vps-u. Two truths: the wave's (`functions.pre-ps2audit.tsv`) and the current `functions.tsv` (Ps2Truth); only `recall` and `precision` depend on it.
+
+| game | recall | precision | recall_verified | precision_verified |
+|---|---|---|---|---|
+| Dark Chronicle | 0.9844 -> **0.9987** | 0.9972 -> 0.9955 | 0.9842 -> **0.9987** | 0.9997 -> 0.9996 |
+| Dark Cloud | 0.9840 -> **0.9988** | 0.9906 -> 0.9889 | 0.9840 -> **0.9988** | 0.9990 -> 0.9978 |
+| Digital Devil Saga | 0.9854 -> **0.9974** | 0.9917 -> 0.9925 | 0.9854 -> **0.9976** | 0.9932 -> 0.9944 |
+| Fatal Frame | 0.9369 -> **0.9958** | 0.9893 -> 0.9930 | 0.9412 -> **0.9959** | 0.9890 -> 0.9936 |
+| God Hand | 0.9709 -> **0.9983** | 0.8950 -> 0.8870 | 0.9664 -> **0.9980** | 0.9938 -> 0.9951 |
+| Persona 4 | 0.9857 -> **0.9992** | 0.9973 -> 0.9931 | 0.9875 -> **0.9993** | 0.9990 -> 0.9986 |
+| Ratchet & Clank | 0.6463 -> **0.6878** | 0.9882 -> 0.9912 | 0.8850 -> **0.9245** | 0.9911 -> 0.9941 |
+| Ratchet & Clank PAL | 0.8539 -> **0.9076** | 0.9882 -> 0.9895 | 0.8463 -> **0.9172** | 0.9993 -> 0.9973 |
+
+Current truth (before -> after, recall / precision): God Hand 0.9574 -> 0.9976 / 0.9825 -> 0.9866, Ratchet & Clank 0.8607 -> 0.9281 / 0.9751 -> 0.9912, PAL 0.8595 -> 0.9276 / 0.9733 -> 0.9895; the other five rows are the same. Stock on the current truth: God Hand 0.8552 / 0.9988, R&C 0.7175 / 1.0000, PAL 0.7184 / 1.0000; other games' recall 0.833-0.929, precision 0.985-1.000. **Uncovered misses** (`ps2_classify.py` adapted to the projects of `ps2_discovery.py`, current truth; truth functions that none of ours covers and that start 64+ bytes past our previous function's end): God Hand 109 -> 0, Fatal Frame 167 -> 1, Digital Devil Saga 52 -> 1, Persona 4 43 -> 0, Dark Chronicle 40 -> 2, Dark Cloud 38 -> 1, R&C 4 -> 3, PAL 4 -> 3 (all distances: 343 -> 11, 253 -> 17, 133 -> 11, 160 -> 5, 99 -> 9, 64 -> 2, 81 -> 18, 76 -> 15). The three Persona 4 functions Ps2Match named (0x2e6b20, 0x3e3680, 0x501160) are found. Invented entries by where they sit (current truth, before -> after): God Hand 192 -> 145 (inside a truth function 152 -> 100), Persona 4 35 -> 91 (the 43 new ones sit in stretches the truth does not cover: its truth covers 50.3% of the scored ranges), Digital Devil Saga 85 -> 57, Fatal Frame 43 -> 26, R&C 40 -> 15, PAL 43 -> 18; the rest of the "inside a truth function" ones are evenly spaced `flow` blocks of switches whose table is not stored (Ps2Tables's).
+
+**m21** (`tests/m21-001_real_images.py`, before = this tree at the start, after = with the changes, same host, two full runs): PASS both. Function counts are identical on the five non-PS2 images; recall / precision before -> after: pokeemerald 0.9761 / 0.9972 (same), pokeheartgold 0.9735 / 0.9984 (same), Darkstalkers 3 (PS1) 0.9878 / 0.3663 (same, 2,206 functions both), NFS Most Wanted 0.9734 / 0.9719 (same), Black Ops 2 0.9833 / 0.9964 (same), **Capcom Fighting Evolution 0.9418 / 0.9964 -> 0.9762 / 0.9924** (8,312 -> 8,651 functions: 306 more truth, 36 invented, 3 truth lost), **dungeon_game 0.9438 / 0.9880 -> 0.9885 / 0.9785** (748 -> 791: 35 more truth, 12 invented, 4 non-truth lost). Precision on those two PS2 images is lower (0.4 and 1.0 points) for +3.4 and +4.5 points of recall; the invented ones are `flow` entries inside truth functions (Capcom 0x149438.. evenly spaced 20-byte blocks, dungeon 0x1038a8, 0x129d34..: blocks after a mid-function `jr ra`), still above the floors. I raised the two PS2 recall floors (`FLOORS`: Capcom 0.931 -> 0.966, dungeon 0.933 -> 0.978). Two rules I tried to take them back and dropped: no sweep candidate after a computed jump until a frame opens (dungeon invented 12 -> 5, Capcom unchanged, but 5 and 17 truth functions lost, and the PS2 games' recall fell 0.05-0.7 points), and no sweep candidate between two stretches of one function's walk (no effect on dungeon, -2 on Capcom).
+
+**Other platforms** (33 wave images that the change could reach: PSP, PSX, N64, GC, Wii; `before` and `after` as above, `after` after the last code change; recall, precision, verified columns, and the function counts compared): all identical, function count included, on 29: PSX 7 of 8, N64 8 of 8, GC 7 of 7, Wii 5 of 5, PSP Melodie and Pac-Man Rally (PRX, `e_type` 0xffa0: not an executable, the rules do not apply). Changed: PSX Silent Hill (the fill rule: 6,433 -> 6,430 functions, precision 0.9879 -> 0.9883), **PSP Tetris 0.9385 -> 0.9884 recall, 0.9710 -> 0.9600 precision** (7,888 -> 8,402 functions: 407 more truth, 107 invented), **PSP Camera 0.9457 -> 0.9599 / 0.9600 -> 0.9472** (190 gained, 93 truth, 97 invented; precision_verified 0.9931 -> 0.9788 and Tetris's 0.9947 -> 0.9820, all new invented inside verified functions), Hot Pixel precision 0.8961 -> 0.8953 (+9 functions). The PSP invented ones are `flow` blocks inside functions like PS2's. The Mario Party 4 check is the one that moved the rule to MIPS only. **PS1 EXE** (`psx::import`, flagged and routed the same way in a scratch build, not kept): recall up on 7 of 8 (Rage Racer 0.9523 -> 0.9925, NFS High Stakes 0.9852 -> 0.9968, Legend of Mana 0.9695 -> 0.9836, Vagrant Story 0.9481 -> 0.9694, Parasite Eve 0.8222 -> 0.8346) and precision down on all 8 (Rage Racer 0.9948 -> 0.9345, Legend of Mana 0.9973 -> 0.9804, NFS 0.9701 -> 0.9567, Vagrant Story 0.9577 -> 0.9446), so PS1 stays on the walk it had; its only change is the fill rule.
+
+**Paired import times** (3 PS2 games, 3 repetitions, `before` and `after` alternating, wall seconds with the load average just before each import; host shared, so rough): Fatal Frame before 16.2 / 7.6 / 7.6 (load 6.3 / 8.3 / 7.8), after 13.8 / 8.9 / 8.7 (7.6 / 8.2 / 6.9); God Hand before 27.9 / 33.3 / 27.9 (7.1 / 5.3 / 5.6), after 30.5 / 37.4 / 30.9 (6.2 / 5.9 / 4.9); Persona 4 before 53.6 / 53.2 / 52.6 (4.6 / 2.6 / 2.0), after 55.7 / 56.2 / 55.8 (3.2 / 2.4 / 2.4). Medians: +17%, +11%, +5%: the sweep decodes every instruction of the code and 230 to 400 more functions (God Hand 10,946 -> 11,351) go through the later rounds. Not a timing claim at those loads.
+
+**Tests** (filtered: `native::discovery native::dol native::elf native::references native::xex native::psx`, 76 passed on the host and locally; `cargo check --workspace --all-targets` clean apart from the known `return_size` warning): `the_gap_before_an_aligned_object_is_fill_and_a_leading_nop_is_not` and `a_function_opening_in_alignment_fill_is_dropped_wherever_it_came_from` (the padding rule: the three alignments, the leading `nop`, `cdcdcdcd`, the end of a mapping, Thumb unaffected; a seed, a data pointer and a sweep candidate on fill dropped, a declared symbol kept), `the_boundary_sweep_finds_the_objects_after_alignment_fill_on_an_ee_sequence` (real decoders, `r5900`: three functions between fill, the second and third found by the sweep only, none on the padding) and `a_range_nothing_calls_is_data_and_is_not_swept` (the same bytes in 8 KB with no call into them: not swept), `a_frame_opener_after_a_nop_on_an_aligned_address_starts_a_function`, `jump_targets_after_a_nop_start_functions_only_in_an_image_full_of_them` (15 targets no, 16 yes, known targets do not count, only unrelocated MIPS). The EE tests skip without a Ghidra install.
+
+**Not done / residual.**
+- R&C's 113 (PAL 117) truth starts inside a body of ours: 109 are `j` targets with no `nop` or frame before them, hand-written assembly that falls into the next routine (0x1ee9f8 runs 4,984 bytes over three truth functions that nothing references); no byte pattern separates them from the code they follow.
+- The sweep adds `flow` entries inside functions (PSP 97-107 on two images, PS2's case blocks, m21's 12 + 36): precision is below stock's everywhere. An `sp`-relative access among a candidate's first instructions flags 22% of the PSP ones (46 of 204) and no true start (0 of 407 + 93), not implemented.
+- The PS1 EXE and PSP PRX images do not get the sweep.
+- Persona 4 (`before` 35, `after` 91 invented, 43 in stretches the truth does not name) and Dark Chronicle/Dark Cloud precision are scored against truth that covers 50%, 7% and 4% of the ranges.
+
+**Files.** New: `benchmarks/ps2_discovery.py` (paired before/after runner on the wave scorer; writes only to `--cache` and `--out`). Edited: `crates/romwright-core/src/native/discovery.rs` (the fill rule, `discover_mapped`'s boundary through fill and call-dense ranges, `call_dense_ranges`, `after_fill_starts`, `jump_starts_after_fill`, the entry/candidate/function-list filters, the `interior_entries` exemption), `native/discovery/tests.rs` (my tests, before Ps2Tables's), `docs/console-research.md` ("Supplement: PS2 discovery"), `docs/game-decomp-plan.md` (row), `tests/m21-001_real_images.py` (two floors), this section. **User WIP files, minimal edits, reported:** `native/elf.rs` (`stripped_mips_executable` and the `unrelocated_data_pointers` line in `import_elf32`), `native.rs` (`NativeImport::fill_starts`; `discover`: stripped MIPS executables go through `discover_mapped`; `code_pointer_tables` and `data_code_pointers`: code ranges from `call_dense_ranges` when `unrelocated_data_pointers`; the discovery rounds: `jump_starts_after_fill`). Native C++: none (`ghidra_opt` sha256 unchanged, `dbd7e74bdd7d04a52da4e5390d7d32a9ad8d1df4f1dc218be805a2868212e32e`, not rebuilt). Host trees, builds and caches under `~/runs/Ps2Recall` are removed (the result JSON, logs and the throwaway analysis scripts stay there and in `~/ventris-scratch/Ps2Recall`); the local build directories are removed. No git writes; no `benchmarks/reports/*.json` touched.
+
+## PS2 C printer: the output agrees with the unit's declarations, and four EE/MWCC shapes (m22-002, 2026-10-11, Ps2Printer)
+
+m22-002 (matched Persona 4 functions, MWCCPS2 under wibo, 200 per sample, compiled against the unit's own declarations and scored by `verify.py`'s MATCH rule and objdiff percent) before and after the printer change. Only the romwright layer moved. All numbers are compiled / exact / mean percent over the 200; "before" is the tree at the start of this work (the first run's own figures, 143 / 14 / 52.1 in context, are in the Ps2Match section: discovery already found all 200 functions by then, so they differ).
+
+| sample | tool, variant | before | after | after, outside `src/promoted` |
+|---|---|---|---|---|
+| seed 20261010 | romwright, context | 147 / 14 / 53.2 | **190 / 45 / 74.7** | 18 exact (was 2), mean 71.6 |
+| seed 20261010 | romwright, best | 171 / 16 / 62.5 | **194 / 46 / 75.9** | 18 exact (was 2), mean 72.3 |
+| seed 20261010 | m2c, context / best | 101 / 32 / 40.4 · 106 / 32 / 42.4 | identical | 13 exact |
+| seed 20261010 | stock, context / best | 110 / 7 / 37.4 · 127 / 8 / 43.4 | identical | 1 exact |
+| seed 20261011 | romwright, context | 163 / 28 / 61.0 | **190 / 45 / 76.4** | 19 exact (was 11), mean 73.8 |
+| seed 20261011 | romwright, best | 181 / 28 / 66.6 | **197 / 45 / 78.0** | 19 exact (was 11), mean 75.6 |
+| seed 20261011 | m2c, context / best | 122 / 50 / 50.9 · 127 / 51 / 52.5 | identical | 19 exact |
+
+Reports (regenerated by the script, not edited): `benchmarks/reports/m22-ps2_p4.{json,md}` (first sample, all three layers), `m22-ps2_p4_seed20261011.{json,md}` (second sample; romwright and m2c, the stock export was not run for it; 8 functions are in both samples) and the `_pre_ps2printer` copies of both from the start-of-work binary. Two details that are not printer effects: the stock context row is 110 / 7 / 37.4, not the first run's 109 / 7 / 37.1, and the m2c best row 106 compiled, not 107, because the harness fix below gives two units their real declaration (0x4633f0 now compiles for stock, 0x46e7f0's standalone m2c compile now fails); the m2c and stock outputs themselves are the same text. Outside `src/promoted`, where the repo's sources were not built from m2c output, romwright is exact on 18 of 98 against m2c's 13 and stock's 1; inside it 27 of 102 against m2c's 19. Paired on percent in context, romwright is above m2c on 124 functions and below on 41, above stock on 154 and below on 16. Standalone (no unit declarations): romwright 142 / 12 / 50.4 -> 148 / 36 / 56.0 (second sample 147 / 23 / 51.9 -> 151 / 31 / 56.8).
+
+**Compile failures, classified** (context variant, first sample 53 -> 10, second 37 -> 10; the messages are MWCC's):
+
+| before | after | message | cause | fix |
+|---|---|---|---|---|
+| 15 | 0 | illegal implicit conversion, `v = f();` | the callee is declared `u8 * f()` (K&R, parameters unspecified: the harness asserts no prototype, the decompiler types the result `unsigned long long` or `int`) | the local takes the declared pointer type when it is only assigned from such calls and only used where a pointer works as is, else the assignment is cast |
+| 13 | 0 | `unsigned char *` to `char *` | a string no symbol names is `extern unsigned char LAB_x`, the callee takes `char *` | the argument is cast to the declared parameter type |
+| 6 | 0 | `void ()` to `int (**)(...)` | `*(code **)p = func`: Ghidra's `code` is a function type, the units and the harness' prelude define it as a pointer | the output defines `romwright_code` (a function type) and casts a function address stored through a slot of another signature |
+| 5 | 0 | illegal implicit conversion in an argument | integer where `u8 *` is declared and the reverse | cast |
+| 3 | 0 | function call does not match | more parameters recovered than the declaration has | the surplus arguments are not printed |
+| 3 | 2 | identifier redeclared | the printed definition's types differ from the context prototype | the definition takes the declared types, names kept; the 2 left have struct parameters |
+| 2 | 0 | call of non-function | `(*param_6)(...)`, the parameter erased to `void *` | the callee is cast to a function pointer |
+| 1 | 3 | `int` to `struct` | a struct by value | not fixed (two more were behind the surplus arguments) |
+| 3 | 3 | undefined identifier | `stack0x...`; a function used as a value that the unit declares inside a function body; `FUN_` for data | not fixed |
+| 2 | 2 | `';' expected`, illegal constant expression | the harness' context text (a `sizeof` size-check typedef; a type name the context lacks) | not fixed |
+
+The syntax error the first run reported for 0x4633f0 (`struct Data_... D_...[] __attribute__(void *);`) was not the printer: `tests/m22-002_ps2_c_output.py`'s `prototype_of` read `extern T D[] __attribute__((aligned(8)));` as a function named `__attribute__` and rewrote it, in every layer's context. Fixed there (`strip_attributes`, selftest). Standalone failures (52 left of 200) are the text compiled without the declarations it leaves to the project (31 a callee result into a local of the other kind, 11 undeclared callees).
+
+**The change** (clean room: tree-sitter C over the printed text and the project's header, no m2c or decomp-repo code). New `crates/romwright-core/src/emit_m2c/conform.rs`: the context-driven pass above (casts at pointer/integer/function conversions, the local's type from the callee's declared return, the target printed with the declared types, surplus arguments dropped, a called `void *` cast), the spellings (a 4-byte `long` is `int` because MWCC's `long` is 64 bits and each cost a `dsll32`/`dsra32`; Ghidra's `code` is the output's typedef), and scalars out of `$gp` reach declared as arrays of unknown size and indexed, because MWCC addresses a scalar of at most 8 bytes `$gp`-relative and the retail code of an out-of-reach global is `lui`/`lw` (209 mismatched instructions on the first sample). `emit_m2c.rs`: a 4-byte float constant is printed `0.5f` (an unsuffixed literal is a double: `fptodp`/`dpmul` calls). `canonical.rs`: `K < x` is `x >= K + 1`, not for 0 (`slti at` against `slti v0`). Unit tests: 13 in `conform.rs` (one per failure class above, the spellings, the gp arrays, an unparseable text), 2 in `canonical.rs`, 1 in `emit_m2c.rs` (float literals), and `--selftest` of the harness (attributes). Ablation, first sample, one switch at a time on the final binary: without the conform pass 37 / 57.7 / 26.0% failing, without the comparison rule 44 / 74.7; the spellings, gp arrays and float suffix have no switch and together with the rest are the move from 14 to 37.
+
+**Tried and dropped.** An integer constant that the function's own instructions reference as data printed as `(int)&DAT_xxxxxxxx` (to get the relocated `lui`/`addiu` pair): the xref table holds colour constants and counts (`0x313131`, `0x100000`) as targets, two functions lost 6 and 2 points. A pointer variable written after the scaled index it is offset by: no effect on either sample.
+
+**Gates.** m22-001 unchanged (ROM 75.734 mean / 9 exact / 31 compiled, ELF 59.017 / 10 / 23; run from a copy of the script that tolerates the host's reassembly parity, 99.94% and 99.87%, with the final binary). m21-001 PASS, 7 images scored (final binary, this tree including the other agents' WIP). `cargo check --workspace --all-targets`: only the known `return_size` warning. Filtered tests: `cargo test -p romwright-core --lib emit_m2c::` 31 passed, 2 ignored (need gcc), 0 failed.
+
+**Still not matched** (148 compiled inexact functions, first sample): register allocation (74 functions), a global's address kept in a register across calls, `if`/`else` arm order (`beq`/`bne` 14 and 5), narrow-load signedness (`lhu`/`lh` 9 and 8, `lbu`/`lb` 8 and 2), adjacent byte stores that were one `sh` (6), a sign-extension pair the original lacks (31), an address printed as a number (25, needs the symbol). 84 of the 200 first-sample candidates are at 90% or better; struct-by-value parameters and names a unit declares inside a function body are not handled.
+
+**Files.** New: `crates/romwright-core/src/emit_m2c/conform.rs`, `benchmarks/reports/m22-ps2_p4_seed20261011.{json,md}`, `benchmarks/reports/m22-ps2_p4*_pre_ps2printer.{json,md}`. Edited: `emit_m2c/canonical.rs` (the comparison rule, its tests), `emit_m2c/globals.rs` (`GlobalRef` fields visible to the module), `tests/m22-002_ps2_c_output.py` (attribute fix, selftest, one limit), `benchmarks/reports/m22-ps2_p4.{json,md}` (regenerated), `docs/console-research.md` (update to the Ps2Match supplement). **User WIP files, minimal edits, reported:** `emit_m2c.rs` (`mod conform`, `M2cOptions::context`, `FuncInputs::gp`, `conform_text` and its call, the float literal helper and its hook, one test), `lib.rs` (`export_m2c` reads the stored `gp` decode context per function and passes it), `romwright-cli/src/main.rs` (one line: `--context` also sets `opts.context`). Builds in `target/Ps2Printer` and `~/.build/Ps2Printer` (`-j 2`, incremental off) are removed; the scratch directory `~/ventris-scratch/Ps2Printer` keeps the start-of-work and final binaries (`bin-base`, `bin-final`), the diff and classification scripts, the per-step reports and logs; its work trees and the p4 repo clone are removed.
+
+## PS2 combined verification: one build of Ps2Truth + Ps2Tables + Ps2Recall + Ps2Printer (2026-10-11, Main)
+
+**PS2 wave rerun.** One host build of the combined tree (tools `4b53a40d4bc45c90`, ghidra_opt `dbd7e74b`) produced `benchmarks/reports/console_research_wave_20261011_ps2.{json,md}`: the 8 PS2 games plus 3 symtab variants, audited truth, n = 500, seeds 1,2, `--stock`. All rows ran and none is degraded. Per-game numbers are in docs/console-research.md, "PS2 rerun (2026-10-11)". Summary:
+- **vs stock:** recall 8/0/0 (p = 0.0039); precision 0/4/4, with the losses at 0.66–1.05 points; precision_verified 1/1/6.
+- **vs baseline-off:** precision 5/0/3.
+
+**m21-001** PASSes on the same build:
+- capcom .9762/.9924 (was .9418/.9964);
+- dungeon .9885/.9822 (was .9438/.9880);
+- the other five images are identical.
+
+Capcom and dungeon trade precision for recall. Ps2Recall raised both recall floors in `tests/m21-001_real_images.py` (capcom .966, dungeon .978).
+
+**Filtered tests** on the combined tree, all passing:
+- `native::discovery`, `native::vsa`, `native::switch`, `native::dol`: 107;
+- `emit_m2c::`: 31, plus 2 ignored.
+
+**m22-002 rebuilt from the shipped source.** Ps2Printer measured a binary built before its last source cleanup. A local build of the final source reproduces its seed-20261010 summary exactly:
+
+| tool | exact | mean % | compile failures |
+|---|---|---|---|
+| romwright | 45/200 | 74.725 | 5.0% |
+| m2c | 32 | 40.41 | — |
+| stock | 7 | 37.434 | — |
+
+The scratch copy is `~/ventris-scratch/m22-verify/`.
+
+**Fatal Frame decompile success: 0.9796 → 0.9724, sampling only.** The sample follows the import's function set (`choose_wave_sample`), so the two runs share 213 functions. On those, failures are 3 → 3. Every failure in both runs is "partial access to DAT_002527xx has no scalar C type", which is open.
+
+## Universal fact pack: masked-body digests of decomp-named functions, applied at import (2026-10-11, FactPack)
+
+A shipped, read-only SQLite file (`romwright_facts::pack::Pack`, format 2, mask rules v1) names functions whose relocation-masked body matches one a decomp already named, gives the donor's exact size, and attaches the donor's prototype. It holds no code bytes: digests of masked bodies plus name, size, prototype, and per-donor game/repo/commit/SPDX license/compiler. Full description: `docs/fact-pack.md`.
+
+**Code.** `crates/romwright-facts/src/{mask,pack}.rs` (masking per family: MIPS LE/BE incl. r5900 and Allegrex, PowerPC BE, ARM, Thumb; consensus with exclusions and twin groups at query time; stubs, generic names, ambiguity), `crates/romwright-core/src/fact_pack.rs` (`Core::apply_fact_pack`, `Core::add_donor_to_pack`, pack resolution), `crates/romwright-cli/src/facts.rs` (`facts add-donor`, `facts apply`), `import --fact-pack`. Apply reuses the signature-match path (`replace_signature_matches`, source `fact-pack`, no schema change): only `FUN_` names change, rows carry the donors' repo/commit/license, prototypes are inferences that never replace an assertion or a `native-import:*` prototype.
+
+**Import.** `import` applies the pack it finds: `--fact-pack`, else `ROMWRIGHT_FACT_PACK`, else `$XDG_DATA_HOME/romwright/fact-pack.sqlite`; `ROMWRIGHT_NO_FACT_PACK=1` disables the implicit lookups. `benchmarks/console_research.py` (`Tools.env`), `tests/m21-001_real_images.py`, `tests/m22-001_c_output.py`, `tests/m22-002_ps2_c_output.py` set it to 1. The console-research cache key (`env_key`) hashes only the per-config extra environment, not `Tools.env`, so no existing project directory name changed and the host cache stays valid. The Core import reuse key gains the pack identity only when a pack is in use.
+
+**Policy (user decision).** The shipped pack takes all 48 decomp donors, whatever their license (25 permissive, 2 GPL-3.0, 6 NOASSERTION, 15 none), recorded verbatim; dropping one is a rebuild without it.
+
+**Smoke on nih-vps-u** (copies of cached projects; pack of ps2-persona-4 + ps2-god-hand + gc-pikmin, 26,299 bodies, 3.8 MB): fatal-frame held out: 4,253 function entries probed, 180 matched, 69 renamed (66 names agree with the repo's truth, 3 differ, donor size equals the truth size on 69/69), 115 abstained (donor name generic); persona-4 with itself excluded: 13,182 probed, 1,519 matched, 359 renamed. Example: `0x223120 sceDmaPutEnv (472 B, ps2-god-hand)`. Sampling 20,000 16-byte chunks of each donor image against the pack file: 36 and 3 hits, every one printable ASCII (function names in the image's data), none code.
+
+**Edits to user-WIP files (minimal):** `crates/romwright-core/src/lib.rs` (`pub mod fact_pack;`), `crates/romwright-cli/src/main.rs` (`mod facts;`, one `"facts"` match arm, `--fact-pack` flag and report lines on `import`, usage lines), `tests/m22-001_c_output.py` (`ROMWRIGHT_NO_FACT_PACK` in `cli_env`).
+
+**Rename gate (2026-10-11, from `benchmarks/reports/fact_pack_gating.md`).** A candidate shorter than `gate_short_body` (default 128 B) renames only with at least `gate_min_donors` (default 2) independent donors (a twin group counts once; `Candidate.independent`). Both live in the pack's `meta` (written with the defaults by `add-donor` on creation, changed with `facts set-meta --pack P KEY VALUE`, absent means defaults). A gated candidate writes no row, renames nothing, applies no prototype, and is reported with action `gated`, counted in `gated` apart from `abstained`; scans are unaffected. Also: prototype votes are by type signature (`pack::type_key`), PSX/r5900/Allegrex languages map to MIPS-LE. Tests: `the_rename_gate_holds_short_bodies_without_independent_donors`, `independent_donors_count_a_twin_group_once`. Extra user-WIP edit: `crates/romwright-cli/src/main.rs` (early `facts set-meta` dispatch before the project opens, one usage line, `gated` in the import report line).
+
+## PS2 decompile success, the ee-gcc lane of m22-002, and five more MWCC shapes (2026-10-11, Ps2CMatch)
+
+**Decompile success on every PS2 wave sample, before -> after** (`benchmarks/ps2_decompile_success.py`, the wave's own 10,342 sampled addresses, 11 projects, results `benchmarks/reports/ps2_decompile_success_*_20261011.*`): **0.9945 (10,285) -> 0.9996 (10,338)**; failures 57 -> 4. Fatal Frame 0.9724 (26 failed) -> **1.0000**, Fatal Frame symtab 0.9766 -> 1.0000, Dark Chronicle symtab 0.9979 -> 1.0000, Dark Cloud 0.9979 -> 0.9989, Dark Cloud symtab 0.9989 -> 1.0000, God Hand 0.9990 -> 1.0000; Dark Chronicle, Digital Devil Saga unchanged at 1.0000; Persona 4 0.9990 and Ratchet & Clank / PAL 0.9988 unchanged. Classes: 53 `partial access to DAT_… has no scalar C type` (fixed: a value without a scalar type is read through its own declared type's cast; misaligned and out-of-bounds accesses through the object's address; a 3 to 7 byte read from its bytes in the target's byte order) -> 0; 2 execution deadlines (Persona 4 `0x2be530`, 49,720 bytes; a Dark Cloud overlay function) and 2 Ghidra `Low-level Error: Backward normalization not implemented` (the same 976-byte Ratchet & Clank function in both builds) unchanged. `emit_m2c/storage.rs` is the fix.
+
+**m22-002** (200 matched Persona 4 functions, compiled / exact / mean percent, context variant; m2c and stock unchanged):
+
+| sample | romwright before | romwright after | m2c | stock |
+|---|---|---|---|---|
+| seed 20261010 | 190 / 45 / 74.725 (5.0% compile failures) | **192 / 55 / 76.624 (4.0%)** | 101 / 32 / 40.41 | 110 / 7 / 37.434 |
+| seed 20261011 | 190 / 45 / 76.361 (5.0%) | **194 / 57 / 78.321 (3.0%)** | 122 / 50 / 50.873 | - |
+| ee-gcc 2.96 units (new lane) | 196 / 94 / 84.558 (2.0%) | **197 / 106 / 86.406 (1.5%)** | 164 / 101 / 74.41 (18.0%) | 173 / 55 / 65.526 (13.5%) |
+
+Exact counts now beat m2c on both MWCC seeds (55 against 32, 57 against 50) and on the ee-gcc lane (106 against 101), mean percent and compile success are higher on all three. Reports: `benchmarks/reports/m22-ps2_p4{,_seed20261011,_eegcc}.{json,md}`, before in the `_pre_ps2cmatch` copies (the ee-gcc one is the first measurement of the lane, the printer of the start of the work).
+
+**ee-gcc lane** (`tests/m22-002_ps2_c_output.py --compiler eegcc`): the 592 matched functions of the units retail built with ee-gcc 2.96 (`config/gcc_units.txt`; 568 are the CRI ADX/SFD/ACS middleware), 200 sampled. The i386 ee-gcc and EE assembler need `/lib/ld-linux.so.2`; the harness re-executes itself in a bubblewrap mount namespace that overlays `/lib` with the user's `~/opt/glibc32` loader (`docs/toolchains.md`), nothing on the host is written. `ld-linux.so.2 --library-path` alone starts the driver but the driver's `cc1` fails to exec. The harness also fixed a bug that cost romwright the lane at first (`typedef struct X *H;` was not read as a typedef: 65 exact / 17% compile failures became 94 / 2% before any printer change; the MWCC lane is identical with or without the fix).
+
+**What the printer does now** (`crates/romwright-core/src/emit_m2c/`): `addresses.rs`, `machine.rs` (a constant the function's own code builds with `lui` + `addiu` is an address and is printed as the project's symbol or `DAT_<addr>`, `(char *)&name`, never `(int)`: MWCC schedules an integer-converted address differently), `token_edits.rs` (a narrow load has the signedness of its instruction; two byte stores of one instruction are one halfword store), `globals.rs` (a function used as a value is declared), `conform.rs` (a structure passed by value keeps its declared type and name; float-first parameter order), `storage.rs` (above). 17 new unit tests (48 `emit_m2c::` tests pass, 2 ignored).
+
+**Gates.** m21-001 PASS (7 images scored); `cargo check --workspace --all-targets` as before (one known `return_size` warning, one `unused mut` in a `fact_pack` test); `tests/m22-002_ps2_c_output.py --selftest` passes.
+
+**Not done.** Register allocation (74 functions in the first sample); `if`/`else` arm order; a loop-invariant the source hoisted; `short` temporaries whose sign extension the decompiler places at the assignment (32 functions still have the extra `dsll32`/`dsra32`); `addu` operand order; `++x` in a condition; floats copied as integers; callee prototypes ordered unlike the declaration; the two deadlines and two Ghidra errors; writes of 3 to 7 byte partial accesses.
+
+**Files.** New: `crates/romwright-core/src/emit_m2c/{addresses,machine,token_edits}.rs`, `benchmarks/ps2_decompile_success.py`, `benchmarks/reports/ps2_decompile_success_{before,after}_20261011.json`, `…_20261011.md`, `benchmarks/reports/m22-ps2_p4_eegcc.{json,md}`, `m22-ps2_p4_eegcc_pre_ps2cmatch.{json,md}`, `m22-ps2_p4_pre_ps2cmatch.{json,md}`, `m22-ps2_p4_seed20261011_pre_ps2cmatch.{json,md}`. Edited: `emit_m2c/{storage,globals,conform}.rs`, `tests/m22-002_ps2_c_output.py` (the lane, the typedef fix, selftest), `scripts/ExportDecompiledC.java` (did not compile under Ghidra 12.1.3), `benchmarks/reports/m22-ps2_p4{,_seed20261011}.{json,md}` (regenerated by the script), `docs/console-research.md`, `docs/toolchains.md`. **User-WIP files, minimal edits, reported:** `crates/romwright-core/src/emit_m2c.rs` (`mod addresses; mod machine; mod token_edits;` and their `pub use` lines, `FuncInputs::machine`, the address and token-edit calls in `emit_doc_in_unit`, the byte order passed to `globals::from_doc`, a replaced `Break` token printing its replacement in `render_named_doc`); `crates/romwright-core/src/lib.rs` (`export_m2c` builds the address-name map and each function's `MachineCode` and hands them to `FuncInputs`). No other WIP file was touched.
+
+
+## `new-project`: a ready-to-decompile repository from a retail image, PS2 first (m23-001, 2026-10-11, Ps2Bootstrap)
+
+`romwright-cli new-project <image> <outdir>` bootstraps a splat + ninja decompilation repository the way decomp-toolkit's dtk-template does for GameCube/Wii (CC0-1.0 template studied for shape and behaviour, not copied). The framework is platform-pluggable (`crates/romwright-core/src/new_project/`: platform matrix, pinned tool manifest, compiler detection, one plugin per platform); PS2 is implemented and gated, every other platform is listed with its concrete next steps (`new-project --list-platforms`, `docs/new-project.md`). Image in: a PS2 boot ELF, or an ISO9660 disc (the `SYSTEM.CNF` `BOOT2` file is extracted). Out: `configure.py` (fetch tools, run splat, write `build.ninja` and `objdiff.json`, `swap` subcommand), splat yaml + `symbol_addrs.txt` from the import (and the fact pack's names/prototypes when a pack is present), `checksum.sha1`, `include/` types and recovered prototypes, README, optional `--decompile` non-matching reference C under `decompiled/`.
+
+**Gate `tests/m23-001_new_project_ps2.py` passes** (`benchmarks/reports/m23-001_new_project_ps2.{json,md}`; import on nih-vps-u, splat/ninja local):
+
+| game | tools | all-assembly build | C swap |
+| --- | --- | --- | --- |
+| Fatal Frame (ee-gcc 2.9-991111) | pinned manifest, downloaded (binutils, wibo, ee-gcc, objdiff-cli) | sha1 `5ac4626e...` = retail, 4251 asm units, split 27 s, ninja 63 s | `CdvdInitIop` from the Himuro repo, still byte-identical, objdiff 100% |
+| Persona 4 (MWCC b210) | user profile over `/var/tmp/p4ci` | sha1 `4eeec036...` = retail, 13,134 asm units, split 113 s, ninja 205 s | `FUN_00102e70` (repo `K_Fldrc_DestroyArchives`), identical, objdiff 100% |
+| Persona 4 | local `file://` manifest (offline path) | same sha1 | same |
+
+Each swap is followed by a negative control (a deliberately wrong C file) that must break the build with a `MISMATCH` naming the function. Detection over the 8 PS2 games with a `meta.json`: **family 7/8, toolchain lineage 8/8**, version class 7/8 (in-sample), suggested manifest compiler names the meta version 6/8; supplementary 2/2. The miss is Ratchet & Clank PAL (SN ProDG 3.01 in an EE GCC 2.95.2-shaped image: no evidence separates them). See `docs/new-project.md`.
+
+**What a real image forced (each found by a failure):** `.align 3` makes GNU as grow an object's `.text` to 8 bytes and shifts everything after (`tools/asm.py` drops it); GNU ld is cubic in `file(.section)` statements (205 s at 95 exact statements on Persona 4's 13k objects, 20 s with wildcards; directory chunking, path-suffix wildcards, response file); gas-hostile symbol names (`CDataAlloc<1,6000>`) and ld-keyword names (`VERSION`); DVP overlay symbols (address 0) claiming real names; discovery "functions" that are data (assembler-rejected words, branches to labels in no file, `vaddx` encoded differently by gas): the object is assembled from the listing's own raw words instead (verified against the retail words, relocated fields masked); `/tmp` quota errors in wibo-run compilers (the build gives compilers a project-local `TMPDIR`).
+
+**Tool policy (user decision): generated projects download pinned tools by default; romwright ships none and never downloads.** `config/toolchain.json` (embedded table `new_project/toolchains.json`: url, sha256, size, version, license, provenance) is fetched by `tools/download_tool.py`, which verifies the sha256 before extracting or running anything; a toolchain profile overrides per tool; `--manifest` swaps the table (`file://` for offline). Pinned: decompals PS2 binutils v0.10 (no upstream digests; hashed), wibo 1.2.0 and objdiff-cli v3.6.1 (upstream digests), 34 decomp.me-hosted compilers (mwcps2 2.3 to 3.0.1 b210, ee-gcc 2.9x to 3.2; the release tag is mutable and only 3 assets carry digests, so bytes seen on 2026-10-11 are pinned). `docs/toolchains.md` now states the split. dtk-template's `files.decomp.dev/compilers_20251118.zip` holds GC/Wii/X360/ProDG and no PS2 compilers.
+
+**Files.** New: `crates/romwright-core/src/new_project/{mod,elf,compiler,iso,manifest,platforms,ps2}.rs`, `toolchains.json`, `templates/ps2/*`; `crates/romwright-cli/src/new_project.rs`; `tests/m23-001_new_project_ps2.py`; `docs/new-project.md`; `benchmarks/reports/m23-001_*`. Changed: `crates/romwright-core/src/export.rs` (`gas_symbol_name`, `splat_symbol_rows`/`render_splat_symbols`; splat names are now gas-safe, one existing test's expectation updated), `docs/toolchains.md`, `docs/console-research.md`.
+
+**Edits to user-WIP files (minimal):** `crates/romwright-core/src/lib.rs` (`pub mod new_project;`), `crates/romwright-cli/src/main.rs` (`mod new_project;`, two USAGE lines, one early dispatch `if matches!(args[1], "new-project" | "detect-compiler")` before `Core::open`). No import-path file was touched. `m21-001` was not run (no import or discovery code changed).
+
+**Not done, by design.** Other platforms (gc/wii via dtk, n64/psx/psp via splat, gba/nds without splat, 3ds/switch/ps3/ps4/vita/x360 as non-matching scaffolds): the matrix lists tools, licenses where checked, and what is missing. NDS has ds-decomp/`dsd` (MIT) and ds-rom (MIT); GBA has no splat support and no licensed generic splitter (gbadisasm and agbcc carry no license file, luvdis is MIT). `INCLUDE_ASM` units are not supported by `swap`; a C unit must replace whole functions.
+
+## Decompiler port: stage roadmap (2026-10-11) -- stage 1, structuring, done
+
+Goal: decompilation with no vendored C++ (`third_party/ghidra/decompiler`, Apache-2.0, pinned 12.1.3, built as `native/build/ghidra_opt`). The port runs **back to front**: each stage moves the single C++ -> Rust handoff point one stage upstream, and every stage is gated by output differentials against the stage before it, so quality never drops. Stage attribution and the measurement are in `docs/ownership.md` (`benchmarks/ownership*.py`); the IR the handoff uses is `docs/printer-ir.md`.
+
+| # | stage | state |
+|---|---|---|
+| 0 | printing (PrintC's block layer, expression emission, pretty printing) | done 2026-10-07 / 2026-10-09: the Rust printer prints 90.9% of tokens (`docs/printer-ir.md`) |
+| 1 | **structuring** (block tree: sequences, if/else, loops, switch, break/continue, gotos) | **done 2026-10-11**: `ghidra_opt` exports the unstructured control-flow graph (IR version 5); `printc/collapse.rs` builds the printed block tree; `ActionBlockStructure`, `ActionFinalStructure`, `ActionPreferComplement` and `PrintC::docFunction` no longer run by default (`ROMWRIGHT_NATIVE_STRUCTURE=1` restores them for differentials) |
+| 2 | types / casts (`ActionInferTypes`, `typeop.cc`, `cast.cc`) | **2a (casts) done 2026-10-13**: the worker decides every cast (IR version 6, `printc/casts.rs`; `ActionSetCasts` runs only for declined functions, `ROMWRIGHT_NATIVE_CASTS=1` restores it). **2b (`ActionInferTypes`) stays in C++ by decision**: it runs 1.8-3.1 times per function inside the mainloop for 0.1-1.6% of the decompile time, so a port buys nothing measurable and needs a Funcdata mirror (`docs/types-port.md`) |
+| 3 | high-variable merge (`merge.cc`, `ActionMarkExplicit`/`NameVars`, the for-loop op moves that stage 1 left in `native/romwright_structure.hh`) | **done 2026-10-14**: the worker decides every merge, explicit/implied mark, default name and the for-loop moves (IR version 7, `printc/merge/`, `native/romwright_merge.hh`; 0 declines on 1,600 + 7,619 functions; output identical to the C++ path on all gates; `ROMWRIGHT_NATIVE_MERGE=1` restores it). `ROMWRIGHT_MERGE_VARIANT` is the per-function printing-variant knob for the near-miss search (`docs/merge-port.md`) |
+| 4 | type decisions on the C output (callee prototypes, float matrix types, struct by value, pointer operands) and the simplification rules (`ruleaction.cc`, `coreaction.cc`, which also take the structurer's negations and return splits that stage 1 answers per structuring query) | **type decisions done 2026-10-15** (Stage4Types): the failing C was traced to the Rust layers, so the decisions are Rust (`emit_m2c/conform.rs`, `dependencies.rs`, `printc/casts.rs`; no mirror, no replay, `ghidra_opt` unchanged; `ROMWRIGHT_NATIVE_TYPES=1` restores the previous output; functions that do not compile 37 -> 9 on the seven m22-003 lanes, no exact or compiled loss on any gate; `docs/types-port.md` section 12). `ActionInferTypes` stays in C++ (0.8% of decompile time). The simplification rules are open **Stack/global symbol layout done 2026-10-15** (SymbolLayout: the worker's global-object rules and three `ghidra_opt` stack rules, `docs/types-port.md` section 13, `ROMWRIGHT_NATIVE_LAYOUT=1` = off; new `ghidra_opt` sha256 `4532792d...`). |
+| 5 | SSA (`heritage.cc`) | open |
+| 6 | flow / lift (`flow.cc`, the decompiler's SLEIGH) | open |
+
+**What stage 1 left in C++, and why.** Ghidra's structurer is not only downstream of the p-code: it negates a branch when it lays the arms out the other way (`BlockBasic::negateCondition` sets `boolean_flip`, and `RuleCondNegate` and the boolean rules turn the flip into the complemented comparison on the next pass), `ActionReturnSplit` splits the in-edges of a return block that the tree makes gotos, and `BlockWhileDo::finalTransform` moves a for-loop's initializer and iterator before variables merge. The worker therefore answers one query per structuring (`romwright_structure`, `printc/query.rs`) and C++ applies the answer (`native/romwright_structure.hh`): the conditions to negate, the return edges to split, the `if`/`else` split points `ActionPreferComplement` may complement, the `while` loops whose header ops move. These applications are p-code edits and belong to the stages above (2-4); the structurer's decisions are Rust's. The for-loop analysis itself (`findLoopVariable`, `findInitializer`, `testTerminal`) is a port of `BlockWhileDo`'s, kept in that header until the merge stage.
+
+**Gates.** Numbers and commands in `docs/structuring-baseline.md` ("Unstructured handoff, stage 1") and `docs/ownership.md` ("2026-10-11, structuring handed to Rust"). The new `ghidra_opt` sha256 is recorded there.
+
+## Ghidra master trial: upstream master against the 12.1.3 pin, same Rust (2026-10-12, GhidraMaster)
+
+**Question and answer.** Would re-pinning to upstream master (`918d44e`, 2026-10-08; no 12.2 tag exists, the branch reports 12.3) make console output better, and what should the Rust port use as its reference. **Do not re-pin now; cherry-pick GP-7003 into the patch; re-run on the 12.2 release; the port takes master as its reference for the list in the report.** Two `ghidra_opt` builds (12.1.3 + `native/ghidra-opt-sleigh.patch`, sha256 `dbd7e74b`; master + the rebased patch, `57efa6b2`) behind one `romwright-cli`/`worker`, the 12.1.3 install's `.sla` files for both (format version 4 on both sides; upstream changed none of MIPS, R5900, ARM, Gekko; PowerPC `dcbz` user-op rename only). Everything ran on nih-vps-u at host load 11-56 (median 26-33); no timing is a claim: the paired median master/base ratio over 1,909 function pairs is 0.997.
+
+| gate | base | master |
+|---|---|---|
+| wave, 11 images other than N64 (4,306 sampled, `-n 200`) | decompile 4,304; recall and precision identical in every game; stored switch tables identical in 10 of 12 games (N64 and God Hand differ, below) | same; gotos 515 -> 492, labels 220 -> 229, printed lines -1.0%; one God Hand table (0x274828) 6 -> 5 targets (GP-7003) |
+| wave, N64 (SM64) | decompile success 1.000 (390/390); 145 stored tables | **0.328 (128/390)**; 142 tables. With GP-7310's added check removed: 1.000, 182 of 200 paired functions identical |
+| x360 (printer-diff sample, m21) | 200/200; m21 recall .9833 | **80 of 200 fail**; m21 recall .9823 with one `partial` switch-stage diagnostic |
+| `ps2_decompile_success.py`, 8 PS2 games' wave samples | 7,495 of 7,500 | 7,495 of 7,500, the same five fail |
+| m21-001 (7 images) | recall/precision as before; capcom recall .9652 under its .966 floor in both arms | identical except x360 |
+| m22-002 romwright layer, MWCC seeds 20261010 / 20261011 | 55 exact, 76.976 / 57 exact, 78.321 | 56, 77.943 / 58, 78.929 |
+| m22-002 ee-gcc lane | 106 exact, 86.406 | **99, 84.665** |
+| paired C text, 2,043 functions | | identical 1,643 (80.4%); changed 400: better 64, worse 167 (134 in N64, 133 of them failures), neutral 169 |
+| printer differential, 8 images + x86 libc | 1,800 of 1,800 identical | all 1,720 decompiled print the same tokens (194 markup-only); the other 80 are x360 failures |
+
+**Attribution** (builds with one commit's effect switched off, re-decompiling the 261 changed non-N64 functions; `benchmarks/ghidra_master_trial.py attribute`): GP-7310 is the whole of the N64 and x360 failures (262/262 and 80/80 restored); GP-7115's new `ruleBlockIfNoExit` branch restores 44 and moves 13, and is the whole ee-gcc loss (9 of 14 changed functions restored; its arm order prints the returning arm first); GP-6788's immediate-copy protection restores 44, moves 24 and gives the MWCC gains (6 of 11 changed functions per seed); GP-7003 changes 4 and is the one real gain: Fatal Frame `FActExecOccur` goes from 72 printed lines (one of three jump tables recovered) to 507 lines, three tables; the cherry-pick alone (`benchmarks/reports/ghidra_master_trial/gp7003-12.1.3.patch`, 6 files, fuzz 2) gives master's output and leaves the 36 moved m22 functions on the 12.1.3 text, but it also drops the last case of one God Hand table (0x274828, 6 -> 5 targets; 0x274890 continues the table's 0x18 stride): not the non-zero mask, the INT_AND bound or the range tie-break (each switched off, none restores it), the rest of the commit was not isolated, so check that case before shipping the cherry-pick. God Hand `cIDManager_getLocalFileName` and `func_0039A140` are not helped by master, GP-7003 or anything else tried. GP-7038, GP-6946, GP-6945 change none of the 261; GP-7080 restores 2.
+
+**Rebase** (`native/ghidra-opt-sleigh.patch` snapshot of 2026-10-10 05:14 UTC; the shared tree's patch has since gained RustStructure's structuring hooks and conflicts with master in a fourth file, `blockaction.cc`): three textual conflicts (`context.hh` ParserContext/ParserWalker bounds, GP-6554; `fspec.cc` `updateInputTypes`, GP-7136/7272; `ghidra_process.cc` `Funcdata::encode` signature, GP-7010), four compile breaks (`SymbolEntry::getAddr` in `variable.cc` and `romwright_printir.hh`, the `BlockIf` split and its new wire numbering, `Funcdata::encode`), two wire breaks the unchanged worker cannot read (packed `ATTRIB_METATYPE` an integer, GP-7253; warnings a new `0x12` burst, GP-6985; both restored in C++ by compat hunks) and one printer-export shape (`t_ifnoexit` has no wire kind; exported as the list it prints as). `max_baddata` now defaults to 4 (GP-6945; no sampled function reaches it). Rebased patch: 36 files, +807/-80.
+
+**Files.** New: `benchmarks/ghidra_master_trial.py` (sample, export, classify, attribute, switchdiff, report), `benchmarks/ghidra_master_trial_notes.json` (curated rebase list, attribution groups, findings, port reference list), `benchmarks/reports/ghidra_master_trial.{json,md}` (generated by the script), `benchmarks/reports/ghidra_master_trial/{ghidra-opt-sleigh.master.patch,gp7003-12.1.3.patch,romwright_printir.master.diff,romwright_ir.master.diff,data/}`. Edited: `docs/upstream-ghidra.md`. Nothing under `third_party/ghidra`, the pin or any shared source was touched; host builds and copies were deleted.
+
+**Follow-up: is GP-7003 safe to cherry-pick? Not as written; with two corrections yes (2026-10-12, GhidraMaster).** This replaces "cherry-pick GP-7003 into the patch" above with "cherry-pick `benchmarks/reports/ghidra_master_trial/gp7003-12.1.3.cpfix.patch`" (GP-7003 plus two corrections; applies to 12.1.3 + the 765c93cc `native/ghidra-opt-sleigh.patch` with `patch -p1`/`git apply`, 6 files, no fuzz; the shared patch and `native/*.hh` were not touched, so whoever lands RustStructure's patch re-checks the apply). **Which count is right:** God Hand 0x274828 has six targets. Retail: `sltiu a0,6`, six words at 0x4475c0 (0x274830, 848, 860, 878, c80, 890), and the decomp repo (58bcee16, `002744e0.c`) has `switch (irand() % 5)` with cases 0 to 5; GP-7003's `INT_REM` bound reads [0,5) under a guard of [0,6). **Correction 1:** the REM/SREM bound only when no guard bounds the switch variable (`calcRange`, two passes). **Widening found a second flaw:** with the stored tables removed (`benchmarks/gp7003_cherrypick.py recover`, 12 games, 3,087 functions) the first cherry-pick loses **20 whole tables in seven games** (GBA 4, Dark Chronicle 1, Dark Cloud 1, God Hand 9 plus 2 with fewer targets, Persona 4 1, R&C 2, PAL 2). Cause (traced with debug prints in a scratch build): the non-zero mask gives a shifted byte the range [0,0xff000020) with step 32, the guard arrives with step 2^24, `CircleRange::newStride` wraps the right edge to 0 and reports an empty range, and an empty range (size 0) wins `findSmallestNormal`. **Correction 2** (5 lines): a guard that empties a range keeps the estimate. **Master has both flaws** (identical `calcRange` and `newStride`; a master build made for this run loses the same 20, plus 102 on N64 through GP-7310, plus the two fewer-target tables). A comparison of stored tables shows only 3 of the 20 (God Hand) for the cherry-pick and showed none for master in the first trial; that comparison is not enough for jump-table changes, and why the two stored runs differ is not explained.
+
+| gate (12 games unless noted) | base (12.1.3 + patch) | first cherry-pick `cp7003` | `cpfix` |
+|---|---|---|---|
+| decompiler-only recovery, tables / targets | 2,865 / 23,618 | 2,849 / 23,502: lost 20, fewer targets 2, gained 4 | **2,869 / 23,689: lost 0, fewer 0, gained 4** |
+| stored tables (each build's own import) | 3,874 tables, 35,145 edges | 3,874, 35,178: lost 3, gained 3, different targets 2 | 3,877, 35,196: lost 0, gained 3 |
+| printed C, 683 functions | | 23 differ (31 -> 16 `switch`, 586 -> 230 `case`) | 3 differ, all gains (Fatal Frame 0x1ca528 1 -> 2 switches, 0x1ca9d8 1 -> 3 and 30 -> 70 cases, God Hand 0x25b6e8 0 -> 1) |
+| upstream datatests, 84 XML (12.1.3's plus master's `switchmask.xml`) | `switchmask` fails (`UNRECOVERED_JUMPTABLE`) | identical to `cpfix` | identical in 83 of 84; `switchmask` recovers the unguarded `% 10` switch (dropping the REM bound entirely recovers it with a bad-data warning) |
+| m21-001, 7 images | | identical | identical |
+| m22-002 romwright, MWCC seeds 20261010 / 20261011, ee-gcc seed 20261010 | 45/200, 45/200, 94/200 | 0 / 0 / 200 paired changes in each | 0 / 0 / 200 in each |
+
+m21 and m22 do not contain the changed switches, so they only show that nothing else moved; the table, printed-C and datatest rows carry the claim. Gains checked against retail: Fatal Frame 0x1caab4 (34), 0x1cab80 (10); God Hand 0x22cca8 (`sltiu v0,v1,0x12`, 18) and 0x25b830 (`sltiu v0,v1,6`, 6). The Rust CLI/worker pair was the 2026-10-11 20:26 build (the current pair expects printer IR 5, the host `ghidra_opt` writes 4), so m22 numbers compare only inside this table. For the port: implement `cpfix` semantics for GP-7003, with 0x274828, 0x37a9f8, `FActExecOccur` and `switchmask.xml` as tests. Files: `benchmarks/gp7003_cherrypick.py` (recover, printed, gates, report), `benchmarks/gp7003_cherrypick_notes.json`, `benchmarks/reports/ghidra_master_trial/gp7003_cherrypick.{json,md}`, `.../gp7003-12.1.3.cpfix.patch` (the old `gp7003-12.1.3.patch` stays as the as-measured first cherry-pick), `.../data/gp7003_*.json`; `docs/upstream-ghidra.md` has the short version. Host `~/runs/GhidraMaster` builds, projects and caches were deleted.
+
+## PS2 discovery precision: way-ins with calls, case blocks, loop tails, data calls (2026-10-12, Ps2Precision)
+
+**Result.** `benchmarks/reports/console_research_wave_20261011_ps2_precision.{json,md}` (script output, nih-vps-u, tools `8089735f6fb1f18e`, 8 PS2 games, n = 500, seeds 1,2, stock reused). Precision against stock, wins/losses/ties: **1/1/6** (was 0/4/4). God Hand 0.9921 -> 0.9943 (stock 0.9988), Persona 4 0.9931 -> 0.9967 (0.9997), Ratchet & Clank 0.9912 -> 0.9965 (1.0000): all three now inside the 0.005 floor. **R&C PAL 0.9895 -> 0.9947 is still a loss, by 0.0003** (9 invented entries, 8 would tie). Dark Cloud 0.9889 -> 0.9907 is a win against stock's 0.9850. recall and recall_verified identical to four places on all 8 games (hits identical in same-tree paired imports); recall vs stock 8/0/0. m21-001 PASS (Capcom 0.9741 / 0.9945, was 0.9762 / 0.9924: its truth is its own symbol table, which names some case blocks the new rule retracts; dungeon_game 0.9872, was 0.9885; floors 0.966 and 0.978 held). PSP Tetris 0.9671 and Camera 0.9585 precision (floors 0.9600 / 0.9472), N64 rows identical, PSX within 0.0006 (details and the per-class before -> after table: `docs/console-research.md`, "PS2 precision").
+
+**Decompile success was not measured**: the report's success column reads 0.0 because the shared tree's worker printer wants IR version 5 and `ghidra_opt` `dbd7e74b` emits 4 ("printer IR version 4 is not 5"; not mine, a newer `ghidra_opt` exists under `~/runs/RustStructure`). Discovery metrics do not use that path.
+
+**Code** (`native/{discovery,switch_tables,vsa}.rs`, tests in `native/discovery/tests.rs` and `vsa.rs`). (1) A seed in a register the ABI leaves unaffected survives a call, a call before the seed's definition is harmless, a composed line holds the index where its way in last defines it (when it defines before reading; INT_SEXT/ZEXT widen), and up to 8 ways in are listed (was 3). (2) A table VSA answered but would have placed "outside" because another table's case labels are in the way is held until the decompiler has answered its function (`NativeImport::switch_deferred`, `settle_deferred_tables`). (3)-(7) in `interior_entries` / `discover_mapped` / `opens_with_alignment_fill`, MIPS: case blocks of an unresolved dispatch, loop tails after the return, the block a jump hops over, `jal`-shaped words of data (r5900), off-grid bodies (r5900), zero padding before `cdcdcdcd` or a pointer table.
+
+**Per-class** (invented entries, before -> after, same tree): Persona 4 91 -> 43, God Hand 87 -> 64, R&C 14 -> 6, PAL 17 -> 9, Fatal Frame 21 -> 3, Dark Chronicle 35 -> 29, Dark Cloud 45 -> 37, Digital Devil Saga 13 -> 13. Remaining classes with no generic fix: truth rows that start at a tail pad (R&C PAL, ~5; God Hand keeps the same pads as rows of their own), real code the truth does not cover (God Hand 25, Persona 4 13), kernel handlers in one truth row (R&C), `jr ra; nop` stubs inside one truth row (Persona 4, 9), calls into the overlay window (Dark Cloud, 31). SetRoomDirecPazzEne does not reproduce: 0x147418 is already an entry and 0x147440 already has 7 targets.
+
+**PSP overflow (2026-10-12, found by RustStructure's overflow-checked build).** The MIPS rules read `entry - 4/8/12`; at an entry 0 or 4 of a PRX linked at 0 the address wraps and the reader's `at + 4` panicked with overflow checks on (release wrapped silently, so no wave row showed it). Fixed in `discovery.rs` (`word_at` uses `checked_add`, `interior_entries` reads through it, `has_undecodable_neighbour` saturates); test `the_mips_entry_rules_ask_about_no_address_below_an_image_linked_at_zero` fails on the old reader, passes now. Release build with `overflow-checks = true`, 5 PSP images, default, `-n 200`: no panic; Camera 0.9597 / 0.9585 (0.9457 / 0.9600 on 2026-10-10), Tetris 0.9876 / 0.9671 (0.9385 / 0.9710), Hot Pixel 0.8884 / 0.9057, Melodie 0.9605 / 0.9477, Pac-Man Rally 0.9074 / 0.9280 (those three: PRX, the MIPS rules do not apply, movement is the shared tree's). m21-001 PASS again. The earlier 'PSP rows' of this section ran on non-checked builds, which is why the panic was not seen.
+
+**Tests** (filtered, on the host): `native::` 498 passed, 2 ignored (the discovery, vsa and switch subset: 112). New: `a_way_in_that_calls_after_defining_the_index_still_bounds_it`, `a_call_that_may_change_the_index_register_gives_no_table`, `a_table_left_to_the_decompiler_is_stored_only_for_a_branch_it_did_not_answer`, `an_r5900_body_that_ends_off_the_word_grid...`, `a_call_into_undecodable_bytes...`, `a_call_beside_bytes_with_no_instruction...`, `an_entry_that_loops_back_into_the_function_above...`, `the_case_blocks_of_a_dispatch_with_no_table...`, `the_block_a_jump_hops_over...`, `zero_words_before_a_table...`; `a_function_opening_in_alignment_fill...` and `a_mips_entry_that_continues_the_code_above_is_none` now give their MIPS flows the 4-byte length of a real instruction.
+
+**User-WIP file edited (minimal, reported):** `crates/romwright-core/src/native.rs`: the field `NativeImport::switch_deferred` (after `switch_asked`), and in `discover` the line `let settled = switch_tables::settle_deferred_tables(imp);` with `tables += decompiled + settled;`.
+
+**Dark Cloud alert withdrawn.** An unstripped import of Dark Cloud reads 242 invented entries, 200+ of them the overlay symbols of its `.symtab` in 0x1dabd00..; the harness imports the stripped copy (45 -> 37). The FinalWave source tree (tools 4b53) gives the same 237 in that window imported unstripped.
+
+## Combined gate: GP-7003 folded into the patch, one build, every lane (2026-10-12, GhidraMaster)
+
+**Result.** `native/ghidra-opt-sleigh.patch` now carries GP-7003 (upstream Ghidra `64606271a`, Apache-2.0, backported to 12.1.3) with the two corrections of the follow-up above (six files: `coreaction.cc/hh`, `jumptable.cc/hh`, `rangeutil.cc`, `ruleaction.cc`; patch md5 `891a4f8a` -> `ad0975eb`, 1,793 -> 2,427 lines, 35 -> 38 files; the other 32 file blocks are byte for byte as RustStructure left them, the previous patch is kept at `~/ventris-scratch/ghidra-opt-sleigh.891a4f8a.patch`; the ownership metric counts the patch's added code lines as ours, 662 -> 849). Built on `nih-vps-u` with `native/build_ghidra_opt.sh --jobs 4` under the build lock (4 min), the release cli, worker and api from a fresh sync of the shared tree (cargo `-j 2`, 4 min). **`ghidra_opt` sha256 `4561fbea361d602cec0576f2c28a18da19dc5155cb9973d1a5b4e762c87ca598`**, installed as `native/build/ghidra_opt` (the previous one, `15396033...`, is kept beside it as `ghidra_opt.before-gp7003-cpfix`; the host build of the old patch reproduces `15396033...` byte for byte). cli `620b67d5...`, worker `008bff14...`, api `41cd75a7...`. **No number moved against the per-agent reports that is not explained below, and GP-7003 moves none of them.** `tools/vendor_ghidra.py` is not in the tree (not in any commit either); the check was `sha256sum -c third_party/ghidra/MANIFEST.sha256`: every `decompiler/` file matches, two language files do not (`languages/gamecube/ppc_gekko_broadway.slaspec`, `languages/ps2/vuupper.sinc`, edited by earlier commits, manifest not refreshed; not touched here). `third_party` and the pin are unchanged.
+
+| gate | latest per-agent report | this build |
+|---|---|---|
+| m21-001 (7 images) | PASS; capcom 0.9741 / 0.9945 (Ps2Precision) | **PASS**, capcom 0.9741 / 0.9945; every image identical to the same tree with the previous `ghidra_opt` |
+| m22-002 MWCC seed 20261010, exact / compiled / mean | 55 / 192 / 76.624 (Ps2CMatch); 55 / 76.976 (RustStructure) | 55 / 193 / **76.976** (1 better, 1 worse of 200; 0 differ from the previous `ghidra_opt`) |
+| m22-002 seed 20261011 | 57 / 194 / 78.321 | 57 / 194 / 78.321 (0 of 200 differ) |
+| m22-002 `--compiler eegcc` | 106 / 197 / 86.406 | 106 / 197 / 86.406 (0 of 200 differ) |
+| `ps2_decompile_success.py`, 11 projects, 10,342 addresses | 10,338 (Ps2CMatch), 10,337 (RustStructure) | **10,338**; the four failures are Ps2CMatch's: two 60 s deadlines, two `Backward normalization not implemented` |
+| PS2 wave, 8 games + symtab, n = 500, seeds 1,2, stock cached | Ps2Precision `..._20261011_ps2_precision`: recall/precision, success column 0.0 | recall and precision identical to four places in all 11 images; **success 10,340 / 10,342** (the two deadlines); default against baseline-off all "helps" |
+| gba / gc / n64 / nds decompile success (n = 500, seeds 1,2) | `console_research_wave_20261010`: 1.0000 / 0.9990 / 1.0000 / 1.0000 | **1.0000 / 1.0000 / 1.0000 / 1.0000** (n64 923 / 923) |
+| psp, 5 images at `-n 200` | Ps2Precision: Camera 0.9597 / 0.9585, Tetris 0.9876 / 0.9671, Hot Pixel 0.8884 / 0.9057, Melodie 0.9605 / 0.9477, Pac-Man 0.9074 / 0.9280 | identical to four places; success 1.0000 except Hot Pixel 386 / 387 (0x001032e0, the 60 s deadline, same with the previous `ghidra_opt`) |
+
+**Explanations** (all in `benchmarks/reports/combined_gate_20261012.md`). m22 seed 20261010: the 76.976 is RustStructure's figure too and the previous `ghidra_opt` scores it identically, so it is the tree between Ps2CMatch's report and now: `func_0038d9f0` compiles (0 -> 72.30 %), `func_001e7080` 96.60 -> 94.62 % is the one function that got worse (not attributed further). gc-pikmin-2 gotos 39 -> 59, lines +9,561 against the 10-10 wave: 0x800f9d0c (9,251 lines, 20 gotos) hit the deadline then and decompiles in 29 s now; the previous `ghidra_opt` gives 59 as well. PSP precision down on Camera (-0.0015) and Tetris (-0.0039) against the 10-10 wave are Ps2Precision's figures, with recall up on both. R&C 0x00239780 / PAL 0x0023aa38 fail on the 4b53 projects with both `ghidra_opt`s.
+
+**What GP-7003 does in this tree: nothing the gates see.** Re-running gc-pikmin-2, Fatal Frame, God Hand and Hot Pixel (3,848 functions) with the previous `ghidra_opt`: gotos, labels, success, recall and precision identical, lines 0 / 0 / 0 / -3, one native warning fewer in Fatal Frame. The import's stored switch tables are the same with and without it (Fatal Frame 278, God Hand 992), and `FActExecOccur` prints 516 lines / 3 switches with either build, because the imports now store the tables (0x1caab4, 0x1cab80, 0x22cca8 are in both; the 4b53 imports lacked them; cause inferred from Ps2Precision's VSA work, not traced). God Hand 0x274828 keeps six targets in this build's import. What the patch still buys is the decompiler-only path (the follow-up: 2,869 against 2,865 tables over 12 games with stored tables removed; `switchmask.xml`), which the import no longer exercises on PS2. Stored-table queries: `benchmarks/reports/ghidra_master_trial/data/gp7003_combined_stored_tables_*.json` (one-off sqlite queries on the host, not a script).
+
+**Files.** New: `benchmarks/combined_gate.py` (reads the run's reports and the frozen ones, writes the comparison), `benchmarks/combined_gate_notes_20261012.json`, `benchmarks/reports/combined_gate_20261012.{json,md}`, `benchmarks/reports/{console_research_wave_20261012_ps2_combined,console_research_wave_20261012_other_combined,console_research_wave_20261012_psp_n200_combined,console_research_wave_old_20261012}.{json,md}`, `m21-001_{combined,old}_20261012.json`, `m22-ps2_p4{,_seed20261011,_eegcc}_combined_20261012.{json,md}`, `m22-ps2_p4_old_20261012.{json,md}`, `ps2_decompile_success_combined_20261012.json` (all written by the harnesses, none edited). Edited: `native/ghidra-opt-sleigh.patch`, `docs/upstream-ghidra.md`. The frozen reports were not overwritten. Host `~/runs/GhidraMaster` (builds, projects, caches, m22 toolchain copy) deleted.
+
+## Multi-game PS2 C-output lanes: m22-003, nine lanes and Persona 4 through the generic path (2026-10-12, Ps2Lanes)
+
+m22-002 scores C output on Persona 4 only, so every C-output rule was tuned and measured on one game. `tests/m22-003_ps2_multigame_c.py` (docs: `docs/c-output-lanes.md`) is one generic harness with a JSON descriptor per game (`tests/m22-003/*.json`) and no per-repo verify adapter: it installs the pinned compilers of `toolchains.json` through the generated project's own `download_tool.py` (shared cache `nih-vps-u:~/runs/Ps2Lanes/cache/tools`), runs the repo's own configure/split steps, takes each unit's compile command from the repo's own build (`ninja -t compdb`; `make -n -B` for R&C PAL; commands recorded from the repo's python entry point for Persona 4 and God Hand), and compiles every unit with it. A function is matched when it is compiled from C by that build and its bytes equal retail modulo the object's relocation fields. Each lane scores a seeded 200-function sample (romwright, m2c, and the `oracle` pipeline check) with m22-002's exact / compiled / objdiff percent. Everything ran on `nih-vps-u` (no heavy work on the laptop).
+
+Headline (`context` variant; exact / compiled / mean percent, 200 functions, romwright against m2c): Digital Devil Saga (ee-gcc 2.96, 9022 matched) 61 / 193 / 75.6 against 49 / 152 / 62.2; Dark Chronicle (MWCC 3.0, C++, plain compiler without Satan's Fiddle, 6627 matched) 32 / 159 / 60.5 against 33 / 108 / 45.2; Fatal Frame (ee-gcc 2.9-991111, 3436 matched against the repo's 3437) 20 / 134 / 46.3 against 4 / 19 / 7.6 (m2c rejects Fatal Frame's context, bitfield width, for 185 of 200 functions); Ratchet & Clank NTSC (SDK compiler for every unit, 346 matched) 24 / 191 / 65.2 against 11 / 112 / 40.7; Dark Cloud (MWCC 2.3.3, C++, `STATEFIX=0`, 3091 matched) 26 / 164 / 65.3 against 33 / 98 / 43.7; God Hand (SN ProDG 2.95.3-136 + Cygnus 2.96, 7367 matched) 78 / 183 / 75.1 against 47 / 134 / 56.5; R&C PAL (SN ProDG 2.95.3, 1372 matched) 15 / 104 / 36.5 against 23 / 76 / 30.4. The `oracle` layer (the unit's own text through the same compile-and-score path) is exact on 186/200 (DDS), 193/200 (FF), 197/200 (RC), 200/200 (God Hand), 148/200 (R&C PAL): what the pipeline itself loses.
+
+**Persona 4 through the generic path reproduces m22-002.** On the same 200 functions m22-002 scored (MWCC seed 20261010) romwright's exact verdict agrees on 199 of 200, compiled on 199, mean 77.6 against 76.6 (exact 54 against 55); m2c exact agrees on 196, mean 44.9 against 40.4. Seed 20261011: 194 of 196 and 189 of 196. ee-gcc units: 193 of 194 and 187 of 194, romwright mean 86.3 against 86.3. The generic matched set has 8483 MWCC functions against verify.py's 8474 MATCH rows and contains 200/200, 198/200 and 195/200 of m22-002's sample functions (the rest sit at addresses shared by identical bodies and could not be assigned to a unit). `tests/m22-003/compare_m22_002.py` does the comparison.
+
+**SN ProDG is obtainable, and is already pinned.** `ee-gcc2.95.3-114` / `-136` in `toolchains.json` are the SN ProDG GCC 2.95.3 builds: their `cc1.exe` git-blob sha1 equals AngheloAlf's `sce_ps2_sdk_24` (v1.14, R&C PAL's `toolchain/sn-prodg-24`) and `SN-Systems-ProDG_for_PS2_3.01` (v1.36, God Hand's `sn-2.95.3-136`), and the driver and `ps2eeas.exe` match too; `ee-gcc2.95.2-273a` is the SN v2.73a archive. They run under wibo here. Two SN lanes were run on them (R&C PAL through `Makefile.sn`, God Hand through `compile.py`); neither needed a compiler outside the manifest.
+
+Named missing prerequisites: Satan's Fiddle for Dark Chronicle (LLDB development files are fetchable without root, `dnf download lldb-devel`, but the pinned revision wants LLVM 19, the host has 22, and Fiddle also needs an unstripped i386 `wibo`, which needs a 32-bit libc development tree: not available), stood in for by an unmodified-compiler script (79 of 6747 functions differ); Dark Cloud's `statefix` shim (the repo's own `STATEFIX=0`, 319 of 3446 differ); Ratchet & Clank NTSC's reconstructed Sony/Cygnus game compiler (built from a GPL archive plus a patch stack, needs `gcc -m32`) and Ps2EeAs 1.9.25.758 (not in `toolchains.json`): that lane compiles every unit with the pinned SDK compiler and its matched count (346) is a small part of the repo's; Digital Devil Saga's patched cc1 and assembler (14 of 9036 functions differ with the pinned unpatched ones). The stock Ghidra layer was not run.
+
+Interface handed to CompilerRules (`docs/c-output-lanes.md`, "Interface for the compiler-rules harness"): `python3 tests/m22-003_ps2_multigame_c.py LANE --layers romwright --env KEY=VALUE --tag T --functions-out OUT.json`; per-function JSON `m22-003-functions/1` keyed by address (`produced`, `compiled`, `exact`, `percent` per layer and variant); every run restores the pristine imported project, so runs under different environments are comparable.
+
+Found on the way: C++ lanes need three things m22-002 never did: romwright prints a demangled name where the object defines the mangled one (the harness renames the function it defines), the repo's C-compatible m2c context carries declarations MWCC rejects (dropped, listed in the report), and a candidate for a `.cpp` unit is C, written as `.c` at the unit's place. A candidate compile must never write through a symlinked sibling of the output directory (it corrupted the repo's own `.o.s` files and the shared build until the output directory was made empty).
+
+**Files.** New: `tests/m22-003_ps2_multigame_c.py`, `tests/m22-003/{elfobj.py,compare_m22_002.py,dds,dc,ff,rc,dk,p4,p4-eegcc,gh,rcpal}.json`, `tests/m22-003/tools/trace/sitecustomize.py`, `tests/m22-003/tools/satansfiddle-plain`, `docs/c-output-lanes.md`, `benchmarks/reports/m22-003_{dds,dc,ff,rc,dk,gh,rcpal,p4,p4_seed20261011,p4-eegcc}.{json,md}` and the three `m22-003_p4*_on_m22-002_sample*.{json,md}` validation reports (all written by the harness, none edited; the markdown of each was re-rendered with `--redo-report`). Run `python3 tests/m22-003_ps2_multigame_c.py --selftest` for the tool-free checks.
+
+## C-output failure classes across the nine PS2 lanes (2026-10-13, Ps2Lanes)
+
+Analysis only (no product code touched). `tests/m22-003/classes.py` (diagnostic and byte-diff classifier) and `tests/m22-003/failure_classes.py` write `benchmarks/reports/m22-003_failure_classes.{json,md}`: romwright compile failures by first diagnostic per lane (286 across the first-round reports), the functions where m2c is exact and romwright is not (dk 18, rcpal 16, dc 13), and a ranking by plausible exact gain with the owning layer. Seven harness-owned classes were found and fixed in `tests/m22-003_ps2_multigame_c.py` (context declarations the unit compiler rejects, SN `long long` being 128-bit, the unasserted target declaration, array-typedef parameters, the C++ rename and the MWCC `__2` symbol suffix, the GH `--extern-jtbl` wrapper argument); affected lanes were re-run as new reports `m22-003_<lane>_fix2/fix3/fix5` (frozen first-round reports unchanged). Compile failures fall from 286 to 143; romwright now leads m2c on exact in dc (35 vs 33) and stays behind in dk (27 vs 33) and rcpal (28 vs 34). What is left is printer/type work: synthetic union members on context-typed globals, `undefinedN` placeholder types, void-pointer arithmetic MWCC rejects, array-typed constants. Details: `docs/c-output-lanes.md`, "Failure classes and harness-owned artifacts".
+
+## Struct types in the printed C: layouts to the decompiler, DWARF first, gated inference (2026-10-13, StructPlumb)
+
+Inference already produced struct layouts (`types_infer.rs`/`subtype.rs`) and the print IR already carried struct fields; nothing connected them to the decompiler. Now `type_defs`/`type_fields` hold layouts with their source (`native-import:debug-info`, `native-inferred:struct-layout`, asserted, fact pack); the worker answers the decompiler's struct-datatype request from them (`romwright-worker/src/struct_types.rs`, an encoder that obeys `TypeStruct::decodeFields`), so a prototype can name `Foo *`; and `export-c`/`decompile`/`decompile-batch` print the struct definitions the text uses (`typedef struct S S;` plus the body, `/* +0xN */` per field). **No C++ changed**: `ghidra_opt` is the pinned build (sha256 `4561fbea…`), the printer IR version is unchanged. `ROMWRIGHT_STRUCTS=off|debug|inferred|all`, default `all`. Details, the gate and the results are in `docs/structs.md`.
+
+**DWARF first.** `native/mdebug/dwarf1.rs` now exports MWCC DWARF 1 structs (`Dwarf1::structs`: members at their stated offsets, spelled from the stream; variants of a name two units declare differently are `Name`, `Name_2`, …) into `type_defs` as `native-import:debug-info`, and the debug prototypes name them. There is no DWARF 2 reader in the Rust tree, so Dungeon (ee-gcc DWARF 2) gets nothing from `debug`. Capcom, 1000 addresses: printed member share 3.2% off, 94.9% `debug`, 95.8% `all`; 999 of 1000 decompile in every mode (the one failure fails with off too); m21-001 PASS with the layer on, every row equal to `combined_gate_compiler_rules_20261012.json` (recall, precision, `size_exact`).
+
+**Inferred layouts.** One struct per pointer parameter, `fn_<addr>_arg<n>`, only the accessed fields, padding elsewhere (`core/struct_types.rs`); a field whose loaded value is dereferenced in the same body is a pointer with its own pointee struct (`subtype.rs`: `through_loaded`/`note_dereference`; this was never typed before); a retyped function is decompiled a second time with its prototype handed to the worker for that function alone (`struct_pass.rs`, an overlay file, nothing in the prototype table, so no caller sees a callee's struct and the shipped no-context-insensitive-join policy stands). Only parameters whose type says nothing of the pointee are retyped; asserted or import-supplied integers never are. **The gate** (`struct_types::gate`: at least 3 placed fields, not a contiguous run of one width), measured against the audit truth with `benchmarks/struct_inference_audit.py`'s scorer (`benchmarks/struct_gate_sweep.py`, six reliable games pooled): struct recall 49.8%, false-struct rate 14.2% (void 13.3, scalar pointer 15.6), precision 80.1%, offset precision 96.0%, against 85.5% / 45.8% with no gate; three fields is where precision stops buying much per point of recall. Nothing is merged across functions.
+
+**Scoring** (`ROMWRIGHT_STRUCTS=off` against default, context variant, exact / compiled / mean, 200 functions): m22-002 MWCC 20261010 55/193/76.987 both (200 of 200 identical); MWCC 20261011 57/194/78.321 both; `--compiler eegcc` 107/199/87.180 against 107/199/87.177 (1 better, 1 worse). m22-003: dds 48/161/61.997 → 48/161/61.869, ff 19/125/43.180 → 19/125/43.258, gh 67/154/62.087 → 67/154/62.156, dc 33/159/60.521 → 33/159/60.551, p4 identical, dk (no context variant) standalone 22/133/51.386 → 22/132/50.957; rc yields no sample here (`unit does not preprocess`). **No lane loses an exact match.** New field-agreement metric (`benchmarks/struct_field_agreement.py`: the share of the truth source's member accesses the candidate prints as members at the same offset): m22-002 lane 1 0/6, lane 2 7/9, eegcc 7/14 (0 with the layer off), over only 1, 4 and 5 functions of 200 that have truth accesses. PS2 decompile success 2750/2750 on the first 250 functions of each of the 11 wave images, off and default (the whole-wave 10338/10342 was not rerun).
+
+**Regressions found and fixed on the way** (the first default build lost one eegcc exact match and four Dark Cloud compiles): `param_1 + 1` of a struct pointer printed under an asserted `void *` header was a byte, not the struct's size (now every use of such a parameter is cast, a written one goes through a typed local, and the cast is applied after `conform` rewrites the header); a gap the printer names (`field_0x8` of `[1]`) is now a real one-byte member of the printed struct; a retyped function that takes the address of a gap or `undefined<N>` member is kept untyped (C++ rejects the uncast `unsigned char *`); a dense float run is no longer a struct; and one dk function made the decompiler's rule pool loop without end under a retyped signature, so the second decompile now has a deadline of its own, bisects a batch and prints the function untyped with a warning. **Remaining and not fixed:** dk standalone loses one compile to C++ rejecting a pointer stored into an `undefined4` field; dds `func_0016F7B0` loses 31 points (not diagnosed past the diff).
+
+**Files.** New: `crates/romwright-model/src/structs.rs`, `crates/romwright-worker/src/struct_types.rs`, `crates/romwright-core/src/{struct_types.rs,struct_pass.rs,emit_m2c/struct_params.rs}`, `benchmarks/{struct_gate_sweep.py,struct_field_agreement.py,struct_print_measure.py}` (+ the two `_test.py`), `docs/structs.md`, `benchmarks/reports/{struct_layer,struct_gate_sweep,m21-001_structs,struct_print_capcom,struct_print_dungeon}_20261013.json`. Changed, not user-WIP: `romwright-db/src/lib.rs` (`store_struct_layouts`), `core/{native/mdebug.rs,native/mdebug/dwarf1.rs,native/store.rs,native_runtime.rs,session.rs,prototypes.rs,subtype.rs,types_infer.rs,types_infer/prototypes.rs}`, `worker/{worker.rs,lib.rs}`, `worker-client/src/lib.rs`, `benchmarks/{console_research.py,ps2_decompile_success.py}`, `tests/m22-002_ps2_c_output.py`, `docs/environment.md`. **User-WIP files, minimal edits:** `core/lib.rs` (`mod` lines; `decompile_native`/`decompile_native_batch` call the struct-pass text path; `export_m2c` uses the struct-pass docs, loads the struct table, appends definitions to the unit context and text, merges the pass's warnings), `core/native.rs` (`NativeImport.debug_structs`), `core/native/elf.rs` (carries it through both `DebugInfo` destructures and `NativeImport` literals), `core/emit_m2c.rs` (`mod struct_params;` and one `cast_struct_params` call after `conform_text`), `worker/provider.rs` (two fields, `Layouts::load` in `from_store`, one dispatch to `struct_datatype` in `answer_datatype`). `cli/main.rs`, `worker/specs.rs`, `sdk_types/`, `elf_image.rs`, `native/tests.rs` and `tests/m22-001_c_output.py` untouched.
+
+**Correction (same day): the m22-003 numbers above are superseded.** Main's review found the m22-003 off arm far under the Ps2Lanes reports (dds 48/161 against 61/196, gh 67/154 against 78/199, p4 49/167 against 60/193). Root cause: the arms ran `--layers romwright` alone, and `tests/m22-003_ps2_multigame_c.py` took the callees whose prototypes are asserted before `export-c` (`needed`) only from the m2c splat assembly's `jal` targets, so romwright asserted just the target ("too few arguments to function" in the context compiles). Not a tree regression: the Ps2Lanes binary run in the same setup gave the identical 48/164, and its tree differs from the working tree only by files of this change. Ps2Lanes fixed the harness (callees now also from the row's relocations). Re-run in a copy of the Ps2Lanes work directory with `--layers romwright,m2c` (gh in a fresh clone), which reproduces Ps2Lanes with the layer off (dds 61/196/76.802, gh 78/199/81.988, p4 60/193/79.121; rc 26/199/68.095), off then default: dds 61/196/76.802 → 61/196/76.818, rc 26/199/68.095 → 26/199/68.104, p4 60/193/79.121 → 60/193/79.129, gh 78/199/81.988 → 78/199/82.057; no exact lost, no compile lost (`benchmarks/reports/struct_layer_rerun_20261013.json`). m22-002 on the compiler-rules work directory, off then default: MWCC 20261010 55/193/76.986 → 55/193/76.987, MWCC 20261011 57/194/78.321 both, eegcc 106/199/87.151 → 107/199/87.177 (one exact gained); field agreement 0/6, 7/9, 7/14. ff, dc and dk were not rerun. Changes the review led to: `func_0016F7B0` (dds) lost 65.0 → 37.1 because one word read as a float and as bits became a `float` field and the bit copy printed as `(unsigned int)p->field_0x48`, a numeric conversion; a retyped function that puts an integer cast on a float member is now kept untyped (`StructTable::converts_float_member`), and a parameter the untyped text reads at one offset as float and bits or at overlapping widths is not retyped (`mixed_accesses`). Word-sized integer fields typed `undefined4` were tried and reverted (a stored pointer then prints uncast and MWCC rejects it: two m22-002 lane 1 functions stopped compiling). Remaining: rc `_sysbitFlush` 51.7 → 35.5 (a 64-bit field where the untyped text was narrowed to 32 bits; gating every 8-byte integer field costs about 10 points of struct recall), dds `sdfTexCreateFromFileHeader`, rc `_multiply` (not diagnosed).
+
+## Compiler rules: one identity for every platform, rules as data, leave-one-out (2026-10-12, CompilerRules)
+
+**Result.** Every program records one canonical compiler id in `programs.compiler` (`family[-version-class]` or `unknown`), detected from the image's bytes at import, with the evidence stored as an import diagnostic; `romwright-cli import --compiler <id>` (or `ROMWRIGHT_COMPILER`) overrides it. Compiler-specific behaviour is declarative data (`crates/romwright-core/compiler_rules/{common,gcc,mwcc}.json`, embedded) executed by five engines in code, switched per rule (`ROMWRIGHT_COMPILER_RULES_DISABLE=<id,id>`, `ROMWRIGHT_NO_COMPILER_RULES=1`, `ROMWRIGHT_COMPILER_RULES_ENABLE=<id,id>` for candidates), and every rule is measured on/off on the games it covers and was not derived on (`benchmarks/compiler_rules_loo.py`). `docs/compiler-rules.md` has the format, the engines, how to add a rule, the policy, and the inventory of what was compiler-specific before. Reports: `benchmarks/reports/compiler_detection_accuracy.{json,md}`, `compiler_rules_loo.{json,md}`, `combined_gate_compiler_rules_20261012.{json,md}`, `compiler_rules_gate_vs_20261012.{json,md}`.
+
+**Detection** (`compiler_detection_accuracy.py`, 64 corpus games with a truth compiler, `import --no-analysis`): 55 exact, 1 lineage, 8 abstained (all PlayStation 1), 0 wrong.
+
+| platform | scored | exact | lineage | abstained |
+|---|---|---|---|---|
+| gba | 6 | 6 | 0 | 0 |
+| gc | 9 | 9 | 0 | 0 |
+| n64 | 9 | 9 | 0 | 0 |
+| nds | 6 | 6 | 0 | 0 |
+| ps2 | 10 | 9 | 1 | 0 |
+| psp | 6 | 6 | 0 | 0 |
+| psx | 8 | 0 | 0 | 8 |
+| wii | 5 | 5 | 0 | 0 |
+| x360 | 5 | 5 | 0 | 0 |
+
+**Rules** (leave-one-out, `compiler_rules_loo.py`, 61 wave games, tools `2bcde8b0d87bc254`; held out = covered and not in `derived_from`):
+
+| rule | kind | status | held out (of covered) | helps / hurts / neutral | metric that moved |
+|---|---|---|---|---|---|
+| `nonreturn-libc-elf` | nonreturn-names | on | 11 / 11 | 0 / 0 / 11 | none (stored facts identical) |
+| `nonreturn-itanium-eh` | nonreturn-names | on | 6 / 6 | 0 / 0 / 6 | none |
+| `nonreturn-windows-crt` | nonreturn-names | on | 0 / 0 | no corpus PE image | - |
+| `thumb-pop-bx-is-return` | flag | on | 10 / 10 | 0 / 0 / 10 | import time only (GBA 2.0-18.6 s on, 9.8-56.5 s off) |
+| `thumb-frame-teardown-entry` | flag | on | 10 / 10 | 4 / 0 / 6 | recall |
+| `mwcc-register-sleds` | register-sled | on | 12 / 12 | 11 / 0 / 1 | `sled_calls`, `unaff_` locals |
+| `literal-pool-extent` | literal-pool-extent | on (learned) | 7 / 10 (3 derived) | 7 / 0 / 0 | size exact 0.17-0.57 -> 0.96-0.999 |
+| `canonical-guarded-loops` | c-canonical | on, `mwcc-ps2` | 12 / 13 | 0 / 0 / 2 | none (m22 lanes dc, dk) |
+| `canonical-strict-greater-constant` | c-canonical | on, `mwcc-ps2-2.4` | 10 / 11 | 1 / 0 / 0 | m22 exact (Dark Chronicle 31 -> 33) |
+| `canonical-{char-negative-equality, fuse-mask-statements, narrow-locals, narrow-uses}` | c-canonical | on | 60 / 61 each | 0 / 0 / 7 each | none on the seven PS2 lanes |
+| `tailcall-promotion` | flag | candidate (off) | 48 / 48 | 2 / 34 / 12 | recall/precision: fails the bar |
+
+**New learned rule with a real win: `literal-pool-extent`.** agbcc and CodeWarrior put each function's literal pool right behind it and their symbol sizes run through it, so the flow walk's size (to the last return) read short on 0.43-0.83 of the GBA and NDS functions that truth sizes. The size is now extended through the pool the function's own PC-relative loads name (never past the next entry, never over decoded code, never over more words than its loads can name, never over a size the symbol table declared). Held out (size exact, off -> on): Golden Sun 0.318 -> 0.981, Klonoa 0.168 -> 0.957, Dragon Quest IV 0.469 -> 0.992, KH 358/2 Days 0.439 -> 0.995, KH Re:coded 0.459 -> 0.997, Pokemon Platinum 0.567 -> 0.999, World Ends With You 0.440 -> 0.994; recall, precision, decompile success and every printed function of the sample unchanged. m21-001 size exact: pokeemerald 5,748 -> 15,421, pokeheartgold ARM9 5,156 -> 9,888. Two guards were added after held-out failures (KH Chain of Memories: a pool in the middle of a function; Nascar Heat: hand-written assembly sharing one pool), so those two games are listed as derived, not held out.
+
+**Candidate that did not clear the bar: `tailcall-promotion`** (discovery's existing `ROMWRIGHT_PROMOTE_TAILCALLS`, now also a rule). Over 48 games it trades a few recall points for precision almost everywhere (34 hurt, 2 help, none for a compiler family without hurting a sibling); it stays `candidate` and off.
+
+**R&C PAL.** Not a detection bug that bytes can fix: the NTSC and PAL builds link the same ee-gcc 2.9x toolchain (15 of the 17 functions the two truth tables share are identical modulo immediates), and the two decomp repos label them differently (`EE GCC 2.95.2` / `SN ProDG 3.01`). Both detect as `ee-gcc-2.9x`, which the report scores as `lineage` for PAL.
+
+**Detection gaps, stated.** PlayStation 1 is `unknown` for all eight games: Psy-Q GCC and CodeWarrior share the Sony library strings and the `move` spelling, and the code-shape features tried did not separate the one CodeWarrior image from seven GCC ones. The GBA `devkitarm-gcc` verdict has no ROM behind it (a control compiled with `arm-none-eabi-gcc` 15.2 reads share 1.000 against 0.106-0.562 for the six agbcc-lineage games) and is `low` confidence. The N64 and GBA thresholds are in-sample.
+
+**Behaviour neutrality.** With the migrated rules only, every game's stored facts (functions, thunks, return behaviours, flow overrides, xrefs, symbols) are identical to a build of the tree before the layer on 60 of 61 games; the 61st, Forza Horizon 2 (x360, no migrated rule covers it), is not deterministic on this host (two imports of the same build: 432,305 and 432,313 xrefs; the baseline build: 77,937 and 77,948 functions).
+
+**Gates against `combined_gate_20261012`** (one build on nih-vps-u, `ghidra_opt` 4561fbea unchanged; `compiler_rules_gate_vs_20261012.md` lists 216 numbers: 206 same, 4 better, 6 changed). m21-001 PASS. m22-002 MWCC seed 20261010 55 / 193 / 76.976, seed 20261011 57 / 194 / 78.321, ee-gcc 106 / 197 / 86.406: identical. PS2 wave (11 images, n = 500, seeds 1,2): every recall, precision, success, goto, label and warning count identical. PS2 decompile success 10,340 / 10,342 (the two 60 s deadlines) on the wave's fresh imports; the combined gate's 10,338 was measured on the cached 4b53 projects, hence R&C 860 -> 861 and PAL 858 -> 859 in the comparison. Changed: m21 size exact (the new rule), and the gotos / labels / native warnings of two wave games, KH Chain of Memories (68 / 36 / 3,124 -> 94 / 44 / 3,065) and KH 358/2 Days (24 / 10 / 2,673 -> 55 / 19 / 2,590), with success, recall and precision unchanged: the wave draws its sample stratified by stored size, so extending sizes changes which functions are drawn. With the rule disabled (`console_research_wave_compiler_rules_20261012_poolrule_off.{json,md}`) both games reproduce the frozen numbers exactly, and the 206 functions of KH Chain of Memories drawn by both runs print identically. The ee-gcc lane of m22-002 read 87.151 on the first run because lanes 1 and 2 had already asserted names and prototypes into the shared project; in a fresh work directory it reads 86.406, and so does the baseline build.
+
+**C-output rules.** The six printed-C rules are judged by the m22 objdiff match on Ps2Lanes' seven per-game PS2 lanes (`tests/m22-003_ps2_multigame_c.py`; dds, ff, dk, rc, rcpal, dc, gh), each arm on a fresh import. Persona 4 (the pinned m22-002 lanes) is where the rewrites were derived, so it is never counted as held-out. Four rules are neutral on all seven lanes. Two failed the held-out bar as first written: `canonical-guarded-loops` lowered the two ee-gcc lanes (Ratchet & Clank mean 63.150 -> 63.118, 2 functions worse; PAL 55.912 -> 55.902, 1 worse), so it is keyed to `mwcc-ps2` (the MWCC games it was derived on and is neutral on); `canonical-strict-greater-constant` helped Dark Chronicle (exact 31 -> 33, mean 60.976 -> 61.045) and hurt Dark Cloud (exact 27 -> 26, 10 functions better and 9 worse). Dark Cloud is CodeWarrior PS2 2.3 and Dark Chronicle / Persona 4 are 3.0, and the Metrowerks linker stamp tells them apart (`2.3.x` against `2.4.x`), so the PS2 MWCC id now carries that class (`mwcc-ps2-2.3`, `mwcc-ps2-2.4`) and the rule is keyed to `mwcc-ps2-2.4`. Switching the rule off instead costs the pinned gate: m22-002 lane 1 falls from 55 exact / 76.976 to 53 / 76.339 (measured), which the brief forbids; the single-game evidence for it (one held-out game after keying) is thin. To turn either off: `status: "off"` in `compiler_rules/common.json`.
+
+**Files.** New: `crates/romwright-core/src/compiler/{mod,detect,ps2,rules}.rs`, `native/pool_extent.rs`, `compiler_rules/{common,gcc,mwcc}.json`, `crates/romwright-cli/src/compiler_rules.rs`, `benchmarks/{compiler_detection_accuracy,compiler_rules_loo,compiler_rules_gate_compare}.py`, `docs/compiler-rules.md`, the reports above. Edited: `new_project/compiler.rs` (the scoring moved to `compiler/ps2.rs`), `native/{mwcc_runtime,discovery,switch_tables,store,xex}.rs`, `nonreturn.rs`, `emit_m2c/canonical.rs`, `session.rs`, `import_cache.rs`, `benchmarks/console_research.py` (`CONSOLE_RESEARCH_ENV`).
+
+**User-WIP files edited (minimal):** `crates/romwright-cli/src/main.rs` (`--compiler` into the config, the `compiler-rules` dispatch, usage), `crates/romwright-core/src/lib.rs` (`pub mod compiler;`, the program's compiler into `export_m2c`'s options), `native.rs` (fields `image_facts` and `identity` in place of `toolchain`, the identify call and container inheritance in `load_container_with`, `mod pool_extent`), `native/elf.rs` (`ImageFacts` where `detect_toolchain` was, which is removed), `emit_m2c.rs` (`M2cOptions.compiler`, the argument to `canonical::apply`), `crates/romwright-worker/src/specs.rs` (the sled fixups read the rule and apply only where it covers the program).
+
+**Limits.** Five wave games (Mario Party 4, Banjo-Kazooie, Paper Mario, Star Fox 64, Smash Bros.) are missing from the leave-one-out: the harness's program name for a container that stores many programs (`n64.main`, `gc-mario-party-4.*`) does not match what the importer names them. Rules measured only through stored facts (`nonreturn-*`, `thumb-pop-bx-is-return`) are `neutral` on recall and precision; the value of `thumb-pop-bx-is-return` shows in import time (GBA imports 2.0-18.6 s on, 9.8-56.5 s off). The `nonreturn-windows-crt` rule covers no corpus game (no PE image).
+
+**Gate provenance.** The gates ran on a build of `ventris-clean`, the tree as it was before this work plus only my hunks: the first final build was made from the shared working tree, which by then also held StructPlumb's in-progress struct-printing changes (struct typedefs in the printed C), and its m22-002 lane 1 lost two functions to compile failures that no rule of mine causes. m21-001, the three m22-002 lanes, the PS2 wave (11 images) and PS2 decompile success were all re-run on the clean build; the non-PS2 waves (KH Chain of Memories, Pikmin 2, SM64, KH 358/2 Days, the five PSP games) are from the first clean build, which differed from the final one only in the two C-output rules' compiler keys (the printed gotos/labels/warnings of a non-PS2 game can move with that; recall, precision and success cannot) and were not re-run.
+
+## Struct layer: the final gate on the combined tree (2026-10-13, StructPlumb)
+
+One release build of the working tree with CompilerRules' landed code and the struct layer together (cli sha256 `a6ffe77c…`, `ghidra_opt` `4561fbea…` unchanged), every arm with its own work directory and fresh import; off = `ROMWRIGHT_STRUCTS=off`, default = unset (`all`). Report: `benchmarks/reports/struct_layer_final_20261013.json`. **m22-002** (exact / compiled / mean): MWCC 20261010 55/193/76.976 both; MWCC 20261011 57/194/78.321 both; `--compiler eegcc` 106/197/86.406 → 106/197/86.403 (1 better, 1 worse); the off column equals `combined_gate_compiler_rules_20261012.json`. Field agreement (member accesses of the truth printed as members at the same offset; 0 with the layer off): 0/6, 7/9, 7/14 on 1, 4 and 5 functions with truth accesses. **m22-003** (`--layers romwright,m2c`, context variant), off → default: dds 61/196/76.802 → 61/196/76.818, rc 26/199/68.126 → 26/199/68.130, p4 60/193/79.121 → 60/193/79.129, gh 78/199/81.988 → 78/199/82.057, ff 20/145/49.247 → 20/145/49.294, dc 35/166/62.571 → 36/166/62.625, dk 28/169/67.360 → 28/169/67.360. **No lane loses an exact match or a compiled function.** m21-001 PASS, every row equal to the combined gate; PS2 decompile success 2000/2000 off and default (first 250 sampled functions of the 8 non-symtab wave images, projects imported by this build; the `-symtab` variants and the wave caches no longer exist, the whole-wave 10338/10342 was not rerun). Unit tests: the compiler and struct filters of `romwright-core` (52 passed).
+
+The ff, dc and dk arms found two more things, fixed in `core/struct_types.rs` and `core/struct_pass.rs` only: dc `SetPosition__9mgCObjectFPf` lost its exact match (100 → 0) and dk `__ct__13CCameraFollowFffff` stopped compiling, both from fields the solver left `undefined4` where the decompiler's own untyped text typed the access (`*(float *)(p+0x10)`): a float compare printed `(float)p->field_0x10`, a numeric conversion of the bits, and a float parameter and a vtable pointer stored into undefined fields printed uncast (C++ rejects it). An undefined field now takes the type every untyped access at its offset agrees on (`access_field_types`), and a float cast on an undefined member keeps the function untyped (`converts_float_member`). Remaining worse functions, not diagnosed except the first: rc `_sysbitFlush` (a 64-bit field where the untyped text was narrowed to 32 bits), dds `sdfTexCreateFromFileHeader`, rc `_multiply`, dc `CreatePacket`/`UpdateGeoramaPartColor`, dk `CheckEventPoint`.
+
+## Decompiler port stage 2: casts handed to Rust, type inference left in C++ (2026-10-13, Stage2Types)
+
+**Cut.** `docs/types-port.md` (as built). The worker decides every cast: `ghidra_opt` exports pre-cast typed print trees (IR version 6) and `printc/casts.rs` ports `CastStrategyC`, the cast methods of `typeop.cc` and `ActionSetCasts`; `ActionSetCasts` runs only for the functions the worker declines (1%) and with `ROMWRIGHT_NATIVE_CASTS=1` (the **off** arm). The decision is made at print time (`romwrightFinishCasts`), on facts C++ reads before any probe. **2b** (`ActionInferTypes`) stays in C++ by decision: 1.8-3.1 mainloop calls per function, 0.1-2.5% of the decompile time, port size of stage 4. New `ghidra_opt` sha256 `ffdd5e57e104fc8383e52a161eacddaa3f8ed39e192afeef7d0e31b6420e8890` (was `4561fbea...`, IR v5).
+
+**Gates** (one host, fresh import or work dir per arm, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `ROMWRIGHT_NO_FACT_PACK=1`; `benchmarks/reports/stage2_gates_20261013.{json,md}`; exact / compiled / mean %, off -> default, paired better / worse / same):
+
+| gate | off | default | paired |
+|---|---|---|---|
+| m22-002 MWCC 20261010 | 55 / 193 / 76.976 | 55 / 193 / 76.968 | 0 / 1 / 199 |
+| m22-002 MWCC 20261011 | 57 / 194 / 78.321 | 57 / 194 / 78.316 | 0 / 1 / 199 |
+| m22-002 ee-gcc (fresh dir per arm) | 106 / 197 / 86.403 | 106 / 197 / 86.403 | 0 / 0 / 200 |
+| dds | 61 / 196 / 76.818 | 61 / 196 / 76.818 | 0 / 0 / 200 |
+| rc | 26 / 199 / 68.130 | 26 / 199 / 68.113 | 0 / 1 / 199 |
+| p4 | 60 / 193 / 79.129 | 60 / 193 / 79.400 | 2 / 0 / 198 |
+| gh (harness clone) | 78 / 199 / 82.057 | 78 / 199 / 82.119 | 1 / 0 / 199 |
+| ff | 20 / 145 / 49.294 | 20 / 145 / 49.350 | 1 / 0 / 199 |
+| dc | 36 / 166 / 62.625 | 38 / 176 / 66.605 | 17 / 0 / 183 |
+| dk | 28 / 169 / 67.360 | 29 / 176 / 70.804 | 15 / 0 / 185 |
+
+m21-001 PASS; `ps2_decompile_success` 10,338 of 10,342 (full set, default build; 6,560 of 6,563 in both arms on 7 freshly imported games); printer differential 1,800 of 1,800 functions identical; cast differential (default vs `ROMWRIGHT_NATIVE_CASTS=1`, 8 images x 200 functions) 1,588 of 1,600 identical, the other 12 classified in `docs/types-port.md` section 9 (aggregate constants printed bare, `ulong`/`longlong` spelling, declined functions). Ownership: the worker decided the casts of 1,585 of 1,600 functions and 95.4% of the printed cast operators (12,622 of 13,229; `docs/ownership.md`). The port alone (parity arm, compiler rule off) is parity or better on every lane (dc +7, dk +8, p4 +2 functions better, from callee prototypes read off the uncast calls); on m22-002 the two single worse functions are the same effect the other way. 
+
+**Quality pass.** Compile failures of the seven m22-003 samples, off -> default: 135 -> 118; `illegal or unknown type name` (MWCC and `void *` arithmetic) **19 -> 1** by the new compiler rule `mwcc-void-pointer-arithmetic` (kind `flag`, `on`; `emit_m2c/conform.rs`); `type mismatch` 43, `member access on a type the context lacks` 35, `undefinedN` syntax errors 20 and `undeclared identifier` 9 are unchanged: not fixed. The first run of the m22-002 ee-gcc gate shared one work directory across lanes (order-dependent: off read 87.149 against the fresh 86.403), which looked like a loss of 2 compiled functions; with a fresh import and work directory per arm all three arms are 106 / 197 / 86.403 and identical (`stage2_followup_20261013.md`). Aggregate constants print bare (`ConstKind::Bare`): no lane moved (ff and dk `noagg` arms identical), it only changes declined functions in the cast differential. Pointer-typed struct fields were not touched.
+
+**User-WIP files edited (minimal):** `crates/romwright-core/src/emit_m2c.rs` (two hunks: `primitive_types` also reads `ir.cast_types`; `decls.void_pointer_arithmetic = rules::applies("mwcc-void-pointer-arithmetic", ...)` before `conform::apply`). `crates/romwright-worker/src/provider.rs`: an edit was made and reverted (net zero). Others touched, not on the WIP list: `romwright-model/src/function_ir.rs` (`cast_types`), test constructors in `core/src/graph.rs`, `types_infer/register_overlap.rs`, `types_infer/pair_params.rs`, `worker/src/semantic.rs`, `worker/src/printc/structure/tests.rs`, `worker/src/printc/tests.rs` (v6 header).
+
+**Limits.** For-loop statements are decided on pre-cast p-code (stage 3); declined functions run `ActionSetCasts` after the exporter's probes; the semantic IR and C spelling pass read a document without casts (the worker gives back `cast_types` and the CAST operations); callee prototypes of undeclared callees are read off the uncast calls (`ROMWRIGHT_RUST_CASTS_CALLS=cast` restores the C++ reading); 2b not ported. Tools: `benchmarks/{cast_diff,gate_pair,types_port_measure,stage2_report}.py`.
+
+**Follow-up (2026-10-13, `benchmarks/reports/stage2_followup_20261013.{json,md}`, a fresh rsync of the integrated tree, `ghidra_opt` sha256 `ffdd5e57...` confirmed, release cli/worker/api built there).** (1) m22-002 ee-gcc with a brand-new import and work directory per arm: off, parity and default are all 106 / 197 / 86.403 and the 200 functions identical, so the earlier "106 / 199 / 87.149 off, 2 compiled lost" was the shared-work-directory artifact (the three lanes of one arm ran in one work directory); the compiler rule loses nothing there (the arms differ by wrapper binaries because the harness drops `ROMWRIGHT_*` env; checked that `ghidra_opt_native` produces no cast log and `romwright-cli-novoid` lists the rule inactive). The rule stays `on`. (2) gh 196 compiled was the pristine repo copy's smaller build (6,250 matched functions against 7,367 on the harness clone): on the clone, off 78 / 199 / 82.057 (the baseline, reproduced) and default 78 / 199 / 82.119 (1 better, 0 worse). (3) Full `ps2_decompile_success` (11 projects, 10,342 addresses, default build): 10,338, the same four failures as the baseline (two 60 s deadlines, two `Backward normalization`). No project source was missing.
+
+
+## Upgrade round 1: the compile-failure classes the Rust layers own, before stage 3 (2026-10-14, Upgrade1)
+
+**Cut.** Nine Rust-side rules, each behind its own switch (`=off` disables it), no C++ change (`ghidra_opt` sha256 `ffdd5e57...`, IR v6): `ROMWRIGHT_EXPORT_SUBPIECE_ARITY` (the
+`SUBPIECE` macro takes the offset the printer passes: 7 of the 20 "syntax errors"), `ROMWRIGHT_EXPORT_ODD_WIDTHS` (`undefined3/5/6/7` is a byte array: the other 13),
+`ROMWRIGHT_EXPORT_LOCAL_VIEWS` (byte-array locals assigned whole or read in pieces, the real (c1) and the locals of (b)), `ROMWRIGHT_EXPORT_MISMATCH_NAMES` (`_NAME`,
+`stack0x...`, `_DAT_...whole`: `pushMismatchSymbol`'s names), `ROMWRIGHT_EXPORT_DECLARED_VIEWS` (a global the header declares is read through that declaration, not
+through the printer's union: the 25 ff and the dk/dc (b) cases), `ROMWRIGHT_EXPORT_CONTEXT_NAMES` (the `BCommJmpTbl` redeclaration), `ROMWRIGHT_EXPORT_DECLARED_ACCESS`
+(a header object of another shape than the printed one, `ene_wrk[i] = 1` on a struct array, is read through its address: ff's type mismatches 22 -> 5),
+`ROMWRIGHT_EXPORT_FLOAT_ARGS` (an integer literal passed to a `float` parameter is the float its bits spell) and `ROMWRIGHT_STRUCT_POINTEE_RUNS` (a struct pointer field to a
+scalar run is `T *`). Code: `emit_m2c/locals.rs` (new), `globals.rs`, `storage.rs`, `dependencies.rs`, `conform.rs`, `struct_types.rs`; docs `docs/c-output-lanes.md`
+("Upgrade round 1") and `docs/structs.md` section 5. Report `benchmarks/reports/upgrade1_gates_20261014.{json,md}` (`benchmarks/upgrade1_report.py`),
+pointer-field measurement `benchmarks/struct_pointer_fields.py`.
+
+**Gates** (one host, one release build, a fresh import and a restored work directory and repo per arm, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `ROMWRIGHT_NO_FACT_PACK=1`; every
+arm a wrapper binary that sets the switches; exact / compiled / mean %, all switches off -> default):
+
+| gate | off | default | paired | exact / compiled gained, lost |
+|---|---|---|---|---|
+| m22-002 MWCC 20261010 | 55 / 193 / 76.968 | 55 / 193 / 76.968 | 0 / 0 / 200 | 0 / 0, 0 / 0 |
+| m22-002 MWCC 20261011 | 57 / 194 / 78.316 | 57 / 194 / 78.316 | 0 / 0 / 200 | 0 / 0, 0 / 0 |
+| m22-002 ee-gcc | 106 / 197 / 86.403 | 106 / 197 / 86.403 | 0 / 0 / 200 | 0 / 0, 0 / 0 |
+| dds | 61 / 196 / 76.818 | 61 / 200 / 77.224 | 2 / 0 / 198 | 0 / 0, 4 / 0 |
+| rc | 26 / 199 / 68.113 | 26 / 200 / 68.158 | 1 / 0 / 199 | 0 / 0, 1 / 0 |
+| p4 | 60 / 193 / 79.400 | 60 / 193 / 79.400 | 0 / 0 / 200 | 0 / 0, 0 / 0 |
+| gh (harness clone) | 78 / 199 / 82.119 | 78 / 199 / 82.119 | 0 / 0 / 200 | 0 / 0, 0 / 0 |
+| ff | 20 / 145 / 49.350 | 21 / 195 / 61.753 | 58 / 1 / 141 | 1 / 0, 50 / 0 |
+| dc | 38 / 176 / 66.605 | 38 / 186 / 69.844 | 10 / 0 / 190 | 0 / 0, 10 / 0 |
+| dk | 29 / 176 / 70.804 | 29 / 189 / 75.561 | 14 / 0 / 186 | 0 / 0, 13 / 0 |
+
+m21-001 PASS in both arms, identical rows; printer differential 1,800 of 1,800 identical; decompile success 7,447 of 7,500 in both arms with the same 53 failures (fresh imports of
+8 images; the 10,342-function wave's cached projects no longer exist). Compile failures of the seven samples, off -> default: **(a) syntax error 20 -> 0, (b) member access
+34 -> 2 (the 2 are `__sinit_*` heads the regex misreads), (c1) byte-array local values 6 -> 0, `BCommJmpTbl` 1 -> 0, undeclared identifiers 8 -> 4, type mismatch 43 -> 26, incomplete type 1 -> 0, call mismatches 5 -> 3; 116 -> 38 failing functions in all (`failure_classes.py`, `upgrade1_failure_classes_{off,def}_20261014`)**; compiled functions
+across the seven lanes (gh on the harness clone) 1,284 -> 1,362 of 1,400. Each fix alone gains where its class occurs and loses nothing (m22-002 lane 1: nine arms, all
+55 / 193 / 76.968); left out of the default each of `sub`, `odd`, `loc`, `mis`, `dec`, `ctx`, `acc` loses compiled functions; `flt` and `ptr` change no outcome on any gate (kept: they
+lose nothing; not counted as wins). One function is worse by percent and still compiles (ff `LoadStoryWrk`, 24.1 -> 23.4).
+
+**Corrections to the scout's map.** The 20 syntax errors are 13 `undefinedN` declarations and 7 `SUBPIECE` macro calls with a second argument; (c1) is Ghidra's declaration of an 8-byte
+stack slot written by `sdl`/`sdr`, fixed in the export (no typing needed); the pointee join to the struct field exists (`struct_types::synthesize`), what is missing is pointer evidence
+(one pointer field in 1,308 inferred fields, 73 integer fields read through pointer casts: `docs/structs.md`); the `_iStack_70`-style undeclared names are `pushMismatchSymbol`'s underscore.
+Harness: `rename_definition` (m22-003) no longer reads a function-like macro for the definition head (it renamed `romwright_subpiece_...` after the function in dc).
+
+**User-WIP files edited (minimal), `crates/romwright-core/src/emit_m2c.rs` only:** `mod locals;`; the `globals::from_doc(..., &opts.declared)` argument; the `locals::edits(...)` call
+after `token_edits::edits`; `decls.remember_printed()` in `conform_text` (the printed declarations are remembered before the header replaces them); in `declared_names`, a parenthesized
+declarator is descended into (`void (*T[])(..)`); one test of it. No other WIP file was touched.
+
+**Limits, for stage 3 and 4.** Still failing: ff 5, dc 14, dk 11, p4 7, gh 1 on the harness clone (`no candidate`; 2 on the pristine copy) (`float **` for `sceVu0FMATRIX` parameters and other uncast-call prototypes (c2), `void` functions that return a value
+(c3), struct arguments by value, VU intrinsics assigned to ints, `CONCAT71` with a 7-byte cast, `stack0x00000000` as an address): stage 4 prototypes or stage 3 merging. The m22-003 isolation
+arms ran on the functions whose outcome differs between off and default (the rest cannot change), the m22-002 and rc arms on all 200. The first isolation attempt named its arms wrongly and ran
+as the default; discarded and re-run. Reproduction: `benchmarks/upgrade1_report.py --out OUTDIR`; host scripts and results in `~/runs/Upgrade1/out/` (`logs/` beside it).
+
+## Decompiler port stage 3: variable merge, explicit/implied marks, default names and the for-loop moves handed to Rust (2026-10-14, Stage3Merge)
+
+**Cut and design:** `docs/merge-port.md`. Stage 2 declined a Funcdata mirror because a cast pass works on one statement tree; merge cannot (covers are intervals over the whole p-code, and the decisions edit the data flow), so stage 3 gives the worker a mirror of the p-code at exactly one point, right after `ActionAssignHigh`, and takes back a log of decisions that `ghidra_opt` replays on the real `Funcdata`/`HighVariable` with the calls and in the order the stock actions use (`native/romwright_merge.hh`, IR version 7, `printc/merge/`, 5,302 code lines). The worker runs `ActionMergeRequired` (`mergeAddrTied`, `groupPartials`, `mergeMarker`, the covers and the intersection test), `ActionMarkExplicit`, `ActionMarkImplied`, `ActionMergeCopy`, `ActionDominantCopy`, `ActionMarkIndirectOnly`, `ActionMergeAdjacent`, `ActionMergeType`, `ActionHideShadow`, `ActionCopyMarker`, the `VariableGroup`/`VariablePiece` bookkeeping, and the two for-loop op moves of `native/romwright_structure.hh`; a second query composes the default variable names (`iVar3`: kind, counter, local-scope bump; `ScopeInternal::buildVariableName`). The symbol table, `FuncProto`, `ActionInputPrototype`/`ActionOutputPrototype`, scope name uniqueness (`makeNameUnique`) and the type factory stay C++ (stage 4+). `ROMWRIGHT_NATIVE_MERGE=1` restores the C++ path byte for byte; `ROMWRIGHT_RUST_MERGE=off|on|verify`, `ROMWRIGHT_RUST_NAMES=off`; **`ROMWRIGHT_MERGE_VARIANT`** is the per-function printing-variant knob (below). A function the worker declines (multi-entry or dynamic symbol, union copy trim, a panic caught) runs the stock actions.
+
+**Parity** (`benchmarks/merge_diff.py`, `merge_verify.py`, `wave_text_diff.py`; default against `ROMWRIGHT_NATIVE_MERGE=1`): printed C identical on **1,600 of 1,600** (8 images x 200), on **7,409 of 7,409** PS2 functions of the 7,500-address wave; verify mode (the stock merge runs, the worker's partition, marks, inserted ops and non-printing ops compared variable by variable) 1,600 of 1,600 on the sample and 7,619 of 7,619 on the PS2 images, 0 mismatches; **0 declines** on both (the first build without `VariablePiece` declined 5.4%: overlapping address-tied storage, proto-partials, partial struct types; those are ported). Worker decision time 0.56 s of 70 s decompile wall (0.8%).
+
+**Gates** (one host, one release build, `ghidra_opt` sha256 `486ace43c12ed3017508f527344dd06552b7ee62304c861566430ca18074ff94`, a fresh import and a restored work directory and repo per arm, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `ROMWRIGHT_NO_FACT_PACK=1`; off = `ROMWRIGHT_NATIVE_MERGE=1`; exact / compiled / mean %; the arms' paired better / worse / same):
+
+| gate | off | default | paired |
+|---|---|---|---|
+| m22-002 MWCC 20261010 | 55 / 193 / 76.968 | 55 / 193 / 76.968 | 0 / 0 / 200 |
+| m22-002 MWCC 20261011 | 57 / 194 / 78.316 | 57 / 194 / 78.316 | 0 / 0 / 200 |
+| m22-002 ee-gcc | 106 / 197 / 86.403 | 106 / 197 / 86.403 | 0 / 0 / 200 |
+| dds | 61 / 200 / 77.224 | 61 / 200 / 77.224 | 0 / 0 / 200 |
+| rc | 26 / 200 / 68.158 | 26 / 200 / 68.158 | 0 / 0 / 200 |
+| p4 | 60 / 193 / 79.400 | 60 / 193 / 79.400 | 0 / 0 / 200 |
+| gh (harness clone) | 78 / 199 / 82.119 | 78 / 199 / 82.119 | 0 / 0 / 200 |
+| ff | 21 / 195 / 61.753 | 21 / 195 / 61.753 | 0 / 0 / 200 |
+| dc | 38 / 186 / 69.844 | 38 / 186 / 69.844 | 0 / 0 / 200 |
+| dk | 29 / 189 / 75.561 | 29 / 189 / 75.561 | 0 / 0 / 200 |
+
+m21-001 PASS in both arms, rows identical (discovery does not run merge; its recall/precision rows are equal in both arms and differ slightly from the 2026-10-10 DiscoveryResidual rows); printer differential 1,800 of 1,800 identical; decompile success 7,448 of 7,500 in both arms with the same 52 failures (fresh imports of the 8 PS2 images; the 10,342-function wave's cached projects no longer exist; persona-4 `002be530` deadline, two `Backward normalization not implemented`, dark-cloud 49 `Flow exceeded`). Report `benchmarks/reports/stage3_gates_20261014.{json,md}` (`benchmarks/stage3_report.py`). The default equals Upgrade1's final gate on every lane: stage 3 is a port with no change in output, by design (parity first); the quality work for it is the knob.
+
+**The knob, on a real near-miss (`benchmarks/reports/variant_smoke_stage3_20261014.json`, m22-003 dds, the 30 best non-exact functions, 12 variants, compiled and matched in the lane, `ghidra_opt` of the gate build).** Mean match 93.066% with the default variant. `ROMWRIGHT_MERGE_VARIANT=maxref=1` (an op's output used once may be inlined, a value read twice stays a variable) turns **`sndAddSourceReferences` from 88.842% to 100.000%** (the value `*(int *)param_1` is read twice, the variant gives it `temp_v0` and the second load `temp_v1`); `datatype=off` (no `ActionMergeType`) turns **`btlReleaseModelEntry` from 99.646% to 99.958% (exact)** by giving each reload its own variable (`temp_v1`, `temp_v2`, `temp_v3` where the default reuses `temp_v0`). Per variant, exact / mean over the 30: default 0 / 93.066, `adjacent=off` 0 / 93.066, `datatype=off` 1 / 93.223, `copy=off` 0 / 93.066, `dominant=off` 0 / 93.066, `hideshadow=off` 0 / 93.066, `maxref=1` 1 / 93.364, `maxref=4` 0 / 93.075, `maxdup=1` 0 / 92.992, `maxdup=4` 0 / 92.694; the best variant per function (what a search would pick) is 93.623% with 2 exact, 5 of the 30 functions improved. Nothing is built that searches; the knob is `printc::merge::Variant` and the `ROMWRIGHT_MERGE_VARIANT` environment variable (`adjacent`, `datatype`, `copy`, `dominant`, `hideshadow` on/off, `maxref`, `maxdup`, `explicit=t12+i0:0x10:4`, `separate=t1~t2`; inline or `@file.json` keyed by function address).
+
+**Stage-3-owned leftovers.** VU intrinsics assigned to ints, `stack0x...` as an address, partial members (`uStack_8._4_4_`, `temp_v7._0_8_`) and undeclared stack locals were traced: they do not come from a merge decision. A scan of the 7,409 PS2 functions (`scan_t5`): partial members in 571 functions (13,286 occurrences, mostly globals `DAT_..._4_4_` and vector `au*._0_4_`), `stack0x` in 63 (217), `undefinedN` in 17 (20); they come from the symbol layout (`ScopeLocal`/`linkSpacebaseSymbol` stack-symbol recovery, global-symbol sizes: stage 4/5) and from type inference. The 16 functions that still do not compile in ff and dk (`float **` for vector parameters, VU intrinsics assigned to ints, `int7`) were printed under 6 variants each (`variant_quality_stage3_20261014.json`): none compiles in any variant, so no switch-guarded merge fix was kept; no stage-3-only fix was found that loses nothing.
+
+**User-WIP files edited:** none. **Limits:** multi-entry and dynamic symbols, union copy trims and constant copy trims decline to the stock actions (none occurred in 1,600 + 7,619 functions); the symbol table, `FuncProto`, input/output prototype actions, scope uniqueness and the type factory stay C++ (stage 4+), and the vendored `HighVariable::merge`/covers still run in the replay; the for-loop finalize still sees pre-cast p-code; the knob changes speculative merges, the implied/explicit thresholds and forced explicit/separated values only (required merges and copy trims are not choices) and was measured on one lane's 30 functions, `explicit=`/`separate=` on no lane; the quality leftovers above need stage-4/5 symbol layout and type inference work; one `pkill -f` on the host killed my own ssh session once (no effect on results). Reproduce: `benchmarks/stage3_report.py --out OUTDIR --tag f1`; host scripts and results in `~/runs/Stage3/out/` (`logs/` beside it).
+
+
+## `romwright-cli match`: near-miss search over alternative C printings (2026-10-14, MatchSearch)
+
+`match <name|0xADDR> [--project REPO] [--budget N] [--time SECS] [--write] [--json]` inside a `new-project` repository (`docs/match.md`): the function is printed in up to N ways (the stage 3 merge variant, `calls=cast`, two structuring switches; single knobs first, then combinations of the ones that helped on that function), each print is compiled with the repository's pinned compiler and flags, the function's `.text` is scored against the retail bytes (relocation fields masked; objdiff `match_percent` with `functionRelocDiffs=none`, the m22-003 lane harness's measure ported to `match_search/object.rs`), and the best is kept; identical prints are compiled once, the search stops at the first exact one, at the budget (default 24) or at `--time` (default 600 s); `--write` puts the best C in `decompiled/<unit>.c` (or `src/<unit>.c` for a C unit) where `configure.py swap` picks it up. The variants travel as `RuntimeConfig::worker_env` / `M2cOptions::worker_env`, environment pairs the decompiler worker gets for one request (`ROMWRIGHT_MERGE_VARIANT`, `ROMWRIGHT_RUST_CASTS_CALLS`, `ROMWRIGHT_RUST_STRUCTURING`); no wire, IR or C++ change (ghidra_opt unchanged, sha256 486ace43...), and the default request is byte-identical (every default arm below equals the baseline table). `match --plan` prints the plan as JSON; the lane harnesses read it from there (`tests/match_search_arm.py`).
+
+Smoke on a real repository (DDS, ee-gcc 2.96, `-O2`, built on the host): `0x001f1c78` (lane name `sndAddSourceReferences`) 88.842% -> `maxref=1` 100% exact in 3 variants, 1.6 s; `--write` + `configure.py swap` + `ninja progress`: the unit reads 76 of 76 bytes, 100%. `0x00211390` (`btlReleaseModelEntry`) 99.167% -> `datatype=off` 99.479%; `0x00198528` 94.667% -> 96.571%; `0x002649b0` stays at 83.091% (a different length from the retail). The all-assembly `ninja` sha1 check of a fresh DDS repository failed by 3 bytes: GNU as rounded the `.incbin` of the second load's last, non-word-sized piece (`0x992bd` bytes) up to 4. `new-project` now writes a load's last 1-3 bytes as a `databin` piece (`new_project/ps2.rs`, `Kind::DataBin`; `docs/new-project.md` item 6); a regenerated DDS repository with the searched `0x001f1c78` swapped in builds to `OK ... sha1 6d18898e…`, the retail sha1.
+
+Benchmark (`tests/m22-003_ps2_multigame_c.py --search 24` adds the `romwright-search` layer: for every function whose default print compiles and is not exact, the plan's variants are exported, deduplicated, compiled with the unit's own command and scored by the lane's scorer; `tests/m22-002_ps2_c_output.py --search 24` the same on the Persona 4 lanes; `tests/match_search_report.py` rolls up; `benchmarks/reports/match_search_20261014.{json,md}`). Every arm is a fresh import and a fresh snapshot; the default arm equals the baseline table on all ten lanes. m22-003 lanes (exact, mean % over 200, default -> searched): dds 61->64 exact, mean 77.224->78.792; rc 26->27 exact, mean 68.158->70.380; p4 60->60 exact, mean 79.400->80.007; gh 78->80 exact, mean 82.119->83.869; ff 21->24 exact, mean 61.753->64.178; dc 38->40 exact, mean 69.844->70.719; dk 29->31 exact, mean 75.561->76.387. Together exact 313 -> 326 of 1400; 278 of 1049 searched functions improved (objdiff percent up or exact); 15297 decompiles, 2161 compiles. Winners: `datatype=off` 74, `maxref=1` 63, `structuring=none` 51, the rest single knobs and pairs. m22-002 lanes: MWCC seed 20261010 55->58 (mean 76.968->77.562), seed 20261011 57->57 (78.316->78.767), ee-gcc 106->107 (86.403->87.736).
+
+**User-WIP files edited (minimal):** `crates/romwright-cli/src/main.rs` (`mod match_cmd;`, a three-line `match` dispatch, one usage line), `crates/romwright-core/src/lib.rs` (`pub mod match_search;`, `request.config.worker_env = opts.worker_env.clone();` in `export_m2c`), `crates/romwright-core/src/emit_m2c.rs` (the `worker_env` field of `M2cOptions` and its default); new: `crates/romwright-core/src/match_search/{mod,plan,object,project}.rs`, `crates/romwright-cli/src/match_cmd.rs`, `tests/match_search_arm.py`, `tests/match_search_report.py`, `docs/match.md`; edited (not WIP): `session.rs`, `native_runtime.rs` (the config field and its use), `tests/m22-002_ps2_c_output.py`, `tests/m22-003_ps2_multigame_c.py` (`--search`), `docs/merge-port.md` section 5, `docs/new-project.md`. **Limits:** PS2 repositories only; the search varies printing, not types, so a function that does not compile or whose prototypes are wrong is not helped; the export switches (`ROMWRIGHT_EXPORT_*`) are not varied; a project with wrong flags scores low for every variant; the lane harness runs each batch of variants in parallel and does not stop a batch at an exact variant (the command does); wall times were measured with three lanes sharing the host; a variant budget of 24 is not an optimum, and only 14 single knobs exist.
+
+## Finish line (2026-10-14, chosen by the orchestrator at the user's request)
+
+The user asked for romwright to be "finished" and left the order of upgrades to me. Finished means:
+
+1. **Import:** recall and precision (including `precision_verified`) at or above stock Ghidra on every corpus platform, at lower wall time. Open: precision losses on PS2/PSP/DS (corpus wave 2026-10-10, `precision_verified` 6/12 against us).
+2. **C output:** stage 4 (type inference) ported where it buys quality (callee prototypes, float matrix types, struct by-value, pointer evidence for struct fields); stack/global symbol layout (partial members in 571 PS2 functions, `stack0x` in 63; **done 2026-10-15: 496 and 1, section "Decompiler port: stack and global symbol layout" below**). Gated on the m22 lanes with fresh arms, no exact or compiled loss.
+3. **Projects:** `new-project` and `match` for every console romwright imports: byte-matching for GameCube/Wii, N64, PSX, PSP, GBA, NDS; a non-matching scaffold for 3DS, Switch, PS3, PS4, Vita, Xbox 360.
+4. **Release:** full filtered test suites and doc checks green, docs current, release packaging per `docs/releasing.md`, desktop app exposing the new commands.
+5. **PC:** Windows PE / x86 games after the consoles (same import, C output and project bar).
+
+Pending decisions taken: the two canonical compiler rules stay on; a stock DNF or crash counts neither way (as documented); Kuna items are outside romwright; `ROMWRIGHT_SJA`, the analysis-split patch, `answer_getbytes` and the datatests harness stay as they are unless a finish item needs them.
+
+
+## `new-project` and `match` for N64, PlayStation and PSP (finish item 3, 2026-10-14/15, NewProjectMips)
+
+`romwright-cli new-project <image> <outdir>` now writes a splat repository for a Nintendo 64 ROM (any dump byte order), a PS-X EXE and a PSP ELF (EBOOT/PRX or `ET_EXEC`), and `romwright-cli match` runs inside them (`docs/new-project.md` "Nintendo 64, PlayStation and PSP", `docs/match.md`). The PS2 plugin's layout code moved to `new_project/mips.rs` (layout planner, symbol/prototype files, types header, README fill, `Inputs`); the PS2 project of a corpus ELF (`dungeon_game.elf`) is byte-identical before and after the refactor (diffed against the pre-refactor binary; the only file that differs is `tools/download_tool.py`, which NewProjectGC changed meanwhile), and the PS2 `new_project::ps2` tests pass. New: `new_project/{n64,psx,psp,detect}.rs`, `templates/mips/` (`configure.py`, `tools/{toolchain,cc,asm,n64crc}.py`, README), the CLI file `crates/romwright-cli/src/new_project_mips.rs`, `ToolEntry.requires` and 18 manifest tools (ido-static-recomp 5.3/7.1 v1.2; mips-gcc-2.7.2 + binutils-2.6; pmret gcc-papermario + binutils-papermario; maspsx at 423ffc6; PSY-Q 3.3 - 4.6 from mkst/esa; psp-gcc 1.7.1; mwccpsp 3.0.1 b219; url, sha256, size, license, provenance each).
+
+**All-assembly rebuilds, sha1-identical, on `nih-vps-u`** (`ROMWRIGHT_NO_IMPORT_CACHE=1 ROMWRIGHT_NO_FACT_PACK=1`, fresh import, `configure.py` then `ninja`, the build tools fetched from the pinned manifest): Super Mario 64 `9bef1128...` (4,592 asm units), Paper Mario `3837f44c...` (GCC; 2,739; 312 overlay programs stay binary), Star Fox 64 `d8b10885...` (1,590), Perfect Dark `af8788ac...` (only the 57 raw-preamble functions: its code is Rare 0x1173 compressed), Silent Hill `f3834456...` (PSX, 236), Vagrant Story `fababcfd...` (PSX, 859), psp-melodie `724fe026...` (PRX, 3,371; 74 units hold Allegrex-only instructions and are assembled as `.word`s), psp-tetris `9c5c0620...` (`ET_EXEC`, Metrowerks, 8,703). Failures found on the way and fixed: PSP `.set gp=64` refused by GNU as for a 32-bit CPU (`add_set_gp_64: False`); splat refusing a mangled C++ symbol name over 255 bytes (names over 240 bytes are cut and keep their address); a link that stopped on `func_800798A4`, a `j` out of the image that splat does not list (the plugin now defines every `jal` target no function names and every tail call that leaves its function, absolutely, in `undefined_syms.txt`); IDO's 16-byte `.text` rounding overrunning the function slot of a C unit ("cannot move location counter backwards", `tools/toolchain.py` trims the zero padding in the object header). N64: `header` + `ipl3` + raw executable ranges as code segments (`export::file_backing` over the importer's layout), the rest `databin`; the CRC1/CRC2 algorithm (`tools/n64crc.py`, and Rust in `n64.rs`) reproduces the header of all nine corpus ROMs (CIC 6101/6102/6103/6105) and `ninja` recomputes it after linking when the retail header is consistent. PSP: the PRX `.rel.*` tables are file bytes the rebuild carries verbatim, so no relocation re-emission is needed for a byte-identical build; a C unit that moves code would (not implemented; the sha1 check is the judge).
+
+**Detection** reuses the importer's N64 (`move` spelling) and PSP rules and adds the version vocabulary: N64 `ido5.3` / `gcc2.7.2kmc` defaults (5.3 vs 7.1 and 2.7.2 vs 2.8.1 are not readable from the ROM), PSX by the Sony libsys `$Id: sys.c` date (Low confidence; the importer measures no byte-level PSY-Q tell), PSP `mwcc-psp` vs `psp-gcc`. `detect-compiler` routes to them.
+
+**`match`** (`match_search/{object,project}.rs`): big-endian object reading and relocation masks, `tools/cc.py` as the compile command for the new kinds, retail bytes from the repository's layout rows, the store program recorded in `project.json`. Real numbers (`docs/match.md`; budget 12 or 6; N64/PSX on `nih-vps-u`, PSP on `smt-cloud` where psp-gcc's 32-bit loader exists): Super Mario 64 8-40 byte functions 13 exact of 24 (mean 74.5%); 48-160 byte functions 0 of 30 (49.8%, one improved by `maxref=1`); Silent Hill 7 exact of 40 (73.2%); psp-melodie small functions 4 exact of 24 (81.2%), mid-size 0 of 12 (46.6% -> 49.4%). Exact prints are usable units: two IDO units swapped into Super Mario 64 and one PSY-Q unit into Silent Hill keep the ROM/EXE sha1 and `ninja progress` reads 100%.
+
+**User-WIP files edited:** none of the listed ones. Shared files touched (additive): `new_project/{mod,platforms,manifest}.rs`, `new_project/toolchains.json` (appended 18 entries), `new_project/ps2.rs` (moved code, same output), `crates/romwright-cli/src/new_project.rs` (a `mips_cli` module, a routing arm, a `detect-compiler` branch), `match_search/{object,project}.rs`, `docs/new-project.md`, `docs/match.md`. No ghidra_opt rebuild (pinned `486ace43...`).
+
+**Limits / remains:** compressed N64 segments and the hundreds of overlay programs of a game like Paper Mario are binary pieces (no recompression, no per-overlay segments with exclusive RAM ids); `.data/.rodata/.bss` are not split out of the code segments; no PSX disc routing (`iso.rs` refuses a `BOOT` disc) and no PSP `~PSP`/`EBOOT.PBP` handling; the PSP compile path needs `/lib/ld-linux.so.2` (psp-gcc is i386); `mwccpsp` and the `gcc2.8.1pm`/`ido7.1`/`psyq` versions other than the defaults are pinned but were not compiled in this wave (only `ido5.3`, `psyq4.3`, `psp-gcc-1.7.1` were); default flags are not calibrated per game. `detect-compiler` on a non-DOL file panicked inside NewProjectGC's `gc::detect_image_compiler` (reported to them; the MIPS branch now runs first).
+
+## `new-project` and `match` for GBA and NDS (finish item 3, 2026-10-14, NewProjectArm)
+
+**What works end to end** (fresh repository from the retail image, `configure.py` fetching the pinned tools, `ninja`, the sha1 compared with the retail one by `tools/verify.py`; host `nih-vps-u` unless noted, the first FE8 build on `fates-vps`):
+
+| platform | image | result |
+|---|---|---|
+| GBA | Fire Emblem: The Sacred Stones (16 MiB) | **OK** `c25b145e37456171ada4b0d440bf88a19f4d509f`; 8,203 function units (8,191 Thumb, 12 ARM) + 294 data units, 3 units kept as raw words |
+| GBA | pokeemerald (16 MiB) | **OK** `f3ae088181bf583e55daf962a92bb46f4f1d07b7`; 15,517 function units, 6 notes (4 whole-unit raw) |
+| GBA | Golden Sun (8 MiB) | **OK** `5c4695205413df7db52b9a184815a07783999971`; 2,481 function units |
+| GBA | KH Chain of Memories (32 MiB) | **OK** `10729bd884f8fdca7a310b6d606c52e46657aa48`; 5,212 function units |
+| GBA | Klonoa, NASCAR Heat 2002 | **OK** (`a0a298d9...`, `0eb1fa43...`) |
+| NDS | The World Ends With You (128 MiB) | **OK** `23e87b1e72aab7f9b718f83e92fd1c3039f23675` |
+| NDS | KH 358/2 Days (EU, 256 MiB) | **OK** `6fae8f5bbe80114b4e2535260eab5f4d0fc8a844` |
+| NDS | KH Re:coded, Dragon Quest IV | **OK** (`3e5e84d6...`, `b9132b77...`; DQ4 needs `dsd init --allow-unknown-function-calls`, which `configure.py` retries with) |
+| NDS | Pokemon Platinum | 4 bytes differ (one word of overlay 98 at `0x02249b34`: retail `0x0222e549`, built `0xeafffea3`), the same with dsd's own files unmerged: dsd's delink of a data word it read as an instruction [not investigated further] |
+| NDS | Pokemon HeartGold (pret's build, not retail) | 62,846 bytes differ in overlays with DS Protect ranges; plain extract + build is 4 header bytes off [INFERENCE: pret does not encrypt the ranges dsd re-encrypts] |
+
+**GBA** (`new_project/gba.rs`, `arm.rs`, templates `templates/gba/`): romwright writes the assembly itself (splat has no ARM). `arm.rs` decodes ARMv4T/v5TE into GNU `as` unified syntax and was checked against the pinned `as`: all 65,536 Thumb halfwords (57,759 identical, 431 refused by the v4t assembler, 192 `adds/subs/cmp` encoding choices) and 3 M random ARM words (2,175,328 identical; 3,851 differ, nearly all unpredictable `pc`/SBZ encodings and VFP-space coprocessor words, which are now not decoded). The ROM is `config/units.json`: a header unit (`tools/header.py` *computes* the complement check and reads the logo from `orig/`), one `.s` per function (zero padding up to 0x20 bytes after it included; literal pools as labelled `.4byte`s, switch tables found as runs of in-unit code addresses and decoded, words symbolised when exactly a function/symbol/label), `.incbin` data units. `tools/asm.py` compares every assembled unit with the retail bytes and falls back to `.inst.n/.inst.w/.inst` per line, then to a raw unit (`build/asm_notes.txt`). GNU ld is cubic in per-file statements: 64 units per directory = one wildcard statement; inside an output section `. = X` is an offset from the section start (an early version doubled the base). C units: `tools/cc.py` = `cpp -nostdinc -undef | agbcc | as` plus pret's `.align 2, 0` (without it `as` pads the slot with Thumb nops, found when a function that matched 100% differed in its last two bytes), `tools/autosyms.py` defines globals the decompiler named by address; seven FE8 functions swapped, ROM still `c25b145e...`. Pins: Arm GNU Toolchain 13.3.rel1 (four hosts, sha256 from Arm's `.sha256asc`), **agbcc = pret/agbcc's release binary**: the Finish-line matrix row claimed agbcc has no binary release; `github.com/pret/agbcc/releases/download/release/agbcc.tar.gz` is one (x86-64 Linux; the tag is mutable, the sha256 pins the 2026-01-20 asset; decomp.me's `gba/agbcc` compiler downloads the same file), so no source-build recipe was written. Detector: the importer's Thumb-return-share rule plus AGB SDK stamps (consistency check on six ROMs, only two have a known compiler).
+
+**NDS** (`new_project/nds.rs`, templates `templates/nds/`): the DS-specific work is dsd v0.12.1 + ds-rom v0.8.0 (pinned with `dsrom`, `wibo`, `mwccarm.zip` from decomp.me, proprietary; its sha256 equals pret/pokeheartgold's `mwccarm.zip`): `dsd rom extract`, `dsd init`, `dsd delink`, `dsd lcf`, `mwldarm` through wibo (`-nodead` required: without it 50 of HeartGold's 129 overlays lost their sizes), `dsd rom config`, `dsd rom build`, then `tools/romfix.py` restores the two header fields ds-rom cannot recompute from a decrypted dump (the retail secure-area CRC at 0x6C, kept in `config/header.json`, and the header CRC-16 at 0x15E): that is the only difference between the unmodified pipeline and the retail ROM on twewy and KH358 (4 bytes of 128/256 MiB). **What differs from the finish-line text ("emit dsd's config from romwright's functions, overlays and symbols"):** new-project emits romwright's functions and symbols per module in dsd's `symbols.txt` grammar (`config/romwright/<module>.symbols.txt`; ARM9, 50-305 overlay programs, ARM7); dsd's own `init` supplies `config.yaml`, `delinks.txt` (the section layout from build info) and `relocs.txt`, and `tools/merge_symbols.py` merges the two (names, functions dsd missed, ambiguous `module:overlays(...)` relocations dropped), validated by `dsd delink` (an added function it cannot analyse is taken out, a refused config is replaced by dsd's). Emitting the sections and relocations from romwright facts alone was not done: the layout and `.ctor`/`.exceptix` boundaries are derived only inside dsd's analysis. Inventories: twewy romwright 12,783 ARM9+overlay functions vs dsd 14,424 (12,763 in both, 20 romwright's alone); KH358 20,786 vs 23,253 (20,753 / 33); dq4 7,912 vs 9,064 with 283 added. With default names the merge renames nothing (it matters once a fact pack or symbol table names functions). An early version dropped symbol rows with nested arguments (`dsprot_range=(..)`) and made `dsd delink` fail: the reader is strict now. `swap` adds a `complete` delink file (`src/<module>/<name>.c`) to the module's `delinks.txt`; `tools/cc.py` runs mwccarm through wibo with the archive's `license.dat`, `-Cpp_exceptions off` (otherwise each C object brings an `@EX@` object and the ARM9 grows by 32 bytes) and `include/romwright_names.h` (romwright names -> dsd names). Two twewy functions swapped (one exact only after the variant search), ROM still `23e87b1e...`. Detector: NitroSDK banner -> `mwcc-arm`, default build `2.0/sp2p3` (a default for the class, not a proof).
+
+**`match`** (`match_search/{object,project}.rs`, kinds `agbcc` and `mwcc-arm`): ARM relocation field masks (`R_ARM_THM_CALL` both halfwords, `CALL/JUMP24`, `ABS32`, `THM_PC8`, `LDR_PC_G0`), one-function objdiff objects with `EM_ARM`, `$t/$a` mapping symbols and the Thumb bit, retail bytes from the ROM (GBA) or `extract/arm9/arm9.bin` (NDS ARM9/autoloads; overlays are not served), Thumb mode from the project's own tables for mwccarm (its objects do not mark it). Real numbers: FE8, 16 evenly spaced Thumb functions of 28-96 bytes: 15 compiled (the 16th fails on a decompiler union member), **7 exact at the default print**, others 90.5, 74.4, 99.92, 70.1->81.1 (search), 83.0, 80.5, 83.1, 41.1->81.0 (search). twewy ARM9, 14 ARM + 1 Thumb of 28-100 bytes, mwccarm 2.0/sp2p3 with a starting flag set: 15 compiled, **1 exact at the default print, 2 after the search** (89.8 -> 100), others 94.1, 87.2, 82.6, 71.5, 68.1, 65.3, 61.4, 60.0, 34.9, 26.2, 22.3, Thumb 11.9, and 0.0 where the compiled function is 112 bytes against 52. `docs/match.md` has the table.
+
+**Tests** (`cargo test --release -p romwright-core --lib -- new_project:: match_search::`): `arm::tests` (3), `gba::tests` (3: header check, a Thumb function with its literal pool as labelled words, the plan covering header/function/data), `nds::tests` (4: header CRC identification, program-to-module mapping, dsd grammar and modes, `merge_symbols.py` on a tiny dsd tree incl. dropped relocations and idempotence), `match_search::object::tests::arm_objects_carry_the_thumb_bit_and_mask_a_bl_pair_whole`.
+
+**Files.** New: `new_project/{arm,gba,nds}.rs`, `new_project/templates/{gba,nds}/**`, `crates/romwright-cli/src/new_project_arm.rs`. Edited (additive): `export.rs` (`ExportFacts.contexts`: the instruction-set mode at the points discovery settled), `new_project/{mod,platforms,manifest}.rs` (rows GBA and NDS now implemented), `new_project/toolchains.json` (`binutils-arm-none-eabi`, `agbcc`, `dsd`, `dsrom`, `mwccarm`), `match_search/{object,project}.rs`, `crates/romwright-cli/src/new_project.rs` (a `mod arm_cli`, the routing arm, ARM branch of `detect-compiler`), `docs/new-project.md`, `docs/match.md`. **No user-WIP file edited.** ghidra_opt not rebuilt (the host copy under `~/runs/NewProjectArm` is the pinned `486ace43...`).
+
+**Limits / remains:** code the GBA game copies to RAM or unpacks (Golden Sun's overlays, NASCAR's module) stays bytes in the ROM; units whose discovery took data for code are kept as raw words; the ARM7 program and ARM7 overlays of a DS ROM are binaries in the extract; encrypted dumps need the ARM7 BIOS; dsd's section layout is not romwright's; `match` serves ARM9/autoload functions only; the mwccarm build and flags are defaults for the evidence class; the C-swap of a DS function needs `include/romwright_names.h` for callee names and has no equivalent of `autosyms.py` for data. The PS2 plugin's C swap has the same undefined-data limitation that `autosyms.py` removes for GBA.
+
+
+## `new-project` for 3DS, Switch, PS3, PS4, Vita and Xbox 360: the non-matching scaffold (finish item 3, 2026-10-14, NewProjectScaffold)
+
+`romwright-cli new-project <image> <outdir>` now writes a non-matching scaffold for the six platforms with no byte-matching ecosystem; docs/new-project.md has the section ("3DS, Switch, PS3, PS4, Vita and Xbox 360: the non-matching scaffold"). The platform is read from the container's magic (`detect_platform`) or `--platform`; extra flags `--keys FILE...` (user keys, in memory only), `--map FILE`, `--raw BASE --language ID`, `--decompile all|first:N|ADDR,ADDR|none`.
+
+**What it writes.** `config/symbols.txt` (name = section:0xADDR; // type:function|label|import size:0xN [mode:thumb|arm] [orig:"..."], per module for a multi-module image), `config/modules.json` (language, section map with load addresses, sha256 of the mapped image, NSO build id), `config/project.json`, `config/toolchain.json`, `include/romwright_types.h` + per-module prototypes, `src/<module>/<shard>/<function>.c` (romwright's C, one function per file, `NON_MATCHING` marker), `orig/target/**.o` (each function's retail bytes as a relocatable ELF, direct calls/branches turned into the relocation a compiler would emit only when the instruction decodes to exactly the target the analysis recorded), `objdiff.json` (3DS, Switch, PS4), `build.py` (clang compile check in lenient C, `fetch`, `report`) and a README with per-platform notes. New code: `new_project/scaffold.rs`, `scaffold_obj.rs`, `templates/scaffold/**`, CLI `new_project_scaffold.rs`; `Core::scaffold_facts` (impl block in scaffold.rs). Pinned `clang-22.1.8` (LLVM release, sha256 from GitHub asset digests) in `toolchains.json`: one clang covers ARM, AArch64, x86-64 and PowerPC, so no cross GCC is pinned for PS3/Xbox 360.
+
+**Real images** (nih-vps-u, `--decompile first:40`, under other agents' load; import times are loaded times):
+
+| image | platform | functions | import | C | compiles | objdiff |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fire Emblem Fates `.code` (raw + symbols.map) | 3DS | 27,625 | 279 s | 38 (2 refused, raw image has no .bss) | 37/38 | 36 units, 61 calls relocated, 16.1% |
+| Xenoblade DE `main` NSO | Switch | 43,506 | 2023 s | 40 | 40/40 | 40 units, 8 at 100%, 49.9% |
+| NFS Most Wanted `eboot.elf` + BINMAP | Vita | 30,727 | 787 s | 40 | 33/40 | none (objdiff-cli 3.6.1: `ARM arch ARMv7 not supported`) |
+| AMPED 3 `default.xex` + map | Xbox 360 | 35,573 | 947 s | 40 | 39/40 | none (no PowerPC backend) |
+| CTR Nitro Fueled `game-ps4-prof.elf` (370 MB) | PS4 | 145,632 | 1327 s | 40 | 12/40 | 40 units, 19.3%, best 90% |
+| Persona 5 `SW.BIN` | PS3 | n/a | blocked: encrypted retail SELF, `SELF metadata counts implausible`; no keys on the hosts | | | |
+
+PS3 was run on a synthetic decrypted PowerPC64 ELF (clang + lld) instead: 4 functions, 4 C files, 3/4 compile, 4 target objects, no objdiff.json. The pinned chain was verified on nih-vps-u: `build.py fetch` downloaded the 1.94 GB clang archive and objdiff-cli, both sha256 matched, and `build.py` + `build.py report` produced the same 40/40 and 49.9% on the Switch scaffold with those pinned tools. objdiff-cli loaded `objdiff.json` for the 3DS, Switch and PS4 scaffolds.
+
+**Found and fixed on the way.** (1) The Thumb mode is a `LowBitCodeMode` context row on 3DS (not `TMode`); a function whose address or size A32 cannot have is Thumb whatever the rows say (a map file names functions the analysis never decoded); a trailing partial instruction is cut from the target object. (2) Decompiled C needs lenient C (`-Wno-implicit-function-declaration -Wno-int-conversion -Wno-incompatible-pointer-types`) to compile at all: without it 3 of 7 FE Fates functions failed on callees with no declaration. (3) objdiff-cli 3.6.1 panics on a unit whose compiled ARM function is empty and errors on a missing object: `build.py report` reports such units target-only. (4) The decompiler refusing a function (the raw 3DS image has no .bss) aborted the whole export: refusals are now skipped and counted, and `all` falls back to function-by-function if its batch fails. (5) Existing importer bug, one line: a bare NSO was taken for an ExeFS by `switch::is_exefs` (its flags word reads as a file size) and failed with `ExeFS entry  outside file`; `is_exefs` now returns false for `NSO0` magic.
+
+**User-WIP files touched:** none of the listed ones. Shared edits: `new_project/mod.rs` (`pub mod scaffold; pub mod scaffold_obj;`), `toolchains.json` (+ `clang-22.1.8`), `manifest.rs` (role comment), `platforms.rs` (six rows + `Scaffold` doc), CLI `new_project.rs` (detect fallback, early route, `#[path] mod`), `native/switch.rs` (the `is_exefs` line), docs/new-project.md.
+
+**Tests** (`cargo test -p romwright-core --lib new_project::scaffold`): 13 — the ELF writer parsed by the `object` crate for ARM, Thumb, AArch64, x86-64, PowerPC32/64 (relocation encodings, a displacement that misses its recorded target is left alone), the plan (files, names, symbols with `orig:`, objdiff rows, modules.json, prototype filtering, no key material in any path), PowerPC without objdiff.json, a language the platform cannot build keeps config only, platform detection by magic, name collisions, manifest pins.
+
+**Limits / remains.** The decompiled C is a reading aid: PS4 compiled 12/40 on its first 40 functions (23 failures are 128-bit vector locals printed as `unsigned char[16]` member accesses), Vita 33/40. Whole-image `--decompile all` was not run on any image (a 30,000-function decompile is hours; the smokes use `first:40`). A bare 3DS `.code` has one region (no NCCH/CIA retail image on the hosts, so the NCCH path is exercised by the loaders' own tests only); a Switch NCA/XCI would give one module per NSO but was not run (no keys), and the build id comes only from a bare NSO. The PS3 corpus image needs keys that are not here. Data operands (literal pools, RIP-relative) are left as retail bytes in the target objects and show as objdiff differences. fates-vps was not used for results (it became unreachable during a download there; the run was killed afterwards).
+
+## `new-project` and `match` for GameCube and Wii (finish item 3, 2026-10-14/15, NewProjectGC)
+
+`romwright-cli new-project <disc image | main.dol> <outdir>` writes a dtk-template repository (`docs/new-project.md`, "GameCube and Wii"; `new_project/{gc,dol_layout,rel_layout,gc_compiler}.rs`, `templates/gc/`, CLI `new_project_gc.rs`): `config/<ID>/{config.yml,splits.txt,symbols.txt,build.sha1,rels.sha1,objects.json}`, `configure.py` (tools from the pinned manifest, `dtk dol split`, mwld through wibo, `dtk elf2dol`, `dtk shasum`, `build.ninja`, `objdiff.json`, `swap`), disc images (ISO, CISO, RVZ, WIA, WBFS, Wii ISO) extracted into `orig/<game id>/{sys/main.dol,rels/*.rel}` by `native/disc.rs::collect` (shared with the importer) and `wii::extract_disc`. Manifest pins: dtk v1.8.4, sjiswrap v1.2.2, the 77 MB `compilers_20251118.zip` bundle (GC/1.0 .. 3.0a5.2, Wii/1.0 .. 1.7; `Asset.include` extracts only `GC/` and `Wii/`), with wibo and objdiff-cli as before. `--list-platforms`: GameCube and Wii are `implemented`. `detect-compiler` takes a DOL or disc.
+
+**End to end, fresh repo each time (nih-vps-u, release CLI, `ROMWRIGHT_NO_IMPORT_CACHE=1 ROMWRIGHT_NO_FACT_PACK=1`, load 10-45 so times are noisy): `ninja` prints `build/<ID>/main.dol: OK`, the rebuilt DOL's sha1 equal to the retail one**
+
+| image | input | new-project / configure / ninja (s) | arrangement |
+|---|---|---|---|
+| GC Pikmin 2 | DOL | 50 / 14 / 1 | keep |
+| GC Pikmin | DOL | 24 / 8 / 1 | keep |
+| GC Super Mario Strikers | DOL | 27 / 9 / 1 | keep |
+| GC Melee | DOL | 58 / 14 / 1 | keep |
+| GC Tiger Woods 2004 | DOL | 20 / 6 / 0 | keep |
+| GC Mario Party 4 | DOL; ISO (99 RELs) | 10 / 5 / 0; 14 / 18 / 1 | keep |
+| GC Twilight Princess | ISO (757 RELs) | 41 / 37 / 1 | names |
+| GC Wind Waker | ISO (415 RELs from `RELS.arc` and the file system) | 35 / 39 / 0 | keep |
+| Wii Pikmin 2 (New Play Control) | DOL | 78 / 46 / 3 | names |
+| Wii Mario Strikers Charged | DOL | 70 / 83 / 9 | names |
+| Wii Rock Band 3 | DOL | 152 / 290 / 7 | names |
+| Wii Skyward Sword | DOL; WBFS (645 RELs read through `nod`'s decrypted partition) | 62 / 46 / 2; 4 GiB image | analysis |
+
+Not reproduced: Animal Crossing (DOL and CISO): stock dtk fails too (no `_eti_init_info` where dtk looks; its repository needs `symbols_known`, `ldscript_template`, `common_start`, relocation lists); Super Mario Galaxy: stock dtk fails (`Unaligned symbol entry`). Both stop in `dtk dol split` with dtk's message.
+
+REL modules (`ninja rels`, each REL as `dtk rel make` writes it against the retail file): Mario Party 4 93 of 93 byte-identical (6 header-only stubs copied), Wind Waker 414 of 415, Twilight Princess 371 of 757 (the others differ in one `.dtors` relocation: dtk ties a module's first `.dtors` entry to the DOL's `__destroy_global_chain`, the retail file to a function of the module). Skyward Sword's module graph (shared ids 2, 3, 5; relocations into an overlay) is refused by dtk, so `configure.py` falls back to the DOL alone and copies the RELs (`config.yml.with-modules` keeps the original).
+
+**What had to be found (each from a failure on a real image; details in the docs):** DOL section names and boundaries from the `.init` `_rom_copy_info`/`_bss_init_info` tables (dtk's own naming fails on AC and Wii DOLs; its `align:` rule reproduced); the entry is `__start`; dtk refuses overlapping/oversized function rows (dropped, in the export and again by `configure.py` from dtk's error); `dtk dol split` needs two passes over a fresh symbol file; the startup registrations (`__init_cpp_exceptions`, `__destroy_global_chain`, `__fini_cpp_exceptions`) need a different arrangement per game, so `configure.py` links after each split and compares the DOL sha1 (`keep`, a `.ctors$10` unit, names + units, dtk's own analysis); the new `mwldeppc.exe` builds (`GC/3.0a*`, `Wii/*`) segfault under wibo (1.0.3 to 1.2.0, two hosts) on a `.comment` older than their own, so `mw_comment_version` follows the linker; REL `Sections:` by slot after `.text`; duplicate module ids; header-only RELs mwld refuses; `rel make` takes the DOL's ELF first and `config.yml`, not `config.json`.
+
+**Compiler detection** (`gc_compiler.rs`; SDK banner dates, TRK revision; in-sample): exact repository directory 8 of 13 images, same generation 12 of 13 (Mario Party 4 misses: no banner, default `GC/1.3.2`, repository `GC/2.6`). Table in `docs/new-project.md`.
+
+**`match` in a GameCube/Wii repository** (`match_search/project.rs`, `object.rs`: PowerPC ELF objects, `R_PPC_*` field masks incl. `EMB_SDA21`, `.rela` objdiff objects with the retail bytes cleared under the compiled function's relocations): Pikmin 2 (GC/2.6, default flags): `0x800c03ec` (32 B) and `0x8006bd04` (8 B) 100% exact in one print (1.3 s), `0x800c0394` 49.250%, `0x800c0548` 48.000%, `0x800be23c` and `0x800c0680` 0% (the print is a different length). Pikmin 2 Wii (GC/3.0a5): 5 of 9 sampled functions exact (`0x800060b8`, `0x80067628`, `0x800e8c5c`, `0x801972f8`, `0x801bee48`), `0x800c0538` 47.875%, three 0%. End to end on Pikmin 2: `match 0x800c03ec --write`, `configure.py swap 0x800c03ec`, `matching: true` in `objects.json`: the DOL stays sha1-identical with the C object linked, `ninja progress` reports the unit 100% (32 of 4,644,080 bytes).
+
+**User-WIP files edited:** `crates/romwright-core/src/native.rs`: one line, `mod disc;` -> `pub(crate) mod disc;`. No other listed file. Other shared edits (additive): `new_project/{mod,platforms,manifest}.rs`, `toolchains.json` (+3 entries), `templates/ps2/tools/download_tool.py` (zip `include`), CLI `new_project.rs` (route + `detect-compiler`), `export.rs` (`dtk_symbols_placed`, overlapping functions rejected), `native/{disc,wii}.rs` (extraction), `match_search/{object,project}.rs`, `docs/{new-project,match}.md`.
+
+**Tests** (`cargo test --release -p romwright-core -- new_project:: match_search:: export::`, 109 passed): DOL layout from synthetic `.init` tables (names, trimmed sizes, BSS sections, alignment rule, no-table fallback), REL slot naming (TP and MP4 shapes), imports, header-only modules, plan output (symbols, config, links, build.sha1/rels.sha1, `__start`, overlapping rows, runtime registration entries, compiler refusal), compiler detection, PowerPC objects and masks, `gc_unit_of`.
+
+**Limits / remains.** No RVZ/WIA image was on the hosts (the WBFS covers the `nod` path; the container equivalence is the importer's own test). REL symbols come from dtk's analysis, not romwright's names; `match`/`swap` handle DOL functions only. The detector names an era, not a build. Animal Crossing and Super Mario Galaxy need hand-written dtk configs. Host `~/runs/NewProjectGC` removed at the end.
+
+## Import precision at or above stock Ghidra on every corpus platform (finish item 1, 2026-10-14/15, ImportPrecision)
+
+**Result.** `benchmarks/reports/import_precision_20261015.{json,md}` (+ `_loo.md`), 53 headline games with a stock result, nih-vps-u, tools `02fd4917ccfce59f`, `ghidra_opt` 486ace43 (unchanged), stock from the research-eval cache. Pooled sign tests against stock (wins/losses/ties): **precision 13/10/30 -> 15/2/36 (p = 0.0012 for us), precision_verified 6/9/37 -> 6/2/44**, recall 51/0/2 and recall_verified 52/0/1 as before. Per platform (precision, then precision_verified): N64 4/2/2 -> 4/0/4 and 2/3/2 -> 2/0/5; NDS 0/2/2 -> 2/0/2; PS2 1/1/6 -> 1/0/7; PSP 0/5/0 -> 0/2/3 and 0/5/0 -> 0/1/4; PSX unchanged (5/0/2; 0/1/6); GBA, GC, Wii, x360 ties or wins as before. Not at the bar: two PSP games on precision (Melodie 0.9917 against 0.9971, Tetris 0.9939 against 1.0) and PSX `precision_verified` (Parasite Eve 2, a truth property); both in `docs/console-research.md` "Import precision against stock Ghidra".
+
+**Classification** (every invented entry of both tools by position against the truth, producer and bytes; `benchmarks/import_precision.py`): C++ landing pads (Hot Pixel 554 of 656), case blocks of tables nothing answers (Pac-Man Rally 258 of one 1,151-entry switch past the 1,024 limit, 30-100 per other PSP game), IDO's second `jr ra; nop` (SM64 362), dead epilogues (`lw ra` / `b .+8` first), a branch table entered by `jr` (Tetris), NDS autoload blocks never mapped at their run address (118 of KH 358/2 Days' invented entries were the stored ITCM copy; 154 ITCM truth functions never found), fill before a pointer table (R&C PAL), and truth gaps (PSP `.sceStub.text` stubs: both tools charged for 187-233 per game).
+
+**Fixes** (generic, no per-game data): six `flag` rules in `compiler_rules/common.json` read by `interior_entries` (`landing-pad-not-entry`, `wide-switch-case-blocks`, `case-run-in-one-function`, `branch-table-after-dispatch`, `epilogue-not-entry`, `ido-leaf-return-pair` with an image-habit quorum; `docs/compiler-rules.md` Appendix D), NDS autoload blocks mapped where they run (`native/nds.rs`: KH 358/2 Days recall 0.8662 -> 0.9371 and precision 0.9395 -> 0.9995, Re:coded 0.8977 -> 0.9441 and 0.957 -> 0.9984), a zero word is no pointer in the run readers, and zero words before a pointer table into any mapped address are fill. **Truth audit:** the five PSP truth tables gain their `.sceStub.text` import stubs as unverified 8-byte rows (233, 99, 200, 206, 187; old tables kept as `functions.pre-pspaudit.tsv`, evidence in `pspaudit-changes.tsv`, marker "PSP TRUTH AUDIT 2026-10-14"); it raises stock's PSP precision as much as ours.
+
+**Leave-one-out** (final build against the six rules off, 28 MIPS images, fresh imports): -1,290 invented, 11 truth entries of ~110,000 lost (SM64 3 unverified `sub_` rows, Pac-Man Rally 4, Camera 01 2, Digital Devil Saga 1, Hot Pixel 1; Hot Pixel gains 27). Three experiments are not in the tree: a PSP relocation-only pointer rule (Hot Pixel recall -24), a gap rule that steps over refused blocks (SM64 +141 invented), and case-block groups retracted at any size (Pac-Man Rally -35 truth functions, 18 more on PS2 and PSX). **Gates:** m21-001 PASS (Capcom Fighting Evolution 0.9741 -> 0.9692 against the 0.966 floor; dungeon_game 0.9885 / 0.9847), `native::` and `compiler::` 531 tests passed (4 new), paired import times in the doc (medians within noise except Hot Pixel, 34.2 -> 43.4 s: more dispatches reach the decompiler once the case blocks stop being "outside").
+
+**User-WIP files edited (minimal):** `crates/romwright-core/src/native.rs`: two `at + 4` -> `at.checked_add(4)?` in the `word` closures of `mips_gap_starts` and `mips_function_evidence` (an overflow panic on Hot Pixel's symtab twin, found by the official harness run; the earlier gap-rule edit of the same function was reverted). `discovery.rs` and `nds.rs` are not on the list. **Files:** new `benchmarks/import_precision.py`, `benchmarks/import_precision_features.py`, `benchmarks/reports/import_precision_20261015{.json,.md,_loo.md}`; edited `crates/romwright-core/src/native/{discovery.rs,discovery/tests.rs,nds.rs}`, `crates/romwright-core/compiler_rules/common.json`, `docs/compiler-rules.md`, `docs/console-research.md`, this file. Outside the repo: the five PSP `truth/` directories of `~/ventris-corpus/extracted` (local and nih-vps-u).
+
+**Not done.** PSP Tetris and Melodie (tables read as runs of other tables' words; Allegrex VFPU words the decoder stops in), the PS1 Parasite Eve 2 truth sizes, R&C PAL / God Hand / Persona 4 truth granularity, and the official harness was run on the PSP, NDS and SM64 subset only (success 1.0000 on every row; the full wave was not rerun: stock reruns on every changed sample).
+
+
+## Decompiler port stage 4: the type decisions that fix the failing C (2026-10-15, Stage4Types)
+
+**Result.** The 38 functions of the seven m22-003 lanes that did not compile after Upgrade round 1 were traced one by one (`docs/types-port.md` 12.1). In none was the type the decompiler inferred the cause; each was a decision of a Rust layer, so stage 4 is Rust and needs no `Funcdata` mirror and no C++ replay: **`ghidra_opt` is unchanged (`486ace43...`), `ActionInferTypes` stays in C++** (re-measured: 1.8-3.1 calls per function, 1.25 s of 149.6 s of decompile wall time, 0.8%, 0.1-3.6% per image; `benchmarks/reports/types_port_measure_stage4_20261015.json`). Rules (each with `ROMWRIGHT_EXPORT_<X>=off`, all off with `ROMWRIGHT_NATIVE_TYPES=1`): `MATRIX_CASTS` (a pointer to an array is `float (*)[4]`, not `float **`: dk 4, dc 5), `VOID_RETURNS` (dc 3), `POINTER_OPERANDS` (ff 2, dk 1), `AGGREGATE_ARGS` (a by-value structure argument read from the bytes or registers passed: p4 3, dc 1), `MISSING_ARGS` (marked zero arguments: p4 1, dc 1), `ODD_POINTEES` / `ODD_PIECES` (`undefined5 *`, `int7`, `CONCAT71`: dc 1, dk 2), `VOID_POINTEES` (dk 1), and in the worker `ROMWRIGHT_RUST_TYPES_NULL_ARGS` (a zero constant argument prints `0x0`, not `(char **)0x0`). Code: `emit_m2c/conform.rs` (`Ty::Array` carries its count), `dependencies.rs`, `printc/casts.rs`; 27 conform unit tests (8 new), 79 worker printc tests green.
+
+**Gates** (one host, one release build, a fresh import and restored work directory and repo per arm, `ROMWRIGHT_NO_IMPORT_CACHE=1`, `ROMWRIGHT_NO_FACT_PACK=1`; wrapper binaries; off = `ROMWRIGHT_NATIVE_TYPES=1`, which reproduces every Stage 3 gate number; exact / compiled / mean %):
+
+| gate | off | default | paired |
+|---|---|---|---|
+| m22-002 MWCC 20261010 | 55 / 193 / 76.968 | 55 / 195 / 77.324 | 2 / 0 / 198 |
+| m22-002 MWCC 20261011 | 57 / 194 / 78.316 | 57 / 194 / 78.316 | 0 / 0 / 200 |
+| m22-002 ee-gcc | 106 / 197 / 86.403 | 106 / 197 / 86.622 | 1 / 0 / 199 |
+| dds | 61 / 200 / 77.224 | 61 / 200 / 77.224 | 0 / 0 / 200 |
+| rc | 26 / 200 / 68.158 | 26 / 200 / 68.158 | 0 / 0 / 200 |
+| p4 | 60 / 193 / 79.400 | 60 / 198 / 80.732 | 5 / 0 / 195 |
+| gh (harness clone) | 78 / 199 / 82.119 | 78 / 199 / 82.119 | 0 / 0 / 200 |
+| ff | 21 / 195 / 61.753 | 21 / 199 / 62.913 | 4 / 1 / 195 |
+| dc | 38 / 186 / 69.844 | 41 / 197 / 73.653 | 11 / 0 / 189 |
+| dk | 29 / 189 / 75.561 | 29 / 197 / 78.277 | 8 / 0 / 192 |
+
+No exact or compiled loss. The one function worse by percent that still compiles is ff `ZushiBonjiAfterDisp` (65.6 -> 63.8: its `CONCAT17` is now rendered instead of being an implicit call). m21-001 PASS both arms; printer differential 1,800 of 1,800 identical; decompile success 7,448 of 7,500 both arms. Failure classes of the seven samples, off -> default: type mismatch 26 -> 4, call mismatch 3 -> 1, undeclared identifier 4 -> 1, illegal type name 1 -> 0; **37 -> 9 functions that do not compile**, compiled 1,362 -> 1,390 of 1,400. Report `benchmarks/reports/stage4_gates_20261015.{json,md}` (`benchmarks/stage4_report.py`), host scripts in `~/runs/Stage4Types/`.
+
+**Not done, with the reason** (`docs/types-port.md` 12.4, 12.6): pointer evidence for struct fields (dk, 200 functions: 71 fields, one pointer; unchanged, no failing function has that cause), struct returned by value, VU intrinsic result types (`_vrnext` into a 16-byte array), stack/global symbol layout (`stack0x...`), callee identity through mangled names (`SetBrother`, `FishingLoad`), a worker-side type mirror. 10 functions still do not compile (listed in 12.6).
+
+**User-WIP files edited:** none (`emit_m2c.rs`, `lib.rs`, `native.rs`, `main.rs` and the others on the list were not touched). Edited, not on the list: `crates/romwright-core/src/emit_m2c/{conform,dependencies}.rs`, `crates/romwright-worker/src/printc/casts.rs`, `docs/{types-port,c-output-lanes}.md`, `STATUS.md`; new: `benchmarks/stage4_report.py`, `benchmarks/reports/{stage4_gates,types_port_measure_stage4,struct_pointer_fields_stage4}_20261015.*`.
+
+## PC: C output, `new-project` and `match` for Windows PE / x86 (finish item 5, 2026-10-15, PcProject)
+
+**Lane** (`tests/m22-004_pc_c_output.py`, `tests/m22-004/{pcobj,assemble_report}.py`; docs/pc-project.md): m22-003's measure on a PE truth fixture: a seeded sample of 200 game functions (the C runtime is left out: link map or PDB modules), `export-c` on a fresh import, the fixture's own compiler through the pinned wibo, exact / compiled / objdiff percent with relocation fields masked on both sides. Fixtures are PcImport's (`local://pc-fixtures.md`) plus an original 50-function one (`tests/pc/mini/`). Headline `benchmarks/reports/pc_c_output_20261015.{json,md}` (per-arm reports beside it). Off (every rule below off) -> default: GLQuake (MSVC 4.2) 42/167/40.574 -> 42/176/41.373, Quake 2 (MSVC 8) 19/160/25.511 -> 19/165/25.699, ioq3 (MinGW GCC, not pinned) 20/124/21.793 -> 20/137/22.704, mini (MSVC 6.0, with `__stdcall`/`__fastcall` code) 17/45/68.547 -> 19/48/74.721 (paired 6 / 0 / 44, p 0.031). On the real games the gain is compiled functions and 0.2 to 0.9 point of mean, not exact matches, and none of the paired tests is significant: those games are `__cdecl` C.
+
+**General x86 failures fixed** (each has an `=off` switch; leave-one-out in docs/pc-project.md): (1) an i386 PE was decompiled with the gcc compiler spec (`__fastcall` came out `__regparm3`, callee-pops functions as `__cdecl`): it now gets Ghidra's `windows` spec (`crates/romwright-worker/specs/x86win.cspec`, `__cdecl` default, `ROMWRIGHT_PE_WINDOWS_SPEC`); (2) `native/pe/x86_conventions.rs` reads each function's `ret N` and `push ecx` frames off its p-code and records `__stdcall+N` / `__cdecl` (`ROMWRIGHT_PE_CONVENTIONS`; the purge reaches the decompiler as `extrapop`, `worker/wire.rs`); (3) callee declarations print `__stdcall`/`__fastcall`, only for an i386 PE (`ROMWRIGHT_EXPORT_CALLEE_CONVENTIONS`; the first version printed MIPS's default model name `__stdcall` on every console callee and dropped dc 197 -> 115: found by SymbolLayout, fixed, gated on the compiler id); (4) IAT slots are carved out of the read-only section so `call [slot]` is not folded into a call to an RVA (`ROMWRIGHT_PE_IAT_REGIONS`; costs 0.31 point of mean on Quake 2, three functions); (5) `longdouble` -> `long double` (the conform pass parsed `(longdouble)*p` as a product and printed `*(unsigned int)p`, `ROMWRIGHT_EXPORT_LONG_DOUBLE`); (6) PE compiler detection (`msvc-10`..`msvc-14`+ from the linker version, `Rich` for high confidence, `mingw-gcc-<major>`); (7) Visual C++ dialect in the lane and in `new-project`: `__int64`/`i64`, `__thiscall` definitions as `__fastcall` + unused `edx`. Not done: `stack0x...` (15 of GLQuake's 200 candidates) and `._1_3_` partial members are SymbolLayout's; `__try` prologues; callers of `__thiscall` functions.
+
+**`new-project`** (`new_project/pe.rs`, templates `templates/pe/`, `romwright-cli/src/new_project_pe.rs`; docs/new-project.md "Windows PE (x86)", a PE row in `--list-platforms`): a reccmp-style repository: `src/<shard>/<fn>.c` (NON_MATCHING, `// FUNCTION: <PROJECT> 0xADDR`), `orig/target/**.obj` (i386 COFF of the retail bytes with `REL32`/`DIR32` relocations), `include/` (types, prototypes with conventions read off the decompiled definitions), `objdiff.json`, `configure.py` (fetches the pinned MSVC 4.2/6.0/7.0/7.1/8.0 + wibo + objdiff-cli, new `toolchains.json` entries, sha256-pinned), `build.py` (compile, strip the `_f@8` decoration, `report` -> `build/progress.{json,tsv}`: per-function match status). **No whole-executable rebuild and no sha1 for PC** (the linker, the C runtime and the object order are not recovered): stated in the README and docs. Smoke: GLQuake 1,284 functions -> 1,283 units, 1,179 compile, **232 match exactly**, 98 at >= 90%, mean 64.5%; the unpacked KOTOR2 (80 units) 68 compile, 11 exact; the retail Steam KOTOR2 is DRM-wrapped (7 functions: the loader stub), the scaffold builds (6 of 7) and objdiff.json loads.
+
+**`match`** (`match_search/{pe,project,object}.rs`; docs/match.md "Windows PE projects"): compiles with the project's pinned `cl.exe`, scores COFF objects against the retail bytes of the PE: GLQuake, six functions at the project's default flags 98.5 to 99.7% (83.2 for one), the search improved none; with the game's own flags (`configure.py --flags`) `FUN_0042f840` is **byte-exact**.
+
+**Console gate:** dds 61/200/77.224 (identical to the baseline); dc 41/197/73.559 against 73.653: five functions differ, the cause is SymbolLayout's global-layout rule (`ROMWRIGHT_NATIVE_LAYOUT=1` restores it: dc 41/197/73.653, the baseline, with this wave's code otherwise unchanged), not a rule of this wave (everything else here is gated to i386 PE).
+
+**User-WIP files edited (minimal):** `crates/romwright-core/src/emit_m2c.rs` (one call: `dependencies::from_doc(..., opts.compiler.starts_with("msvc") || ...)`), `crates/romwright-worker/src/specs.rs` (the i386 PE hook, `WINDOWS_X86_CSPEC`, `is_windows_x86`), `crates/romwright-worker/src/provider.rs` (two functions made `pub(crate)`). Not touched: `main.rs`, `lib.rs`, `native.rs`, `native/elf*.rs`, `native/tests.rs`, `romwright-sig`, `sdk_types/`, `tests/m22-001_c_output.py`. Other files edited: `compiler/{mod,detect}.rs`, `native/{pe,store}.rs`, `emit_m2c/{globals,dependencies}.rs`, `worker/wire.rs`, `new_project/{mod,platforms,scaffold}.rs` (helpers `pub(super)`), `new_project/toolchains.json` (+5), `match_search/{mod,object,project}.rs`, `romwright-cli/src/{new_project,match_cmd}.rs`, `docs/{new-project,match,c-output-lanes,compiler-rules}.md`; new: `native/pe/x86_conventions.rs`, `new_project/pe.rs`, `new_project/templates/pe/`, `match_search/pe.rs`, `romwright-cli/src/new_project_pe.rs`, `crates/romwright-worker/specs/x86win.cspec`, `tests/m22-004*`, `tests/pc/mini/`, `docs/pc-project.md`. No ghidra_opt rebuild (pinned `486ace43...`); no git writes.
+
+**Limits:** MinGW GCC is not pinned (the ioq3 lane used PcImport's extracted Fedora RPM tree, its gcc sha256 is in the report; `new-project`/`match` on a MinGW PE are a clang compile check only); wibo 1.2.0 cannot run the `link.exe` of Visual C++ 7.x/8.0; PE32+ (x86-64) is refused; Visual C++ 5.0 and 2008+ are not pinned; the project flags are the era's defaults until `configure.py --flags`; `build.py report` uses objdiff's report percent, which reads higher than `match`'s `diff` percent for one wrong instruction.
+
+## Windows PC (PE / x86): truth fixtures, import above stock Ghidra, x86 PE compiler detection (finish item 5, 2026-10-15, PcImport)
+
+**Fixtures.** Eight open-source PC programs built on `nih-vps-u` with real toolchains and published as truth-contract directories under `~/ventris-corpus/extracted/pc-*` (binary, `truth/{meta.json,functions.tsv}`, the unstripped build and PDB/map under `truth/build/`): `pc-ioq3-ded-mingw32` and `-mingw64` (ioquake3 dedicated server, GCC 16.2.1 MinGW-w64, DWARF + COFF symbols), `pc-doomgeneric-mingw32` (GCC 16.2.1), `pc-quake2-msvc8` / `-game-msvc8` / `-refgl-msvc8` (Quake 2 exe and two DLLs, MSVC 14.00.50727 with its static CRT, PDB truth), `pc-quake2-game-msvc8-debug` (the game DLL as a Debug build with an incremental link table: 1,011 ILT thunks in the truth) and `pc-glquake-msvc42` (GLQuake, Visual C++ 4.2, COFF-symbol truth). 1,077 to 3,393 functions each, 1 x86-64. Toolchains unpacked without root: Fedora's MinGW RPMs and wine 11.0 (wibo 1.2.0 cannot link with 8.0's `link.exe`). Recipes `benchmarks/pc_fixtures/`, extractor `benchmarks/pc_truth.py`, list `docs/console-research.md` "Windows PC". No game code is in romwright.
+
+**Harness.** `console_research.py --corpus-wave` takes the fixtures as a `pc` platform (stock: the PE loader's own language and compiler), `--no-truth NAME=PATH` runs an image without truth for success and time only (KOTOR II: success and time only, below), `benchmarks/pc_import.py` is the fast discovery loop with per-function miss and invented lists, `benchmarks/pc_rules_loo.py` the rule leave-one-out, `benchmarks/pc_import_report.py` the report.
+
+**Result** (`benchmarks/reports/pc_import_20261015.{json,md}`, `console_research_wave_pc_20261015.{json,md}`; fresh import and work directory per arm, no import cache, no fact pack, host load in the report): on the 8 fixtures ours against stock Ghidra 12.1.3 (discovery, scored by the wave's metric): **recall ahead on 8/8** (ours 0.7897-1.0000, stock 0.4357-0.9282; sign test p = 0.00391), **precision at or above stock on all 8** (5 ahead by at least 0.5 pp, 3 equal within it; ours 0.9638-1.0000, stock 0.9249-1.0000; p = 0.03125 over the ahead ones), **wall time below stock on 8/8** (ours 6.98-59.55 s median of three, stock 35.1-68.2 s, CPU seconds the same way on 8/8; stock was timed at load 6-10, ours re-run at load 13-25, so the gap understates ours). With every PE rule switched off (the importer as it was) ours was ahead of stock on recall everywhere and behind on precision on 7 of 8 fixtures (by 0.0013 to 0.0866; `pc_import_20261015.md` "Before the PE rules"). Export-c of 190-195 sampled functions per fixture (two seeds): doomgeneric-mingw32 1.0000, glquake-msvc42 1.0000, ioq3-ded-mingw32 1.0000, ioq3-ded-mingw64 0.9948, quake2-game-msvc8 1.0000, quake2-game-msvc8-debug 1.0000, quake2-msvc8 1.0000, quake2-refgl-msvc8 1.0000. Console gate `tests/m21-001_real_images.py` on gba-pokeemerald, ps2-dungeon-game, psx-darkstalkers-3 and x360-black-ops-2: PASS (the same numbers as their floors' last records). Compiler detection: 8 of 8 fixtures exact, plus the controls (VC6, VC7.1, KOTOR II). KOTOR II: ours 7 functions in 2.7 s, export-c 7/7, stock 8 in 21.3 s, 7 entries in common: the image is SteamStub-wrapped. Unit tests: `cargo test --release -p romwright-core --lib` (final tree): 1,054 passed, 0 failed, 7 ignored.
+
+**What changed** (all PE-only; no console path is touched): nine `flag` rules in `compiler_rules/pe.json` (`pe-jump-table-relocs`, `pe-dense-case-tables`, `pe-x86-memory-operands`, `pe-x86-scope-tables`, `pe-x86-local-calls`, `pe-x86-trailing-data`, `pe-x86-case-runs`, `pe-import-stub-position`, `pe-x86-fill-starts`) in new `native/pe/{x86_operands,local_calls,x86_fill}.rs` and small hooks in `native/{discovery,elf_pointers,pe_roots,store}.rs`; the x86 PE detector (`compiler/detect.rs`: Rich header comp ids decoded, majority GCC stamp, x86-64, linker 14 -> `cl` 19, imported `msvcr*.dll`); `docs/compiler-rules.md` Appendix E.
+
+**Not done / limits:** MSVC 5.0/6.0/7.x and Borland are detection controls only (no CRT libraries to link a program with); no x86-64 Visual C++ or Clang-built PE; i386 recall stays 0.79-0.97 on Visual C++ images (unreferenced functions behind functions whose proven body overshoots or that are chained through fill-free neighbours) and the i386 switch recovery still refuses most `jmp [table+reg*4]` forms (the table rules keep their labels out of the list; the switch is not recovered for the decompiler); truth of COFF-symbol fixtures has no CRT sizes; timings on a shared host (load 5-30, CPU seconds reported); stock's "success" in the harness is a printed signature, not a decompile verdict. Details in `docs/console-research.md` "Windows PC".
+
+**User-WIP files edited:** `crates/romwright-core/src/native.rs` (one hook: the operand filter in `const_data_targets`; no other change). Not touched: `main.rs`, `emit_m2c.rs`, `lib.rs`, `native/elf.rs`, `native/elf_image.rs`, `native/tests.rs`, `romwright-sig/src/object.rs`, `romwright-worker/src/{provider,specs}.rs`, `sdk_types/`, `tests/m22-001_c_output.py`. Shared files edited (additive): `native/pe.rs` (PcProject's lines kept; three `mod` lines and two image facts), `compiler/detect.rs` (PcProject's detector extended), `compiler/rules.rs` (the `pe.json` file), `native/{discovery,elf_pointers,pe_roots,store}.rs`, `benchmarks/{console_research,console_research_wave,compiler_detection_accuracy}.py`, `docs/{console-research,compiler-rules}.md`. ghidra_opt not rebuilt (`486ace43...`).
+
+## Release readiness: the integrated tree (finish item 4, 2026-10-15, ReleaseReady)
+
+Everything below is on the uncommitted integrated tree (no git writes, no tag) and was run on `nih-vps-u` in `~/runs/ReleaseReady/ventris` (synced from the laptop with `rsync`, ghidra_opt `4532792d...`, Ghidra 12.1.3, clang 22.1.8, load 10-40 from the other agents, so no wall time here is a measurement). The edits were made on the laptop; nothing was built or tested there.
+
+### What passes
+
+| check | result |
+|---|---|
+| `cargo test --release --workspace` (twice: baseline tree, then after the fixes below) | **1,362 passed, 0 failed, 31 ignored**; of the 31 ignored (`-- --ignored`) 28 pass with the built decompiler; the other 3 need an `N64_ROM`, an `arm-none-eabi` toolchain and `objdiff-cli` (environment) |
+| `romwright-desktop` and `romwright-cli` unit tests (`projects::tests` 3 new) | 20 passed |
+| desktop gate on the PE32 fixture (`--gate --project-image`), then `tests/m6-007_desktop_projects.py` from the extracted archive | **PASS**: Create project wrote 13 files in 1.4 s; Match on `FUN_00405380` painted 7 variant rows, 7 compiled, best 1.763 % against the stock print's 1.599 % |
+| `tests/m6-001` (24 documented commands, 37 output lines, 63 verbs all in usage, 0 skipped: runs the new `new-project`, `configure.py` and `match` blocks), `m6-002`, `m6-003`, `m6-004`, `m6-005`, `m6-006` | **PASS** (reports regenerated by the tests) |
+| `docs/releasing.md` flow into a scratch `$RELEASE` (`package_desktop --no-build`, `stage_release`, `sbom`, `update_manifest`, `verify_update`) and `tests/m6-004` | **PASS**: 5 artifacts, SPDX with 466 packages (every workspace crate, a licence on each), a flipped byte and a truncation both rejected; the archive and the staged `romwright-cli` ship; `romwright-cli` run from the staged copy writes a PE project from its embedded templates and a manifest of 2 pinned tools with sha256 and size |
+| `tests/m5-012` (evidence index), `m5-005` + `support_matrix_test` (support matrix), `m6-006` (citations and ungated blocks) | **PASS** |
+| harness unit tests: `benchmarks/*_test.py` (49), `tests/gate_cache_test.py`, `m1-006_pdb_test.py`, `m22-002`/`m22-003` `--selftest`, `struct_inference_audit.py selftest` | **PASS** |
+| the corpus-oracle CI job replayed on a fresh 20-row corpus and fresh oracles (`~/runs/ReleaseReady/{corpus20,oracle20}`) | 51 of the 65 python commands pass, among them m1-008/m1-008b, m2-002, m2-016, m3-001 (1,640 DWARF functions, recall 1.0, 0 unattributed), m3-003, m4-004..m4-031 except m4-012, m5-002, m5-004 to m5-011, m5-001 and m5-003 (GBA, PSX), m12-001, m14-001..m14-004, m15-001, m17-001, m21-001 (7 images), xref and string gates; 11 fail (below) and `m7-002`, `m5-017`, `m12-002_cross_compiler` were not scored (skipped or not run) |
+
+### Fixed
+
+| failure | class | cause and fix |
+|---|---|---|
+| `tests/m6-006` (15 command blocks, then 7 more once the first were marked) | stale prose | 15 `sh`/`json` blocks of `console-research.md`, `compiler-rules.md`, `ownership.md`, `n64-segments.md` carry `<!-- not gated: reason -->`; 7 file names (`native.rs`, `flow.cc`, ...) read as metric names, now path-qualified |
+| `tests/support_matrix_test.py`, `tests/m5-005` | real (README and generator had diverged since 2026-09-13) | the generator printed the PS2/PSP/PS3/X360 processor rows as "Not supported" with blockers that say "no gap remains" and dropped the hand-written rows; `docs/platform-tiers.json` gains tier 3 (supported, no gate report of its own, claim and evidence committed), the generator prints it, RISC-V no longer says "no spec bundle", the Xbox 360 row names the language the loader sets (`Xenon-32addr`, the README row said A2ALT); `m5-005` follows the tiers; the README block is regenerated and the processor-coverage prose moved below the markers |
+| `tests/m5-012` | real + stale | `benchmarks/reports/m3-001.json` was a 38-row run on stale oracles that recorded 7 failures (README index said pass): re-run on 20 rows with fresh oracles, written by the test (recall 1.0, 0 unattributed); the generator now skips list-valued record files (`n64_layout_discovery.json`, which the test already tolerated); 18 tests that write a `--report` had none committed: `m1-010`, `m10-005`, `m12-002`, `m13-002`, `m18-003`, `m20-001/002/003/005/006/012/013/014/015/016` now have one (the last 7 result-only writers gained an `id` and `passed`), `m20-004/006(dtk)/007-011`, `m22-*` and `m23-001` are named in an exemption table with the reason (private images, toolchains, hours) and a stale-exemption guard; README evidence index regenerated (369 reports) |
+| `tests/m5-001` (GBA) | real | with clang 22 `game_main` saves no register, so the call-only retraction (`store.rs`, "a function only a call claims") saw no trusted caller and dropped `checksum`: GBA recall 0.8333. The image's own entry is now an anchor (`process_entry`, set by `native/gba.rs` from the header branch, read by the retraction) and `m5-001` passes (7 functions, recall 1.0000); a unit test asserts the process entry |
+| `tests/m6-001` | stale | the verb check read only `match` arms, so `new-project`, `detect-compiler`, `match`, `facts`, `signatures`, `compiler-rules` (routed before it) failed both ways; `evidence` was missing from the usage text (added: one line in `romwright-cli/src/main.rs`); the `new-project` usage said `--decompile all|ADDR,ADDR` (now with `first:N`, `none`, `--platform`, `--keys`, `--map`); the gate learned a `clang` requirement for the new `match` block |
+| `benchmarks/ui_gate_test.py` | stale | its fake app lacked the xrefs, programs and fetch metrics `ui_gate.py` requires; updated to the current set |
+| `tests/p4-3_vu0_macro.py` | stale | pinned `(float *)(param_1 + 0x`; stage 4 prints the loads as `param_1->field_0x..` (same lanes), both accepted |
+| `tests/m16-001` | stale scorer (part) | the scorer did not know the lattice's `int-or-uintN` (a generalisation of `intN`/`uintN`): 14 of 68 answers read as contradictions, 4 after teaching it; the remaining 4 are below |
+| `tests/m20-012` | environment (reference library) | rabbitizer 1.14 reads `vnop` with operand bits as `.word`; the canonical encoding is compared |
+| `new_project/arm.rs` | real (clippy `bad_bit_mask`, deny) | `word & 0x0fb0_0000 == 0x0300_0000 \|\| word & 0x0fb0_0000 == 0x0340_0000` could not hold twice; one test now, the mask's reach documented; the unused `simm` removed |
+| `discovery.rs` | real (architecture check) | the per-ISA alignment table moved to `discovery/patterns.rs`; the PE hooks are left (below) |
+| `new-project` unknown platform | stale text | the error said only PlayStation 2 is routed; it lists the platform ids |
+| README, docs | stale | new "Projects: `new-project` and `match`" section (a table per platform with where it is described, a runnable PE32 example with clang as the compile check), documentation index of every page, layout list, the GameCube "`.rel` loading is not implemented" and "native console" claims, the CI description, the stage-4 memory figure (out of date for imports, see below), `docs/getting-started.md` "Start a matching project" (executed by `m6-001`), `docs/new-project.md` intro, `docs/desktop.md`, `docs/releasing.md`, `docs/environment.md` (`ROMWRIGHT_CLI`), `docs/match.md`, `THIRD_PARTY_NOTICES.md` (every remaining direct crate and the bundled SQLite) |
+
+### Desktop and packaging
+
+`crates/romwright-desktop`: `src/projects.rs` (`run_new_project` runs the sibling `romwright-cli new-project` as a job with progress, Cancel and a staged name for the artifact copy; `run_match` is `match` as a library call with Cancel), `panels/match_search.rs` (the Match panel: variant table, best starred, Copy C, Write best), the Setup panel's New project section and `ShellEvent::ProjectCreated`, `gate/projects.rs` and `--project-image` (`ui.new_project.*`, `ui.match.*`). `package_desktop.py` ships `bin/romwright-cli` beside the app; CI builds it with the desktop. The templates (`new_project/templates/**`) and `toolchains.json` are `include_str!`-embedded in the CLI (every template file is referenced); `m6-004` runs the staged CLI to prove it.
+
+### What remains
+
+1. **Frozen memory envelopes (decision for the human, AGENTS.md II.1).** `m7-001` and `m7-003` fail: since the SLEIGH console was replaced by in-process decoder lanes a tiny ELF import peaks at 289 MB (four fixed lanes; 152 MB with one, 197 MB with two) against the 50.7 MB envelope `cost-envelope.json` froze, and the session grows 123 MB in its first rounds (one lane built per round). Still below stock Ghidra's 375 MiB. Either re-record the envelopes (the gates forbid editing them) or share the lanes' language data; README's "Honest status" now says the old figure is out of date.
+2. **`benchmarks/discovery_gate.py` architecture check** (corpus CI job): `discovery.rs` still names `x86` in the PE hooks added by PcImport (`X86_FILL_PASSES`, `pe::x86_fill::starts`, `pe::x86_operands::*`, about six lines). PcUpgrade owns that code and was told; the fix is to re-export them under neutral names.
+3. **`tests/m16-001`**: 4 of 68 answers contradict the compiler (0.0588) against the 0.05 ceiling (the documented limitation had three); all four are O2 rows (`through_pointer` return, `mixed` parameters 1 and 2 and its return) under this host's clang 22; not investigated further.
+4. **`tests/m13-001`**: combined answers 130 dispatches, not more than stock's 132 (the documented standing failure of 2026-10-09, docs/console-research.md).
+5. **`tests/m4-012`** reads `native/specs/x86-LE-64-default/cspec.xml` (only `__fastcall`/`__thiscall`, a bundle added by 93850ca7) and finds no `processEntry`, which the root `native/specs/cspec.xml` declares; the guard's docstring says the root is the x86-64 bundle. Not caused by this wave.
+6. **Environment-only** (each reproduced and explained): `m2-007` (clang 22 emits `ja default` for the fixture's switch and stock lists that guard target among its destinations, we list the table's seven entries, with the decompiler alone or with value-set analysis); `m1-006_integrity_test` and `m17-002` (no MinGW cross compiler, the 6-architecture corpus); `m4-003` (this tree's `native/specs` holds 213 bundles where the gate expects the corpus ones); `m8-003` (its stale-exemption guard fires: the recorded false entry `0x20980` of the mipsel fixture is not there; `[INFERENCE]` this host's clang laid the fixture out differently); `m3-002` (the frozen baseline does not reproduce on this corpus; `[INFERENCE]` the corpus binaries come from another clang); `m5-017` (no `lz4` module, no Xenoblade dump); `m1-009`, `m11-001/002`, `m20-004/006(dtk)/007-011`, `m12-002_cross_compiler`, `m21` rows (private images and projects absent); `m22-*` (compilers and hours), `m23-001` (downloads the pinned PS2 toolchains, 150 s here without finishing); the libc `benchmarks/ui_gate.py` run (the largest function of this host's glibc 2.43, `0x142cb0`, exceeds the 60 s decompile budget under load; the committed ui-gate report was recorded on another libc; the tiny-binary, PE and store-only gates pass); `m10-001`, `m1-007_oracle_test` timed out in a 150-240 s sweep under load 20-40 (`m1-008b_scoring_test` passes alone in 298 s).
+7. **Clippy** (`rustc 1.98.0` toolchain copied to the host; Fedora ships none, and the repo has no clippy CI): 267 style warnings sit in new or changed lines (`collapsible_if` 103, `manual_is_multiple_of` 31, `chunks_exact_to_as_chunks` 21, `field_reassign_with_default` 13, `type_complexity` 13, others); the one deny-level lint is fixed and none is in the desktop files above. Mechanical, not done: most are in files other agents still edit.
+8. **Not done on purpose**: no tag, no signing, no reproducibility claim (docs/releasing.md); the PC C-output areas (`emit_m2c/`, `printc`, PE import facts) were not touched; no new analysis feature.
+
+**Files.** Rust: `crates/romwright-desktop/src/{projects.rs,panels/match_search.rs,gate/projects.rs}` (new), `{lib.rs,main.rs,panel.rs,gate.rs,panels/{mod,setup}.rs}`, `crates/romwright-core/src/{native/store.rs,native/gba.rs,native/discovery.rs,native/discovery/patterns.rs,new_project/arm.rs,match_search/project.rs,fact_pack.rs}`, `crates/romwright-cli/src/new_project.rs`. Python and data: `tests/{m6-001,m6-004,m5-005,m5-012,m16-001,p4-3_vu0_macro,m20-012,m20-014,m20-015,m20-016,m1-010,m12-002_scratch_score,m18-003}`, `tests/m6-007_desktop_projects.py` and `tests/fixtures-src/pe_clang_profile.json` (new), `benchmarks/ui_gate_test.py`, `scripts/{gen_support_matrix,gen_evidence_index}.py`, `packaging/package_desktop.py`, `docs/platform-tiers.json`, 16 new and 8 refreshed `benchmarks/reports/*.json` (written by the tests, none hand-edited). Docs: `README.md`, `THIRD_PARTY_NOTICES.md`, `docs/{getting-started,new-project,desktop,releasing,match,environment,compiler-rules,console-research,ownership,n64-segments,third-party,types-port}.md`, `crates/romwright-desktop/PANELS.md`, `.github/workflows/ci.yml`. **User-WIP files edited: `crates/romwright-cli/src/main.rs` only** (two usage lines: `evidence`, the `new-project` options); none of the other listed ones.
+
+## PC upgrade: classes, lane fixes and general x86 rules (finish item 5, 2026-10-15, PcUpgrade)
+
+**Result** (`nih-vps-u`, 200-function samples, seed 20261015, fresh import and work directory per arm, `ROMWRIGHT_NO_IMPORT_CACHE=1 ROMWRIGHT_NO_FACT_PACK=1`, integrated tree with SymbolLayout's `ghidra_opt`; exact / compiled / mean %; `off` is the final binary with this work's switches off): GLQuake 42 / 190 / 69.520 -> **50 / 191 / 72.535**, Quake 2 30 / 196 / 65.791 -> **38 / 196 / 67.990**, ioq3 21 / 181 / 41.633 -> **22 / 181 / 41.968**; `gamex86.dll` 32 / 195 / 63.037 -> 35 / 195 / 63.132, `ref_gl.dll` 92 / 196 / 73.009 -> 94 / 197 / 73.786, doomgeneric 34 / 176 / 47.835 -> 35 / 176 / 47.829. The first wave's lane read GLQuake 42 / 176 / 41.373, Quake 2 19 / 165 / 25.699, ioq3 20 / 137 / 22.704; most of that gap to the consoles was the lane (below), not the decompiler. Report `benchmarks/reports/pc_upgrade_20261015.{json,md}` (classes before/after, tags, leave-one-out of every switch, search layer, gates; per-arm reports in `pc_upgrade_20261015_arms/`), docs/pc-project.md "Upgrade round", docs/match.md.
+
+**Lane fixes, found before any product work** (`tests/m22-004_pc_c_output.py`, `tests/m22-004/{pcobj,failure_classes,assemble_upgrade}.py`): (1) the objdiff target took the candidate's relocation fields, which desynchronises an x86 decode after the first difference in length and scored 33 of 132 near-miss GLQuake functions 0.0: the target now carries the retail function's own relocations (`pcobj.retail_relocations`), the same 199 GLQuake candidates read 41.58 -> 65.46; (2) `exact` resolves the relocations the candidate names by an address (no false exact found, switch `--no-strict-relocs`); (3) the GCC fixtures draw the sample from the game's DWARF compile units (117 of ioq3's 1,534 candidates were the MinGW C runtime); (4) ioq3 is compiled with the build's `-fno-strict-aliasing` (`meta.json` omits it; PcImport told); (5) GCC 16's C23 `bool` keyword failed 177 of doomgeneric's 200 candidates on the prelude; (6) `--artifacts`, `--search N`, `--target-relocs`, export warnings in the report, a capstone classifier of compile failures and byte differences (class, cause, tags: x87, switch table, `rep` string ops, `add esp`, `__ftol`, security cookie).
+
+**General rules, each with an `=off` switch** (leave-one-out in the report): callee declarations the export refused (`ROMWRIGHT_EXPORT_UNKNOWN_RETURN_VOID`: an unknown size-0 return is `void`, at least 384 declarations in GLQuake's sample; `ROMWRIGHT_EXPORT_MERGE_CALL_SIGNATURES`: one callee seen with different call-site signatures, 45 of GLQuake's 200 functions; `ROMWRIGHT_EXPORT_RECURSIVE_CALLEE`, `ROMWRIGHT_EXPORT_CALLEE_OVER_CODE_REF`: conflicting declarations), `__stdcall` import calls (`ROMWRIGHT_EXPORT_STDCALL_IMPORTS`: the IAT slots of every library but the C runtime, read from the import directory), the `__ftol` helper (`ROMWRIGHT_PE_FTOL`: recognised by its p-code shape, `_ftol` and `_ftol2_sse`, named `__ftol`, a call fixup in `x86win.cspec`; the converted expression no longer vanishes), a float stored through an integer pointer (`ROMWRIGHT_EXPORT_FLOAT_STORES`), `-1 < x` (`ROMWRIGHT_EXPORT_COMPARE_ZERO`), `rep movs`/`rep stos` loops as `memcpy`/`memset` (`ROMWRIGHT_EXPORT_STRING_OPS`), `fsqrt`/`fsin`/`fcos`/`fpatan` (`ROMWRIGHT_EXPORT_SQRT`, `ROMWRIGHT_EXPORT_X87_MATH`). The declaration rules are i386-PE-only (applied to the consoles they cost dc four exact functions). Measured: GLQuake +8 exact, Quake 2 +8, ioq3 +1, `ref_gl.dll` +2 (the biggest single effects: `__ftol` +1.35 mean on GLQuake, float stores +1.5 on Quake 2, the unknown return +0.45 / +0.9).
+
+**`match` as a lane layer** (`--search 12`): GLQuake 72.535 -> 73.575 mean, Quake 2 +0.96, ioq3 +0.49, at most one more exact function: on x86 the printing knobs reach little of what is left (the decompiler's expression shape and x87 code).
+
+**Gates:** dds 61 / 200 / 77.402, dc 42 / 197 / 73.877, m22-002 MWCC 20261010 56 / 196 / 78.031 with the switches off and with the final binary, identical lane totals (no console regression); against the announced integrated values dds matches and dc / m22-002 read higher on this host's copy of the tree, off and default alike. Filtered tests (`cargo test --release -p romwright-core --lib -- emit_m2c:: native::pe native::store:: native::discovery new_project::pe export:: match_search::`): 216 passed, including the new ones for the merge, the float store, `-1 < x`, the string loops, the `__ftol` shape and the import-slot parser.
+
+**User-WIP files edited (minimal):** `crates/romwright-core/src/emit_m2c.rs` (the `stdcall_imports` field of `M2cOptions`, `mod imports`, the conform flags, the callee-over-code-reference filter), `crates/romwright-core/src/lib.rs` (`export_m2c` fills `stdcall_imports` from the image), `crates/romwright-core/src/native.rs` (one re-export). None of the other listed files. Edited, not on the list: `emit_m2c/{conform,dependencies,globals}.rs`, new `emit_m2c/imports.rs`, `native/{pe,pe_roots,store,discovery}.rs`, `native/pe/{x86_conventions,x86_fill}.rs`, `crates/romwright-worker/specs/x86win.cspec`, `tests/m22-004*`, `docs/{pc-project,match}.md`. `native/discovery.rs` now names the PE hooks neutrally (`pe::fill`, `pe::operand_hooks`: ReleaseReady's `discovery_gate.py` architecture check; no behaviour change).
+
+**Limits / remains:** one sample per fixture (functions share units); the rules the sample hardly meets are neutral there; `__ftol` on Quake 2 is neutral by exact and -0.22 mean, the merge -0.02 / -0.09; most of what is left is the decompiler's expression and loop shape (107 of GLQuake's 141 non-exact compiled functions differ in length), x87 values typed as integers, a compare's operand order, `repne scasb` string idioms, a stack slot used as a pointer and a float, SEH prologues and `/GS` cookies; a function with a jump table in its bytes scores about 0 in objdiff (4 and 6 of 200). Host `~/runs/PcUpgrade` removed at the end.
+
+## Release follow-ups: discovery gate, m4-012, m16-001, clippy (2026-10-15, ReleaseFixes)
+
+Follow-up to the checklist of "Release readiness: the integrated tree" above (items 2, 3, 5 and 7 of its "What remains"; not a rewrite of it). Run on `nih-vps-u` in `~/runs/ReleaseFixes/ventris` (synced from the laptop, `ghidra_opt` `4532792d...`, Ghidra 12.1.3, gcc 16.2.1, clang 22.1.8, clippy 1.98.0); edits were made on the laptop and nothing was built there. Of the checklist's remaining items, `m7-001`/`m7-003` (MemoryFix), `m13-001` and the environment-only list are untouched.
+
+| item | before | cause | change | after |
+|---|---|---|---|---|
+| `benchmarks/discovery_gate.py` | architecture check failed (about six x86 lines in `discovery.rs`) | PcUpgrade had already renamed the PE hooks (`pe::fill`, `pe::operand_hooks`) | none needed; no code moved, so no import-row comparison was due | **PASS 20 of 20, `architecture_check.passed`, `isa_specific_lines` empty** (run again inside the CI replay below) |
+| `tests/m4-012` | "x86:LE:64:default no longer declares processEntry" | the test, not the spec: `native_runtime::language_decompile_config` hands `x86:LE:64:default` the root `native/specs` (the gcc spec: `__stdcall`, `MSABI`, `syscall`, `processEntry`), and `native/store.rs::declared_entry_model` reads the same files. `native/specs/x86-LE-64-default/` (added by 93850ca7 on 2026-09-12, after the helper was written on 2026-09-10) is the install's *default* compiler, Visual Studio (`x86-64-win.cspec`, `__fastcall`/`__thiscall`), and nothing reads it for x86-64. `spec_bundle()` preferred the directory whenever it existed. A second stale pin sat behind it: the PE guard asserted a PE image records no convention at all, but the PE importer records `x86-convention` rows (`__stdcall+N`, `__cdecl`) by design | `spec_bundle()` in `tests/m4-012_remaining_facts.py` and `tests/m4-011_widths_exits_names.py` returns the root for that language, as the importer does; the PE guard now asserts that no `processEntry` fact and no `native-import:entry-convention` fact exists on the PE image | **PASS** (the ELF entry carries `processEntry`, 2 model parameters, 6 controls hold); `m4-011` PASS. The spec directory is left in place (still read by `mode_register_alias`'s pspec lookup only) |
+| `tests/m16-001` | 4 of 68 answers contradict the compiler (0.0588 against 0.05): `through_pointer` return `uint32` for `int32`, `mixed` parameter 1 `ptr` for `uint64`, parameter 2 `uint32` for `int32`, return `num32` for `uint64` | not the host compiler and not a change of ground truth (DWARF reads the same types): the fixture is built with gcc 16.2.1 (the checklist said clang 22), which at `-O2` vectorises `mixed`'s loop and lays zeroing paths last, and that exposes three faults of `types_infer.rs`, all of the documented "registers, not SSA values" kind. (a) `xor eax,eax` was read as an unsigned use of `eax` and as the register's last write (`uint32`, then `num32` through the zero-extension). (b) `test r8d,r8d` is `and r,r`, counted as an unsigned mask, so the sign the `cmovns` after it reads never reached the parameter (`uint32` for `int32`), and the parity flag's `& 0xff` counted as a mask too. (c) `lea rax,[rsi-1]` then `mov rax,rdi` left `rsi-1` resolved as the address held in `rax`, so the vector load through `rax` made `rsi` a pointer; found with a p-code trace (the trace code is removed). Per-row attribution of (a) and (b) is from the p-code, the four rows were only verified together | `types_infer.rs`: a register zeroed by `xor`/`sub` of itself is a constant (no read of its entry value, no sign; it keeps a class the body already proved for the register and is otherwise `numN`, also through its zero-extension), `and`/`or` of a register with itself is a `numN` read and carries the register's identity (so a later `js`/`cmovns` types it), the `popcount` mask of the parity flag is not evidence, and a register written by anything but an address computation drops its resolved address. 4 unit tests (`xor_of_a_register_with_itself_is_a_zero_not_a_read`, `a_zeroing_write_keeps_the_class_the_return_register_already_proved`, `test_of_a_register_with_itself_keeps_the_sign_a_branch_reads`, `a_register_rewritten_after_an_address_computation_holds_no_address`); the gate's comment states the new figures | **PASS**: 68 typed positions, exact 0.5441 (unchanged, 37), conservative 1.0 (0.9412), contradicting the compiler 0 (4), silent 0 (1); `types_infer` tests 66 passed; `m4-001` and `m4-002` still PASS |
+| clippy, new or changed code | 555 distinct warnings workspace-wide (1023 with the per-target copies); 271 on lines that differ from HEAD, 44 of them in user-WIP or MemoryFix files | the tree is uncommitted since 2026-09-24, so "lines that differ from HEAD" is the whole wave and not only the last two days | machine-applicable suggestions applied from clippy's own JSON, restricted to those lines (`collapsible_if` 82 sites over three rounds, `manual_is_multiple_of` 24, `chunks_exact_to_as_chunks` 17, `unnecessary_map_or`, `int_plus_one`, `manual_repeat_n`, ...); four of clippy's `as_chunks` rewrites did not compile (`as_chunks_mut` with `iter()`, a by-reference compare) and were corrected by hand. By hand: `field_reassign_with_default` 13 (struct literals), `type_complexity` 8 (type aliases), `large_enum_variant` 5 (`Edit::Node`, `Recovery::Doc`, `JobKind::MatchSource`, `MatchingEvent::Operation`, `WorkspaceOperation::Import` boxed), `if_same_then_else` 5, `needless_range_loop` 9, `while_let_loop` 2, `unnecessary_unwrap` 1, an unused `analysis` parameter of `cond_exits` removed, a `ptr_arg`, a `manual_clamp`. `#[allow(..)]` with a stated reason on `too_many_arguments` (6 signatures that every caller fills field by field), `enum_variant_names` (`Int::Int`/`Int::UInt` are C's type names), one `needless_range_loop` (`singlelist` is rewritten inside the loop) and a test's `set_readonly(false)` on a scratch file. One behaviour change, deliberate: `struct_types.rs::resolve_name` carried a `depth` it never checked, so a typedef cycle recursed until the stack ended; it now stops at `DEPTH` like `resolve`. Everything else is behaviour-neutral | **0 left in any file outside the exclusions**; 55 remain in files this follow-up must not touch: user-WIP `native.rs` 3, `lib.rs` 1, `main.rs` 1, `provider.rs` 1, `specs.rs` 2, and MemoryFix's `native/discovery.rs` 19, `native_runtime/propagation*` 20, `native_runtime/lift.rs` 4, `flow.rs` 3, `native/references.rs` 1 (collapsible_if 27, type_complexity 6, is_multiple_of 6, chunks_exact 4, range_contains 4, others) |
+
+**Checks on the final tree** (one snapshot, synced 11:41 UTC): `cargo test --release --workspace` **1,367 passed, 0 failed, 31 ignored** (the checklist's 1,362 plus the 4 new tests and one other agent's); the CI corpus-oracle commands replayed one by one on the `ReleaseReady` corpus and oracles (58 of 65): everything passes except `m17-002` (6-architecture corpus), `m13-001` (130 against stock's 132, the documented standing failure), `m5-017` (no lz4 module) and `m8-003` (stale exemption on the mipsel fixture), all four in the checklist's own list; not replayed: `ui_gate` (34), `m12-002_cross_compiler` (43), `m4-003` (44), `m7-001`/`m7-002`/`m7-003` (51-53, MemoryFix) and `m3-002` (60), all known failures or environment. `discovery_gate`, `m4-012`, `m16-001`, `m4-001`, `m4-002`, `m3-001`, `m3-003`, `m5-001` to `m5-004`, `m21-001` pass in that replay.
+
+**User-WIP files edited:** none (`main.rs`, `emit_m2c.rs`, `lib.rs`, `native.rs`, `native/elf.rs`, `native/elf_image.rs`, `native/tests.rs`, `romwright-sig/src/object.rs`, `romwright-worker/src/{provider,specs}.rs`, `sdk_types/`, `tests/m22-001_c_output.py` are untouched; their clippy warnings are the ones left above). The clippy pass edited about 90 other files under `crates/` (no `Cargo.toml` or API change); the logic changes are in `types_infer.rs` and `struct_types.rs`, the tests changed are `tests/{m4-011,m4-012,m16-001}`.
+
+## Memory: a tiny import and a long session fit the frozen envelopes again (finish item 4 follow-up, 2026-10-15, MemoryFix)
+
+`tests/m7-001` and `tests/m7-003` failed against `benchmarks/reports/cost-envelope.json` and `session-envelope.json` (recorded once, never edited, 25% headroom): since the SLEIGH console was replaced by in-process decoder lanes a tiny ELF import peaked at 289-300 MB against a frozen 40-50 MB, and a `romwright-api` session grew 100-123 MB in its first rounds. The envelopes are untouched; the code changed. Run on `nih-vps-u` in `~/runs/MemoryFix/ventris` (synced from the laptop, `native/build/ghidra_opt` `4532792d...`), baseline binaries built from the tree as synced at 10:14 UTC (`~/runs/MemoryFix/basebin`), load 0.1-2 for the timed runs. `benchmarks/memory_fix.py` measures before and after side by side and writes `benchmarks/reports/memory_fix_20261015.{json,md}`; `tests/m7-001` **PASS** (20 entries, every one inside its envelope), `tests/m7-003` passes for 16 of its 20 entries (below).
+
+### What the memory was
+
+| cause | evidence | fix |
+|---|---|---|
+| every decoder decoded its whole `.sla` into its own tables: 35 MB of heap for x86-64, 10 MB for PowerPC, 57% of it constructor templates | allocation census by symbol kind (mallinfo deltas around `SymbolTable::decode`) | `third_party/kuna-sleigh/src/slaimage.rs`: the `.sla` is inflated once per process (`SlaImage`, shared through an `Arc`; kuna's tables are `Rc`-linked to their own address spaces, so the *tables* cannot be shared between lane threads, the *bytes* can) and the constructors, templates and decision trees are cut out of the stream; a decoder holds an empty slot for each and decodes it when an instruction first reaches it. A decoder of a tiny ELF is 2-3 MB, builds in ~3 ms (was 8-22 ms), and the language's `.sla` is parsed once (`sla-parse`) |
+| five to nine decoders alive at once on a program of 20 KiB: four discovery lanes, a plain lifter, four propagation lanes, unpooled decoders built by `elf_pointers`, the propagated-linkage pass and the round's lifter, and up to 16 idle pooled decoders kept through the decompiler stage and the store | `import --timings` TALLY: `decoder-builds` 7, `decoder-build` 0.82 thread-s for one tiny ELF | a small image (under 256 KiB mapped) keeps the configured lane count, so the result is exactly the one four decoders give, but its lanes share one decoder that swaps each lane's context database in for the slice that lane answers (`Lanes`, `Sleigh::swap_context_db`; test `lanes_sharing_a_decoder_answer_as_lanes_with_one_each_do`); the plain lifter is the same decoder with the language's own templates instead of the marked ones (`TemplateArena` keeps both variants, `set_marked`; the pool key no longer splits flow decoders from lifters); the reference lanes of a small image are one per 256 KiB; `elf_pointers` and the propagated linkages take pooled decoders; the lanes are dropped before the linkage lifter is taken, the round's lifter before the decompiler stage, idle decoders released when a single-program import is done and before a small one's decompiler stage. Decoders built for a tiny ELF: 7 -> 1 |
+| `ROMWRIGHT_CONSOLE_SHARDS` lanes cost memory only when there is something to walk | | `ROMWRIGHT_EAGER_SLA=1` restores the eager decode (what the lazy one is tested against: `a_lazily_decoded_language_lifts_what_the_eager_decode_does`, six languages, random bytes) |
+| each `JobExecutor` thread opened its own `Core` and kept its own warm decompiler, and threads were started up front: one client asking one question after another landed on a different thread each time, so a session ended with one `ghidra_opt` per job thread (9 processes, +15-39 MB each) | `tests/m7-003` rounds: PowerPC 101 -> 119 -> 136 -> 153 MB then flat; per-process tree: one new `ghidra_opt` per round | threads start when a job finds none free (`available`/`spawned` in `Shared`), so a sequential client has one thread, one `Core`, one decompiler |
+| the executor kept every job's result, a value tree of megabytes for a decompiled document, and `wait` cloned it for the reply | api resident +7.5 MB per round on the `many_o2` entries; 20 MB spike and 36 MB steady for a 2 MB reply | `wait_take` moves the result out for the request that submitted the job, results of asynchronous jobs are bounded (`KEPT_RESULTS` 64) and so are rows (`KEPT_ROWS` 4096) |
+| the importer's resident code: a 23.7 MB binary with 8.6 of its text pages mapped by fault-around before the first decoder is built | `RssFile` 13-16 MB at the peak of a tiny PowerPC import | `[profile.release]` `lto = "fat"`, `codegen-units = 1`: 19.3 MB, RssFile 15 -> 11-12 MB (`docs/releasing.md` names the price: about twice the build time, and a cheap profile for `cargo test --release`) |
+| `tests/m7-001` ran without `ROMWRIGHT_NO_IMPORT_CACHE`, so a warm import cache measured a file copy (15 MB) and a cold one the analysis | `docs/environment.md`: "a gate that measures import cost must set it" | the gate sets it |
+
+### Before and after
+
+(`benchmarks/memory_fix.py`, `benchmarks/reports/memory_fix_20261015.{json,md}`: every import cold, `ru_maxrss` of the largest process as `tests/m7-001` reads it, the corpus20 the gate uses, before and after alternating, host load 0.5-2.)
+
+| | frozen (x1.25) | before | after |
+|---|---|---|---|
+| import, x86-64 (largest process) | 40.6 MB (50.7) | 299 MB | 40.2 MB, the decompiler worker's (the importing process alone 22.5 MB) |
+| import, i386 | 33.7 MB (42.1) | 244 MB | 32.9 MB, the worker's |
+| import, AArch64 | 36.3 MB (45.4) | 249 MB | 35.5 MB, the worker's |
+| import, PowerPC (five entries) | 18.7 MB (23.4) | 90-92 MB | 20.0-21.6 MB, the importer (anon 6.5-8.8 MB, file 11.9-12.5 MB) |
+| decoders built for a tiny ELF | | 7 (and 5 reused) | 1 (and 4 reused) |
+| importing process alone, decompiler stage off (x86-64 / i386 / AArch64 / PowerPC) | | 298 / 244 / 249 / 90 MB | 22.5 / 21.6 / 23.7 / 19.7 MB; with the tables decoded eagerly (`ROMWRIGHT_EAGER_SLA=1`) 55.2 / 46.2 / 50.0 / 24.9 MB: sharing one decoder saved 243 / 198 / 199 / 65 MB, lazy tables 33 / 25 / 26 / 5 MB |
+| session (service + decompilers), plain_o0 x86-64 / i386 / AArch64 / PowerPC | 47.6 / 40.2 / 43.2 / 23.8 MB (59.5 / 50.2 / 54.0 / 29.7) | 344 / 286 / 307 / 152 MB, 9 processes | 54.4 / 47.3 / 50.1 / 30.5 MB, 2 processes; resident growth after warm-up 123 MB -> 20 KB |
+| Persona 4 (PS2 MIPS, 8.6 MB), wall, three interleaved pairs | | 24.99 s | **18.54 s** (0.74; CPU 0.83) |
+| GBA Pokemon Emerald, wall | | 15.74 s | 15.08 s (0.96; CPU 0.97) |
+| GameCube Melee `main.dol`, wall | | 19.26 s | 18.78 s (0.98; CPU 0.98) |
+| rows compared on the three images | | | 165,812 / 231,818 / 386,925 rows in 42 tables each, **identical** as multisets (timestamp columns masked); the 20 corpus entries too |
+
+Persona 4 is faster because of one more change: with `codegen-units = 1` the function-start pattern scan (`native_runtime/patterns.rs`, 5.4 s of that import) slowed to 8.5 s, and the scan was the real cost. A second byte of each pattern is now tested from the bucket's own memory (`Candidate`) before the pattern is read: 1.26 s for the same 9,602 matches (`import --timings`, `patterns`).
+
+### Checks
+
+- `tests/m7-001`: **PASS** on the final binaries (20 entries inside the envelope; native median 34.3 MB against stock's 444 MB, 13.6x less memory and 33x faster).
+- `tests/m7-003`: **16 of 20 entries pass** (all x86-64, i386 and AArch64 entries, `powerpc_many_o2` in this run). The four PowerPC entries `plain_o0/o2/pie/cpp_o2` peak at 30.4-31.7 MB against 29.4-29.8: the service is 13-15 MB resident (8 MB of it code pages mapped by fault-around, 1.4 MB read-only data, 2 MB libc and libm, 2.4-3.2 MB heap) and its decompiler 15.5-16.2 MB. The pre-change service binary was 17 MB beside the same decompiler (33 MB), so this is not caused by decoders or caches: the envelope was recorded with a service of about 8 MB, and the binary has grown by about 35 features since. Nothing was re-recorded. A smaller service binary (a profile-driven hot/cold function layout, or fewer crates linked into the API) is the way down.
+- `tests/m21-001`: **PASS** (7 images scored: GBA recall 0.9761 / precision 0.9972, NDS ARM9 0.9746 / 0.9994, PS2 Capcom 0.9692 / 0.9945, PS2 dungeon 0.9885 / 0.9847, PSX 0.9878 / 0.3664, Vita 0.9734 / 0.9719, X360 0.9833 / 0.9964).
+- `tests/m5-012` PASS with the report and the regenerated README index. Unit tests: `cargo test --release -p romwright-core -p romwright-worker-client -p romwright-api` (cheap profile, `docs/releasing.md`): all passed, 0 failed; new tests `a_lazily_decoded_language_lifts_what_the_eager_decode_does` (six languages, random bytes, every address) and `lanes_sharing_a_decoder_answer_as_lanes_with_one_each_do` (an ARM `blx` committed in one lane, a mode set for all).
+
+### Not done, and limits
+
+- **`tests/m7-003` on PowerPC**, above. `powerpc_many_o2` is at the edge as well (it passed in the last run and failed, 59.9 against 55.3, in one before): its steady figure is far inside its limit (the service 18-30 MB, depending on what the allocator left behind), its peak is the moment the service holds a 2 MB decompiled document, the decompiler's structure of it and the value tree built from it (about 20 MB more for a second), and it passed in one run and failed in another (59.9 against 55.3). The way down is to serialize the document into the reply without the tree (`serde_json::value::RawValue` through the executor and the envelope); building the tree from the document's text instead, so that the two are not alive together, was tried and made the steady figure worse (38 MB: the allocator kept the tree's fragments), and was reverted.
+- A small import's discovery lanes share a decoder and run one after another, so a small image's batches are not split across threads (they were walked in milliseconds); an image of 256 KiB or more runs the configured lanes as before. `SMALL_IMAGE` is a constant in `native/discovery.rs`.
+- The reference lanes of a small image are one per 256 KiB (never more than `ROMWRIGHT_CONSOLE_SHARDS`); they claim ranges as they finish them, so no result depends on which lane took which. Not verified on a small *mixed ARM/Thumb* image beyond the corpus (`aarch64`) and the unit tests; the discovery lanes, whose slicing the lane count does fix, are exact by construction and by test.
+- A corrupt `.sla` shows at a template, constructor or decision node's first use (a panic naming the template) rather than when the decoder is built; the shipped `.sla`s are Ghidra's, and `ROMWRIGHT_EAGER_SLA=1` decodes everything up front.
+- The release profile (`lto = "fat"`, `codegen-units = 1`) makes `cargo build --release` about twice as slow and the core crate's `cargo test --release` build more than twice (measured over 9 minutes against 4); `docs/releasing.md` gives the cheap-profile environment for quick test runs. `codegen-units = 16` with fat LTO misses the PowerPC envelope (24.5-25.1 MB against 23.4), and so does one unit everywhere except `romwright-core` (23.7-24.4): the unit count of the core crate is what the envelope needs.
+- `tests/m6-006` fails on `docs/pc-project.md` (cites `native.rs` as a metric, not this change); `README.md`'s evidence index was regenerated and also gained `pc_upgrade_20261015.json`, which was missing from it.
+
+**User-WIP files edited** (minimal, each listed): `crates/romwright-core/src/native.rs` (one `drop(lifter)` before the decompiler stage, with its comment), `crates/romwright-core/src/native_runtime/` (not on the list; `lift.rs`, `flow.rs`, `propagation.rs`, `propagation/lang.rs`, `patterns.rs`). `main.rs`, `emit_m2c.rs`, `lib.rs`, `native/elf.rs`, `native/elf_image.rs`, `native/tests.rs`, `romwright-sig/src/object.rs`, `romwright-worker/src/{provider.rs,specs.rs}`, `sdk_types/` and `tests/m22-001_c_output.py` untouched (`lib.rs` and `native.rs` carried temporary probe lines during the work, removed).
+
+**Files.** `third_party/kuna-sleigh/src/{slaimage.rs (new),lib.rs,slaformat.rs,sleigh.rs,sleighbase.rs,sleighbase/tests.rs,slghsymbol.rs}`; `crates/romwright-core/src/native_runtime/{lift.rs,flow.rs,propagation.rs,propagation/lang.rs,patterns.rs}`, `native_runtime.rs`, `native/{discovery.rs,discovery/tests.rs,references.rs,elf_pointers.rs,programs.rs,switch_tables.rs}`, `native.rs`; `crates/romwright-worker-client/src/lib.rs`, `crates/romwright-api/src/lib.rs`; `Cargo.toml`; `benchmarks/memory_fix.py` (new), `benchmarks/reports/memory_fix_20261015.{json,md}` (written by it); `tests/m7-001_cost_envelope.py` (cold imports), `tests/m7-003_session_envelope.py` (one decompiler for sequential requests); `docs/{environment,third-party,import-speed,releasing}.md`, `README.md` (evidence index). Host `~/runs/MemoryFix` (trees, binaries `basebin/` before, `ventris/target/release` after, corpus copy, logs) is left for inspection; the extra target directories of the profile experiments are removed. No git writes, no envelope edited.
+
+## Release follow-ups: a shipping build profile, the service's resident set, m6-006 (2026-10-15, ReleaseProfile)
+
+The three items MemoryFix left (its "Not done, and limits" and `benchmarks/reports/memory_fix_20261015.md`). Run on `nih-vps-u` in `~/runs/ReleaseProfile/ventris` (synced from the laptop, `ghidra_opt` `4532792d...`), memory measured paired on `smt-cloud` (4 vCPU, load 0.1-0.7) and on `nih-vps-u`; nothing was built on the laptop. Baseline for every "before": the binaries MemoryFix ended with (`romwright-api` `afcb97b98668`, lto fat, `release`).
+
+### 1. Build profiles
+
+| | before | now |
+|---|---|---|
+| `[profile.release]` | `overflow-checks`, `lto = "fat"`, `codegen-units = 1` (slow builds for every test run) | `overflow-checks = true` only, as before MemoryFix: the development profile |
+| `[profile.dist]` | none | inherits `release`; `lto = "fat"`, `codegen-units = 1`: what `packaging/` builds (CLI, worker, desktop) |
+| `[profile.dist-service]` | none | inherits `dist`; `opt-level = "s"`, with `romwright-core` and `kuna-{sleigh,base,num}` at 3: `romwright-api` (see 2) |
+| packaging | `cargo build --release`, `target/release` | `package_desktop.py` builds `--profile dist` and reads `target/dist`; `stage_release.py` reads each binary from its profile's directory (`dist`, and `dist-service` for the API; `--binaries DIR` for one directory); `docs/releasing.md` documents the two `cargo build` lines `tests/m6-004` runs |
+| m7 gates | built and measured `target/release` | `tests/m7-001`, `m7-002`, `m7-003` build and run what ships: `benchmarks/cost.py` `build_shipped` / `shipped_binary` (per-binary profile) |
+| CI | | the desktop package job builds `--profile dist` and renders its screenshot from `target/dist`; the m7 steps build through the tests; the documented-release step is `tests/m6-004` |
+
+`docs/{releasing,environment,desktop,import-speed}.md` and `README.md` say which profile does what; `docs/environment.md` has a "Build profiles" section and the cheap-test environment (`CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16`) still applies to `--release`.
+
+### 2. The service's resident set (`tests/m7-003`, PowerPC)
+
+What is in a session's 28-30 MB on PowerPC: the decompiler (`ghidra_opt`) 16.0 MB (8.7 heap, 3 text, 3.5 libraries) and the service 12-15 MB. The service's anonymous memory is 2.0-2.4 MB; the rest is code. A round of requests *touches* 2.1 MB of its text (`clear_refs` plus `Referenced`, 528 pages), but the kernel maps the 64 KiB around each touched page (fault-around; `MADV_RANDOM` does not stop it, tried), so 6.6-8.2 MB of its 12 MB text is resident. Resident code follows the binary's size, and a hot/cold layout (hot functions together: the touched functions are 3 MB of the 8.6) would save about 4 MB, but it needs a linker script or a profile (`mold` rejects `INSERT`; PGO needs `RUSTFLAGS`), neither of which a Cargo profile can carry; the layout was not attempted.
+
+| change | measured (`powerpc_plain_o0` session, tree peak, `nih-vps-u`, frozen limit 29.7) |
+|---|---|
+| MemoryFix's service (`release`, lto fat, opt 3) | 30.3 |
+| RawValue reply path alone | 30.3 (`powerpc_many_o2` 59.9 -> 45-46 against 55.3) |
+| opt-level 2 / s / z on the whole `dist` | 29.8 / 29.1 / 28.7 |
+| thin LTO, 16 units / no LTO, 64 units | 33.0 / 33.5 (worse: duplicated generics) |
+| **`dist-service`** (s, importer crates at 3) | 28.4 (service 14.9 MB binary, text mapped 8.2 -> 6.6 MB) |
+| + one allocator arena in a stdio session | 28.0-28.3 |
+
+Import speed, the reason the importer's crates stay at 3 (`smt-cloud`, Persona 4 `SLUS_217.82` and Pokémon Emerald, user+sys, interleaved): `z` everywhere 1.78x and 1.68x, `s` everywhere 1.20x and 1.13x, `dist-service`'s mix 1.0-1.08x (host noise on these runs is about 10%). `panic = "abort"` was not used: `printc/collapse/finish.rs` and `printc/merge/mod.rs` catch a panic in one function (`catch_unwind`) and report it for that function; an aborting service would die on it.
+
+**The reply path** (`crates/romwright-worker-client/src/lib.rs`, `crates/romwright-api/src/lib.rs`): a decompiled document was a `DecompDoc` struct, then a `serde_json::Value` tree in the executor, then the tree in the envelope, then the reply string: the 2 MB document of `many_o2` was held as a tree of 15-20 MB beside its text. `JobOutput::{Tree, Document}` replaces `Value` as the executor's result: `decompile_doc` serializes the struct once into a `Box<RawValue>` and drops it; `wait_take` moves it out; the API writes it into the envelope as it is into a buffer sized for it (`encode`); the other jobs keep their small `Tree`. The reply is the same JSON value; its object keys come in the struct's field order instead of `serde_json`'s sorted order (`serde_json` gained the `raw_value` feature in the two crates). New tests: `a_document_answer_is_the_same_value_as_its_tree` (worker-client), `a_document_reply_carries_its_text_as_it_is` (api); `cargo test --release -p romwright-api -p romwright-worker-client` (cheap profile): 7 and 5 passed, 0 failed. In `romwright-api/src/main.rs` a stdio session calls `mallopt(M_ARENA_MAX, 1)` before any thread starts (`libc`, Linux/glibc only; HTTP keeps the default): the request thread and the job thread take turns and the second arena was 0.9 MB resident; Cargo.lock gains `libc` under `romwright-api`.
+
+**Gates** (`nih-vps-u`, binaries built by the gates themselves): `tests/m7-001` **PASS** (native median 34,142 KiB against stock's 431,724: 12.9x less memory, 33.0x faster); `tests/m7-002` **PASS** (35,544 KiB, 10.9x, 26.1x); `tests/m7-003` **PASS, 20 of 20** (peak median 47,746 KiB, growth 52 KiB worst case; margin to the frozen limit 0.85-1.4 MB on the four PowerPC entries that failed before, 5-24 MB on the others, `powerpc_many_o2` 15.8 MB); `tests/m21-001` **PASS** (7 images, recall/precision identical to MemoryFix's: GBA 0.9761/0.9972, NDS 0.9746/0.9994, PS2 Capcom 0.9692/0.9945, PS2 dungeon 0.9885/0.9847, PSX 0.9878/0.3664, Vita 0.9734/0.9719, X360 0.9833/0.9964); `tests/m6-004` **PASS** (7 documented commands, the API from `dist-service`, 5 artifacts, tamper and truncation rejected, SBOM 466 packages); `tests/m6-003` PASS; `tests/m6-001`, `m6-002` (14 exchanges, `decompile_doc` among them), `m6-005` PASS; `tests/m6-006` **PASS** after the doc fixes below.
+
+**Paired before/after** (`benchmarks/service_memory.py`, new: the m7-003 session, all 20 entries, three alternating repeats, the 10 ms sampler; `benchmarks/reports/service_memory_20261015-{nih,smt-cold,smt-warm}.{json,md}`): on `smt-cloud` with both sets dropped from the page cache first, `powerpc_plain_o0/o2/pie/cpp_o2` 30.3 / 30.5 / 30.3 / 31.5 -> 28.0-28.2 / 28.3-28.7 / 28.2-28.7 / 28.8-28.9 MB (limits 29.7 / 29.4 / 29.6 / 29.8), `powerpc_many_o2` 60.0 -> 41.0-43.3 (55.3); service peak median 14.4 -> 12.5 MB; 5 entries over the limit before (the four PowerPC entries and `powerpc_many_o2`), 0 after; smallest margin 0.69 MB (warm cache: 0.57; on `nih-vps-u` 0.72). Every `decompile_doc` reply is the same JSON value as before on 16 of 20 entries; on four (`*_cpp_o2`) the decompiler itself is not deterministic (the unchanged binary's own runs differ in variable ids and the types it settles on), and the token streams are equal on all 20.
+
+### Limits: read before relying on 3 percent
+
+- **The margin is 0.7-1.4 MB on PowerPC, and a resident-size gate on code is noisy by about that much.** The same binary maps 8.2 MB of text read back from disk, 9.1 after `cp` and 11.1 after `rsync` (`smt-cloud`; large folios in the page cache are mapped whole, a binary the linker just wrote behaves like the first), and a copy of the final service made the real `tests/m7-003` on `smt-cloud` fail by 51 and 35 KB on `powerpc_plain_o2` / `powerpc_cpp_o2` (29,436 against 29,385; 29,820 against 29,785) while the harness on another copy of the same binary passed; on `nih-vps-u`, in place, it passes with 0.85 MB at least. Run the memory gates where the binaries are built; `service_memory.py --refault-binaries` puts both sets in one state.
+- What would add real margin: a hot/cold layout (4 MB; see above), a statically linked, gc-sectioned `ghidra_opt` (its libstdc++ is 1.7 MB mapped; the binary is pinned), or the importer split out of the service. None was done.
+- `--release` binaries are no longer what the gates or the packages measure; a development `cargo build --release` of the API is the 17 MB build and will not meet `m7-003`'s PowerPC limits.
+- `tests/m6-006` also failed on `docs/third-party.md` (`import.pattern_labels` read as a metric of the `import` family a new report introduced): reworded to "the import's `pattern_labels` field"; `docs/pc-project.md` now cites `core/src/native.rs` where it cited `native.rs`.
+- The README evidence index gained three rows and was regenerated; another slice's `finish_gate_20261015` report landed meanwhile, so run `python3 scripts/gen_evidence_index.py` again if `tests/m5-012` calls it stale.
+
+**User-WIP files edited:** none (`main.rs`, `emit_m2c.rs`, `lib.rs`, `native.rs`, `native/elf.rs`, `native/elf_image.rs`, `native/tests.rs`, `romwright-sig/src/object.rs`, `romwright-worker/src/{provider,specs}.rs`, `sdk_types/`, `tests/m22-001_c_output.py` untouched).
+
+**Files.** `Cargo.toml`, `Cargo.lock`; `crates/romwright-worker-client/{Cargo.toml,src/lib.rs}`, `crates/romwright-api/{Cargo.toml,src/lib.rs,src/main.rs}`; `benchmarks/{cost.py,service_memory.py (new)}`, `benchmarks/reports/service_memory_20261015-{nih,smt-cold,smt-warm}.{json,md}`; `packaging/{package_desktop.py,stage_release.py}`; `tests/m7-001_cost_envelope.py`, `m7-002_decompile_envelope.py`, `m7-003_session_envelope.py`; `.github/workflows/ci.yml`; `docs/{releasing,environment,desktop,import-speed,pc-project,third-party}.md`, `README.md`, `STATUS.md`.
+
+## Finish gate: the integrated tree, one build, every lane (finish line, 2026-10-15, FinalGate2)
+
+One gate over everything the finish line produced, on one build of a frozen tree, each number next to the value the last agent reported. `benchmarks/reports/finish_gate_20261015.{json,md}` (written by `benchmarks/finish_gate_report.py` from the raw lane, import, smoke and bisect reports in `benchmarks/reports/finish_gate_20261015_arms/`). Run on `nih-vps-u` (`~/runs/FinalGate2`) and `smt-cloud` (the two i386 compilers); nothing was built or run on the laptop.
+
+**Freeze and build.** The laptop tree was synced once, 14:07:14-14:07:30 UTC (manifest sha1 `c0d31114...` over every non-`target` file; `ghidra_opt` copied from the laptop, `4532792d...`), and built once, 14:07:58-14:13:46 UTC: `cargo build --release -p romwright-cli -p romwright-api -p romwright-worker -p romwright-desktop`, rustc 1.98.1, `CARGO_PROFILE_RELEASE_LTO=false CARGO_PROFILE_RELEASE_CODEGEN_UNITS=16` (cli `a820e725...`, worker `71ef64db...`, desktop `2c3416c4...`; unchanged after the gate). Every import fresh with `ROMWRIGHT_NO_IMPORT_CACHE=1 ROMWRIGHT_NO_FACT_PACK=1`; an m22-003 lane restores a pristine snapshot of its prepared work directory and repository at the same path before its run; gh on the harness's own clone; the m22-002 lanes and m21-001 through a wrapper binary. **ReleaseProfile's changes are not in the frozen tree** (its section above: the `release`/`dist`/`dist-service` profiles, the API reply path, packaging, m7 gates, ci, docs, README; the end-of-gate `rsync -ani` lists exactly its files). So these are the new development `release` build (LTO off, 16 units), not the shipping `dist` profile; `romwright-api` was built from the pre-change source and not run; `tests/m6-007` packaged the frozen packager's `target/release`.
+
+**Against the latest defaults every number is equal.**
+
+| item | this gate | expected (source) |
+|---|---|---|
+| m22-003 dds / dc | 61 / 200 / 77.402; 42 / 197 / 73.877 | PcUpgrade's console readings: same |
+| m22-002 MWCC 20261010 | 56 / 196 / 78.031 | PcUpgrade: same |
+| m22-002 MWCC 20261011, ee-gcc; m22-003 rc | 57 / 195 / 78.712; 106 / 197 / 86.622; 26 / 200 / 68.327 | SymbolLayout: same |
+| m22-003 p4, gh, ff, dk | 60 / 199 / 81.202; 78 / 199 / 82.129; 22 / 199 / 63.373; 29 / 197 / 78.223 | SymbolLayout 80.85, 82.119, 63.148, 78.194: higher by 0.352, 0.010, 0.225, 0.029 (D1, D2); exact and compiled equal |
+| m22-004, six fixtures (`default`) | GLQuake 50 / 191 / 72.535, Quake 2 38 / 196 / 67.990, ioq3 22 / 181 / 41.968, gamex86 35 / 195 / 63.132, ref_gl 94 / 197 / 73.786, doomgeneric 35 / 176 / 47.829 | PcUpgrade: cell for cell (also the at-least-90% counts) |
+| m21-001 | PASS, 7 images, every scalar field of every row equal | MemoryFix's run |
+| PS2 decompile success, 8 images | 7,448 of 7,500, every game equal | SymbolLayout |
+| PC import against stock, 8 PC fixtures | every score field of every fixture equal (ours R ahead 8 of 8, P 5 of 8 with 3 ties, wall and CPU time 8 of 8) | PcImport's recorded run (stock cached) |
+| desktop, `tests/m6-007` and the direct `--gate --project-image` | PASS: Create project 13 files; Match on `FUN_00405380` 7 rows, 7 compiled, best 1.763% against 1.599% | ReleaseReady: same |
+| new-project, configure, build, `match` | PS2 DDS `6d18898e...` (match on smt-cloud: 2 exact of 3), GC Pikmin 2 (`0x800c03ec`, `0x8006bd04` exact, `0x800c0394` 49.250%), Wii Pikmin 2 (3 exact of 3), N64 SM64 `9bef1128...`, PSX Silent Hill `f3834456...`, PSP psp-melodie PRX `724fe026...` (smt-cloud), GBA FE8 `c25b145e...` (`0x080a6f0c` exact), NDS twewy `23e87b1e...` (one exact of 3); PE GLQuake per function (243 of 1,293 exact, 1,249 compile, mean 68.416%; `match` 99.667 / 99.643 / 83.214%); 3DS scaffold 37/38 compile, 36 objdiff units, 16.108% | the earlier agents' sha1s and match numbers: same |
+
+**Deviations, each traced** (all in the report with the arms that establish them):
+- **D1, five console lanes read higher than SymbolLayout's table** (ff, dk, p4, dc, m22-002 MWCC 20261010; 1 to 3 functions each, none lower, dc and the MWCC lane gain one exact function each). Cause: PcUpgrade's `ROMWRIGHT_EXPORT_FLOAT_STORES` (`emit_m2c/conform.rs`, `*(float *)&p[i] = x` for a float stored through an integer pointer), written for Visual C++ but gated only by the stage-4 switch, so it prints MIPS functions too. SymbolLayout's own binary reproduces its lanes on this harness; with only that switch off this build's rows equal SymbolLayout's for every changed function, and the whole MWCC lane is 55 / 196 / 77.638; the sum of the changed functions explains each mean. PcUpgrade's console gate (off equal to default) did not catch it, because its `off` arm evidently left this switch on [INFERENCE]. **A decision for the owner of `conform.rs`:** gate the rule to i386, or accept it; it is a gain on every PS2 lane it touches.
+- **D2, gh 82.129 against 82.119:** one function, `Quaternion_SetVectorRotation` 20.541 -> 22.392, PcUpgrade's `ROMWRIGHT_EXPORT_SQRT` (`FLOAT_SQRT` printed as `sqrt`, also for MIPS `sqrt.s`); 15 single-function arms, only that switch off (and SymbolLayout's binary) give the old value.
+- **D3, the GLQuake project is better than `docs/pc-project.md`'s smoke** (232 exact, 1,179 compile, mean 64.501): PcProject's own binary reproduces the document to the digit on this host; the exact +11 is PcUpgrade's eleven switches, the 1,424 -> 1,293 functions and the mean are PcImport's nine PE rules, the compile rate SymbolLayout's layout rules (four arms of this build, table in the report); the rest has no switch [INFERENCE].
+- **D4, Super Mario 64 has 4,525 asm and 41 binary units where `docs/new-project.md` says 4,592 / 186:** the sha1 still matches; the old binaries give the old counts today, the importer after ImportPrecision's three added MIPS rules (`epilogue-not-entry`, `case-run-in-one-function`, `branch-table-after-dispatch`) and `discovery.rs` edits finds fewer functions (rules off: 4,537; all six off: 5,008).
+- **D5, PS2 `match` on nih-vps-u compiles nothing:** that host has no `/lib/ld-linux.so.2` for `ee-gcc`; the PS2 and PSP matches are the smt-cloud runs.
+
+**User-WIP files edited:** none (no source file at all). Added: `benchmarks/finish_gate_report.py`, `benchmarks/reports/finish_gate_20261015.{json,md}`, `benchmarks/reports/finish_gate_20261015_arms/`; this section; the one `finish_gate_20261015.json` row of `README.md`'s evidence index (`scripts/gen_evidence_index.py`).
+
+**Limits / remains:** one build with LTO off; the memory envelopes (`m7-*`), the unit tests and the doc gates were not re-run (they belong to ReleaseReady, ReleaseFixes, MemoryFix and ReleaseProfile); no wall time is a measurement (load 5-32); PC import's stock side is PcImport's cached run; the 3DS scaffold is `first:40` (Xenoblade's 2,023 s import not run) and `match` does not apply to a scaffold; NDS `match` ran on three hand-picked ARM9 functions. The host `~/runs/FinalGate2` keeps the scripts (`*.sh`, `smoke.py`), `out/`, `logs/` and the binaries; the heavy work directories were removed.
+
+**Orchestrator decision on D1/D2 (2026-10-15):** `ROMWRIGHT_EXPORT_FLOAT_STORES` and `ROMWRIGHT_EXPORT_SQRT` stay on for every target. They were written for x86, but on the consoles they lose no exact, compiled or percent point and gain two exact functions, so they are general rules, not PC-only rules. Each keeps its `=off` switch. After ReleaseProfile's changes, `cargo test --release --workspace` on the final tree passes 1,370 tests with 0 failures (nih-vps-u, ghidra_opt 4532792d).

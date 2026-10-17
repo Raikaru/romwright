@@ -22,6 +22,7 @@ Nothing is "done" until its gate file is committed and continuous integration en
 - Never mark a gate passed without a committed gate report produced by the gate script in that session.
 - Never edit a committed `baseline-*.json` by hand.
 - Metric definitions are frozen (see roadmap). Never change a metric definition without human review.
+- C1 is defined in `GOAL.md`: equal to or better than stock Ghidra against ground truth; parity with stock applies only to facts without ground truth. Stock comparisons report our margin over Ghidra.
 
 ## Operating loop and commit conventions
 
