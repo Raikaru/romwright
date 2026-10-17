@@ -1,0 +1,68 @@
+--- a/mips.sinc
++++ b/mips.sinc
+@@ -531,6 +531,17 @@
+     ind26       = (0,25)				# 26 bit unsigned index, e.g. jal
+     copfill     = (6,24)
+     cofun       = (0,24)
++    # PSX GTE fields (gte.sinc); they live in this token because a
++    # constructor cannot combine fields of two tokens.
++    gte_cmd     = (0,5)
++    gte_lm      = (10,10)
++    gte_cv      = (13,14)
++    gte_v       = (15,16)
++    gte_mx      = (17,18)
++    gte_sf      = (19,19)
++    gte_dr      = (11,15)
++    gte_cr      = (11,15)
++    gte_rt      = (16,20)
+     off21       = (0,20) signed		# 21 bit signed offset in conditional branch/link
+     off16       = (0,15) signed		# 16 bit signed offset in conditional branch/link
+     bit21       = (21,21)
+--- a/mips32Instructions.sinc
++++ b/mips32Instructions.sinc
+@@ -112,10 +112,7 @@
+ }
+ 
+ # 0100 1000 010t tttt ssss s000 0000 0000
+-:cfc2 RT, immed                 is $(AMODE) & prime=0x12 & copop=2 & RT & immed {
+-    tmp:4 = getCopControlWord( 2:1, immed:4 );
+-    RT = sext(tmp);
+-}
++# cfc2: PSX GTE definition in gte.sinc
+ 
+ # Special case of ADDU
+ # 0000 0000 0000 0000 dddd d000 0010 0001
+@@ -151,9 +148,7 @@
+     RD0 = RTsrc;
+ }
+ # 0100 1000 110t tttt iiii iiii iiii iiii
+-:ctc2 RTsrc, immed              is $(AMODE) & prime=0x12 & copop=6 & RTsrc & immed {
+-    setCopControlWord( 2:1, immed:4, RTsrc );
+-}
++# ctc2: PSX GTE definition in gte.sinc
+ 
+ # 0100 0010 0000 0000 0000 0000 0001 1111 
+ :deret                          is $(AMODE) & prime=0x10 & bit25=1 & copfill=0x0 & fct=0x1F {
+@@ -424,10 +419,7 @@
+ }
+ 
+ # 0100 1000 000t tttt iiii iiii iiii iiii
+-:mfc2 RT, immed                 is $(AMODE) & prime=0x12 & copop=0 & RT & immed {
+-    tmp:4 = getCopReg(2:1, immed:4);
+-    RT = sext( tmp );
+-}
++# mfc2: PSX GTE definition in gte.sinc
+ 
+ # 0100 1000 011t tttt iiii iiii iiii iiii
+ :mfhc2 RT, immed                is $(AMODE) & prime=0x12 & copop=3 & RT & fs & immed {
+@@ -457,9 +449,7 @@
+ }
+ 
+ # 0100 1000 100t tttt iiii iiii iiii iiii
+-:mtc2 RTsrc, immed              is $(AMODE) & prime=0x12 & copop=4 & RTsrc & immed {
+-    setCopReg(2:1, immed:4, RTsrc);
+-}
++# mtc2: PSX GTE definition in gte.sinc
+ 
+ :mthc0 RTsrc, RD0, sel          is $(AMODE) & prime=0x10 & copop=6 & RTsrc & RD0 & zero6=0 & sel {
+     tmp:4 = RTsrc:$(SIZETO4);

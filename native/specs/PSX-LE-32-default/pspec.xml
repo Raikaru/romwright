@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<!-- PlayStation (R3000A) processor spec: Ghidra's mips32.pspec (Apache-2.0,
+     third_party/ghidra/languages/mips) minus the MIPS:BE assembly rating. -->
+
 <processor_spec>
   <properties>
     <property key="addressesDoNotAppearDirectlyInCode" value="true"/>
     <property key="emulateInstructionStateModifierClass" value="ghidra.program.emulation.MIPSEmulateInstructionStateModifier"/>
-    <property key="assemblyRating:MIPS:BE:32:default" value="PLATINUM"/>
+    <property key="useropLibs" value="mips"/>
   </properties>
   <programcounter register="pc"/>
   <context_data>

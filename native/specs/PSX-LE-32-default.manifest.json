@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "producer": "dump_specs",
+  "upstream_version": "12.1.3",
+  "upstream_revision": "8b4c91d4d5bd1549622bfbade0df199585b98365",
+  "bridge_sources_sha256": "180235b9ab1a62a76933524cc1364f21faabcdefe5fd4857ffbbae0ebe3a9729",
+  "language": "PSX:LE:32:default",
+  "compiler": "default",
+  "representative_sha256": "f933f98f1c35ce6a7d285e0e1f3e5d06006434f145b2a72608decb60d61634ca",
+  "files": {
+    "pspec.xml": {
+      "sha256": "f9597e240ce90b791a233c57802cd263a285347b5a895c31d238f8d468b04aea",
+      "bytes": 3795
+    },
+    "cspec.xml": {
+      "sha256": "82c312f9a44b10eeca83e2026a6d97a4a67e8dab1afce66dcc97c7f52d255cad",
+      "bytes": 6893
+    },
+    "tspec.xml": {
+      "sha256": "3f5067e13a4f8080e357f95768c20967a3df8bb36a7c1c710d5aed2dbd7cbe9f",
+      "bytes": 441
+    },
+    "coretypes.xml": {
+      "sha256": "161fcd4f61b0d1dc8f95758ab5032e9d6b6fd44cf6c9e1a6ae089aa922ee3353",
+      "bytes": 2678
+    },
+    "registers.txt": {
+      "sha256": "7611f886903daa6b97cb383f7da2539e4d99e028d2add2c8e431059087b9cb4c",
+      "bytes": 9742
+    }
+  }
+}
