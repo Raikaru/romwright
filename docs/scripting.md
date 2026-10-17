@@ -71,7 +71,7 @@ different rule can apply one.
 reverses the last command, so a script that changes a project can undo its own
 work — the same journal the desktop and the CLI use.
 
-## Which parts need the SLEIGH console
+## Which parts need the pinned Ghidra install
 
 Reads of the store need nothing beyond the built binaries. `decompile`,
 `disasm_native` and `listing` need SLEIGH language data from the pinned Ghidra

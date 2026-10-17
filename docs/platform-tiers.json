@@ -1,36 +1,60 @@
 {
  "schema_version": 1,
- "note": "Platforms Romwright does not fully support, each with the fact that blocks it. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed here only once someone has looked. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3. Loaders for 3DS (NCCH/NCSD/CIA), PS3 (SELF/SPRX), Vita (SELF), PSP (PRX), Switch (NCA/XCI) and Xbox 360 (XEX) ship in crates/romwright-core/src/native/ and route through parse_container. Every console processor is now modelled: the pinned install ships SPU (GhidraSPU), R5900 with MMI/VU0 (ghidra-emotionengine-reloaded), Allegrex with VFPU (Processors/Allegrex), and Xenon VMX128 is native (native/languages/xenon). The only remaining blocker is per-title/console-provisioned key material, which II.1 forbids fetching at runtime.",
+ "note": "Platforms Romwright lists beyond the gate-report-derived rows of the README support matrix. Tier 1 means a committed gate report measures it; the support matrix generator refuses to print a tier-1 claim whose gate report is missing, so a platform is listed as tier 1 only once someone has looked. Tier 2 is a platform or container that is not fully supported, with the fact that blocks it (`blocker`) and where it was checked (`evidence`); the generator prints these under 'Not supported'. Tier 3 is an input that is supported and has no per-platform gate report of its own: the matrix prints its `claim` as a supported row, and the claim says what was checked and that no gate measures it. Evidence paths are relative to the pinned Ghidra install (docs/upstream-ghidra.md) unless stated otherwise; they were checked against Ghidra 12.1.3. Loaders for 3DS (NCCH/NCSD/CIA), PS3 (SELF/SPRX), Vita (SELF), PSP (PRX), Switch (NCA/XCI) and Xbox 360 (XEX) ship in crates/romwright-core/src/native/ and route through parse_container. Every console processor is modelled: the pinned install ships SPU (GhidraSPU), R5900 with MMI/VU0 (ghidra-emotionengine-reloaded), Allegrex with VFPU and the Xenon VMX128 language; the only blocker left is content whose keys the user has not supplied (the encrypted-container row).",
  "platforms": [
-  {
-   "input": "Sony PSP (Allegrex ELF/PBP)",
-   "tier": 2,
-   "blocker": "The PRX loader imports decrypted ELF32 Allegrex modules (e_type 0xFFA0, sceModuleInfo, .lib.ent/.lib.stub), and the pinned install's Allegrex processor ships the full VFPU: allegrexVfpu.sinc, allegrexVfpuBase.sinc and allegrexVfpuGenerated.sinc model the vector unit (vadd.s/p/t/q and the matrix ops decode under Allegrex:LE:32:default). No processor gap remains; the only open item is per-title key material, covered by the encrypted-container row.",
-   "evidence": "crates/romwright-core/src/native/psp.rs imports PRX; Ghidra/Processors/Allegrex/data/languages/allegrexVfpu*.sinc (74+340+553 VFPU constructors); allegrex.sla decodes vadd.s. Verified: word 0x60030201 -> 'vadd.s S000,S030,S003'."
-  },
-  {
-   "input": "PlayStation 2 (R5900 ELF)",
-   "tier": 2,
-   "blocker": "The pinned install ships ghidra-emotionengine-reloaded, a complete R5900 language (r5900:LE:32:default) whose eecore.sinc models the MMI 128-bit multimedia ops (paddw/psubw/pnor under prime=28) and vuupper.sinc the VU0 macro-mode. The scalar gate row already passes; the MMI/VU0 ops decode under the same language. No processor gap remains.",
-   "evidence": "Ghidra/Extensions/ghidra-emotionengine-reloaded/data/languages/{eecore,vuupper}.sinc; r5900.sla decodes paddw (word 0x70430808 -> 'paddw at,v0,v1'). native/specs/r5900-LE-32-default bundle present."
-  },
-  {
-   "input": "PlayStation 3 (Cell SPU objects)",
-   "tier": 2,
-   "blocker": "The pinned install ships the GhidraSPU extension (SPU:BE:128:default) with a full spu.sinc — the carved SPU ELF32 images decode (a/lqd/nop verified). The SELF/SPRX loader unwraps PPU images and carves embedded SPU images. No processor gap remains.",
-   "evidence": "Ghidra/Extensions/GhidraSPU/data/languages/spu.{sinc,sla}; spu.sla decodes 'a lr,lr,lr' and 'nop lr'. native/specs/SPU-BE-128-default bundle present; crates/romwright-core/src/native/ps3.rs carves SPU images."
-  },
-  {
-   "input": "Xbox 360 (XEX)",
-   "tier": 2,
-   "blocker": "The Xenon language (PowerPC:BE:64:Xenon-32addr) now models VMX128's 128 vector registers and the XEX loader maps the image. The remaining gap is XEX decryption: retail images are encrypted and compressed, and the keys are not bundled (the encrypted-container row covers this).",
-   "evidence": "native/languages/xenon builds PowerPC:BE:64:Xenon-32addr with VMX128; crates/romwright-core/src/native/xex.rs maps the container. Retail XEX decryption keys are not in this repository."
-  },
   {
    "input": "Encrypted console containers (3DS CIA, PS3/Vita SELF, Switch NCA/XCI, Xbox 360 XEX)",
    "tier": 2,
    "blocker": "Retail images are encrypted. The loaders decrypt with bundled public keys where those exist (Xbox 360 XEX retail key, PS3 APP vault, Vita public MetaKeys, 3DS zeros fixed key, and now PSP ~PSP via the long-public KIRK key vault + tag tables in native/kirk_tables.rs), and accept user-supplied keys through a KeyStore (`--keys <file>`): a Switch prod.keys supplies header_key/key_area_key, a PS3 .rap derives the NPDRM title key, a Vita .klic unwraps NPDRM, and a 3DS aes_keys.txt supplies slot0xNN/fixed_system. What remains unreachable is content whose key only the console holds and the user has not dumped — Switch retail NCA/XCI without a prod.keys, 3DS slot-key content without the slot key, PS3/Vita NPDRM without the .rap/.klic. II.1 still forbids any runtime fetch; the keys come only from a file the user provides.",
    "evidence": "crates/romwright-core/src/native/keys.rs (KeyStore) + native/kirk.rs + native/kirk_tables.rs (PSP KIRK vault/tag tables, public constants); import_with(data, keys) on switch/threeds/vita/ps3/psp; tests prove a retail-keyed NCA, an NPDRM SELF via .rap, a klic-wrapped Vita SELF, and a ~PSP round-trip all import."
+  },
+  {
+   "input": "NES iNES ROM (`.nes`)",
+   "tier": 3,
+   "claim": "decodes on `6502:LE:16:default`; PRG at `0x8000`, vectors seeded; no gate report",
+   "evidence": "crates/romwright-core/src/native/nes.rs; native/specs/6502-LE-16-default bundle present."
+  },
+  {
+   "input": "Genesis / Mega Drive ROM (`.gen`)",
+   "tier": 3,
+   "claim": "decodes on `68000:BE:32:default`; vectors + entry seeded; no gate report",
+   "evidence": "crates/romwright-core/src/native/genesis.rs; native/specs/68000-BE-32-default bundle present."
+  },
+  {
+   "input": "Game Boy ROM (`.gb`)",
+   "tier": 3,
+   "claim": "decodes on `GameBoy:LE:16:default`; header-checksum detection, banks at `0x0000`/`0x4000`; no gate report",
+   "evidence": "crates/romwright-core/src/native/gameboy.rs; native/specs/GameBoy-LE-16-default bundle present."
+  },
+  {
+   "input": "SNES LoROM (`.sfc`)",
+   "tier": 3,
+   "claim": "decodes on `65816:LE:16:default`; checksum+complement detection, 32 KiB chunks at `bank:0x8000`; no gate report",
+   "evidence": "crates/romwright-core/src/native/snes.rs; native/specs/65816-LE-16-default bundle present."
+  },
+  {
+   "input": "Sony PSP ELF (`e_type=0xffa0`)",
+   "tier": 3,
+   "claim": "decodes on `Allegrex:LE:32:default` with the pinned install's full VFPU model (`allegrexVfpu*.sinc`); decrypted PRX modules import, `~PSP` images decrypt with the public KIRK vault; per-title key material is the encrypted-container row below",
+   "evidence": "crates/romwright-core/src/native/psp.rs imports PRX; Ghidra/Processors/Allegrex/data/languages/allegrexVfpu*.sinc (74+340+553 VFPU constructors); allegrex.sla decodes vadd.s. Verified: word 0x60030201 -> 'vadd.s S000,S030,S003'."
+  },
+  {
+   "input": "PlayStation 2 (R5900 ELF)",
+   "tier": 3,
+   "claim": "decodes on `r5900:LE:32:default` (vendored `ghidra-emotionengine-reloaded`: MMI and VU0 macro mode); VU0 macro ops lift to per-lane float p-code (`native/languages/r5900/gen_vu.py`; MAC/status flags, the R register and `vcallms` stay opaque)",
+   "evidence": "Ghidra/Extensions/ghidra-emotionengine-reloaded/data/languages/{eecore,vuupper}.sinc; r5900.sla decodes paddw (word 0x70430808 -> 'paddw at,v0,v1'). native/specs/r5900-LE-32-default bundle present."
+  },
+  {
+   "input": "PlayStation 3 (SPU ELF)",
+   "tier": 3,
+   "claim": "decodes on `SPU:BE:128:default` (vendored `GhidraSPU`); PPU side is `PowerPC:BE:64`; the SELF/SPRX loader unwraps PPU images and carves embedded SPU images",
+   "evidence": "Ghidra/Extensions/GhidraSPU/data/languages/spu.{sinc,sla}; spu.sla decodes 'a lr,lr,lr' and 'nop lr'. native/specs/SPU-BE-128-default bundle present; crates/romwright-core/src/native/ps3.rs carves SPU images."
+  },
+  {
+   "input": "Xbox 360 (XEX2)",
+   "tier": 3,
+   "claim": "maps the embedded PE on `PowerPC:BE:64:Xenon-32addr` (VMX128 registers modelled); retail XEX decryption (AES-CBC, retail key) and decompression (basic/LZX) are in the loader; encrypted-container row below for keys that are not bundled",
+   "evidence": "native/languages/xenon builds PowerPC:BE:64:Xenon-32addr with VMX128; crates/romwright-core/src/native/xex.rs maps the container. Retail XEX decryption keys are not in this repository."
   }
  ]
 }

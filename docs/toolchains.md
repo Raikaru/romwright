@@ -2,21 +2,44 @@
 
 Pinned toolchain configuration for multi-architecture corpus generation (`m1-006`).
 
-## User-owned matching profiles
+## Tool policy: what romwright ships, what generated projects fetch
 
-Matching workspaces use installed toolchains, not a compiler-download service.
-Supply source/header inputs and target objects that you are entitled to use.
-Inputs default to private; mark them redistributable only when authorized.
-Compiler and declared tool bytes are never included in workspace exports.
-Bundles retain recipe paths, arguments and environment, so review metadata
-before sharing.
+romwright ships no compiler, assembler, linker or wrapper, and the romwright
+binary never downloads one. Two separate mechanisms put tools in front of a
+build:
+
+* **Matching workspaces** (this section, `matching-run`, `match-source`) use
+  installed, user-owned toolchain profiles. They are not a compiler-download
+  service. Supply source/header inputs and target objects that you are entitled
+  to use. Inputs default to private; mark them redistributable only when
+  authorized. Compiler and declared tool bytes are never included in workspace
+  exports. Bundles retain recipe paths, arguments and environment, so review
+  metadata before sharing.
+* **Generated projects** (`romwright-cli new-project`, see
+  [new-project.md](new-project.md)) behave like decomp-toolkit's dtk-template: the
+  project's own `configure.py` downloads its build tools by default, from a pinned
+  manifest (`config/toolchain.json`: URL, sha256, version, license and provenance per
+  tool; the table lives in `crates/romwright-core/src/new_project/toolchains.json` and is
+  updated by editing data, not code). The sha256 is checked before anything is
+  extracted or run, and a mismatch stops the build. Compilers named there (MWCC,
+  ee-gcc) are proprietary third-party archives that romwright neither hosts nor
+  licenses; the manifest records where each came from. A toolchain profile
+  (`--toolchain FILE` or `config/toolchain.local.json`, the format below) overrides
+  any tool, one by one, so a machine that already has its tools never downloads.
+
+## User-owned matching profiles
 
 A profile records the launcher hash, declared tool hashes, version command,
 compiler flags and environment. `compile_arguments` are appended to
 `recipe.arguments`; `version_arguments` are the complete version-query argv.
 `{source}`, `{output}`, `{root}` and `{tool:NAME}` expand as argv operands,
 not shell code. Declare required headers, wrappers and support files explicitly:
-implicit external dependencies are not discovered automatically.
+implicit external dependencies are not discovered automatically. A generated
+project reads the same file: tools `compiler`, `as`, `ld`, `objcopy`, `objdump`,
+`wibo` and `objdiff-cli` replace the manifest's; `recipe.compiler` and
+`recipe.arguments` are the compiler launcher; `recipe.environment` is applied to
+compiles; a `compile_arguments` template that has `{source}` replaces the
+project's default compile command.
 
 For MWCC with wibo and sjiswrap, the profile template is:
 
@@ -58,6 +81,26 @@ Standalone matching execution uses the Unix process runner; real-project
 verification additionally requires Linux bubblewrap. This isolates writable
 build state but is not a hermetic toolchain or hostile-code sandbox.
 See [core-api.md](core-api.md#matching-workspaces) for the shared contracts.
+
+### i386 compiler binaries on a host without a 32-bit glibc
+
+The ee-gcc 2.96 compilers and Sony's EE assembler that PS2 decompilation projects use are i386 ELFs
+whose interpreter is the fixed path `/lib/ld-linux.so.2`. A host that has no 32-bit glibc can still run
+them from a user-owned 32-bit glibc tree (a Debian `libc6:i386` extraction, for instance) without
+root and without touching the host: run the command inside a bubblewrap mount namespace in which a
+tmpfs overlay on the directory `/lib` resolves to puts the tree's `ld-linux.so.2` at that name.
+
+<!-- not gated: host-specific recipe -->
+```bash
+LIB=$(realpath /lib)
+bwrap --dev-bind / / --overlay-src "$LIB" --tmp-overlay "$LIB" \
+      --bind ~/opt/glibc32/usr/lib/ld-linux.so.2 "$LIB/ld-linux.so.2" \
+      env LD_LIBRARY_PATH=~/opt/glibc32/usr/lib ee-gcc -O2 -G0 -S unit.c
+```
+
+`tests/m22-002_ps2_c_output.py --compiler eegcc` does this for itself (it re-executes under
+`bwrap` when `/lib/ld-linux.so.2` is absent; `--glibc32` names the tree). The toolchain stays the
+user's: romwright neither downloads nor ships it, and no tool bytes enter an export.
 
 ## Host Toolchains (Fedora 44 baseline)
 

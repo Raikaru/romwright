@@ -31,7 +31,7 @@ The security review covers the shipped runtime surfaces:
 - binary parsing and analysis are bounded by the selected image and function
   range; truncated or malformed ELF/PE input must return a typed error, never
   panic or execute bytes from the target file;
-- the native worker and SLEIGH console are spawned as child processes without
+- the native worker is spawned as a child process without
   a shell (`Command` with argv only); user-supplied paths and addresses are
   passed as arguments, never interpolated into a shell command line;
 - matching runs execute explicitly configured local compiler recipes and objdiff.

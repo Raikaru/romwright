@@ -2,7 +2,6 @@
 /build/
 /dist/
 /target/
-/desktop/romwright-qt/build/
 
 # Java
 *.class
@@ -40,7 +39,6 @@ third_party/ghidra/decompiler/ghi_opt/
 third_party/ghidra/decompiler/ghidra_opt
 third_party/ghidra/decompiler/sla_opt/
 third_party/ghidra/decompiler/sleigh_opt
-/desktop/romwright-qt/generated/
 /third_party/sysroots/
 # Local analysis caches
 .romwright/
@@ -48,6 +46,9 @@ third_party/ghidra/decompiler/sleigh_opt
 # Volatile benchmark run artifacts (keep only the summarized report)
 /benchmarks/reports/gate-run/
 /benchmarks/reports/**/*.sqlite
+# Hex-Rays comparator output: its EULA (2.1(v)) restricts publishing
+# benchmark data, so these reports stay local (docs/console-research.md)
+/benchmarks/reports/*hexrays*
 
 # Python
 __pycache__/

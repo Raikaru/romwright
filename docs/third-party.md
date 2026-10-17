@@ -83,11 +83,12 @@ change its fingerprint or the immutable raw oracle references.
 
 ## Instruction flow metadata
 
-`native/romwright_flow.hh` follows Ghidra 12.1.3
+`crates/romwright-core/src/native_runtime/flow.rs` follows Ghidra 12.1.3
 `SleighInstructionPrototype.walkTemplates`, `flowListToFlowType`,
-`gatherFlags` and `convertFlowFlags` (Apache-2.0). The pinned-tree patch
-collects template flow facts during ordinary SLEIGH p-code generation, not
-through a second decode. Instruction-local labels and `inst_start`/`inst_next`
+`gatherFlags` and `convertFlowFlags` (Apache-2.0). Flow facts are collected
+during ordinary in-process SLEIGH p-code generation, not through a second
+decode. (A C++ header, `native/romwright_flow.hh`, carried the same port
+inside the SLEIGH console's patch until the console was retired.) Instruction-local labels and `inst_start`/`inst_next`
 branches are not exported as machine flow references.
 
 `FLOW` includes conditional/terminal classification, actual RETURN p-code
@@ -97,6 +98,88 @@ Discovery follows the reported fallthrough, including conditional returns,
 and does not invent fallthrough after terminal calls. Console consumers require
 the enriched protocol; rebuild both native binaries after this cutover.
 Ordinary decompiler translation does not collect the optional flow metadata.
+
+## In-process SLEIGH lifting
+
+`crates/romwright-core/src/native_runtime/lift.rs` lifts p-code with kuna's
+`kuna-sleigh` runtime ([noelo-Lab/kuna](https://github.com/noelo-Lab/kuna),
+Apache-2.0, commit `c4f735f903026ec486a47f395e0e9944069e95e5`), a Rust port of
+Ghidra 12.1.3's C++ `Sleigh` translator, `ContextDatabase` and `.sla` reader.
+Romwright uses the translator, the context database and its `<context_data>`
+decoder, and kuna's XML reader; its decompiler crates are not used. Kuna's
+NOTICE attribution is carried in the root `NOTICE`.
+
+The setup around the translator reproduces, without copying their code, what
+Ghidra 12.1.3's C++ console and `SleighArchitecture` (Apache-2.0) did for a
+loaded image:
+`SleighArchitecture` language resolution (`scanForSleighDirectories`,
+`collectSpecFiles`, `normalizeArchitecture`, `buildSpecFile`, `.ldefs`
+`<truncate_space>`), `FileManage` search-path order and
+`discoverGhidraRoot`, `Architecture::restoreFromSpec`'s processor-then-compiler
+`<context_data>`, and the byte views of `LoadImageXml` (including `pad()`),
+`RawLoadImage` and, for `pei-*` targets, `LoadImageBfd` over the PE section
+table as BFD's `coff_swap_scnhdr_in` sizes it. Kuna grows its parser-state
+arena where the pinned `Sleigh` holds 75 states (`sleigh.cc:457`), so a
+constructor walk the console reports as bad data is refused before decoding,
+counted from kuna's `instruction_mask` operand views. The PowerPC
+conditional-LR return rewrite is Romwright's own (`native/romwright_ppc_return.hh`
+for `ghidra_opt`, `native_runtime/flow.rs` and `lift.rs` in process).
+
+`kuna-sleigh` is built from `third_party/kuna-sleigh`, a vendored copy at the
+same commit with three changes. Its constructor-walk depth bound (`MAX_DEPTH`,
+the C++ `ParserWalker::breadcrumb[32]`) is raised to Ghidra's own (Java
+`ParserWalker.MAX_PARSE_DEPTH` = 64, `breadcrumb = new int[65]`, read from the
+12.1.3 `SoftwareModeling.jar` bytecode), and the `context.hh` hunk of
+`native/ghidra-opt-sleigh.patch` raises and checks the C++ array the same way. The C++ walker never checked
+its 32: a PowerPC `lmw`/`stmw` naming ~31 registers wrote past the array
+(GameCube data decoded as code reached it 8 times), while kuna refused it.
+Its operand bound (`MAX_OPERAND`, the C++ `initialize(75,20)` per-state
+operand array) is raised from 20 to 74, the console's operand-state count (75
+states, the base and 74 operands, `sleigh.cc:457`): the console's
+`allocateOperand` hunk grows the array to the operand index named (a VMX128
+constructor names 33), so the state count is its only bound, and kuna refuses
+an operand index of 74 or more exactly where the console is out of states.
+Before the change the in-process flow decoder answered `Bad` for 6249 Xbox 360
+VMX128 words the C++ translator decodes (found by the flow differential
+against the SLEIGH console, since retired; its last result, 0 differing
+answers on 10 corpus images, is recorded in STATUS.md).
+The third change is `Sleigh::reset_for_reuse` (`src/sleigh.rs`), a method kuna does not
+have: it installs a given context database, empties the context cache and the
+remembered constructor matches and commits. It is what lets
+`native_runtime/lift.rs` hand a decoder, whose `.sla` decode costs more than a
+small image's whole analysis, to the next program of a container (the idle
+pool and `ROMWRIGHT_NO_DECODER_POOL`, `docs/environment.md`) instead of
+building one per use; the Rust side is Romwright's own.
+
+The memory work (`benchmarks/reports/memory_fix_*.md`) adds to the vendored copy,
+none of it in kuna: `src/slaimage.rs` (`SlaImage`, `Sleigh::initialize_from_image`) inflates
+a `.sla` once per process and cuts every constructor, every `construct_tpl` and
+every subtable's root decision tree out of the packed stream into a shared
+buffer, leaving stubs in the stream the eager decode reads; the tables of a
+decoder then hold an empty slot for each, and a constructor, template or
+decision node is decoded the first time an instruction reaches it. Kuna's
+tables are `Rc`-linked to their own address spaces, so they cannot be shared
+between lane threads: what is shared is the bytes, and what each decoder
+avoids is the objects it never reads (a language's templates alone were 57% of
+a decoded x86-64 heap, and a program uses hundreds of its thousands). The
+templates come in two variants for one decoder, the language's own and a
+caller-supplied transform of them (the flow decoder's markers,
+`native_runtime/flow.rs`), selected by a switch on the arena, so a flow lane
+and a plain lifter are one decoder (`TemplateArena::set_marked`).
+`Sleigh::swap_context_db` lets one decoder serve several lanes' context
+databases in turn. Smaller changes: a subtable symbol is boxed (it was five
+times the size of any other), the register cross-reference is shared with the
+lookup the manager holds instead of copied, the lookup by name scans it, and
+a decode from an image registers names in the global scope only (the local
+scopes, one per constructor, are the compiler's). `SymbolTable::decode`,
+`Sleigh::initialize_from_sla` and every compiler-side path are unchanged and
+decode eagerly (`ROMWRIGHT_EAGER_SLA`, `docs/environment.md`).
+
+`crates/romwright-core/src/native_runtime/flow.rs` answers discovery's flow
+questions with the same runtime: it implements Ghidra's
+`SleighInstructionPrototype.walkTemplates`/`flowListToFlowType` by inserting
+marker ops into the translator's constructor templates before each flow op,
+label and delay slot, and reading them back out of the emitted p-code.
 
 ## Minimal direct-jump thunks
 
@@ -119,8 +202,10 @@ thunk analyzer.
 The bounded indirect-linkage prerequisite also follows `getThunkedAddr` and
 `addRegisterUsage` in `CreateThunkFunctionCmd` (Apache-2.0), with stricter
 fail-closed handling of unknown inputs and partial register aliases.
-`native/romwright_linkage.hh` consumes SLEIGH p-code and reuses the decompiler's
-registered `OpBehavior` constant evaluators. It tracks pointer-slot identity,
+`crates/romwright-core/src/native_runtime/linkage.rs` consumes SLEIGH p-code
+(kuna-sleigh) and reuses the registered `OpBehavior` constant evaluators
+(`kuna_num::opbehavior`); it replaced the console command of the same name
+(`native/romwright_linkage.hh`, deleted). It tracks pointer-slot identity,
 not invented external pointer values. Stores, calls, other control flow and
 unused non-flag register writes are rejected. Bounds are 8 instructions,
 128 operations per instruction and 64 live values. Unique temporaries are
@@ -177,17 +262,19 @@ loader-recorded external slot. Generic branch-target recognition remains strict.
 
 ## Native function-start pattern matching
 
-`native/romwright_patterns.hh` follows Ghidra 12.1.3 BytePatterns (Apache-2.0):
-`Patterns`, `Pattern`, `PatternPairSet`, `DittedBitSequence`, `AlignRule`,
-`LanguageConstraint`, `CompilerConstraint`, and `generic.constraint.DecisionNode`.
-The existing native XML parser reads installed `patternconstraints.xml` and the
+`crates/romwright-core/src/native_runtime/patterns.rs` follows Ghidra 12.1.3
+BytePatterns (Apache-2.0): `Patterns`, `Pattern`, `PatternPairSet`,
+`DittedBitSequence`, `AlignRule`, `LanguageConstraint`, `CompilerConstraint`, and
+`generic.constraint.DecisionNode`. It replaced the console command
+`functionstarts` (`native/romwright_patterns.hh`, deleted). Kuna's XML reader
+(a port of the decompiler's) reads the installed `patternconstraints.xml` and the
 selected pattern files. Selection uses the loaded language and resolved compiler
 specification, including more-specific decision precedence; it does not infer a
 compiler from opcode bytes.
 
-The console command `functionstarts <start> <end> ...` accepts exclusive-end
-mapped ranges and returns `PATTERNS` JSON: instruction alignment, shared source
-rules with ordered action attributes, and address/rule matches. Matching preserves
+`SleighLifter::function_patterns` takes exclusive-end mapped ranges and returns
+the instruction alignment, shared source rules with ordered action attributes,
+and address/rule matches. Matching preserves
 hex/binary wildcards, explicit marks, pair fixed-bit thresholds and raw-start
 alignment. XML integers retain `SpecXmlUtils.decodeInt` low-32-bit semantics.
 Parsed sequences are shared across pairs; bounded scan windows retain lookahead.
@@ -203,7 +290,7 @@ base load-spec selection, not producer identification from Go/Swift metadata.
 
 ## Native instruction-flow facts
 
-`native/romwright_flow.hh` follows Ghidra 12.1.3
+`native_runtime/flow.rs` follows Ghidra 12.1.3
 `SleighInstructionPrototype.walkTemplates`, `flowListToFlowType` and
 `convertFlowFlags` (Apache-2.0). It retains template distinctions that resolved
 p-code alone loses: instruction-local labels and J_START/J_NEXT are not
@@ -242,6 +329,14 @@ new functions. Definite actions take precedence over possible actions at the
 same address. Rejected bodies are reconciled with their surviving owner before
 the existing PIC linkage pass.
 
+The flow walk (`discovery.rs`, `RepeatRuns`) also applies Ghidra 12.1.3
+`Disassembler.disassembleInstructionBlock`'s use of
+`RepeatInstructionByteTracker` (limit `MAX_REPEAT_PATTERN_LENGTH`, 16): the
+seventeenth consecutive instruction whose bytes are one repeated value, the
+same as the instruction before it, is not decoded and its flow stops. The
+count restarts where Ghidra starts a block: an entry, a branch target, and
+the instruction after a call (`endBlockOnCall`).
+
 ## ELF loaded images and worker memory
 
 ELF record layouts and relative-relocation constants are checked against the
@@ -263,13 +358,16 @@ Core memory reads retain their strict region-boundary contract.
 
 ## Function constant propagation
 
-`native/romwright_constants.hh` follows Ghidra 12.1.3's
-`ConstantPropagationContextEvaluator`, `SymbolicPropogator` and
-`VarnodeContext` (Apache-2.0), checked against the extracted release sources.
-The evaluator supplies pointer policy; it is not itself a propagation engine.
-The native implementation uses the pinned `Funcdata`/`FlowInfo` raw graph,
-`OpBehavior` arithmetic, and prototype side-effect/stack-pop metadata.
-No pinned upstream files are modified in place.
+`native_runtime/propagation.rs` and `propagation/{state,lang,graph}.rs`
+follow Ghidra 12.1.3's `ConstantPropagationContextEvaluator`,
+`SymbolicPropogator` and `VarnodeContext` (Apache-2.0), checked against the
+extracted release sources. The evaluator supplies pointer policy; it is not
+itself a propagation engine. The Rust implementation runs over the in-process
+kuna-sleigh lift (`native_runtime/flow.rs`), with `OpBehavior` arithmetic from
+kuna-num and prototype side-effect/stack-pop metadata read from the spec.
+`native_runtime/reference_pass.rs` carries the per-round context
+(register contexts, call register, externals, call fixups). No pinned
+upstream file is modified or linked.
 
 Sparse state distinguishes known bits, unknown values and affine incoming
 register values. Partial register writes invalidate overlapping relations;
@@ -278,12 +376,41 @@ Virtual stack offsets are internal identities, never exported pointer values.
 Ordinary calls discard memory facts and non-preserved register facts, then
 apply the prototype's return stack adjustment. Call-to-next handling remains
 with the upstream raw-flow generation.
-Each query creates a temporary symbol-owned function. Its distinct scope id
-prevents collisions with anonymous jump-table recovery clones. Removing the
-query's symbol also removes its analysis body; pre-existing bodies stay intact.
-The end-exclusive query bound is converted to `FlowInfo`'s inclusive bound.
-The out-of-tree flow patch indexes synthetic bounded exits in the visited
-map so branch-target lookup can resolve them.
+Each query builds its own raw graph over the range; nothing is installed in a
+shared function table, so no analysis body or symbol outlives the query.
+The end-exclusive query bound is converted to `FlowInfo`'s inclusive bound,
+and a synthetic bounded exit is indexed in the visited map so branch-target
+lookup can resolve it.
+
+The graph is a Rust port of Ghidra 12.1.3's `FlowInfo` (`cpp/flow.cc`,
+Apache-2.0): instruction following with `addrlist`/`unprocessed`,
+`findRelTarget` and `branchTarget`, `setupCallSpecs`/`checkContainedCall`,
+`truncateIndirectJump` and `earlyJumpTableFail`, and the injection of
+call-fixup and call-other-fixup p-code (`doInjection`, with
+`PcodeInjectLibrarySleigh::parseInject`'s `PcodeSnippet` compiled by the
+vendored kuna-sleigh `compile_snippet`/`inject_pcode`). Stack-pointer,
+default-prototype effect, `extrapop` and pointer-storage data come from the
+pinned processor/compiler spec XML, with the pointer-sized-argument
+assignment following `ModelRules.cc`'s fallback rule. The decompiler's
+jump-table recovery runs in the flow as `FlowInfo::recoverJumpTables` orders
+it (the table first, the return-address test only when no table is found,
+then `truncateIndirectJump`), and the table is the one the import's
+value-set pass (`native/vsa.rs`, `JumpBasic::analyzeGuards` and
+`buildAddresses` of `jumptable.cc`, cited in its own section) finds over the
+ops the flow holds: `propagation/jump.rs` builds the dispatch block, the
+guard blocks and the shapes from the traced instructions and reads the
+image through the lane's loader. A table is kept only when a guard bounds
+the index, every case lies in the traced range, and it holds again once the
+flow it opened is traced (`Graph::follow` strikes one that does not and
+traces the range again, the way Ghidra re-analyses a jump table whose
+function body changed). `Flow::jump_shape` classifies the computation that
+makes a jump's target (a load whose address holds an index, arithmetic with
+no load, a pointer): only the first two are dispatches. A jump with no
+recovered table is treated as a return when it targets the return address and
+as a call otherwise, as before.
+The operand pass reads `SleighInstructionPrototype.getOpObjects` through the
+vendored `Sleigh::operand_objects` / `operand_scalars` (a
+`ParserWalker::get_offset` accessor was added to kuna-sleigh).
 
 Initial-image reads follow the 1/2/4/8-byte, byte-order and nonzero rules.
 Writable initial memory requires explicit trust and becomes unknown after a
@@ -319,7 +446,7 @@ The scalar pass honors `ScalarOperandAnalyzer.getDefaultEnablement2`'s
 instruction-alignment restriction. Aligned ISAs still receive memory and
 computed-use references, but unused address formation is not promoted by
 the scalar pass.
-`native/romwright_operand_refs.hh` walks decoded display operands, not assembly
+The operand pass in `propagation.rs` walks decoded display operands, not assembly
 text or incidental p-code constants. Direct control-flow targets keep their
 flow classification; address literals in comparisons need no pointer output.
 The x86-only computed-address policy follows `X86Analyzer.evaluateContext`
@@ -337,18 +464,19 @@ predecessors. Equal values at a join retain both possible origins. Source
 search shares the propagation operation bound; it does not maintain a second
 copy of every register state. `VarnodeContext`'s last-set lookup provides the
 source policy; when no setter is available, the consuming instruction is used.
-The importer reuses discovery's loaded console and collects the complete pass
-before publishing any of its rows. ELF, PE and DOL mapping permissions use
-the same low three bits; higher ELF section attributes are not wire flags.
-Cross-architecture reference type and origin parity remains gated by m2-002.
+The importer runs the pass over in-process propagation lanes and collects the
+complete pass before publishing any of its rows. ELF, PE and DOL mapping
+permissions use the same low three bits; higher ELF section attributes are not
+wire flags. Cross-architecture reference type and origin parity remains gated
+by m2-002.
 
 Reference context also consumes `CallFixupAnalyzer`'s compiler target-name
 policy (Ghidra 12.1.3, Apache-2.0). Pattern labels with `validcode="function"`
 annotate existing discovered functions only. The selected compiler's
-`InjectPayloadCallfixup` supplies the p-code; `FuncProto.setInjectId` and
-`FlowInfo` apply it. The staged native patch exposes two read-only metadata
-accessors; it does not modify the pinned source tree. Cached labels are
-transient console context, not function discoveries or durable renames.
+`InjectPayloadCallfixup` supplies the p-code (the spec's `<callfixup>` bodies,
+matched to a label by target name); `FuncProto.setInjectId` and `FlowInfo`
+apply it. Labels are transient reference-pass context
+(the import's `pattern_labels` field), not function discoveries or durable renames.
 Scalar classification uses original SLEIGH control-flow targets even when
 the compiler's fixup replaces a CALL in the raw function.
 Symbolic alignment follows `VarnodeContext.and`'s alignment-mask policy.
@@ -397,6 +525,22 @@ priority: USER_DEFINED and IMPORTED become asserted facts; ANALYSIS, AI and
 DEFAULT remain inferred. The bridge reports the source without manufacturing
 a confidence score. Rust persists ownership separately from the producer
 label and preserves assertions when replacing inferred references.
+
+## Jump-table recovery over p-code
+
+`native/vsa.rs` and `native_runtime/propagation/jump.rs` port the method of
+Ghidra 12.1.3's `jumptable.cc` (Apache-2.0) onto SLEIGH's p-code instead of
+the decompiler's SSA form: `JumpBasic::analyzeGuards` (:1061, the guard that
+bounds the switch variable, single-predecessor chains and `maxbranch`),
+`JumpBasic::buildAddresses` (:1451-1478, the emulation of the path that feeds
+the branch once per index value), `JumpValuesRange` (the value range the
+guard gives), `JumpBasic::foldInOneGuard` (:1390, the guard's target follows
+the cases) and `JumpBasic::findDeterminingVarnodes` (:554, the path read
+backwards from the branch). `FlowInfo::recoverJumpTables` (`cpp/flow.cc`) fixes
+the order the reference flow asks in: the table, then the return-address
+test, then `truncateIndirectJump`. No source of m2c, PCSX2 or binutils was
+read for this; the guard and emulation rules are Ghidra's, restated here in
+terms of raw p-code.
 
 ## Reference oracle analysis context
 
@@ -499,3 +643,376 @@ invokes it explicitly. `Function.getParameterCount` includes auto-parameters;
 no C rendering is parsed. Immutable `baseline-*.json` records pin stripped
 input hashes, exporter identity, language/compiler, and the loaded image base.
 DWARF and stock results are joined only in the benchmark, after analysis.
+
+## Rust C printer
+
+`crates/romwright-worker/src/printc/` ports, from the vendored Ghidra 12.1.3
+C++ (Apache-2.0), `PrintC`'s block layer (`printc.cc`: `docFunction`,
+`emitBlockBasic` ... `emitBlockSwitch`, `emitGotoStatement`, `emitAnyLabelStatement`,
+`emitCommentGroup`/`emitCommentBlockTree`), the comment walk of
+`CommentSorter` (`comment.cc`), and `EmitPrettyPrint`, `EmitMarkup` and
+`TokenSplit` (`prettyprint.{hh,cc}`) with `PackedEncode`'s integer and space
+encoding (`marshal.cc`). It was written from those sources; kuna's Rust port
+of the same files ([noelo-Lab/kuna](https://github.com/noelo-Lab/kuna) commit
+`bca4ae8d`, Apache-2.0) was read for comparison only and no code was taken
+from it. `printc/render.rs` (2026-10-09) ports PrintC's expression emission
+from the same tree: `PrintLanguage::pushOp`/`pushAtom`/`recurse`/`parentheses`/
+`emitOp`/`opBinary`/`opUnary`, `printlanguage.cc`'s `mostNaturalBase` and
+`formatBinary`, the `OpToken` table and op handlers of `printc.cc` (`opLoad`,
+`opStore`, `opPtradd`, `opPtrsub`, `opCall*`, `opReturn`, `opIntZext`,
+`opSubpiece`, `opTypeCast`, `opBoolNegate`, `opCbranch`, `push_integer`,
+`pushCharConstant`, `pushConstant`'s default form, `pushSymbol`,
+`pushSymbolScope`, `pushPartialSymbol`, `pushTypeStart`/`pushTypeEnd`,
+`emitExpression`), `TypeStruct::findTruncation`/`TypeArray::getSubEntry`
+(`type.cc`), and `CastStrategyC::isZextCast`/`isSextCast`/`isSubpieceCast`
+(`cast.cc`), plus the mixed-operator grouping rule of this repository's own
+`native/ghidra-opt-sleigh.patch`. `native/romwright_printir.hh` exports, from
+PrintC's own state, the data those routines read (types, symbols, cast
+decisions) and, for the leaves the port does not format, the single token
+PrintC's handler produced (docs/printer-ir.md).
+
+## Desktop rendering and fonts
+
+`crates/romwright-desktop` draws its window with egui/eframe 0.36 and the
+`egui-wgpu` renderer over wgpu 30 (all MIT OR Apache-2.0), docks panels with
+`egui_dock` 0.21 (MIT), and encodes offscreen frames with `png` (MIT OR
+Apache-2.0). The workbench's information architecture, palette roles and line
+icons are Romwright's own, carried over from its earlier desktop frontend; no
+third-party UI code was copied.
+
+The UI typeface is Inter 4.1 (<https://github.com/rsms/inter>) and the code
+typeface JetBrains Mono 2.304 (<https://github.com/JetBrains/JetBrainsMono>),
+both SIL Open Font License 1.1, bundled unmodified with their license texts in
+`crates/romwright-desktop/assets/fonts/`. File hashes are recorded in
+`THIRD_PARTY_NOTICES.md`.
+
+## GameCube REL, CISO/GCM and Yaz0 (P3.1)
+
+`native/rel.rs`, `native/disc.rs` and `native/yaz0.rs` read GameCube RELs, CISO
+and GCM discs, and Yaz0 streams. The REL layout, the relocation-stream opcodes
+(`R_PPC_*` 0-13 plus `R_DOLPHIN_NOP/SECTION/END/MRKREF` 201-204) and the merged
+placement (`align32(__ArenaLo + 0x2000)`, sections 32-byte aligned, module-id
+order) follow encounter/decomp-toolkit v1.8.3 (`src/util/rel.rs`,
+`src/cmd/rel.rs`; MIT OR Apache-2.0). CISO, GCM boot header, FST and Yaz0 follow
+the community format notes (YAGCD; the Yaz0 and CISO pages of the Custom Mario
+Kart / Dolphin wikis). No code was copied from any of them, and no GPL source
+(Dolphin, m2c, binutils) was read. `dtk rel info` and `dtk rel merge` are
+used as test oracles only (`benchmarks/gc_rel_gate.py`, optional in
+`tests/m20-014_rel.py`); the dtk binary is not bundled.
+
+Animal Crossing symbols (`ACreTeam/ac-decomp`, CC0-1.0; see `THIRD_PARTY_NOTICES.md`)
+are the function-recovery truth for `foresta.rel`; they are read from a local
+clone on the measurement host and not copied into this repository. The GameCubeLoader
+extension (Apache-2.0, Cuyler36) is run as the stock comparison only.
+
+## GameCube/Wii disc containers: `nod` (P3.4)
+
+`native/wii.rs` reads RVZ, WIA, WBFS and Wii ISO (encrypted partitions) through
+the `nod` crate, `=2.0.0-alpha.9` (<https://github.com/encounter/nod>, Luke
+Street; **MIT OR Apache-2.0**, taken as recorded in the crate manifest on
+crates.io; maintained, 2.0.0-alpha.9 published 2026-05-26). `nod` is used as a
+library, unmodified, with its default features (bzip2, LZMA, zlib and zstd
+decoders built from vendored C sources; `threading` on, but no preloader thread
+is started). It decodes only the groups a read touches: the boot header, the
+FST, the DOL and the RELs, so a disc of any size is never expanded to an ISO in
+memory or on disk (`native/disc.rs` `Disc::Partition`; the compressed file
+itself is the one captured input, shared by reference).
+
+Transitive crates new to the tree: `aes`/`cbc`/`cipher`/`digest`/`sha1`/`md-5`
+(RustCrypto, MIT OR Apache-2.0), `crc32fast`, `xxhash-rust` (BSL-1.0),
+`encoding_rs` ((Apache-2.0 OR MIT) AND BSD-3-Clause), `zstd-sys` (BSD-3-Clause
+with the vendored zstd), `bzip2-sys`, `liblzma-sys`, `libz-sys` (MIT OR
+Apache-2.0, vendored bzip2 / xz / zlib sources under their own permissive
+terms), `lru`, `itertools`, `bytes`, `dyn-clone`, `zerocopy`,
+`polonius-the-crab`, `tracing`, `crossbeam-*`, `simple_moving_average` (MIT). The
+previous in-tree RVZ chunk decoder and its `zstd` and `lz4_flex` dependencies
+are gone: that decoder handled only a layout that no real RVZ uses.
+
+`nod` carries the Wii common keys it needs to unwrap a title key from the
+disc's own ticket. Romwright adds no key and no key derivation of its own; a
+disc whose partitions it cannot open is refused with `nod`'s error (see the
+plan's legal register, Wii common key/title keys: never ship or commit).
+
+The Wii data-partition layout (`0x5d1c9ea3` at 0x18, DOL offset, FST offset and
+size, and every FST file offset stored shifted right by two) follows YAGCD and
+the Wiibrew disc-format notes; no GPL source (Dolphin, wit) was read.
+
+## GameCube/Wii archives and PlayStation CD images (P3.4b)
+
+`native/archive.rs` lists the files of the two archives games pack their RELs
+in, so `native/disc.rs` links RELs that are not files of the disc's own file
+system (Wind Waker's and Twilight Princess's `RELS.arc`, Skyward Sword's
+`rels.arc`): **RARC** (the RARC pages of the Custom Mario Kart and Luigi's
+Mansion modding wikis) and **U8** (Wiibrew, "U8 archive"), plain or wrapped in
+Yaz0. `native/rel.rs` now places RELs that share a module id as programs of
+their own (Mario Party 4's DLLs); that is a layout decision recorded in
+STATUS.md, not a format. The Yaz0 decoder gained a prefix mode so a directory
+is read without unpacking the archive.
+
+`native/iso9660.rs` and `native/cue.rs` import PlayStation CD images: ECMA-130
+(sector layouts: 12 sync bytes, a 4-byte header with the mode, a mode-2 XA
+subheader), ECMA-119 (ISO9660 volume and directory records), psx-spx ("CDROM
+Disk Images", "CDROM File Formats": 2352- and 2336-byte tracks, the cue-sheet
+grammar; "Executables" for the PS-EXE header, already read by `native/psx.rs`)
+and the cdrdao/CDRWIN cue grammar. `SYSTEM.CNF`'s `BOOT = cdrom:\FILE;1` line
+names the PS-EXE. No code was copied from any of them, and no GPL source
+(PCSX2, mednafen, Dolphin, binutils) was read.
+
+## MWCC symbol demangling (P1.7)
+
+`crates/romwright-core/src/qualified_prototypes/mwcc_demangle.rs` decodes
+Metrowerks (CodeWarrior) C++ mangling. The output spelling and the edge cases
+(`___` runs in names, `Fv_v`-style return types, `Q<n>` scopes, operator
+codes, `$localstatic` forms, array/function-pointer declarators) follow
+encounter/cwdemangle (<https://github.com/encounter/cwdemangle>, CC0-1.0;
+the library inside decomp-toolkit's `dtk demangle`, MIT OR Apache-2.0) as
+observed through `dtk demangle` 1.8.3, which is used as a test oracle only
+(`benchmarks/mwcc_demangle_diff.py`); the dtk binary is not bundled and no
+source was copied. The `T<i>` / `N<n><i>` repeated-parameter back-references
+are an extension that follows the gcc-2 mangling description (the format only;
+no GPL source was read) and are switched off for the oracle comparison
+(`Options::DTK`). Symbol corpora used by the differential: Agent Under Fire
+and Nightfire symbol lists and ELF symbol tables from local projects, and
+`ACreTeam/ac-decomp` symbols (CC0-1.0), read in place and not copied.
+
+## Metrowerks DWARF 1 types (P3.3)
+
+`native/mdebug/dwarf1.rs` (importer) and `benchmarks/dwarf1_types.py` (the
+benchmark's independent reader) decode the DWARF 1 `.debug` stream that
+Metrowerks' MIPS compiler writes into SLUS_209.50. The grammar is the DWARF
+1.1.0 draft (UNIX International, 1992); tag, attribute and fundamental-type
+numbers were checked against the image (names against `.symtab`, sibling
+chains, struct layouts). Two Metrowerks facts are measured, not taken from a
+reference: `long` is 64-bit (303 struct members, none 4), and `FT 0xa510` is
+the 16-byte `I128`/`UI128` multimedia member type. No third-party code was
+read or copied, GPL (gdb, binutils) included. The Rust and Python readers share
+no code; `benchmarks/dwarf1_diff.py` compares them. The Python reader and the
+PSP Puzzle Bobble DWARF 2 are benchmark truth only, never an import input (the
+research input is the llvm-strip'd twin).
+
+## Compiler run-time helper signatures (symbol-name typing)
+
+`oracle/library-prototypes-v1/runtime_helpers.json` (written by
+`scripts/gen_runtime_helpers.py`, applied by `native/store.rs`'s symbol-name
+pass through `library_types/helpers.rs`) declares the signatures of the
+compiler's own helper routines (`__adddf3`, `__udivdi3`, `__fixdfsi`,
+`__aeabi_dadd`, ...). Facts only, from two public documents; no libgcc,
+compiler-rt or any other library source was read:
+
+- GCC Internals, "The GCC low-level runtime library" (sections 3.1, integer
+  routines, and 3.2, soft-float routines), https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html
+  (the GCC manuals are published under the GNU Free Documentation License;
+  only the routine names and their stated argument and result modes were
+  transcribed, no prose). The document types these by machine mode with
+  illustrative C types (`long` for `DImode`), so the table keeps the mode and
+  the runtime resolves it against the language's own type widths.
+- Run-time ABI for the Arm Architecture (`rtabi32`, release 2025Q4, Arm
+  Limited, CC-BY-SA-4.0 with a patent license), https://github.com/ARM-software/abi-aa/blob/main/rtabi32/rtabi32.rst
+  (the `__aeabi_*` floating-point, long long, integer division, unaligned
+  access and memory helpers; signatures only).
+
+Not covered, each for the stated reason: complex-number routines (no C spelling
+for the result), `_BitInt` routines (target-defined limb type), decimal-float
+and fixed-point routines (`_Decimal32`, `_Fract` and kin are in no language's
+type document, so no row could ever be applied), `__value_in_regs` aggregate
+returns (`__aeabi_idivmod`, `__aeabi_ldivmod`), the obsolete `__aeabi_fneg` and
+`__aeabi_dneg`, and the C++ vector helpers. The MIPS and PowerPC EABI
+documents name no C-level helper signatures (their out-of-line routines are
+register-convention save/restore stubs), so nothing from them is recorded.
+
+## dtk / splat / objdiff project files (P1.9, P2.1)
+
+`crates/romwright-core/src/export.rs` writes decomp-toolkit `config.yml`,
+`splits.txt` and `symbols.txt`, splat `<name>.yaml` and `symbol_addrs.txt`, and
+objdiff `objdiff.json` units, and reads objdiff-cli `report generate` JSON.
+Formats and behaviour only: dtk's symbol grammar (`name = section:0xADDR; //
+type:function size:0x.. scope:global`), the `Sections:` block (entries bind to
+a DOL's sections by position, names must not contain `:`), `dtk dol diff`'s
+per-symbol check, and the `config.json` `autogenerated` units (decomp-toolkit
+1.8.3, MIT OR Apache-2.0, observed through the binary; no source copied);
+splat's option set, segment list (`start` is a file offset; the last entry is
+the end offset), `symbol_addrs.txt` attributes and its duplicate/filename rules
+(splat 0.39.1, MIT, read from its documented behaviour and error messages; no
+source copied); objdiff 3.6.1's `objdiff.json` unit keys (`metadata.complete`,
+`auto_generated`, `source_path`), report JSON (64-bit counters as strings,
+zero fields omitted, `functions` arrays) and `report changes` shape (MIT OR
+Apache-2.0, observed through objdiff-cli; no source copied). None of the three
+tools is bundled; they are test oracles only.
+
+## N64 segment layouts and codecs (P3.3)
+
+`native/n64_codec.rs` and `native/n64_layouts.json` unpack the code a Nintendo
+64 ROM stores compressed. Written from format facts, no code ported:
+
+- **MIO0** and **Yay0**: Hack64 wiki pages "MIO0 Compression"
+  (`super_mario_64:mio0`) and "YAY0 Compression" (`paper_mario:yay0`) for the
+  header, layout bitmap, 16-bit back reference and the extended length; the
+  MIO0 page's own game list (Super Mario 64, Mario Kart 64, F-Zero X, Star Fox
+  64, Wave Race 64, Pilotwings 64, ...). **Yaz0**: nintendo-formats.com "Yaz0"
+  (`libs/sead/yaz0`) for the header and the code-byte groups; Ocarina of Time
+  and Majora's Mask use it. Wiki text is documentation; none of it is copied.
+  The libraries those pages list (queueram/sm64tools, ...) were not read.
+- **Rare zlib** (`0x1172`, `0x1173`) and the Perfect Dark segment layout: the
+  `n64decomp/perfect_dark` repository (MIT, Copyright (c) 2022 Ryan Dwyer)
+  documents it in `tools/rareunzip`, `tools/extract-segment`, `tools/extract`
+  (magic, 3-byte length, raw DEFLATE; a game segment as a table of offsets to
+  4 KiB pages; the `lib`/`data`/`game` ROM offsets of each revision) and
+  `ld/pd.ld` (segment order and RAM addresses). Those scripts are MIT and were
+  read for their facts; each fact in the layout was re-measured against the
+  ROM bytes (declared lengths equal inflated lengths; segment sizes equal the
+  linker script's RAM ranges). The decomp's `tools/gzip` and `tools/mkrom`
+  contain GPL-derived gzip code and were not opened. DEFLATE itself is
+  `miniz_oxide` (MIT OR Zlib OR Apache-2.0), already a dependency.
+- **Stock comparison**: the N64LoaderWV extension (zeroKilo, built from
+  `~/opt/n64loader-src` with the repo's Ghidra 12.1.3 patch) was run headless
+  as a measurement; no code from it is used.
+
+### N64 layout discovery from the ROM's bytes (`native/n64_discovery.rs`, 2026-10-10)
+
+The importer finds segments and overlays for ROMs the catalog does not list.
+What it relies on, and where each fact comes from:
+
+- **Entry point per CIC variant**: n64brew wiki "CIC-NUS" (the "Game
+  Entrypoint" column: `u32@0x08` for 6101/6102/6105, `-0x100000` for 6103/7103,
+  `-0x200000` for 6106/7106). The importer does not identify the chip: it takes
+  whichever of the three candidates the boot code's own `jal` targets agree
+  with. Wiki text is documentation; none of it is copied.
+- **MIPS encodings**: `jal` (opcode 3, 26-bit word index, region of the
+  delay-slot PC), `lui`/`addiu`/`ori` constant pairs, `addiu sp, sp, -N` and
+  `jr ra` as the o32 prologue/epilogue, and the reserved opcodes and
+  must-be-zero fields used to tell code from data. Standard MIPS III; the
+  pinned Ghidra MIPS SLEIGH spec (Apache-2.0, already a dependency) agrees.
+- **Packed-file headers**: Yaz0 / MIO0 / Yay0 as above. The Banjo-Kazooie
+  `0x1172` header (magic, 4-byte big-endian inflated length, raw DEFLATE) was
+  measured on that ROM, not read from a source: at every stream the length
+  equals what inflates.
+- **Truth** (benchmarks only, never an importer input):
+  `~/ventris-corpus/extracted/n64-<slug>/truth/{layout.json,functions.tsv}`
+  from the matching decomps (`zeldaret/oot`, `zeldaret/mm`, `n64decomp/sm64`,
+  `n64decomp/banjo-kazooie`, `pmret/papermario`, `n64decomp/perfect_dark`,
+  `sonicdcer/sf64`, `VetriTheRetri/ssb-decomp-re`, `AngheloAlf/drmario64`; GPL
+  or unlicensed). `benchmarks/n64_layout_score.py` reads them after the
+  import; no file, address or name from them is in the importer, the catalog
+  or the tests.
+
+## Calling-convention work: IDO o32 and MWCC register-save helpers (P2.3, P2.4)
+
+- **o32 argument slots** (`romwright-worker` `specs.rs::with_o32_argument_rules`):
+  the MIPS o32 convention as the MIPS ABI handbook states it (word slots; a
+  leading float run in `f12`/`f14` shadowing `a0`/`a1`; stack arguments from
+  `sp+16`), written with the decompiler's own `<group>`/`<rule>` constructs,
+  following the shape the pinned stock MIPS32 spec (Ghidra 12.1.3, Apache-2.0)
+  already uses for the same convention. No code from m2c, IDO recomp or
+  binutils (GPL, reference-only) was read or copied.
+- **MWCC `_savegpr_N`/`_restgpr_N`/`_savefpr_N`/`_restfpr_N`**
+  (`native/mwcc_runtime.rs`, `specs.rs::mwcc_callfixups`): the sled layout was
+  read off the retail bytes of Animal Crossing `main.dol` (0x8009ae00..0x8009af2c)
+  and agrees with the labels decomp-toolkit (MIT OR Apache-2.0) and ac-decomp
+  (CC0-1.0) assign. The pinned Gekko spec's own `_savegpr_N`/`_restgpr_N`
+  fixups address through `r1`; the helper addresses through `r11`, so ours
+  replace them.
+- **Truth** (benchmarks only, never an import input): `n64decomp/perfect_dark`
+  (MIT) function names, C prototypes and link order via
+  `benchmarks/pd_ido_truth.py`; function addresses are derived from the ROM's
+  own bytes (the game segment is inflated by a decoder written from the Rare
+  zlib format facts, not ported from the decomp's `tools/extract`);
+  `ACreTeam/ac-decomp` (CC0-1.0) via `benchmarks/ac_mwcc_truth.py`. The PD
+  decomp's clone lives under `~/opt` on the build host and is not committed.
+
+## Soft-float PSX and GBA conventions (P2.5)
+
+- **PS-EXE `$gp`** (`native/psx.rs`): psx-spx "Executables" (initial GP at header
+  offset 0x14, zero meaning the program sets it) plus a scan of the file's own
+  crt0 bytes for psyq's `lui gp,hi; addiu/ori gp,gp,lo`. Validated against the
+  linker map's section table (Darkstalkers 3's `.sdata` starts at the value the
+  scan finds), and against 302 of 313 `$gp`-based loads and stores landing in
+  `.sdata`/`.sbss`. No psyq source or header was used.
+- **psyq o32 soft-float** (`specs.rs::with_psyq_soft_float`): the R3000A has no
+  FPU, so the float slots of the PSX spec are removed. Written from the
+  hardware fact, not from a psyq header.
+- **agbcc / APCS**: no cspec change. The pinned `ARM-LE-32-v4t` spec is already
+  soft-float with `r4`..`r11`/`sp` callee-saved; the only APCS/AAPCS difference
+  that matters (a 64-bit argument's register pairing) is not visible in
+  pokeemerald, which passes no `float`/`double`/`s64`, so it was not changed.
+  The two hand-assembled bundles `ARM-LE-32-v4t-apcs` (byte-identical to
+  `ARM-LE-32-v4t`) and `PSX-LE-32-psyq-soft` (no language to select it) from an
+  earlier commit were never wired to anything and are removed.
+
+## PSX language (P4.1 GTE decode)
+
+`native/languages/psx` builds `PSX:LE:32:default` from sources we may use:
+
+- **MIPS base**: Ghidra 12.1.3's MIPS32 little-endian SLEIGH (`mips.sinc`,
+  `mips32Instructions.sinc`, `mipsfloat.sinc`), `mips32le.cspec`, `mips32.pspec`
+  (Apache-2.0, vendored in `third_party/ghidra/languages/mips`). `install.sh`
+  stages those files, applies `stock-cop2.patch` (removes the generic
+  `mfc2`/`mtc2`/`cfc2`/`ctc2`; adds the GTE fields to the `instr` token, because
+  a constructor cannot mix fields of two tokens) and compiles `psx.slaspec`. The
+  MIPS16/microMIPS/MT/DSP sets of the stock slaspec are not included: the
+  R3000A has none of them. `psx.cspec` is `mips32le.cspec` plus one `<range>` for
+  the GTE register block; `psx.pspec` is `mips32.pspec` minus the MIPS:BE
+  assembly rating.
+- **GTE/COP2** (`gte.sinc`): psx-spx, "Geometry Transformation Engine (GTE)":
+  the cop2r0-63 register map and names, `mfc2`/`mtc2`/`cfc2`/`ctc2`/`lwc2`/`swc2`
+  semantics (SXYP FIFO push, IRGB to IR1-3, LZCS to LZCR, 16-bit extension of
+  narrow registers, read-only ORGB/LZCR, FLAG bit 31), and the command word
+  (`0100101` + `sf` bit 19, `mx` 18:17, `v` 16:15, `cv` 14:13, `lm` bit 10,
+  command number bits 5:0) with the 22 command numbers RTPS 0x01, NCLIP 0x06,
+  OP 0x0C, DPCS 0x10, INTPL 0x11, MVMVA 0x12, NCDS 0x13, CDP 0x14, NCDT 0x16,
+  NCCS 0x1B, CC 0x1C, NCS 0x1E, NCT 0x20, SQR 0x28, DCPL 0x29, DPCT 0x2A,
+  AVSZ3 0x2D, AVSZ4 0x2E, RTPT 0x30, GPF 0x3D, GPL 0x3E, NCCT 0x3F. Each command
+  is a named pcodeop `gte_<command>(...)` with its decoded flag fields as
+  arguments. The arithmetic of a command is not modelled.
+- **Inline-macro lifter** (`crates/romwright-worker/src/printc/gte.rs`, P4.1):
+  prints GTE register moves and commands as one call per macro. Sources: the
+  command names (`RTPS`, `RTPT`, `NCLIP`, `AVSZ3`, ...), register names and the
+  register-to-memory moves are psx-spx's (same chapter as above). The macro
+  names that group several moves (`gte_ldv0`..`gte_ldv3`, `gte_ldsxy3`,
+  `gte_stsxy3`, `gte_stlvnl`, `gte_SetRotMatrix`, ...) and the short store
+  names (`gte_stsxy`, `gte_stsz`, `gte_stotz`, `gte_stopz`, `gte_stdp`,
+  `gte_strgb`) are the PlayStation SDK's inline-macro API names, written from
+  knowledge of that public interface: a name, its argument roles and the
+  registers it moves. No SDK header, source, table or documentation text was
+  read or copied, no open SDK (PSn00bSDK included) was consulted or
+  vendored, and the argument layouts (a vertex is `VXYn` from `p` and `VZn`
+  from `p+4`; the translation vector sits at `p+20`) are the structures'
+  documented layouts. The names are labels for the reader, not a claim of
+  byte-for-byte SDK equivalence; they have not been checked against an SDK
+  install. The deleted `gte_lift.rs` (whose tables came from PsxLoader's
+  `inline_s.sinc`) was not consulted.
+- **Not used**: `lab313ru/ghidra_psx_ldr` ("PsxLoader"): no licence file and no
+  licence headers. Its `cop2_regs`, `gtemac`, `inline_c`, `inline_s`,
+  `macro_addrs` `.sinc` files and its `mips.ldefs`, `mips32.pspec`,
+  `mips32le.cspec` and the bundle's `cspec.xml`/`pspec.xml` were byte-identical
+  copies and are removed; `mips.sinc`/`mips32Instructions.sinc` were its
+  modified MIPS copies and are replaced by the stock files plus
+  `stock-cop2.patch`. The PsxLoader jar remains a Ghidra-side baseline loader
+  only; `install.sh` moves its `data/languages` out of the scanned tree so the
+  language id resolves to ours.
+
+## XEX2 normal (LZX) compression
+
+`crates/romwright-core/src/native/xex.rs` decodes the base file format's
+compression mode 2 as a chain of blocks (`nextSize: u32`, a 20-byte hash,
+then big-endian `u16` length-prefixed chunks, a zero length ending the block)
+whose chunks are the frames of one LZX stream, windowed by the header's
+`window_size`.
+
+- **LZX bitstream**: Microsoft's public [MS-PATCH] LZX DELTA Compression and
+  Decompression specification (block types, pretree/path-length coding,
+  16-bit-aligned frames of 32 KiB of output). It is decoded by the
+  [`lzxd`](https://crates.io/crates/lzxd) crate (`MIT OR Apache-2.0`), which
+  implements that specification and is a normal dependency; the regression
+  test's bit writer is written from the same specification.
+- **Block chain and chunk framing**: checked against the BSD-3-Clause xenia
+  XEX loader (`src/xenia/cpu/xex_module.cc`, the de-blocking loop: a block is
+  `cur_block->block_size` bytes long, its 4+20-byte header names the *next*
+  block, chunks are `u16` BE length plus payload until a zero length) and
+  against XEXLoaderWV (Apache-2.0, already cited above). Only the structure
+  was taken; xenia's bundled mspack-derived LZX code (LGPL) was not read or
+  used, and neither were libmspack or wimlib.
+- **Frame = chunk**: not stated by the references above; established on a real
+  devkit image (59 blocks, 286 chunks, image size `0x8f0000` = 286 x `0x8000`)
+  and confirmed by the decoded image matching the separately staged raw PE.
+  No game bytes are in the repository; the regression test builds its LZX and
+  XEX structures from the public layouts.

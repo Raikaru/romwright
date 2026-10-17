@@ -165,6 +165,11 @@ Order is disassembly-first, in-install specs before greenfield.
   PsxLoader/N64Loader/NdsLoader/SwitchLoader/GhidraSPU/XEXLoaderWV/
   Ghidra3DS (no license on disk), Project_CTR (unlicensed),
   re4sym/fado/mwcc-rs/ida-gekko-pseudocode (confirm before porting).
+  2026-10-08: `native/languages/psx` had carried byte-identical copies of
+  PsxLoader's `.sinc`/cspec/pspec/ldefs files (no licence file, no file
+  headers). They were replaced by a clean-room language (stock Ghidra MIPS,
+  Apache-2.0, plus GTE definitions from psx-spx); a hash check of every
+  `~/opt/psxloader-src` file against the repo now finds no match.
 - **Never ship or commit:** any console key or key derivation
   (Switch prod/dev keys, Wii common key/title keys, NPDRM
   RAP/RIF/klicensee, 3DS titlekeys, X360 session keys), proprietary
@@ -201,6 +206,63 @@ Order is disassembly-first, in-install specs before greenfield.
 6. Corpus additions (each retail/user-owned image needs approval per
    `docs/third-party.md`).
 
+### Decisions taken (2026-10-08, maintainer-approved)
+
+1. Overlay model: shared program + `module_id` (already built; ratified).
+   Refinement (P3.12, 2026-10-08): modules whose windows do not overlap (GC
+   DOL + RELs, N64 segments) are rows of one program; modules that share a
+   window (DS overlays, N64 overlay sets) are one program each with one `modules`
+   row, because a program's facts are keyed by address. `locate` answers per
+   (program, module) with the module id; resident memory is its own program.
+2. Gekko PS emission: scalarized `{ps0,ps1}` lane C (already built; ratified).
+3. PS3 SPU: out of scope; PPU only, SPU images stay data.
+4. P4.6 pin: pokeemerald (agbcc) through the m22 harness; other platforms
+   are added only when their fixtures are held.
+5. Switch crate: neither for now (NCA/XCI chain deferred, see below).
+6. Corpus: Capcom's DWARF 1 (`SLUS_209.50`) and PSP Puzzle Bobble's DWARF
+   are approved as type-truth sources (stripped twins as analysis input).
+
+### Revised order and deferrals (2026-10-08)
+
+Grounded in the decomp.dev project census (GameCube 50, Wii 30, PS1 30,
+PS2 29, N64 24, Windows 21, GBA 16, NDS 12, X360 7, Switch 6, Xbox 2,
+PSP 1, 3DS 1). Goto removal is judged by fake matches avoided (a match
+that only holds through `goto` does not reproduce the source's control
+flow), not by the m22 score delta, which structuring moved by 0.001.
+
+Order: (1) run every plan gate runnable on held fixtures; (2) P3.1 REL on
+Animal Crossing (`foresta.rel.szs` holds the game code; the research `gc`
+image is `main.dol` only); (3) P3.9 DWARF 1 + `.mdebug` types as truth and
+facts; (4) ABI correctness P2.5, P2.4, P2.3; (5) P3.2/P3.3 PSX and N64
+overlays, P1.6 certification, P3.12 rename isolation; (6) variable/stack
+recovery against DWARF; (7) P4.6 with the m22 context fix; then P4.1/P4.3,
+P1.3 with one adapter (PCSX2 PINE), a Rust-ownership metric. In parallel
+with all of these: expression equality in the printer IR, then the
+remaining goto passes (switch-lowering reversal, jump-threading reversal,
+loop re-rolling, de-duplication of compiler-copied regions).
+
+P4.6 status (2026-10-09, STATUS.md "P4.6 match-shaped emission"): the m22
+context variant compiles (`context.h` no longer redeclares libc built-ins);
+pokeemerald through m22 scores 75.7 mean / 9 exact in context (63.5 / 6
+before), and the gate holds there: token distance to m2c 510 against stock's
+516 on the five functions stock has output for, objdiff at or above m2c on
+26 of 33 (33 of 33 standalone). The sm64 and `base.elf` rows have no fixture.
+
+Deferred, with the reason:
+- P2.2 hosted fact service: operating a service keyed to retail-binary
+  hashes; file export (dtk/splat/objdiff) already covers sharing.
+- P3.11 further emulator adapters: prove P1.3 end to end on one first.
+- P4.4/P4.5 lifting microcode to C: projects keep RSP/VU microcode as asm;
+  disassembly is the deliverable, decompile falls back to it.
+- P3.6 NCA/XCI chain (per-user keys; projects extract NSOs already). The
+  multi-NSO rtld link (main + subsdk) is kept.
+- P3.7 XBE/3DS (2 and 1 projects); XEX is done.
+- P3.8 PS2 IRX: IOP modules are mostly SDK code reached over SIF RPC, not
+  the EE program projects decompile.
+- Retypd and a general block/varnode export: no measured benefit at
+  current truth density.
+- P2.7 MND `.SYM`: no fixture held.
+
 ## 8. Verification discipline
 
 - No milestone lands without its `tests/mX-NNN_*.py|.sh` gate, its
@@ -211,3 +273,61 @@ Order is disassembly-first, in-install specs before greenfield.
 - Standing regressions on every commit: `cargo test --workspace`,
   `tests/corpus.sh`, `tests/ppc_sda.sh`,
   `tests/generic_discovery_test.sh`, m10 sweep once P1.2 lands.
+
+## 9. Status of the ABI rows (2026-10-08)
+
+- **P2.3 (MWCC):** done on Animal Crossing. `_savegpr/_restgpr/_savefpr/_restfpr`
+  entries are named from their bytes (`native/mwcc_runtime.rs`) and expanded by
+  `r11`-based call fixups (`specs.rs`); the pinned spec's `r1`-based ones are
+  replaced. On 200 functions calling `_savegpr_14..26`: arity 46% -> 95.5%
+  (stock 46%), irregular inputs 283 -> 2. `fmadds` family and the `r3:r4`
+  8-byte return were already right and now have tests. The plan's `base.elf`
+  oracle gate stays open (not held); the ac-decomp truth stands in. See STATUS.md.
+- **P2.4 (IDO o32):** the f12/f14 hole rule, the `sp+16` stack start and float
+  typing of FP-register parameters are done (PD, 4086 truth functions derived
+  from the ROM): float-subset signature agreement 43% -> 73% (stock 44%). The
+  `gp` small-data range has no PD instance (`-G 0`); the sm64/oot gates named in
+  the row are not held. Switch case counts equal stock on common functions; 18
+  jump tables both tools lose remain.
+- **P2.5 (soft-float):** PSX gets a soft-float convention (a declared `float` is
+  `a0`, no FP register is callee-saved) and its crt0 `$gp`, so `$gp`-relative
+  accesses name the `.sdata`/`.sbss` globals they address (243 `uGp...` tokens in
+  71 functions -> 0). GBA: the ARM v4t convention was already agbcc-correct;
+  arity agrees with the source on 97% of the 200-function sample, the misses
+  being parameters the code never reads. See STATUS.md.
+
+## 10. Status after the 2026-10-08 run
+
+Each row's numbers and commands are in the STATUS.md section named after it.
+
+| Item | State | Measured |
+|---|---|---|
+| P0.1 | done | m5-013 recall 0.9742 |
+| P1.5 MAP | done | 0.9993 MAP FUNC rows hit same-address ELF FUNC |
+| P1.6 DS overlays | done | 2772 -> 0 wrong-overlay names; precision ties NTRGhidra (0.99833), recall +0.109 |
+| P1.7 MWCC demangle | done | 16,032/16,032 agree with `dtk demangle`; wired into import (display names, parameter prototypes) |
+| P1.8 qualified prototypes | done | `declared_qualified_for` is the only library-prototype path |
+| P1.9 / P2.1 export | done | dtk split clean, splat 0.39.1 rc 0 on PSX/PS2/PSP/N64, objdiff 707 units equal control; `dtk dol diff` residue is discovery |
+| P2.3 / P2.4 / P2.5 ABI | done | section 9 |
+| P2.8 containers | partial | PS2 ISO, GC CISO and PSX BIN/CUE pass (P3.4b); PBP, NRO not held |
+| P3.4 Wii/GC disc containers | done | RVZ, WIA, WBFS and Wii ISO (encrypted partitions) import through `nod` lazily, GC CISO through `disc.rs`; project tables identical to the decompressed ISO on every disc checked (STATUS.md, RvzNkit) |
+| P3.4b disc layers | done | RELs in RARC/U8 archives link like file-system RELs (TWW 415/415, TP 757/757, SS 636/636), same-id RELs are overlay programs (MP4 99/99), PS1 `.cue`/raw `.bin` import their boot PS-EXE (7 discs, function sets identical to the staged EXEs); STATUS.md, DiscLayer |
+| P3.1 REL | done | Animal Crossing foresta recall 0.9993 vs GameCubeLoader 0.9414; relocations byte-equal to dtk |
+| P3.3 N64 | done for 9 games | Perfect Dark through its catalog entry (145 -> 5485 functions, recall 0.9491 vs N64LoaderWV 0.0; its TLB-mapped layout is not discoverable generically, so the entry stays); generic layout discovery (`native/n64_discovery.rs`, 0 wrong vram) for the other eight: main recall OoT .045 -> .984, MM .104 -> .978, Banjo-Kazooie / SSB / Paper Mario 0 -> .95+, overlays .84-.99 (STATUS.md, N64Layouts) |
+| P3.9 DWARF 1 | done | Capcom types: Rust and Python readers agree 5221/5221; `.mdebug` types not read (no held image has them) |
+| P3.12 isolation | done | per-overlay programs; `tests/m10-005_overlay_isolation.py` |
+| P4.1 GTE | done | clean-room language + psyq-style macro lifter (`printc/gte.rs`, default on): synthetic RTPT/NCLIP/AVSZ3 routine 14 MIPS instructions / 13 statements -> 6 calls, matrix setup 17 / 8 -> 2 (`tests/p4-1_gte_macros.py`); held PSX image (VS.EXE) has 3 functions with GTE moves (10 `ctc2`), 0 commands, 0 lifted, all 2206 functions print identically with the pass on and off |
+| P4.3 VU0 | done | opaque VU calls in VU0 functions 883 -> 14 (Capcom), 984 -> 12 (dungeon) |
+| P4.6 match-shaped emission | done on the pinned row | m22 ROM 64.14/6 exact -> 75.73/9; ours >= m2c on 26/33 (context) |
+| PSP | added | stripped discovery recall 0.9453 vs stock 0.7990; symtab arity 0.8828 vs 0.7931 |
+| Switch tables | done | stored tables supply 100% of printed switches (Rust-owned share 0% -> 61.8%) |
+| Constant propagation in Rust | done | `native-analysis:constant-propagation` / `data-width` facts computed in process (`native_runtime/propagation*`), not by the console: project tables identical to the console-driven import on 5 of 10 images (dungeon, psx, gc, both PSP), every differing range on the other five classified as a jump table only one side follows (STATUS.md, ConstPropRust); m21 unchanged or up (GBA .9737 -> .9761); discovery-stage facts 100% Rust by provenance; imports 1.1-2.6x faster in paired runs (dungeon 8.3 -> 5.1 s, psx 10.2 -> 6.2 s, gc 14.5 -> 10.4 s, x360 152 -> 96 s) |
+| SLEIGH console retired | done | every console caller (flow for nonreturn, ELF initializers, demand walks; the CLI/API/desktop `disasm` and listing; the m13 decode oracle) runs on the in-process kuna-sleigh lifter; `decomp_native`, `build_console.sh`, `ROMWRIGHT_FLOW_DIFFERENTIAL*` and 453 lines of first-party C++ are gone (net -422), `ghidra_opt` is the only native process and builds without `binutils-devel`; m21-001 identical on all 7 images, paired imports unchanged (gba 18.1 -> 18.0 s, gc 3.55 -> 3.53 s, x360 36.7 -> 36.7 s); `disasm` now lists the N instructions asked for instead of stopping at the console's flow-derived function end (STATUS.md, ConsoleRetire) |
+| XEX LZX | done | compression-2 block chains walked; AMPED 3 imports 35,573 functions, other XEX images unchanged (STATUS.md, XexLzx) |
+| GBA RAM overlays | done | `native/gba/overlays.rs` places code copied to RAM: NASCAR Heat 0 -> 353/456 copied functions, Golden Sun 96/96 scene overlays as `gba.ov<N>` programs; m21 gba .9761/.9972 (STATUS.md, GbaOverlays) |
+| Import memory | done | mmap'd artifacts plus one parsed-image snapshot handed to workers: peak RSS Dark Cloud 16.0 -> 0.6 GB, Wii RVZ 16.9 -> 1.8 GB, Dark Chronicle OOM -> 0.95 GB; tables identical (STATUS.md, ImageMemory) |
+| Switch determinism | done | a deterministic work budget (75M units) replaces the 60 s wall clock, lanes fixed at 4: 0 differing rows between idle and CPU-starved hosts on psv/AW/capcom; the 13 heaviest dispatchers are refused and named as partial; paired imports faster in all 8 pairs (psv 147 -> 91 s, nds 119 -> 68 s); ghidra_opt dbd7e74b (STATUS.md, SwitchDeterminism) |
+| GC/Wii DOL discovery | done | sweep entries exempt from span-sharing retraction, DOLs seed data pointers: main recall Skyward Sword .594 -> .989, Galaxy .857 -> .997, NPC Pikmin 2 .701 -> .998, Rock Band 3 .866 -> .987, Strikers Charged .900 -> .997, GC Pikmin 2 .828 -> .9998, Melee/TW04 unchanged; precision 99.35-99.93%; m21 identical (STATUS.md, WiiDiscovery) |
+| Per-program cost | done | worker snapshot reuses the importing process's image, SLEIGH decoders pooled, independent programs run side by side (rows identical at any job count): paired, Golden Sun 55.3 -> 12.0 s, Paper Mario 131.4 -> 21.1 s, Mario Party 4 51.1 -> 21.4 s, KH 358/2 Days 66.3 -> 16.6 s, single-program images flat (STATUS.md, ProgramOverhead) |
+| Corpus wave (58 games, 9 platforms) | done | `console_research_wave_20261010` (tools 5d47c57f; n=500 x seeds 1,2; 55 headline games): discovery recall vs stock 51 wins / 0 losses / 2 ties (p < 1e-5), winning on every platform; precision vs stock 14/12 (p = 0.42), lost on PS2 (1/5) and PSP (1/3); vs baseline-off precision 20/0 and recall 8/0. Stock DNF on FE Sacred Stones (>4 h), stock crash on KH Chain of Memories; both are labelled rows and in no test (docs/console-research.md "Final run") |
+| PS2 discovery | done | alignment fill is no function start, the boundary sweep and data-pointer seeding run for stripped MIPS ELF executables, a frame opener after a `nop` starts a function: recall (wave truth) Fatal Frame .937 -> .996, God Hand .971 -> .998, Persona 4 .986 -> .999, Dark Chronicle .984 -> .999, Dark Cloud .984 -> .999, Digital Devil Saga .985 -> .997, Ratchet & Clank .646 -> .688 (.861 -> .928 on the audited truth), PAL .854 -> .908; uncovered misses of 64+ bytes 167/109/52/43/40/38 -> 1/0/1/0/2/1; functions on fill words 24 -> 1; precision still below stock's (STATUS.md, Ps2Recall; docs/console-research.md "Supplement: PS2 discovery") |

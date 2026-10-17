@@ -1,9 +1,17 @@
 # GOAL
 
 The Stage-4 JVM-free workflow is the verified baseline, not the full completion
-claim. The ratified milestone roadmap requires program-model parity with
-Ghidra (C1), improvements over stock Ghidra measured against ground truth
-(C2), and measured game-first sessions on the approved targets (C3).
+claim. The ratified milestone roadmap requires program-model accuracy equal to
+or better than stock Ghidra against ground truth (C1), improvements over stock
+Ghidra measured against ground truth (C2), and measured game-first sessions on
+the approved targets (C3).
+
+C1 covers every gated program-model fact (discovery, references, prototypes,
+switch tables, strings, library identification, C++ facts): accuracy against
+ground truth (symbols, DWARF, linker maps, objdiff) is equal to or better than
+stock Ghidra's. Where a fact has no ground truth, stock Ghidra stays the
+reference and the parity gate applies. Stock Ghidra is otherwise a baseline
+to beat, reported as the margin by which we lead it, not a target to match.
 
 ## Stages
 
@@ -28,9 +36,10 @@ Ghidra (C1), improvements over stock Ghidra measured against ground truth
 - M1 discovery is verified on the current tree: all 20 ELF rows have
   precision/recall 1.0. The held DOL has recall 0.993789 and precision
   0.956652; its acceptance gate constrains recall, not precision.
-- M2 program-model parity: constant propagation, data references and strings,
-  inferred prototypes, switch recovery, library identification and C++ facts.
-  The parity gate, not discovery alone, establishes C1.
+- M2 program model at or above stock Ghidra: constant propagation, data
+  references and strings, inferred prototypes, switch recovery, library
+  identification and C++ facts. The ground-truth gates (and the parity gate
+  for facts without ground truth), not discovery alone, establish C1.
 - M3 ground-truth gates pass: fresh DWARF scoring, the reproduced stock
   baseline and fresh regression scoring. The frozen comparison covers 20 ELF
   rows; the broader DWARF gate retains its explicit exemptions.

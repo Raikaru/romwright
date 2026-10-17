@@ -31,4 +31,37 @@ Ghidra is licensed under Apache-2.0; its own NOTICE attribution follows from
 that licence, and every vendored byte is hashed in
 third_party/ghidra/MANIFEST.sha256 so the "unmodified" claim is checkable.
 
+Kuna SLEIGH runtime
+-------------------
+Romwright links the `kuna-sleigh`, `kuna-base` and `kuna-num` crates of kuna
+(https://github.com/noelo-Lab/kuna, commit
+c4f735f903026ec486a47f395e0e9944069e95e5), licensed under Apache-2.0, to lift
+SLEIGH p-code in process. Kuna's NOTICE reads, in the parts that pertain to
+those crates:
+
+    kuna
+    Copyright 2026 The kuna Authors
+
+    kuna is derived from Ghidra (https://github.com/NationalSecurityAgency/ghidra),
+    released under the Apache License, Version 2.0. The decompiler engine and the
+    SLEIGH compiler are a Rust port of Ghidra's C++ decompiler and SLEIGH compiler
+    (sleigh_opt); the SLEIGH processor specifications (specs/Ghidra/Processors/)
+    and the decompiler regression corpus (tests/datatests/) are vendored from
+    Ghidra. The pinned upstream commit is recorded in docs/UPSTREAM.md.
+
+    The following attribution is reproduced from Ghidra's NOTICE file:
+
+        Ghidra
+
+        This product includes software developed at National Security Agency
+        (https://www.nsa.gov)
+
+        Portions of this product were created by the U.S. Government and not
+        subject to U.S. copyright protections under 17 U.S.C.
+
+        The remaining portions are copyright their respective authors and have
+        been contributed under the terms of one or more open source licenses,
+        and made available to you under the terms of those licenses. (See
+        LICENSE)
+
 See THIRD_PARTY_NOTICES.md for the provenance and distribution boundary.

@@ -1,6 +1,6 @@
 # The Core API
 
-`romwright-api` exposes the Core service over stdio and HTTP. The Qt bridge
+`romwright-api` exposes the Core service over stdio and HTTP. The desktop
 and CLI dispatch the same typed Core operations. Analysis facts remain in
 the project store; matching candidates and trial evidence have separate
 history and do not silently become native analysis facts.
@@ -117,11 +117,13 @@ states does not pay for the rest, and a kind that does not exist is
 {"api": 2, "id": 12, "error": {"code": "invalid_params"}}
 ```
 
-## What needs the SLEIGH console
+## What needs the pinned Ghidra install
 
-`xrefs` answers from the store, and the store holds more when the SLEIGH
-console proved more: the call into `add` is a flow fact, while the reference
-from the unwind tables is a loader fact. `decompile_doc` needs the console
+`xrefs` answers from the store, and the store holds more when the in-process
+SLEIGH decoder proved more: the call into `add` is a flow fact, while the
+reference from the unwind tables is a loader fact. The decoder reads its
+language data from the pinned Ghidra install, so an import made without it
+proves less. `decompile_doc` needs the install and the native decompiler
 outright. Both still start no JVM.
 
 The `function` field names the function whose body contains the *source*
@@ -153,17 +155,31 @@ assertions fail export rather than silently dropping the contract. Unreferenced
 assertions are not parsed. This does not certify arbitrary C frontend support
 or semantic equivalence of the generated function body.
 
-The Rust `Core::function_bb_graph(program, binary, address)` operation and Qt
-bridge's `function_bb_graph` use the complete native `FunctionIr`; they require
+`export-c --context HEADER` names what the project already declares: a function
+or object the header declares is not redeclared in the export (the header's types
+stand, so a recovered `int` cannot contradict a declared `u32`). Declarations of
+the C library's built-in functions (`memset`, `strlen`, ...) are never emitted,
+and a compiler runtime helper without a recovered signature is declared by its
+ABI (`int __divsi3(int, int)`). The function body then passes through
+`emit_m2c/canonical.rs` (P4.6): a local whose every assignment masks to a byte or
+halfword is declared with that type, a loop guard that is the loop test at the
+counter's first value is written as the loop test, and `*(char *)p == -2` is the
+unsigned-byte test `0xfe`. `ROMWRIGHT_NO_CANONICAL=all` (or a comma list of
+`char_negative_equality`, `fuse_mask_statements`, `narrow_locals`, `narrow_uses`,
+`guarded_loops`) turns them off, to measure a rule against the printer's own text.
+
+The Rust `Core::function_bb_graph(program, binary, address)` operation and the
+desktop's Graph panel use the complete native `FunctionIr`; they require
 native decompilation and have no bounded-decoder fallback. Nodes are keyed by
 native block ID. Their optional addresses anchor the first retained operation,
 not a machine-block extent. All native blocks and successor edges are retained,
 including empty/disconnected blocks and loops.
 
-The Qt adapter enriches its `decompile_doc` result with this `graph`, known
-direct-call `call_signatures`, and an authoritative `function_entry` when the
-store identifies the containing function. These are adapter fields, not new
-promises for the versioned HTTP/stdio document envelope. Metadata enrichment
+The desktop's decompile (`WorkerPoolManager::decompile_function`) enriches the
+document with this `graph`, known direct-call `call_signatures`, and an
+authoritative `function_entry` when the store identifies the containing
+function. These are frontend fields, not new promises for the versioned
+HTTP/stdio document envelope. Metadata enrichment
 reuses `Core::check_execution` before publishing, rejecting expired, cancelled
 or revision-stale results.
 

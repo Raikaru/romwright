@@ -14,15 +14,19 @@ for example `/tmp/romwright-demo`.
 | Step | Needs |
 |---|---|
 | `import`, `functions`, `symbols`, `strings`, `xrefs`, `search`, `rename`, `bookmark`, `patch` | nothing beyond the built binary |
-| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra install for **SLEIGH language data** (`ROMWRIGHT_GHIDRA`, default `~/ghidra_12.1.3_PUBLIC`) and the native console (`native/build_console.sh`) |
+| `disasm`, `decompile`, `decompile-doc` | the pinned Ghidra install for **SLEIGH language data** (`ROMWRIGHT_GHIDRA`, default `~/ghidra_12.1.3_PUBLIC`); `decompile` and `decompile-doc` also the native decompiler (`native/build_ghidra_opt.sh`) |
+| `detect-compiler` | nothing beyond the built binary (it reads the image's bytes) |
+| `new-project` | the SLEIGH data like `import` (it imports the image); `python3` for the repository's own scripts. romwright downloads no tool: the repository's `configure.py` fetches the pinned ones |
+| `match` | the native decompiler, and the repository's compiler (installed by its `configure.py`, or a profile naming one you have) |
 | anything with `--oracle` | a Java runtime and the Stage-1 bridge; used only to generate comparison oracles |
 
 **No step starts a JVM** unless you pass `--oracle`. The native decompiler
 reads SLEIGH language data as data; it does not run Ghidra.
 
-Discovery uses the SLEIGH console when it is available, so an import made
-without the pinned install recovers fewer functions than one made with it —
-the console is what proves a byte pattern is a function start. Both imports
+Discovery uses the in-process SLEIGH decoder when the pinned install supplies
+its language data, so an import made without the install recovers fewer
+functions than one made with it — the decoder is what proves a byte pattern
+is a function start. Both imports
 are honest; the smaller one simply had less evidence.
 
 ## Build
@@ -125,9 +129,9 @@ $ ./target/release/romwright-cli bookmarks tiny --project $PROJECT
 -- 1 bookmarks
 ```
 
-## What the SLEIGH console adds
+## What the SLEIGH decoder adds
 
-With the console available the same import proves more: `printf`'s linkage
+With the language data available the same import proves more: `printf`'s linkage
 stub becomes a function, function extents come from flow rather than from the
 next entry, and the call into `add` is recorded as a reference.
 
@@ -173,6 +177,74 @@ Three companion binaries disassemble coprocessor blobs without a
 project: `gte_dump`, `rsp_dump` and `vu_dump` each take a raw binary
 file and print one `mnemonic operands` line per instruction for the
 PSX GTE, N64 RSP and PS2 VU macro sets respectively.
+
+## Start a matching project
+
+`new-project` turns a retail image into a repository to decompile it in, and
+`match` searches the ways the decompiler can print one function for the C that
+the repository's compiler turns into the retail bytes. Every platform romwright
+imports has a plugin; the shapes are byte-matching (PlayStation 2, GameCube and
+Wii, Nintendo 64, PlayStation, PSP, Game Boy Advance, Nintendo DS), non-matching
+scaffold (3DS, Switch, PS3, PS4, Vita, Xbox 360) and per-function (Windows PE
+x86); `docs/new-project.md` has one section per platform, `docs/pc-project.md`
+the Windows PE fixtures and results, and `docs/match.md` what `match` varies and
+measured.
+
+```console
+$ ./target/release/romwright-cli new-project --list-platforms
+pe      Windows PE (x86)       Scaffold
+ps2     PlayStation 2          Implemented
+gba     Game Boy Advance       Implemented
+3ds     Nintendo 3DS           Scaffold
+```
+
+`detect-compiler` names the compiler the image was built with and the evidence
+(the fixture is a MinGW-built PE32):
+
+```console
+$ ./target/release/romwright-cli detect-compiler tests/fixtures-src/tiny_pe32.exe
+platform:   Windows PE (i386)
+compiler:   mingw-gcc-15 (Medium confidence)
+```
+
+The repository below is the PC shape, because it is the one whose compile
+check needs no proprietary tool: `--toolchain` names a profile
+(`{"clang": "clang"}`, here the host's clang) instead of the compiler the
+manifest pins, and `--decompile none` writes no C yet. The fixture's functions
+are the importer's, so the count depends on the SLEIGH data like the import
+above. A byte-matching platform is the same two commands with a retail image
+and, for the first run, `python3 configure.py` fetching the pinned tools
+(sha256-checked; romwright ships none):
+
+<!-- requires: sleigh -->
+
+```console
+$ ./target/release/romwright-cli new-project tests/fixtures-src/tiny_pe32.exe $PROJECT-repo --toolchain tests/fixtures-src/pe_clang_profile.json --decompile none
+per-function PE project (131 functions
+next: cd
+```
+
+`configure.py` writes the repository's build configuration, and `match` prints
+the function in alternative ways (here `--budget 4` of them), compiles each with
+the repository's compiler and scores it against the retail bytes. `match`
+decompiles, so it needs the native decompiler like `decompile` does; the score
+column is *equal instruction words* here, an objdiff percent when
+`objdiff-cli` is installed, and says nothing about the original compiler:
+
+<!-- requires: sleigh clang -->
+
+```console
+$ python3 $PROJECT-repo/configure.py
+configured: clang-22.1.8 (clang)
+$ ./target/release/romwright-cli match 0x00401420 --project $PROJECT-repo --budget 4
+FUN_00401420 0x401420 (164 bytes)
+best: default
+```
+
+`match --write` stores the best variant's C in the repository for
+`configure.py swap` (byte-matching platforms) or `build.py` (PE) to build. The
+desktop's Program setup panel (**Create project**) and Match panel do the same
+from the open image (`docs/desktop.md`).
 
 ## Where the numbers live
 
